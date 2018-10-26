@@ -122,19 +122,14 @@ func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
-	latestPulse, err := m.db.GetLatestPulseNumber()
-	if err != nil {
-		return nil, err
-	}
-
+func (m *TransactionManager) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*record.ID, error) {
 	recHash := hash.NewIDHash()
-	_, err = rec.WriteHashData(recHash)
+	_, err := rec.WriteHashData(recHash)
 	if err != nil {
 		return nil, err
 	}
 	id := record.ID{
-		Pulse: latestPulse,
+		Pulse: pulseNumber,
 		Hash:  recHash.Sum(nil),
 	}
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(id))
