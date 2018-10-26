@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/core/message"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -40,6 +41,7 @@ const (
 	scopeIDJetDrop  byte = 3
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
+	scopeIDMessage  byte = 6
 
 	sysGenesis     byte = 1
 	sysLatestPulse byte = 2
@@ -127,7 +129,11 @@ func (db *DB) Bootstrap() error {
 			return nil, err
 		}
 
-		genesisID, err := db.SetRecord(&record.GenesisRecord{})
+		lastPulse, err := db.GetLatestPulseNumber()
+		if err != nil {
+			return nil, err
+		}
+		genesisID, err := db.SetRecord(lastPulse, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
@@ -205,13 +211,13 @@ func (db *DB) GetRecord(id *record.ID) (record.Record, error) {
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(rec record.Record) (*record.ID, error) {
+func (db *DB) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*record.ID, error) {
 	var (
 		id  *record.ID
 		err error
 	)
 	err = db.Update(func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(rec)
+		id, err = tx.SetRecord(pulseNumber, rec)
 		return err
 	})
 	if err != nil {
@@ -288,66 +294,38 @@ func (db *DB) waitinflight() {
 // Previous JetDrop hash should be provided. On success returns saved drop and slot records.
 func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 	*jetdrop.JetDrop,
-	[][2][]byte, // records
-	[][2][]byte, // indexes
+	[][]byte,
 	error,
 ) {
 	var err error
 	db.waitinflight()
 
-	prefix := make([]byte, core.PulseNumberSize+1)
-	prefix[0] = scopeIDRecord
-	copy(prefix[1:], pulse.Bytes())
-
 	hw := hash.NewIDHash()
 	_, err = hw.Write(prevHash)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	var records [][2][]byte
+	prefix := make([]byte, core.PulseNumberSize+1)
+	prefix[0] = scopeIDMessage
+	copy(prefix[1:], pulse.Bytes())
+
+	var messages [][]byte
 	err = db.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			item := it.Item()
-			key := item.Key()
-			_, err = hw.Write(key[1:])
+			val, err := it.Item().ValueCopy(nil)
 			if err != nil {
 				return err
 			}
-			value, err := item.ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-			records = append(records, [2][]byte{key[1:], value})
+			messages = append(messages, val)
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	var indexes [][2][]byte
-	err = db.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-
-		seekIndex := []byte{scopeIDLifeline}
-		for it.Seek(seekIndex); it.ValidForPrefix(seekIndex); it.Next() {
-			item := it.Item()
-			key := item.Key()
-			value, err := item.ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-			indexes = append(indexes, [2][]byte{key, value})
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	drop := jetdrop.JetDrop{
@@ -355,7 +333,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		PrevHash: prevHash,
 		Hash:     hw.Sum(nil),
 	}
-	return &drop, records, indexes, nil
+	return &drop, messages, nil
 }
 
 // SetDrop saves provided JetDrop in db.
@@ -484,4 +462,24 @@ func (db *DB) Update(fn func(*TransactionManager) error) error {
 // GetBadgerDB return badger.DB instance (for internal usage, like tests)
 func (db *DB) GetBadgerDB() *badger.DB {
 	return db.db
+}
+
+// SetMessage persists message to the database
+func (db *DB) SetMessage(pulseNumber core.PulseNumber, genericMessage core.Message) error {
+	messageBytes, err := message.ToBytes(genericMessage)
+	if err != nil {
+		return err
+	}
+
+	hw := hash.NewIDHash()
+	_, err = hw.Write(messageBytes)
+	if err != nil {
+		return err
+	}
+	hw.Sum(nil)
+
+	return db.Set(
+		prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
+		messageBytes,
+	)
 }

@@ -42,3 +42,4 @@ bootstrap:
   rootkeys: "scripts/insolard/root_member_keys.json"
   rootbalance: 10000
 keyspath: "scripts/insolard/bootstrap_keys.json"
+certificatepath: ""

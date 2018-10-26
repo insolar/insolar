@@ -19,6 +19,7 @@ package logicrunner
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"net"
 	"sync"
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -84,7 +84,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 // Start starts logic runner component
-func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
+func (lr *LogicRunner) Start(ctx context.Context, c core.Components) error {
 	am := c.Ledger.GetArtifactManager()
 	lr.ArtifactManager = am
 	lr.MessageBus = c.MessageBus
@@ -136,7 +136,7 @@ func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
 }
 
 // Stop stops logic runner component and its executors
-func (lr *LogicRunner) Stop(ctx core.Context) error {
+func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
 	for _, e := range lr.Executors {
 		if e == nil {
@@ -193,7 +193,7 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.SignedMessage) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
 	if !ok {
@@ -272,7 +272,7 @@ func init() {
 }
 
 func (lr *LogicRunner) getObjectMessage(objref Ref) (*ObjectBody, error) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	cr, step := lr.getNextValidationStep(objref)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObject != cr.Type {
@@ -310,7 +310,7 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*ObjectBody, error) {
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := inscontext.TODO()
+	insctx := context.TODO()
 	executionState := lr.UpsertExecution(m.ObjectRef)
 	executionState.mutex.Lock()
 	defer executionState.mutex.Unlock()
@@ -378,7 +378,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 }
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := inscontext.TODO()
+	insctx := context.TODO()
 	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class")
@@ -430,7 +430,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// send copy for validation
 	for ref, records := range objectsRecords {
 		_, err := lr.MessageBus.Send(
-			inscontext.TODO(),
+			context.TODO(),
 			&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse},
 		)
 		if err != nil {
@@ -438,7 +438,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 		}
 
 		temp := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
-		_, err = lr.MessageBus.Send(inscontext.TODO(), &temp)
+		_, err = lr.MessageBus.Send(context.TODO(), &temp)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}

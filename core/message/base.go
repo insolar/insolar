@@ -113,9 +113,9 @@ func Deserialize(buff io.Reader) (core.SignedMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	signed, err := NewSignedMessage(msg, core.RecordRef{}, nil)
 	enc := gob.NewDecoder(buff)
 	err = enc.Decode(msg)
+	signed := &SignedMessage{Msg: msg}
 	return signed, err
 }
 
@@ -163,4 +163,5 @@ func init() {
 	gob.Register(&BootstrapRequest{})
 	gob.Register(&SignedMessage{})
 	gob.Register(core.RecordRef{})
+	gob.Register(&GetChildren{})
 }

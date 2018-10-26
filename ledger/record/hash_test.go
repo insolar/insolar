@@ -90,7 +90,7 @@ var hashtestsRecordsMutate = []struct {
 			&CodeRecord{Code: []byte{1, 2, 3}},
 			&CodeRecord{
 				Code: []byte{1, 2, 3},
-				ResultRecord: ResultRecord{
+				SideEffectRecord: SideEffectRecord{
 					Domain: Reference{
 						Record: str2ID("0A"),
 					},

@@ -17,6 +17,7 @@
 package servicenetwork
 
 import (
+	"context"
 	ecdsa2 "crypto/ecdsa"
 	"strconv"
 	"strings"
@@ -29,7 +30,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/network/dhtnetwork"
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -83,7 +83,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	network.certificate, _ = certificate.NewCertificateFromFields(certificate.CertRecords{}, []*ecdsa2.PrivateKey{key})
 	assert.NoError(t, err)
 
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	err = network.Start(ctx, initComponents(t, testutils.RandomRef()))
 	assert.NoError(t, err)
 
@@ -147,7 +147,7 @@ func (l *mockLedger) GetPulseManager() core.PulseManager {
 }
 
 func TestServiceNetwork_SendMessage2(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("awaiting for big service network mock")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -193,7 +193,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 }
 
 func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("wait for DI and network refactoring")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -260,7 +260,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 }
 
 func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
-	insctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("fix data race INS-534")
 	nodeIds := []core.RecordRef{
 		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
@@ -287,7 +287,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 
 	defer func() {
 		for _, service := range services {
-			service.Stop(insctx)
+			service.Stop(ctx)
 		}
 	}()
 
@@ -295,7 +295,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
 		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
-		service.Start(insctx, core.Components{})
+		service.Start(ctx, core.Components{})
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
 			return nil, nil
@@ -344,7 +344,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 }
 
 func Test_processPulse(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("rewrite test with multiple pulses and respecting logic of adding active nodes")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -400,7 +400,7 @@ func Test_processPulse(t *testing.T) {
 }
 
 func Test_processPulse2(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("fix data race INS-534")
 	nodeIds := []core.RecordRef{
 		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),

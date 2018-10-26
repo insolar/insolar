@@ -19,6 +19,7 @@
 package testmessagebus
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -65,7 +66,7 @@ func (mb *TestMessageBus) Stop() error {
 	panic("implement me")
 }
 
-func (mb *TestMessageBus) Send(ctx core.Context, m core.Message) (core.Reply, error) {
+func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
 	key, _ := ecdsa.GeneratePrivateKey()
 	signedMsg, err := message.NewSignedMessage(m, testutils.RandomRef(), key)
 	if err != nil {

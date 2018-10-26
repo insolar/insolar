@@ -17,6 +17,7 @@
 package logicrunner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -24,7 +25,6 @@ import (
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 
@@ -45,7 +45,7 @@ func byteRecorRef(b byte) core.RecordRef {
 }
 
 func TestBareHelloworld(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -100,7 +100,7 @@ func TestBareHelloworld(t *testing.T) {
 	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	// #1
 	resp, err := lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -119,7 +119,7 @@ func TestBareHelloworld(t *testing.T) {
 	signed, _ = message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	// #2
 	resp, err = lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
