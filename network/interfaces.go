@@ -65,6 +65,8 @@ type HostNetwork interface {
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() RequestBuilder
+	// BuildResponse create response to an incoming request with Data set to responseData
+	BuildResponse(request Request, responseData interface{}) Response
 }
 
 // Packet is a packet that is transported via network by HostNetwork.
@@ -83,8 +85,9 @@ type Response Packet
 
 // Future allows to handle responses to a previously sent request.
 type Future interface {
-	Result() <-chan Response
-	GetResult(duration time.Duration) Response
+	GetRequest() Request
+	Response() <-chan Response
+	GetResponse(duration time.Duration) (Response, error)
 }
 
 // RequestBuilder allows to build a Request.

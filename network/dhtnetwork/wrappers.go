@@ -191,6 +191,10 @@ func (w *Wrapper) NewRequestBuilder() network.RequestBuilder {
 	panic("not used in DHT implementation")
 }
 
+func (w *Wrapper) BuildResponse(request network.Request, responseData interface{}) network.Response {
+	panic("not used in DHT implementation")
+}
+
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon
 func (w *Wrapper) ResendPulseToKnownHosts(pulse core.Pulse) {
 	p := &packet.RequestPulse{Pulse: pulse}

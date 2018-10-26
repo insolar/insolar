@@ -185,7 +185,7 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 			}
 		}(n)
 
-		// TODO: create adequate cancelable context without dht values (after switching to new n)
+		// TODO: create adequate cancelable context without dht values (after switching to new network)
 		ctx := context.WithValue(context.Background(), dhtnetwork.CtxTableIndex, dhtnetwork.DefaultHostID)
 		n.doConsensus(ctx, pulse)
 	}

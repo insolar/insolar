@@ -68,7 +68,7 @@ func TestHost_Equal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.equal, Host{test.id1, test.addr1}.Equal(Host{test.id2, test.addr2}))
+			assert.Equal(t, test.equal, Host{ID: test.id1, Address: test.addr1}.Equal(Host{ID: test.id2, Address: test.addr2}))
 		})
 	}
 }
