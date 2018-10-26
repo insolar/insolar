@@ -176,7 +176,7 @@ func generateCertificates(out io.Writer) {
 
 	data, err := cert.Dump()
 	check("[ generateCertificates ] Can't dump certificate", err)
-	out.Write([]byte(data))
+	writeToOutput(out, data)
 }
 
 func sendRequest(out io.Writer) {

@@ -188,14 +188,14 @@ func isValidPublicKey(publicKey string, privateKey *ecdsa.PrivateKey) (bool, err
 	return true, nil
 }
 
-func (c *Certificate) setKeys(privateKey *ecdsa.PrivateKey) error {
+func (cert *Certificate) setKeys(privateKey *ecdsa.PrivateKey) error {
 	expPubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		return errors.Wrap(err, "[ GenerateKeys ] Failed to export public key.")
 	}
 
-	c.PublicKey = expPubKey
-	c.privateKey = privateKey
+	cert.PublicKey = expPubKey
+	cert.privateKey = privateKey
 
 	return nil
 }
