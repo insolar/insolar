@@ -41,7 +41,7 @@ type Ref = core.RecordRef
 type ExecutionState struct {
 	sync.Mutex
 	validate    bool
-	insContext  core.Context
+	insContext  context.Context
 	callContext *core.LogicCallContext
 	deactivate  bool
 
