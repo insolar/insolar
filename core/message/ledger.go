@@ -212,9 +212,10 @@ func (e *GetChildren) Target() *core.RecordRef {
 // JetDrop spreads jet drop
 type JetDrop struct {
 	ledgerMessage
-	Jet     core.RecordRef
-	Drop    []byte
-	Messages [][]byte
+	Jet         core.RecordRef
+	Drop        []byte
+	Messages    [][]byte
+	PulseNumber core.PulseNumber
 }
 
 // Type implementation of Message interface.

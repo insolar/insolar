@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"bytes"
-	"sync"
 	"time"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -39,7 +38,6 @@ type MessageHandler struct {
 	db              *storage.DB
 	handlers        map[core.MessageType]core.MessageHandler
 	jetDropHandlers map[core.MessageType]internalHandler
-	handlersRWLock  sync.RWMutex
 }
 
 // NewMessageHandler creates new handler.
@@ -53,8 +51,6 @@ func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
 // Link links external components.
 func (h *MessageHandler) Link(components core.Components) error {
 	bus := components.MessageBus
-
-	h.handlersRWLock.Lock()
 
 	h.handlers[core.TypeGetCode] = h.handlerWithSavingMessages(h.handleGetCode)
 	h.handlers[core.TypeGetClass] = h.handlerWithSavingMessages(h.handleGetClass)
@@ -79,13 +75,9 @@ func (h *MessageHandler) Link(components core.Components) error {
 	h.jetDropHandlers[core.TypeUpdateClass] = h.handleUpdateClass
 	h.jetDropHandlers[core.TypeValidateRecord] = h.handleValidateRecord
 
-	h.handlersRWLock.Unlock()
-
-	h.handlersRWLock.RLock()
 	for handlerType, handler := range h.handlers {
 		bus.MustRegister(handlerType, handler)
 	}
-	h.handlersRWLock.RUnlock()
 
 	return nil
 }
@@ -346,9 +338,7 @@ func (h *MessageHandler) handleUpdateObject(pulseNumber core.PulseNumber, ctx co
 		return nil, errors.New("wrong class state record")
 	}
 
-	var (
-		idx *index.ObjectLifeline
-	)
+	var idx *index.ObjectLifeline
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		idx, err = getObjectIndex(tx, &objectID, true)
 		if err != nil {
@@ -362,7 +352,7 @@ func (h *MessageHandler) handleUpdateObject(pulseNumber core.PulseNumber, ctx co
 			return errors.New("invalid state record")
 		}
 
-		id, err := tx.SetRecord(rec)
+		id, err := tx.SetRecord(pulseNumber, rec)
 		if err != nil {
 			return err
 		}
@@ -411,7 +401,7 @@ func (h *MessageHandler) handleRegisterChild(pulseNumber core.PulseNumber, ctx c
 	}
 
 	var child *record.ID
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		idx, _, _, err := getObject(tx, &parentRef.Record, nil, false)
 		if err != nil {
 			return err
@@ -421,7 +411,7 @@ func (h *MessageHandler) handleRegisterChild(pulseNumber core.PulseNumber, ctx c
 			return errors.New("invalid child record")
 		}
 
-		child, err = tx.SetRecord(childRec)
+		child, err = tx.SetRecord(pulseNumber, childRec)
 		if err != nil {
 			return err
 		}
@@ -451,18 +441,16 @@ func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message
 
 	for _, rawMessage := range msg.Messages {
 		parsedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
-		log.Infof("parsed message - %v", parsedMessage)
 		if err != nil {
 			return nil, err
 		}
-		h.handlersRWLock.RLock()
-		handler, ok := h.handlers[parsedMessage.Type()]
-		h.handlersRWLock.RUnlock()
+
+		handler, ok := h.jetDropHandlers[parsedMessage.Type()]
 		if !ok {
 			return nil, errors.New("unknown message type")
 		}
 
-		_, err = handler(ctx, parsedMessage)
+		_, err = handler(msg.PulseNumber, ctx, parsedMessage)
 		if err != nil {
 			return nil, err
 		}
