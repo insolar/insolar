@@ -190,8 +190,8 @@ func (currentPulsar *Pulsar) StopServer() {
 }
 
 // EstablishConnectionToPulsar is a method for creating connection to another pulsar
-func (currentPulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
-	log.Debug("[EstablishConnectionToPulsar]")
+func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pubKey string) error {
+	inslogger.FromContext(ctx).Debug("[EstablishConnectionToPulsar]")
 	neighbour, err := currentPulsar.FetchNeighbour(pubKey)
 	if err != nil {
 		return err
@@ -228,7 +228,7 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
 		return errors.New("signature check Failed")
 	}
 
-	log.Infof("pulsar - %v connected to - %v", currentPulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
+	inslogger.FromContext(ctx).Infof("pulsar - %v connected to - %v", currentPulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
 	return nil
 }
 
@@ -237,7 +237,7 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 	for pubKey, neighbour := range currentPulsar.Neighbours {
 		log.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
 		if neighbour.OutgoingClient == nil || !neighbour.OutgoingClient.IsInitialised() {
-			err := currentPulsar.EstablishConnectionToPulsar(pubKey)
+			err := currentPulsar.EstablishConnectionToPulsar(ctx, pubKey)
 			if err != nil {
 				inslogger.FromContext(ctx).Error(err)
 				continue
@@ -249,7 +249,7 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 		if replyCall.Error != nil {
 			log.Warnf("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
 			neighbour.OutgoingClient.ResetClient()
-			err := currentPulsar.EstablishConnectionToPulsar(pubKey)
+			err := currentPulsar.EstablishConnectionToPulsar(ctx, pubKey)
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Attempt of connection to %v Failed with error - %v", neighbour.ConnectionAddress, err)
 				neighbour.OutgoingClient.ResetClient()

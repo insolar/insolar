@@ -114,7 +114,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 }
 
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
-	server.CheckConnectionsToPulsars()
+	server.CheckConnectionsToPulsars(ctx)
 
 	var nextPulseNumber core.PulseNumber
 	if server.GetLastPulse().PulseNumber == core.GenesisPulse.PulseNumber {
