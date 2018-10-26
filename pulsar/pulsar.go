@@ -270,18 +270,16 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 
 	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
 		currentPulsar.StartProcessLock.Unlock()
-		inslogger.FromContext(ctx).Warnf(
-			"Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
-			currentPulsar.StateSwitcher.GetState().String(),
-			pulseNumber,
-			currentPulsar.GetLastPulse().PulseNumber,
-			currentPulsar.ProcessingPulseNumber)
-		return fmt.Errorf(
+		err := fmt.Errorf(
 			"wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
 			currentPulsar.StateSwitcher.GetState().String(),
 			pulseNumber, currentPulsar.GetLastPulse().PulseNumber,
 			currentPulsar.ProcessingPulseNumber)
+		inslogger.FromContext(ctx).Warn(err)
+		return err
 	}
+	currentPulsar.ProcessingPulseNumber = pulseNumber
+	ctx, inslog := inslogger.WithTraceField(context.Background(), string(pulseNumber))
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 
 	err := currentPulsar.generateNewEntropyAndSign()
@@ -290,6 +288,8 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
 		return err
 	}
+	inslog.Debugf("Entropy generated - %v", currentPulsar.GeneratedEntropy)
+	inslog.Debugf("Entropy sign generated - %v", currentPulsar.GeneratedEntropySign)
 
 	currentPulsar.OwnedBftRow[currentPulsar.PublicKeyRaw] = &BftCell{
 		Entropy:           currentPulsar.GeneratedEntropy,
@@ -297,7 +297,6 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 		Sign:              currentPulsar.GeneratedEntropySign,
 	}
 
-	currentPulsar.ProcessingPulseNumber = pulseNumber
 	currentPulsar.StartProcessLock.Unlock()
 
 	currentPulsar.broadcastSignatureOfEntropy()
