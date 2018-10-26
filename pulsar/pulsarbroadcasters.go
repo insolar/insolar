@@ -17,9 +17,11 @@
 package pulsar
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
@@ -30,8 +32,8 @@ import (
 	"github.com/insolar/insolar/network/transport/relay"
 )
 
-func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
-	log.Debug("[broadcastSignatureOfEntropy]")
+func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[broadcastSignatureOfEntropy]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -49,10 +51,10 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			inslogger.FromContext(ctx).Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 			continue
 		}
-		log.Infof("Sign of Entropy sent to %v", neighbour.ConnectionAddress)
+		inslogger.FromContext(ctx).Infof("Sign of Entropy sent to %v", neighbour.ConnectionAddress)
 	}
 }
 

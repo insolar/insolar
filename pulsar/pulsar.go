@@ -299,7 +299,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 
 	currentPulsar.StartProcessLock.Unlock()
 
-	currentPulsar.broadcastSignatureOfEntropy()
+	currentPulsar.broadcastSignatureOfEntropy(ctx)
 	currentPulsar.StateSwitcher.SwitchToState(WaitingForEntropySigns, nil)
 	return nil
 }
