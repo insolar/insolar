@@ -76,6 +76,14 @@ type ArtifactManager interface {
 	// (used by VM on executing side)
 	RegisterRequest(ctx context.Context, message Message) (*RecordID, error)
 
+	// RegisterValidation marks provided object state as approved or disapproved.
+	//
+	// When fetching object, validity can be specified.
+	RegisterValidation(ctx context.Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
+
+	// RegisterResult saves VM method call result.
+	RegisterResult(ctx context.Context, request RecordRef, payload []byte) (*RecordID, error)
+
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
@@ -151,11 +159,6 @@ type ArtifactManager interface {
 	//
 	// Returned reference will be the latest object state (exact) reference.
 	UpdateObject(ctx context.Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
-
-	// RegisterValidation marks provided object state as approved or disapproved.
-	//
-	// When fetching object, validity can be specified.
-	RegisterValidation(ctx context.Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
