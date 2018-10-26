@@ -162,4 +162,5 @@ func init() {
 	// Bootstrap
 	gob.Register(&BootstrapRequest{})
 	gob.Register(&SignedMessage{})
+	gob.Register(core.RecordRef{})
 }

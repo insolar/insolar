@@ -67,7 +67,10 @@ func (mb *TestMessageBus) Stop() error {
 
 func (mb *TestMessageBus) Send(ctx core.Context, m core.Message) (core.Reply, error) {
 	key, _ := ecdsa.GeneratePrivateKey()
-	signedMsg, _ := message.NewSignedMessage(m, testutils.RandomRef(), key)
+	signedMsg, err := message.NewSignedMessage(m, testutils.RandomRef(), key)
+	if err != nil {
+		return nil, err
+	}
 	t := signedMsg.Message().Type()
 	handler, ok := mb.handlers[t]
 	if !ok {

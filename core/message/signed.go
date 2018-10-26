@@ -41,6 +41,9 @@ func NewSignedMessage(msg core.Message, sender core.RecordRef, key *ecdsa.Privat
 	if key == nil {
 		return nil, errors.New("failed to sign a message: private key == nil")
 	}
+	if msg == nil {
+		return nil, errors.New("failed to sign a nil message")
+	}
 	sign, err := signMessage(msg, key)
 	if err != nil {
 		return nil, err

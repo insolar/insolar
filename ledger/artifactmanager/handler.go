@@ -397,8 +397,8 @@ func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.SignedM
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleValidateRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.ValidateRecord)
+func (h *MessageHandler) handleValidateRecord(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.ValidateRecord)
 	objID := record.Core2Reference(msg.Object).Record
 	validatedStateID := record.Bytes2ID(msg.State[:])
 

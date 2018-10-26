@@ -24,9 +24,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/testutils/nodekeeper"
-
 	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/testutils/nodekeeper"
 
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/member/signer"
@@ -91,20 +90,20 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	assert.NoError(t, err, "Initialize runner")
 
 	nk := nodekeeper.GetTestNodekeeper()
-	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
-
-	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
-	mb := testmessagebus.NewTestMessageBus()
-
+	messageBus := testmessagebus.NewTestMessageBus()
 	nw := network.GetTestNetwork()
+	c := core.Components{
+		LogicRunner: lr,
+		NodeNetwork: nk,
+		MessageBus:  messageBus,
+		Network:     nw,
+	}
+	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
+	c.Ledger = l
 
-	assert.NoError(t, lr.Start(ctx, core.Components{
-		Ledger:     l,
-		MessageBus: mb,
-		Network:    nw,
-	}), "starting logicrunner")
+	assert.NoError(t, lr.Start(ctx, c), "starting logicrunner")
 
-	MessageBusTrivialBehavior(mb, lr)
+	MessageBusTrivialBehavior(messageBus, lr)
 	pm := l.GetPulseManager()
 	err = lr.Ledger.GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
 	//err = pm.Set(*pulsar.NewPulse(0, 10, &entropygenerator.StandardEntropyGenerator{}))
