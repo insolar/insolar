@@ -211,7 +211,7 @@ func (m *LedgerArtifactManager) DeclareType(
 ) (*core.RecordID, error) {
 	return m.setRecord(
 		&record.TypeRecord{
-			ResultRecord: record.ResultRecord{
+			SideEffectRecord: record.SideEffectRecord{
 				Domain:  record.Core2Reference(domain),
 				Request: record.Core2Reference(request),
 			},
@@ -233,7 +233,7 @@ func (m *LedgerArtifactManager) DeployCode(
 ) (*core.RecordID, error) {
 	return m.setRecord(
 		&record.CodeRecord{
-			ResultRecord: record.ResultRecord{
+			SideEffectRecord: record.SideEffectRecord{
 				Domain:  record.Core2Reference(domain),
 				Request: record.Core2Reference(request),
 			},
@@ -252,7 +252,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 ) (*core.RecordID, error) {
 	return m.updateClass(
 		&record.ClassActivateRecord{
-			ResultRecord: record.ResultRecord{
+			SideEffectRecord: record.SideEffectRecord{
 				Domain:  record.Core2Reference(domain),
 				Request: record.Core2Reference(request),
 			},
@@ -275,7 +275,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 ) (*core.RecordID, error) {
 	return m.updateClass(
 		&record.DeactivationRecord{
-			ResultRecord: record.ResultRecord{
+			SideEffectRecord: record.SideEffectRecord{
 				Domain:  record.Core2Reference(domain),
 				Request: record.Core2Reference(request),
 			},
@@ -296,7 +296,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 ) (*core.RecordID, error) {
 	return m.updateClass(
 		&record.ClassAmendRecord{
-			ResultRecord: record.ResultRecord{
+			SideEffectRecord: record.SideEffectRecord{
 				Domain:  record.Core2Reference(domain),
 				Request: record.Core2Reference(request),
 			},
@@ -332,7 +332,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 
 	obj, err := m.updateObject(
 		&record.ObjectActivateRecord{
-			ResultRecord: record.ResultRecord{
+			SideEffectRecord: record.SideEffectRecord{
 				Domain:  record.Core2Reference(domain),
 				Request: objectRef,
 			},
@@ -393,7 +393,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 ) (*core.RecordID, error) {
 	desc, err := m.updateObject(
 		&record.DeactivationRecord{
-			ResultRecord: record.ResultRecord{
+			SideEffectRecord: record.SideEffectRecord{
 				Domain:  record.Core2Reference(domain),
 				Request: record.Core2Reference(request),
 			},
@@ -420,7 +420,7 @@ func (m *LedgerArtifactManager) UpdateObject(
 ) (core.ObjectDescriptor, error) {
 	obj, err := m.updateObject(
 		&record.ObjectAmendRecord{
-			ResultRecord: record.ResultRecord{
+			SideEffectRecord: record.SideEffectRecord{
 				Domain:  record.Core2Reference(domain),
 				Request: record.Core2Reference(request),
 			},
@@ -464,6 +464,19 @@ func (m *LedgerArtifactManager) RegisterValidation(
 	}
 
 	return nil
+}
+
+// RegisterResult saves VM method call result.
+func (m *LedgerArtifactManager) RegisterResult(
+	ctx core.Context, request core.RecordRef, payload []byte,
+) (*core.RecordID, error) {
+	return m.setRecord(
+		&record.ResultRecord{
+			Request: record.Core2Reference(request),
+			Payload: payload,
+		},
+		request,
+	)
 }
 
 func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordRef) (*core.RecordID, error) {
