@@ -16,130 +16,127 @@
 
 package certificate
 
-// func TestNewCertificate(t *testing.T) {
-// 	var certificate core.Certificate
-// 	certificate, err := NewCertificate("./testdata/bootstrap_keys.json")
-// 	assert.NoError(t, err)
-//
-// 	key := certificate.GetEcdsaPrivateKey()
-// 	assert.NotNil(t, key)
-// }
-//
-// type key struct {
-// 	PrivateKey string `json:"private_key"`
-// 	PublicKey  string `json:"public_key"`
-// }
-//
-// func TestNewCertificateFromFile(t *testing.T) {
-// 	cert, err := NewCertificateFromFile("testdata/cert.json")
-// 	assert.NoError(t, err)
-// 	err = cert.Validate()
-// 	assert.NoError(t, err)
-// }
-//
-// func TestNewCertificateFromFields_DifferentFieldsLength(t *testing.T) {
-// 	var privKeys []*ecdsa.PrivateKey
-// 	privKeys = append(privKeys, nil)
-// 	privKeys = append(privKeys, nil)
-//
-// 	cRecords := CertRecords{}
-//
-// 	_, err := NewCertificateFromFields(cRecords, privKeys)
-// 	assert.EqualError(t, err, "[ NewCertificateFromFields ] params must be the same length")
-// }
-//
-// func TestNewCertificateFromFields(t *testing.T) {
-// 	var privKeys []*ecdsa.PrivateKey
-// 	records := CertRecords{}
-// 	for i := 0; i < 10; i++ {
-// 		key, err := ecdsahelper.GeneratePrivateKey()
-// 		assert.NoError(t, err)
-// 		privKeys = append(privKeys, key)
-//
-// 		pubKey, err := ecdsahelper.ExportPublicKey(&key.PublicKey)
-// 		assert.NoError(t, err)
-// 		records = append(records, Record{NodeRef: testutils.RandomRef().String(), PublicKey: pubKey})
-// 	}
-//
-// 	cert, err := NewCertificateFromFields(records, privKeys)
-// 	assert.NoError(t, err)
-// 	assert.NoError(t, cert.Validate())
-//
-// }
-//
-// func TestNewCertifiacteFromFile_BadFile(t *testing.T) {
-// 	_, err := NewCertificateFromFile("______")
-// 	assert.EqualError(t, err, "[ NewCertificateFromFile ]: open ______: no such file or directory")
-// }
-//
-// func TestNewCertifiacteFromFile_BadFileData(t *testing.T) {
-// 	_, err := NewCertificateFromFile("testdata/private_keys.json")
-// 	assert.EqualError(t, err, "[ NewCertificateFromFile ]: json: cannot unmarshal array into Go value of type certificate.Certificate")
-// }
-//
-// func TestNewCertificateFromFile_WrongSignature(t *testing.T) {
-// 	_, err := NewCertificateFromFile("testdata/cert_wrong_signature.json")
-// 	assert.EqualError(t, err, "[ NewCertificateFromFile ]: [ Validate ] invalid signature: 0")
-// }
-//
-// func TestNewCertificateFromFields_EmptyLists(t *testing.T) {
-// 	_, err := NewCertificateFromFields(nil, nil)
-// 	assert.EqualError(t, err, "[ NewCertificateFromFields ] params must not be empty")
-// }
-//
-// func readPrivateKeys() ([]*ecdsa.PrivateKey, error) {
-// 	rawKeys, err := ioutil.ReadFile("testdata/private_keys.json")
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	keysData := []key{}
-// 	err = json.Unmarshal(rawKeys, &keysData)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	privateKeys := []*ecdsa.PrivateKey{}
-//
-// 	for i := 0; i < len(keysData); i++ {
-// 		privKey, err := ecdsahelper.ImportPrivateKey(keysData[i].PrivateKey)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		privateKeys = append(privateKeys, privKey)
-// 	}
-//
-// 	return privateKeys, nil
-// }
-//
-// func TestComplexCheck(t *testing.T) {
-// 	// Read from test dump
-// 	cert, err := NewCertificateFromFile("testdata/cert.json")
-// 	assert.NoError(t, err)
-//
-// 	// Dump to tmp file
-// 	dumpCert, err := cert.Dump()
-// 	assert.NoError(t, err)
-// 	tmpDir, err := ioutil.TempDir("", "test-")
-// 	defer os.RemoveAll(tmpDir)
-// 	assert.NoError(t, err)
-// 	tmpFile := tmpDir + "/test_cert.json"
-// 	ioutil.WriteFile(tmpFile, []byte(dumpCert), 0644)
-//
-// 	// Read from tmp file
-// 	newCert, err := NewCertificateFromFile(tmpFile)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, cert, newCert)
-//
-// 	// Construct from fields
-// 	privateKeys, err := readPrivateKeys()
-// 	assert.NoError(t, err)
-//
-// 	new2Cert, err := NewCertificateFromFields(cert.CertRecords, privateKeys)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, newCert.CertRecords, new2Cert.CertRecords)
-//
-// 	err = cert.Validate()
-// 	assert.NoError(t, err)
-//
-// }
+import (
+	"testing"
+
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/stretchr/testify/assert"
+)
+
+const TEST_CERT = "testdata/cert.json"
+const TEST_BAD_CERT = "testdata/bad_cert.json"
+
+const TEST_KEYS = "testdata/keys.json"
+const TEST_BAD_KEYS = "testdata/bad_keys.json"
+
+func TestAreKeysTheSame(t *testing.T) {
+	privateKey, err := ecdsahelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	pubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
+	assert.NoError(t, err)
+	assert.NoError(t, AreKeysTheSame(privateKey, pubKey))
+}
+
+func TestAreKeysTheSame_NotTheSame(t *testing.T) {
+	privateKey, err := ecdsahelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	err = AreKeysTheSame(privateKey, "")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Public keys in certificate and keypath file are not the same")
+}
+
+func TestNewCertificate_NoCert(t *testing.T) {
+	_, err := NewCertificate("", "")
+	assert.EqualError(t, err, "[ NewCertificate ] couldn't read certificate from: ")
+}
+
+func TestNewCertificate_BadCert(t *testing.T) {
+	_, err := NewCertificate("", TEST_BAD_CERT)
+	assert.Contains(t, err.Error(), "failed to parse certificate json")
+}
+
+func TestNewCertificate_NoKeys(t *testing.T) {
+	_, err := NewCertificate("", TEST_CERT)
+	assert.Contains(t, err.Error(), "failed to read keys")
+}
+
+func checkKeys(cert *Certificate, t *testing.T) {
+	pubKey, err := ecdsahelper.ExportPublicKey(&cert.privateKey.PublicKey)
+	assert.NoError(t, err)
+	assert.Equal(t, pubKey, cert.PublicKey)
+}
+
+func TestNewCertificate(t *testing.T) {
+	cert, err := NewCertificate(TEST_KEYS, TEST_CERT)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, cert.PublicKey)
+	assert.NotEmpty(t, cert.Reference)
+
+	checkKeys(cert, t)
+}
+
+func TestCertificate_GenerateKeys(t *testing.T) {
+	cert := Certificate{}
+	assert.Nil(t, cert.privateKey)
+	assert.Empty(t, cert.PublicKey)
+
+	assert.NoError(t, cert.GenerateKeys())
+
+	assert.NotNil(t, cert.privateKey)
+	assert.NotEmpty(t, cert.PublicKey)
+}
+
+func TestNewCertificatesWithKeys(t *testing.T) {
+	cert, err := NewCertificatesWithKeys(TEST_KEYS)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, cert.Reference)
+	checkKeys(cert, t)
+}
+
+func TestNewCertificatesWithKeys_NoFile(t *testing.T) {
+	_, err := NewCertificatesWithKeys("")
+	assert.Contains(t, err.Error(), "failed to read keys: [ readKeys ] couldn't read keys from")
+}
+
+func TestReadPrivateKey(t *testing.T) {
+	_, err := readPrivateKey("")
+	assert.Contains(t, err.Error(), "couldn't read keys from")
+}
+
+func TestReadPrivateKey_BadJson(t *testing.T) {
+	_, err := readPrivateKey(TEST_BAD_CERT)
+	assert.Contains(t, err.Error(), "failed to parse json")
+}
+
+func TestReadPrivateKey_BadPrivateKey(t *testing.T) {
+	_, err := readPrivateKey(TEST_BAD_KEYS)
+	assert.Contains(t, err.Error(), "Failed to import private key")
+}
+
+func TestReadPrivateKey_BadKeyPair(t *testing.T) {
+	_, err := readPrivateKey("testdata/different_keys.json")
+	assert.Contains(t, err.Error(), "public key is not valid")
+}
+
+func TestIsPublicKeyValid(t *testing.T) {
+	privateKey, err := ecdsahelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	pubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
+	assert.NoError(t, err)
+
+	assert.Nil(t, isValidPublicKey(pubKey, privateKey))
+}
+
+func TestIsPublicKeyValid_BadKeyPair(t *testing.T) {
+	privateKey, err := ecdsahelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	pubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
+	assert.NoError(t, err)
+
+	anotherPrivateKey, err := ecdsahelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+
+	err = isValidPublicKey(pubKey, anotherPrivateKey)
+	assert.Contains(t, err.Error(), "[ isValidPublicKey ] invalid public key in config")
+
+}

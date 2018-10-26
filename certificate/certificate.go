@@ -95,20 +95,6 @@ func (cert *Certificate) reset() {
 	cert.Roles = []string{}
 }
 
-// NewRandomCertificate creates certificate with random node id and keys pair
-func NewRandomCertificate() (*Certificate, error) {
-	cert := Certificate{}
-	cert.reset()
-	err := cert.GenerateKeys()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewRandomCertificate ] Can't generate keys")
-	}
-
-	cert.Reference = testutils.RandomRef().String()
-
-	return &cert, nil
-}
-
 // NewCertificatesWithKeys generate certificate from given keys
 func NewCertificatesWithKeys(keysPath string) (*Certificate, error) {
 	cert := Certificate{}
@@ -169,23 +155,23 @@ func readPrivateKey(keysPath string) (*ecdsa.PrivateKey, error) {
 		return nil, errors.Wrap(err, "[ readKeys ] Failed to import private key.")
 	}
 
-	valid, err := isValidPublicKey(keys["public_key"], private)
-	if !valid {
+	err = isValidPublicKey(keys["public_key"], private)
+	if err != nil {
 		return nil, errors.Wrap(err, "[ readKeys ] public key is not valid")
 	}
 
 	return private, nil
 }
 
-func isValidPublicKey(publicKey string, privateKey *ecdsa.PrivateKey) (bool, error) {
+func isValidPublicKey(publicKey string, privateKey *ecdsa.PrivateKey) error {
 	validPublicKeyString, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
 	if err != nil {
-		return false, errors.Wrap(err, "[ isValidPublicKey ]")
+		return errors.Wrap(err, "[ isValidPublicKey ]")
 	}
 	if validPublicKeyString != publicKey {
-		return false, errors.New("[ isValidPublicKey ] invalid public key in config")
+		return errors.New("[ isValidPublicKey ] invalid public key in config")
 	}
-	return true, nil
+	return nil
 }
 
 func (cert *Certificate) setKeys(privateKey *ecdsa.PrivateKey) error {
