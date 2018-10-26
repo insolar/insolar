@@ -17,6 +17,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -27,8 +28,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/inscontext"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
@@ -42,8 +42,9 @@ type request struct {
 }
 
 type answer struct {
-	Error  string      `json:"error,omitempty"`
-	Result interface{} `json:"result,omitempty"`
+	Error   string      `json:"error,omitempty"`
+	Result  interface{} `json:"result,omitempty"`
+	TraceID string      `json:"traceID,omitempty"`
 }
 
 func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
@@ -62,8 +63,8 @@ func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	return body, nil
 }
 
-func (ar *Runner) verifySignature(params request) error {
-	key, err := ar.getMemberPubKey(params.Reference)
+func (ar *Runner) verifySignature(ctx context.Context, params request) error {
+	key, err := ar.getMemberPubKey(ctx, params.Reference)
 	if err != nil {
 		return err
 	}
@@ -96,6 +97,10 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 		params := request{}
 		resp := answer{}
 
+		traceid := RandTraceID()
+		ctx, inslog := inslogger.WithTraceField(context.Background(), traceid)
+		resp.TraceID = traceid
+
 		defer func() {
 			res, err := json.MarshalIndent(resp, "", "    ")
 			if err != nil {
@@ -104,45 +109,45 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			response.Header().Add("Content-Type", "application/json")
 			_, err = response.Write(res)
 			if err != nil {
-				log.Errorf("Can't write response\n")
+				inslog.Errorf("Can't write response\n")
 			}
 		}()
 
 		_, err := unmarshalRequest(req, &params)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal request"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal request"))
 			return
 		}
 
 		seed := seedmanager.SeedFromBytes(params.Seed)
 		if seed == nil {
 			resp.Error = "[ CallHandler ] Bad seed param"
-			log.Error(resp.Error)
+			inslog.Error(resp.Error)
 			return
 		}
 
 		if !ar.seedmanager.Exists(*seed) {
 			resp.Error = "[ CallHandler ] Incorrect seed"
-			log.Error(resp.Error)
+			inslog.Error(resp.Error)
 			return
 		}
 
-		err = ar.verifySignature(params)
+		err = ar.verifySignature(ctx, params)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(errors.Wrap(err, "[ CallHandler ] Can't verify signature"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't verify signature"))
 			return
 		}
 
 		args, err := core.MarshalArgs(*c.Bootstrapper.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(errors.Wrap(err, "[ CallHandler ] Can't marshal args"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't marshal args"))
 			return
 		}
 		res, err := ar.messageBus.Send(
-			inscontext.TODO(),
+			ctx,
 			&message.CallMethod{
 				ObjectRef: core.NewRefFromBase58(params.Reference),
 				Method:    "Call",
@@ -151,7 +156,7 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 		)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(errors.Wrap(err, "[ CallHandler ] Can't send message to message bus"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't send message to message bus"))
 			return
 		}
 
@@ -160,14 +165,14 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 		err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal params"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal params"))
 			return
 		}
 
 		resp.Result = result
 		if contractErr != nil {
 			resp.Error = contractErr.S
-			log.Error(errors.Wrap(errors.New(contractErr.S), "[ CallHandler ] Error in called method"))
+			inslog.Error(errors.Wrap(errors.New(contractErr.S), "[ CallHandler ] Error in called method"))
 		}
 	}
 }

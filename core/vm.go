@@ -17,6 +17,7 @@
 package core
 
 import (
+	"context"
 	"time"
 )
 
@@ -41,11 +42,11 @@ type MachineLogicExecutor interface {
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	Execute(Context, Message) (res Reply, err error)
-	ValidateCaseBind(Context, Message) (res Reply, err error)
-	ProcessValidationResults(Context, Message) (res Reply, err error)
-	ExecutorResults(Context, Message) (res Reply, err error)
-	Validate(ref RecordRef, p Pulse, cr []CaseRecord) (int, error) // TODO hide?
+	Execute(context.Context, Message) (res Reply, err error)
+	ValidateCaseBind(context.Context, Message) (res Reply, err error)
+	ProcessValidationResults(context.Context, Message) (res Reply, err error)
+	ExecutorResults(context.Context, Message) (res Reply, err error)
+	Validate(ref RecordRef, p Pulse, cr []CaseRecord) (int, error)
 	OnPulse(Pulse) error
 }
 

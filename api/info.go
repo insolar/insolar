@@ -17,24 +17,28 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
 func (ar *Runner) infoHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
+
+		_, inslog := inslogger.WithTraceField(context.Background(), RandTraceID())
+
 		data, err := c.Bootstrapper.Info()
 		if err != nil {
-			log.Error(errors.Wrap(err, "[ INFO ] Can't get bootstraper info"))
+			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get bootstraper info"))
 		}
 
 		response.Header().Add("Content-Type", "application/json")
 		_, err = response.Write(data)
 		if err != nil {
-			log.Error(errors.Wrap(err, "[ INFO ] Can't write response"))
+			inslog.Error(errors.Wrap(err, "[ INFO ] Can't write response"))
 		}
 	}
 }

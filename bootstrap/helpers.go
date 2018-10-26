@@ -17,14 +17,14 @@
 package bootstrap
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -79,7 +79,7 @@ func getContractsMap() (map[string]string, error) {
 	return contracts, nil
 }
 
-func isLightExecutor(c core.Components) (bool, error) {
+func isLightExecutor(ctx context.Context, c core.Components) (bool, error) {
 	am := c.Ledger.GetArtifactManager()
 	jc := c.Ledger.GetJetCoordinator()
 	pm := c.Ledger.GetPulseManager()
@@ -96,16 +96,15 @@ func isLightExecutor(c core.Components) (bool, error) {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
 	}
 	if !isLightExecutor {
-		log.Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
+		inslogger.FromContext(ctx).Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
 		return false, nil
 	}
 	return true, nil
 }
 
-func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
+func getRootDomainRef(ctx context.Context, c core.Components) (*core.RecordRef, error) {
 	am := c.Ledger.GetArtifactManager()
-	ctx := inscontext.TODO()
-	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil)
+	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
 	}
@@ -123,14 +122,14 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	return nil, nil
 }
 
-func getRootMemberPubKey(file string) (string, error) {
+func getRootMemberPubKey(ctx context.Context, file string) (string, error) {
 	absPath, err := filepath.Abs(file)
 	if err != nil {
-		return "", errors.Wrap(err, "couldn't get abs path")
+		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't get abs path")
 	}
 	data, err := ioutil.ReadFile(absPath)
 	if err != nil {
-		return "", errors.Wrap(err, "couldn't read rootkeys file "+absPath)
+		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't read rootkeys file "+absPath)
 	}
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)

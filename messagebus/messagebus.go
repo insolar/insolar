@@ -18,13 +18,13 @@ package messagebus
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 )
 
@@ -35,7 +35,7 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 type MessageBus struct {
 	service      core.Network
 	ledger       core.Ledger
-	activeNodes  core.ActiveNodeComponent
+	activeNodes  core.NodeNetwork
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
 }
@@ -49,17 +49,17 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 }
 
 // Start initializes message bus
-func (mb *MessageBus) Start(c core.Components) error {
+func (mb *MessageBus) Start(ctx context.Context, c core.Components) error {
 	mb.service = c.Network
 	mb.service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 	mb.ledger = c.Ledger
-	mb.activeNodes = c.ActiveNodeComponent
+	mb.activeNodes = c.NodeNetwork
 
 	return nil
 }
 
 // Stop releases resources and stops the bus
-func (mb *MessageBus) Stop() error { return nil }
+func (mb *MessageBus) Stop(ctx context.Context) error { return nil }
 
 // Register sets a function as a hadler for particular message type,
 // only one handler per type is allowed
@@ -82,7 +82,7 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Reply` or error from remote host.
-func (mb *MessageBus) Send(ctx core.Context, msg core.Message) (core.Reply, error) {
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
 	signedMsg, err := message.NewSignedMessage(msg, mb.service.GetNodeID(), mb.service.GetPrivateKey())
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func (mb *MessageBus) doDeliver(msg core.Message) (core.Reply, error) {
 		return nil, errors.New("no handler for received message type")
 	}
 
-	resp, err := handler(inscontext.TODO(), msg)
+	resp, err := handler(context.TODO(), msg)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),

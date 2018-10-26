@@ -17,6 +17,8 @@
 package ledger
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
@@ -109,7 +111,7 @@ func NewTestLedger(
 }
 
 // Start initializes external ledger dependencies.
-func (l *Ledger) Start(c core.Components) error {
+func (l *Ledger) Start(ctx context.Context, c core.Components) error {
 	var err error
 	if err = l.am.Link(c); err != nil {
 		return err
@@ -128,6 +130,6 @@ func (l *Ledger) Start(c core.Components) error {
 }
 
 // Stop stops Ledger gracefully.
-func (l *Ledger) Stop() error {
+func (l *Ledger) Stop(ctx context.Context) error {
 	return l.db.Close()
 }

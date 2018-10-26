@@ -22,11 +22,12 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 )
 
-func newActiveNode(ref byte, pulse int) *core.ActiveNode {
+func newActiveNode(ref byte, pulse int) *core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
-	return &core.ActiveNode{
+	return &core.Node{
 		NodeID:   core.RecordRef{ref},
 		PulseNum: core.PulseNumber(pulse),
 		State:    core.NodeActive,
@@ -43,11 +44,11 @@ type TestNode struct {
 }
 
 type TestParticipant struct {
-	node   *core.ActiveNode
+	node   *core.Node
 	holder mockUnsyncHolder
 }
 
-func NewParticipant(ref byte, list []*core.ActiveNode) *TestParticipant {
+func NewParticipant(ref byte, list []*core.Node) *TestParticipant {
 	return &TestParticipant{node: newActiveNode(ref, 0),
 		holder: mockUnsyncHolder{list}}
 }
@@ -56,11 +57,11 @@ func (p *TestParticipant) GetID() core.RecordRef {
 	return p.node.NodeID
 }
 
-func (p *TestParticipant) GetActiveNode() *core.ActiveNode {
+func (p *TestParticipant) GetActiveNode() *core.Node {
 	return p.node
 }
 
-func (m *TestParticipant) GetUnsync() []*core.ActiveNode {
+func (m *TestParticipant) GetUnsync() []*core.Node {
 	return m.holder.GetUnsync()
 }
 
@@ -68,20 +69,20 @@ func (m *TestParticipant) GetPulse() core.PulseNumber {
 	return m.holder.GetPulse()
 }
 
-func (m *TestParticipant) SetHash([]*NodeUnsyncHash) {
+func (m *TestParticipant) SetHash([]*network.NodeUnsyncHash) {
 }
 
-func (TestParticipant) GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error) {
+func (TestParticipant) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyncHash, error) {
 	return nil, nil
 }
 
 // =====
 
 type mockUnsyncHolder struct {
-	list []*core.ActiveNode
+	list []*core.Node
 }
 
-func (m *mockUnsyncHolder) GetUnsync() []*core.ActiveNode {
+func (m *mockUnsyncHolder) GetUnsync() []*core.Node {
 	return m.list
 }
 
@@ -89,10 +90,10 @@ func (mockUnsyncHolder) GetPulse() core.PulseNumber {
 	return 0
 }
 
-func (mockUnsyncHolder) SetHash([]*NodeUnsyncHash) {
+func (mockUnsyncHolder) SetHash([]*network.NodeUnsyncHash) {
 }
 
-func (mockUnsyncHolder) GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error) {
+func (mockUnsyncHolder) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyncHash, error) {
 	return nil, nil
 }
 
@@ -100,12 +101,12 @@ type testCommunicator struct {
 	self Participant
 }
 
-func (c *testCommunicator) ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
+func (c *testCommunicator) ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []*core.Node) ([]*core.Node, error) {
 	log.Infof("returns data: %v", data)
 	tp := p.(*TestParticipant)
 	return tp.holder.GetUnsync(), nil
 }
 
-func (c *testCommunicator) ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*NodeUnsyncHash) ([]*NodeUnsyncHash, error) {
-	return []*NodeUnsyncHash{}, nil
+func (c *testCommunicator) ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*network.NodeUnsyncHash) ([]*network.NodeUnsyncHash, error) {
+	return []*network.NodeUnsyncHash{}, nil
 }

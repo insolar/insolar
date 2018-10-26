@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -25,16 +26,19 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 const HOST = "http://localhost:19191"
 const TestUrl = HOST + "/api/v1?query_type=LOL"
 
 func TestMain(m *testing.M) {
+	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
 	bootstrapCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)
@@ -42,11 +46,11 @@ func TestMain(m *testing.M) {
 	cs := core.Components{}
 	b, _ := bootstrap.NewBootstrapper(bootstrapCfg.Bootstrap)
 	cs.Bootstrapper = b
-	api.Start(cs)
+	api.Start(ctx, cs)
 
 	code := m.Run()
 
-	api.Stop()
+	api.Stop(ctx)
 
 	os.Exit(code)
 }

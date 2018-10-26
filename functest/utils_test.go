@@ -18,6 +18,7 @@ package functest
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -195,11 +196,12 @@ type response struct {
 }
 
 func signedRequest(user *user, method string, params ...interface{}) (interface{}, error) {
+	ctx := context.TODO()
 	rootCfg, err := requesters.CreateUserConfig(user.ref, user.privKey)
 	if err != nil {
 		return nil, err
 	}
-	res, err := requesters.Send(TestURL, rootCfg, &requesters.RequestConfigJSON{
+	res, err := requesters.Send(ctx, TestURL, rootCfg, &requesters.RequestConfigJSON{
 		Method: method,
 		Params: params,
 	})

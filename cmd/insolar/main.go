@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
@@ -218,7 +220,8 @@ func sendRequest(out io.Writer) {
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
 	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
 
-	response, err := requesters.Send(defaultURL, userCfg, reqCfg)
+	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
+	response, err := requesters.Send(ctx, defaultURL, userCfg, reqCfg)
 	check("[ sendRequest ]", err)
 
 	writeToOutput(out, string(response))

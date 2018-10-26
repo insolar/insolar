@@ -17,6 +17,7 @@
 package certificate
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
@@ -81,12 +82,12 @@ type Certificate struct {
 }
 
 // Start is method from Component interface and it do nothing
-func (c *Certificate) Start(components core.Components) error {
+func (c *Certificate) Start(ctx context.Context, components core.Components) error {
 	return nil
 }
 
 // Stop is method from Component interface and it do nothing
-func (c *Certificate) Stop() error {
+func (c *Certificate) Stop(ctx context.Context) error {
 	return nil
 }
 
