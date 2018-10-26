@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
@@ -69,7 +68,7 @@ func chooseOutput(path string) (io.Writer, error) {
 		res = os.Stdout
 	} else {
 		var err error
-		res, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
+		res, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't open file for writing")
 		}
@@ -97,7 +96,7 @@ var (
 func parseInputParams() {
 	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
-		"available commands: default_config | random_ref | version | gen_keys | gen_certificates | send_request | gen_send_configs")
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
@@ -171,38 +170,13 @@ func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
 	return json.MarshalIndent(map[string]interface{}{"keys": kk}, "", "    ")
 }
 
-type certRecords = certificate.CertRecords
-
 func generateCertificates(out io.Writer) {
+	cert, err := certificate.NewCertificatesWithKeys(configPath)
+	check("[ generateCertificates ] Can't create certificate", err)
 
-	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
-	cRecords := certRecords{}
-
-	var keys []*ecdsa.PrivateKey
-	for i := uint(0); i < numberCertificates; i++ {
-		ref := testutils.RandomRef()
-		privKey, err := ecdsahelper.GeneratePrivateKey()
-		check("[ generateCertificates ]:", err)
-
-		records[ref] = privKey
-		pubKey, err := ecdsahelper.ExportPublicKey(&privKey.PublicKey)
-		check("[ generateCertificates ]:", err)
-
-		cRecords = append(cRecords, certificate.Record{NodeRef: ref.String(), PublicKey: pubKey})
-		keys = append(keys, privKey)
-	}
-
-	cert, err := certificate.NewCertificateFromFields(cRecords, keys)
-	check("[ generateCertificates ]:", err)
-
-	certStr, err := cert.Dump()
-	check("[ generateCertificates ]:", err)
-
-	writeToOutput(out, certStr+"\n")
-
-	keysList, err := makeKeysJSON(keys)
-	check("[ generateCertificates ]:", err)
-	writeToOutput(out, string(keysList)+"\n")
+	data, err := cert.Dump()
+	check("[ generateCertificates ] Can't dump certificate", err)
+	out.Write([]byte(data))
 }
 
 func sendRequest(out io.Writer) {
@@ -256,7 +230,7 @@ func main() {
 		fmt.Println(version.GetFullVersion())
 	case "gen_keys":
 		generateKeysPair(out)
-	case "gen_certificates":
+	case "gen_certificate":
 		generateCertificates(out)
 	case "send_request":
 		sendRequest(out)
