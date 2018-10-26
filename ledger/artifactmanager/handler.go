@@ -325,7 +325,8 @@ func (h *MessageHandler) handleUpdateObject(pulseNumber core.PulseNumber, ctx co
 
 	var idx *index.ObjectLifeline
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err := getObjectIndex(tx, &objectID, true)
+		var err error
+		idx, err = getObjectIndex(tx, &objectID, true)
 		if err != nil {
 			return err
 		}

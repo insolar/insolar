@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -49,14 +48,14 @@ func TestDB_SetRecord(t *testing.T) {
 	defer cleaner()
 
 	rec := &record.CallRequest{}
-	gotRef, err := db.SetRecord(rec)
+	gotRef, err := db.SetRecord(core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(t, err)
 
 	gotRec, err := db.GetRecord(gotRef)
 	assert.Nil(t, err)
 	assert.Equal(t, rec, gotRec)
 
-	_, err = db.SetRecord(rec)
+	_, err = db.SetRecord(core.GenesisPulse.PulseNumber, rec)
 	assert.Equalf(t, err, storage.ErrOverride, "records override should be forbidden")
 }
 
