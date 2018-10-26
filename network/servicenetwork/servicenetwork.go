@@ -48,7 +48,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	network := &ServiceNetwork{}
 
 	// workaround before DI
-	cert, err := certificate.NewCertificate(conf.KeysPath)
+	cert, err := certificate.NewCertificate(conf.KeysPath, conf.CertificatePath)
 	if err != nil {
 		log.Warnf("failed to read certificate: %s", err.Error())
 	}
@@ -106,7 +106,7 @@ func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
 }
 
 // Start implements core.Component
-func (n *ServiceNetwork) Start(insctx core.Context, components core.Components) error {
+func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) error {
 	n.inject(components)
 	go n.listen()
 
@@ -137,7 +137,7 @@ func (n *ServiceNetwork) inject(components core.Components) {
 }
 
 // Stop implements core.Component
-func (n *ServiceNetwork) Stop(insctx core.Context) error {
+func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return n.hostNetwork.Disconnect()
 }
 
@@ -157,6 +157,7 @@ func (n *ServiceNetwork) listen() {
 }
 
 func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
+	ctx := context.TODO()
 	if n.pulseManager == nil {
 		log.Error("PulseManager is not initialized")
 		return
@@ -179,7 +180,7 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 			if network.coordinator == nil {
 				return
 			}
-			err := network.coordinator.WriteActiveNodes(pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
+			err := network.coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
 			if err != nil {
 				log.Warn("Writing active nodes to ledger: " + err.Error())
 			}

@@ -17,10 +17,11 @@
 package artifactmanager
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 )
 
@@ -47,7 +48,7 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 
 // Code returns code data.
 func (d *CodeDescriptor) Code() ([]byte, error) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	if d.cache.code == nil {
 		desc, err := d.am.GetCode(ctx, d.ref)
 		if err != nil {
@@ -135,7 +136,7 @@ func (d *ObjectDescriptor) Memory() []byte {
 
 // Children returns object's children references.
 func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, error) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	return d.am.GetChildren(ctx, d.head, pulse)
 }
 
@@ -213,7 +214,7 @@ func (i *ChildIterator) fetch() error {
 		return errors.New("failed to fetch record")
 	}
 	genericReply, err := i.messageBus.Send(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.GetChildren{
 			Parent:    i.parent,
 			FromPulse: i.fromPulse,

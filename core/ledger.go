@@ -16,6 +16,8 @@
 
 package core
 
+import "context"
+
 // JetRole is number representing a node role.
 type JetRole int
 
@@ -72,88 +74,91 @@ type ArtifactManager interface {
 
 	// RegisterRequest creates or check call request record and returns it RecordRef.
 	// (used by VM on executing side)
-	RegisterRequest(ctx Context, message Message) (*RecordID, error)
+	RegisterRequest(ctx context.Context, message Message) (*RecordID, error)
+
+	// RegisterValidation marks provided object state as approved or disapproved.
+	//
+	// When fetching object, validity can be specified.
+	RegisterValidation(ctx context.Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
+
+	// RegisterResult saves VM method call result.
+	RegisterResult(ctx context.Context, request RecordRef, payload []byte) (*RecordID, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
-	GetCode(ctx Context, ref RecordRef) (CodeDescriptor, error)
+	GetCode(ctx context.Context, ref RecordRef) (CodeDescriptor, error)
 
 	// GetClass returns descriptor for provided state.
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetClass(ctx Context, head RecordRef, state *RecordID) (ClassDescriptor, error)
+	GetClass(ctx context.Context, head RecordRef, state *RecordID) (ClassDescriptor, error)
 
 	// GetObject returns descriptor for provided state.
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(ctx Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
+	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
 
 	// GetDelegate returns provided object's delegate reference for provided class.
 	//
 	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
 	// be returned.
-	GetDelegate(ctx Context, head, asClass RecordRef) (*RecordRef, error)
+	GetDelegate(ctx context.Context, head, asClass RecordRef) (*RecordRef, error)
 
 	// GetChildren returns children iterator.
 	//
 	// During iteration children refs will be fetched from remote source (parent object).
-	GetChildren(ctx Context, parent RecordRef, pulse *PulseNumber) (RefIterator, error)
+	GetChildren(ctx context.Context, parent RecordRef, pulse *PulseNumber) (RefIterator, error)
 
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
-	DeclareType(ctx Context, domain, request RecordRef, typeDec []byte) (*RecordID, error)
+	DeclareType(ctx context.Context, domain, request RecordRef, typeDec []byte) (*RecordID, error)
 
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate class or as migration code for an object.
-	DeployCode(ctx Context, domain, request RecordRef, code []byte, machineType MachineType) (*RecordID, error)
+	DeployCode(ctx context.Context, domain, request RecordRef, code []byte, machineType MachineType) (*RecordID, error)
 
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 	//
 	// Request reference will be this class'es identifier and referred as "class head".
-	ActivateClass(ctx Context, domain, request, code RecordRef, machineType MachineType) (*RecordID, error)
+	ActivateClass(ctx context.Context, domain, request, code RecordRef, machineType MachineType) (*RecordID, error)
 
 	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
 	// the class. If class is already deactivated, an error should be returned.
 	//
 	// Deactivated class cannot be changed or instantiate objects.
-	DeactivateClass(ctx Context, domain, request, class RecordRef, state RecordID) (*RecordID, error)
+	DeactivateClass(ctx context.Context, domain, request, class RecordRef, state RecordID) (*RecordID, error)
 
 	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 	// the class. Migrations are references to code records.
 	//
 	// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
 	// migrate objects memory in the order they appear in provided slice.
-	UpdateClass(ctx Context, domain, request, class, code RecordRef, machineType MachineType, state RecordID) (*RecordID, error)
+	UpdateClass(ctx context.Context, domain, request, class, code RecordRef, machineType MachineType, state RecordID) (*RecordID, error)
 
 	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's class.
 	// If memory is not provided, the class default memory will be used.
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(
-		ctx Context, domain, request, class, parent RecordRef, asDelegate bool, memory []byte,
+		ctx context.Context, domain, request, class, parent RecordRef, asDelegate bool, memory []byte,
 	) (ObjectDescriptor, error)
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor) (*RecordID, error)
+	DeactivateObject(ctx context.Context, domain, request RecordRef, obj ObjectDescriptor) (*RecordID, error)
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
-
-	// RegisterValidation marks provided object state as approved or disapproved.
-	//
-	// When fetching object, validity can be specified.
-	RegisterValidation(ctx Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
+	UpdateObject(ctx context.Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.

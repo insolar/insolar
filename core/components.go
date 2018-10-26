@@ -16,10 +16,12 @@
 
 package core
 
+import "context"
+
 // Component controller methods
 type Component interface {
-	Start(ctx Context, components Components) error
-	Stop(ctx Context) error
+	Start(ctx context.Context, components Components) error
+	Stop(ctx context.Context) error
 }
 
 // Components is a registry for other core interfaces

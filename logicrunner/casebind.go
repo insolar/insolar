@@ -20,11 +20,11 @@ package logicrunner
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
@@ -83,6 +83,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		if start.Type != core.CaseRecordTypeStart {
 			return step, errors.New("step between two shores")
 		}
+
 		ret, err := lr.Execute(es.insContext, start.Resp.(core.Message))
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
@@ -114,14 +115,14 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 	}
 }
-func (lr *LogicRunner) ValidateCaseBind(ctx core.Context, inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Message) (core.Reply, error) {
 	msg, ok := inmsg.(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
 	_, err := lr.MessageBus.Send(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.ValidationResults{
 			Caller:           lr.Network.GetNodeID(),
 			RecordRef:        msg.GetReference(),
@@ -149,7 +150,7 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 	return c, ok
 }
 
-func (lr *LogicRunner) ProcessValidationResults(ctx core.Context, inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.Message) (core.Reply, error) {
 	msg, ok := inmsg.(*message.ValidationResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
@@ -159,7 +160,7 @@ func (lr *LogicRunner) ProcessValidationResults(ctx core.Context, inmsg core.Mes
 	return nil, nil
 }
 
-func (lr *LogicRunner) ExecutorResults(ctx core.Context, inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Message) (core.Reply, error) {
 	msg, ok := inmsg.(*message.ExecutorResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
@@ -184,7 +185,7 @@ type ValidationSaver struct {
 }
 
 func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
 	if err != nil {
 		return nil, err

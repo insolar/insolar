@@ -18,6 +18,7 @@ package functest
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -26,7 +27,6 @@ import (
 
 	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -196,7 +196,7 @@ type response struct {
 }
 
 func signedRequest(user *user, method string, params ...interface{}) (interface{}, error) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	rootCfg, err := requesters.CreateUserConfig(user.ref, user.privKey)
 	if err != nil {
 		return nil, err

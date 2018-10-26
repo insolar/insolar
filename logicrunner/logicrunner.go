@@ -19,6 +19,7 @@ package logicrunner
 
 import (
 	"bytes"
+	"context"
 	"net"
 	"sync"
 	"time"
@@ -29,7 +30,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -88,7 +88,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 // Start starts logic runner component
-func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
+func (lr *LogicRunner) Start(ctx context.Context, c core.Components) error {
 	am := c.Ledger.GetArtifactManager()
 	lr.ArtifactManager = am
 	messageBus := c.MessageBus
@@ -141,7 +141,7 @@ func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
 }
 
 // Stop stops logic runner component and its executors
-func (lr *LogicRunner) Stop(ctx core.Context) error {
+func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
 	for _, e := range lr.Executors {
 		if e == nil {
@@ -163,7 +163,7 @@ func (lr *LogicRunner) Stop(ctx core.Context) error {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Message) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.(message.IBaseLogicMessage)
 	if !ok {
@@ -436,7 +436,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// send copy for validation
 	for ref, records := range objectsRecords {
 		_, err := lr.MessageBus.Send(
-			inscontext.TODO(),
+			context.TODO(),
 			&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse},
 		)
 		if err != nil {
@@ -444,7 +444,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 		}
 
 		temp := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
-		_, err = lr.MessageBus.Send(inscontext.TODO(), &temp)
+		_, err = lr.MessageBus.Send(context.TODO(), &temp)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}
