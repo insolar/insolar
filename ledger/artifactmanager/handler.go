@@ -86,8 +86,7 @@ func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Messa
 	}
 
 	msg := genericMsg.(*message.SetRecord)
-
-	id, err := h.db.SetRecord(record.DeserializeRecord(msg.Record))
+	id, err := h.db.SetRecord(lastPulse, record.DeserializeRecord(msg.Record))
 	if err != nil {
 		return nil, err
 	}

@@ -129,7 +129,11 @@ func (db *DB) Bootstrap() error {
 			return nil, err
 		}
 
-		genesisID, err := db.SetRecord(&record.GenesisRecord{})
+		lastPulse, err := db.GetLatestPulseNumber()
+		if err != nil {
+			return nil, err
+		}
+		genesisID, err := db.SetRecord(lastPulse, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
@@ -204,13 +208,13 @@ func (db *DB) GetRecord(id *record.ID) (record.Record, error) {
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(rec record.Record) (*record.ID, error) {
+func (db *DB) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*record.ID, error) {
 	var (
 		id  *record.ID
 		err error
 	)
 	err = db.Update(func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(rec)
+		id, err = tx.SetRecord(pulseNumber, rec)
 		return err
 	})
 	if err != nil {
