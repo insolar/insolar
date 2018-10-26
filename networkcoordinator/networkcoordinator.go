@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 )
 
@@ -65,7 +64,7 @@ func RandomUint64() uint64 {
 	return binary.LittleEndian.Uint64(buf)
 }
 
-func (nc *NetworkCoordinator) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
+func (nc *NetworkCoordinator) routeCall(ctx core.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
 	if nc.messageBus == nil {
 		return nil, errors.New("[ NetworkCoordinator::routeCall ] message bus was not set during initialization")
 	}
@@ -77,7 +76,7 @@ func (nc *NetworkCoordinator) routeCall(ref core.RecordRef, method string, args 
 		Arguments:        args,
 	}
 
-	res, err := nc.messageBus.Send(inscontext.TODO(), e)
+	res, err := nc.messageBus.Send(ctx, e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NetworkCoordinator::routeCall ] couldn't send message: "+ref.String())
 	}
@@ -85,13 +84,13 @@ func (nc *NetworkCoordinator) routeCall(ref core.RecordRef, method string, args 
 	return res, nil
 }
 
-func (nc *NetworkCoordinator) sendRequest(ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
+func (nc *NetworkCoordinator) sendRequest(ctx core.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NetworkCoordinator::sendRequest ]")
 	}
 
-	routResult, err := nc.routeCall(*ref, method, args)
+	routResult, err := nc.routeCall(ctx, *ref, method, args)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NetworkCoordinator::sendRequest ]")
 	}
@@ -99,9 +98,9 @@ func (nc *NetworkCoordinator) sendRequest(ref *core.RecordRef, method string, ar
 	return routResult, nil
 }
 
-func (nc *NetworkCoordinator) getNodeDomainRef() (*core.RecordRef, error) {
+func (nc *NetworkCoordinator) getNodeDomainRef(ctx core.Context) (*core.RecordRef, error) {
 	if nc.nodeDomainRef == nil {
-		nodeDomainRef, err := nc.fetchNodeDomainRef()
+		nodeDomainRef, err := nc.fetchNodeDomainRef(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ getNodeDomainRef ] can't fetch nodeDomainRef")
 		}
@@ -110,8 +109,8 @@ func (nc *NetworkCoordinator) getNodeDomainRef() (*core.RecordRef, error) {
 	return nc.nodeDomainRef, nil
 }
 
-func (nc *NetworkCoordinator) fetchNodeDomainRef() (*core.RecordRef, error) {
-	routResult, err := nc.sendRequest(nc.rootDomainRef, "GetNodeDomainRef", []interface{}{})
+func (nc *NetworkCoordinator) fetchNodeDomainRef(ctx core.Context) (*core.RecordRef, error) {
+	routResult, err := nc.sendRequest(ctx, nc.rootDomainRef, "GetNodeDomainRef", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't send request")
 	}
@@ -125,18 +124,18 @@ func (nc *NetworkCoordinator) fetchNodeDomainRef() (*core.RecordRef, error) {
 }
 
 // WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) WriteActiveNodes(number core.PulseNumber, activeNodes []*core.Node) error {
+func (nc *NetworkCoordinator) WriteActiveNodes(ctx core.Context, number core.PulseNumber, activeNodes []*core.Node) error {
 	return errors.New("not implemented")
 }
 
 // Authorize authorizes node by verifying it's signature
-func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
-	nodeDomainRef, err := nc.getNodeDomainRef()
+func (nc *NetworkCoordinator) Authorize(ctx core.Context, nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
+	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "[ Authorize ] Can't get nodeDomainRef")
 	}
 
-	routResult, err := nc.sendRequest(nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
+	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
 
 	if err != nil {
 		return "", nil, errors.Wrap(err, "[ Authorize ] Can't send request")
@@ -151,12 +150,12 @@ func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, sig
 }
 
 // RegisterNode registers node in nodedomain
-func (nc *NetworkCoordinator) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
-	nodeDomainRef, err := nc.getNodeDomainRef()
+func (nc *NetworkCoordinator) RegisterNode(ctx core.Context, publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't get nodeDomainRef")
 	}
-	routResult, err := nc.sendRequest(nodeDomainRef, "RegisterNode", []interface{}{publicKey, numberOfBootstrapNodes, majorityRule, roles, ip})
+	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKey, numberOfBootstrapNodes, majorityRule, roles, ip})
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")
