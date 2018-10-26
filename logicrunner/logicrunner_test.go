@@ -24,6 +24,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/testutils/nodekeeper"
+
+	"github.com/insolar/insolar/testutils/network"
+
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/contract/rootdomain"
@@ -37,11 +41,8 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 )
@@ -72,6 +73,7 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicR
 }
 
 func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
+	ctx := inscontext.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
@@ -88,16 +90,24 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	c := core.Components{LogicRunner: lr}
+	nk := nodekeeper.GetTestNodekeeper()
+	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
+
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	mb := testmessagebus.NewTestMessageBus()
-	assert.NoError(t, lr.Start(core.Components{
+
+	nw := network.GetTestNetwork()
+
+	assert.NoError(t, lr.Start(ctx, core.Components{
 		Ledger:     l,
 		MessageBus: mb,
+		Network:    nw,
 	}), "starting logicrunner")
+
 	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
-	err = pm.Set(*pulsar.NewPulse(0, 10, &entropygenerator.StandardEntropyGenerator{}))
+	err = lr.Ledger.GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
+	//err = pm.Set(*pulsar.NewPulse(0, 10, &entropygenerator.StandardEntropyGenerator{}))
 	assert.NoError(t, err)
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
@@ -107,7 +117,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 
 	return lr, am, cb, pm, func() {
 		cb.Clean()
-		lr.Stop()
+		lr.Stop(ctx)
 		cleaner()
 		rundCleaner()
 	}
@@ -124,8 +134,7 @@ func ValidateAllResults(t testing.TB, lr core.LogicRunner, mustfail ...core.Reco
 	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
 	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
-		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.Pulse.PulseNumber), "right pulsenumber")
-		vstep, err := lr.Validate(ref, rlr.Pulse, cr)
+		vstep, err := lr.Validate(ref, *rlr.pulse(), cr)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation")
 			assert.True(t, len(cr) > vstep, "Validation failed before end")
@@ -155,63 +164,6 @@ type testResp struct {
 	err  error
 }
 
-func newTestExecutor() *testExecutor {
-	return &testExecutor{
-		constructorResponses: make([]*testResp, 0),
-		methodResponses:      make([]*testResp, 0),
-	}
-}
-
-func (r *testExecutor) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
-	if len(r.methodResponses) < 1 {
-		panic(errors.New("no expected 'CallMethod' calls"))
-	}
-
-	res := r.methodResponses[0]
-	r.methodResponses = r.methodResponses[1:]
-	return res.data, res.res, res.err
-}
-
-func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
-	if len(r.constructorResponses) < 1 {
-		panic(errors.New("no expected 'CallConstructor' calls"))
-	}
-
-	res := r.constructorResponses[0]
-	r.constructorResponses = r.constructorResponses[1:]
-	return res.data, res.err
-}
-
-func TestBasics(t *testing.T) {
-	if parallel {
-		t.Parallel()
-	}
-	lr, err := NewLogicRunner(&configuration.LogicRunner{})
-	assert.NoError(t, err)
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-
-	mb := testmessagebus.NewTestMessageBus()
-	comps := core.Components{
-		Ledger:     &testLedger{am: goplugintestutils.NewTestArtifactManager()},
-		MessageBus: mb,
-	}
-	assert.NoError(t, lr.Start(comps))
-	assert.IsType(t, &LogicRunner{}, lr)
-	MessageBusTrivialBehavior(mb, lr)
-
-	_, err = lr.GetExecutor(core.MachineTypeGoPlugin)
-	assert.Error(t, err)
-
-	te := newTestExecutor()
-
-	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
-	assert.NoError(t, err)
-
-	te2, err := lr.GetExecutor(core.MachineTypeGoPlugin)
-	assert.NoError(t, err)
-	assert.Equal(t, te, te2)
-}
-
 func getRefFromID(id *core.RecordID) *core.RecordRef {
 	ref := core.RecordRef{}
 	ref.SetRecord(*id)
@@ -220,6 +172,7 @@ func getRefFromID(id *core.RecordID) *core.RecordRef {
 
 type testLedger struct {
 	am core.ArtifactManager
+	jc core.JetCoordinator
 }
 
 func (r *testLedger) GetPulseManager() core.PulseManager {
@@ -227,7 +180,7 @@ func (r *testLedger) GetPulseManager() core.PulseManager {
 }
 
 func (r *testLedger) GetJetCoordinator() core.JetCoordinator {
-	panic("implement me")
+	return r.jc
 }
 
 func (r *testLedger) Start(components core.Components) error   { return nil }
@@ -236,51 +189,6 @@ func (r *testLedger) GetArtifactManager() core.ArtifactManager { return r.am }
 
 func (r *testLedger) HandleMessage(core.Message) (core.Reply, error) {
 	panic("implement me")
-}
-
-func TestExecution(t *testing.T) {
-	if parallel {
-		t.Parallel()
-	}
-	am := goplugintestutils.NewTestArtifactManager()
-	ld := &testLedger{am: am}
-	lr, err := NewLogicRunner(&configuration.LogicRunner{})
-	assert.NoError(t, err)
-	mb := testmessagebus.NewTestMessageBus()
-	MessageBusTrivialBehavior(mb, lr)
-	lr.Start(core.Components{
-		Ledger:     ld,
-		MessageBus: mb,
-	})
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-
-	codeRef := core.NewRefFromBase58("someCode")
-	dataRef := core.NewRefFromBase58("someObject")
-	classRef := core.NewRefFromBase58("someClass")
-	am.Objects[dataRef] = &goplugintestutils.TestObjectDescriptor{
-		AM:     am,
-		ARef:   &dataRef,
-		Data:   []byte("origData"),
-		Code:   &codeRef,
-		AClass: &classRef,
-	}
-	am.Classes[classRef] = &goplugintestutils.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
-	am.Codes[codeRef] = &goplugintestutils.TestCodeDescriptor{ARef: codeRef, AMachineType: core.MachineTypeGoPlugin}
-
-	te := newTestExecutor()
-	te.methodResponses = append(te.methodResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
-
-	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
-	assert.NoError(t, err)
-
-	resp, err := lr.Execute(inscontext.TODO(), &message.CallMethod{ObjectRef: dataRef})
-	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*reply.CallMethod).Data)
-	assert.Equal(t, []byte("res"), resp.(*reply.CallMethod).Result)
-
-	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
-	resp, err = lr.Execute(inscontext.TODO(), &message.CallConstructor{ClassRef: classRef})
-	assert.NoError(t, err)
 }
 
 func TestContractCallingContract(t *testing.T) {
@@ -953,6 +861,7 @@ func (c *Contract) Rand() (int, error) {
 		)
 		assert.NoError(t, err, "contract call")
 	}
+
 	ValidateAllResults(t, lr, *contract)
 }
 
@@ -1366,7 +1275,7 @@ func New(n int) (*Child, error) {
 }
 `
 	ctx := inscontext.TODO()
-	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
 	err := cb.Build(map[string]string{"child": goChild, "contract": goContract})
@@ -1411,10 +1320,8 @@ func New(n int) (*Child, error) {
 		toCheckValidate = append(toCheckValidate, m)
 		return nil, nil
 	})
-	current, err := pm.Current()
-	assert.NoError(t, err)
-	// end of pulse, now send everything to right places
-	err = pm.Set(*pulsar.NewPulse(10, current.PulseNumber, &entropygenerator.StandardEntropyGenerator{}))
+
+	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}})
 	assert.NoError(t, err)
 
 	for _, m := range toValidate {

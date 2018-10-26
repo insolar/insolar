@@ -45,7 +45,7 @@ type LogicRunner interface {
 	ValidateCaseBind(Context, Message) (res Reply, err error)
 	ProcessValidationResults(Context, Message) (res Reply, err error)
 	ExecutorResults(Context, Message) (res Reply, err error)
-	Validate(ref RecordRef, p Pulse, cr []CaseRecord) (int, error) // TODO hide?
+	Validate(ref RecordRef, p Pulse, cr []CaseRecord) (int, error)
 	OnPulse(Pulse) error
 }
 

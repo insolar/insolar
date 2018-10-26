@@ -83,13 +83,13 @@ type ArtifactManager interface {
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetClass(ctx Context, head RecordRef, state *RecordRef) (ClassDescriptor, error)
+	GetClass(ctx Context, head RecordRef, state *RecordID) (ClassDescriptor, error)
 
 	// GetObject returns descriptor for provided state.
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(ctx Context, head RecordRef, state *RecordRef) (ObjectDescriptor, error)
+	GetObject(ctx Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
 
 	// GetDelegate returns provided object's delegate reference for provided class.
 	//
@@ -148,7 +148,12 @@ type ArtifactManager interface {
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (*RecordID, error)
+	UpdateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
+
+	// RegisterValidation marks provided object state as approved or disapproved.
+	//
+	// When fetching object, validity can be specified.
+	RegisterValidation(ctx Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.

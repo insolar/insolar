@@ -17,6 +17,9 @@
 package networkcoordinator
 
 import (
+	"crypto/rand"
+	"encoding/binary"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -38,7 +41,7 @@ func New() (*NetworkCoordinator, error) {
 }
 
 // Start implements interface of Component
-func (nc *NetworkCoordinator) Start(c core.Components) error {
+func (nc *NetworkCoordinator) Start(ctx core.Context, c core.Components) error {
 	nc.logicRunner = c.LogicRunner
 	nc.messageBus = c.MessageBus
 	nc.rootDomainRef = c.Bootstrapper.GetRootDomainRef()
@@ -47,8 +50,19 @@ func (nc *NetworkCoordinator) Start(c core.Components) error {
 }
 
 // Stop implements interface of Component
-func (nc *NetworkCoordinator) Stop() error {
+func (nc *NetworkCoordinator) Stop(ctx core.Context) error {
 	return nil
+}
+
+// RandomUint64 generates random uint64
+func RandomUint64() uint64 {
+	buf := make([]byte, 8)
+	_, err := rand.Read(buf)
+	if err != nil {
+		panic(err)
+	}
+
+	return binary.LittleEndian.Uint64(buf)
 }
 
 func (nc *NetworkCoordinator) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
@@ -57,9 +71,10 @@ func (nc *NetworkCoordinator) routeCall(ref core.RecordRef, method string, args 
 	}
 
 	e := &message.CallMethod{
-		ObjectRef: ref,
-		Method:    method,
-		Arguments: args,
+		BaseLogicMessage: message.BaseLogicMessage{Nonce: RandomUint64()},
+		ObjectRef:        ref,
+		Method:           method,
+		Arguments:        args,
 	}
 
 	res, err := nc.messageBus.Send(inscontext.TODO(), e)
@@ -110,7 +125,7 @@ func (nc *NetworkCoordinator) fetchNodeDomainRef() (*core.RecordRef, error) {
 }
 
 // WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) WriteActiveNodes(number core.PulseNumber, activeNodes []*core.ActiveNode) error {
+func (nc *NetworkCoordinator) WriteActiveNodes(number core.PulseNumber, activeNodes []*core.Node) error {
 	return errors.New("not implemented")
 }
 

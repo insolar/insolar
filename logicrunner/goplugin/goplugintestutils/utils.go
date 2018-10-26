@@ -189,7 +189,7 @@ func (t *TestArtifactManager) RegisterRequest(ctx core.Context, message core.Mes
 }
 
 // GetClass implementation for tests
-func (t *TestArtifactManager) GetClass(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
+func (t *TestArtifactManager) GetClass(ctx core.Context, object core.RecordRef, state *core.RecordID) (core.ClassDescriptor, error) {
 	res, ok := t.Classes[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -198,7 +198,7 @@ func (t *TestArtifactManager) GetClass(ctx core.Context, object core.RecordRef, 
 }
 
 // GetObject implementation for tests
-func (t *TestArtifactManager) GetObject(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
+func (t *TestArtifactManager) GetObject(ctx core.Context, object core.RecordRef, state *core.RecordID, approved bool) (core.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -326,7 +326,7 @@ func (t *TestArtifactManager) UpdateObject(
 	request core.RecordRef,
 	object core.ObjectDescriptor,
 	memory []byte,
-) (*core.RecordID, error) {
+) (core.ObjectDescriptor, error) {
 	objDesc, ok := t.Objects[*object.HeadRef()]
 	if !ok {
 		return nil, errors.New("No object to update")
@@ -335,7 +335,18 @@ func (t *TestArtifactManager) UpdateObject(
 	objDesc.Data = memory
 
 	// TODO: return real exact "ref"
-	return &core.RecordID{}, nil
+	return objDesc, nil
+}
+
+// RegisterValidation implementation for tests
+func (t *TestArtifactManager) RegisterValidation(
+	ctx core.Context,
+	object core.RecordRef,
+	state core.RecordID,
+	isValid bool,
+	validationMessages []core.Message,
+) error {
+	panic("implement me")
 }
 
 // CBORMarshal - testing serialize helper

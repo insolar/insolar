@@ -71,7 +71,7 @@ func (e *GetCode) Target() *core.RecordRef {
 type GetClass struct {
 	ledgerMessage
 	Head  core.RecordRef
-	State *core.RecordRef // If nil, will fetch the latest state.
+	State *core.RecordID // If nil, will fetch the latest state.
 }
 
 // Type implementation of Message interface.
@@ -87,8 +87,9 @@ func (e *GetClass) Target() *core.RecordRef {
 // GetObject retrieves object from storage.
 type GetObject struct {
 	ledgerMessage
-	Head  core.RecordRef
-	State *core.RecordRef // If nil, will fetch the latest state.
+	Head     core.RecordRef
+	State    *core.RecordID // If nil, will fetch the latest state.
+	Approved bool
 }
 
 // Type implementation of Message interface.
@@ -229,4 +230,29 @@ func (e *JetDrop) Target() *core.RecordRef {
 // TargetRole implementation of Message interface.
 func (JetDrop) TargetRole() core.JetRole {
 	return core.RoleLightValidator
+}
+
+// ValidateRecord creates VM validation for specific object record.
+type ValidateRecord struct {
+	ledgerMessage
+
+	Object             core.RecordRef
+	State              core.RecordID
+	IsValid            bool
+	ValidationMessages []core.Message
+}
+
+// Type implementation of Message interface.
+func (*ValidateRecord) Type() core.MessageType {
+	return core.TypeValidateRecord
+}
+
+// Target implementation of Message interface.
+func (m *ValidateRecord) Target() *core.RecordRef {
+	return &m.Object
+}
+
+// TargetRole implementation of Message interface.
+func (*ValidateRecord) TargetRole() core.JetRole {
+	return core.RoleLightExecutor
 }

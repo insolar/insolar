@@ -23,5 +23,5 @@ type NetworkCoordinator interface {
 	// RegisterNode registers node in nodedomain
 	RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error)
 	// WriteActiveNodes write active nodes to ledger
-	WriteActiveNodes(number PulseNumber, activeNodes []*ActiveNode) error
+	WriteActiveNodes(number PulseNumber, activeNodes []*Node) error
 }

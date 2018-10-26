@@ -20,15 +20,12 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"reflect"
-	"sync/atomic"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/pkg/errors"
@@ -75,7 +72,6 @@ func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
 
 // RequestHandler encapsulate processing of request
 type RequestHandler struct {
-	qid                 string
 	params              *Params
 	messageBus          core.MessageBus
 	rootDomainReference core.RecordRef
@@ -87,7 +83,6 @@ type RequestHandler struct {
 // NewRequestHandler creates new query handler
 func NewRequestHandler(params *Params, messageBus core.MessageBus, nc core.NetworkCoordinator, rootDomainReference core.RecordRef, smanager *seedmanager.SeedManager) *RequestHandler {
 	return &RequestHandler{
-		qid:                 params.QID,
 		params:              params,
 		messageBus:          messageBus,
 		rootDomainReference: rootDomainReference,
@@ -96,13 +91,13 @@ func NewRequestHandler(params *Params, messageBus core.MessageBus, nc core.Netwo
 	}
 }
 
-func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reply, error) {
+func (rh *RequestHandler) sendRequest(ctx core.Context, method string, argsIn []interface{}) (core.Reply, error) {
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
 	}
 
-	routResult, err := rh.routeCall(rh.rootDomainReference, method, args)
+	routResult, err := rh.routeCall(ctx, rh.rootDomainReference, method, args)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
 	}
@@ -110,22 +105,19 @@ func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core
 	return routResult, nil
 }
 
-// TODO: make it ok
-var serial uint64 = 1
-
-func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
+func (rh *RequestHandler) routeCall(ctx core.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
 	if rh.messageBus == nil {
 		return nil, errors.New("[ RouteCall ] message bus was not set during initialization")
 	}
 
 	e := &message.CallMethod{
-		BaseLogicMessage: message.BaseLogicMessage{Nonce: atomicLoadAndIncrementUint64(&serial)},
+		BaseLogicMessage: message.BaseLogicMessage{Nonce: networkcoordinator.RandomUint64()},
 		ObjectRef:        ref,
 		Method:           method,
 		Arguments:        args,
 	}
 
-	res, err := rh.messageBus.Send(inscontext.TODO(), e)
+	res, err := rh.messageBus.Send(ctx, e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't send message")
 	}
@@ -133,173 +125,8 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 	return res, nil
 }
 
-// ProcessCreateMember processes CreateMember query type
-func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-
-	if len(rh.params.Name) == 0 {
-		return nil, errors.New("field 'name' is required")
-	}
-	if len(rh.params.PublicKey) == 0 {
-		return nil, errors.New("field 'public_key' is required")
-	}
-
-	routResult, err := rh.sendRequest("CreateMember", []interface{}{rh.params.Name, rh.params.PublicKey})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
-	}
-
-	memberRef, err := extractStringResponse(routResult.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
-	}
-
-	result[REFERENCE] = memberRef
-
-	return result, nil
-}
-
-func extractGetBalanceResponse(data []byte) (uint, error) {
-	var typeHolder uint
-	dataUnmarsh, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
-	if err != nil {
-		return 0, errors.Wrap(err, "[ extractGetBalanceResponse ]")
-	}
-
-	if _, ok := dataUnmarsh[0].(uint64); ok {
-		return (uint)(dataUnmarsh[0].(uint64)), nil
-	}
-	if balance, ok := dataUnmarsh[0].(uint); ok {
-		return balance, nil
-	}
-
-	msg := fmt.Sprintf("Can't cast response to uint. orig: %s", reflect.TypeOf(dataUnmarsh[0]).String())
-	return 0, errors.New(msg)
-}
-
-// ProcessGetBalance processes get_balance query type
-func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	result["currency"] = "RUB"
-
-	if len(rh.params.Reference) == 0 {
-		return nil, errors.New("field 'reference' is required")
-	}
-
-	routResult, err := rh.sendRequest("GetBalance", []interface{}{rh.params.Reference})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
-	}
-
-	amount, err := extractGetBalanceResponse(routResult.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
-	}
-
-	result["amount"] = amount
-
-	return result, nil
-}
-
-func extractBoolResponse(data []byte) (bool, error) {
-	var typeHolder bool
-	dataUnmarsh, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
-	if err != nil {
-		return false, errors.Wrap(err, "[ extractBoolResponse ]")
-	}
-
-	isSent, ok := dataUnmarsh[0].(bool)
-	if !ok {
-		msg := fmt.Sprintf("Can't cast response to bool. orig: %T", dataUnmarsh)
-		return false, errors.New(msg)
-	}
-
-	return isSent, nil
-}
-
-// ProcessSendMoney processes send_money query type
-func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-
-	if len(rh.params.From) == 0 {
-		return nil, errors.New("field 'from' is required")
-	}
-
-	if len(rh.params.To) == 0 {
-		return nil, errors.New("field 'from' is required")
-	}
-	if rh.params.Amount == 0 {
-		return nil, errors.New("field 'amount' is required")
-	}
-
-	routResult, err := rh.sendRequest("SendMoney", []interface{}{rh.params.From, rh.params.To, rh.params.Amount})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
-	}
-
-	isSent, err := extractBoolResponse(routResult.(*reply.CallMethod).Result)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
-	}
-
-	result["success"] = isSent
-
-	return result, nil
-}
-
-func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
-	var typeHolder []byte
-	dataUnmarsh, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ extractDumpAllUsersResponse ]")
-	}
-
-	dumpJSON, ok := dataUnmarsh[0].([]byte)
-	if !ok {
-		msg := fmt.Sprintf("Can't cast response to []byte. orig: %s", reflect.TypeOf(dataUnmarsh[0]))
-		return nil, errors.New(msg)
-	}
-
-	return dumpJSON, nil
-}
-
-// ProcessDumpUsers processes Dump users query type
-func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-
-	var err error
-	var routResult core.Reply
-	if all {
-		routResult, err = rh.sendRequest("DumpAllUsers", []interface{}{})
-	} else {
-		if len(rh.params.Reference) == 0 {
-			return nil, errors.New("field 'reference' is required")
-		}
-		routResult, err = rh.sendRequest("DumpUserInfo", []interface{}{rh.params.Reference})
-	}
-
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
-	}
-
-	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
-	}
-
-	var dumpInfo interface{}
-	err = json.Unmarshal(serJSONDump, &dumpInfo)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
-	}
-	result["dump_info"] = dumpInfo
-
-	return result, nil
-}
-
 // ProcessRegisterNode process register node response
-func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessRegisterNode(ctx core.Context) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	if len(rh.params.PublicKey) == 0 {
@@ -314,7 +141,7 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.New("field 'host' is required")
 	}
 
-	routResult, err := rh.sendRequest("RegisterNode",
+	routResult, err := rh.sendRequest(ctx, "RegisterNode",
 		[]interface{}{rh.params.PublicKey, rh.params.NumberOfBootstrapNodes,
 			rh.params.MajorityRule, rh.params.Roles, rh.params.Host})
 	if err != nil {
@@ -339,11 +166,11 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 }
 
 // ProcessIsAuthorized processes is_auth query type
-func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]interface{}, error) {
 
 	// Check calling smart contract
 	result := make(map[string]interface{})
-	routResult, err := rh.sendRequest("Authorize", []interface{}{})
+	routResult, err := rh.sendRequest(ctx, "Authorize", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
@@ -400,7 +227,7 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 }
 
 // ProcessGetSeed processes get seed request
-func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessGetSeed(ctx core.Context) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	seed, err := rh.seedGenerator.Next()
 	if err != nil {
@@ -411,14 +238,4 @@ func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
 	result[SEED] = seed[:]
 
 	return result, nil
-}
-
-// atomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
-	}
 }
