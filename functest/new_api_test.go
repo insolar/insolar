@@ -17,6 +17,7 @@
 package functest
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -46,9 +47,10 @@ func contractError(body []byte) error {
 }
 
 func TestBadSeed(t *testing.T) {
+	ctx := context.TODO()
 	rootCfg, err := requesters.CreateUserConfig(root.ref, root.privKey)
 	assert.NoError(t, err)
-	res, err := requesters.SendWithSeed(TestCallUrl, rootCfg, &requesters.RequestConfigJSON{
+	res, err := requesters.SendWithSeed(ctx, TestCallUrl, rootCfg, &requesters.RequestConfigJSON{
 		Method: "CreateMember",
 		Params: nil,
 	}, []byte("111"))
@@ -57,9 +59,10 @@ func TestBadSeed(t *testing.T) {
 }
 
 func TestIncorrectSeed(t *testing.T) {
+	ctx := context.TODO()
 	rootCfg, err := requesters.CreateUserConfig(root.ref, root.privKey)
 	assert.NoError(t, err)
-	res, err := requesters.SendWithSeed(TestCallUrl, rootCfg, &requesters.RequestConfigJSON{
+	res, err := requesters.SendWithSeed(ctx, TestCallUrl, rootCfg, &requesters.RequestConfigJSON{
 		Method: "CreateMember",
 		Params: nil,
 	}, []byte("12345678901234567890123456789012"))
