@@ -174,7 +174,7 @@ func TestDB_CreateDrop(t *testing.T) {
 	drop, recData, idxData, err := db.CreateDrop(pulse, []byte{4, 5, 6})
 	assert.NoError(t, err)
 	assert.Equal(t, pulse, drop.Pulse)
-	assert.Equal(t, "qhHkoYwhmhf1oDQscCvZKjq8BQS4ELQicJrFpp", base58.Encode(drop.Hash))
+	assert.Equal(t, "673jhTZ4fFLz26xSYKcfzzCx2ibmUfVHFHw9mC", base58.Encode(drop.Hash))
 	assert.Equal(t, expectedRecData, recData)
 
 	genesisPulseBytes := core.PulseNumber(core.FirstPulseNumber).Bytes()
