@@ -33,7 +33,8 @@ import (
 )
 
 func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
-	inslogger.FromContext(ctx).Debug("[broadcastSignatureOfEntropy]")
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[broadcastSignatureOfEntropy]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -51,10 +52,10 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			inslogger.FromContext(ctx).Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			logger.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 			continue
 		}
-		inslogger.FromContext(ctx).Infof("Sign of Entropy sent to %v", neighbour.ConnectionAddress)
+		logger.Infof("Sign of Entropy sent to %v", neighbour.ConnectionAddress)
 	}
 }
 

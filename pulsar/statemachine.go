@@ -17,10 +17,11 @@
 package pulsar
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 //go:generate stringer -type=State
@@ -45,6 +46,9 @@ const (
 	// WaitingForEntropy means that state machine is waiting for the entropy for other pulsars
 	WaitingForEntropy
 
+	// SendingVector means that state machine is sending verctor to other pulsars
+	SendingVector
+
 	// WaitingForVectors means that state machine is waiting for other pulsars' vectors
 	WaitingForVectors
 
@@ -63,7 +67,7 @@ const (
 
 // StateSwitcher is a base for pulsar's state machine
 type StateSwitcher interface {
-	SwitchToState(state State, args interface{})
+	SwitchToState(ctx context.Context, state State, args interface{})
 	GetState() State
 	setState(state State)
 	SetPulsar(pulsar *Pulsar)
@@ -94,8 +98,9 @@ func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
 	switcher.pulsar = pulsar
 }
 
-func (switcher *StateSwitcherImpl) SwitchToState(state State, args interface{}) {
-	log.Debugf("Switch state from %v to %v, node - %v", switcher.GetState().String(), state.String(), switcher.pulsar.Config.MainListenerAddress)
+func (switcher *StateSwitcherImpl) SwitchToState(ctx context.Context, state State, args interface{}) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("Switch state from %v to %v, node - %v", switcher.GetState().String(), state.String(), switcher.pulsar.Config.MainListenerAddress)
 	if state < switcher.GetState() && (state != WaitingForStart && state != Failed) {
 		panic(fmt.Sprintf("Attempt to set a backward step. %v", switcher.pulsar.Config.MainListenerAddress))
 	}
