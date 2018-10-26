@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -65,7 +66,7 @@ func logTimeInside(start time.Time, funcName string) {
 	}
 }
 
-func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleSetRecord(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.SetRecord)
 
 	id, err := h.db.SetRecord(record.DeserializeRecord(msg.Record))
@@ -76,7 +77,7 @@ func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Messa
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetCode(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
@@ -96,7 +97,7 @@ func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetClass(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetClass)
 	headRef := record.Core2Reference(msg.Head)
@@ -125,7 +126,7 @@ func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Messag
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetObject(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetObject)
 	headRef := record.Core2Reference(msg.Head)
@@ -159,7 +160,7 @@ func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Messa
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetDelegate(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetDelegate)
 	headRef := record.Core2Reference(msg.Head)
@@ -183,7 +184,7 @@ func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Mes
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetChildren(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetChildren)
 	parentRef := record.Core2Reference(msg.Parent)
@@ -236,7 +237,7 @@ func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Mes
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleUpdateClass(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.UpdateClass)
 	classCoreID := msg.Class.GetRecordID()
 	classID := record.Bytes2ID(classCoreID[:])
@@ -278,7 +279,7 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleUpdateObject(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.UpdateObject)
 	objectCoreID := msg.Object.GetRecordID()
 	objectID := record.Bytes2ID(objectCoreID[:])
@@ -289,9 +290,12 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 		return nil, errors.New("wrong class state record")
 	}
 
-	var id *record.ID
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err := getObjectIndex(tx, &objectID, true)
+	var (
+		err error
+		idx *index.ObjectLifeline
+	)
+	err = h.db.Update(func(tx *storage.TransactionManager) error {
+		idx, err = getObjectIndex(tx, &objectID, true)
 		if err != nil {
 			return err
 		}
@@ -303,7 +307,7 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 			return errors.New("invalid state record")
 		}
 
-		id, err = tx.SetRecord(rec)
+		id, err := tx.SetRecord(rec)
 		if err != nil {
 			return err
 		}
@@ -323,10 +327,17 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 		}
 		return nil, err
 	}
-	return &reply.ID{ID: *id.CoreID()}, nil
+
+	rep := reply.Object{
+		Head:         msg.Object,
+		State:        *idx.LatestState.CoreID(),
+		Class:        *idx.ClassRef.CoreRef(),
+		ChildPointer: idx.ChildPointer.CoreID(),
+	}
+	return &rep, nil
 }
 
-func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleRegisterChild(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
@@ -374,7 +385,7 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 	return &reply.ID{ID: *child.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.JetDrop)
 
 	// TODO: validate
@@ -397,7 +408,7 @@ func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleValidateRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleValidateRecord(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.ValidateRecord)
 	objID := record.Core2Reference(msg.Object).Record
 	validatedStateID := record.Bytes2ID(msg.State[:])

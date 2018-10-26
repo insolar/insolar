@@ -17,6 +17,7 @@
 package certificate
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
@@ -143,12 +144,12 @@ func (cert *Certificate) GetEcdsaPrivateKey() *ecdsa.PrivateKey {
 }
 
 // Start is method from Component interface and it do nothing
-func (cert *Certificate) Start(ctx core.Context, components core.Components) error {
+func (cert *Certificate) Start(ctx context.Context, components core.Components) error {
 	return nil
 }
 
 // Stop is method from Component interface and it do nothing
-func (cert *Certificate) Stop(ctx core.Context) error {
+func (cert *Certificate) Stop(ctx context.Context) error {
 	return nil
 }
 

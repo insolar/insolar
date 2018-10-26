@@ -17,6 +17,7 @@
 package metrics
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,7 +47,7 @@ func TestMetrics_NewMetrics(t *testing.T) {
 
 	m, err := NewMetrics(cfg)
 	assert.NoError(t, err)
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	err = m.Start(ctx, core.Components{})
 	assert.NoError(t, err)
 

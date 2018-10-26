@@ -22,9 +22,8 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/api/requesters"
-	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
@@ -45,7 +44,7 @@ func getResponse(body []byte) *response {
 	return res
 }
 
-func sendRequest(ctx core.Context, method string, params []interface{}, member memberInfo) []byte {
+func sendRequest(ctx context.Context, method string, params []interface{}, member memberInfo) []byte {
 	reqCfg := &requesters.RequestConfigJSON{
 		Params: params,
 		Method: method,
@@ -63,7 +62,7 @@ func sendRequest(ctx core.Context, method string, params []interface{}, member m
 	return body
 }
 
-func transfer(ctx core.Context, amount float64, from memberInfo, to memberInfo) string {
+func transfer(ctx context.Context, amount float64, from memberInfo, to memberInfo) string {
 	params := []interface{}{amount, to.ref}
 	body := sendRequest(ctx, "Transfer", params, from)
 	transferResponse := getResponse(body)
@@ -90,7 +89,7 @@ func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 		check("Problems with serialization of public key:", err)
 
 		params := []interface{}{memberName, memberPubKeyStr}
-		ctx := inscontext.WithTraceID(context.Background(), fmt.Sprintf("createMemberNumber%d", i))
+		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("createMemberNumber%d", i))
 
 		body := sendRequest(ctx, "CreateMember", params, rootMember)
 

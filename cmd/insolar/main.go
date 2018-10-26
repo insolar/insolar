@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
@@ -194,7 +194,7 @@ func sendRequest(out io.Writer) {
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
 	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
 
-	ctx := inscontext.WithTraceID(context.Background(), "insolarUtility")
+	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
 	response, err := requesters.Send(ctx, defaultURL, userCfg, reqCfg)
 	check("[ sendRequest ]", err)
 
