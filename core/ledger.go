@@ -82,7 +82,7 @@ type ArtifactManager interface {
 	RegisterValidation(ctx context.Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
 
 	// RegisterResult saves VM method call result.
-	RegisterResult(ctx context.Context, request RecordRef, result []byte) (*RecordID, error)
+	RegisterResult(ctx context.Context, request RecordRef, payload []byte) (*RecordID, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
