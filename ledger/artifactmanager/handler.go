@@ -17,8 +17,8 @@
 package artifactmanager
 
 import (
-	"context"
 	"bytes"
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-type internalHandler func(pulseNumber core.PulseNumber, ctx core.Context, genericMsg core.Message) (core.Reply, error)
+type internalHandler func(pulseNumber core.PulseNumber, ctx context.Context, genericMsg core.Message) (core.Reply, error)
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
@@ -85,7 +85,7 @@ func logTimeInside(start time.Time, funcName string) {
 }
 
 func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
-	return func(context core.Context, genericMsg core.Message) (core.Reply, error) {
+	return func(context context.Context, genericMsg core.Message) (core.Reply, error) {
 		err := persistMessageToDb(h.db, genericMsg)
 		if err != nil {
 			return nil, err
