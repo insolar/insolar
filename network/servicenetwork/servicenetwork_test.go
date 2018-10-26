@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"context"
-	ecdsa2 "crypto/ecdsa"
 	"strconv"
 	"strings"
 	"sync"
@@ -80,7 +79,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := NewServiceNetwork(cfg)
 	key, _ := ecdsa.GeneratePrivateKey()
-	network.certificate, _ = certificate.NewCertificateFromFields(certificate.CertRecords{}, []*ecdsa2.PrivateKey{key})
+	network.certificate, _ = certificate.NewCertificatesWithKeys(keysPath)
 	assert.NoError(t, err)
 
 	ctx := context.TODO()
