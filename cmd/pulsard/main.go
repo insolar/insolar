@@ -88,7 +88,7 @@ func initPulsar(cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
-	cert, err := certificate.NewCertificate(cfg.KeysPath)
+	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
