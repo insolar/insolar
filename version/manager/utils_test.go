@@ -23,19 +23,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newActiveNode(ver string) *core.ActiveNode {
-	// key, _ := ecdsa.GeneratePrivateKey()
-	return &core.ActiveNode{
+func newActiveNode(ver string) *core.Node {
+	return &core.Node{
 		NodeID:   core.RecordRef{255},
 		PulseNum: core.PulseNumber(0),
 		State:    core.NodeActive,
 		Roles:    []core.NodeRole{core.RoleUnknown},
-		// PublicKey: &key.PublicKey,
+		Version:  ver,
 	}
 }
 
 func TestGetMapOfVersions(t *testing.T) {
-	nodes := []*core.ActiveNode{
+	nodes := []*core.Node{
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.1"),
@@ -50,13 +49,13 @@ func TestGetMapOfVersions(t *testing.T) {
 }
 
 func TestProcessVersionConsensus(t *testing.T) {
-	nodes := []*core.ActiveNode{
+	nodes := []*core.Node{
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.1"),
 		newActiveNode("v0.5.1"),
 	}
-	assert.Error(t, ProcessVersionConsensus([]*core.ActiveNode{}))
+	assert.Error(t, ProcessVersionConsensus([]*core.Node{}))
 	assert.NoError(t, ProcessVersionConsensus(nodes))
 }
 
@@ -68,7 +67,7 @@ func TestGetMaxVersion(t *testing.T) {
 	mapOfVersions["v0.3.2"] = 1
 	res, err := getMaxVersion(5, &mapOfVersions)
 	assert.NoError(t, err)
-	assert.Nil(t, res)
+	assert.Equal(t, StringVersion(res), "v0.3.1")
 	mapOfVersions = make(map[string]int)
 	mapOfVersions["v0.3.0"] = 3
 	mapOfVersions["v0.3.1"] = 4
@@ -81,6 +80,16 @@ func TestGetMaxVersion(t *testing.T) {
 	res, err = getMaxVersion(5, &mapOfVersions)
 	assert.NoError(t, err)
 	assert.Equal(t, StringVersion(res), "v0.3.0")
+
+	mapOfVersions = make(map[string]int)
+	res, err = getMaxVersion(5, &mapOfVersions)
+	assert.Error(t, err)
+	mapOfVersions["error"] = 1
+	res, err = getMaxVersion(5, &mapOfVersions)
+	assert.Error(t, err)
+	mapOfVersions["error"] = 6
+	res, err = getMaxVersion(5, &mapOfVersions)
+	assert.Error(t, err)
 }
 
 func TestGetRequired(t *testing.T) {

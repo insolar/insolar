@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/spf13/viper"
 )
@@ -31,11 +32,15 @@ type VersionManager struct {
 	viper         *viper.Viper
 }
 
+type VersionTable struct {
+	Vt map[string]*Feature
+}
+
 var instance *VersionManager
 
 func GetVersionManager() (*VersionManager, error) {
 	if instance == nil {
-		vm, err := newVersionManager()
+		vm, err := NewVersionManager(configuration.NewVersionManager())
 		if err != nil {
 			return nil, err
 		}
@@ -56,10 +61,10 @@ func (vm *VersionManager) Verify(key string) bool {
 	return false
 }
 
-func newVersionManager() (*VersionManager, error) {
+func NewVersionManager(cfg configuration.VersionManager) (*VersionManager, error) {
 	versionTable := make(map[string]*Feature)
 
-	baseVersion, err := ParseVersion(InsBaseVersion)
+	baseVersion, err := ParseVersion(cfg.MinAlowedVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -77,14 +82,6 @@ func newVersionManager() (*VersionManager, error) {
 
 func (vm *VersionManager) Load() error {
 	err := vm.viper.ReadInConfig()
-	if err != nil {
-		return err
-	}
-	return vm.viper.UnmarshalKey("versiontable", &vm.VersionTable)
-}
-
-func (vm *VersionManager) LoadFromVariable() error {
-	err := vm.viper.ReadConfig(strings.NewReader(InsVersionTable))
 	if err != nil {
 		return err
 	}
@@ -137,14 +134,11 @@ func (vm *VersionManager) Remove(key string) {
 	}
 }
 
-func (vm *VersionManager) Start(components core.Components) error {
-	err := vm.LoadFromVariable()
-	if err != nil {
-		return err
-	}
+func (vm *VersionManager) Start(ctx core.Context, components core.Components) error {
+	vm.loadVersionTable()
 	return nil
 }
 
-func (vm *VersionManager) Stop() error {
+func (vm *VersionManager) Stop(ctx core.Context) error {
 	return nil
 }

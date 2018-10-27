@@ -168,7 +168,7 @@ func main() {
 		log.Fatalln("failed to start NetworkCoordinator: ", err.Error())
 	}
 
-	cm.components.VersionManager, err = manager.GetVersionManager()
+	cm.components.VersionManager, err = manager.NewVersionManager(cfgHolder.Configuration.VersionManager)
 	if err != nil {
 		log.Fatalln("failed to load VersionManager: ", err.Error())
 	}

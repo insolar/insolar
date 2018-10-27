@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ProcessVersionConsensus(nodes []*core.ActiveNode) error {
+func ProcessVersionConsensus(nodes []*core.Node) error {
 	if len(nodes) == 0 {
 		return errors.New("List of nodes is empty")
 	}
@@ -33,24 +33,22 @@ func ProcessVersionConsensus(nodes []*core.ActiveNode) error {
 	if err != nil {
 		return err
 	}
-	if topVersion != nil {
-		vm, err := GetVersionManager()
-		if err != nil {
-			return err
-		}
-		currentVersion, err := ParseVersion(version.Version)
-		if err != nil {
-			return errors.New("current version is invalid: " + err.Error())
-		}
-		if currentVersion.Compare(*topVersion) != 0 {
-			log.Warn("WARNING! Current version: " + StringVersion(currentVersion) + ", must go to version: " + StringVersion(topVersion))
-		}
-		vm.AgreedVersion = topVersion
+	vm, err := GetVersionManager()
+	if err != nil {
+		return err
 	}
+	currentVersion, err := ParseVersion(version.Version)
+	if err != nil {
+		return errors.New("current version is invalid: " + err.Error())
+	}
+	if currentVersion.Compare(*topVersion) != 0 {
+		log.Warn("WARNING! Current version: " + StringVersion(currentVersion) + ", must go to version: " + StringVersion(topVersion))
+	}
+	vm.AgreedVersion = topVersion
 	return nil
 }
 
-func getMapOfVersion(nodes []*core.ActiveNode) *map[string]int {
+func getMapOfVersion(nodes []*core.Node) *map[string]int {
 	mapOfVersions := make(map[string]int)
 
 	// ToDo: I Need a version from the ActiveNodeList
@@ -66,13 +64,26 @@ func getMapOfVersion(nodes []*core.ActiveNode) *map[string]int {
 }
 
 func getMaxVersion(required int, mapOfVersions *map[string]int) (*semver.Version, error) {
-
-	for key, count := range *mapOfVersions {
-		if count >= required {
-			return ParseVersion(key)
+	versions := make([]semver.Version, 0, len(*mapOfVersions))
+	for version := range *mapOfVersions {
+		semVer, err := ParseVersion(version)
+		if err != nil {
+			log.Warn("Error parsing version: " + version)
+		}
+		if semVer != nil {
+			versions = append(versions, *semVer)
 		}
 	}
-	return nil, nil
+	semver.Sort(versions)
+	count := 0
+	for i := len(versions) - 1; i >= 0; i-- {
+		key := StringVersion(&versions[i])
+		count += (*mapOfVersions)[key]
+		if count >= required {
+			return &versions[i], nil
+		}
+	}
+	return nil, errors.New("Version consensus is not reached")
 }
 
 func Verify(key string) bool {

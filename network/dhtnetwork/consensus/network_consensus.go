@@ -24,8 +24,8 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/version/manager"
 	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
+	"github.com/insolar/insolar/version/manager"
 )
 
 type participantWrapper struct {

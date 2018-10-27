@@ -21,6 +21,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,7 +58,7 @@ func TestLoadSaveVersionManager(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
-	vm, err := newVersionManager()
+	vm, err := NewVersionManager(configuration.VersionManager{"v0.3.0"})
 	assert.NoError(t, err)
 	feature, err := vm.Add("insolar", "v1.1.1", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
@@ -70,7 +71,7 @@ func TestLoadSaveVersionManager(t *testing.T) {
 	feature, err = vm.Add("insolar3", "v1.1.2", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
 	assert.NotNil(t, feature)
-	vm2, err := newVersionManager()
+	vm2, err := NewVersionManager(configuration.VersionManager{"v0.3.0"})
 	assert.NoError(t, err)
 	err = vm2.LoadFromFile(dir + "versiontable.yml")
 	assert.NoError(t, err)
@@ -80,10 +81,6 @@ func TestLoadSaveVersionManager(t *testing.T) {
 	vm2.Remove("insolar2")
 	feature = vm2.Get("Insolar2")
 	assert.Nil(t, feature)
-	vm, err = newVersionManager()
-	assert.NoError(t, err)
-	err = vm.LoadFromVariable()
-	assert.NoError(t, err)
-	assert.NotNil(t, vm)
-
+	vm, err = NewVersionManager(configuration.VersionManager{"error"})
+	assert.Error(t, err)
 }
