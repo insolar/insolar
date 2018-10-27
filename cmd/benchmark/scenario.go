@@ -22,7 +22,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type scenario interface {
@@ -72,7 +72,7 @@ func (s *transferDifferentMembersScenario) start() {
 func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for j := 0; j < s.repetitions*2; j = j + 2 {
-		ctx := inscontext.WithTraceID(context.Background(), fmt.Sprintf("transferFromMemberNumber%d", index+j))
+		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("transferFromMemberNumber%d", index+j))
 		from := s.members[index+j]
 		to := s.members[index+j+1]
 		response := transfer(ctx, 1, from, to)

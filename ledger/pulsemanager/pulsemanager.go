@@ -17,9 +17,10 @@
 package pulsemanager
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -63,7 +64,7 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	if err != nil {
 		return err
 	}
-	drop, records, indexes, err := m.db.CreateDrop(latestPulseNumber, prevDrop.Hash)
+	drop, messages, err := m.db.CreateDrop(latestPulseNumber, prevDrop.Hash)
 	if err != nil {
 		return err
 	}
@@ -72,20 +73,20 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 		return err
 	}
 
-	err = m.db.AddPulse(pulse)
-	if err != nil {
-		return err
-	}
-
 	dropSerialized, err := jetdrop.Encode(drop)
 	if err != nil {
 		return err
 	}
-	_, err = m.bus.Send(inscontext.TODO(), &message.JetDrop{
-		Drop:    dropSerialized,
-		Records: records,
-		Indexes: indexes,
+	_, err = m.bus.Send(context.TODO(), &message.JetDrop{
+		Drop:        dropSerialized,
+		Messages:    messages,
+		PulseNumber: latestPulseNumber,
 	})
+	if err != nil {
+		return err
+	}
+
+	err = m.db.AddPulse(pulse)
 	if err != nil {
 		return err
 	}

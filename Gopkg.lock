@@ -438,7 +438,7 @@
     "xtea",
   ]
   pruneopts = "UT"
-  revision = "74cb1d3d52f4c01cbfb44c1b50d204462f3124c7"
+  revision = "85e1b3f9139abd58575d728a509643924e3b2ebf"
 
 [[projects]]
   branch = "master"

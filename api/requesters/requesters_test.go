@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -53,7 +53,7 @@ func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 
-	ctx := inscontext.WithTraceID(context.Background(), "FakeHandler")
+	ctx := inslogger.ContextWithTrace(context.Background(), "FakeHandler")
 	params, err := api.PreprocessRequest(ctx, req)
 	if err != nil {
 		log.Errorf("Can't read request\n")
@@ -196,7 +196,7 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *RequestConfigJSON) {
 }
 
 func TestSend(t *testing.T) {
-	ctx := inscontext.WithTraceID(context.Background(), "TestSend")
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
 	resp, err := Send(ctx, URL, userConf, reqConf)
 	assert.NoError(t, err)
@@ -204,7 +204,7 @@ func TestSend(t *testing.T) {
 }
 
 func TestSendWithSeed(t *testing.T) {
-	ctx := inscontext.WithTraceID(context.Background(), "TestSendWithSeed")
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
 	resp, err := SendWithSeed(ctx, URL, userConf, reqConf, []byte(TESTSEED))
 	assert.NoError(t, err)
@@ -212,20 +212,20 @@ func TestSendWithSeed(t *testing.T) {
 }
 
 func TestSendWithSeed_WithBadUrl(t *testing.T) {
-	ctx := inscontext.WithTraceID(context.Background(), "TestSendWithSeed_WithBadUrl")
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
 	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, []byte(TESTSEED))
 	assert.EqualError(t, err, "[ Send ] Problem with sending target request: [ getResponseBody ] Bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
-	ctx := inscontext.WithTraceID(context.Background(), "TestSendWithSeed_NilConfigs")
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
 	_, err := SendWithSeed(ctx, URL, nil, nil, []byte(TESTSEED))
 	assert.EqualError(t, err, "[ Send ] Configs must be initialized")
 }
 
 func TestSend_BadSeedUrl(t *testing.T) {
-	ctx := inscontext.WithTraceID(context.Background(), "TestSend_BadSeedUrl")
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend_BadSeedUrl")
 	userConf, reqConf := readConfigs(t)
 	_, err := Send(ctx, URL+"TTT", userConf, reqConf)
 	assert.EqualError(t, err, "[ Send ] Problem with getting seed: [ getSeed ]: [ getResponseBody ] Bad http response code: 404")

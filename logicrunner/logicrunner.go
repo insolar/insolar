@@ -19,6 +19,7 @@ package logicrunner
 
 import (
 	"bytes"
+	"context"
 	"net"
 	"sync"
 	"time"
@@ -29,7 +30,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -55,8 +55,6 @@ type LogicRunner struct {
 	execution       map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
 	executionMutex  sync.Mutex
 
-	Pulse core.Pulse // pulse info for this bind
-
 	// TODO move caseBind to context
 	caseBind      core.CaseBind
 	caseBindMutex sync.Mutex
@@ -75,9 +73,9 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	}
 	res := LogicRunner{
 		ArtifactManager: nil,
+		Ledger:          nil,
 		Cfg:             cfg,
 		execution:       make(map[Ref]*ExecutionState),
-		Pulse:           core.Pulse{},
 		caseBind:        core.CaseBind{Records: make(map[Ref][]core.CaseRecord)},
 		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
@@ -85,15 +83,16 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 // Start starts logic runner component
-func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
+func (lr *LogicRunner) Start(ctx context.Context, c core.Components) error {
 	am := c.Ledger.GetArtifactManager()
 	lr.ArtifactManager = am
 	messageBus := c.MessageBus
 	lr.MessageBus = messageBus
 	lr.Ledger = c.Ledger
 	lr.Network = c.Network
+
 	if lr.Cfg.BuiltIn != nil {
-		bi := builtin.NewBuiltIn(messageBus, am)
+		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
 			return err
 		}
@@ -105,7 +104,7 @@ func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
 			StartRPC(lr)
 		}
 
-		gp, err := goplugin.NewGoPlugin(lr.Cfg, messageBus, am)
+		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
 		if err != nil {
 			return err
 		}
@@ -116,20 +115,20 @@ func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
 	}
 
 	// TODO: use separate handlers
-	if err := messageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
+	if err := lr.MessageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
 		return err
 	}
-	if err := messageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
+	if err := lr.MessageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
 		return err
 	}
 
-	if err := messageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
+	if err := lr.MessageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
 		return err
 	}
-	if err := messageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
+	if err := lr.MessageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
 		return err
 	}
-	if err := messageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
+	if err := lr.MessageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
 		return err
 	}
 
@@ -137,7 +136,7 @@ func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
 }
 
 // Stop stops logic runner component and its executors
-func (lr *LogicRunner) Stop(ctx core.Context) error {
+func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
 	for _, e := range lr.Executors {
 		if e == nil {
@@ -194,7 +193,7 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Message) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.(message.IBaseLogicMessage)
 	if !ok {
@@ -213,12 +212,23 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 		vb = ValidationSaver{lr: lr}
 	}
 
+	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
+	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(vb.GetRole(), *msg.Target(), lr.pulse().PulseNumber, lr.Network.GetNodeID())
+
+	if err != nil {
+		return nil, errors.New("Authorization failed with error: " + err.Error())
+	}
+	if !isAuthorized {
+		return nil, errors.New("Can't execute this object")
+	}
+
 	vb.Begin(ref, core.CaseRecord{
 		Type: core.CaseRecordTypeStart,
 		Resp: msg,
 	})
 
 	reqref, err := vb.RegisterRequest(msg)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't create request")
 	}
@@ -226,7 +236,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 		Caller:  msg.GetCaller(),
 		Request: reqref,
 		Time:    time.Now(), // TODO: probably we should take it from e
-		Pulse:   lr.Pulse,
+		Pulse:   *lr.pulse(),
 	}
 
 	switch m := msg.(type) {
@@ -243,6 +253,14 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 	}
 }
 
+func (lr *LogicRunner) pulse() *core.Pulse {
+	pulse, err := lr.Ledger.GetPulseManager().Current()
+	if err != nil {
+		panic(err)
+	}
+	return pulse
+}
+
 type objectBody struct {
 	Object core.ObjectDescriptor
 	Class  core.ClassDescriptor
@@ -250,7 +268,7 @@ type objectBody struct {
 }
 
 func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	cr, step := lr.getNextValidationStep(objref)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObject != cr.Type {
@@ -288,7 +306,7 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := inscontext.TODO()
+	insctx := context.TODO()
 	executionState := lr.UpsertExecution(m.ObjectRef)
 	executionState.mutex.Lock()
 	defer executionState.mutex.Unlock()
@@ -356,7 +374,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 }
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := inscontext.TODO()
+	insctx := context.TODO()
 	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class")
@@ -394,7 +412,6 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	lr.Pulse = pulse
 	lr.consensus = make(map[Ref]*Consensus)
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind()
@@ -409,7 +426,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// send copy for validation
 	for ref, records := range objectsRecords {
 		_, err := lr.MessageBus.Send(
-			inscontext.TODO(),
+			context.TODO(),
 			&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse},
 		)
 		if err != nil {
@@ -417,7 +434,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 		}
 
 		temp := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
-		_, err = lr.MessageBus.Send(inscontext.TODO(), &temp)
+		_, err = lr.MessageBus.Send(context.TODO(), &temp)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}

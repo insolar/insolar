@@ -17,22 +17,37 @@
 package metrics
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/stretchr/testify/assert"
 )
 
+func changePort(address *string, t *testing.T) {
+	pair := strings.Split(*address, ":")
+	assert.Len(t, pair, 2)
+
+	currentPort, err := strconv.Atoi(pair[1])
+	assert.NoError(t, err)
+
+	*address = pair[0] + ":" + strconv.Itoa(currentPort+1)
+}
+
 func TestMetrics_NewMetrics(t *testing.T) {
 	cfg := configuration.NewMetrics()
+
+	// it's needed to prevent using same port for concurrent tests
+	changePort(&cfg.ListenAddress, t)
+
 	m, err := NewMetrics(cfg)
 	assert.NoError(t, err)
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	err = m.Start(ctx, core.Components{})
 	assert.NoError(t, err)
 

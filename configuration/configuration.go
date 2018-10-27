@@ -28,18 +28,19 @@ import (
 
 // Configuration contains configuration params for all Insolar components
 type Configuration struct {
-	Host           HostNetwork
-	Node           NodeNetwork
-	Service        ServiceNetwork
-	Ledger         Ledger
-	Log            Log
-	Metrics        Metrics
-	LogicRunner    LogicRunner
-	APIRunner      APIRunner
-	Pulsar         Pulsar
-	Bootstrap      Bootstrap
-	VersionManager VersionManager
-	KeysPath       string
+	Host            HostNetwork
+	Node            NodeNetwork
+	Service         ServiceNetwork
+	Ledger          Ledger
+	Log             Log
+	Metrics         Metrics
+	LogicRunner     LogicRunner
+	APIRunner       APIRunner
+	Pulsar          Pulsar
+	Bootstrap       Bootstrap
+	VersionManager  VersionManager
+	KeysPath        string
+	CertificatePath string
 }
 
 // Holder provides methods to manage configuration
@@ -51,18 +52,19 @@ type Holder struct {
 // NewConfiguration creates new default configuration
 func NewConfiguration() Configuration {
 	cfg := Configuration{
-		Host:           NewHostNetwork(),
-		Node:           NewNodeNetwork(),
-		Service:        NewServiceNetwork(),
-		Ledger:         NewLedger(),
-		Log:            NewLog(),
-		Metrics:        NewMetrics(),
-		LogicRunner:    NewLogicRunner(),
-		APIRunner:      NewAPIRunner(),
-		Pulsar:         NewPulsar(),
-		Bootstrap:      NewBootstrap(),
-		VersionManager: NewVersionManager(),
-		KeysPath:       "./",
+		Host:            NewHostNetwork(),
+		Node:            NewNodeNetwork(),
+		Service:         NewServiceNetwork(),
+		Ledger:          NewLedger(),
+		Log:             NewLog(),
+		Metrics:         NewMetrics(),
+		LogicRunner:     NewLogicRunner(),
+		APIRunner:       NewAPIRunner(),
+		Pulsar:          NewPulsar(),
+		Bootstrap:       NewBootstrap(),
+		VersionManager:  NewVersionManager(),
+		KeysPath:        "./",
+		CertificatePath: "",
 	}
 
 	return cfg

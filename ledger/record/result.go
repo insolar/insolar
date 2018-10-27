@@ -58,15 +58,31 @@ type ObjectState interface {
 	PrevStateID() *ID
 }
 
-// ResultRecord is a record which is created in response to a request.
+// ResultRecord represents result of a VM method.
 type ResultRecord struct {
+	Request Reference
+	Payload []byte
+}
+
+// Type implementation of Record interface.
+func (ResultRecord) Type() TypeID {
+	return typeResult
+}
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ResultRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
+
+// SideEffectRecord is a record which is created in response to a request.
+type SideEffectRecord struct {
 	Domain  Reference
 	Request Reference
 }
 
 // TypeRecord is a code interface declaration.
 type TypeRecord struct {
-	ResultRecord
+	SideEffectRecord
 
 	TypeDeclaration []byte
 }
@@ -81,7 +97,7 @@ func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
 
 // CodeRecord is a code storage record.
 type CodeRecord struct {
-	ResultRecord
+	SideEffectRecord
 
 	Code        []byte
 	MachineType core.MachineType
@@ -113,7 +129,7 @@ func (r *ClassStateRecord) GetCode() *Reference {
 
 // ClassActivateRecord is produced when we "activate" new contract class.
 type ClassActivateRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ClassStateRecord
 }
 
@@ -137,7 +153,7 @@ func (r *ClassActivateRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ClassAmendRecord is an amendment record for classes.
 type ClassAmendRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ClassStateRecord
 
 	PrevState ID
@@ -173,7 +189,7 @@ func (r *ObjectStateRecord) GetMemory() []byte {
 
 // ObjectActivateRecord is produced when we instantiate new object from an available class.
 type ObjectActivateRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ObjectStateRecord
 
 	Class    Reference
@@ -201,7 +217,7 @@ func (r *ObjectActivateRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ObjectAmendRecord is an amendment record for objects.
 type ObjectAmendRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ObjectStateRecord
 
 	PrevState ID
@@ -227,7 +243,7 @@ func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {
 
 // DeactivationRecord marks targeted object as disabled.
 type DeactivationRecord struct {
-	ResultRecord
+	SideEffectRecord
 	PrevState ID
 }
 
