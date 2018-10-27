@@ -71,7 +71,7 @@ func (e *GetCode) Target() *core.RecordRef {
 type GetClass struct {
 	ledgerMessage
 	Head  core.RecordRef
-	State *core.RecordRef // If nil, will fetch the latest state.
+	State *core.RecordID // If nil, will fetch the latest state.
 }
 
 // Type implementation of Message interface.
@@ -87,8 +87,9 @@ func (e *GetClass) Target() *core.RecordRef {
 // GetObject retrieves object from storage.
 type GetObject struct {
 	ledgerMessage
-	Head  core.RecordRef
-	State *core.RecordRef // If nil, will fetch the latest state.
+	Head     core.RecordRef
+	State    *core.RecordID // If nil, will fetch the latest state.
+	Approved bool
 }
 
 // Type implementation of Message interface.
@@ -118,79 +119,6 @@ func (e *GetDelegate) Target() *core.RecordRef {
 	return &e.Head
 }
 
-// DeclareType creates new type.
-type DeclareType struct {
-	ledgerMessage
-	Domain  core.RecordRef
-	Request core.RecordRef
-	TypeDec []byte
-}
-
-// Type implementation of Message interface.
-func (e *DeclareType) Type() core.MessageType {
-	return core.TypeDeclareType
-}
-
-// Target implementation of Message interface.
-func (e *DeclareType) Target() *core.RecordRef {
-	return &e.Request
-}
-
-// DeployCode creates new code.
-type DeployCode struct {
-	ledgerMessage
-	Domain      core.RecordRef
-	Request     core.RecordRef
-	Code        []byte
-	MachineType core.MachineType
-}
-
-// Type implementation of Message interface.
-func (e *DeployCode) Type() core.MessageType {
-	return core.TypeDeployCode
-}
-
-// Target implementation of Message interface.
-func (e *DeployCode) Target() *core.RecordRef {
-	return &e.Request
-}
-
-// ActivateClass activates class.
-type ActivateClass struct {
-	ledgerMessage
-	Domain  core.RecordRef
-	Request core.RecordRef
-	Code    core.RecordRef
-}
-
-// Type implementation of Message interface.
-func (e *ActivateClass) Type() core.MessageType {
-	return core.TypeActivateClass
-}
-
-// Target implementation of Message interface.
-func (e *ActivateClass) Target() *core.RecordRef {
-	return &e.Code
-}
-
-// DeactivateClass deactivates class.
-type DeactivateClass struct {
-	ledgerMessage
-	Domain  core.RecordRef
-	Request core.RecordRef
-	Class   core.RecordRef
-}
-
-// Type implementation of Message interface.
-func (e *DeactivateClass) Type() core.MessageType {
-	return core.TypeDeactivateClass
-}
-
-// Target implementation of Message interface.
-func (e *DeactivateClass) Target() *core.RecordRef {
-	return &e.Class
-}
-
 // UpdateClass amends class.
 type UpdateClass struct {
 	ledgerMessage
@@ -209,71 +137,13 @@ func (e *UpdateClass) Target() *core.RecordRef {
 	return &e.Class
 }
 
-// ActivateObject activates object.
-type ActivateObject struct {
-	ledgerMessage
-	Domain  core.RecordRef
-	Request core.RecordRef
-	Class   core.RecordRef
-	Parent  core.RecordRef
-	Memory  []byte
-}
-
-// Type implementation of Message interface.
-func (e *ActivateObject) Type() core.MessageType {
-	return core.TypeActivateObject
-}
-
-// Target implementation of Message interface.
-func (e *ActivateObject) Target() *core.RecordRef {
-	return &e.Class
-}
-
-// ActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
-type ActivateObjectDelegate struct {
-	ledgerMessage
-	Domain  core.RecordRef
-	Request core.RecordRef
-	Class   core.RecordRef
-	Parent  core.RecordRef
-	Memory  []byte
-}
-
-// Type implementation of Message interface.
-func (e *ActivateObjectDelegate) Type() core.MessageType {
-	return core.TypeActivateObjectDelegate
-}
-
-// Target implementation of Message interface.
-func (e *ActivateObjectDelegate) Target() *core.RecordRef {
-	return &e.Class
-}
-
-// DeactivateObject deactivates object.
-type DeactivateObject struct {
-	ledgerMessage
-	Domain  core.RecordRef
-	Request core.RecordRef
-	Object  core.RecordRef
-}
-
-// Type implementation of Message interface.
-func (e *DeactivateObject) Type() core.MessageType {
-	return core.TypeDeactivateObject
-}
-
-// Target implementation of Message interface.
-func (e *DeactivateObject) Target() *core.RecordRef {
-	return &e.Object
-}
-
 // UpdateObject amends object.
 type UpdateObject struct {
 	ledgerMessage
-	Domain  core.RecordRef
-	Request core.RecordRef
-	Object  core.RecordRef
-	Memory  []byte
+
+	Record []byte
+	Class  *core.RecordRef // Only used for activation.
+	Object core.RecordRef
 }
 
 // Type implementation of Message interface.
@@ -289,8 +159,10 @@ func (e *UpdateObject) Target() *core.RecordRef {
 // RegisterChild amends object.
 type RegisterChild struct {
 	ledgerMessage
-	Parent core.RecordRef
-	Child  core.RecordRef
+	Record  []byte
+	Parent  core.RecordRef
+	Child   core.RecordRef
+	AsClass *core.RecordRef // If not nil, considered as delegate.
 }
 
 // Type implementation of Message interface.
@@ -359,4 +231,29 @@ func (e *JetDrop) Target() *core.RecordRef {
 // TargetRole implementation of Message interface.
 func (JetDrop) TargetRole() core.JetRole {
 	return core.RoleLightValidator
+}
+
+// ValidateRecord creates VM validation for specific object record.
+type ValidateRecord struct {
+	ledgerMessage
+
+	Object             core.RecordRef
+	State              core.RecordID
+	IsValid            bool
+	ValidationMessages []core.Message
+}
+
+// Type implementation of Message interface.
+func (*ValidateRecord) Type() core.MessageType {
+	return core.TypeValidateRecord
+}
+
+// Target implementation of Message interface.
+func (m *ValidateRecord) Target() *core.RecordRef {
+	return &m.Object
+}
+
+// TargetRole implementation of Message interface.
+func (*ValidateRecord) TargetRole() core.JetRole {
+	return core.RoleLightExecutor
 }

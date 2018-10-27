@@ -17,15 +17,12 @@
 package artifactmanager
 
 import (
-	"time"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/log"
 )
 
 const (
@@ -105,7 +102,7 @@ func (m *LedgerArtifactManager) GetCode(
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
 func (m *LedgerArtifactManager) GetClass(
-	ctx core.Context, head core.RecordRef, state *core.RecordRef,
+	ctx core.Context, head core.RecordRef, state *core.RecordID,
 ) (core.ClassDescriptor, error) {
 	genericReact, err := m.messageBus.Send(
 		inscontext.TODO(),
@@ -138,13 +135,14 @@ func (m *LedgerArtifactManager) GetClass(
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
 func (m *LedgerArtifactManager) GetObject(
-	ctx core.Context, head core.RecordRef, state *core.RecordRef,
+	ctx core.Context, head core.RecordRef, state *core.RecordID, approved bool,
 ) (core.ObjectDescriptor, error) {
 	genericReact, err := m.messageBus.Send(
 		inscontext.TODO(),
 		&message.GetObject{
-			Head:  head,
-			State: state,
+			Head:     head,
+			State:    state,
+			Approved: approved,
 		},
 	)
 
@@ -155,11 +153,12 @@ func (m *LedgerArtifactManager) GetObject(
 	switch r := genericReact.(type) {
 	case *reply.Object:
 		desc := ObjectDescriptor{
-			am:     m,
-			head:   r.Head,
-			state:  r.State,
-			class:  r.Class,
-			memory: r.Memory,
+			am:           m,
+			head:         r.Head,
+			state:        r.State,
+			class:        r.Class,
+			childPointer: r.ChildPointer,
+			memory:       r.Memory,
 		}
 		return &desc, nil
 	case *reply.Error:
@@ -321,48 +320,68 @@ func (m *LedgerArtifactManager) ActivateObject(
 	object core.RecordRef,
 	class core.RecordRef,
 	parent core.RecordRef,
+	asDelegate bool,
 	memory []byte,
-) (*core.RecordID, error) {
-	start := time.Now()
-	objID, err := m.fetchID(&message.ActivateObject{
-		Domain:  domain,
-		Request: object,
-		Class:   class,
-		Parent:  parent,
-		Memory:  memory,
-	})
+) (core.ObjectDescriptor, error) {
+	objectRef := record.Core2Reference(object)
 
+	parendDesc, err := m.GetObject(ctx, parent, nil, false)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = m.fetchID(&message.RegisterChild{
-		Parent: parent,
-		Child:  object,
-	})
+	objID, err := m.updateObject(
+		&record.ObjectActivateRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: objectRef,
+			},
+			ObjectStateRecord: record.ObjectStateRecord{
+				Memory: memory,
+			},
+			Class:    record.Core2Reference(class),
+			Parent:   record.Core2Reference(parent),
+			Delegate: asDelegate,
+		},
+		object,
+		&class,
+	)
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Inside ActivateObject: class - '%s', parent - %s, time - %s", class, parent, time.Since(start))
-	return objID, nil
-}
 
-// ActivateObjectDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
-func (m *LedgerArtifactManager) ActivateObjectDelegate(
-	ctx core.Context,
-	domain core.RecordRef,
-	request core.RecordRef,
-	class core.RecordRef,
-	parent core.RecordRef,
-	memory []byte,
-) (*core.RecordID, error) {
-	return m.fetchID(&message.ActivateObjectDelegate{
-		Domain:  domain,
-		Request: request,
-		Class:   class,
-		Parent:  parent,
-		Memory:  memory,
-	})
+	var (
+		prevChild *record.ID
+		asClass   *core.RecordRef
+	)
+	if parendDesc.ChildPointer() != nil {
+		c := record.Bytes2ID(parendDesc.ChildPointer()[:])
+		prevChild = &c
+	}
+	if asDelegate {
+		asClass = &class
+	}
+	_, err = m.registerChild(
+		&record.ChildRecord{
+			Ref:       objectRef,
+			PrevChild: prevChild,
+		},
+		parent,
+		object,
+		asClass,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ObjectDescriptor{
+		am:           m,
+		head:         object,
+		state:        *objID,
+		class:        class,
+		childPointer: nil,
+		memory:       memory,
+	}, nil
 }
 
 // DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
@@ -370,14 +389,19 @@ func (m *LedgerArtifactManager) ActivateObjectDelegate(
 //
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObject(
-	ctx core.Context,
-	domain, request, object core.RecordRef,
+	ctx core.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
 ) (*core.RecordID, error) {
-	return m.fetchID(&message.DeactivateObject{
-		Domain:  domain,
-		Request: request,
-		Object:  object,
-	})
+	return m.updateObject(
+		&record.DeactivationRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			PrevState: record.Bytes2ID(object.StateID()[:]),
+		},
+		*object.HeadRef(),
+		nil,
+	)
 }
 
 // UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -386,45 +410,44 @@ func (m *LedgerArtifactManager) DeactivateObject(
 // Returned reference will be the latest object state (exact) reference.
 func (m *LedgerArtifactManager) UpdateObject(
 	ctx core.Context,
-	domain core.RecordRef,
-	request core.RecordRef,
-	object core.RecordRef,
+	domain, request core.RecordRef,
+	object core.ObjectDescriptor,
 	memory []byte,
 ) (*core.RecordID, error) {
-	return m.fetchID(&message.UpdateObject{
-		Domain:  domain,
-		Request: request,
-		Object:  object,
-		Memory:  memory,
-	})
+	return m.updateObject(
+		&record.ObjectAmendRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			ObjectStateRecord: record.ObjectStateRecord{
+				Memory: memory,
+			},
+			PrevState: record.Bytes2ID(object.StateID()[:]),
+		},
+		*object.HeadRef(),
+		nil,
+	)
 }
 
-func (m *LedgerArtifactManager) fetchReference(ev core.Message) (*core.RecordRef, error) {
-	genericReact, err := m.messageBus.Send(inscontext.TODO(), ev)
-
+// RegisterValidation marks provided object state as approved or disapproved.
+//
+// When fetching object, validity can be specified.
+func (m *LedgerArtifactManager) RegisterValidation(
+	ctx core.Context, object core.RecordRef, state core.RecordID, isValid bool, validationMessages []core.Message,
+) error {
+	msg := message.ValidateRecord{
+		Object:             object,
+		State:              state,
+		IsValid:            isValid,
+		ValidationMessages: validationMessages,
+	}
+	_, err := m.messageBus.Send(ctx, &msg)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	react, ok := genericReact.(*reply.Reference)
-	if !ok {
-		return nil, ErrUnexpectedReply
-	}
-	return &react.Ref, nil
-}
-
-func (m *LedgerArtifactManager) fetchID(msg core.Message) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(inscontext.TODO(), msg)
-
-	if err != nil {
-		return nil, err
-	}
-
-	react, ok := genericReact.(*reply.ID)
-	if !ok {
-		return nil, ErrUnexpectedReply
-	}
-	return &react.ID, nil
+	return nil
 }
 
 func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordRef) (*core.RecordID, error) {
@@ -454,6 +477,54 @@ func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.Record
 		&message.UpdateClass{
 			Record: record.SerializeRecord(rec),
 			Class:  class,
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+
+	return &react.ID, nil
+}
+
+func (m *LedgerArtifactManager) updateObject(
+	rec record.Record, object core.RecordRef, class *core.RecordRef,
+) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.UpdateObject{
+			Record: record.SerializeRecord(rec),
+			Object: object,
+			Class:  class,
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+
+	return &react.ID, nil
+}
+
+func (m *LedgerArtifactManager) registerChild(
+	rec record.Record, parent, child core.RecordRef, asClass *core.RecordRef,
+) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(inscontext.TODO(),
+		&message.RegisterChild{
+			Record:  record.SerializeRecord(rec),
+			Parent:  parent,
+			Child:   child,
+			AsClass: asClass,
 		},
 	)
 

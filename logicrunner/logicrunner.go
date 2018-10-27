@@ -39,7 +39,8 @@ type Ref = core.RecordRef
 
 // Context of one contract execution
 type ExecutionState struct {
-	mutex sync.Mutex
+	mutex      sync.Mutex
+	deactivate bool
 }
 
 // LogicRunner is a general interface of contract executor
@@ -84,7 +85,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 // Start starts logic runner component
-func (lr *LogicRunner) Start(c core.Components) error {
+func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
 	am := c.Ledger.GetArtifactManager()
 	lr.ArtifactManager = am
 	messageBus := c.MessageBus
@@ -136,7 +137,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 }
 
 // Stop stops logic runner component and its executors
-func (lr *LogicRunner) Stop() error {
+func (lr *LogicRunner) Stop(ctx core.Context) error {
 	reterr := error(nil)
 	for _, e := range lr.Executors {
 		if e == nil {
@@ -171,6 +172,16 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	}
 
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
+}
+
+func (lr *LogicRunner) GetExecution(ref Ref) *ExecutionState {
+	lr.executionMutex.Lock()
+	defer lr.executionMutex.Unlock()
+	res, ok := lr.execution[ref]
+	if !ok {
+		return nil
+	}
+	return res
 }
 
 func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
@@ -233,10 +244,9 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 }
 
 type objectBody struct {
-	Body        []byte
-	Code        Ref
-	Class       Ref
-	MachineType core.MachineType
+	Object core.ObjectDescriptor
+	Class  core.ClassDescriptor
+	Code   core.CodeDescriptor
 }
 
 func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
@@ -253,22 +263,21 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 		return cr.Resp.(*objectBody), nil
 	}
 
-	objDesc, err := lr.ArtifactManager.GetObject(ctx, objref, nil)
+	objDesc, err := lr.ArtifactManager.GetObject(ctx, objref, nil, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
 
-	classDesc, err := objDesc.ClassDescriptor(nil)
+	classDesc, err := lr.ArtifactManager.GetClass(ctx, *objDesc.Class(), nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
 
 	codeDesc := classDesc.CodeDescriptor()
 	ob := &objectBody{
-		Body:        objDesc.Memory(),
-		Code:        *codeDesc.Ref(),
-		Class:       *classDesc.HeadRef(),
-		MachineType: codeDesc.MachineType(),
+		Object: objDesc,
+		Class:  classDesc,
+		Code:   codeDesc,
 	}
 	lr.addObjectCaseRecord(objref, core.CaseRecord{
 		Type:   core.CaseRecordTypeGetObject,
@@ -290,27 +299,33 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 	}
 
 	ctx.Callee = &m.ObjectRef
-	ctx.Class = &objbody.Class
+	ctx.Class = objbody.Class.HeadRef()
 	vb.ModifyContext(&ctx)
 
-	executor, err := lr.GetExecutor(objbody.MachineType)
+	executor, err := lr.GetExecutor(objbody.Code.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "no executor registered")
 	}
 
 	executer := func() (*reply.CallMethod, error) {
 		newData, result, err := executor.CallMethod(
-			&ctx, objbody.Code, objbody.Body, m.Method, m.Arguments,
+			&ctx, *objbody.Code.Ref(), objbody.Object.Memory(), m.Method, m.Arguments,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "executor error")
 		}
 
-		// TODO: deactivation should be handled way better here
-		if vb.NeedSave() && lr.lastObjectCaseRecord(m.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
-			_, err = lr.ArtifactManager.UpdateObject(
-				insctx, Ref{}, *ctx.Request, m.ObjectRef, newData,
-			)
+		if vb.NeedSave() {
+			am := lr.ArtifactManager
+			if executionState.deactivate {
+				_, err = am.DeactivateObject(
+					insctx, Ref{}, *ctx.Request, objbody.Object,
+				)
+			} else {
+				_, err = am.UpdateObject(
+					insctx, Ref{}, *ctx.Request, objbody.Object, newData,
+				)
+			}
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
 			}
@@ -360,26 +375,11 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	}
 
 	switch m.SaveAs {
-	case message.Child:
-		log.Warn()
-		log.Warnf("M = %+v", m)
+	case message.Child, message.Delegate:
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
 				insctx,
-				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
-			)
-		}
-		vb.End(m.ClassRef, core.CaseRecord{
-			Type: core.CaseRecordTypeResult,
-			Resp: &reply.CallConstructor{Object: ctx.Request},
-		})
-
-		return &reply.CallConstructor{Object: ctx.Request}, err
-	case message.Delegate:
-		if vb.NeedSave() {
-			_, err = lr.ArtifactManager.ActivateObjectDelegate(
-				insctx,
-				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
+				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, m.SaveAs == message.Delegate, newData,
 			)
 		}
 		vb.End(m.ClassRef, core.CaseRecord{

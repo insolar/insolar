@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -28,6 +29,7 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,6 +37,7 @@ const HOST = "http://localhost:19191"
 const TestUrl = HOST + "/api/v1?query_type=LOL"
 
 func TestMain(m *testing.M) {
+	ctx := inscontext.WithTraceID(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
 	bootstrapCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)
@@ -42,11 +45,11 @@ func TestMain(m *testing.M) {
 	cs := core.Components{}
 	b, _ := bootstrap.NewBootstrapper(bootstrapCfg.Bootstrap)
 	cs.Bootstrapper = b
-	api.Start(cs)
+	api.Start(ctx, cs)
 
 	code := m.Run()
 
-	api.Stop()
+	api.Stop(ctx)
 
 	os.Exit(code)
 }
@@ -62,7 +65,7 @@ func TestWrongQueryParam(t *testing.T) {
 }
 
 func TestHandlerError(t *testing.T) {
-	postParams := map[string]string{"query_type": "get_balance", "reference": "test"}
+	postParams := map[string]string{"query_type": "register_node", "public_key": "test"}
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
@@ -70,7 +73,7 @@ func TestHandlerError(t *testing.T) {
 	assert.NoError(t, err)
 	a := string(body[:])
 	_ = a
-	assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] message`)
+	assert.Contains(t, string(body[:]), `"message": "Handler error: field 'roles' is required"`)
 }
 
 func TestBadRequest(t *testing.T) {

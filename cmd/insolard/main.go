@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
@@ -49,12 +50,12 @@ type componentManager struct {
 }
 
 // linkAll - link dependency for all components
-func (cm *componentManager) linkAll() {
+func (cm *componentManager) linkAll(ctx core.Context) {
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
 		componentName := v.Field(i).String()
 		log.Infof("Starting component `%s` ...", componentName)
-		err := v.Field(i).Interface().(core.Component).Start(cm.components)
+		err := v.Field(i).Interface().(core.Component).Start(ctx, cm.components)
 		if err != nil {
 			log.Fatalf("failed to start component %s : %s", componentName, err.Error())
 		}
@@ -64,10 +65,10 @@ func (cm *componentManager) linkAll() {
 }
 
 // stopAll - reverse order stop all components
-func (cm *componentManager) stopAll() {
+func (cm *componentManager) stopAll(ctx core.Context) {
 	v := reflect.ValueOf(cm.components)
 	for i := v.NumField() - 1; i >= 0; i-- {
-		err := v.Field(i).Interface().(core.Component).Stop()
+		err := v.Field(i).Interface().(core.Component).Stop(ctx)
 		log.Infoln("Stop component: ", v.String())
 		if err != nil {
 			log.Errorf("failed to stop component %s : %s", v.String(), err.Error())
@@ -112,6 +113,8 @@ func main() {
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
+	ctx := inscontext.WithTraceID(inscontext.Background(), api.RandTraceID())
+
 	cm := componentManager{}
 	cert, err := certificate.NewCertificate(cfgHolder.Configuration.KeysPath)
 	if err != nil {
@@ -119,9 +122,9 @@ func main() {
 	}
 	cm.components.Certificate = cert
 
-	cm.components.ActiveNodeComponent, err = nodekeeper.NewActiveNodeComponent(cfgHolder.Configuration)
+	cm.components.NodeNetwork, err = nodekeeper.NewNodeNetwork(cfgHolder.Configuration)
 	if err != nil {
-		log.Fatalln("failed to start ActiveNodeComponent: ", err.Error())
+		log.Fatalln("failed to start NodeNetwork: ", err.Error())
 	}
 
 	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
@@ -170,14 +173,14 @@ func main() {
 		log.Fatalln("failed to load VersionManager: ", err.Error())
 	}
 
-	cm.linkAll()
+	cm.linkAll(ctx)
 	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(cfgHolder.Configuration.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	if err != nil {
 		log.Fatalln("failed init pulse for LogicRunner: ", err.Error())
 	}
 
 	defer func() {
-		cm.stopAll()
+		cm.stopAll(ctx)
 	}()
 
 	var gracefulStop = make(chan os.Signal)
@@ -188,13 +191,13 @@ func main() {
 		sig := <-gracefulStop
 		log.Debugln("caught sig: ", sig)
 
-		cm.stopAll()
+		cm.stopAll(ctx)
 		os.Exit(0)
 	}()
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")
-	repl(nw)
+	repl(nw, cm.components.Ledger.GetPulseManager())
 }
 
 func initLogger(cfg configuration.Log) {

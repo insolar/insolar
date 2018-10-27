@@ -21,11 +21,13 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
-	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/id"
+	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
+
+	"github.com/insolar/insolar/network/transport/relay"
 )
 
 func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
@@ -296,7 +298,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 		}
 		receiverHost := host.NewHost(receiverAddress)
 
-		b := packet.NewBuilder()
+		b := packet.NewBuilder(pulsarHost)
 		pingPacket := packet.NewPingPacket(pulsarHost, receiverHost)
 		pingCall, err := t.SendRequest(pingPacket)
 		if err != nil {
@@ -306,8 +308,8 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 		pingResult := <-pingCall.Result()
 		receiverHost.ID = pingResult.Sender.ID
 
-		b = packet.NewBuilder()
-		request := b.Sender(pulsarHost).Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(packet.TypeGetRandomHosts).Build()
+		b = packet.NewBuilder(pulsarHost)
+		request := b.Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(types.TypeGetRandomHosts).Build()
 
 		call, err := t.SendRequest(request)
 		if err != nil {
@@ -343,8 +345,8 @@ func sendPulseToHost(sender *host.Host, t transport.Transport, pulseReceiver *ho
 			log.Fatalf("run time panic: %v", x)
 		}
 	}()
-	pb := packet.NewBuilder()
-	pulseRequest := pb.Sender(sender).Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(packet.TypePulse).Build()
+	pb := packet.NewBuilder(sender)
+	pulseRequest := pb.Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.TypePulse).Build()
 	call, err := t.SendRequest(pulseRequest)
 	if err != nil {
 		return err

@@ -53,7 +53,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err, "Initialize runner")
 
 	mb := testmessagebus.NewTestMessageBus()
-	assert.NoError(t, lr.Start(core.Components{
+	assert.NoError(t, lr.Start(ctx, core.Components{
 		Ledger:     l,
 		MessageBus: mb,
 	}), "starting logicrunner")
@@ -74,7 +74,10 @@ func TestBareHelloworld(t *testing.T) {
 	reqref := core.RecordRef{}
 	reqref.SetRecord(*contract)
 
-	_, err = am.ActivateObject(ctx, domain, reqref, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
+	_, err = am.ActivateObject(
+		ctx, domain, reqref, *classRef, *am.GenesisRef(), false,
+		goplugintestutils.CBORMarshal(t, hw),
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 

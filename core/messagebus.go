@@ -85,7 +85,7 @@ const (
 	TypeExecutorResults
 	// TypeValidateCaseBind sends CaseBind form Executor to Validators for redo all actions
 	TypeValidateCaseBind
-	// TypeValidationResult sends from Validator to new Executor with results of validation actions of previous Executor
+	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
 	TypeValidationResults
 
 	// Ledger
@@ -102,22 +102,8 @@ const (
 	TypeGetDelegate
 	// TypeGetChildren retrieves object represented as provided class.
 	TypeGetChildren
-	// TypeDeclareType creates new type.
-	TypeDeclareType
-	// TypeDeployCode creates new code.
-	TypeDeployCode
-	// TypeActivateClass activates class.
-	TypeActivateClass
-	// TypeDeactivateClass deactivates class.
-	TypeDeactivateClass
 	// TypeUpdateClass amends class.
 	TypeUpdateClass
-	// TypeActivateObject activates object.
-	TypeActivateObject
-	// TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
-	TypeActivateObjectDelegate
-	// TypeDeactivateObject deactivates object.
-	TypeDeactivateObject
 	// TypeUpdateObject amends object.
 	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.
@@ -126,6 +112,8 @@ const (
 	TypeJetDrop
 	// TypeSetRecord saves record in storage.
 	TypeSetRecord
+	// TypeValidateRecord saves record in storage.
+	TypeValidateRecord
 
 	// Bootstrap
 

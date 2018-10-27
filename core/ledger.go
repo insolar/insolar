@@ -83,13 +83,13 @@ type ArtifactManager interface {
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetClass(ctx Context, head RecordRef, state *RecordRef) (ClassDescriptor, error)
+	GetClass(ctx Context, head RecordRef, state *RecordID) (ClassDescriptor, error)
 
 	// GetObject returns descriptor for provided state.
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(ctx Context, head RecordRef, state *RecordRef) (ObjectDescriptor, error)
+	GetObject(ctx Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
 
 	// GetDelegate returns provided object's delegate reference for provided class.
 	//
@@ -134,22 +134,26 @@ type ArtifactManager interface {
 	// If memory is not provided, the class default memory will be used.
 	//
 	// Request reference will be this object's identifier and referred as "object head".
-	ActivateObject(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
-
-	// ActivateObjectDelegate is similar to ActivateObject but it created object will be parent's delegate of provided class.
-	ActivateObjectDelegate(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
+	ActivateObject(
+		ctx Context, domain, request, class, parent RecordRef, asDelegate bool, memory []byte,
+	) (ObjectDescriptor, error)
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObject(ctx Context, domain, request, obj RecordRef) (*RecordID, error)
+	DeactivateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor) (*RecordID, error)
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(ctx Context, domain, request, obj RecordRef, memory []byte) (*RecordID, error)
+	UpdateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (*RecordID, error)
+
+	// RegisterValidation marks provided object state as approved or disapproved.
+	//
+	// When fetching object, validity can be specified.
+	RegisterValidation(ctx Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
@@ -187,11 +191,14 @@ type ObjectDescriptor interface {
 	// Memory fetches object memory from storage.
 	Memory() []byte
 
-	// ClassDescriptor returns descriptor for fetching object's class data.
-	ClassDescriptor(state *RecordRef) (ClassDescriptor, error)
+	// Class
+	Class() *RecordRef
 
 	// Children returns object's children references.
 	Children(pulse *PulseNumber) (RefIterator, error)
+
+	// ChildPointer returns the latest child for this object.
+	ChildPointer() *RecordID
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.
