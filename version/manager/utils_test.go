@@ -42,7 +42,8 @@ func TestGetMapOfVersions(t *testing.T) {
 	}
 	mapOfVersions := getMapOfVersion(nodes)
 	mapOfVersions2 := make(map[string]int)
-	mapOfVersions2["v0.5.0"] = 4
+	mapOfVersions2["v0.5.0"] = 2
+	mapOfVersions2["v0.5.1"] = 2
 	assert.NotNil(t, mapOfVersions)
 	assert.NotNil(t, mapOfVersions2)
 	assert.Equal(t, *mapOfVersions, mapOfVersions2)
