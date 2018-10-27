@@ -17,6 +17,7 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -134,11 +135,11 @@ func (vm *VersionManager) Remove(key string) {
 	}
 }
 
-func (vm *VersionManager) Start(ctx core.Context, components core.Components) error {
+func (vm *VersionManager) Start(ctx context.Context, components core.Components) error {
 	vm.loadVersionTable()
 	return nil
 }
 
-func (vm *VersionManager) Stop(ctx core.Context) error {
+func (vm *VersionManager) Stop(ctx context.Context) error {
 	return nil
 }
