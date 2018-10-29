@@ -33,7 +33,7 @@ type JaegerConfig struct {
 func NewTracer() Tracer {
 	return Tracer{
 		Jaeger: JaegerConfig{
-			AgentEndpoint: "localhost:6831",
+			AgentEndpoint: "",
 		},
 	}
 }
