@@ -141,9 +141,11 @@ func (e *UpdateClass) Target() *core.RecordRef {
 type UpdateObject struct {
 	ledgerMessage
 
-	Record []byte
-	Class  *core.RecordRef // Only used for activation.
-	Object core.RecordRef
+	Record     []byte
+	RecordSign []byte
+	Class      *core.RecordRef // Only used for activation.
+	Object     core.RecordRef
+	Memory     []byte
 }
 
 // Type implementation of Message interface.

@@ -328,6 +328,10 @@ func (m *LedgerArtifactManager) ActivateObject(
 	if err != nil {
 		return nil, err
 	}
+	pulseNumber, err := m.db.GetLatestPulseNumber()
+	if err != nil {
+		return nil, err
+	}
 
 	obj, err := m.updateObject(
 		&record.ObjectActivateRecord{
@@ -336,7 +340,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: memory,
+				Memory: record.CalculateIDForBlob(pulseNumber, memory),
 			},
 			Class:    class,
 			Parent:   parent,
@@ -344,6 +348,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 		},
 		object,
 		&class,
+		memory,
 	)
 	if err != nil {
 		return nil, err
@@ -399,6 +404,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 		},
 		*object.HeadRef(),
 		nil,
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -416,6 +422,11 @@ func (m *LedgerArtifactManager) UpdateObject(
 	object core.ObjectDescriptor,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
+	pulseNumber, err := m.db.GetLatestPulseNumber()
+	if err != nil {
+		return nil, err
+	}
+
 	obj, err := m.updateObject(
 		&record.ObjectAmendRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -423,12 +434,13 @@ func (m *LedgerArtifactManager) UpdateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: memory,
+				Memory: record.CalculateIDForBlob(pulseNumber, memory),
 			},
 			PrevState: *object.StateID(),
 		},
 		*object.HeadRef(),
 		nil,
+		memory,
 	)
 	if err != nil {
 		return nil, err
@@ -520,14 +532,16 @@ func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.Record
 }
 
 func (m *LedgerArtifactManager) updateObject(
-	rec record.Record, object core.RecordRef, class *core.RecordRef,
+	rec record.Record, object core.RecordRef, class *core.RecordRef, memory []byte,
 ) (*reply.Object, error) {
 	genericReact, err := m.messageBus.Send(
 		context.TODO(),
 		&message.UpdateObject{
-			Record: record.SerializeRecord(rec),
-			Object: object,
-			Class:  class,
+			Record:     record.SerializeRecord(rec),
+			RecordSign: nil,
+			Object:     object,
+			Class:      class,
+			Memory:     memory,
 		},
 	)
 
