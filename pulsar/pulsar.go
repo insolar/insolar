@@ -41,7 +41,7 @@ import (
 // Pulsar is a base struct for pulsar's node
 // It contains all the stuff, which is needed for working of a pulsar
 type Pulsar struct {
-	Id string
+	ID string
 
 	Sock               net.Listener
 	SockConnectionType configuration.ConnectionType
@@ -284,7 +284,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	}
 	currentPulsar.ProcessingPulseNumber = pulseNumber
 
-	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%v", currentPulsar.Id, string(pulseNumber)))
+	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%v", currentPulsar.ID, string(pulseNumber)))
 
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 

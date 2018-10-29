@@ -53,7 +53,7 @@ func main() {
 	}
 
 	server, storage := initPulsar(ctx, cfgHolder.Configuration)
-	server.Id = uniqueId
+	server.ID = uniqueId
 
 	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
