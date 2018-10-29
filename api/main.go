@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -119,9 +119,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceid := RandTraceID()
 		ctx, inslog := inslogger.WithTraceField(context.Background(), traceid)
-		inslog,
-
-			startTime := time.Now()
+		startTime := time.Now()
 		answer := make(map[string]interface{})
 		var params *Params
 		defer func() {
