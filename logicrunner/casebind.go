@@ -109,7 +109,12 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			return step, errors.New("step between two shores")
 		}
 
-		ret, err := lr.Execute(context.TODO(), start.Resp.(core.Message))
+		msg := start.Resp.(core.Message)
+		signed, err := message.NewSignedMessage(msg, ref, lr.Network.GetPrivateKey())
+		if err != nil {
+			return 0, errors.New("failed to create a signed message")
+		}
+		ret, err := lr.Execute(context.TODO(), signed)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -140,8 +145,8 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 	}
 }
-func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(*message.ValidateCaseBind)
+func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
@@ -175,8 +180,8 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 	return c, ok
 }
 
-func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(*message.ValidationResults)
+func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+	msg, ok := inmsg.Message().(*message.ValidationResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
@@ -185,8 +190,8 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	return nil, nil
 }
 
-func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(*message.ExecutorResults)
+func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+	msg, ok := inmsg.Message().(*message.ExecutorResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}

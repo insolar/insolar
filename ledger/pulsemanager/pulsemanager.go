@@ -77,11 +77,13 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	if err != nil {
 		return err
 	}
-	_, err = m.bus.Send(context.TODO(), &message.JetDrop{
+
+	msg := &message.JetDrop{
 		Drop:        dropSerialized,
 		Messages:    messages,
 		PulseNumber: latestPulseNumber,
-	})
+	}
+	_, err = m.bus.Send(context.TODO(), msg)
 	if err != nil {
 		return err
 	}

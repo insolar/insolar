@@ -78,12 +78,12 @@ func (n *ServiceNetwork) GetNodeID() core.RecordRef {
 }
 
 // SendMessage sends a message from MessageBus.
-func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
+func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.SignedMessage) ([]byte, error) {
 	return n.controller.SendMessage(nodeID, method, msg)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes
-func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
+func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error {
 	return n.controller.SendCascadeMessage(data, method, msg)
 }
 
@@ -144,7 +144,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 func (n *ServiceNetwork) bootstrap() {
 	err := n.controller.Bootstrap()
 	if err != nil {
-		log.Errorln("Failed to bootstrap n", err.Error())
+		log.Errorln("Failed to bootstrap network", err.Error())
 	}
 }
 

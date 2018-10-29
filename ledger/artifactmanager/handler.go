@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error)
+type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error)
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
@@ -85,8 +85,8 @@ func logTimeInside(start time.Time, funcName string) {
 }
 
 func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
-	return func(context context.Context, genericMsg core.Message) (core.Reply, error) {
-		err := persistMessageToDb(h.db, genericMsg)
+	return func(context context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+		err := persistMessageToDb(h.db, genericMsg.Message())
 		if err != nil {
 			return nil, err
 		}
@@ -100,8 +100,8 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 	}
 }
 
-func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.SetRecord)
+func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.SetRecord)
 	id, err := h.db.SetRecord(pulseNumber, record.DeserializeRecord(msg.Record))
 	if err != nil {
 		return nil, err
@@ -110,9 +110,9 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetCode)
+	msg := genericMsg.Message().(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
 
 	codeRec, err := getCode(h.db, codeRef.Record)
@@ -130,9 +130,9 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetClass)
+	msg := genericMsg.Message().(*message.GetClass)
 	headRef := record.Core2Reference(msg.Head)
 
 	_, stateID, state, err := getClass(h.db, &headRef.Record, msg.State)
@@ -159,9 +159,9 @@ func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.Pu
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetObject)
+	msg := genericMsg.Message().(*message.GetObject)
 	headRef := record.Core2Reference(msg.Head)
 
 	idx, stateID, state, err := getObject(h.db, &headRef.Record, msg.State, msg.Approved)
@@ -193,9 +193,9 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetDelegate)
+	msg := genericMsg.Message().(*message.GetDelegate)
 	headRef := record.Core2Reference(msg.Head)
 
 	idx, _, _, err := getObject(h.db, &headRef.Record, nil, false)
@@ -217,9 +217,9 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetChildren)
+	msg := genericMsg.Message().(*message.GetChildren)
 	parentRef := record.Core2Reference(msg.Parent)
 
 	idx, _, _, err := getObject(h.db, &parentRef.Record, nil, false)
@@ -270,8 +270,8 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.UpdateClass)
+func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.UpdateClass)
 	classCoreID := msg.Class.GetRecordID()
 	classID := record.Bytes2ID(classCoreID[:])
 
@@ -312,8 +312,8 @@ func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.UpdateObject)
+func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.UpdateObject)
 	objectCoreID := msg.Object.GetRecordID()
 	objectID := record.Bytes2ID(objectCoreID[:])
 
@@ -368,9 +368,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.RegisterChild)
+	msg := genericMsg.Message().(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
 	childRef := record.Core2Reference(msg.Child)
 
@@ -416,8 +416,8 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	return &reply.ID{ID: *child.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.JetDrop)
+func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.JetDrop)
 
 	for _, rawMessage := range msg.Messages {
 		parsedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
@@ -425,7 +425,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Mess
 			return nil, err
 		}
 
-		handler, ok := h.jetDropHandlers[parsedMessage.Type()]
+		handler, ok := h.jetDropHandlers[parsedMessage.Message().Type()]
 		if !ok {
 			return nil, errors.New("unknown message type")
 		}
@@ -439,8 +439,8 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Mess
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.ValidateRecord)
+func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.ValidateRecord)
 	objID := record.Core2Reference(msg.Object).Record
 	validatedStateID := record.Bytes2ID(msg.State[:])
 
