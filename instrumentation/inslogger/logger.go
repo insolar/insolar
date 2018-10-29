@@ -43,6 +43,7 @@ func WithField(ctx context.Context, key string, value string) (context.Context, 
 
 // WithTraceField returns context with logger initialized with provided traceid value and logger itself.
 func WithTraceField(ctx context.Context, traceid string) (context.Context, core.Logger) {
+	ctx = setTraceID(ctx, traceid)
 	return WithField(ctx, "traceid", traceid)
 }
 
@@ -58,4 +59,19 @@ func getLogger(ctx context.Context) core.Logger {
 		return logger.GlobalLogger
 	}
 	return l.(core.Logger)
+}
+
+type traceIDKey struct{}
+
+// TraceID returns traceid provided by WithTraceField and ContextWithTrace helpers.
+func TraceID(ctx context.Context) string {
+	val := ctx.Value(traceIDKey{})
+	if val == nil {
+		return ""
+	}
+	return val.(string)
+}
+
+func setTraceID(ctx context.Context, traceid string) context.Context {
+	return context.WithValue(ctx, traceIDKey{}, traceid)
 }
