@@ -38,8 +38,9 @@ type Consensus struct {
 	CaseRecords []core.CaseRecord
 }
 
-func newConsensus(refs []Ref) *Consensus {
+func newConsensus(lr LogicRunner, refs []Ref) *Consensus {
 	c := &Consensus{
+		lr:      lr,
 		Results: make(map[Ref]ConsensusRecord),
 	}
 	for _, r := range refs {
@@ -51,7 +52,7 @@ func newConsensus(refs []Ref) *Consensus {
 }
 
 // AddValidated adds results from validators
-func (c *Consensus) AddValidated(m *message.ValidationResults) {
+func (c *Consensus) AddValidated(m *message.ValidationResults, node Ref, sig []byte) {
 	caller := *m.GetCaller()
 	if _, ok := c.Results[caller]; !ok {
 		// why ??
@@ -65,7 +66,7 @@ func (c *Consensus) AddValidated(m *message.ValidationResults) {
 	c.CheckReady()
 }
 
-func (c *Consensus) AddExecutor(m *message.ExecutorResults) {
+func (c *Consensus) AddExecutor(m *message.ExecutorResults, node Ref, sig []byte) {
 	c.CaseRecords = m.CaseRecords
 	c.CheckReady()
 }

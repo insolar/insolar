@@ -126,14 +126,11 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMe
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
-	_, err := lr.MessageBus.Send(
-		context.TODO(),
+	_, err := lr.MessageBus.Send(ctx,
 		&message.ValidationResults{
-			Caller:           lr.Network.GetNodeID(),
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
 			Error:            validationError,
-			// TODO: INS-663 use signatures here
 		},
 	)
 
@@ -146,7 +143,7 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 	c, _ := lr.GetConsensus(msg.RecordRef)
-	c.AddValidated(msg)
+	c.AddValidated(msg, inmsg.GetSender(), inmsg.GetSign())
 	return nil, nil
 }
 
@@ -156,7 +153,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.SignedMes
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 	c, _ := lr.GetConsensus(msg.RecordRef)
-	c.AddExecutor(msg)
+	c.AddExecutor(msg, inmsg.GetSender(), inmsg.GetSign())
 	return nil, nil
 }
 
