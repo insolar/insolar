@@ -41,6 +41,7 @@ type Ref = core.RecordRef
 // Context of one contract execution
 type ExecutionState struct {
 	sync.Mutex
+	noWait      bool
 	validate    bool
 	insContext  context.Context
 	callContext *core.LogicCallContext
@@ -313,10 +314,15 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 
 func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
 	insctx := es.insContext
+	es.noWait = false
+	defer func() {
+		if !es.noWait {
+			es.Unlock()
+		}
+	}()
 
 	err := lr.getObjectMessage(es, m.ObjectRef)
 	if err != nil {
-		es.Unlock()
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
@@ -325,12 +331,15 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 
 	executor, err := lr.GetExecutor(es.objectbody.CodeMachineType)
 	if err != nil {
-		es.Unlock()
 		return nil, errors.Wrap(err, "no executor registered")
 	}
 
 	executer := func() (*reply.CallMethod, error) {
-		defer es.Unlock()
+		defer func() {
+			if es.noWait {
+				es.Unlock()
+			}
+		}()
 		newData, result, err := executor.CallMethod(
 			es.callContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
 		)
@@ -368,6 +377,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	case message.ReturnResult:
 		return executer()
 	case message.ReturnNoWait:
+		es.noWait = true
 		go func() {
 			_, err := executer()
 			if err != nil {
@@ -376,12 +386,14 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		}()
 		return &reply.CallMethod{}, nil
 	}
-	es.Unlock()
 	return nil, errors.Errorf("Invalid ReturnMode #%d", m.ReturnMode)
 }
 
 func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
 	insctx := es.insContext
+	defer func() {
+		es.Unlock()
+	}()
 	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class")
@@ -411,10 +423,8 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 			Type: core.CaseRecordTypeResult,
 			Resp: &reply.CallConstructor{Object: es.callContext.Request},
 		})
-		es.Unlock()
 		return &reply.CallConstructor{Object: es.callContext.Request}, err
 	default:
-		es.Unlock()
 		return nil, errors.New("unsupported type of save object")
 	}
 }
