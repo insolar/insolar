@@ -118,7 +118,7 @@ func (switcher *StateSwitcherImpl) SwitchToState(ctx context.Context, state Stat
 	case WaitingForEntropy:
 		switcher.pulsar.waitForEntropy(ctx)
 	case SendingVector:
-		switcher.pulsar.sendVector()
+		switcher.pulsar.sendVector(ctx)
 	case WaitingForVectors:
 		switcher.pulsar.waitForVectors()
 	case Verifying:

@@ -140,14 +140,14 @@ func (currentPulsar *Pulsar) sendPulseToPulsars() {
 	}
 }
 
-func (currentPulsar *Pulsar) sendVector() {
-	log.Debug("[sendVector]")
+func (currentPulsar *Pulsar) sendVector(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[sendVector]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
 
 	if currentPulsar.isStandalone() {
-		currentPulsar.StateSwitcher.SwitchToState(Verifying, nil)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Verifying, nil)
 		return
 	}
 
