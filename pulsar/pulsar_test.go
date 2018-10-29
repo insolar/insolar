@@ -620,7 +620,6 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, uint64(1), switcher.SwitchToStateCounter)
-	assert.Equal(t, WaitingForVectors, switcher.SwitchToStateMock.mockExpectations.p)
 }
 
 func TestPulsar_sendEntropy_OnePulsar(t *testing.T) {
@@ -634,7 +633,6 @@ func TestPulsar_sendEntropy_OnePulsar(t *testing.T) {
 	pulsar.sendEntropy(ctx)
 
 	assert.Equal(t, uint64(1), switcher.SwitchToStateCounter)
-	assert.Equal(t, Verifying, switcher.SwitchToStateMock.mockExpectations.p)
 }
 
 func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
