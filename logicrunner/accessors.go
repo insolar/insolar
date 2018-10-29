@@ -108,7 +108,7 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 		//if err != nil {
 		//	panic("cannot QueryRole")
 		//}
-		c = newConsensus(nil)
+		c = newConsensus(lr, nil)
 		lr.consensus[r] = c
 	}
 	return c, ok

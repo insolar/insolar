@@ -31,6 +31,7 @@ type ConsensusRecord struct {
 
 // Consensus is an object for one validation process where all validated results will be compared.
 type Consensus struct {
+	lr          *LogicRunner
 	Have        int
 	Need        int
 	Total       int
@@ -38,7 +39,7 @@ type Consensus struct {
 	CaseRecords []core.CaseRecord
 }
 
-func newConsensus(lr LogicRunner, refs []Ref) *Consensus {
+func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
 	c := &Consensus{
 		lr:      lr,
 		Results: make(map[Ref]ConsensusRecord),
