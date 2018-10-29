@@ -172,7 +172,7 @@ func main() {
 
 	cm := componentManager{}
 
-	cert := &certificate.Certificate{}
+	var cert *certificate.Certificate
 	if isBootstrap {
 		cert, err = certificate.NewCertificatesWithKeys(config.KeysPath)
 		checkError("failed to start Certificate ( bootstrap mode ): ", err)
