@@ -41,7 +41,7 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
 
 	payload, err := currentPulsar.preparePayload(EntropySignaturePayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Signature: currentPulsar.GeneratedEntropySign})
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -59,8 +59,9 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
 	}
 }
 
-func (currentPulsar *Pulsar) broadcastVector() {
-	log.Debug("[broadcastVector]")
+func (currentPulsar *Pulsar) broadcastVector(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[broadcastVector]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -69,7 +70,7 @@ func (currentPulsar *Pulsar) broadcastVector() {
 		Vector:      currentPulsar.OwnedBftRow})
 
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -80,7 +81,7 @@ func (currentPulsar *Pulsar) broadcastVector() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			logger.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 		}
 	}
 }
