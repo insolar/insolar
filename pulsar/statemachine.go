@@ -122,7 +122,7 @@ func (switcher *StateSwitcherImpl) SwitchToState(ctx context.Context, state Stat
 	case WaitingForVectors:
 		switcher.pulsar.waitForVectors(ctx)
 	case Verifying:
-		switcher.pulsar.verify()
+		switcher.pulsar.verify(ctx)
 	case WaitingForPulseSigns:
 		switcher.pulsar.waitForPulseSigns()
 	case SendingPulseSign:

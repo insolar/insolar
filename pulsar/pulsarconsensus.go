@@ -17,12 +17,13 @@
 package pulsar
 
 import (
+	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // SetBftGridItem set item of the bftGrid in the thread-safe way
@@ -108,8 +109,9 @@ func (currentPulsar *Pulsar) isVerificationNeeded() bool {
 	return true
 }
 
-func (currentPulsar *Pulsar) verify() {
-	log.Debugf("[verify] - %v", currentPulsar.Config.MainListenerAddress)
+func (currentPulsar *Pulsar) verify(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[verify] - %v", currentPulsar.Config.MainListenerAddress)
 	if !currentPulsar.isVerificationNeeded() {
 		return
 	}
@@ -166,7 +168,11 @@ func (currentPulsar *Pulsar) verify() {
 	}
 
 	if len(finalEntropySet) == 0 || wrongVectors > currentPulsar.getMaxTraitorsCount() {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, errors.New("bft is broken"))
+		currentPulsar.StateSwitcher.SwitchToState(
+			ctx,
+			Failed,
+			fmt.Errorf("bft is broken. len(finalEntropySet) == %v, wrongVectors - %v", len(finalEntropySet), wrongVectors),
+		)
 		return
 	}
 
