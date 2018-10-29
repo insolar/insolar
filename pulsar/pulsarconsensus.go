@@ -93,28 +93,21 @@ func (bftCell *BftCell) GetIsEntropyReceived() bool {
 	return bftCell.IsEntropyReceived
 }
 
-func (currentPulsar *Pulsar) isVerificationNeeded() bool {
+func (currentPulsar *Pulsar) verify(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[verify] - %v", currentPulsar.Config.MainListenerAddress)
+
 	if currentPulsar.IsStateFailed() {
-		return false
+		return
 
 	}
 	if currentPulsar.isStandalone() {
 		currentPulsar.CurrentSlotEntropy = currentPulsar.GeneratedEntropy
 		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
-		currentPulsar.StateSwitcher.SwitchToState(SendingPulse, nil)
-		return false
-
-	}
-
-	return true
-}
-
-func (currentPulsar *Pulsar) verify(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[verify] - %v", currentPulsar.Config.MainListenerAddress)
-	if !currentPulsar.isVerificationNeeded() {
+		currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
 		return
 	}
+
 	type bftMember struct {
 		PubPem string
 		PubKey *ecdsa.PublicKey
@@ -183,14 +176,14 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 			finalEntropy[byteIndex] ^= tempEntropy[byteIndex]
 		}
 	}
-	currentPulsar.finalizeBft(finalEntropy, keys)
+	currentPulsar.finalizeBft(ctx, finalEntropy, keys)
 }
 
-func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsars []string) {
+func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.Entropy, activePulsars []string) {
 	currentPulsar.CurrentSlotEntropy = finalEntropy
 	chosenPulsar, err := selectByEntropy(finalEntropy, activePulsars, len(activePulsars))
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 	}
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
@@ -201,7 +194,7 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		})
 		if err != nil {
-			currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+			currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 			return
 		}
 		currentPulsar.currentSlotSenderConfirmationsLock.Lock()
@@ -213,8 +206,8 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 		}
 		currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
 
-		currentPulsar.StateSwitcher.SwitchToState(WaitingForPulseSigns, nil)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForPulseSigns, nil)
 	} else {
-		currentPulsar.StateSwitcher.SwitchToState(SendingPulseSign, nil)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulseSign, nil)
 	}
 }
