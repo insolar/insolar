@@ -20,6 +20,7 @@ package logicrunner
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
 	"net"
 	"sync"
 	"time"
@@ -91,8 +92,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 func (lr *LogicRunner) Start(ctx context.Context, c core.Components) error {
 	am := c.Ledger.GetArtifactManager()
 	lr.ArtifactManager = am
-	messageBus := c.MessageBus
-	lr.MessageBus = messageBus
+	lr.MessageBus = c.MessageBus
 	lr.Ledger = c.Ledger
 	lr.Network = c.Network
 
@@ -163,9 +163,9 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
-	msg, ok := inmsg.(message.IBaseLogicMessage)
+	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
@@ -236,6 +236,9 @@ type objectBody struct {
 	ClassHeadRef    *Ref
 	CodeMachineType core.MachineType
 	CodeRef         *Ref
+}
+func init() {
+	gob.Register(&ObjectBody{})
 }
 
 func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {

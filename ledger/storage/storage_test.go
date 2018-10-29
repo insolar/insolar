@@ -159,7 +159,7 @@ func TestDB_CreateDrop(t *testing.T) {
 	for _, rawMessage := range messages {
 		formatedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
 		assert.NoError(t, err)
-		assert.Equal(t, core.TypeSetRecord, formatedMessage.Type())
+		assert.Equal(t, core.TypeSetRecord, formatedMessage.Message().Type())
 	}
 }
 
