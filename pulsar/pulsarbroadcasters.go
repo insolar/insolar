@@ -173,8 +173,8 @@ func (currentPulsar *Pulsar) sendEntropy(ctx context.Context) {
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForEntropy, nil)
 }
 
-func (currentPulsar *Pulsar) sendPulseSign() {
-	log.Debug("[sendPulseSign]")
+func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[sendPulseSign]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -185,7 +185,7 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 		PulseNumber:     currentPulsar.ProcessingPulseNumber,
 	})
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 	confirmation := core.PulseSenderConfirmation{
@@ -197,7 +197,7 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 
 	payload, err := currentPulsar.preparePayload(confirmation)
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -206,10 +206,10 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 	if reply.Error != nil {
 		//Here should be retry
 		log.Error(reply.Error)
-		currentPulsar.StateSwitcher.SwitchToState(Failed, log.Error)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, log.Error)
 	}
 
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForStart, nil)
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
 }
 
 func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
