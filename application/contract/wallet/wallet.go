@@ -32,7 +32,7 @@ type Wallet struct {
 	Balance uint
 }
 
-// Allocate - returns reference to a new allowance
+// Allocate returns reference to a new allowance
 func (w *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, error) {
 	// TODO check balance is enough
 	w.Balance -= amount
@@ -67,6 +67,7 @@ func (w *Wallet) Receive(amount uint, from *core.RecordRef) error {
 	return nil
 }
 
+// Transfer transfers money to given wallet
 func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	if amount > w.Balance {
 		return fmt.Errorf("[ Transfer ] Not enough balance for transfer")
@@ -91,6 +92,7 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	return nil
 }
 
+// Accept transforms allowance to balance
 func (w *Wallet) Accept(aRef *core.RecordRef) error {
 	b, err := allowance.GetObject(*aRef).TakeAmount()
 	if err != nil {
