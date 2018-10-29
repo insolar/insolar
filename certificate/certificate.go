@@ -79,7 +79,7 @@ func NewCertificate(keysPath string, certPath string) (*Certificate, error) {
 
 	err = AreKeysTheSame(private, cert.PublicKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NewCertificate ]")
+		return nil, errors.Wrap(err, "[ NewCertificate ] Different keys")
 	}
 
 	cert.privateKey = private
