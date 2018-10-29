@@ -42,6 +42,7 @@ const (
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
 	scopeIDMessage  byte = 6
+	scopeIdBlob     byte = 7
 
 	sysGenesis     byte = 1
 	sysLatestPulse byte = 2
@@ -189,6 +190,31 @@ func (db *DB) Set(key, value []byte) error {
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.Set(key, value)
 	})
+}
+
+func (db *DB) GetBlob(id *core.RecordID) ([]byte, error) {
+	tx := db.BeginTransaction(false)
+	defer tx.Discard()
+	rec, err := tx.GetBlob(id)
+	if err != nil {
+		return nil, err
+	}
+	return rec, nil
+}
+
+func (db *DB) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+	var (
+		id  *core.RecordID
+		err error
+	)
+	err = db.Update(func(tx *TransactionManager) error {
+		id, err = tx.SetBlob(pulseNumber, blob)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return id, nil
 }
 
 // GetRequest wraps matching transaction manager method.
