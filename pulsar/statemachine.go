@@ -98,6 +98,7 @@ func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
 	switcher.pulsar = pulsar
 }
 
+// SwitchToState switches the state-machine to another step
 func (switcher *StateSwitcherImpl) SwitchToState(ctx context.Context, state State, args interface{}) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Switch state from %v to %v, node - %v", switcher.GetState().String(), state.String(), switcher.pulsar.Config.MainListenerAddress)
@@ -129,7 +130,7 @@ func (switcher *StateSwitcherImpl) SwitchToState(ctx context.Context, state Stat
 	case SendingPulse:
 		switcher.pulsar.sendPulseToNodesAndPulsars()
 	case Failed:
-		switcher.pulsar.handleErrorState(args.(error))
+		switcher.pulsar.handleErrorState(ctx, args.(error))
 		switcher.setState(WaitingForStart)
 	}
 }

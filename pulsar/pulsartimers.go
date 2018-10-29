@@ -17,8 +17,10 @@
 package pulsar
 
 import (
+	"context"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 )
 
@@ -60,8 +62,8 @@ func (currentPulsar *Pulsar) waitForEntropy() {
 	}()
 }
 
-func (currentPulsar *Pulsar) waitForEntropySigns() {
-	log.Debug("[waitForEntropySigns]")
+func (currentPulsar *Pulsar) waitForEntropySigns(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[waitForEntropySigns]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignTimeout) * time.Millisecond)
 	go func() {
@@ -73,7 +75,7 @@ func (currentPulsar *Pulsar) waitForEntropySigns() {
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(SendingEntropy, nil)
+				currentPulsar.StateSwitcher.SwitchToState(ctx, SendingEntropy, nil)
 			}
 		}
 	}()
