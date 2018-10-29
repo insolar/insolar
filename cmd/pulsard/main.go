@@ -39,7 +39,6 @@ import (
 func main() {
 	uniqueId := RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), uniqueId)
-	ctx = context.WithValue(ctx, pulsar.IdKey, uniqueId)
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
@@ -54,6 +53,7 @@ func main() {
 	}
 
 	server, storage := initPulsar(ctx, cfgHolder.Configuration)
+	server.Id = uniqueId
 
 	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)

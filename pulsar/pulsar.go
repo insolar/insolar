@@ -38,12 +38,11 @@ import (
 	"github.com/insolar/insolar/pulsar/storage"
 )
 
-// IdKey is being used inside context as a key for id-filed
-const IdKey = "pulsarUniqueId"
-
 // Pulsar is a base struct for pulsar's node
 // It contains all the stuff, which is needed for working of a pulsar
 type Pulsar struct {
+	Id string
+
 	Sock               net.Listener
 	SockConnectionType configuration.ConnectionType
 	RPCServer          *rpc.Server
@@ -285,8 +284,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	}
 	currentPulsar.ProcessingPulseNumber = pulseNumber
 
-	traceUniqueId := ctx.Value(IdKey).(string)
-	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%v", traceUniqueId, string(pulseNumber)))
+	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%v", currentPulsar.Id, string(pulseNumber)))
 
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 
