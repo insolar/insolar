@@ -111,6 +111,8 @@ func getParentSpan(ctx context.Context) (parentspan TraceSpan, ok bool) {
 	return
 }
 
+var ErrJagerConfigEmpty = errors.New("can't create jaeger exporter, config not provided")
+
 // RegisterJaeger creates jaeger exporter and registers it in opencensus trace lib.
 func RegisterJaeger(
 	servicename string,
@@ -118,7 +120,7 @@ func RegisterJaeger(
 	collectorendpoint string,
 ) (*jaeger.Exporter, error) {
 	if agentendpoint == "" && collectorendpoint == "" {
-		return nil, errors.New("can't create jaeger exporter, config not provided")
+		return nil, ErrJagerConfigEmpty
 	}
 	exporter, err := jaeger.NewExporter(jaeger.Options{
 		AgentEndpoint:     agentendpoint,
@@ -159,7 +161,11 @@ func ShouldRegisterJaeger(
 			exporter.Flush()
 		}
 	} else {
-		inslog.Warn("registerJaeger error:", regerr)
+		if regerr == ErrJagerConfigEmpty {
+			inslog.Info("registerJaeger skipped: config is not provided")
+		} else {
+			inslog.Warn("registerJaeger error:", regerr)
+		}
 		flusher = func() {}
 	}
 	return
