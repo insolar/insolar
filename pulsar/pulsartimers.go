@@ -43,8 +43,8 @@ func (currentPulsar *Pulsar) waitForPulseSigns() {
 	}()
 }
 
-func (currentPulsar *Pulsar) waitForEntropy() {
-	log.Debug("[waitForEntropy]")
+func (currentPulsar *Pulsar) waitForEntropy(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[waitForEntropy]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	timeout := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingNumberTimeout) * time.Millisecond)
 	go func() {
@@ -56,7 +56,7 @@ func (currentPulsar *Pulsar) waitForEntropy() {
 
 			if time.Now().After(timeout) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(SendingVector, nil)
+				currentPulsar.StateSwitcher.SwitchToState(ctx, SendingVector, nil)
 			}
 		}
 	}()
