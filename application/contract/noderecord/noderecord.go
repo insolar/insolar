@@ -72,7 +72,7 @@ func (nr *NodeRecord) GetRole() ([]core.NodeRole, error) {
 	return nr.Record.Roles, nil
 }
 
-// SelfDestroy makes request to destroy current node record
+// Destroy makes request to destroy current node record
 func (nr *NodeRecord) Destroy() error {
 	nr.SelfDestruct()
 	return nil
