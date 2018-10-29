@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
@@ -60,7 +61,7 @@ type HostNetwork interface {
 	PublicAddress() string
 
 	// SendRequest send request to a remote node.
-	SendRequest(Request) (Future, error)
+	SendRequest(request Request, receiver core.RecordRef) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
@@ -72,7 +73,7 @@ type HostNetwork interface {
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() core.RecordRef
-	GetReceiver() core.RecordRef
+	GetSenderHost() *host.Host
 	GetType() types.PacketType
 	GetData() interface{}
 }
@@ -92,7 +93,6 @@ type Future interface {
 
 // RequestBuilder allows to build a Request.
 type RequestBuilder interface {
-	Receiver(ref core.RecordRef) RequestBuilder
 	Type(packetType types.PacketType) RequestBuilder
 	Data(data interface{}) RequestBuilder
 	Build() Request

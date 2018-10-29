@@ -177,7 +177,7 @@ func (w *Wrapper) PublicAddress() string {
 }
 
 // SendRequest send request to a remote node.
-func (w *Wrapper) SendRequest(network.Request) (network.Future, error) {
+func (w *Wrapper) SendRequest(network.Request, core.RecordRef) (network.Future, error) {
 	panic("not used in DHT implementation")
 }
 

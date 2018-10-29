@@ -29,56 +29,63 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
-type HostNetwork struct {
+type hostTransport struct {
 	transport transport.Transport
 	origin    *host.Host
 	handlers  map[types.PacketType]network.RequestHandler
 }
 
 type builder struct {
-	p *packet.Packet
-}
-
-func newBuilder(origin *host.Host) *builder {
-	data := &packet.Packet{Sender: origin}
-	return &builder{p: data}
-}
-
-func (b *builder) Receiver(ref core.RecordRef) network.RequestBuilder {
-	b.p.Receiver = &host.Host{NodeID: ref}
-	return b
+	sender *host.Host
+	t      types.PacketType
+	data   interface{}
 }
 
 func (b *builder) Type(packetType types.PacketType) network.RequestBuilder {
-	b.p.Type = packetType
+	b.t = packetType
 	return b
 }
 
 func (b *builder) Data(data interface{}) network.RequestBuilder {
-	b.p.Data = data
-	b.p.IsResponse = false
+	b.data = data
 	return b
 }
 
-func (b *builder) Build() network.Request {
-	return (*racket)(b.p)
+func (b *builder) GetSender() core.RecordRef {
+	return b.sender.NodeID
 }
 
-type racket packet.Packet
+func (b *builder) GetSenderHost() *host.Host {
+	return b.sender
+}
 
-func (p *racket) GetSender() core.RecordRef {
+func (b *builder) GetType() types.PacketType {
+	return b.t
+}
+
+func (b *builder) GetData() interface{} {
+	return b.data
+}
+
+func (b *builder) Build() network.Request {
+	return b
+}
+
+type packetWrapper packet.Packet
+
+func (p *packetWrapper) GetSender() core.RecordRef {
 	return p.Sender.NodeID
 }
 
-func (p *racket) GetReceiver() core.RecordRef {
-	return p.Receiver.NodeID
+func (p *packetWrapper) GetSenderHost() *host.Host {
+	return p.Sender
 }
 
-func (p *racket) GetType() types.PacketType {
+func (p *packetWrapper) GetType() types.PacketType {
 	return p.Type
 }
 
-func (p *racket) GetData() interface{} {
+func (p *packetWrapper) GetData() interface{} {
 	return p.Data
 }
 
@@ -91,7 +98,7 @@ func (f future) Response() <-chan network.Response {
 	out := make(chan network.Response, cap(in))
 	go func() {
 		for packet := range in {
-			out <- (*racket)(packet)
+			out <- (*packetWrapper)(packet)
 		}
 	}()
 	return out
@@ -103,7 +110,7 @@ func (f future) GetResponse(duration time.Duration) (network.Response, error) {
 		if !ok {
 			return nil, transport.ErrChannelClosed
 		}
-		return (*racket)(result), nil
+		return (*packetWrapper)(result), nil
 	case <-time.After(duration):
 		f.Cancel()
 		return nil, transport.ErrTimeout
@@ -112,16 +119,16 @@ func (f future) GetResponse(duration time.Duration) (network.Response, error) {
 
 func (f future) GetRequest() network.Request {
 	request := transport.Future(f).Request()
-	return (*racket)(request)
+	return (*packetWrapper)(request)
 }
 
 // Listen start listening to network requests, should be started in goroutine.
-func (h *HostNetwork) Listen() error {
+func (h *hostTransport) Listen() error {
 	go h.listen()
 	return h.transport.Start()
 }
 
-func (h *HostNetwork) listen() {
+func (h *hostTransport) listen() {
 	for {
 		select {
 		case msg := <-h.transport.Packets():
@@ -131,7 +138,7 @@ func (h *HostNetwork) listen() {
 				break
 			}
 			if msg.Error != nil {
-				log.Warn("Received error response")
+				log.Warnf("Received error response: %s", msg.Error.Error())
 			}
 			h.processMessage(msg)
 		case <-h.transport.Stopped():
@@ -141,70 +148,73 @@ func (h *HostNetwork) listen() {
 	}
 }
 
-func (h *HostNetwork) processMessage(msg *packet.Packet) {
+func (h *hostTransport) processMessage(msg *packet.Packet) {
 	handler, exist := h.handlers[msg.Type]
 	if !exist {
 		log.Errorf("No handler set for packet type %s from node %s",
 			msg.Type.String(), msg.Sender.NodeID.String())
 		return
 	}
-	response, err := handler((*racket)(msg))
+	response, err := handler((*packetWrapper)(msg))
 	if err != nil {
 		log.Errorf("Error handling request %s from node %s: %s",
 			msg.Type.String(), msg.Sender.NodeID.String(), err)
 		return
 	}
-	r := response.(*racket)
+	r := response.(*packetWrapper)
 	h.transport.SendResponse(msg.RequestID, (*packet.Packet)(r))
 }
 
 // Disconnect stop listening to network requests.
-func (h *HostNetwork) Disconnect() error {
+func (h *hostTransport) Disconnect() error {
 	h.transport.Stop()
 	return nil
 }
 
 // PublicAddress returns public address that can be published for all nodes.
-func (h *HostNetwork) PublicAddress() string {
+func (h *hostTransport) PublicAddress() string {
 	return h.origin.Address.String()
 }
 
-// SendRequest send request to a remote node.
-func (h *HostNetwork) SendRequest(request network.Request) (network.Future, error) {
-	f, err := h.transport.SendRequest(requestToPacket(request))
+// SendRequestPacket send request packet to a remote node.
+func (h *hostTransport) SendRequestPacket(request network.Request, receiver *host.Host) (network.Future, error) {
+	f, err := h.transport.SendRequest(h.buildRequest(request, receiver))
 	if err != nil {
 		return nil, err
 	}
-	// TODO: resolve NodeID -> Address
 	return future{Future: f}, nil
 }
 
-// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
-func (h *HostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
+func (h *hostTransport) buildRequest(request network.Request, receiver *host.Host) *packet.Packet {
+	return packet.NewBuilder(h.origin).Receiver(receiver).
+		Type(request.GetType()).Request(request.GetData()).Build()
+}
+
+// RegisterPacketHandler register a handler function to process incoming request packets of a specific type.
+func (h *hostTransport) RegisterPacketHandler(t types.PacketType, handler network.RequestHandler) {
+	h.checkHandler(t)
+	h.handlers[t] = handler
+}
+
+func (h *hostTransport) checkHandler(t types.PacketType) {
 	_, exists := h.handlers[t]
 	if exists {
 		panic(fmt.Sprintf("multiple handlers for packet type %s are not supported!", t.String()))
 	}
-	h.handlers[t] = handler
 }
 
 // NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
-func (h *HostNetwork) NewRequestBuilder() network.RequestBuilder {
-	return newBuilder(h.origin)
+func (h *hostTransport) NewRequestBuilder() network.RequestBuilder {
+	return &builder{sender: h.origin}
 }
 
-// BuildResponse create response to an incoming request with Data set to responseData
-func (h *HostNetwork) BuildResponse(request network.Request, responseData interface{}) network.Response {
-	sender := requestToPacket(request).Sender
-	p := packet.NewBuilder(h.origin).Type(request.GetType()).
-		Receiver(sender).Response(responseData).Build()
-	return (*racket)(p)
+// BuildResponse create response to an incoming request with Data set to responseData.
+func (h *hostTransport) BuildResponse(request network.Request, responseData interface{}) network.Response {
+	sender := request.(*packetWrapper).Sender
+	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).Response(responseData).Build()
+	return (*packetWrapper)(p)
 }
 
-func requestToPacket(request network.Request) *packet.Packet {
-	return (*packet.Packet)(request.(*racket))
-}
-
-func NewHostNetwork() network.HostNetwork {
-	return nil
+func NewHostTransport() *hostTransport {
+	return &hostTransport{}
 }
