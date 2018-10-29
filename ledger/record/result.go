@@ -179,11 +179,11 @@ func (r *ClassAmendRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
-	Memory []byte
+	Memory *core.RecordID
 }
 
 // GetMemory returns state memory.
-func (r *ObjectStateRecord) GetMemory() []byte {
+func (r *ObjectStateRecord) GetMemory() *core.RecordID {
 	return r.Memory
 }
 
