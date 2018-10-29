@@ -47,7 +47,7 @@ func WithTraceField(ctx context.Context, traceid string) (context.Context, core.
 	return WithField(ctx, "traceid", traceid)
 }
 
-// ContextWithTrace returns only with logger initialized with provided traceid.
+// ContextWithTrace returns only context with logger initialized with provided traceid.
 func ContextWithTrace(ctx context.Context, traceid string) context.Context {
 	ctx, _ = WithTraceField(ctx, traceid)
 	return ctx
