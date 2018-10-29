@@ -50,7 +50,7 @@ const (
 // DB represents BadgerDB storage implementation.
 type DB struct {
 	db         *badger.DB
-	genesisRef *record.Reference
+	genesisRef *core.RecordRef
 
 	// dropWG guards inflight updates before jet drop calculated.
 	dropWG sync.WaitGroup
@@ -105,18 +105,17 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 
 // Bootstrap creates initial records in storage.
 func (db *DB) Bootstrap() error {
-	getGenesisRef := func() (*record.Reference, error) {
-		rootRefBuff, err := db.Get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
+	getGenesisRef := func() (*core.RecordRef, error) {
+		buff, err := db.Get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
 			return nil, err
 		}
-		var coreRootRef core.RecordRef
-		copy(coreRootRef[:], rootRefBuff)
-		rootRef := record.Core2Reference(coreRootRef)
-		return &rootRef, nil
+		var genesisRef core.RecordRef
+		copy(genesisRef[:], buff)
+		return &genesisRef, nil
 	}
 
-	createGenesisRecord := func() (*record.Reference, error) {
+	createGenesisRecord := func() (*core.RecordRef, error) {
 		err := db.AddPulse(core.Pulse{
 			PulseNumber: core.GenesisPulse.PulseNumber,
 			Entropy:     core.GenesisPulse.Entropy,
@@ -145,8 +144,8 @@ func (db *DB) Bootstrap() error {
 			return nil, err
 		}
 
-		genesisRef := record.Reference{Domain: *genesisID, Record: *genesisID}
-		return &genesisRef, db.Set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef.CoreRef()[:])
+		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
+		return genesisRef, db.Set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
 	}
 
 	var err error
@@ -164,7 +163,7 @@ func (db *DB) Bootstrap() error {
 // GenesisRef returns the genesis record reference.
 //
 // Genesis record is the parent for all top-level records.
-func (db *DB) GenesisRef() *record.Reference {
+func (db *DB) GenesisRef() *core.RecordRef {
 	return db.genesisRef
 }
 
@@ -193,14 +192,14 @@ func (db *DB) Set(key, value []byte) error {
 }
 
 // GetRequest wraps matching transaction manager method.
-func (db *DB) GetRequest(id *record.ID) (record.Request, error) {
+func (db *DB) GetRequest(id *core.RecordID) (record.Request, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 	return tx.GetRequest(id)
 }
 
 // GetRecord wraps matching transaction manager method.
-func (db *DB) GetRecord(id *record.ID) (record.Record, error) {
+func (db *DB) GetRecord(id *core.RecordID) (record.Record, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 	rec, err := tx.GetRecord(id)
@@ -211,9 +210,9 @@ func (db *DB) GetRecord(id *record.ID) (record.Record, error) {
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*record.ID, error) {
+func (db *DB) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	var (
-		id  *record.ID
+		id  *core.RecordID
 		err error
 	)
 	err = db.Update(func(tx *TransactionManager) error {
@@ -234,7 +233,7 @@ func (db *DB) SetRecordBinary(key, rec []byte) error {
 }
 
 // GetClassIndex wraps matching transaction manager method.
-func (db *DB) GetClassIndex(id *record.ID, forupdate bool) (*index.ClassLifeline, error) {
+func (db *DB) GetClassIndex(id *core.RecordID, forupdate bool) (*index.ClassLifeline, error) {
 	tx := db.BeginTransaction(forupdate)
 	defer tx.Discard()
 
@@ -246,14 +245,14 @@ func (db *DB) GetClassIndex(id *record.ID, forupdate bool) (*index.ClassLifeline
 }
 
 // SetClassIndex wraps matching transaction manager method.
-func (db *DB) SetClassIndex(id *record.ID, idx *index.ClassLifeline) error {
+func (db *DB) SetClassIndex(id *core.RecordID, idx *index.ClassLifeline) error {
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.SetClassIndex(id, idx)
 	})
 }
 
 // GetObjectIndex wraps matching transaction manager method.
-func (db *DB) GetObjectIndex(id *record.ID, forupdate bool) (*index.ObjectLifeline, error) {
+func (db *DB) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
@@ -265,7 +264,7 @@ func (db *DB) GetObjectIndex(id *record.ID, forupdate bool) (*index.ObjectLifeli
 }
 
 // SetObjectIndex wraps matching transaction manager method.
-func (db *DB) SetObjectIndex(id *record.ID, idx *index.ObjectLifeline) error {
+func (db *DB) SetObjectIndex(id *core.RecordID, idx *index.ObjectLifeline) error {
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(id, idx)
 	})

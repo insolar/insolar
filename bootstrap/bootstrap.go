@@ -116,10 +116,11 @@ func (b *Bootstrapper) activateRootDomain(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
-	contract := core.ComposeRecordRef(*contractID, *contractID)
+	contract := core.NewRecordRef(*contractID, *contractID)
 	desc, err := am.ActivateObject(
 		ctx,
-		core.RecordRef{}, contract,
+		core.RecordRef{},
+		*contract,
 		*cb.Classes[rootDomain],
 		*am.GenesisRef(),
 		false,
@@ -128,7 +129,7 @@ func (b *Bootstrapper) activateRootDomain(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
-	b.rootDomainRef = &contract
+	b.rootDomainRef = contract
 
 	return contractID, desc, nil
 }
@@ -150,10 +151,11 @@ func (b *Bootstrapper) activateNodeDomain(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
-	contract := core.ComposeRecordRef(*domain, *contractID)
+	contract := core.NewRecordRef(*domain, *contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		core.RecordRef{}, contract,
+		core.RecordRef{},
+		*contract,
 		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
 		false,
@@ -163,7 +165,7 @@ func (b *Bootstrapper) activateNodeDomain(
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 
-	b.nodeDomainRef = &contract
+	b.nodeDomainRef = contract
 
 	return nil
 }
@@ -185,10 +187,11 @@ func (b *Bootstrapper) activateRootMember(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
-	contract := core.ComposeRecordRef(*domain, *contractID)
+	contract := core.NewRecordRef(*domain, *contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		core.RecordRef{}, contract,
+		core.RecordRef{},
+		*contract,
 		*cb.Classes[memberContract],
 		*b.rootDomainRef,
 		false,
@@ -198,7 +201,7 @@ func (b *Bootstrapper) activateRootMember(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
-	b.rootMemberRef = &contract
+	b.rootMemberRef = contract
 	return nil
 }
 
@@ -241,10 +244,11 @@ func (b *Bootstrapper) activateRootMemberWallet(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
-	contract := core.ComposeRecordRef(*domain, *contractID)
+	contract := core.NewRecordRef(*domain, *contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		core.RecordRef{}, contract,
+		core.RecordRef{},
+		*contract,
 		*cb.Classes[walletContract],
 		*b.rootMemberRef,
 		true,

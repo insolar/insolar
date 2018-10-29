@@ -27,7 +27,7 @@ type GenesisRecord struct {
 }
 
 // PrevStateID returns previous state id.
-func (r *GenesisRecord) PrevStateID() *ID {
+func (r *GenesisRecord) PrevStateID() *core.RecordID {
 	return nil
 }
 
@@ -50,15 +50,15 @@ func (*GenesisRecord) GetMemory() []byte {
 }
 
 // GetCode returns state code.
-func (*GenesisRecord) GetCode() *Reference {
+func (*GenesisRecord) GetCode() *core.RecordRef {
 	return nil
 }
 
 // ChildRecord is a child activation record. Its used for children iterating.
 type ChildRecord struct {
-	PrevChild *ID
+	PrevChild *core.RecordID
 
-	Ref Reference // Reference to the child's head.
+	Ref core.RecordRef // Reference to the child's head.
 }
 
 // Type implementation of Record interface.
