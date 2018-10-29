@@ -137,7 +137,8 @@ func (mb *MessageBus) doDeliver(msg core.SignedMessage) (core.Reply, error) {
 		return nil, errors.New("no handler for received message type")
 	}
 
-	resp, err := handler(context.TODO(), msg)
+	ctx := msg.Context(context.Background())
+	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
