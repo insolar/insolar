@@ -46,7 +46,7 @@ type ExecutionState struct {
 	callContext *core.LogicCallContext
 	deactivate  bool
 
-	objectbody *objectBody
+	objectbody *ObjectBody
 }
 
 // LogicRunner is a general interface of contract executor
@@ -230,13 +230,16 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	}
 }
 
-type objectBody struct {
+// ObjectBody is an inner representation of object and all it accessory
+// make it private again when we start it serialize before sending
+type ObjectBody struct {
 	objDescriptor   core.ObjectDescriptor
 	Object          []byte
 	ClassHeadRef    *Ref
 	CodeMachineType core.MachineType
 	CodeRef         *Ref
 }
+
 func init() {
 	gob.Register(&ObjectBody{})
 }
@@ -275,7 +278,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 		if !bytes.Equal(cr.ReqSig, sig) {
 			return errors.New("Wrong validation sig on CaseRecordTypeGetObject")
 		}
-		es.objectbody = cr.Resp.(*objectBody)
+		es.objectbody = cr.Resp.(*ObjectBody)
 		return nil
 	}
 
@@ -291,7 +294,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 
 	codeDesc := classDesc.CodeDescriptor()
 
-	es.objectbody = &objectBody{
+	es.objectbody = &ObjectBody{
 		objDescriptor:   objDesc,
 		Object:          objDesc.Memory(),
 		ClassHeadRef:    classDesc.HeadRef(),
