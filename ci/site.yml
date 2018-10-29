@@ -1,0 +1,59 @@
+groups:
+- name: master
+  jobs:
+    - unit
+
+resources:
+- name: master
+  type: git
+  source:
+    uri: ssh://git@gitlab.corp.code-pilots.ru:22222/its/Insolar.git
+    branch: master
+    private_key: ((meta.github.private_key))
+
+- name: site
+  type: docker-image
+  source:
+    repository: registry.ins.world/site
+    username: ((meta.registry.username))
+    password: ((meta.registry.password))
+
+jobs:
+- name: unit
+  public: true
+  plan:
+  - get: master
+    trigger: true
+  - task: unit
+    timeout: 10m
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: busybox}
+      inputs:
+      - name: master
+      outputs:
+      - name: site
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo create Dockerfile
+             cat << EOF > master/Dockerfile
+             FROM node:8-alpine as builder
+             ADD . /site 
+             WORKDIR /site
+             RUN ls -alh && pwd && npm i && npm run build
+
+             FROM nginx:alpine as site
+             COPY --from=builder /site/dist /usr/share/nginx/html
+             EOF
+             cat master/Dockerfile
+             rm -Rf master/dist/*
+             mv master/* site/
+  - put: site
+    params:
+      build: site
+      target: site
