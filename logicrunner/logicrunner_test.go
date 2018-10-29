@@ -25,9 +25,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/testutils/nodekeeper"
-
 	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/testutils/nodekeeper"
 
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/member/signer"
@@ -91,20 +90,20 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	assert.NoError(t, err, "Initialize runner")
 
 	nk := nodekeeper.GetTestNodekeeper()
-	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
-
-	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
-	mb := testmessagebus.NewTestMessageBus()
-
+	messageBus := testmessagebus.NewTestMessageBus()
 	nw := network.GetTestNetwork()
+	c := core.Components{
+		LogicRunner: lr,
+		NodeNetwork: nk,
+		MessageBus:  messageBus,
+		Network:     nw,
+	}
+	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
+	c.Ledger = l
 
-	assert.NoError(t, lr.Start(ctx, core.Components{
-		Ledger:     l,
-		MessageBus: mb,
-		Network:    nw,
-	}), "starting logicrunner")
+	assert.NoError(t, lr.Start(ctx, c), "starting logicrunner")
 
-	MessageBusTrivialBehavior(mb, lr)
+	MessageBusTrivialBehavior(messageBus, lr)
 	pm := l.GetPulseManager()
 	err = lr.Ledger.GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
 	//err = pm.Set(*pulsar.NewPulse(0, 10, &entropygenerator.StandardEntropyGenerator{}))
@@ -281,13 +280,16 @@ func (r *Two) Hello(s string) (string, error) {
 	)
 	assert.NoError(t, err)
 
+	msg := &message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Hello",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *obj,
-			Method:    "Hello",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
@@ -295,14 +297,17 @@ func (r *Two) Hello(s string) (string, error) {
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", f)
 
 	for i := 2; i <= 5; i++ {
+		msg1 := &message.CallMethod{
+			ObjectRef:        *obj,
+			Method:           "Again",
+			Arguments:        goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
+			BaseLogicMessage: message.BaseLogicMessage{Nonce: uint64(i)},
+		}
+		key, _ := cryptoHelper.GeneratePrivateKey()
+		signed, _ := message.NewSignedMessage(msg1, testutils.RandomRef(), key)
 		resp, err := lr.Execute(
 			context.TODO(),
-			&message.CallMethod{
-				ObjectRef:        *obj,
-				Method:           "Again",
-				Arguments:        goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
-				BaseLogicMessage: message.BaseLogicMessage{Nonce: uint64(i)},
-			},
+			signed,
 		)
 		assert.NoError(t, err, "contract call")
 		r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
@@ -310,13 +315,16 @@ func (r *Two) Hello(s string) (string, error) {
 		assert.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), f)
 	}
 
+	msg2 := &message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "GetFriend",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ = cryptoHelper.GeneratePrivateKey()
+	signed, _ = message.NewSignedMessage(msg2, testutils.RandomRef(), key)
 	resp, err = lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *obj,
-			Method:    "GetFriend",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
@@ -327,14 +335,17 @@ func (r *Two) Hello(s string) (string, error) {
 	}
 
 	for i := 6; i <= 9; i++ {
+		msg3 := &message.CallMethod{
+			ObjectRef:        two,
+			Method:           "Hello",
+			Arguments:        goplugintestutils.CBORMarshal(t, []interface{}{"Insolar"}),
+			BaseLogicMessage: message.BaseLogicMessage{Nonce: uint64(i)},
+		}
+		key, _ := cryptoHelper.GeneratePrivateKey()
+		signed, _ := message.NewSignedMessage(msg3, testutils.RandomRef(), key)
 		resp, err := lr.Execute(
 			context.TODO(),
-			&message.CallMethod{
-				ObjectRef:        two,
-				Method:           "Hello",
-				Arguments:        goplugintestutils.CBORMarshal(t, []interface{}{"Insolar"}),
-				BaseLogicMessage: message.BaseLogicMessage{Nonce: uint64(i)},
-			},
+			signed,
 		)
 		assert.NoError(t, err, "contract call")
 		r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
@@ -429,26 +440,32 @@ func (r *Two) Hello(s string) (string, error) {
 	)
 	assert.NoError(t, err)
 
+	msg := &message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Hello",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *obj,
-			Method:    "Hello",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
-		},
+		signed,
 	)
 	assert.NoError(t, err)
 
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{"Hi, ins! Two said: Hello you too, ins. 644 times!", nil}, r)
 
+	msg1 := &message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "HelloFromDelegate",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
+	}
+	key, _ = cryptoHelper.GeneratePrivateKey()
+	signed, _ = message.NewSignedMessage(msg1, testutils.RandomRef(), key)
 	resp, err = lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *obj,
-			Method:    "HelloFromDelegate",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
-		},
+		signed,
 	)
 
 	assert.NoError(t, err)
@@ -533,13 +550,16 @@ func (r *Two) Hello() (string, error) {
 	)
 	assert.NoError(t, err)
 
+	msg := &message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Hello",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	_, err = lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *obj,
-			Method:    "Hello",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -620,13 +640,16 @@ func (r *One) Kill() error {
 	)
 	assert.NoError(t, err)
 
+	msg := &message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Kill",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	_, err = lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *obj,
-			Method:    "Kill",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 }
@@ -672,21 +695,27 @@ func (r *One) NotPanic() error {
 	)
 	assert.NoError(t, err)
 
+	msg := &message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Panic",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	_, err = lr.Execute(context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *obj,
-			Method:    "Panic",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
-		},
+		signed,
 	)
 	assert.Error(t, err)
 
+	msg1 := &message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "NotPanic",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ = cryptoHelper.GeneratePrivateKey()
+	signed, _ = message.NewSignedMessage(msg1, testutils.RandomRef(), key)
 	_, err = lr.Execute(context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *obj,
-			Method:    "NotPanic",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
-		},
+		signed,
 	)
 	assert.NoError(t, err)
 }
@@ -780,25 +809,31 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
+	msg := &message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "NewChilds",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{10}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *contract,
-			Method:    "NewChilds",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{10}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{uint64(45), nil}, r)
 
+	msg1 := &message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "SumChilds",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ = cryptoHelper.GeneratePrivateKey()
+	signed, _ = message.NewSignedMessage(msg1, testutils.RandomRef(), key)
 	resp, err = lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *contract,
-			Method:    "SumChilds",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -848,16 +883,20 @@ func (c *Contract) Rand() (int, error) {
 	)
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
+	msg := make([]core.Message, 5)
 
 	for i := 0; i < 5; i++ {
+		msg[i] = &message.CallMethod{
+			ObjectRef:        *contract,
+			Method:           "Rand",
+			Arguments:        goplugintestutils.CBORMarshal(t, []interface{}{}),
+			BaseLogicMessage: message.BaseLogicMessage{Nonce: uint64(i)},
+		}
+		key, _ := cryptoHelper.GeneratePrivateKey()
+		signed, _ := message.NewSignedMessage(msg[i], testutils.RandomRef(), key)
 		_, err = lr.Execute(
 			context.TODO(),
-			&message.CallMethod{
-				ObjectRef:        *contract,
-				Method:           "Rand",
-				Arguments:        goplugintestutils.CBORMarshal(t, []interface{}{}),
-				BaseLogicMessage: message.BaseLogicMessage{Nonce: uint64(i)},
-			},
+			signed,
 		)
 		assert.NoError(t, err, "contract call")
 	}
@@ -945,13 +984,16 @@ func (r *Two) NoError() error {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
+	msg := &message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "AnError",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *contract,
-			Method:    "AnError",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -963,13 +1005,16 @@ func (r *Two) NoError() error {
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 
+	msg1 := &message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "NoError",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ = cryptoHelper.GeneratePrivateKey()
+	signed, _ = message.NewSignedMessage(msg1, testutils.RandomRef(), key)
 	resp, err = lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *contract,
-			Method:    "NoError",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -1044,13 +1089,16 @@ func (r *Two) Hello() (*string, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
+	msg := &message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "Hello",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *contract,
-			Method:    "Hello",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -1085,13 +1133,16 @@ func (s *Caller) SignedCall(rootDomain core.RecordRef, method string, params []i
 	sign, err := cryptoHelper.Sign(args, s.key)
 	assert.NoError(s.t, err)
 
+	msg := &message.CallMethod{
+		ObjectRef: core.NewRefFromBase58(s.member),
+		Method:    "Call",
+		Arguments: goplugintestutils.CBORMarshal(s.t, []interface{}{rootDomain, method, buf, seed, sign}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	res, err := s.lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: core.NewRefFromBase58(s.member),
-			Method:    "Call",
-			Arguments: goplugintestutils.CBORMarshal(s.t, []interface{}{rootDomain, method, buf, seed, sign}),
-		},
+		signed,
 	)
 	assert.NoError(s.t, err, "contract call")
 
@@ -1292,31 +1343,34 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
+	msg := &message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "NewChilds",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{1}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
 		context.TODO(),
-		&message.CallMethod{
-			ObjectRef: *contract,
-			Method:    "NewChilds",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{1}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{uint64(0), nil}, r)
 
 	mb := lr.(*LogicRunner).MessageBus.(*testmessagebus.TestMessageBus)
-	var toValidate []core.Message
-	mb.ReRegister(core.TypeValidateCaseBind, func(ctx context.Context, m core.Message) (core.Reply, error) {
+	toValidate := make([]core.SignedMessage, 0)
+	mb.ReRegister(core.TypeValidateCaseBind, func(ctx context.Context, m core.SignedMessage) (core.Reply, error) {
 		toValidate = append(toValidate, m)
 		return nil, nil
 	})
-	var toExecute []core.Message
-	mb.ReRegister(core.TypeExecutorResults, func(ctx context.Context, m core.Message) (core.Reply, error) {
+	toExecute := make([]core.SignedMessage, 0)
+	mb.ReRegister(core.TypeExecutorResults, func(ctx context.Context, m core.SignedMessage) (core.Reply, error) {
 		toExecute = append(toExecute, m)
 		return nil, nil
 	})
-	var toCheckValidate []core.Message
-	mb.ReRegister(core.TypeValidationResults, func(ctx context.Context, m core.Message) (core.Reply, error) {
+	toCheckValidate := make([]core.SignedMessage, 0)
+	mb.ReRegister(core.TypeValidationResults, func(ctx context.Context, m core.SignedMessage) (core.Reply, error) {
 		toCheckValidate = append(toCheckValidate, m)
 		return nil, nil
 	})

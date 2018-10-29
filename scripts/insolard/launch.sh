@@ -40,6 +40,7 @@ create_required_dirs()
     mkdir -p $TEST_DATA/functional
     mkdir -p $CONTRACT_STORAGE
     mkdir -p $LEDGER_DIR
+    mkdir -p scripts/insolard/$CONFIGS_DIR
 }
 
 prepare()
@@ -51,6 +52,7 @@ prepare()
         stop_listening
     fi
     clear_dirs
+    create_required_dirs
 }
 
 build_binaries()
