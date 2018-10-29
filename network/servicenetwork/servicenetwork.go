@@ -214,7 +214,3 @@ func NewNetworkController(conf configuration.Configuration, network network.Host
 func NewConsensus(network network.HostNetwork) consensus.Processor {
 	return dhtnetwork.NewNetworkConsensus(network)
 }
-
-func (network *ServiceNetwork) SetCert(cert core.Certificate) {
-	network.certificate = cert
-}
