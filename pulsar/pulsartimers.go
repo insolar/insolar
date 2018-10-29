@@ -21,11 +21,10 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 )
 
-func (currentPulsar *Pulsar) waitForPulseSigns() {
-	log.Debug("[waitForPulseSigns]")
+func (currentPulsar *Pulsar) waitForPulseSigns(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[waitForPulseSigns]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
 	go func() {
@@ -37,7 +36,7 @@ func (currentPulsar *Pulsar) waitForPulseSigns() {
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(SendingPulse, nil)
+				currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
 			}
 		}
 	}()
