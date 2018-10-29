@@ -31,9 +31,9 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -54,18 +54,18 @@ func writeError(message string, code int) map[string]interface{} {
 	return errJSON
 }
 
-func makeHandlerMarshalErrorJSON(ctx core.Context) []byte {
+func makeHandlerMarshalErrorJSON(ctx context.Context) []byte {
 	jsonErr := writeError("Invalid data from handler", HandlerError)
 	serJSON, err := json.Marshal(jsonErr)
 	if err != nil {
-		ctx.Log().Fatal("Can't marshal base error")
+		inslogger.FromContext(ctx).Fatal("Can't marshal base error")
 	}
 	return serJSON
 }
 
-var handlerMarshalErrorJSON = makeHandlerMarshalErrorJSON(inscontext.WithTraceID(context.Background(), "handlerMarshalErrorJSON"))
+var handlerMarshalErrorJSON = makeHandlerMarshalErrorJSON(inslogger.ContextWithTrace(context.Background(), "handlerMarshalErrorJSON"))
 
-func processQueryType(ctx core.Context, rh *RequestHandler, qTypeStr string) map[string]interface{} {
+func processQueryType(ctx context.Context, rh *RequestHandler, qTypeStr string) map[string]interface{} {
 	qtype := QTypeFromString(qTypeStr)
 	var answer map[string]interface{}
 
@@ -80,12 +80,12 @@ func processQueryType(ctx core.Context, rh *RequestHandler, qTypeStr string) map
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
 		answer = writeError(msg, BadRequest)
-		ctx.Log().Warnf("[ processQueryType ] %s\n", msg)
+		inslogger.FromContext(ctx).Warnf("[ processQueryType ] %s\n", msg)
 		return answer
 	}
 	if hError != nil {
 		errMsg := "Handler error: " + hError.Error()
-		ctx.Log().Errorf("[ processQueryType ] %s\n", errMsg)
+		inslogger.FromContext(ctx).Errorf("[ processQueryType ] %s\n", errMsg)
 		answer = writeError(errMsg, HandlerError)
 	}
 
@@ -95,7 +95,7 @@ func processQueryType(ctx core.Context, rh *RequestHandler, qTypeStr string) map
 const TraceIDQueryParam = "traceID"
 
 // PreprocessRequest extracts params from requests
-func PreprocessRequest(ctx core.Context, req *http.Request) (*Params, error) {
+func PreprocessRequest(ctx context.Context, req *http.Request) (*Params, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't read body. So strange")
@@ -110,15 +110,15 @@ func PreprocessRequest(ctx core.Context, req *http.Request) (*Params, error) {
 		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't parse input params")
 	}
 
-	ctx.Log().Infof("[ PreprocessRequest ] Query: %s. Url: %s\n", string(body), req.URL)
+	inslogger.FromContext(ctx).Infof("[ PreprocessRequest ] Query: %s. Url: %s\n", string(body), req.URL)
 
 	return &params, nil
 }
 
 func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
-		ctx := inscontext.WithTraceID(inscontext.Background(), RandTraceID())
-
+		traceid := RandTraceID()
+		ctx, inslog := inslogger.WithTraceField(context.Background(), traceid)
 		startTime := time.Now()
 		answer := make(map[string]interface{})
 		var params *Params
@@ -129,7 +129,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			if params == nil {
 				params = &Params{}
 			}
-			answer[TraceIDQueryParam] = ctx.TraceID()
+			answer[TraceIDQueryParam] = traceid
 			serJSON, err := json.MarshalIndent(answer, "", "    ")
 			if err != nil {
 				serJSON = handlerMarshalErrorJSON
@@ -138,15 +138,15 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			var newLine byte = '\n'
 			_, err = response.Write(append(serJSON, newLine))
 			if err != nil {
-				ctx.Log().Errorf("[ wrapAPIV1Handler ] Can't write response\n")
+				inslog.Errorf("[ wrapAPIV1Handler ] Can't write response\n")
 			}
-			ctx.Log().Infof("[ wrapAPIV1Handler ] Request completed. Total time: %s\n", time.Since(startTime))
+			inslog.Infof("[ wrapAPIV1Handler ] Request completed. Total time: %s\n", time.Since(startTime))
 		}()
 
 		params, err := PreprocessRequest(ctx, req)
 		if err != nil {
 			answer = writeError("Bad request", BadRequest)
-			ctx.Log().Errorf("[ wrapAPIV1Handler ] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
+			inslog.Errorf("[ wrapAPIV1Handler ] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
 		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, runner.seedmanager)
@@ -189,16 +189,16 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	return &ar, nil
 }
 
-func (ar *Runner) reloadMessageBus(ctx core.Context, c core.Components) {
+func (ar *Runner) reloadMessageBus(ctx context.Context, c core.Components) {
 	if c.MessageBus == nil {
-		ctx.Log().Warn("Working in demo mode: without MessageBus")
+		inslogger.FromContext(ctx).Warn("Working in demo mode: without MessageBus")
 	} else {
 		ar.messageBus = c.MessageBus
 	}
 }
 
 // Start runs api server
-func (ar *Runner) Start(ctx core.Context, c core.Components) error {
+func (ar *Runner) Start(ctx context.Context, c core.Components) error {
 	ar.reloadMessageBus(ctx, c)
 
 	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
@@ -210,21 +210,22 @@ func (ar *Runner) Start(ctx core.Context, c core.Components) error {
 	http.HandleFunc(ar.cfg.Location, fw)
 	http.HandleFunc(ar.cfg.Info, ar.infoHandler(c))
 	http.HandleFunc(ar.cfg.Call, ar.callHandler(c))
-	ctx.Log().Info("Starting ApiRunner ...")
-	ctx.Log().Info("Config: ", ar.cfg)
+	inslog := inslogger.FromContext(ctx)
+	inslog.Info("Starting ApiRunner ...")
+	inslog.Info("Config: ", ar.cfg)
 	go func() {
 		if err := ar.server.ListenAndServe(); err != nil {
-			ctx.Log().Error("Httpserver: ListenAndServe() error: ", err)
+			inslog.Error("Httpserver: ListenAndServe() error: ", err)
 		}
 	}()
 	return nil
 }
 
 // Stop stops api server
-func (ar *Runner) Stop(ctx core.Context) error {
+func (ar *Runner) Stop(ctx context.Context) error {
 	const timeOut = 5
 
-	ctx.Log().Infof("Shutting down server gracefully ...(waiting for %d seconds)", timeOut)
+	inslogger.FromContext(ctx).Infof("Shutting down server gracefully ...(waiting for %d seconds)", timeOut)
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(timeOut)*time.Second)
 	defer cancel()
 	err := ar.server.Shutdown(ctxWithTimeout)
@@ -235,7 +236,7 @@ func (ar *Runner) Stop(ctx core.Context) error {
 	return nil
 }
 
-func (ar *Runner) getMemberPubKey(ctx core.Context, ref string) (string, error) { //nolint
+func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (string, error) { //nolint
 	ar.cacheLock.RLock()
 	key, ok := ar.keyCache[ref]
 	ar.cacheLock.RUnlock()

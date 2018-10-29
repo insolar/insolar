@@ -620,6 +620,9 @@ func TestProxyGeneration(t *testing.T) {
 	assert.NoError(t, err)
 
 	for _, contract := range contracts {
+		// Make a copy for proper work of closure inside gorutine
+		contract := contract
+
 		t.Run(contract, func(t *testing.T) {
 			t.Parallel()
 			parsed, err := ParseFile("../../../application/contract/" + contract + "/" + contract + ".go")

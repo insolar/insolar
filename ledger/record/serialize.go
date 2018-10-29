@@ -22,31 +22,7 @@ import (
 	"fmt"
 
 	"github.com/ugorji/go/codec"
-
-	"github.com/insolar/insolar/core"
 )
-
-// Bytes2ID converts ID from byte representation to struct.
-func Bytes2ID(b []byte) ID {
-	return ID{
-		Pulse: core.Bytes2PulseNumber(b[:core.PulseNumberSize]),
-		Hash:  b[core.PulseNumberSize:],
-	}
-}
-
-// Core2Reference converts commonly used reference to Ledger-specific.
-func Core2Reference(cRef core.RecordRef) Reference {
-	return Reference{
-		Record: Bytes2ID(cRef[:core.RecordIDSize]),
-		Domain: Bytes2ID(cRef[core.RecordIDSize:]),
-	}
-}
-
-// ID2Bytes converts ID struct to it's byte representation.
-func ID2Bytes(id ID) []byte {
-	rec := core.GenRecordID(id.Pulse, id.Hash)
-	return rec[:]
-}
 
 // record type ids for record types
 // in use mostly for hashing and deserialization
@@ -61,13 +37,14 @@ const (
 	typeCallRequest TypeID = 20
 
 	// result
-	typeType           TypeID = 30
-	typeCode           TypeID = 31
-	typeClassActivate  TypeID = 32
-	typeClassAmend     TypeID = 33
-	typeObjectActivate TypeID = 34
-	typeObjectAmend    TypeID = 35
-	typeDeactivate     TypeID = 36
+	typeResult         TypeID = 30
+	typeType           TypeID = 31
+	typeCode           TypeID = 32
+	typeClassActivate  TypeID = 33
+	typeClassAmend     TypeID = 34
+	typeObjectActivate TypeID = 35
+	typeObjectAmend    TypeID = 36
+	typeDeactivate     TypeID = 37
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -95,6 +72,8 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 		return &ChildRecord{}
 	case typeGenesis:
 		return &GenesisRecord{}
+	case typeResult:
+		return &ResultRecord{}
 	default:
 		panic(fmt.Errorf("unknown record type id %v", id))
 	}

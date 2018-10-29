@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/core/message"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -40,6 +41,7 @@ const (
 	scopeIDJetDrop  byte = 3
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
+	scopeIDMessage  byte = 6
 
 	sysGenesis     byte = 1
 	sysLatestPulse byte = 2
@@ -48,7 +50,7 @@ const (
 // DB represents BadgerDB storage implementation.
 type DB struct {
 	db         *badger.DB
-	genesisRef *record.Reference
+	genesisRef *core.RecordRef
 
 	// dropWG guards inflight updates before jet drop calculated.
 	dropWG sync.WaitGroup
@@ -103,18 +105,17 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 
 // Bootstrap creates initial records in storage.
 func (db *DB) Bootstrap() error {
-	getGenesisRef := func() (*record.Reference, error) {
-		rootRefBuff, err := db.Get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
+	getGenesisRef := func() (*core.RecordRef, error) {
+		buff, err := db.Get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
 			return nil, err
 		}
-		var coreRootRef core.RecordRef
-		copy(coreRootRef[:], rootRefBuff)
-		rootRef := record.Core2Reference(coreRootRef)
-		return &rootRef, nil
+		var genesisRef core.RecordRef
+		copy(genesisRef[:], buff)
+		return &genesisRef, nil
 	}
 
-	createGenesisRecord := func() (*record.Reference, error) {
+	createGenesisRecord := func() (*core.RecordRef, error) {
 		err := db.AddPulse(core.Pulse{
 			PulseNumber: core.GenesisPulse.PulseNumber,
 			Entropy:     core.GenesisPulse.Entropy,
@@ -127,7 +128,11 @@ func (db *DB) Bootstrap() error {
 			return nil, err
 		}
 
-		genesisID, err := db.SetRecord(&record.GenesisRecord{})
+		lastPulse, err := db.GetLatestPulseNumber()
+		if err != nil {
+			return nil, err
+		}
+		genesisID, err := db.SetRecord(lastPulse, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
@@ -139,8 +144,8 @@ func (db *DB) Bootstrap() error {
 			return nil, err
 		}
 
-		genesisRef := record.Reference{Domain: *genesisID, Record: *genesisID}
-		return &genesisRef, db.Set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef.CoreRef()[:])
+		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
+		return genesisRef, db.Set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
 	}
 
 	var err error
@@ -158,7 +163,7 @@ func (db *DB) Bootstrap() error {
 // GenesisRef returns the genesis record reference.
 //
 // Genesis record is the parent for all top-level records.
-func (db *DB) GenesisRef() *record.Reference {
+func (db *DB) GenesisRef() *core.RecordRef {
 	return db.genesisRef
 }
 
@@ -187,14 +192,14 @@ func (db *DB) Set(key, value []byte) error {
 }
 
 // GetRequest wraps matching transaction manager method.
-func (db *DB) GetRequest(id *record.ID) (record.Request, error) {
+func (db *DB) GetRequest(id *core.RecordID) (record.Request, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 	return tx.GetRequest(id)
 }
 
 // GetRecord wraps matching transaction manager method.
-func (db *DB) GetRecord(id *record.ID) (record.Record, error) {
+func (db *DB) GetRecord(id *core.RecordID) (record.Record, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 	rec, err := tx.GetRecord(id)
@@ -205,13 +210,13 @@ func (db *DB) GetRecord(id *record.ID) (record.Record, error) {
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(rec record.Record) (*record.ID, error) {
+func (db *DB) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	var (
-		id  *record.ID
+		id  *core.RecordID
 		err error
 	)
 	err = db.Update(func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(rec)
+		id, err = tx.SetRecord(pulseNumber, rec)
 		return err
 	})
 	if err != nil {
@@ -228,7 +233,7 @@ func (db *DB) SetRecordBinary(key, rec []byte) error {
 }
 
 // GetClassIndex wraps matching transaction manager method.
-func (db *DB) GetClassIndex(id *record.ID, forupdate bool) (*index.ClassLifeline, error) {
+func (db *DB) GetClassIndex(id *core.RecordID, forupdate bool) (*index.ClassLifeline, error) {
 	tx := db.BeginTransaction(forupdate)
 	defer tx.Discard()
 
@@ -240,14 +245,14 @@ func (db *DB) GetClassIndex(id *record.ID, forupdate bool) (*index.ClassLifeline
 }
 
 // SetClassIndex wraps matching transaction manager method.
-func (db *DB) SetClassIndex(id *record.ID, idx *index.ClassLifeline) error {
+func (db *DB) SetClassIndex(id *core.RecordID, idx *index.ClassLifeline) error {
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.SetClassIndex(id, idx)
 	})
 }
 
 // GetObjectIndex wraps matching transaction manager method.
-func (db *DB) GetObjectIndex(id *record.ID, forupdate bool) (*index.ObjectLifeline, error) {
+func (db *DB) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
@@ -259,7 +264,7 @@ func (db *DB) GetObjectIndex(id *record.ID, forupdate bool) (*index.ObjectLifeli
 }
 
 // SetObjectIndex wraps matching transaction manager method.
-func (db *DB) SetObjectIndex(id *record.ID, idx *index.ObjectLifeline) error {
+func (db *DB) SetObjectIndex(id *core.RecordID, idx *index.ObjectLifeline) error {
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(id, idx)
 	})
@@ -288,66 +293,38 @@ func (db *DB) waitinflight() {
 // Previous JetDrop hash should be provided. On success returns saved drop and slot records.
 func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 	*jetdrop.JetDrop,
-	[][2][]byte, // records
-	[][2][]byte, // indexes
+	[][]byte,
 	error,
 ) {
 	var err error
 	db.waitinflight()
 
-	prefix := make([]byte, core.PulseNumberSize+1)
-	prefix[0] = scopeIDRecord
-	copy(prefix[1:], pulse.Bytes())
-
 	hw := hash.NewIDHash()
 	_, err = hw.Write(prevHash)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	var records [][2][]byte
+	prefix := make([]byte, core.PulseNumberSize+1)
+	prefix[0] = scopeIDMessage
+	copy(prefix[1:], pulse.Bytes())
+
+	var messages [][]byte
 	err = db.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			item := it.Item()
-			key := item.Key()
-			_, err = hw.Write(key[1:])
+			val, err := it.Item().ValueCopy(nil)
 			if err != nil {
 				return err
 			}
-			value, err := item.ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-			records = append(records, [2][]byte{key[1:], value})
+			messages = append(messages, val)
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	var indexes [][2][]byte
-	err = db.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-
-		seekIndex := []byte{scopeIDLifeline}
-		for it.Seek(seekIndex); it.ValidForPrefix(seekIndex); it.Next() {
-			item := it.Item()
-			key := item.Key()
-			value, err := item.ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-			indexes = append(indexes, [2][]byte{key, value})
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	drop := jetdrop.JetDrop{
@@ -355,7 +332,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		PrevHash: prevHash,
 		Hash:     hw.Sum(nil),
 	}
-	return &drop, records, indexes, nil
+	return &drop, messages, nil
 }
 
 // SetDrop saves provided JetDrop in db.
@@ -484,4 +461,24 @@ func (db *DB) Update(fn func(*TransactionManager) error) error {
 // GetBadgerDB return badger.DB instance (for internal usage, like tests)
 func (db *DB) GetBadgerDB() *badger.DB {
 	return db.db
+}
+
+// SetMessage persists message to the database
+func (db *DB) SetMessage(pulseNumber core.PulseNumber, genericMessage core.Message) error {
+	messageBytes, err := message.ToBytes(genericMessage)
+	if err != nil {
+		return err
+	}
+
+	hw := hash.NewIDHash()
+	_, err = hw.Write(messageBytes)
+	if err != nil {
+		return err
+	}
+	hw.Sum(nil)
+
+	return db.Set(
+		prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
+		messageBytes,
+	)
 }

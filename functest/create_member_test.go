@@ -59,3 +59,9 @@ func TestCreateMembersWithSameName(t *testing.T) {
 
 	assert.NotEqual(t, firstMemberRef, secondMemberRef)
 }
+
+func TestCreateMemberByNoRoot(t *testing.T) {
+	member := createMember(t, "Member1")
+	_, err := signedRequest(member, "CreateMember", "Member2", "000")
+	assert.EqualError(t, err, "[ CreateMember ] Only Root member can create members")
+}

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -90,10 +91,8 @@ var hashtestsRecordsMutate = []struct {
 			&CodeRecord{Code: []byte{1, 2, 3}},
 			&CodeRecord{
 				Code: []byte{1, 2, 3},
-				ResultRecord: ResultRecord{
-					Domain: Reference{
-						Record: str2ID("0A"),
-					},
+				SideEffectRecord: SideEffectRecord{
+					Domain: core.RecordRef{1, 2, 3},
 				},
 			},
 		},

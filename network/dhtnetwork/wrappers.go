@@ -86,7 +86,7 @@ func (w *Wrapper) initCascadeSendMessage(data core.Cascade, findCurrentNode bool
 }
 
 // SendMessage send message to nodeID
-func (w *Wrapper) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
+func (w *Wrapper) SendMessage(nodeID core.RecordRef, method string, msg core.SignedMessage) ([]byte, error) {
 	start := time.Now()
 	if msg == nil {
 		return nil, errors.New("message is nil")
@@ -107,7 +107,7 @@ func (w *Wrapper) SendMessage(nodeID core.RecordRef, method string, msg core.Mes
 	return res, err
 }
 
-func (w *Wrapper) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
+func (w *Wrapper) SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}

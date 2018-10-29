@@ -20,11 +20,11 @@ package logicrunner
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
@@ -109,7 +109,12 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			return step, errors.New("step between two shores")
 		}
 
-		ret, err := lr.Execute(inscontext.TODO(), start.Resp.(core.Message))
+		msg := start.Resp.(core.Message)
+		signed, err := message.NewSignedMessage(msg, ref, lr.Network.GetPrivateKey())
+		if err != nil {
+			return 0, errors.New("failed to create a signed message")
+		}
+		ret, err := lr.Execute(context.TODO(), signed)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -131,7 +136,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			}
 		case *reply.CallConstructor:
 			if got, ok := ret.(*reply.CallConstructor); !ok {
-				return step, errors.New("not result type callmethod")
+				return step, errors.New("not result type callconstructor")
 			} else if !got.Object.Equal(*need.Object) {
 				return step, errors.New("constructed refs mismatch mismatch")
 			}
@@ -140,16 +145,16 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 	}
 }
-func (lr *LogicRunner) ValidateCaseBind(ctx core.Context, inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(*message.ValidateCaseBind)
+func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
 	_, err := lr.MessageBus.Send(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.ValidationResults{
-			//Caller:           lr.Network.GetNodeID(),
+			Caller:           lr.Network.GetNodeID(),
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
 			Error:            validationError,
@@ -175,8 +180,8 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 	return c, ok
 }
 
-func (lr *LogicRunner) ProcessValidationResults(ctx core.Context, inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(*message.ValidationResults)
+func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+	msg, ok := inmsg.Message().(*message.ValidationResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
@@ -185,8 +190,8 @@ func (lr *LogicRunner) ProcessValidationResults(ctx core.Context, inmsg core.Mes
 	return nil, nil
 }
 
-func (lr *LogicRunner) ExecutorResults(ctx core.Context, inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(*message.ExecutorResults)
+func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+	msg, ok := inmsg.Message().(*message.ExecutorResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
@@ -199,6 +204,7 @@ func (lr *LogicRunner) ExecutorResults(ctx core.Context, inmsg core.Message) (co
 type ValidationBehaviour interface {
 	Begin(refs Ref, record core.CaseRecord)
 	End(refs Ref, record core.CaseRecord)
+	GetRole() core.JetRole
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
 	RegisterRequest(m message.IBaseLogicMessage) (*Ref, error)
@@ -209,7 +215,7 @@ type ValidationSaver struct {
 }
 
 func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
 	if err != nil {
 		return nil, err
@@ -240,6 +246,10 @@ func (vb ValidationSaver) Begin(refs Ref, record core.CaseRecord) {
 
 func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
+}
+
+func (vb ValidationSaver) GetRole() core.JetRole {
+	return core.RoleVirtualExecutor
 }
 
 type ValidationChecker struct {
@@ -276,4 +286,8 @@ func (vb ValidationChecker) Begin(refs Ref, record core.CaseRecord) {
 
 func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
+}
+
+func (vb ValidationChecker) GetRole() core.JetRole {
+	return core.RoleVirtualValidator
 }

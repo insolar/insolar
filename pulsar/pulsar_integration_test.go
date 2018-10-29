@@ -17,6 +17,7 @@
 package pulsar
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
@@ -24,7 +25,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
@@ -35,7 +35,7 @@ import (
 )
 
 func newCertificate(t *testing.T) *certificate.Certificate {
-	cert, err := certificate.NewCertificate("../testdata/functional/bootstrap_keys.json")
+	cert, err := certificate.NewCertificatesWithKeys("../testdata/functional/bootstrap_keys.json")
 	assert.NoError(t, err)
 	err = cert.GenerateKeys()
 	assert.NoError(t, err)
@@ -43,6 +43,7 @@ func newCertificate(t *testing.T) *certificate.Certificate {
 }
 
 func TestTwoPulsars_Handshake(t *testing.T) {
+	ctx := context.TODO()
 	cert1 := newCertificate(t)
 	cert2 := newCertificate(t)
 
@@ -86,22 +87,22 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	go firstPulsar.StartServer()
-	go secondPulsar.StartServer()
-	err = secondPulsar.EstablishConnectionToPulsar(firstPublicExported)
+	go firstPulsar.StartServer(ctx)
+	go secondPulsar.StartServer(ctx)
+	err = secondPulsar.EstablishConnectionToPulsar(ctx, firstPublicExported)
 
 	assert.NoError(t, err)
 	assert.Equal(t, true, firstPulsar.Neighbours[secondPublicExported].OutgoingClient.IsInitialised())
 	assert.Equal(t, true, secondPulsar.Neighbours[firstPublicExported].OutgoingClient.IsInitialised())
 
 	defer func() {
-		firstPulsar.StopServer()
-		secondPulsar.StopServer()
+		firstPulsar.StopServer(ctx)
+		secondPulsar.StopServer(ctx)
 	}()
 }
 
 func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(), *servicenetwork.ServiceNetwork, string) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -121,7 +122,7 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 }
 
 func TestPulsar_SendPulseToNode(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
@@ -150,7 +151,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 
 	// Act
 	go func() {
-		err := newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+		err := newPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
 		assert.NoError(t, err)
 	}()
 
@@ -176,7 +177,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 		err = bootstrapNodeNetwork.Stop(ctx)
 		assert.NoError(t, err)
 
-		newPulsar.StopServer()
+		newPulsar.StopServer(ctx)
 
 		bootstrapLedgerCleaner()
 		usualLedgerCleaner()
@@ -184,7 +185,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 }
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
@@ -248,14 +249,14 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	secondStateSwitcher.setState(WaitingForStart)
 	secondStateSwitcher.SetPulsar(secondPulsar)
 
-	go firstPulsar.StartServer()
-	go secondPulsar.StartServer()
-	err = firstPulsar.EstablishConnectionToPulsar(secondPubKey)
+	go firstPulsar.StartServer(ctx)
+	go secondPulsar.StartServer(ctx)
+	err = firstPulsar.EstablishConnectionToPulsar(ctx, secondPubKey)
 	assert.NoError(t, err)
 
 	// Act
 	go func() {
-		err := firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+		err := firstPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
 		assert.NoError(t, err)
 	}()
 
@@ -284,8 +285,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		usualNodeNetwork.Stop(ctx)
 		bootstrapNodeNetwork.Stop(ctx)
 
-		firstPulsar.StopServer()
-		secondPulsar.StopServer()
+		firstPulsar.StopServer(ctx)
+		secondPulsar.StopServer(ctx)
 
 		bootstrapLedgerCleaner()
 		usualLedgerCleaner()
@@ -293,7 +294,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 }
 
 func TestSevenPulsars_Full_Consensus(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
@@ -363,13 +364,13 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		switcher.SetPulsar(pulsar)
 		assert.NoError(t, err)
 		pulsars[pulsarIndex] = pulsar
-		go pulsar.StartServer()
+		go pulsar.StartServer(ctx)
 	}
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 		for neighbourIndex := pulsarIndex + 1; neighbourIndex < 7; neighbourIndex++ {
 			pubKey, _ := keys[neighbourIndex].GetPublicKey()
-			err := pulsars[pulsarIndex].EstablishConnectionToPulsar(pubKey)
+			err := pulsars[pulsarIndex].EstablishConnectionToPulsar(ctx, pubKey)
 			assert.NoError(t, err)
 		}
 	}
@@ -386,7 +387,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	}
 
 	// Main act
-	go pulsars[0].StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+	go pulsars[0].StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
 
 	// Need to wait for the moment of brodcasting pulse in the network
 	currentPulse, err := usualLedger.GetPulseManager().Current()
@@ -430,7 +431,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		bootstrapNodeNetwork.Stop(ctx)
 
 		for _, pulsar := range pulsars {
-			pulsar.StopServer()
+			pulsar.StopServer(ctx)
 		}
 
 		bootstrapLedgerCleaner()

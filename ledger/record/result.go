@@ -41,11 +41,11 @@ type ClassState interface {
 	// State returns state id.
 	State() State
 	// GetCode returns state code.
-	GetCode() *Reference
+	GetCode() *core.RecordRef
 	// GetMachineType returns state code machine type.
 	GetMachineType() core.MachineType
 	// PrevStateID returns previous state id.
-	PrevStateID() *ID
+	PrevStateID() *core.RecordID
 }
 
 // ObjectState is common object state record.
@@ -55,18 +55,34 @@ type ObjectState interface {
 	// GetMemory returns state memory.
 	GetMemory() []byte
 	// PrevStateID returns previous state id.
-	PrevStateID() *ID
+	PrevStateID() *core.RecordID
 }
 
-// ResultRecord is a record which is created in response to a request.
+// ResultRecord represents result of a VM method.
 type ResultRecord struct {
-	Domain  Reference
-	Request Reference
+	Request core.RecordRef
+	Payload []byte
+}
+
+// Type implementation of Record interface.
+func (ResultRecord) Type() TypeID {
+	return typeResult
+}
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ResultRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
+
+// SideEffectRecord is a record which is created in response to a request.
+type SideEffectRecord struct {
+	Domain  core.RecordRef
+	Request core.RecordRef
 }
 
 // TypeRecord is a code interface declaration.
 type TypeRecord struct {
-	ResultRecord
+	SideEffectRecord
 
 	TypeDeclaration []byte
 }
@@ -81,7 +97,7 @@ func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
 
 // CodeRecord is a code storage record.
 type CodeRecord struct {
-	ResultRecord
+	SideEffectRecord
 
 	Code        []byte
 	MachineType core.MachineType
@@ -97,7 +113,7 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ClassStateRecord is a record containing data for a class state.
 type ClassStateRecord struct {
-	Code        Reference
+	Code        core.RecordRef
 	MachineType core.MachineType
 }
 
@@ -107,18 +123,18 @@ func (r *ClassStateRecord) GetMachineType() core.MachineType {
 }
 
 // GetCode returns state code.
-func (r *ClassStateRecord) GetCode() *Reference {
+func (r *ClassStateRecord) GetCode() *core.RecordRef {
 	return &r.Code
 }
 
 // ClassActivateRecord is produced when we "activate" new contract class.
 type ClassActivateRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ClassStateRecord
 }
 
 // PrevStateID returns previous state id.
-func (r *ClassActivateRecord) PrevStateID() *ID {
+func (r *ClassActivateRecord) PrevStateID() *core.RecordID {
 	return nil
 }
 
@@ -137,14 +153,14 @@ func (r *ClassActivateRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ClassAmendRecord is an amendment record for classes.
 type ClassAmendRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ClassStateRecord
 
-	PrevState ID
+	PrevState core.RecordID
 }
 
 // PrevStateID returns previous state id.
-func (r *ClassAmendRecord) PrevStateID() *ID {
+func (r *ClassAmendRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
@@ -173,16 +189,16 @@ func (r *ObjectStateRecord) GetMemory() []byte {
 
 // ObjectActivateRecord is produced when we instantiate new object from an available class.
 type ObjectActivateRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ObjectStateRecord
 
-	Class    Reference
-	Parent   Reference
+	Class    core.RecordRef
+	Parent   core.RecordRef
 	Delegate bool
 }
 
 // PrevStateID returns previous state id.
-func (r *ObjectActivateRecord) PrevStateID() *ID {
+func (r *ObjectActivateRecord) PrevStateID() *core.RecordID {
 	return nil
 }
 
@@ -201,14 +217,14 @@ func (r *ObjectActivateRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ObjectAmendRecord is an amendment record for objects.
 type ObjectAmendRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ObjectStateRecord
 
-	PrevState ID
+	PrevState core.RecordID
 }
 
 // PrevStateID returns previous state id.
-func (r *ObjectAmendRecord) PrevStateID() *ID {
+func (r *ObjectAmendRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
@@ -227,12 +243,12 @@ func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {
 
 // DeactivationRecord marks targeted object as disabled.
 type DeactivationRecord struct {
-	ResultRecord
-	PrevState ID
+	SideEffectRecord
+	PrevState core.RecordID
 }
 
 // PrevStateID returns previous state id.
-func (r *DeactivationRecord) PrevStateID() *ID {
+func (r *DeactivationRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
@@ -260,6 +276,6 @@ func (*DeactivationRecord) GetMemory() []byte {
 }
 
 // GetCode returns state code.
-func (*DeactivationRecord) GetCode() *Reference {
+func (*DeactivationRecord) GetCode() *core.RecordRef {
 	return nil
 }

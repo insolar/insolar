@@ -17,21 +17,24 @@
 package logicrunner
 
 import (
+	"context"
 	"testing"
 
-	"github.com/insolar/insolar/inscontext"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/testutils/nodekeeper"
+
+	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
@@ -42,23 +45,30 @@ func byteRecorRef(b byte) core.RecordRef {
 }
 
 func TestBareHelloworld(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
-	c := core.Components{LogicRunner: lr}
+
+	nk := nodekeeper.GetTestNodekeeper()
+	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
+
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 	am := l.GetArtifactManager()
 	assert.NoError(t, err, "Initialize runner")
 
 	mb := testmessagebus.NewTestMessageBus()
+
+	nw := network.GetTestNetwork()
 	assert.NoError(t, lr.Start(ctx, core.Components{
 		Ledger:     l,
 		MessageBus: mb,
+		Network:    nw,
 	}), "starting logicrunner")
+
 	MessageBusTrivialBehavior(mb, lr)
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
+	l.GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
 
 	hw := helloworld.NewHelloWorld()
 
@@ -81,14 +91,17 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 
+	msg := &message.CallMethod{
+		ObjectRef: reqref,
+		Method:    "Greet",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
+	}
+	key, _ := ecdsa.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	// #1
 	resp, err := lr.Execute(
-		inscontext.TODO(),
-		&message.CallMethod{
-			ObjectRef: reqref,
-			Method:    "Greet",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
-		},
+		context.TODO(),
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -97,14 +110,17 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
+	msg = &message.CallMethod{
+		ObjectRef: reqref,
+		Method:    "Greet",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
+	}
+	key, _ = ecdsa.GeneratePrivateKey()
+	signed, _ = message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	// #2
 	resp, err = lr.Execute(
-		inscontext.TODO(),
-		&message.CallMethod{
-			ObjectRef: reqref,
-			Method:    "Greet",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
-		},
+		context.TODO(),
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 

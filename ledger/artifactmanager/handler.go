@@ -17,10 +17,10 @@
 package artifactmanager
 
 import (
-	"time"
+	"bytes"
+	"context"
 
 	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -30,58 +30,82 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
+type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error)
+
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	db *storage.DB
+	db              *storage.DB
+	jetDropHandlers map[core.MessageType]internalHandler
 }
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
-	return &MessageHandler{db: db}, nil
+	return &MessageHandler{
+		db:              db,
+		jetDropHandlers: map[core.MessageType]internalHandler{},
+	}, nil
 }
 
 // Link links external components.
 func (h *MessageHandler) Link(components core.Components) error {
 	bus := components.MessageBus
 
-	bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	bus.MustRegister(core.TypeGetClass, h.handleGetClass)
-	bus.MustRegister(core.TypeGetObject, h.handleGetObject)
-	bus.MustRegister(core.TypeGetDelegate, h.handleGetDelegate)
-	bus.MustRegister(core.TypeGetChildren, h.handleGetChildren)
-	bus.MustRegister(core.TypeUpdateObject, h.handleUpdateObject)
-	bus.MustRegister(core.TypeRegisterChild, h.handleRegisterChild)
+	bus.MustRegister(core.TypeGetCode, h.messagePersistingWrapper(h.handleGetCode))
+	bus.MustRegister(core.TypeGetClass, h.messagePersistingWrapper(h.handleGetClass))
+	bus.MustRegister(core.TypeGetObject, h.messagePersistingWrapper(h.handleGetObject))
+	bus.MustRegister(core.TypeGetDelegate, h.messagePersistingWrapper(h.handleGetDelegate))
+	bus.MustRegister(core.TypeGetChildren, h.messagePersistingWrapper(h.handleGetChildren))
+	bus.MustRegister(core.TypeUpdateObject, h.messagePersistingWrapper(h.handleUpdateObject))
+	bus.MustRegister(core.TypeRegisterChild, h.messagePersistingWrapper(h.handleRegisterChild))
 	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
-	bus.MustRegister(core.TypeSetRecord, h.handleSetRecord)
-	bus.MustRegister(core.TypeUpdateClass, h.handleUpdateClass)
-	bus.MustRegister(core.TypeValidateRecord, h.handleValidateRecord)
+	bus.MustRegister(core.TypeSetRecord, h.messagePersistingWrapper(h.handleSetRecord))
+	bus.MustRegister(core.TypeUpdateClass, h.messagePersistingWrapper(h.handleUpdateClass))
+	bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
+
+	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
+	h.jetDropHandlers[core.TypeGetClass] = h.handleGetClass
+	h.jetDropHandlers[core.TypeGetObject] = h.handleGetObject
+	h.jetDropHandlers[core.TypeGetDelegate] = h.handleGetDelegate
+	h.jetDropHandlers[core.TypeGetChildren] = h.handleGetChildren
+	h.jetDropHandlers[core.TypeUpdateObject] = h.handleUpdateObject
+	h.jetDropHandlers[core.TypeRegisterChild] = h.handleRegisterChild
+	h.jetDropHandlers[core.TypeSetRecord] = h.handleSetRecord
+	h.jetDropHandlers[core.TypeUpdateClass] = h.handleUpdateClass
+	h.jetDropHandlers[core.TypeValidateRecord] = h.handleValidateRecord
 
 	return nil
 }
 
-func logTimeInside(start time.Time, funcName string) {
-	if time.Since(start) > time.Second {
-		log.Debugf("Handle takes too long: %s: time inside - %s", funcName, time.Since(start))
+func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
+	return func(context context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+		err := persistMessageToDb(h.db, genericMsg.Message())
+		if err != nil {
+			return nil, err
+		}
+
+		lastPulseNumber, err := h.db.GetLatestPulseNumber()
+		if err != nil {
+			return nil, err
+		}
+
+		return handler(context, lastPulseNumber, genericMsg)
 	}
 }
 
-func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.SetRecord)
-
-	id, err := h.db.SetRecord(record.DeserializeRecord(msg.Record))
+func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.SetRecord)
+	id, err := h.db.SetRecord(pulseNumber, record.DeserializeRecord(msg.Record))
 	if err != nil {
 		return nil, err
 	}
 
-	return &reply.ID{ID: *id.CoreID()}, nil
+	return &reply.ID{ID: *id}, nil
 }
 
-func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-	msg := genericMsg.(*message.GetCode)
-	codeRef := record.Core2Reference(msg.Code)
+func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetCode)
 
-	codeRec, err := getCode(h.db, codeRef.Record)
+	codeRec, err := getCode(h.db, msg.Code.Record())
 	if err != nil {
 		return nil, err
 	}
@@ -91,17 +115,13 @@ func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message
 		MachineType: codeRec.MachineType,
 	}
 
-	logTimeInside(start, "handleGetCode")
-
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-	msg := genericMsg.(*message.GetClass)
-	headRef := record.Core2Reference(msg.Head)
+func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetClass)
 
-	_, stateID, state, err := getClass(h.db, &headRef.Record, msg.State)
+	_, stateID, state, err := getClass(h.db, msg.Head.Record(), msg.State)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +130,7 @@ func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Messag
 	if state.GetCode() == nil {
 		code = nil
 	} else {
-		code = state.GetCode().CoreRef()
+		code = state.GetCode()
 	}
 
 	rep := reply.Class{
@@ -120,17 +140,13 @@ func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Messag
 		MachineType: state.GetMachineType(),
 	}
 
-	logTimeInside(start, "handleGetClass")
-
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-	msg := genericMsg.(*message.GetObject)
-	headRef := record.Core2Reference(msg.Head)
+func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetObject)
 
-	idx, stateID, state, err := getObject(h.db, &headRef.Record, msg.State, msg.Approved)
+	idx, stateID, state, err := getObject(h.db, msg.Head.Record(), msg.State, msg.Approved)
 	if err != nil {
 		switch err {
 		case ErrObjectDeactivated:
@@ -144,27 +160,23 @@ func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Messa
 
 	var childPointer *core.RecordID
 	if idx.ChildPointer != nil {
-		childPointer = idx.ChildPointer.CoreID()
+		childPointer = idx.ChildPointer
 	}
 	rep := reply.Object{
 		Head:         msg.Head,
 		State:        *stateID,
-		Class:        *idx.ClassRef.CoreRef(),
+		Class:        idx.ClassRef,
 		ChildPointer: childPointer,
 		Memory:       state.GetMemory(),
 	}
 
-	logTimeInside(start, "handleGetObject")
-
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-	msg := genericMsg.(*message.GetDelegate)
-	headRef := record.Core2Reference(msg.Head)
+func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetDelegate)
 
-	idx, _, _, err := getObject(h.db, &headRef.Record, nil, false)
+	idx, _, _, err := getObject(h.db, msg.Head.Record(), nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -175,33 +187,28 @@ func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Mes
 	}
 
 	rep := reply.Delegate{
-		Head: *delegateRef.CoreRef(),
+		Head: delegateRef,
 	}
-
-	logTimeInside(start, "handleGetDelegate")
 
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-	msg := genericMsg.(*message.GetChildren)
-	parentRef := record.Core2Reference(msg.Parent)
+func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetChildren)
 
-	idx, _, _, err := getObject(h.db, &parentRef.Record, nil, false)
+	idx, _, _, err := getObject(h.db, msg.Parent.Record(), nil, false)
 	if err != nil {
 		return nil, err
 	}
 
 	var (
 		refs         []core.RecordRef
-		currentChild *record.ID
+		currentChild *core.RecordID
 	)
 
 	// Counting from specified child or the latest.
 	if msg.FromChild != nil {
-		id := record.Bytes2ID(msg.FromChild[:])
-		currentChild = &id
+		currentChild = msg.FromChild
 	} else {
 		currentChild = idx.ChildPointer
 	}
@@ -210,7 +217,7 @@ func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Mes
 	for currentChild != nil {
 		// We have enough results.
 		if counter >= msg.Amount {
-			return &reply.Children{Refs: refs, NextFrom: currentChild.CoreID()}, nil
+			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
 		}
 		counter++
 
@@ -225,21 +232,18 @@ func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Mes
 		currentChild = childRec.PrevChild
 
 		// Skip records later than specified pulse.
-		if msg.FromPulse != nil && childRec.Ref.Record.Pulse > *msg.FromPulse {
+		recPulse := childRec.Ref.Record().Pulse()
+		if msg.FromPulse != nil && recPulse > *msg.FromPulse {
 			continue
 		}
-		refs = append(refs, *childRec.Ref.CoreRef())
+		refs = append(refs, childRec.Ref)
 	}
-
-	logTimeInside(start, "handleGetChildren")
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.UpdateClass)
-	classCoreID := msg.Class.GetRecordID()
-	classID := record.Bytes2ID(classCoreID[:])
+func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.UpdateClass)
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ClassState)
@@ -247,9 +251,9 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 		return nil, errors.New("wrong class state record")
 	}
 
-	var id *record.ID
+	var id *core.RecordID
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err := getClassIndex(tx, &classID, true)
+		idx, err := getClassIndex(tx, msg.Class.Record(), true)
 		if err != nil {
 			return err
 		}
@@ -257,17 +261,17 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 			return err
 		}
 		// Index exists and latest record id does not match (preserving chain consistency).
-		if idx.LatestState != nil && !state.PrevStateID().IsEqual(idx.LatestState) {
+		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
 
-		id, err = tx.SetRecord(rec)
+		id, err = tx.SetRecord(pulseNumber, rec)
 		if err != nil {
 			return err
 		}
 		idx.LatestState = id
 		idx.State = state.State()
-		return tx.SetClassIndex(&classID, idx)
+		return tx.SetClassIndex(msg.Class.Record(), idx)
 	})
 	if err != nil {
 		if err == ErrClassDeactivated {
@@ -275,13 +279,11 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 		}
 		return nil, err
 	}
-	return &reply.ID{ID: *id.CoreID()}, nil
+	return &reply.ID{ID: *id}, nil
 }
 
-func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.UpdateObject)
-	objectCoreID := msg.Object.GetRecordID()
-	objectID := record.Bytes2ID(objectCoreID[:])
+func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.UpdateObject)
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ObjectState)
@@ -289,9 +291,10 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 		return nil, errors.New("wrong class state record")
 	}
 
-	var id *record.ID
+	var idx *index.ObjectLifeline
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err := getObjectIndex(tx, &objectID, true)
+		var err error
+		idx, err = getObjectIndex(tx, msg.Object.Record(), true)
 		if err != nil {
 			return err
 		}
@@ -299,11 +302,11 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 			return err
 		}
 		// Index exists and latest record id does not match (preserving chain consistency).
-		if idx.LatestState != nil && !state.PrevStateID().IsEqual(idx.LatestState) {
+		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
 
-		id, err = tx.SetRecord(rec)
+		id, err := tx.SetRecord(pulseNumber, rec)
 		if err != nil {
 			return err
 		}
@@ -313,9 +316,9 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 			if msg.Class == nil {
 				return errors.New("not enough data for activation provided")
 			}
-			idx.ClassRef = record.Core2Reference(*msg.Class)
+			idx.ClassRef = *msg.Class
 		}
-		return tx.SetObjectIndex(&objectID, idx)
+		return tx.SetObjectIndex(msg.Object.Record(), idx)
 	})
 	if err != nil {
 		if err == ErrObjectDeactivated {
@@ -323,14 +326,18 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 		}
 		return nil, err
 	}
-	return &reply.ID{ID: *id.CoreID()}, nil
+
+	rep := reply.Object{
+		Head:         msg.Object,
+		State:        *idx.LatestState,
+		Class:        idx.ClassRef,
+		ChildPointer: idx.ChildPointer,
+	}
+	return &rep, nil
 }
 
-func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-	msg := genericMsg.(*message.RegisterChild)
-	parentRef := record.Core2Reference(msg.Parent)
-	childRef := record.Core2Reference(msg.Child)
+func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.RegisterChild)
 
 	rec := record.DeserializeRecord(msg.Record)
 	childRec, ok := rec.(*record.ChildRecord)
@@ -338,26 +345,26 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 		return nil, errors.New("wrong child record")
 	}
 
-	var child *record.ID
+	var child *core.RecordID
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, &parentRef.Record, nil, false)
+		idx, _, _, err := getObject(tx, msg.Parent.Record(), nil, false)
 		if err != nil {
 			return err
 		}
 		// Children exist and pointer does not match (preserving chain consistency).
-		if idx.ChildPointer != nil && !childRec.PrevChild.IsEqual(idx.ChildPointer) {
+		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
 			return errors.New("invalid child record")
 		}
 
-		child, err = tx.SetRecord(childRec)
+		child, err = tx.SetRecord(pulseNumber, childRec)
 		if err != nil {
 			return err
 		}
 		idx.ChildPointer = child
 		if msg.AsClass != nil {
-			idx.Delegates[*msg.AsClass] = childRef
+			idx.Delegates[*msg.AsClass] = msg.Child
 		}
-		err = tx.SetObjectIndex(&parentRef.Record, idx)
+		err = tx.SetObjectIndex(msg.Parent.Record(), idx)
 		if err != nil {
 			return err
 		}
@@ -369,26 +376,24 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 		return nil, err
 	}
 
-	logTimeInside(start, "handleRegisterChild")
-
-	return &reply.ID{ID: *child.CoreID()}, nil
+	return &reply.ID{ID: *child}, nil
 }
 
-func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.JetDrop)
+func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.JetDrop)
 
-	// TODO: validate
-	for _, rec := range msg.Records {
-		err := h.db.SetRecordBinary(rec[0], rec[1])
+	for _, rawMessage := range msg.Messages {
+		parsedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	// temporary hack for Index passing
-	// FIXME: should be removed after proper validation has been implemented
-	for _, rec := range msg.Indexes {
-		err := h.db.Set(rec[0], rec[1])
+		handler, ok := h.jetDropHandlers[parsedMessage.Message().Type()]
+		if !ok {
+			return nil, errors.New("unknown message type")
+		}
+
+		_, err = handler(ctx, msg.PulseNumber, parsedMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -397,15 +402,11 @@ func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleValidateRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.ValidateRecord)
-	objID := record.Core2Reference(msg.Object).Record
-	validatedStateID := record.Bytes2ID(msg.State[:])
-
-	// TODO: store validation record for fishers.
+func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.ValidateRecord)
 
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err := tx.GetObjectIndex(&objID, true)
+		idx, err := tx.GetObjectIndex(msg.Object.Record(), true)
 		if err != nil {
 			return errors.Wrap(err, "inconsistent object index")
 		}
@@ -414,7 +415,7 @@ func (h *MessageHandler) handleValidateRecord(ctx core.Context, genericMsg core.
 		currentID := idx.LatestState
 		for currentID != nil {
 			// We have passed an approved record.
-			if currentID.IsEqual(idx.LatestStateApproved) {
+			if currentID.Equal(idx.LatestStateApproved) {
 				return errors.New("changing approved records is not allowed")
 			}
 
@@ -429,13 +430,13 @@ func (h *MessageHandler) handleValidateRecord(ctx core.Context, genericMsg core.
 			}
 
 			// Validated record found.
-			if currentID.IsEqual(&validatedStateID) {
+			if currentID.Equal(&msg.State) {
 				if msg.IsValid {
 					idx.LatestStateApproved = currentID
 				} else {
 					idx.LatestState = currentState.PrevStateID()
 				}
-				err := tx.SetObjectIndex(&objID, idx)
+				err := tx.SetObjectIndex(msg.Object.Record(), idx)
 				if err != nil {
 					return err
 				}
@@ -455,16 +456,21 @@ func (h *MessageHandler) handleValidateRecord(ctx core.Context, genericMsg core.
 	return &reply.OK{}, nil
 }
 
-func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
-	ref := record.Reference{
-		Record: *id,
-		Domain: record.Core2Reference(*request).Domain,
+func persistMessageToDb(db *storage.DB, genericMsg core.Message) error {
+	lastPulse, err := db.GetLatestPulseNumber()
+	if err != nil {
+		return err
 	}
-	return ref.CoreRef()
+	err = db.SetMessage(lastPulse, genericMsg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func getCode(s storage.Store, id record.ID) (*record.CodeRecord, error) {
-	rec, err := s.GetRecord(&id)
+func getCode(s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
+	rec, err := s.GetRecord(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code record")
 	}
@@ -477,17 +483,16 @@ func getCode(s storage.Store, id record.ID) (*record.CodeRecord, error) {
 }
 
 func getClass(
-	s storage.Store, head *record.ID, state *core.RecordID,
+	s storage.Store, head *core.RecordID, state *core.RecordID,
 ) (*index.ClassLifeline, *core.RecordID, record.ClassState, error) {
 	idx, err := s.GetClassIndex(head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
 
-	var stateID *record.ID
+	var stateID *core.RecordID
 	if state != nil {
-		s := record.Bytes2ID(state[:])
-		stateID = &s
+		stateID = state
 	} else {
 		stateID = idx.LatestState
 	}
@@ -504,21 +509,20 @@ func getClass(
 		return nil, nil, nil, ErrClassDeactivated
 	}
 
-	return idx, stateID.CoreID(), stateRec, nil
+	return idx, stateID, stateRec, nil
 }
 
 func getObject(
-	s storage.Store, head *record.ID, state *core.RecordID, approved bool,
+	s storage.Store, head *core.RecordID, state *core.RecordID, approved bool,
 ) (*index.ObjectLifeline, *core.RecordID, record.ObjectState, error) {
 	idx, err := s.GetObjectIndex(head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
 
-	var stateID *record.ID
+	var stateID *core.RecordID
 	if state != nil {
-		s := record.Bytes2ID(state[:])
-		stateID = &s
+		stateID = state
 	} else {
 		if approved {
 			stateID = idx.LatestStateApproved
@@ -543,10 +547,10 @@ func getObject(
 		return nil, nil, nil, ErrObjectDeactivated
 	}
 
-	return idx, stateID.CoreID(), stateRec, nil
+	return idx, stateID, stateRec, nil
 }
 
-func getClassIndex(s storage.Store, head *record.ID, forupdate bool) (*index.ClassLifeline, error) {
+func getClassIndex(s storage.Store, head *core.RecordID, forupdate bool) (*index.ClassLifeline, error) {
 	idx, err := s.GetClassIndex(head, forupdate)
 	if err == storage.ErrNotFound {
 		return &index.ClassLifeline{State: record.StateUndefined}, nil
@@ -554,7 +558,7 @@ func getClassIndex(s storage.Store, head *record.ID, forupdate bool) (*index.Cla
 	return idx, err
 }
 
-func getObjectIndex(s storage.Store, head *record.ID, forupdate bool) (*index.ObjectLifeline, error) {
+func getObjectIndex(s storage.Store, head *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
 	idx, err := s.GetObjectIndex(head, forupdate)
 	if err == storage.ErrNotFound {
 		return &index.ObjectLifeline{State: record.StateUndefined}, nil

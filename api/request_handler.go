@@ -17,10 +17,10 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"sync/atomic"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
@@ -92,7 +92,7 @@ func NewRequestHandler(params *Params, messageBus core.MessageBus, nc core.Netwo
 	}
 }
 
-func (rh *RequestHandler) sendRequest(ctx core.Context, method string, argsIn []interface{}) (core.Reply, error) {
+func (rh *RequestHandler) sendRequest(ctx context.Context, method string, argsIn []interface{}) (core.Reply, error) {
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
@@ -106,16 +106,13 @@ func (rh *RequestHandler) sendRequest(ctx core.Context, method string, argsIn []
 	return routResult, nil
 }
 
-// TODO: make it ok
-var serial uint64 = 1
-
-func (rh *RequestHandler) routeCall(ctx core.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
+func (rh *RequestHandler) routeCall(ctx context.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
 	if rh.messageBus == nil {
 		return nil, errors.New("[ RouteCall ] message bus was not set during initialization")
 	}
 
 	e := &message.CallMethod{
-		BaseLogicMessage: message.BaseLogicMessage{Nonce: atomicLoadAndIncrementUint64(&serial)},
+		BaseLogicMessage: message.BaseLogicMessage{Nonce: networkcoordinator.RandomUint64()},
 		ObjectRef:        ref,
 		Method:           method,
 		Arguments:        args,
@@ -130,7 +127,7 @@ func (rh *RequestHandler) routeCall(ctx core.Context, ref core.RecordRef, method
 }
 
 // ProcessRegisterNode process register node response
-func (rh *RequestHandler) ProcessRegisterNode(ctx core.Context) (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessRegisterNode(ctx context.Context) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	if len(rh.params.PublicKey) == 0 {
@@ -170,7 +167,7 @@ func (rh *RequestHandler) ProcessRegisterNode(ctx core.Context) (map[string]inte
 }
 
 // ProcessIsAuthorized processes is_auth query type
-func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]interface{}, error) {
 
 	// Check calling smart contract
 	result := make(map[string]interface{})
@@ -206,7 +203,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]inte
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
 	}
 
-	rawCertificate, err := rh.netCoordinator.RegisterNode(pubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
+	rawCertificate, err := rh.netCoordinator.RegisterNode(ctx, pubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
 	}
@@ -216,7 +213,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]inte
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
 	}
 
-	regPubKey, _, err := rh.netCoordinator.Authorize(core.NewRefFromBase58(nodeRef), seed, signature)
+	regPubKey, _, err := rh.netCoordinator.Authorize(ctx, core.NewRefFromBase58(nodeRef), seed, signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::Authorize")
 	}
@@ -231,7 +228,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]inte
 }
 
 // ProcessGetSeed processes get seed request
-func (rh *RequestHandler) ProcessGetSeed(ctx core.Context) (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessGetSeed(ctx context.Context) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	seed, err := rh.seedGenerator.Next()
 	if err != nil {
@@ -242,14 +239,4 @@ func (rh *RequestHandler) ProcessGetSeed(ctx core.Context) (map[string]interface
 	result[SEED] = seed[:]
 
 	return result, nil
-}
-
-// atomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
-	}
 }

@@ -17,6 +17,7 @@
 package servicenetwork
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,7 +28,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/dhtnetwork"
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -39,7 +40,7 @@ import (
 const keysPath = "../../testdata/functional/bootstrap_keys.json"
 
 func initComponents(t *testing.T, nodeId core.RecordRef) core.Components {
-	cert, err := certificate.NewCertificate(keysPath)
+	cert, err := certificate.NewCertificatesWithKeys(keysPath)
 	assert.NoError(t, err)
 	return core.Components{Certificate: cert, NodeNetwork: nodekeeper.NewNodeKeeper(testutils.TestNode(nodeId)), Ledger: &dhtnetwork.MockLedger{}}
 }
@@ -77,9 +78,11 @@ func TestServiceNetwork_GetHostNetwork(t *testing.T) {
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := NewServiceNetwork(cfg)
+	key, _ := ecdsa.GeneratePrivateKey()
+	network.certificate, _ = certificate.NewCertificatesWithKeys(keysPath)
 	assert.NoError(t, err)
 
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	err = network.Start(ctx, initComponents(t, testutils.RandomRef()))
 	assert.NoError(t, err)
 
@@ -89,8 +92,10 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
+	signed, _ := message.NewSignedMessage(e, network.GetNodeID(), key)
+
 	ref := testutils.RandomRef()
-	network.SendMessage(ref, "test", e)
+	network.SendMessage(ref, "test", signed)
 }
 
 func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID string) configuration.Configuration {
@@ -141,7 +146,7 @@ func (l *mockLedger) GetPulseManager() core.PulseManager {
 }
 
 func TestServiceNetwork_SendMessage2(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("awaiting for big service network mock")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -177,15 +182,17 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
+	signed, _ := message.NewSignedMessage(e, firstNode.GetNodeID(), firstNode.GetPrivateKey())
+
 	ref := testutils.RandomRef()
-	firstNode.SendMessage(ref, "test", e)
+	firstNode.SendMessage(ref, "test", signed)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
 }
 
 func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("wait for DI and network refactoring")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -233,7 +240,9 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	firstNode.SendCascadeMessage(c, "test", e)
+	signed, err := message.NewSignedMessage(e, firstNode.GetNodeID(), firstNode.GetPrivateKey())
+
+	firstNode.SendCascadeMessage(c, "test", signed)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
@@ -241,16 +250,16 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	err = firstNode.SendCascadeMessage(c, "test", nil)
 	assert.Error(t, err)
 	c.ReplicationFactor = 0
-	err = firstNode.SendCascadeMessage(c, "test", e)
+	err = firstNode.SendCascadeMessage(c, "test", signed)
 	assert.Error(t, err)
 	c.ReplicationFactor = 2
 	c.NodeIds = nil
-	err = firstNode.SendCascadeMessage(c, "test", e)
+	err = firstNode.SendCascadeMessage(c, "test", signed)
 	assert.Error(t, err)
 }
 
 func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
-	insctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("fix data race INS-534")
 	nodeIds := []core.RecordRef{
 		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
@@ -277,7 +286,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 
 	defer func() {
 		for _, service := range services {
-			service.Stop(insctx)
+			service.Stop(ctx)
 		}
 	}()
 
@@ -285,7 +294,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
 		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
-		service.Start(insctx, core.Components{})
+		service.Start(ctx, core.Components{})
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
 			return nil, nil
@@ -320,7 +329,10 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		ReplicationFactor: 2,
 		Entropy:           core.Entropy{0},
 	}
-	firstService.SendCascadeMessage(c, "test", e)
+
+	signed, _ := message.NewSignedMessage(e, firstService.GetNodeID(), firstService.GetPrivateKey())
+
+	firstService.SendCascadeMessage(c, "test", signed)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
@@ -331,7 +343,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 }
 
 func Test_processPulse(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("rewrite test with multiple pulses and respecting logic of adding active nodes")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -387,7 +399,7 @@ func Test_processPulse(t *testing.T) {
 }
 
 func Test_processPulse2(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("fix data race INS-534")
 	nodeIds := []core.RecordRef{
 		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),

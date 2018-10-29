@@ -24,11 +24,11 @@ import (
 
 // Store is used by context unaware clients who can work inside transactions as well as outside.
 type Store interface {
-	GetRecord(ref *record.ID) (record.Record, error)
-	SetRecord(rec record.Record) (*record.ID, error)
-	GetClassIndex(ref *record.ID, forupdate bool) (*index.ClassLifeline, error)
-	SetClassIndex(ref *record.ID, idx *index.ClassLifeline) error
-	GetObjectIndex(ref *record.ID, forupdate bool) (*index.ObjectLifeline, error)
-	SetObjectIndex(ref *record.ID, idx *index.ObjectLifeline) error
+	GetRecord(ref *core.RecordID) (record.Record, error)
+	SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
+	GetClassIndex(ref *core.RecordID, forupdate bool) (*index.ClassLifeline, error)
+	SetClassIndex(ref *core.RecordID, idx *index.ClassLifeline) error
+	GetObjectIndex(ref *core.RecordID, forupdate bool) (*index.ObjectLifeline, error)
+	SetObjectIndex(ref *core.RecordID, idx *index.ObjectLifeline) error
 	GetLatestPulseNumber() (core.PulseNumber, error)
 }
