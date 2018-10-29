@@ -156,7 +156,7 @@ func ShouldRegisterJaeger(
 		collectorendpoint,
 	)
 	inslog := inslogger.FromContext(ctx)
-	if regerr != nil {
+	if regerr == nil {
 		flusher = func() {
 			inslog.Debugf("Flush jaeger for %v\n", servicename)
 			exporter.Flush()
