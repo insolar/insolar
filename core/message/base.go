@@ -114,9 +114,10 @@ func Deserialize(buff io.Reader) (core.SignedMessage, error) {
 		return nil, err
 	}
 	enc := gob.NewDecoder(buff)
-	err = enc.Decode(msg)
-	signed := &SignedMessage{Msg: msg}
-	return signed, err
+	if err = enc.Decode(msg); err != nil {
+		return nil, err
+	}
+	return &SignedMessage{Msg: msg}, nil
 }
 
 // ToBytes deserialize a core.Message to bytes.
