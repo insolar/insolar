@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +61,7 @@ func Test_TypeIDConversion(t *testing.T) {
 
 func TestSerializeDeserializeRecord(t *testing.T) {
 	rec := ObjectActivateRecord{
-		ObjectStateRecord: ObjectStateRecord{Memory: []byte{1, 2, 3}},
+		ObjectStateRecord: ObjectStateRecord{Memory: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
 	}
 	serialized := SerializeRecord(&rec)
 	deserialized := DeserializeRecord(serialized)
