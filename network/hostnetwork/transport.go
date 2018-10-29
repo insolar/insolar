@@ -170,7 +170,9 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 
 // Disconnect stop listening to network requests.
 func (h *hostTransport) Disconnect() error {
-	h.transport.Stop()
+	go h.transport.Stop()
+	<-h.transport.Stopped()
+	h.transport.Close()
 	return nil
 }
 
@@ -214,19 +216,30 @@ func (h *hostTransport) BuildResponse(request network.Request, responseData inte
 	return (*packetWrapper)(p)
 }
 
+func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
+	address, err := host.NewAddress(tp.PublicAddress())
+	if err != nil {
+		return nil, errors.Wrap(err, "error resolving address")
+	}
+	nodeID := core.NewRefFromBase58(id)
+	if nodeID.Equal(core.RecordRef{}) {
+		return nil, errors.Wrap(err, "error parsing NodeID from string (NodeID is zero)")
+	}
+	origin := &host.Host{NodeID: nodeID, Address: address}
+	return origin, nil
+}
+
 func NewInternalTransport(conf configuration.Configuration) (InternalTransport, error) {
 	tp, err := transport.NewTransport(conf.Host.Transport, relay.NewProxy())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}
-	address, err := host.NewAddress(tp.PublicAddress())
+	origin, err := getOrigin(tp, conf.Node.Node.ID)
 	if err != nil {
-		return nil, errors.Wrap(err, "error resolving address")
+		go tp.Stop()
+		<-tp.Stopped()
+		tp.Close()
+		return nil, errors.Wrap(err, "error getting origin")
 	}
-	nodeID := core.NewRefFromBase58(conf.Node.Node.ID)
-	if nodeID.Equal(core.RecordRef{}) {
-		return nil, errors.Wrap(err, "error parsing NodeID from string (NodeID is zero)")
-	}
-	origin := &host.Host{NodeID: nodeID, Address: address}
 	return &hostTransport{transport: tp, origin: origin, handlers: make(map[types.PacketType]network.RequestHandler)}, nil
 }
