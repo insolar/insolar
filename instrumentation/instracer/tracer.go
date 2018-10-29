@@ -68,7 +68,8 @@ func SetBaggage(ctx context.Context, e ...Entry) context.Context {
 	return context.WithValue(ctx, baggageKey{}, e)
 }
 
-func getBaggage(ctx context.Context) []Entry {
+// GetBaggage returns trace entries have set as trace baggage.
+func GetBaggage(ctx context.Context) []Entry {
 	val := ctx.Value(baggageKey{})
 	if val == nil {
 		return nil
@@ -91,7 +92,7 @@ func StartSpan(ctx context.Context, name string) (context.Context, *trace.Span) 
 	} else {
 		spanctx, span = trace.StartSpan(ctx, name)
 	}
-	setSpanEntries(span, getBaggage(spanctx)...)
+	setSpanEntries(span, GetBaggage(spanctx)...)
 	return spanctx, span
 }
 
