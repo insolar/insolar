@@ -46,7 +46,8 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		return 0, errors.New("casebind is empty")
 	}
 	es := lr.UpsertExecution(ref)
-	es.insContext = context.TODO()
+	ctx := context.TODO()
+	es.insContext = ctx
 	es.validate = true
 	es.objectbody = nil
 	err := func() error {
@@ -85,7 +86,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		msg := start.Resp.(core.Message)
-		signed, err := message.NewSignedMessage(msg, ref, lr.Network.GetPrivateKey())
+		signed, err := message.NewSignedMessage(ctx, msg, ref, lr.Network.GetPrivateKey())
 		if err != nil {
 			return 0, errors.New("failed to create a signed message")
 		}

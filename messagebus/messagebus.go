@@ -83,7 +83,7 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Reply` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
-	signedMsg, err := message.NewSignedMessage(msg, mb.service.GetNodeID(), mb.service.GetPrivateKey())
+	signedMsg, err := message.NewSignedMessage(ctx, msg, mb.service.GetNodeID(), mb.service.GetPrivateKey())
 	if err != nil {
 		return nil, err
 	}
