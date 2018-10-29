@@ -91,7 +91,7 @@ func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
 
 // RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeRouteCall != cr.Type {
 			return errors.New("wrong validation type on RouteCall")
@@ -141,7 +141,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 		return errors.New("event bus was not set during initialization")
 	}
 
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeSaveAsChild != cr.Type {
 			return errors.New("wrong validation type on SaveAsChild")
@@ -185,7 +185,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 	ctx := context.TODO()
 	// TODO: INS-408
 
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObjChildren != cr.Type {
 			return errors.New("wrong validation type on GetObjChildren")
@@ -233,7 +233,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeSaveAsDelegate != cr.Type {
 			return errors.New("wrong validation type on SaveAsDelegate")
@@ -275,7 +275,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
 	ctx := context.TODO()
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetDelegate != cr.Type {
 			return errors.New("wrong validation type on RouteCall")
@@ -304,7 +304,7 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
-	state := gpr.lr.GetExecution(req.Object)
+	state := gpr.lr.GetExecution(req.Callee)
 	if state == nil {
 		return errors.New("no execution state, impossible, shouldn't be")
 	}
