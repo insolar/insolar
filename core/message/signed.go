@@ -17,27 +17,45 @@
 package message
 
 import (
+	"context"
 	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/core"
 	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
 // SignedMessage is a message signed by senders private key.
 type SignedMessage struct {
-	Sender    core.RecordRef
-	Msg       core.Message
-	Signature []byte
+	Sender      core.RecordRef
+	Msg         core.Message
+	Signature   []byte
+	LogTraceID  string
+	ContextData []byte
 }
 
 func (sm *SignedMessage) Message() core.Message {
 	return sm.Msg
 }
 
+// Context returns initialized context with propagated data with ctx as parent.
+func (sm *SignedMessage) Context(ctx context.Context) context.Context {
+	baggage := instracer.MustDeserialize(sm.ContextData)
+	ctx = inslogger.ContextWithTrace(ctx, sm.LogTraceID)
+	ctx = instracer.SetBaggage(ctx, baggage...)
+	return ctx
+}
+
 // NewSignedMessage creates and return a signed message.
-func NewSignedMessage(msg core.Message, sender core.RecordRef, key *ecdsa.PrivateKey) (*SignedMessage, error) {
+func NewSignedMessage(
+	ctx context.Context,
+	msg core.Message,
+	sender core.RecordRef,
+	key *ecdsa.PrivateKey,
+) (*SignedMessage, error) {
 	if key == nil {
 		return nil, errors.New("failed to sign a message: private key == nil")
 	}
@@ -48,7 +66,13 @@ func NewSignedMessage(msg core.Message, sender core.RecordRef, key *ecdsa.Privat
 	if err != nil {
 		return nil, err
 	}
-	return &SignedMessage{Sender: sender, Msg: msg, Signature: sign}, nil
+	return &SignedMessage{
+		Sender:      sender,
+		Msg:         msg,
+		Signature:   sign,
+		LogTraceID:  inslogger.TraceID(ctx),
+		ContextData: instracer.MustSerialize(ctx),
+	}, nil
 }
 
 // SignMessage tries to sign a core.Message.

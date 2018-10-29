@@ -18,8 +18,11 @@ package message
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,4 +60,31 @@ func TestSerializeSignedFail(t *testing.T) {
 	signMsgOut, err := Deserialize(bytes.NewBuffer(buff))
 	assert.Error(t, err)
 	assert.Nil(t, signMsgOut)
+}
+
+func TestSerializeSignedWithContext(t *testing.T) {
+	msg := &SetRecord{
+		Record: []byte{0x0A},
+	}
+	ctxIn := context.Background()
+	traceid := "testtraceid"
+	ctxIn = inslogger.ContextWithTrace(context.Background(), traceid)
+	ctxIn = instracer.SetBaggage(ctxIn, instracer.Entry{Key: "traceid", Value: traceid})
+
+	signMsgIn := &SignedMessage{
+		Msg:         msg,
+		Signature:   nil,
+		ContextData: instracer.MustSerialize(ctxIn),
+		LogTraceID:  inslogger.TraceID(ctxIn),
+	}
+	buff, err := SignedToBytes(signMsgIn)
+	assert.NoError(t, err)
+
+	signMsgOut, err := DeserializeSigned(bytes.NewBuffer(buff))
+	assert.NoError(t, err)
+
+	ctxOut := signMsgOut.Context(context.Background())
+	assert.Equal(t, traceid, inslogger.TraceID(ctxIn))
+	assert.Equal(t, inslogger.TraceID(ctxIn), inslogger.TraceID(ctxOut))
+	assert.Equal(t, instracer.GetBaggage(ctxIn), instracer.GetBaggage(ctxOut))
 }
