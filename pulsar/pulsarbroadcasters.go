@@ -157,20 +157,20 @@ func (currentPulsar *Pulsar) sendVector() {
 	currentPulsar.StateSwitcher.SwitchToState(WaitingForVectors, nil)
 }
 
-func (currentPulsar *Pulsar) sendEntropy() {
-	log.Debug("[sendEntropy]")
+func (currentPulsar *Pulsar) sendEntropy(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[sendEntropy]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
 
 	if currentPulsar.isStandalone() {
-		currentPulsar.StateSwitcher.SwitchToState(Verifying, nil)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Verifying, nil)
 		return
 	}
 
 	currentPulsar.broadcastEntropy()
 
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForEntropy, nil)
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForEntropy, nil)
 }
 
 func (currentPulsar *Pulsar) sendPulseSign() {
