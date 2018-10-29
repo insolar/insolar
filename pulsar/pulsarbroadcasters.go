@@ -86,15 +86,16 @@ func (currentPulsar *Pulsar) broadcastVector(ctx context.Context) {
 	}
 }
 
-func (currentPulsar *Pulsar) broadcastEntropy() {
-	log.Debug("[broadcastEntropy]")
+func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[broadcastEntropy]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
 
 	payload, err := currentPulsar.preparePayload(EntropyPayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Entropy: currentPulsar.GeneratedEntropy})
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -105,13 +106,14 @@ func (currentPulsar *Pulsar) broadcastEntropy() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			logger.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 		}
 	}
 }
 
-func (currentPulsar *Pulsar) sendPulseToPulsars() {
-	log.Debug("[sendPulseToPulsars]")
+func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[sendPulseToPulsars]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -125,7 +127,7 @@ func (currentPulsar *Pulsar) sendPulseToPulsars() {
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -136,7 +138,7 @@ func (currentPulsar *Pulsar) sendPulseToPulsars() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			logger.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 		}
 	}
 }
@@ -152,10 +154,10 @@ func (currentPulsar *Pulsar) sendVector(ctx context.Context) {
 		return
 	}
 
-	currentPulsar.broadcastVector()
+	currentPulsar.broadcastVector(ctx)
 
 	currentPulsar.SetBftGridItem(currentPulsar.PublicKeyRaw, currentPulsar.OwnedBftRow)
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForVectors, nil)
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForVectors, nil)
 }
 
 func (currentPulsar *Pulsar) sendEntropy(ctx context.Context) {
@@ -169,7 +171,7 @@ func (currentPulsar *Pulsar) sendEntropy(ctx context.Context) {
 		return
 	}
 
-	currentPulsar.broadcastEntropy()
+	currentPulsar.broadcastEntropy(ctx)
 
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForEntropy, nil)
 }
@@ -236,7 +238,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	}
 
 	currentPulsar.sendPulseToNetwork(pulsarHost, t, pulseForSending)
-	currentPulsar.sendPulseToPulsars()
+	currentPulsar.sendPulseToPulsars(ctx)
 
 	err = currentPulsar.Storage.SavePulse(&pulseForSending)
 	if err != nil {
