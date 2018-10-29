@@ -257,7 +257,6 @@ func New() (*Two, error) {
 
 func (r *Two) Hello(s string) (string, error) {
 	r.X ++
-//	return fmt.Sprintf("%d",r.X), nil
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
 }
 `
