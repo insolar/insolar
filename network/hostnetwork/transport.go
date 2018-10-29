@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -27,6 +28,8 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/pkg/errors"
 )
 
 type hostTransport struct {
@@ -192,15 +195,11 @@ func (h *hostTransport) buildRequest(request network.Request, receiver *host.Hos
 
 // RegisterPacketHandler register a handler function to process incoming request packets of a specific type.
 func (h *hostTransport) RegisterPacketHandler(t types.PacketType, handler network.RequestHandler) {
-	h.checkHandler(t)
-	h.handlers[t] = handler
-}
-
-func (h *hostTransport) checkHandler(t types.PacketType) {
 	_, exists := h.handlers[t]
 	if exists {
 		panic(fmt.Sprintf("multiple handlers for packet type %s are not supported!", t.String()))
 	}
+	h.handlers[t] = handler
 }
 
 // NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
@@ -215,6 +214,19 @@ func (h *hostTransport) BuildResponse(request network.Request, responseData inte
 	return (*packetWrapper)(p)
 }
 
-func NewHostTransport() *hostTransport {
-	return &hostTransport{}
+func NewInternalTransport(conf configuration.Configuration) (InternalTransport, error) {
+	tp, err := transport.NewTransport(conf.Host.Transport, relay.NewProxy())
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating transport")
+	}
+	address, err := host.NewAddress(tp.PublicAddress())
+	if err != nil {
+		return nil, errors.Wrap(err, "error resolving address")
+	}
+	nodeID := core.NewRefFromBase58(conf.Node.Node.ID)
+	if nodeID.Equal(core.RecordRef{}) {
+		return nil, errors.Wrap(err, "error parsing NodeID from string (NodeID is zero)")
+	}
+	origin := &host.Host{NodeID: nodeID, Address: address}
+	return &hostTransport{transport: tp, origin: origin, handlers: make(map[types.PacketType]network.RequestHandler)}, nil
 }

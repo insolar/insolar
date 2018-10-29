@@ -32,7 +32,7 @@ type Resolver interface {
 
 // TransportResolvable is implementation of HostNetwork interface that is capable of address resolving.
 type TransportResolvable struct {
-	internalTransport hostTransport
+	internalTransport InternalTransport
 	resolver          Resolver
 }
 
@@ -67,11 +67,11 @@ func (tr *TransportResolvable) SendRequest(request network.Request, receiver cor
 
 // RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 func (tr *TransportResolvable) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
-	tr.internalTransport.checkHandler(t)
-	tr.internalTransport.handlers[t] = func(request network.Request) (network.Response, error) {
+	f := func(request network.Request) (network.Response, error) {
 		tr.resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(request)
 	}
+	tr.RegisterRequestHandler(t, f)
 }
 
 // NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
@@ -82,4 +82,8 @@ func (tr *TransportResolvable) NewRequestBuilder() network.RequestBuilder {
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (tr *TransportResolvable) BuildResponse(request network.Request, responseData interface{}) network.Response {
 	return tr.internalTransport.BuildResponse(request, responseData)
+}
+
+func NewHostTransport(transport InternalTransport, resolver Resolver) network.HostNetwork {
+	return &TransportResolvable{internalTransport: transport, resolver: resolver}
 }
