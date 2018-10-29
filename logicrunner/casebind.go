@@ -128,7 +128,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMe
 	}
 	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
 	_, err := lr.MessageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.ValidationResults{
 			Caller:           lr.Network.GetNodeID(),
 			RecordRef:        msg.GetReference(),
