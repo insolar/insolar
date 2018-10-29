@@ -20,6 +20,7 @@ package logicrunner
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
 	"net"
 	"sync"
 	"time"
@@ -86,8 +87,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 func (lr *LogicRunner) Start(ctx context.Context, c core.Components) error {
 	am := c.Ledger.GetArtifactManager()
 	lr.ArtifactManager = am
-	messageBus := c.MessageBus
-	lr.MessageBus = messageBus
+	lr.MessageBus = c.MessageBus
 	lr.Ledger = c.Ledger
 	lr.Network = c.Network
 
@@ -193,9 +193,9 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
-	msg, ok := inmsg.(message.IBaseLogicMessage)
+	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
@@ -261,13 +261,17 @@ func (lr *LogicRunner) pulse() *core.Pulse {
 	return pulse
 }
 
-type objectBody struct {
+type ObjectBody struct {
 	Object core.ObjectDescriptor
 	Class  core.ClassDescriptor
 	Code   core.CodeDescriptor
 }
 
-func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
+func init() {
+	gob.Register(&ObjectBody{})
+}
+
+func (lr *LogicRunner) getObjectMessage(objref Ref) (*ObjectBody, error) {
 	ctx := context.TODO()
 	cr, step := lr.getNextValidationStep(objref)
 	if step >= 0 { // validate
@@ -278,7 +282,7 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 		if !bytes.Equal(cr.ReqSig, sig) {
 			return nil, errors.New("Wrong validation sig on RouteCall")
 		}
-		return cr.Resp.(*objectBody), nil
+		return cr.Resp.(*ObjectBody), nil
 	}
 
 	objDesc, err := lr.ArtifactManager.GetObject(ctx, objref, nil, false)
@@ -292,7 +296,7 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 	}
 
 	codeDesc := classDesc.CodeDescriptor()
-	ob := &objectBody{
+	ob := &ObjectBody{
 		Object: objDesc,
 		Class:  classDesc,
 		Code:   codeDesc,

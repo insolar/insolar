@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error)
+type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error)
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
@@ -77,8 +77,8 @@ func (h *MessageHandler) Link(components core.Components) error {
 }
 
 func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
-	return func(context context.Context, genericMsg core.Message) (core.Reply, error) {
-		err := persistMessageToDb(h.db, genericMsg)
+	return func(context context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+		err := persistMessageToDb(h.db, genericMsg.Message())
 		if err != nil {
 			return nil, err
 		}
@@ -92,8 +92,8 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 	}
 }
 
-func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.SetRecord)
+func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.SetRecord)
 	id, err := h.db.SetRecord(pulseNumber, record.DeserializeRecord(msg.Record))
 	if err != nil {
 		return nil, err
@@ -102,8 +102,8 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 	return &reply.ID{ID: *id}, nil
 }
 
-func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.GetCode)
+func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetCode)
 
 	codeRec, err := getCode(h.db, msg.Code.Record())
 	if err != nil {
@@ -118,8 +118,8 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.GetClass)
+func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetClass)
 
 	_, stateID, state, err := getClass(h.db, msg.Head.Record(), msg.State)
 	if err != nil {
@@ -143,8 +143,8 @@ func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.Pu
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.GetObject)
+func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetObject)
 
 	idx, stateID, state, err := getObject(h.db, msg.Head.Record(), msg.State, msg.Approved)
 	if err != nil {
@@ -173,8 +173,8 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.GetDelegate)
+func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetDelegate)
 
 	idx, _, _, err := getObject(h.db, msg.Head.Record(), nil, false)
 	if err != nil {
@@ -193,8 +193,8 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.GetChildren)
+func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetChildren)
 
 	idx, _, _, err := getObject(h.db, msg.Parent.Record(), nil, false)
 	if err != nil {
@@ -242,8 +242,8 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.UpdateClass)
+func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.UpdateClass)
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ClassState)
@@ -282,8 +282,8 @@ func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core
 	return &reply.ID{ID: *id}, nil
 }
 
-func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.UpdateObject)
+func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.UpdateObject)
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ObjectState)
@@ -336,8 +336,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.RegisterChild)
+func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.RegisterChild)
 
 	rec := record.DeserializeRecord(msg.Record)
 	childRec, ok := rec.(*record.ChildRecord)
@@ -379,8 +379,8 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	return &reply.ID{ID: *child}, nil
 }
 
-func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.JetDrop)
+func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.JetDrop)
 
 	for _, rawMessage := range msg.Messages {
 		parsedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
@@ -388,7 +388,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Mess
 			return nil, err
 		}
 
-		handler, ok := h.jetDropHandlers[parsedMessage.Type()]
+		handler, ok := h.jetDropHandlers[parsedMessage.Message().Type()]
 		if !ok {
 			return nil, errors.New("unknown message type")
 		}
@@ -402,8 +402,8 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Mess
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.ValidateRecord)
+func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.ValidateRecord)
 
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(msg.Object.Record(), true)
