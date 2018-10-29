@@ -53,7 +53,7 @@ type ObjectState interface {
 	// State returns state id.
 	State() State
 	// GetMemory returns state memory.
-	GetMemory() []byte
+	GetMemory() *core.RecordID
 	// PrevStateID returns previous state id.
 	PrevStateID() *core.RecordID
 }

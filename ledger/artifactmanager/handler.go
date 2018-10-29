@@ -167,7 +167,13 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 		State:        *stateID,
 		Class:        idx.ClassRef,
 		ChildPointer: childPointer,
-		Memory:       state.GetMemory(),
+	}
+
+	if state.GetMemory() != nil {
+		rep.Memory, err = h.db.GetBlob(state.GetMemory())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &rep, nil
