@@ -6,6 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "StateSwitcher" can be found in github.com/insolar/insolar/pulsar
 */
 import (
+	"context"
 	"sync/atomic"
 	"time"
 
@@ -27,7 +28,7 @@ type StateSwitcherMock struct {
 	SetPulsarPreCounter uint64
 	SetPulsarMock       mStateSwitcherMockSetPulsar
 
-	SwitchToStateFunc       func(p State, p1 interface{})
+	SwitchToStateFunc       func(p context.Context, p1 State, p2 interface{})
 	SwitchToStateCounter    uint64
 	SwitchToStatePreCounter uint64
 	SwitchToStateMock       mStateSwitcherMockSwitchToState
@@ -169,38 +170,39 @@ type mStateSwitcherMockSwitchToState struct {
 
 //StateSwitcherMockSwitchToStateParams represents input parameters of the StateSwitcher.SwitchToState
 type StateSwitcherMockSwitchToStateParams struct {
-	p  State
-	p1 interface{}
+	p  context.Context
+	p1 State
+	p2 interface{}
 }
 
 //Expect sets up expected params for the StateSwitcher.SwitchToState
-func (m *mStateSwitcherMockSwitchToState) Expect(p State, p1 interface{}) *mStateSwitcherMockSwitchToState {
-	m.mockExpectations = &StateSwitcherMockSwitchToStateParams{p, p1}
+func (m *mStateSwitcherMockSwitchToState) Expect(p context.Context, p1 State, p2 interface{}) *mStateSwitcherMockSwitchToState {
+	m.mockExpectations = &StateSwitcherMockSwitchToStateParams{p, p1, p2}
 	return m
 }
 
 //Return sets up a mock for StateSwitcher.SwitchToState to return Return's arguments
 func (m *mStateSwitcherMockSwitchToState) Return() *StateSwitcherMock {
-	m.mock.SwitchToStateFunc = func(p State, p1 interface{}) {
+	m.mock.SwitchToStateFunc = func(p context.Context, p1 State, p2 interface{}) {
 		return
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of StateSwitcher.SwitchToState method
-func (m *mStateSwitcherMockSwitchToState) Set(f func(p State, p1 interface{})) *StateSwitcherMock {
+func (m *mStateSwitcherMockSwitchToState) Set(f func(p context.Context, p1 State, p2 interface{})) *StateSwitcherMock {
 	m.mock.SwitchToStateFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //SwitchToState implements github.com/insolar/insolar/pulsar.StateSwitcher interface
-func (m *StateSwitcherMock) SwitchToState(p State, p1 interface{}) {
+func (m *StateSwitcherMock) SwitchToState(p context.Context, p1 State, p2 interface{}) {
 	atomic.AddUint64(&m.SwitchToStatePreCounter, 1)
 	defer atomic.AddUint64(&m.SwitchToStateCounter, 1)
 
 	if m.SwitchToStateMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SwitchToStateMock.mockExpectations, StateSwitcherMockSwitchToStateParams{p, p1},
+		testify_assert.Equal(m.t, *m.SwitchToStateMock.mockExpectations, StateSwitcherMockSwitchToStateParams{p, p1, p2},
 			"StateSwitcher.SwitchToState got unexpected parameters")
 
 		if m.SwitchToStateFunc == nil {
@@ -216,7 +218,7 @@ func (m *StateSwitcherMock) SwitchToState(p State, p1 interface{}) {
 		return
 	}
 
-	m.SwitchToStateFunc(p, p1)
+	m.SwitchToStateFunc(p, p1, p2)
 }
 
 //SwitchToStateMinimockCounter returns a count of StateSwitcherMock.SwitchToStateFunc invocations
@@ -319,12 +321,14 @@ func (m *StateSwitcherMock) ValidateCallCounters() {
 
 //CheckMocksCalled checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//noinspection GoDeprecation
 func (m *StateSwitcherMock) CheckMocksCalled() {
 	m.Finish()
 }
 
 //Finish checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//noinspection GoDeprecation
 func (m *StateSwitcherMock) Finish() {
 	m.MinimockFinish()
 }
