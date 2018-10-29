@@ -116,7 +116,7 @@ func (b *Bootstrapper) activateRootDomain(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
-	contract := core.ComposeRecordRef(*contractID, *contractID)
+	contract := core.NewRecordRef(*contractID, *contractID)
 	desc, err := am.ActivateObject(
 		ctx,
 		core.RecordRef{}, contract,
@@ -150,7 +150,7 @@ func (b *Bootstrapper) activateNodeDomain(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
-	contract := core.ComposeRecordRef(*domain, *contractID)
+	contract := core.NewRecordRef(*domain, *contractID)
 	_, err = am.ActivateObject(
 		ctx,
 		core.RecordRef{}, contract,
@@ -185,7 +185,7 @@ func (b *Bootstrapper) activateRootMember(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
-	contract := core.ComposeRecordRef(*domain, *contractID)
+	contract := core.NewRecordRef(*domain, *contractID)
 	_, err = am.ActivateObject(
 		ctx,
 		core.RecordRef{}, contract,
@@ -241,7 +241,7 @@ func (b *Bootstrapper) activateRootMemberWallet(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
-	contract := core.ComposeRecordRef(*domain, *contractID)
+	contract := core.NewRecordRef(*domain, *contractID)
 	_, err = am.ActivateObject(
 		ctx,
 		core.RecordRef{}, contract,
