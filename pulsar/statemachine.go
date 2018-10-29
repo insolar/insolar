@@ -128,7 +128,7 @@ func (switcher *StateSwitcherImpl) SwitchToState(ctx context.Context, state Stat
 	case SendingPulseSign:
 		switcher.pulsar.sendPulseSign(ctx)
 	case SendingPulse:
-		switcher.pulsar.sendPulseToNodesAndPulsars()
+		switcher.pulsar.sendPulseToNodesAndPulsars(ctx)
 	case Failed:
 		switcher.pulsar.handleErrorState(ctx, args.(error))
 		switcher.setState(WaitingForStart)

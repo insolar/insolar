@@ -212,8 +212,8 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
 }
 
-func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
-	log.Debug("[sendPulseToNodesAndPulsars]. Pulse - %v", time.Now())
+func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[sendPulseToNodesAndPulsars]. Pulse - %v", time.Now())
 
 	if currentPulsar.IsStateFailed() {
 		return
@@ -230,7 +230,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
 
 	pulsarHost, t, err := currentPulsar.prepareForSendingPulse()
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -247,7 +247,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
 	}
 	currentPulsar.SetLastPulse(&pulseForSending)
 
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForStart, nil)
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
 	defer func() {
 		go t.Stop()
 		<-t.Stopped()
