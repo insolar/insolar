@@ -243,7 +243,7 @@ func (t *TestArtifactManager) DeployCode(ctx context.Context, domain core.Record
 		AMachineType: core.MachineTypeGoPlugin,
 	}
 	id := ref.Record()
-	return &id, nil
+	return id, nil
 }
 
 // GetCode implementation for tests
