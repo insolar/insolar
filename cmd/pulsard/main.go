@@ -37,7 +37,9 @@ import (
 
 // Need to fix problem with start pulsar
 func main() {
-	ctx, inslog := inslogger.WithTraceField(context.Background(), RandTraceID())
+	uniqueId := RandTraceID()
+	ctx, inslog := inslogger.WithTraceField(context.Background(), uniqueId)
+	ctx = context.WithValue(ctx, pulsar.IdKey, uniqueId)
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
@@ -153,7 +155,7 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 func RandTraceID() string {
 	qid, err := uuid.NewV4()
 	if err != nil {
-		return "createRandomTraceIDFailed:" + err.Error()
+		panic("createRandomTraceIDFailed:" + err.Error())
 	}
 	return qid.String()
 }

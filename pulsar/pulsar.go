@@ -38,6 +38,9 @@ import (
 	"github.com/insolar/insolar/pulsar/storage"
 )
 
+// IdKey is being used inside context as a key for id-filed
+const IdKey = "pulsarUniqueId"
+
 // Pulsar is a base struct for pulsar's node
 // It contains all the stuff, which is needed for working of a pulsar
 type Pulsar struct {
@@ -234,8 +237,9 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pu
 
 // CheckConnectionsToPulsars is a method refreshing connections between pulsars
 func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
 	for pubKey, neighbour := range currentPulsar.Neighbours {
-		log.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
+		logger.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
 		if neighbour.OutgoingClient == nil || !neighbour.OutgoingClient.IsInitialised() {
 			err := currentPulsar.EstablishConnectionToPulsar(ctx, pubKey)
 			if err != nil {
@@ -247,11 +251,11 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 		healthCheckCall := neighbour.OutgoingClient.Go(HealthCheck.String(), nil, nil, nil)
 		replyCall := <-healthCheckCall.Done
 		if replyCall.Error != nil {
-			log.Warnf("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
+			logger.Warnf("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
 			neighbour.OutgoingClient.ResetClient()
 			err := currentPulsar.EstablishConnectionToPulsar(ctx, pubKey)
 			if err != nil {
-				inslogger.FromContext(ctx).Errorf("Attempt of connection to %v Failed with error - %v", neighbour.ConnectionAddress, err)
+				logger.Errorf("Attempt of connection to %v Failed with error - %v", neighbour.ConnectionAddress, err)
 				neighbour.OutgoingClient.ResetClient()
 				continue
 			}
@@ -261,7 +265,8 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 
 // StartConsensusProcess starts process of calculating consensus between pulsars
 func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNumber core.PulseNumber) error {
-	inslogger.FromContext(ctx).Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
 	currentPulsar.StartProcessLock.Lock()
 
 	if pulseNumber == currentPulsar.ProcessingPulseNumber {
@@ -275,17 +280,20 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 			currentPulsar.StateSwitcher.GetState().String(),
 			pulseNumber, currentPulsar.GetLastPulse().PulseNumber,
 			currentPulsar.ProcessingPulseNumber)
-		inslogger.FromContext(ctx).Warn(err)
+		logger.Warn(err)
 		return err
 	}
 	currentPulsar.ProcessingPulseNumber = pulseNumber
-	ctx, inslog := inslogger.WithTraceField(context.Background(), string(pulseNumber))
+
+	traceUniqueId := ctx.Value(IdKey).(string)
+	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%v", traceUniqueId, string(pulseNumber)))
+
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 
 	err := currentPulsar.generateNewEntropyAndSign()
 	if err != nil {
 		currentPulsar.StartProcessLock.Unlock()
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return err
 	}
 	inslog.Debugf("Entropy generated - %v", currentPulsar.GeneratedEntropy)
@@ -300,6 +308,6 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	currentPulsar.StartProcessLock.Unlock()
 
 	currentPulsar.broadcastSignatureOfEntropy(ctx)
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForEntropySigns, nil)
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForEntropySigns, nil)
 	return nil
 }
