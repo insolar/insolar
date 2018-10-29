@@ -44,6 +44,7 @@ func (w *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, erro
 	return a.GetReference(), nil
 }
 
+// Receive gets money from given wallet
 func (w *Wallet) Receive(amount uint, from *core.RecordRef) error {
 	fromWallet, err := wallet.GetImplementationFrom(*from)
 	if err != nil {
@@ -99,6 +100,7 @@ func (w *Wallet) Accept(aRef *core.RecordRef) error {
 	return nil
 }
 
+// GetTotalBalance get total balance
 func (w *Wallet) GetTotalBalance() (uint, error) {
 	var totalAllowanced uint
 	crefs, err := w.GetChildrenTyped(allowance.GetClass())
@@ -133,6 +135,7 @@ func (w *Wallet) ReturnAndDeleteExpiredAllowances() error {
 	return nil
 }
 
+// New creates new allowance
 func New(balance uint) (*Wallet, error) {
 	return &Wallet{
 		Balance: balance,
