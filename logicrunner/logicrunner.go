@@ -46,6 +46,7 @@ type ExecutionState struct {
 	insContext  context.Context
 	callContext *core.LogicCallContext
 	deactivate  bool
+	request     *Ref
 
 	objectbody *ObjectBody
 }
@@ -203,7 +204,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 		Resp: msg,
 	})
 
-	reqref, err := vb.RegisterRequest(msg)
+	es.request, err = vb.RegisterRequest(msg)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't create request")
@@ -212,7 +213,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	es.callContext = &core.LogicCallContext{
 		Caller:  msg.GetCaller(),
 		Callee:  &ref,
-		Request: reqref,
+		Request: es.request,
 		Time:    time.Now(), // TODO: probably we should take it from e
 		Pulse:   *lr.pulse(),
 	}
@@ -351,17 +352,17 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			am := lr.ArtifactManager
 			if es.deactivate {
 				_, err = am.DeactivateObject(
-					insctx, Ref{}, *es.callContext.Request, es.objectbody.objDescriptor,
+					insctx, Ref{}, *es.request, es.objectbody.objDescriptor,
 				)
 			} else {
 				es.objectbody.objDescriptor, err = am.UpdateObject(
-					insctx, Ref{}, *es.callContext.Request, es.objectbody.objDescriptor, newData,
+					insctx, Ref{}, *es.request, es.objectbody.objDescriptor, newData,
 				)
 			}
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
 			}
-			_, err = am.RegisterResult(insctx, *es.callContext.Request, result)
+			_, err = am.RegisterResult(insctx, *es.request, result)
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't save results")
 			}
@@ -421,14 +422,14 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
 				insctx,
-				Ref{}, *es.callContext.Request, m.ClassRef, m.ParentRef, m.SaveAs == message.Delegate, newData,
+				Ref{}, *es.request, m.ClassRef, m.ParentRef, m.SaveAs == message.Delegate, newData,
 			)
 		}
 		vb.End(m.GetReference(), core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
-			Resp: &reply.CallConstructor{Object: es.callContext.Request},
+			Resp: &reply.CallConstructor{Object: es.request},
 		})
-		return &reply.CallConstructor{Object: es.callContext.Request}, err
+		return &reply.CallConstructor{Object: es.request}, err
 	default:
 		return nil, errors.New("unsupported type of save object")
 	}
