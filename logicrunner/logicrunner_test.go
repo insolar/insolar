@@ -76,7 +76,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
-	rundCleaner, err := testutils.StartInsgorund(runnerbin, "unix", rundSock, "unix", lrSock)
+	rundCleaner, err := goplugintestutils.StartInsgorund(runnerbin, "unix", rundSock, "unix", lrSock)
 	assert.NoError(t, err)
 
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
