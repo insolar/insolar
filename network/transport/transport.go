@@ -67,6 +67,8 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 		return newUTPTransport(conn, proxy, publicAddress)
 	case "KCP":
 		return newKCPTransport(conn, proxy, publicAddress)
+	case "PURE_UDP":
+		return newUDPTransport(conn, proxy, publicAddress)
 	default:
 		return nil, errors.New("invalid transport configuration")
 	}
