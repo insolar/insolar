@@ -41,11 +41,11 @@ type ClassState interface {
 	// State returns state id.
 	State() State
 	// GetCode returns state code.
-	GetCode() *Reference
+	GetCode() *core.RecordRef
 	// GetMachineType returns state code machine type.
 	GetMachineType() core.MachineType
 	// PrevStateID returns previous state id.
-	PrevStateID() *ID
+	PrevStateID() *core.RecordID
 }
 
 // ObjectState is common object state record.
@@ -55,12 +55,12 @@ type ObjectState interface {
 	// GetMemory returns state memory.
 	GetMemory() []byte
 	// PrevStateID returns previous state id.
-	PrevStateID() *ID
+	PrevStateID() *core.RecordID
 }
 
 // ResultRecord represents result of a VM method.
 type ResultRecord struct {
-	Request Reference
+	Request core.RecordRef
 	Payload []byte
 }
 
@@ -76,8 +76,8 @@ func (r *ResultRecord) WriteHashData(w io.Writer) (int, error) {
 
 // SideEffectRecord is a record which is created in response to a request.
 type SideEffectRecord struct {
-	Domain  Reference
-	Request Reference
+	Domain  core.RecordRef
+	Request core.RecordRef
 }
 
 // TypeRecord is a code interface declaration.
@@ -113,7 +113,7 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ClassStateRecord is a record containing data for a class state.
 type ClassStateRecord struct {
-	Code        Reference
+	Code        core.RecordRef
 	MachineType core.MachineType
 }
 
@@ -123,7 +123,7 @@ func (r *ClassStateRecord) GetMachineType() core.MachineType {
 }
 
 // GetCode returns state code.
-func (r *ClassStateRecord) GetCode() *Reference {
+func (r *ClassStateRecord) GetCode() *core.RecordRef {
 	return &r.Code
 }
 
@@ -134,7 +134,7 @@ type ClassActivateRecord struct {
 }
 
 // PrevStateID returns previous state id.
-func (r *ClassActivateRecord) PrevStateID() *ID {
+func (r *ClassActivateRecord) PrevStateID() *core.RecordID {
 	return nil
 }
 
@@ -156,11 +156,11 @@ type ClassAmendRecord struct {
 	SideEffectRecord
 	ClassStateRecord
 
-	PrevState ID
+	PrevState core.RecordID
 }
 
 // PrevStateID returns previous state id.
-func (r *ClassAmendRecord) PrevStateID() *ID {
+func (r *ClassAmendRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
@@ -192,13 +192,13 @@ type ObjectActivateRecord struct {
 	SideEffectRecord
 	ObjectStateRecord
 
-	Class    Reference
-	Parent   Reference
+	Class    core.RecordRef
+	Parent   core.RecordRef
 	Delegate bool
 }
 
 // PrevStateID returns previous state id.
-func (r *ObjectActivateRecord) PrevStateID() *ID {
+func (r *ObjectActivateRecord) PrevStateID() *core.RecordID {
 	return nil
 }
 
@@ -220,11 +220,11 @@ type ObjectAmendRecord struct {
 	SideEffectRecord
 	ObjectStateRecord
 
-	PrevState ID
+	PrevState core.RecordID
 }
 
 // PrevStateID returns previous state id.
-func (r *ObjectAmendRecord) PrevStateID() *ID {
+func (r *ObjectAmendRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
@@ -244,11 +244,11 @@ func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {
 // DeactivationRecord marks targeted object as disabled.
 type DeactivationRecord struct {
 	SideEffectRecord
-	PrevState ID
+	PrevState core.RecordID
 }
 
 // PrevStateID returns previous state id.
-func (r *DeactivationRecord) PrevStateID() *ID {
+func (r *DeactivationRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
@@ -276,6 +276,6 @@ func (*DeactivationRecord) GetMemory() []byte {
 }
 
 // GetCode returns state code.
-func (*DeactivationRecord) GetCode() *Reference {
+func (*DeactivationRecord) GetCode() *core.RecordRef {
 	return nil
 }

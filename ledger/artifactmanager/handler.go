@@ -19,10 +19,8 @@ package artifactmanager
 import (
 	"bytes"
 	"context"
-	"time"
 
 	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -78,12 +76,6 @@ func (h *MessageHandler) Link(components core.Components) error {
 	return nil
 }
 
-func logTimeInside(start time.Time, funcName string) {
-	if time.Since(start) > time.Second {
-		log.Debugf("Handle takes too long: %s: time inside - %s", funcName, time.Since(start))
-	}
-}
-
 func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
 	return func(context context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 		err := persistMessageToDb(h.db, genericMsg.Message())
@@ -107,15 +99,13 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 		return nil, err
 	}
 
-	return &reply.ID{ID: *id.CoreID()}, nil
+	return &reply.ID{ID: *id}, nil
 }
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
-	start := time.Now()
 	msg := genericMsg.Message().(*message.GetCode)
-	codeRef := record.Core2Reference(msg.Code)
 
-	codeRec, err := getCode(h.db, codeRef.Record)
+	codeRec, err := getCode(h.db, msg.Code.Record())
 	if err != nil {
 		return nil, err
 	}
@@ -125,17 +115,13 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 		MachineType: codeRec.MachineType,
 	}
 
-	logTimeInside(start, "handleGetCode")
-
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
-	start := time.Now()
 	msg := genericMsg.Message().(*message.GetClass)
-	headRef := record.Core2Reference(msg.Head)
 
-	_, stateID, state, err := getClass(h.db, &headRef.Record, msg.State)
+	_, stateID, state, err := getClass(h.db, msg.Head.Record(), msg.State)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +130,7 @@ func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.Pu
 	if state.GetCode() == nil {
 		code = nil
 	} else {
-		code = state.GetCode().CoreRef()
+		code = state.GetCode()
 	}
 
 	rep := reply.Class{
@@ -154,17 +140,13 @@ func (h *MessageHandler) handleGetClass(ctx context.Context, pulseNumber core.Pu
 		MachineType: state.GetMachineType(),
 	}
 
-	logTimeInside(start, "handleGetClass")
-
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
-	start := time.Now()
 	msg := genericMsg.Message().(*message.GetObject)
-	headRef := record.Core2Reference(msg.Head)
 
-	idx, stateID, state, err := getObject(h.db, &headRef.Record, msg.State, msg.Approved)
+	idx, stateID, state, err := getObject(h.db, msg.Head.Record(), msg.State, msg.Approved)
 	if err != nil {
 		switch err {
 		case ErrObjectDeactivated:
@@ -178,27 +160,23 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 
 	var childPointer *core.RecordID
 	if idx.ChildPointer != nil {
-		childPointer = idx.ChildPointer.CoreID()
+		childPointer = idx.ChildPointer
 	}
 	rep := reply.Object{
 		Head:         msg.Head,
 		State:        *stateID,
-		Class:        *idx.ClassRef.CoreRef(),
+		Class:        idx.ClassRef,
 		ChildPointer: childPointer,
 		Memory:       state.GetMemory(),
 	}
-
-	logTimeInside(start, "handleGetObject")
 
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
-	start := time.Now()
 	msg := genericMsg.Message().(*message.GetDelegate)
-	headRef := record.Core2Reference(msg.Head)
 
-	idx, _, _, err := getObject(h.db, &headRef.Record, nil, false)
+	idx, _, _, err := getObject(h.db, msg.Head.Record(), nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -209,33 +187,28 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	}
 
 	rep := reply.Delegate{
-		Head: *delegateRef.CoreRef(),
+		Head: delegateRef,
 	}
-
-	logTimeInside(start, "handleGetDelegate")
 
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
-	start := time.Now()
 	msg := genericMsg.Message().(*message.GetChildren)
-	parentRef := record.Core2Reference(msg.Parent)
 
-	idx, _, _, err := getObject(h.db, &parentRef.Record, nil, false)
+	idx, _, _, err := getObject(h.db, msg.Parent.Record(), nil, false)
 	if err != nil {
 		return nil, err
 	}
 
 	var (
 		refs         []core.RecordRef
-		currentChild *record.ID
+		currentChild *core.RecordID
 	)
 
 	// Counting from specified child or the latest.
 	if msg.FromChild != nil {
-		id := record.Bytes2ID(msg.FromChild[:])
-		currentChild = &id
+		currentChild = msg.FromChild
 	} else {
 		currentChild = idx.ChildPointer
 	}
@@ -244,7 +217,7 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 	for currentChild != nil {
 		// We have enough results.
 		if counter >= msg.Amount {
-			return &reply.Children{Refs: refs, NextFrom: currentChild.CoreID()}, nil
+			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
 		}
 		counter++
 
@@ -259,21 +232,18 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 		currentChild = childRec.PrevChild
 
 		// Skip records later than specified pulse.
-		if msg.FromPulse != nil && childRec.Ref.Record.Pulse > *msg.FromPulse {
+		recPulse := childRec.Ref.Record().Pulse()
+		if msg.FromPulse != nil && recPulse > *msg.FromPulse {
 			continue
 		}
-		refs = append(refs, *childRec.Ref.CoreRef())
+		refs = append(refs, childRec.Ref)
 	}
-
-	logTimeInside(start, "handleGetChildren")
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
 func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.UpdateClass)
-	classCoreID := msg.Class.GetRecordID()
-	classID := record.Bytes2ID(classCoreID[:])
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ClassState)
@@ -281,9 +251,9 @@ func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core
 		return nil, errors.New("wrong class state record")
 	}
 
-	var id *record.ID
+	var id *core.RecordID
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err := getClassIndex(tx, &classID, true)
+		idx, err := getClassIndex(tx, msg.Class.Record(), true)
 		if err != nil {
 			return err
 		}
@@ -291,7 +261,7 @@ func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core
 			return err
 		}
 		// Index exists and latest record id does not match (preserving chain consistency).
-		if idx.LatestState != nil && !state.PrevStateID().IsEqual(idx.LatestState) {
+		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
 
@@ -301,7 +271,7 @@ func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core
 		}
 		idx.LatestState = id
 		idx.State = state.State()
-		return tx.SetClassIndex(&classID, idx)
+		return tx.SetClassIndex(msg.Class.Record(), idx)
 	})
 	if err != nil {
 		if err == ErrClassDeactivated {
@@ -309,13 +279,11 @@ func (h *MessageHandler) handleUpdateClass(ctx context.Context, pulseNumber core
 		}
 		return nil, err
 	}
-	return &reply.ID{ID: *id.CoreID()}, nil
+	return &reply.ID{ID: *id}, nil
 }
 
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.UpdateObject)
-	objectCoreID := msg.Object.GetRecordID()
-	objectID := record.Bytes2ID(objectCoreID[:])
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ObjectState)
@@ -326,7 +294,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	var idx *index.ObjectLifeline
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
 		var err error
-		idx, err = getObjectIndex(tx, &objectID, true)
+		idx, err = getObjectIndex(tx, msg.Object.Record(), true)
 		if err != nil {
 			return err
 		}
@@ -334,7 +302,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 			return err
 		}
 		// Index exists and latest record id does not match (preserving chain consistency).
-		if idx.LatestState != nil && !state.PrevStateID().IsEqual(idx.LatestState) {
+		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
 
@@ -348,9 +316,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 			if msg.Class == nil {
 				return errors.New("not enough data for activation provided")
 			}
-			idx.ClassRef = record.Core2Reference(*msg.Class)
+			idx.ClassRef = *msg.Class
 		}
-		return tx.SetObjectIndex(&objectID, idx)
+		return tx.SetObjectIndex(msg.Object.Record(), idx)
 	})
 	if err != nil {
 		if err == ErrObjectDeactivated {
@@ -361,18 +329,15 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 
 	rep := reply.Object{
 		Head:         msg.Object,
-		State:        *idx.LatestState.CoreID(),
-		Class:        *idx.ClassRef.CoreRef(),
-		ChildPointer: idx.ChildPointer.CoreID(),
+		State:        *idx.LatestState,
+		Class:        idx.ClassRef,
+		ChildPointer: idx.ChildPointer,
 	}
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
-	start := time.Now()
 	msg := genericMsg.Message().(*message.RegisterChild)
-	parentRef := record.Core2Reference(msg.Parent)
-	childRef := record.Core2Reference(msg.Child)
 
 	rec := record.DeserializeRecord(msg.Record)
 	childRec, ok := rec.(*record.ChildRecord)
@@ -380,14 +345,14 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		return nil, errors.New("wrong child record")
 	}
 
-	var child *record.ID
+	var child *core.RecordID
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, &parentRef.Record, nil, false)
+		idx, _, _, err := getObject(tx, msg.Parent.Record(), nil, false)
 		if err != nil {
 			return err
 		}
 		// Children exist and pointer does not match (preserving chain consistency).
-		if idx.ChildPointer != nil && !childRec.PrevChild.IsEqual(idx.ChildPointer) {
+		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
 			return errors.New("invalid child record")
 		}
 
@@ -397,9 +362,9 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		}
 		idx.ChildPointer = child
 		if msg.AsClass != nil {
-			idx.Delegates[*msg.AsClass] = childRef
+			idx.Delegates[*msg.AsClass] = msg.Child
 		}
-		err = tx.SetObjectIndex(&parentRef.Record, idx)
+		err = tx.SetObjectIndex(msg.Parent.Record(), idx)
 		if err != nil {
 			return err
 		}
@@ -411,9 +376,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		return nil, err
 	}
 
-	logTimeInside(start, "handleRegisterChild")
-
-	return &reply.ID{ID: *child.CoreID()}, nil
+	return &reply.ID{ID: *child}, nil
 }
 
 func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
@@ -441,13 +404,9 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Sign
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.ValidateRecord)
-	objID := record.Core2Reference(msg.Object).Record
-	validatedStateID := record.Bytes2ID(msg.State[:])
-
-	// TODO: store validation record for fishers.
 
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err := tx.GetObjectIndex(&objID, true)
+		idx, err := tx.GetObjectIndex(msg.Object.Record(), true)
 		if err != nil {
 			return errors.Wrap(err, "inconsistent object index")
 		}
@@ -456,7 +415,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 		currentID := idx.LatestState
 		for currentID != nil {
 			// We have passed an approved record.
-			if currentID.IsEqual(idx.LatestStateApproved) {
+			if currentID.Equal(idx.LatestStateApproved) {
 				return errors.New("changing approved records is not allowed")
 			}
 
@@ -471,13 +430,13 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 			}
 
 			// Validated record found.
-			if currentID.IsEqual(&validatedStateID) {
+			if currentID.Equal(&msg.State) {
 				if msg.IsValid {
 					idx.LatestStateApproved = currentID
 				} else {
 					idx.LatestState = currentState.PrevStateID()
 				}
-				err := tx.SetObjectIndex(&objID, idx)
+				err := tx.SetObjectIndex(msg.Object.Record(), idx)
 				if err != nil {
 					return err
 				}
@@ -510,16 +469,8 @@ func persistMessageToDb(db *storage.DB, genericMsg core.Message) error {
 	return nil
 }
 
-func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
-	ref := record.Reference{
-		Record: *id,
-		Domain: record.Core2Reference(*request).Domain,
-	}
-	return ref.CoreRef()
-}
-
-func getCode(s storage.Store, id record.ID) (*record.CodeRecord, error) {
-	rec, err := s.GetRecord(&id)
+func getCode(s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
+	rec, err := s.GetRecord(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code record")
 	}
@@ -532,17 +483,16 @@ func getCode(s storage.Store, id record.ID) (*record.CodeRecord, error) {
 }
 
 func getClass(
-	s storage.Store, head *record.ID, state *core.RecordID,
+	s storage.Store, head *core.RecordID, state *core.RecordID,
 ) (*index.ClassLifeline, *core.RecordID, record.ClassState, error) {
 	idx, err := s.GetClassIndex(head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
 
-	var stateID *record.ID
+	var stateID *core.RecordID
 	if state != nil {
-		s := record.Bytes2ID(state[:])
-		stateID = &s
+		stateID = state
 	} else {
 		stateID = idx.LatestState
 	}
@@ -559,21 +509,20 @@ func getClass(
 		return nil, nil, nil, ErrClassDeactivated
 	}
 
-	return idx, stateID.CoreID(), stateRec, nil
+	return idx, stateID, stateRec, nil
 }
 
 func getObject(
-	s storage.Store, head *record.ID, state *core.RecordID, approved bool,
+	s storage.Store, head *core.RecordID, state *core.RecordID, approved bool,
 ) (*index.ObjectLifeline, *core.RecordID, record.ObjectState, error) {
 	idx, err := s.GetObjectIndex(head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
 
-	var stateID *record.ID
+	var stateID *core.RecordID
 	if state != nil {
-		s := record.Bytes2ID(state[:])
-		stateID = &s
+		stateID = state
 	} else {
 		if approved {
 			stateID = idx.LatestStateApproved
@@ -598,10 +547,10 @@ func getObject(
 		return nil, nil, nil, ErrObjectDeactivated
 	}
 
-	return idx, stateID.CoreID(), stateRec, nil
+	return idx, stateID, stateRec, nil
 }
 
-func getClassIndex(s storage.Store, head *record.ID, forupdate bool) (*index.ClassLifeline, error) {
+func getClassIndex(s storage.Store, head *core.RecordID, forupdate bool) (*index.ClassLifeline, error) {
 	idx, err := s.GetClassIndex(head, forupdate)
 	if err == storage.ErrNotFound {
 		return &index.ClassLifeline{State: record.StateUndefined}, nil
@@ -609,7 +558,7 @@ func getClassIndex(s storage.Store, head *record.ID, forupdate bool) (*index.Cla
 	return idx, err
 }
 
-func getObjectIndex(s storage.Store, head *record.ID, forupdate bool) (*index.ObjectLifeline, error) {
+func getObjectIndex(s storage.Store, head *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
 	idx, err := s.GetObjectIndex(head, forupdate)
 	if err == storage.ErrNotFound {
 		return &index.ObjectLifeline{State: record.StateUndefined}, nil

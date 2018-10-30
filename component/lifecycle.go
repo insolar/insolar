@@ -14,13 +14,18 @@
  *    limitations under the License.
  */
 
-package index
+package component
 
 import (
-	"os"
-	"testing"
+	"context"
 )
 
-func TestMain(m *testing.M) {
-	os.Exit(m.Run())
+// Starter interface provide method to start component
+type Starter interface {
+	Start(ctx context.Context) error
+}
+
+// Stopper interface provide method to stop component
+type Stopper interface {
+	Stop(ctx context.Context) error
 }

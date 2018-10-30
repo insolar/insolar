@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -79,7 +78,7 @@ func NewCertificate(keysPath string, certPath string) (*Certificate, error) {
 
 	err = AreKeysTheSame(private, cert.PublicKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NewCertificate ]")
+		return nil, errors.Wrap(err, "[ NewCertificate ] Different public keys. Cert path: "+certPath+". Key path: "+keysPath)
 	}
 
 	cert.privateKey = private
@@ -130,7 +129,7 @@ func (cert *Certificate) GetEcdsaPrivateKey() *ecdsa.PrivateKey {
 }
 
 // Start is method from Component interface and it do nothing
-func (cert *Certificate) Start(ctx context.Context, components core.Components) error {
+func (cert *Certificate) Start(ctx context.Context) error {
 	return nil
 }
 

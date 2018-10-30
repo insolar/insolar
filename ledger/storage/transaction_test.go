@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/stretchr/testify/assert"
@@ -49,8 +49,8 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	classid := &record.ID{Pulse: 100500}
-	idxid := &record.ID{}
+	classid := core.NewRecordID(100500, nil)
+	idxid := core.NewRecordID(0, nil)
 	classvalue0 := &index.ClassLifeline{
 		LatestState: classid,
 	}

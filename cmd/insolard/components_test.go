@@ -14,25 +14,23 @@
  *    limitations under the License.
  */
 
-package record
+package main
 
 import (
-	"os"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(m *testing.M) {
-	os.Exit(m.Run())
-}
+func TestInitComponents(t *testing.T) {
+	cfg := configuration.NewConfiguration()
+	cfg.Bootstrap.RootKeys = "testdata/root_member_keys.json"
+	cfg.KeysPath = "testdata/bootstrap_keys.json"
+	cfg.CertificatePath = "testdata/certificate.json"
 
-// This ensures serialized reference has Record prefix and Domain suffix.
-// It's required for selecting records by record pulse
-func TestReference_Key(t *testing.T) {
-	ref := Reference{
-		Domain: ID{Pulse: 1},
-		Record: ID{Pulse: 2},
-	}
-	assert.Equal(t, []byte{0, 0, 0, 2}, ref.CoreRef()[:4])
+	cm, _, repl, err := InitComponents(cfg, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, cm)
+	assert.NotNil(t, repl)
 }

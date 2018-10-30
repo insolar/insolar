@@ -54,7 +54,7 @@ func (m *LedgerArtifactManager) Link(components core.Components) error {
 //
 // Root record is the parent for all top-level records.
 func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
-	return m.db.GenesisRef().CoreRef()
+	return m.db.GenesisRef()
 }
 
 // RegisterRequest sends message for request registration,
@@ -213,8 +213,8 @@ func (m *LedgerArtifactManager) DeclareType(
 	return m.setRecord(
 		&record.TypeRecord{
 			SideEffectRecord: record.SideEffectRecord{
-				Domain:  record.Core2Reference(domain),
-				Request: record.Core2Reference(request),
+				Domain:  domain,
+				Request: request,
 			},
 			TypeDeclaration: typeDec,
 		},
@@ -235,8 +235,8 @@ func (m *LedgerArtifactManager) DeployCode(
 	return m.setRecord(
 		&record.CodeRecord{
 			SideEffectRecord: record.SideEffectRecord{
-				Domain:  record.Core2Reference(domain),
-				Request: record.Core2Reference(request),
+				Domain:  domain,
+				Request: request,
 			},
 			Code:        code,
 			MachineType: machineType,
@@ -254,12 +254,12 @@ func (m *LedgerArtifactManager) ActivateClass(
 	return m.updateClass(
 		&record.ClassActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
-				Domain:  record.Core2Reference(domain),
-				Request: record.Core2Reference(request),
+				Domain:  domain,
+				Request: request,
 			},
 			ClassStateRecord: record.ClassStateRecord{
 				MachineType: machineType,
-				Code:        record.Core2Reference(code),
+				Code:        code,
 			},
 		},
 		request,
@@ -277,10 +277,10 @@ func (m *LedgerArtifactManager) DeactivateClass(
 	return m.updateClass(
 		&record.DeactivationRecord{
 			SideEffectRecord: record.SideEffectRecord{
-				Domain:  record.Core2Reference(domain),
-				Request: record.Core2Reference(request),
+				Domain:  domain,
+				Request: request,
 			},
-			PrevState: record.Bytes2ID(state[:]),
+			PrevState: state,
 		},
 		class,
 	)
@@ -298,14 +298,14 @@ func (m *LedgerArtifactManager) UpdateClass(
 	return m.updateClass(
 		&record.ClassAmendRecord{
 			SideEffectRecord: record.SideEffectRecord{
-				Domain:  record.Core2Reference(domain),
-				Request: record.Core2Reference(request),
+				Domain:  domain,
+				Request: request,
 			},
 			ClassStateRecord: record.ClassStateRecord{
-				Code:        record.Core2Reference(code),
+				Code:        code,
 				MachineType: machineType,
 			},
-			PrevState: record.Bytes2ID(state[:]),
+			PrevState: state,
 		},
 		class,
 	)
@@ -324,8 +324,6 @@ func (m *LedgerArtifactManager) ActivateObject(
 	asDelegate bool,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
-	objectRef := record.Core2Reference(object)
-
 	parendDesc, err := m.GetObject(ctx, parent, nil, false)
 	if err != nil {
 		return nil, err
@@ -334,14 +332,14 @@ func (m *LedgerArtifactManager) ActivateObject(
 	obj, err := m.updateObject(
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
-				Domain:  record.Core2Reference(domain),
-				Request: objectRef,
+				Domain:  domain,
+				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
 				Memory: memory,
 			},
-			Class:    record.Core2Reference(class),
-			Parent:   record.Core2Reference(parent),
+			Class:    class,
+			Parent:   parent,
 			Delegate: asDelegate,
 		},
 		object,
@@ -352,19 +350,18 @@ func (m *LedgerArtifactManager) ActivateObject(
 	}
 
 	var (
-		prevChild *record.ID
+		prevChild *core.RecordID
 		asClass   *core.RecordRef
 	)
 	if parendDesc.ChildPointer() != nil {
-		c := record.Bytes2ID(parendDesc.ChildPointer()[:])
-		prevChild = &c
+		prevChild = parendDesc.ChildPointer()
 	}
 	if asDelegate {
 		asClass = &class
 	}
 	_, err = m.registerChild(
 		&record.ChildRecord{
-			Ref:       objectRef,
+			Ref:       object,
 			PrevChild: prevChild,
 		},
 		parent,
@@ -395,10 +392,10 @@ func (m *LedgerArtifactManager) DeactivateObject(
 	desc, err := m.updateObject(
 		&record.DeactivationRecord{
 			SideEffectRecord: record.SideEffectRecord{
-				Domain:  record.Core2Reference(domain),
-				Request: record.Core2Reference(request),
+				Domain:  domain,
+				Request: request,
 			},
-			PrevState: record.Bytes2ID(object.StateID()[:]),
+			PrevState: *object.StateID(),
 		},
 		*object.HeadRef(),
 		nil,
@@ -422,13 +419,13 @@ func (m *LedgerArtifactManager) UpdateObject(
 	obj, err := m.updateObject(
 		&record.ObjectAmendRecord{
 			SideEffectRecord: record.SideEffectRecord{
-				Domain:  record.Core2Reference(domain),
-				Request: record.Core2Reference(request),
+				Domain:  domain,
+				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
 				Memory: memory,
 			},
-			PrevState: record.Bytes2ID(object.StateID()[:]),
+			PrevState: *object.StateID(),
 		},
 		*object.HeadRef(),
 		nil,
@@ -473,7 +470,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 ) (*core.RecordID, error) {
 	return m.setRecord(
 		&record.ResultRecord{
-			Request: record.Core2Reference(request),
+			Request: request,
 			Payload: payload,
 		},
 		request,

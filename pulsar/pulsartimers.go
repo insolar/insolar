@@ -17,13 +17,14 @@
 package pulsar
 
 import (
+	"context"
 	"time"
 
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-func (currentPulsar *Pulsar) waitForPulseSigns() {
-	log.Debug("[waitForPulseSigns]")
+func (currentPulsar *Pulsar) waitForPulseSigns(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[waitForPulseSigns]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
 	go func() {
@@ -35,14 +36,14 @@ func (currentPulsar *Pulsar) waitForPulseSigns() {
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(SendingPulse, nil)
+				currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
 			}
 		}
 	}()
 }
 
-func (currentPulsar *Pulsar) waitForEntropy() {
-	log.Debug("[waitForEntropy]")
+func (currentPulsar *Pulsar) waitForEntropy(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[waitForEntropy]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	timeout := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingNumberTimeout) * time.Millisecond)
 	go func() {
@@ -54,14 +55,14 @@ func (currentPulsar *Pulsar) waitForEntropy() {
 
 			if time.Now().After(timeout) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(SendingVector, nil)
+				currentPulsar.StateSwitcher.SwitchToState(ctx, SendingVector, nil)
 			}
 		}
 	}()
 }
 
-func (currentPulsar *Pulsar) waitForEntropySigns() {
-	log.Debug("[waitForEntropySigns]")
+func (currentPulsar *Pulsar) waitForEntropySigns(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[waitForEntropySigns]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignTimeout) * time.Millisecond)
 	go func() {
@@ -73,14 +74,14 @@ func (currentPulsar *Pulsar) waitForEntropySigns() {
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(SendingEntropy, nil)
+				currentPulsar.StateSwitcher.SwitchToState(ctx, SendingEntropy, nil)
 			}
 		}
 	}()
 }
 
-func (currentPulsar *Pulsar) waitForVectors() {
-	log.Debug("[waitForVectors]")
+func (currentPulsar *Pulsar) waitForVectors(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[waitForVectors]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingVectorTimeout) * time.Millisecond)
 	go func() {
@@ -92,7 +93,7 @@ func (currentPulsar *Pulsar) waitForVectors() {
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(Verifying, nil)
+				currentPulsar.StateSwitcher.SwitchToState(ctx, Verifying, nil)
 			}
 		}
 	}()

@@ -22,31 +22,7 @@ import (
 	"fmt"
 
 	"github.com/ugorji/go/codec"
-
-	"github.com/insolar/insolar/core"
 )
-
-// Bytes2ID converts ID from byte representation to struct.
-func Bytes2ID(b []byte) ID {
-	return ID{
-		Pulse: core.Bytes2PulseNumber(b[:core.PulseNumberSize]),
-		Hash:  b[core.PulseNumberSize:],
-	}
-}
-
-// Core2Reference converts commonly used reference to Ledger-specific.
-func Core2Reference(cRef core.RecordRef) Reference {
-	return Reference{
-		Record: Bytes2ID(cRef[:core.RecordIDSize]),
-		Domain: Bytes2ID(cRef[core.RecordIDSize:]),
-	}
-}
-
-// ID2Bytes converts ID struct to it's byte representation.
-func ID2Bytes(id ID) []byte {
-	rec := core.GenRecordID(id.Pulse, id.Hash)
-	return rec[:]
-}
 
 // record type ids for record types
 // in use mostly for hashing and deserialization
