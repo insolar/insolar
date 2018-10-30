@@ -1,6 +1,6 @@
 host:
   transport:
-    protocol: PURE_UDP
+    protocol: UTP
     address: 127.0.0.1:53837
     behindnat: false
   bootstraphosts: []
