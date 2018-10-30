@@ -68,6 +68,7 @@ func (c *Consensus) AddValidated(sm core.SignedMessage, msg *message.ValidationR
 	}
 	c.Have++
 	c.CheckReady()
+	return nil
 }
 
 func (c *Consensus) AddExecutor(sm core.SignedMessage, msg *message.ExecutorResults) {

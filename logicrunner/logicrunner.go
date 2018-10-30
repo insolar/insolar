@@ -361,6 +361,11 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
 			}
+			_, err = am.RegisterResult(insctx, *es.callContext.Request, result)
+			if err != nil {
+				return nil, errors.Wrap(err, "couldn't save results")
+			}
+
 		}
 
 		es.objectbody.Object = newData
