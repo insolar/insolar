@@ -254,6 +254,7 @@ func (m *LedgerArtifactManager) DeployCode(
 			},
 			request,
 		)
+		wg.Done()
 	}()
 
 	var setBlobErr error
@@ -262,6 +263,7 @@ func (m *LedgerArtifactManager) DeployCode(
 			code,
 			request,
 		)
+		wg.Done()
 	}()
 	wg.Wait()
 
