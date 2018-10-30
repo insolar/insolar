@@ -469,6 +469,10 @@ func (m *LedgerArtifactManager) UpdateObject(
 	if err != nil {
 		return nil, err
 	}
+	blobId, err := record.CalculateIDForBlob(pulseNumber, memory)
+	if err != nil {
+		return nil, err
+	}
 
 	obj, err := m.updateObject(
 		&record.ObjectAmendRecord{
@@ -477,7 +481,7 @@ func (m *LedgerArtifactManager) UpdateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: record.CalculateIDForBlob(pulseNumber, memory),
+				Memory: blobId,
 			},
 			PrevState: *object.StateID(),
 		},
