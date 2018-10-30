@@ -105,6 +105,13 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 
 func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetBlob)
+
+	calculatedId := record.CalculateIDForBlob(pulseNumber, msg.Memory)
+	_, err := h.db.GetBlob(calculatedId)
+	if err == nil {
+		return &reply.ID{ID: *calculatedId}, nil
+	}
+
 	id, err := h.db.SetBlob(pulseNumber, msg.Memory)
 	if err != nil {
 		return nil, err
