@@ -35,7 +35,7 @@ import (
 )
 
 // InitComponents creates and links all insolard components
-func InitComponents(cfg configuration.Configuration) (*component.Manager, *ComponentManager, *Repl, error) {
+func InitComponents(cfg configuration.Configuration, isBootstrap bool) (*component.Manager, *ComponentManager, *Repl, error) {
 
 	var cert *certificate.Certificate
 	var err error

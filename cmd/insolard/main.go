@@ -58,30 +58,31 @@ func (cm *ComponentManager) linkAll(ctx context.Context) {
 	}
 }
 
-var (
+type inputParams struct {
 	configPath               string
 	isBootstrap              bool
 	bootstrapCertificatePath string
-)
+}
 
-func parseInputParams() {
+func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
-	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
-	rootCmd.Flags().BoolVarP(&isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
-	rootCmd.Flags().StringVarP(&bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
+	var result inputParams
+	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	rootCmd.Flags().BoolVarP(&result.isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
+	rootCmd.Flags().StringVarP(&result.bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
 	}
 
-	if isBootstrap && len(bootstrapCertificatePath) == 0 {
+	if result.isBootstrap && len(result.bootstrapCertificatePath) == 0 {
 		log.Fatal("flag '--cert_out|-r' must not be empty, if '--bootstrap|-b' exists")
 	}
+	return result
 }
 
-func registerCurrentNode(cfgHolder *configuration.Holder, cert core.Certificate, nc core.NetworkCoordinator) {
+func registerCurrentNode(host string, bootstrapCertificatePath string, cert core.Certificate, nc core.NetworkCoordinator) {
 	roles := []string{"virtual", "heavy_material", "light_material"}
-	host := cfgHolder.Configuration.Host.Transport.Address
 	publicKey, err := cert.GetPublicKey()
 	checkError("failed to get public key: ", err)
 
@@ -120,13 +121,13 @@ func mergeConfigAndCertificate(cfg *configuration.Configuration) {
 }
 
 func main() {
-	parseInputParams()
+	params := parseInputParams()
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
 	var err error
-	if len(configPath) != 0 {
-		err = cfgHolder.LoadFromFile(configPath)
+	if len(params.configPath) != 0 {
+		err = cfgHolder.LoadFromFile(params.configPath)
 	} else {
 		err = cfgHolder.Load()
 	}
@@ -139,7 +140,7 @@ func main() {
 		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
-	if !isBootstrap {
+	if !params.isBootstrap {
 		mergeConfigAndCertificate(&cfgHolder.Configuration)
 	}
 
@@ -149,7 +150,7 @@ func main() {
 
 	ctx := inslogger.ContextWithTrace(context.Background(), api.RandTraceID())
 
-	cm, cmOld, repl, err := InitComponents(cfgHolder.Configuration)
+	cm, cmOld, repl, err := InitComponents(cfgHolder.Configuration, params.isBootstrap)
 	checkError("failed to init components", err)
 
 	cmOld.linkAll(ctx)
@@ -178,8 +179,12 @@ func main() {
 	}()
 
 	// move to bootstrap component
-	if isBootstrap {
-		registerCurrentNode(cfgHolder, cmOld.components.Certificate, cmOld.components.NetworkCoordinator)
+	if params.isBootstrap {
+		registerCurrentNode(cfgHolder.Configuration.Host.Transport.Address,
+			params.bootstrapCertificatePath,
+			cmOld.components.Certificate,
+			cmOld.components.NetworkCoordinator,
+		)
 		log.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
 		gracefulStop <- syscall.SIGINT
 	}
