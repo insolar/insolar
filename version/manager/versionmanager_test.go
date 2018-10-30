@@ -45,13 +45,13 @@ func TestNewVersionManager(t *testing.T) {
 
 	vm.AgreedVersion, err = ParseVersion("v1.1.1")
 	assert.NoError(t, err)
-	assert.Equal(t, vm.Verify("InsoLar"), true)
+	assert.Equal(t, vm.IsAvailable("InsoLar"), true)
 	vm.AgreedVersion, err = ParseVersion("v1.1.0")
 	assert.NoError(t, err)
-	assert.Equal(t, vm.Verify("InsoLar"), false)
+	assert.Equal(t, vm.IsAvailable("InsoLar"), false)
 	vm.AgreedVersion, err = ParseVersion("v1.1.1")
 	assert.NoError(t, err)
-	assert.Equal(t, vm.Verify("InsoLar10"), false)
+	assert.Equal(t, vm.IsAvailable("InsoLar10"), false)
 }
 
 func TestLoadSaveVersionManager(t *testing.T) {

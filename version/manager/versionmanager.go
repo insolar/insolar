@@ -50,7 +50,7 @@ func GetVersionManager() (*VersionManager, error) {
 	return instance, nil
 }
 
-func (vm *VersionManager) Verify(key string) bool {
+func (vm *VersionManager) IsAvailable(key string) bool {
 	key = strings.ToLower(key)
 	feature := vm.Get(key)
 	if feature == nil {

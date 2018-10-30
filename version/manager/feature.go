@@ -23,6 +23,7 @@ import (
 )
 
 type Feature struct {
+	Key          string
 	StartVersion *semver.Version
 	Description  string
 }
@@ -39,6 +40,7 @@ func NewFeature(key string, startVersion string, description string) (*Feature, 
 		return nil, err
 	}
 	return &Feature{
+		Key:          key,
 		StartVersion: version,
 		Description:  description,
 	}, nil

@@ -90,7 +90,7 @@ func Verify(key string) bool {
 	if err != nil {
 		return false
 	}
-	return vm.Verify(key)
+	return vm.IsAvailable(key)
 }
 
 func getRequired(count int) int {
