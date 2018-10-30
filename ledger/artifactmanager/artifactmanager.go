@@ -511,6 +511,27 @@ func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordR
 	return &react.ID, nil
 }
 
+func (m *LedgerArtifactManager) setBlob(blob []byte, target core.RecordRef) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(
+		context.TODO(),
+		&message.SetBlob{
+			Memory:    blob,
+			TargetRef: target,
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+
+	return &react.ID, nil
+}
+
 func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.RecordRef) (*core.RecordID, error) {
 	genericReact, err := m.messageBus.Send(
 		context.TODO(),

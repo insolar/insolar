@@ -99,7 +99,6 @@ func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
 type CodeRecord struct {
 	SideEffectRecord
 
-	Code        []byte
 	MachineType core.MachineType
 }
 
