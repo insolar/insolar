@@ -1297,9 +1297,11 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 		},
 	}
 
-	if targetID == dht.GetOriginHost().IDs[0].String() {
-		return dht.ncf.GetRPC().Invoke(request.Sender, method, args)
-	}
+	// if targetID == dht.GetOriginHost().IDs[0].String() {
+	// 	return dht.ncf.GetRPC().Invoke(request.Sender, method, args)
+	// }
+
+	log.Debug("================RemoteProcedureCall")
 
 	// Send the async queries and wait for a future
 	future, err := dht.transport.SendRequest(request)
