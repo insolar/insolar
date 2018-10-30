@@ -20,8 +20,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/stretchr/testify/assert"
+	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 func TestSerialize(t *testing.T) {
@@ -36,12 +38,16 @@ func TestSerialize(t *testing.T) {
 	}
 	for _, tt := range ttable {
 		t.Run(tt.name, func(t *testing.T) {
-			ctxIn := instracer.SetBaggage(context.Background(), tt.entries...)
-			b := instracer.MustSerialize(ctxIn)
-			baggageOut := instracer.MustDeserialize(b)
-			assert.Equal(t, tt.entries, baggageOut)
-			// assert.NotNil(t, span)
+			ctxIn, span := trace.StartSpan(context.Background(), "test")
+			spanctx := span.SpanContext()
+			ctxIn = instracer.SetBaggage(ctxIn, tt.entries...)
 
+			b := instracer.MustSerialize(ctxIn)
+			spanOut := instracer.MustDeserialize(b)
+			assert.Equal(t, tt.entries, spanOut.Entries)
+			assert.Equal(t, spanctx.SpanID[:], spanOut.SpanID)
+			assert.Equal(t, spanctx.TraceID[:], spanOut.TraceID)
+			// assert.NotNil(t, span)
 		})
 	}
 	// ctx := inslogger.ContextWithTrace(context.Background(), "tracenotdefined")

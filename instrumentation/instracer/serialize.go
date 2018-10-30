@@ -20,9 +20,10 @@ import (
 	"context"
 
 	"github.com/ugorji/go/codec"
+	"go.opencensus.io/trace"
 )
 
-// MustDeserialize encode baggage entries frotom bytes, panics on error.
+// MustSerialize encode baggage entries from bytes, panics on error.
 func MustSerialize(ctx context.Context) []byte {
 	b, err := Serialize(ctx)
 	if err != nil {
@@ -33,26 +34,37 @@ func MustSerialize(ctx context.Context) []byte {
 
 // Serialize encode baggage entries to bytes.
 func Serialize(ctx context.Context) ([]byte, error) {
-	entries := GetBaggage(ctx)
-	ch := new(codec.CborHandle)
-	var b []byte
-	err := codec.NewEncoderBytes(&b, ch).Encode(entries)
-	return b, err
+	var tracespan TraceSpan
+	span := trace.FromContext(ctx)
+
+	if span != nil {
+		sc := span.SpanContext()
+		tracespan.SpanID = sc.SpanID[:]
+		tracespan.TraceID = sc.TraceID[:]
+	}
+	tracespan.Entries = GetBaggage(ctx)
+	return tracespan.Serialize()
 }
 
 // MustDeserialize decode baggage entries from bytes, panics on error.
-func MustDeserialize(b []byte) []Entry {
-	bag, err := Deserialize(b)
+func MustDeserialize(b []byte) TraceSpan {
+	ts, err := Deserialize(b)
 	if err != nil {
 		panic(err)
 	}
-	return bag
+	return ts
 }
 
 // Deserialize decode baggage entries from bytes.
-func Deserialize(b []byte) ([]Entry, error) {
-	var bag []Entry
+func Deserialize(b []byte) (TraceSpan, error) {
+	var ts TraceSpan
 	ch := new(codec.CborHandle)
-	err := codec.NewDecoderBytes(b, ch).Decode(&bag)
-	return bag, err
+	err := codec.NewDecoderBytes(b, ch).Decode(&ts)
+	return ts, err
+}
+
+func (ts TraceSpan) Serialize() (b []byte, err error) {
+	ch := new(codec.CborHandle)
+	err = codec.NewEncoderBytes(&b, ch).Encode(ts)
+	return
 }

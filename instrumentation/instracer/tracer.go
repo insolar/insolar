@@ -112,6 +112,7 @@ func getParentSpan(ctx context.Context) (parentspan TraceSpan, ok bool) {
 	return
 }
 
+// ErrJagerConfigEmpty is returned if jaeger configuration has empty endpoint values.
 var ErrJagerConfigEmpty = errors.New("can't create jaeger exporter, config not provided")
 
 // RegisterJaeger creates jaeger exporter and registers it in opencensus trace lib.
