@@ -137,16 +137,13 @@ func (e *UpdateClass) Target() *core.RecordRef {
 	return &e.Class
 }
 
-// сделать - сохрани блоб
-
 // UpdateObject amends object.
 type UpdateObject struct {
 	ledgerMessage
 
-	Record     []byte
-	RecordSign []byte
-	Class      *core.RecordRef // Only used for activation.
-	Object     core.RecordRef
+	Record []byte
+	Class  *core.RecordRef // Only used for activation.
+	Object core.RecordRef
 }
 
 // Type implementation of Message interface.

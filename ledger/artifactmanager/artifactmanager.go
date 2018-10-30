@@ -594,10 +594,9 @@ func (m *LedgerArtifactManager) updateObject(
 		genericReact, genericError = m.messageBus.Send(
 			context.TODO(),
 			&message.UpdateObject{
-				Record:     record.SerializeRecord(rec),
-				RecordSign: nil,
-				Object:     object,
-				Class:      class,
+				Record: record.SerializeRecord(rec),
+				Object: object,
+				Class:  class,
 			},
 		)
 		wg.Done()
