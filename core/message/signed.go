@@ -20,12 +20,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/core"
 	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
 )
 
 // SignedMessage is a message signed by senders private key.

@@ -21,9 +21,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSerializeSigned(t *testing.T) {
