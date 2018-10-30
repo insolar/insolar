@@ -155,7 +155,7 @@ func main() {
 	traceid := api.RandTraceID()
 	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
 	jaegerflush := func() {}
-	if traceEnabled {
+	if params.traceEnabled {
 		jconf := cfgHolder.Configuration.Tracer.Jaeger
 		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint)
 		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceid})

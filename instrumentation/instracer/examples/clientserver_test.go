@@ -36,7 +36,7 @@ import (
 //  docker run --rm --name jaeger -p 6831:6831/udp -p 16686:16686 jaegertracing/all-in-one:1.7 --log-level=debug
 //
 // run example:
-//  INSOLAR_TRACER_JAEGER_AGENTENDPOINT="localhost:6831" INSOLAR_LOG_LEVEL=debug go test -v ./instrumentation/instracer/examples/. -run=ExampleClientServer
+//  INSOLAR_TRACER_JAEGER_AGENTENDPOINT="localhost:6831" INSOLAR_LOG_LEVEL=debug go test -v ./instrumentation/instracer/examples/. -run=TestClientServerExample
 //
 // check generated traces:
 //  http://localhost:16686
