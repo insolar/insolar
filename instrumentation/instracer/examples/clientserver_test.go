@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"testing"
 	"time"
 
 	"go.opencensus.io/trace"
@@ -40,16 +41,18 @@ import (
 // check generated traces:
 //  http://localhost:16686
 
-var testNameForExampleClientServer = "ExampleClientServer"
+var testNameForExampleClientServer = "TestClientServerExample"
+
+func TestClientServerExample(t *testing.T) {
+	if os.Getenv("INSOLAR_TRACER_JAEGER_AGENTENDPOINT") == "" {
+		t.Skip()
+	}
+	ExampleClientServer()
+}
 
 func ExampleClientServer() {
-	if os.Getenv("INSOLAR_TRACER_JAEGER_AGENTENDPOINT") == "" {
-		return
-	}
 	cfgHolder := configuration.NewHolder().MustInit(false)
-	// _ = cfgHolder.Load()
 	jconf := cfgHolder.Configuration.Tracer.Jaeger
-	// fmt.Printf()
 	ctx := context.Background()
 	inslogger.FromContext(ctx).Infof("jconf => %+v", jconf)
 
@@ -87,7 +90,6 @@ func ExampleClientServer() {
 
 	time.Sleep(time.Millisecond * 150)
 	fmt.Println("A> end")
-	// Output: client server interaction flow
 }
 
 func requestServer(ctx context.Context, traceid string) {
