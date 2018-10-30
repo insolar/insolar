@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -111,11 +110,10 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 		return nil, err
 	}
 
-	//Short path when sending to self node. Skip serialization
-	// if nodes[0].Equal(mb.service.GetNodeID()) {
-	// 	return mb.doDeliver(signedMsg)
-	// }
-	log.Debug("MessageBus.Send: No short path")
+	// Short path when sending to self node. Skip serialization
+	if nodes[0].Equal(mb.service.GetNodeID()) {
+		return mb.doDeliver(signedMsg)
+	}
 
 	res, err := mb.service.SendMessage(nodes[0], deliverRPCMethodName, signedMsg)
 	if err != nil {
