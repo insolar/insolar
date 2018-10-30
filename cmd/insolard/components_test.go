@@ -25,9 +25,9 @@ import (
 
 func TestInitComponents(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	cfg.Bootstrap.RootKeys = "../../testdata/functional/root_member_keys.json"
-	cfg.KeysPath = "../../testdata/functional/bootstrap_keys.json"
-	cfg.CertificatePath = "../../testdata/functional/certificate.json"
+	cfg.Bootstrap.RootKeys = "testdata/root_member_keys.json"
+	cfg.KeysPath = "testdata/bootstrap_keys.json"
+	cfg.CertificatePath = "testdata/certificate.json"
 
 	cm, _, repl, err := InitComponents(cfg, false)
 	assert.NoError(t, err)
