@@ -513,6 +513,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{3}),
 		},
 	})
+	db.SetBlob(core.GenesisPulse.PulseNumber, []byte{3})
 	objectAmendID, _ := db.SetRecord(core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
@@ -521,6 +522,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{4}),
 		},
 	})
+	db.SetBlob(core.GenesisPulse.PulseNumber, []byte{4})
 	objectIndex := index.ObjectLifeline{
 		LatestState: objectAmendID,
 		ClassRef:    *genRefWithID(classID),

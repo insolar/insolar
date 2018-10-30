@@ -137,6 +137,8 @@ func (e *UpdateClass) Target() *core.RecordRef {
 	return &e.Class
 }
 
+// сделать - сохрани блоб
+
 // UpdateObject amends object.
 type UpdateObject struct {
 	ledgerMessage
@@ -258,4 +260,20 @@ func (m *ValidateRecord) Target() *core.RecordRef {
 // TargetRole implementation of Message interface.
 func (*ValidateRecord) TargetRole() core.JetRole {
 	return core.RoleLightExecutor
+}
+
+// SetBlob saves blob in storage.
+type SetBlob struct {
+	ledgerMessage
+
+	TargetRef core.RecordRef
+	Memory    []byte
+}
+
+func (*SetBlob) Type() core.MessageType {
+	return core.TypeSetBlob
+}
+
+func (m *SetBlob) Target() *core.RecordRef {
+	return &m.TargetRef
 }

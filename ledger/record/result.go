@@ -271,7 +271,7 @@ func (*DeactivationRecord) GetMachineType() core.MachineType {
 }
 
 // GetMemory returns state memory.
-func (*DeactivationRecord) GetMemory() []byte {
+func (*DeactivationRecord) GetMemory() *core.RecordID {
 	return nil
 }
 

@@ -59,6 +59,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeRegisterChild, h.messagePersistingWrapper(h.handleRegisterChild))
 	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
 	bus.MustRegister(core.TypeSetRecord, h.messagePersistingWrapper(h.handleSetRecord))
+	bus.MustRegister(core.TypeSetBlob, h.messagePersistingWrapper(h.handleSetBlob))
 	bus.MustRegister(core.TypeUpdateClass, h.messagePersistingWrapper(h.handleUpdateClass))
 	bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
 
@@ -95,6 +96,16 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetRecord)
 	id, err := h.db.SetRecord(pulseNumber, record.DeserializeRecord(msg.Record))
+	if err != nil {
+		return nil, err
+	}
+
+	return &reply.ID{ID: *id}, nil
+}
+
+func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.SetBlob)
+	id, err := h.db.SetBlob(pulseNumber, msg.Memory)
 	if err != nil {
 		return nil, err
 	}
