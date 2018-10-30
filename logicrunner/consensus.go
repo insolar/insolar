@@ -22,11 +22,13 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
 type ConsensusRecord struct {
-	Steps int
-	Error error
+	Steps   int
+	Error   string
+	Message core.SignedMessage
 }
 
 // Consensus is an object for one validation process where all validated results will be compared.
@@ -37,6 +39,7 @@ type Consensus struct {
 	Total       int
 	Results     map[Ref]ConsensusRecord
 	CaseRecords []core.CaseRecord
+	Message     core.SignedMessage
 }
 
 func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
@@ -53,22 +56,23 @@ func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
 }
 
 // AddValidated adds results from validators
-func (c *Consensus) AddValidated(m *message.ValidationResults, node Ref, sig []byte) {
-	caller := *m.GetCaller()
-	if _, ok := c.Results[caller]; !ok {
-		// why ??
+func (c *Consensus) AddValidated(sm core.SignedMessage, msg *message.ValidationResults) error {
+	source := sm.GetSender()
+	if _, ok := c.Results[source]; !ok {
+		return errors.Errorf("Validation packet from non validation node for %#v", sm)
 	} else {
-		c.Results[caller] = ConsensusRecord{
-			Steps: m.PassedStepsCount,
-			Error: m.Error,
+		c.Results[source] = ConsensusRecord{
+			Steps: msg.PassedStepsCount,
+			Error: msg.Error,
 		}
 	}
 	c.Have++
 	c.CheckReady()
 }
 
-func (c *Consensus) AddExecutor(m *message.ExecutorResults, node Ref, sig []byte) {
-	c.CaseRecords = m.CaseRecords
+func (c *Consensus) AddExecutor(sm core.SignedMessage, msg *message.ExecutorResults) {
+	c.CaseRecords = msg.CaseRecords
+	c.Message = sm
 	c.CheckReady()
 }
 

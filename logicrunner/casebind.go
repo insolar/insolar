@@ -130,7 +130,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMe
 		&message.ValidationResults{
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
-			Error:            validationError,
+			Error:            validationError.Error(),
 		},
 	)
 
@@ -143,7 +143,7 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 	c, _ := lr.GetConsensus(msg.RecordRef)
-	c.AddValidated(msg, inmsg.GetSender(), inmsg.GetSign())
+	c.AddValidated(inmsg, msg)
 	return nil, nil
 }
 
@@ -153,7 +153,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.SignedMes
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 	c, _ := lr.GetConsensus(msg.RecordRef)
-	c.AddExecutor(msg, inmsg.GetSender(), inmsg.GetSign())
+	c.AddExecutor(inmsg, msg)
 	return nil, nil
 }
 
