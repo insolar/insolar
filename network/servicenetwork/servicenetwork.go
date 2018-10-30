@@ -108,7 +108,8 @@ func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
 // Start implements core.Component
 func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) error {
 	n.inject(components)
-	go n.listen()
+	log.Infoln("Network starts listening")
+	n.hostNetwork.Start()
 
 	n.controller.Inject(components)
 	n.consensus.SetNodeKeeper(components.NodeNetwork.(network.NodeKeeper))
@@ -138,21 +139,14 @@ func (n *ServiceNetwork) inject(components core.Components) {
 
 // Stop implements core.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
-	return n.hostNetwork.Disconnect()
+	n.hostNetwork.Stop()
+	return nil
 }
 
 func (n *ServiceNetwork) bootstrap() {
 	err := n.controller.Bootstrap()
 	if err != nil {
 		log.Errorln("Failed to bootstrap network", err.Error())
-	}
-}
-
-func (n *ServiceNetwork) listen() {
-	log.Infoln("Network starts listening")
-	err := n.hostNetwork.Listen()
-	if err != nil {
-		log.Errorln("Listen failed:", err.Error())
 	}
 }
 
@@ -186,7 +180,7 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 			}
 		}(n)
 
-		// TODO: create adequate cancelable context without dht values (after switching to new n)
+		// TODO: create adequate cancelable context without dht values (after switching to new network)
 		ctx := context.WithValue(context.Background(), dhtnetwork.CtxTableIndex, dhtnetwork.DefaultHostID)
 		n.doConsensus(ctx, pulse)
 	}

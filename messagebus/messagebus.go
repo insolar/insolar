@@ -156,7 +156,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when mb.deliver()")
 	}
-	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
+	msg, err := message.DeserializeSigned(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}

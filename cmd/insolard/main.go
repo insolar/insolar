@@ -171,8 +171,15 @@ func main() {
 	ctx := inslogger.ContextWithTrace(context.Background(), api.RandTraceID())
 
 	cm := componentManager{}
-	cert, err := certificate.NewCertificate(config.KeysPath, config.CertificatePath)
-	checkError("failed to start Certificate: ", err)
+
+	var cert *certificate.Certificate
+	if isBootstrap {
+		cert, err = certificate.NewCertificatesWithKeys(config.KeysPath)
+		checkError("failed to start Certificate ( bootstrap mode ): ", err)
+	} else {
+		cert, err = certificate.NewCertificate(config.KeysPath, config.CertificatePath)
+		checkError("failed to start Certificate: ", err)
+	}
 	cm.components.Certificate = cert
 
 	cm.components.NodeNetwork, err = nodekeeper.NewNodeNetwork(*config)

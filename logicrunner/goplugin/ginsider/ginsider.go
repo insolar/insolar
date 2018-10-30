@@ -346,7 +346,6 @@ func (gi *GoInsider) DeactivateObject(object core.RecordRef) error {
 
 	req := rpctypes.UpDeactivateObjectReq{
 		UpBaseReq: MakeUpBaseReq(),
-		Object:    object,
 	}
 
 	res := rpctypes.UpDeactivateObjectResp{}

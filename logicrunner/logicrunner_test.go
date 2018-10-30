@@ -76,7 +76,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
-	rundCleaner, err := testutils.StartInsgorund(runnerbin, "unix", rundSock, "unix", lrSock)
+	rundCleaner, err := goplugintestutils.StartInsgorund(runnerbin, "unix", rundSock, "unix", lrSock)
 	assert.NoError(t, err)
 
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
@@ -133,13 +133,14 @@ func ValidateAllResults(t testing.TB, lr core.LogicRunner, mustfail ...core.Reco
 	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
 	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
+		log.Debugf("TEST validating: %s", ref)
 		vstep, err := lr.Validate(ref, *rlr.pulse(), cr)
 		if _, ok := failmap[ref]; ok {
-			assert.Error(t, err, "validation")
-			assert.True(t, len(cr) > vstep, "Validation failed before end")
+			assert.Error(t, err, "validation %s", ref)
+			assert.True(t, len(cr) > vstep, "Validation failed before end %s", ref)
 		} else {
-			assert.NoError(t, err, "validation")
-			assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+			assert.NoError(t, err, "validation %s", ref)
+			assert.Equal(t, len(cr), vstep, "Validation passed to the end %s", ref)
 		}
 	}
 }
@@ -996,8 +997,6 @@ func (r *Two) NoError() error {
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
-
-	ValidateAllResults(t, lr)
 
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}

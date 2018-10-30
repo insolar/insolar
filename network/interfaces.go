@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
@@ -52,25 +53,27 @@ type RequestHandler func(Request) (Response, error)
 
 // HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
-	// Listen start listening to network requests, should be started in goroutine.
-	Listen() error
-	// Disconnect stop listening to network requests.
-	Disconnect() error
+	// Start listening to network requests.
+	Start()
+	// Stop listening to network requests.
+	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 
 	// SendRequest send request to a remote node.
-	SendRequest(Request) (Future, error)
+	SendRequest(request Request, receiver core.RecordRef) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() RequestBuilder
+	// BuildResponse create response to an incoming request with Data set to responseData
+	BuildResponse(request Request, responseData interface{}) Response
 }
 
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() core.RecordRef
-	GetReceiver() core.RecordRef
+	GetSenderHost() *host.Host
 	GetType() types.PacketType
 	GetData() interface{}
 }
@@ -83,13 +86,13 @@ type Response Packet
 
 // Future allows to handle responses to a previously sent request.
 type Future interface {
-	Result() <-chan Response
-	GetResult(duration time.Duration) Response
+	GetRequest() Request
+	Response() <-chan Response
+	GetResponse(duration time.Duration) (Response, error)
 }
 
 // RequestBuilder allows to build a Request.
 type RequestBuilder interface {
-	Receiver(ref core.RecordRef) RequestBuilder
 	Type(packetType types.PacketType) RequestBuilder
 	Data(data interface{}) RequestBuilder
 	Build() Request
