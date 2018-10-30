@@ -88,7 +88,6 @@ func StartSpan(ctx context.Context, name string) (context.Context, *trace.Span) 
 		spanctx, span = trace.StartSpanWithRemoteParent(
 			ctx, name, parentSpan.spanContext())
 		spanctx = context.WithValue(spanctx, parentSpanKey{}, nil)
-		setSpanEntries(span, parentSpan.Entries...)
 	} else {
 		spanctx, span = trace.StartSpan(ctx, name)
 	}
@@ -100,6 +99,7 @@ type parentSpanKey struct{}
 
 // WithParentSpan returns new conext with provided parent span.
 func WithParentSpan(ctx context.Context, pspan TraceSpan) context.Context {
+	ctx = SetBaggage(ctx, pspan.Entries...)
 	return context.WithValue(ctx, parentSpanKey{}, pspan)
 }
 

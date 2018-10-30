@@ -30,11 +30,11 @@ import (
 
 // SignedMessage is a message signed by senders private key.
 type SignedMessage struct {
-	Sender      core.RecordRef
-	Msg         core.Message
-	Signature   []byte
-	LogTraceID  string
-	ContextData []byte
+	Sender        core.RecordRef
+	Msg           core.Message
+	Signature     []byte
+	LogTraceID    string
+	TraceSpanData []byte
 }
 
 func (sm *SignedMessage) Message() core.Message {
@@ -43,10 +43,9 @@ func (sm *SignedMessage) Message() core.Message {
 
 // Context returns initialized context with propagated data with ctx as parent.
 func (sm *SignedMessage) Context(ctx context.Context) context.Context {
-	baggage := instracer.MustDeserialize(sm.ContextData)
 	ctx = inslogger.ContextWithTrace(ctx, sm.LogTraceID)
-	ctx = instracer.SetBaggage(ctx, baggage...)
-	return ctx
+	parentspan := instracer.MustDeserialize(sm.TraceSpanData)
+	return instracer.WithParentSpan(ctx, parentspan)
 }
 
 // NewSignedMessage creates and return a signed message.
@@ -67,11 +66,11 @@ func NewSignedMessage(
 		return nil, err
 	}
 	return &SignedMessage{
-		Sender:      sender,
-		Msg:         msg,
-		Signature:   sign,
-		LogTraceID:  inslogger.TraceID(ctx),
-		ContextData: instracer.MustSerialize(ctx),
+		Sender:        sender,
+		Msg:           msg,
+		Signature:     sign,
+		LogTraceID:    inslogger.TraceID(ctx),
+		TraceSpanData: instracer.MustSerialize(ctx),
 	}, nil
 }
 

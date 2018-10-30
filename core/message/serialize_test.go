@@ -72,10 +72,10 @@ func TestSerializeSignedWithContext(t *testing.T) {
 	ctxIn = instracer.SetBaggage(ctxIn, instracer.Entry{Key: "traceid", Value: traceid})
 
 	signMsgIn := &SignedMessage{
-		Msg:         msg,
-		Signature:   nil,
-		ContextData: instracer.MustSerialize(ctxIn),
-		LogTraceID:  inslogger.TraceID(ctxIn),
+		Msg:           msg,
+		Signature:     nil,
+		TraceSpanData: instracer.MustSerialize(ctxIn),
+		LogTraceID:    inslogger.TraceID(ctxIn),
 	}
 	buff, err := SignedToBytes(signMsgIn)
 	assert.NoError(t, err)

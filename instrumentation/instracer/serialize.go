@@ -63,6 +63,7 @@ func Deserialize(b []byte) (TraceSpan, error) {
 	return ts, err
 }
 
+// Serialize method encodes TraceSpan to bytes.
 func (ts TraceSpan) Serialize() (b []byte, err error) {
 	ch := new(codec.CborHandle)
 	err = codec.NewEncoderBytes(&b, ch).Encode(ts)
