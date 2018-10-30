@@ -68,7 +68,7 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 	case "KCP":
 		return newKCPTransport(conn, proxy, publicAddress)
 	default:
-		closePlease(conn)
+		closeVerbose(conn)
 		return nil, errors.New("invalid transport configuration")
 	}
 }
@@ -81,13 +81,13 @@ func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) 
 	}
 	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
 	if err != nil {
-		closePlease(conn)
+		closeVerbose(conn)
 		return nil, "", errors.Wrap(err, "Failed to create resolver")
 	}
 	return conn, publicAddress, nil
 }
 
-func closePlease(conn net.PacketConn) {
+func closeVerbose(conn net.PacketConn) {
 	err := conn.Close()
 	if err != nil {
 		log.Warn(err)

@@ -24,10 +24,10 @@ import (
 
 // InternalTransport simple interface to send network requests and process network responses.
 type InternalTransport interface {
-	// Listen start listening to network requests, should be started in goroutine.
-	Listen() error
-	// Disconnect stop listening to network requests.
-	Disconnect() error
+	// Start listening to network requests, should be started in goroutine.
+	Start()
+	// Stop listening to network requests.
+	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 

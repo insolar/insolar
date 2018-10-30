@@ -98,6 +98,7 @@ type future struct {
 	transport.Future
 }
 
+// Response get channel that receives response to sent request
 func (f future) Response() <-chan network.Response {
 	in := transport.Future(f).Result()
 	out := make(chan network.Response, cap(in))
@@ -109,6 +110,7 @@ func (f future) Response() <-chan network.Response {
 	return out
 }
 
+// GetResponse get response to sent request with `duration` timeout
 func (f future) GetResponse(duration time.Duration) (network.Response, error) {
 	select {
 	case result, ok := <-f.Result():
@@ -122,18 +124,23 @@ func (f future) GetResponse(duration time.Duration) (network.Response, error) {
 	}
 }
 
+// GetRequest get initiating request.
 func (f future) GetRequest() network.Request {
 	request := transport.Future(f).Request()
 	return (*packetWrapper)(request)
 }
 
 // Listen start listening to network requests, should be started in goroutine.
-func (h *hostTransport) Listen() error {
+func (h *hostTransport) Start() {
 	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
-		return errors.New("double listen initiated")
+		log.Warn("double listen initiated")
+		return
 	}
 	go h.listen()
-	return h.transport.Start()
+	err := h.transport.Start()
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 func (h *hostTransport) listen() {
@@ -147,7 +154,7 @@ func (h *hostTransport) listen() {
 			if msg.Error != nil {
 				log.Warnf("Received error response: %s", msg.Error.Error())
 			}
-			h.processMessage(msg)
+			go h.processMessage(msg)
 		case <-h.transport.Stopped():
 			if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
 				h.transport.Close()
@@ -178,13 +185,12 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 }
 
 // Disconnect stop listening to network requests.
-func (h *hostTransport) Disconnect() error {
+func (h *hostTransport) Stop() {
 	go h.transport.Stop()
 	if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
 		<-h.transport.Stopped()
 		h.transport.Close()
 	}
-	return nil
 }
 
 // PublicAddress returns public address that can be published for all nodes.

@@ -36,14 +36,14 @@ type TransportResolvable struct {
 	resolver          Resolver
 }
 
-// Listen start listening to network requests, should be started in goroutine.
-func (tr *TransportResolvable) Listen() error {
-	return tr.internalTransport.Listen()
+// Start listening to network requests.
+func (tr *TransportResolvable) Start() {
+	go tr.internalTransport.Start()
 }
 
-// Disconnect stop listening to network requests.
-func (tr *TransportResolvable) Disconnect() error {
-	return tr.internalTransport.Disconnect()
+// Stop listening to network requests.
+func (tr *TransportResolvable) Stop() {
+	tr.internalTransport.Stop()
 }
 
 // PublicAddress returns public address that can be published for all nodes.

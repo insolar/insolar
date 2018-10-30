@@ -75,7 +75,7 @@ func TestNewInternalTransport(t *testing.T) {
 	address := "127.0.0.1:0"
 	tp, err := NewInternalTransport(mockConfiguration(ID1, address))
 	assert.NoError(t, err)
-	defer tp.Disconnect()
+	defer tp.Stop()
 	// assert that new address with correct port has been assigned
 	assert.NotEqual(t, address, tp.PublicAddress())
 }
@@ -83,10 +83,10 @@ func TestNewInternalTransport(t *testing.T) {
 func TestNewInternalTransport2(t *testing.T) {
 	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
 	assert.NoError(t, err)
-	go tp.Listen()
-	// no assertion, check that Disconnect does not block
+	go tp.Start()
+	// no assertion, check that Stop does not block
 	defer func(t *testing.T) {
-		tp.Disconnect()
+		tp.Stop()
 		assert.True(t, true)
 	}(t)
 }
@@ -133,12 +133,12 @@ func TestNewHostTransport(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.TypePing, handler)
 
-	go t1.Listen()
-	go t2.Listen()
+	t2.Start()
+	t1.Start()
 
 	defer func() {
-		t1.Disconnect()
-		t2.Disconnect()
+		t1.Stop()
+		t2.Stop()
 	}()
 
 	for i := 0; i < count; i++ {
@@ -157,8 +157,8 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
 	assert.NoError(t, err)
 	t1 := NewHostTransport(i1, &m)
-	go t1.Listen()
-	defer t1.Disconnect()
+	t1.Start()
+	defer t1.Stop()
 
 	unknownID := core.NewRefFromBase58("unknown")
 
@@ -197,11 +197,11 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	t2.RegisterRequestHandler(types.TypePing, handler)
 
-	go t1.Listen()
-	go t2.Listen()
+	t2.Start()
+	t1.Start()
 	defer func() {
-		t1.Disconnect()
-		t2.Disconnect()
+		t1.Stop()
+		t2.Stop()
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
@@ -230,11 +230,11 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.TypePing, handler)
 
-	go t1.Listen()
-	go t2.Listen()
+	t2.Start()
+	t1.Start()
 	defer func() {
-		t1.Disconnect()
-		t2.Disconnect()
+		t1.Stop()
+		t2.Stop()
 	}()
 
 	magicNumber := 42
@@ -259,30 +259,6 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	assert.Equal(t, magicNumber+1, d.Number)
 }
 
-func TestHostTransport_Listen(t *testing.T) {
-	m := MockResolver{
-		mapping: make(map[core.RecordRef]string),
-	}
-
-	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
-	assert.NoError(t, err)
-	t1 := NewHostTransport(i1, &m)
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	go func() {
-		wg.Done()
-		t1.Listen()
-	}()
-	wg.Wait()
-	time.Sleep(time.Microsecond * 10)
-	// test for double listen checking
-	err = t1.Listen()
-	assert.Error(t, err)
-	defer t1.Disconnect()
-}
-
 func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
 	assert.NoError(t, err)
@@ -294,9 +270,9 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.TypePing, handler)
 
-	go t1.Listen()
-	go t2.Listen()
-	defer t2.Disconnect()
+	t2.Start()
+	defer t2.Stop()
+	t1.Start()
 
 	request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
 	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
@@ -308,7 +284,7 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 
 	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
 	assert.NoError(t, err)
-	t1.Disconnect()
+	t1.Stop()
 
 	_, err = f.GetResponse(time.Second)
 	assert.Error(t, err)
