@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
@@ -280,4 +281,36 @@ func TestHostTransport_Listen(t *testing.T) {
 	err = t1.Listen()
 	assert.Error(t, err)
 	defer t1.Disconnect()
+}
+
+func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
+	t1, t2, err := createTwoHostNetworks(ID1, ID2)
+	assert.NoError(t, err)
+
+	handler := func(r network.Request) (network.Response, error) {
+		log.Info("handler triggered")
+		time.Sleep(time.Second)
+		return t2.BuildResponse(r, nil), nil
+	}
+	t2.RegisterRequestHandler(types.TypePing, handler)
+
+	go t1.Listen()
+	go t2.Listen()
+	defer t2.Disconnect()
+
+	request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
+	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	assert.NoError(t, err)
+
+	_, err = f.GetResponse(time.Millisecond)
+	assert.Error(t, err)
+	assert.Equal(t, transport.ErrTimeout, err)
+
+	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	assert.NoError(t, err)
+	t1.Disconnect()
+
+	_, err = f.GetResponse(time.Second)
+	assert.Error(t, err)
+	assert.Equal(t, transport.ErrChannelClosed, err)
 }
