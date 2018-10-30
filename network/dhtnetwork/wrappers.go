@@ -92,7 +92,7 @@ func (w *Wrapper) SendMessage(nodeID core.RecordRef, method string, msg core.Sig
 		return nil, errors.New("message is nil")
 	}
 	hostID := resolver.ResolveHostID(nodeID)
-	buff, err := message.ToBytes(msg)
+	buff, err := message.SignedToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
@@ -111,7 +111,7 @@ func (w *Wrapper) SendCascadeMessage(data core.Cascade, method string, msg core.
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	buff, err := message.ToBytes(msg)
+	buff, err := message.SignedToBytes(msg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize event")
 	}
