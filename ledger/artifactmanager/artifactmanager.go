@@ -371,7 +371,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 		return nil, err
 	}
 
-	blobId, err := record.CalculateIDForBlob(pulseNumber, memory)
+	blobID, err := record.CalculateIDForBlob(pulseNumber, memory)
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +383,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: blobId,
+				Memory: blobID,
 			},
 			Class:    class,
 			Parent:   parent,
@@ -469,7 +469,7 @@ func (m *LedgerArtifactManager) UpdateObject(
 	if err != nil {
 		return nil, err
 	}
-	blobId, err := record.CalculateIDForBlob(pulseNumber, memory)
+	blobID, err := record.CalculateIDForBlob(pulseNumber, memory)
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +481,7 @@ func (m *LedgerArtifactManager) UpdateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: blobId,
+				Memory: blobID,
 			},
 			PrevState: *object.StateID(),
 		},
