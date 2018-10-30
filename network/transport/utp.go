@@ -36,7 +36,6 @@ type utpTransport struct {
 }
 
 func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*utpTransport, error) {
-	log.Debug("utpTransport.newUTPTransport")
 	socket, err := utp.NewSocketFromPacketConn(conn)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create socket")
@@ -88,7 +87,6 @@ func (t *utpTransport) send(recvAddress string, data []byte) error {
 	}
 	defer conn.Close()
 
-	log.Debug("UDP: =======WRITE: len = ", len(data))
 	_, err = conn.Write(data)
 	return errors.Wrap(err, "Failed to write data")
 }
