@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/version/manager"
 )
 
 // InitComponents creates and links all insolard components
@@ -74,6 +75,9 @@ func InitComponents(cfg configuration.Configuration, isBootstrap bool) (*compone
 	networkCoordinator, err := networkcoordinator.New()
 	checkError("failed to start NetworkCoordinator: ", err)
 
+	versionManager, err := manager.NewVersionManager(cfg.VersionManager)
+	checkError("failed to load VersionManager: ", err)
+
 	// move to logic runner ??
 	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError("failed init pulse for LogicRunner: ", err)
@@ -90,6 +94,7 @@ func InitComponents(cfg configuration.Configuration, isBootstrap bool) (*compone
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
+		versionManager,
 	)
 
 	cmOld := ComponentManager{components: core.Components{
@@ -103,6 +108,7 @@ func InitComponents(cfg configuration.Configuration, isBootstrap bool) (*compone
 		Bootstrapper:       bootstrapper,
 		APIRunner:          apiRunner,
 		NetworkCoordinator: networkCoordinator,
+		VersionManager:     versionManager,
 	}}
 
 	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), Service: nw}, nil
