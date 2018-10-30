@@ -124,7 +124,7 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 			Domain:  domainRef,
 			Request: requestRef,
 		},
-		Code:        []byte{1, 2, 3},
+		Code:        record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		MachineType: core.MachineTypeBuiltin,
 	})
 }
@@ -263,7 +263,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
 		},
-		Code: []byte{1},
+		Code: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1}),
 	})
 	updateID, err := am.UpdateClass(
 		ctx,
@@ -662,7 +662,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	defer cleaner()
 
 	codeRecord := record.CodeRecord{
-		Code: []byte{1, 2, 3, 3, 2, 1},
+		Code: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
 	}
 	recHash := hash.NewIDHash()
 	_, err := codeRecord.WriteHashData(recHash)
