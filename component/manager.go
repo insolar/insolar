@@ -70,13 +70,13 @@ func (m *Manager) Start(ctx context.Context) error {
 	for _, c := range m.components {
 		name := reflect.TypeOf(c).Elem().String()
 		if s, ok := c.(Starter); ok {
-			log.Infoln("~~~~ NEW ComponentManager: Start component: ", name)
+			log.Infoln("ComponentManager: Start component: ", name)
 			err := s.Start(ctx)
 			if err != nil {
 				return errors.Wrap(err, "Failed to start components.")
 			}
 		} else {
-			log.Warnf("~~~~ NEW ComponentManager: Component %s has no Stop method", name)
+			log.Warnf("ComponentManager: Component %s has no Stop method", name)
 		}
 	}
 	return nil
@@ -88,14 +88,14 @@ func (m *Manager) Stop(ctx context.Context) error {
 	for i := len(m.components) - 1; i >= 0; i-- {
 		name := reflect.TypeOf(m.components[i]).Elem().String()
 		if s, ok := m.components[i].(Stopper); ok {
-			log.Infoln("~~~~ NEW ComponentManager: Stop component: ", name)
+			log.Infoln("ComponentManager: Stop component: ", name)
 
 			err := s.Stop(ctx)
 			if err != nil {
 				return errors.Wrap(err, "Failed to stop components.")
 			}
 		} else {
-			log.Warnf("~~~~ NEW ComponentManager: Component %s has no Stop method", name)
+			log.Warnf("ComponentManager: Component %s has no Stop method", name)
 		}
 	}
 	return nil
