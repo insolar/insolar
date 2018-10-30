@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -37,6 +38,7 @@ type MessageBus struct {
 	ledger       core.Ledger
 	activeNodes  core.NodeNetwork
 	handlers     map[core.MessageType]core.MessageHandler
+	queue        *ExpiryQueue
 	signmessages bool
 }
 
@@ -54,7 +56,7 @@ func (mb *MessageBus) Start(ctx context.Context, c core.Components) error {
 	mb.service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 	mb.ledger = c.Ledger
 	mb.activeNodes = c.NodeNetwork
-
+	mb.queue = NewExpiryQueue(10 * time.Second)
 	return nil
 }
 
@@ -87,6 +89,8 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 	if err != nil {
 		return nil, err
 	}
+	mb.queue.Push(msg)
+
 	jc := mb.ledger.GetJetCoordinator()
 	pm := mb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
