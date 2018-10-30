@@ -1,4 +1,4 @@
-package testutils
+package goplugintestutils
 
 import (
 	"os"
@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
 // StartInsgorund starts `insgorund` process
 func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string) (func(), error) {
-	id := RandomString()
+	id := testutils.RandomString()
 	log.Debug("Starting 'insgorund' ", id)
 
 	stackTrace := (string)(debug.Stack())
