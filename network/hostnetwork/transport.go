@@ -18,6 +18,7 @@ package hostnetwork
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -33,6 +34,7 @@ import (
 )
 
 type hostTransport struct {
+	started   uint32
 	transport transport.Transport
 	origin    *host.Host
 	handlers  map[types.PacketType]network.RequestHandler
@@ -127,6 +129,9 @@ func (f future) GetRequest() network.Request {
 
 // Listen start listening to network requests, should be started in goroutine.
 func (h *hostTransport) Listen() error {
+	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
+		return errors.New("double listen initiated")
+	}
 	go h.listen()
 	return h.transport.Start()
 }
@@ -136,8 +141,7 @@ func (h *hostTransport) listen() {
 		select {
 		case msg := <-h.transport.Packets():
 			if msg == nil {
-				log.Error("HostNetwork receiving channel is closed, disconnecting")
-				h.Disconnect()
+				log.Error("HostNetwork receiving channel is closed")
 				break
 			}
 			if msg.Error != nil {
@@ -145,7 +149,9 @@ func (h *hostTransport) listen() {
 			}
 			h.processMessage(msg)
 		case <-h.transport.Stopped():
-			h.transport.Close()
+			if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
+				h.transport.Close()
+			}
 			return
 		}
 	}
@@ -165,14 +171,19 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 		return
 	}
 	r := response.(*packetWrapper)
-	h.transport.SendResponse(msg.RequestID, (*packet.Packet)(r))
+	err = h.transport.SendResponse(msg.RequestID, (*packet.Packet)(r))
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 // Disconnect stop listening to network requests.
 func (h *hostTransport) Disconnect() error {
 	go h.transport.Stop()
-	<-h.transport.Stopped()
-	h.transport.Close()
+	if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
+		<-h.transport.Stopped()
+		h.transport.Close()
+	}
 	return nil
 }
 
@@ -223,7 +234,7 @@ func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
 	}
 	nodeID := core.NewRefFromBase58(id)
 	if nodeID.Equal(core.RecordRef{}) {
-		return nil, errors.Wrap(err, "error parsing NodeID from string (NodeID is zero)")
+		return nil, errors.New("error parsing NodeID from string (NodeID is zero)")
 	}
 	origin := &host.Host{NodeID: nodeID, Address: address}
 	return origin, nil

@@ -71,7 +71,7 @@ func (tr *TransportResolvable) RegisterRequestHandler(t types.PacketType, handle
 		tr.resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(request)
 	}
-	tr.RegisterRequestHandler(t, f)
+	tr.internalTransport.RegisterPacketHandler(t, f)
 }
 
 // NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
