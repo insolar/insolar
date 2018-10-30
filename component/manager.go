@@ -29,20 +29,19 @@ type Manager struct {
 	components []interface{}
 }
 
-// Register components in Manager and inject dependencies
-// TODO: write about inject
+// Register components in Manager and inject required dependencies
+// Register can inject interfaces only, tag public struct fields with `inject:""`
 func (m *Manager) Register(components ...interface{}) {
 	m.components = components
-	// todo: fix logs
 	for _, c := range components {
 		componentValue := reflect.ValueOf(c).Elem()
 		componentType := componentValue.Type()
-		log.Infof("~~~~ NEW ComponentManager: Register component: %s", componentType.String())
+		log.Infof("ComponentManager: Register component: %s", componentType.String())
 
 		for i := 0; i < componentType.NumField(); i++ {
 			f := componentType.Field(i)
 			if _, ok := f.Tag.Lookup("inject"); ok {
-				log.Debugf("~~~~ NEW ComponentManager: Component %s need inject: ", componentType.String(), f.Name)
+				log.Debugf("ComponentManager: Component %s need inject: ", componentType.String(), f.Name)
 
 				// try to inject
 				isInjected := false
@@ -50,7 +49,7 @@ func (m *Manager) Register(components ...interface{}) {
 					fieldValue := componentValue.Field(i)
 					if reflect.ValueOf(cc).Type().Implements(fieldValue.Type()) {
 						fieldValue.Set(reflect.ValueOf(cc))
-						log.Infof("~~~~ NEW ComponentManager: Inject interface %s with %s: ", fieldValue.Type().String(), reflect.ValueOf(cc).Type().String())
+						log.Infof("ComponentManager: Inject interface %s with %s: ", fieldValue.Type().String(), reflect.ValueOf(cc).Type().String())
 						isInjected = true
 						break
 					}
