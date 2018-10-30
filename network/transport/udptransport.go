@@ -14,13 +14,91 @@
  *    limitations under the License.
  */
 
-package udptransport
+package transport
 
 import (
-	"github.com/xtaci/kcp-go"
+	"bytes"
+	"net"
+
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/pkg/errors"
 )
 
 type udpTransport struct {
-	listener   *kcp.Listener
-	blockCrypt kcp.BlockCrypt
+	baseTransport
+	serverConn net.PacketConn
+}
+
+func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
+	transport := &udpTransport{
+		baseTransport: newBaseTransport(proxy, publicAddress),
+		serverConn:    conn}
+	transport.sendFunc = transport.send
+
+	return transport, nil
+}
+
+func (udpT *udpTransport) send(recvAddress string, data []byte) error {
+
+	log.Debug("Sending PURE_UDP request")
+
+	// TODO: may be try to send second time if error
+	// TODO: skip resolving every time by caching result
+	udpAddr, err := net.ResolveUDPAddr("udp", recvAddress)
+	if err != nil {
+		return errors.Wrap(err, "udpT.send")
+	}
+
+	udpConn, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		return errors.Wrap(err, "udpT.send")
+	}
+	defer udpConn.Close()
+
+	log.Debug("=======WRITE: len = ", len(data))
+	_, err = udpConn.Write(data)
+	log.Debug("=======AFTER_WRITE")
+	return errors.Wrap(err, "Failed to write data")
+}
+
+// Start starts networking.
+func (udpT *udpTransport) Start() error {
+	log.Info("Start UDP transport")
+	for {
+		buf := make([]byte, 1700)
+		n, addr, err := udpT.serverConn.ReadFrom(buf)
+		log.Debug("__________ Start: n = ", n, ". addr = ", addr)
+		if err != nil {
+			<-udpT.disconnectFinished
+			return err
+		}
+
+		go udpT.handleAcceptedConnection(buf[:n], addr)
+	}
+}
+
+// Stop stops networking.
+func (udpT *udpTransport) Stop() {
+	udpT.mutex.Lock()
+	defer udpT.mutex.Unlock()
+
+	log.Info("Stop UTP transport")
+	udpT.disconnectStarted <- true
+	close(udpT.disconnectStarted)
+}
+
+func (udpT *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
+	log.Debug("++++++++++handleAcceptedConnection")
+	r := bytes.NewReader(data)
+	msg, err := packet.DeserializePacket(r)
+	if err != nil {
+		log.Error("[ handleAcceptedConnection ] ", err)
+		return
+	}
+	log.Debug("++++++++++AFTER_DESERIALIZING")
+	log.Info("[ handleAcceptedConnection ] Packet processed. size: ", len(data), ". Address: ", addr)
+
+	udpT.baseTransport.handlePacket(msg)
 }
