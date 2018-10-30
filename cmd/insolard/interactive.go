@@ -29,11 +29,18 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 )
 
-func repl(service *servicenetwork.ServiceNetwork, manager core.PulseManager) {
-	displayInteractiveHelp()
-	dhtNetwork, ctx := service.GetHostNetwork()
+// Repl is "read-eval-print loop" interactive console
+type Repl struct {
+	Service *servicenetwork.ServiceNetwork
+	Manager core.PulseManager
+}
 
-	doInfo(service, dhtNetwork, ctx)
+// Start method starts interactive console
+func (r *Repl) Start() {
+	displayInteractiveHelp()
+	dhtNetwork, ctx := r.Service.GetHostNetwork()
+
+	doInfo(r.Service, dhtNetwork, ctx)
 
 	rl, err := readline.New("> ")
 	if err != nil {
@@ -62,7 +69,7 @@ func repl(service *servicenetwork.ServiceNetwork, manager core.PulseManager) {
 		case "findhost":
 			doFindHost(input, dhtNetwork, ctx)
 		case "info":
-			doInfo(service, dhtNetwork, ctx)
+			doInfo(r.Service, dhtNetwork, ctx)
 		case "relay":
 			doSendRelay(input[2], input[1], dhtNetwork, ctx)
 		case "rpc":
@@ -71,7 +78,7 @@ func repl(service *servicenetwork.ServiceNetwork, manager core.PulseManager) {
 		case "activenodes":
 			doActiveNodes(dhtNetwork)
 		case "pulse":
-			doPulse(manager)
+			doPulse(r.Manager)
 		default:
 			displayInteractiveHelp()
 		}

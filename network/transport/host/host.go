@@ -19,12 +19,15 @@ package host
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/id"
 )
 
 // Host is the over-the-wire representation of a host.
 type Host struct {
-	// ID is a 20 byte unique identifier.
+	// NodeID is unique identifier of the node
+	NodeID core.RecordRef
+	// ID is a 20 byte unique identifier (for old DHT network, deprecated)
 	ID id.ID
 	// Address is IP and port.
 	Address *Address

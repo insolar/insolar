@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
@@ -264,7 +263,7 @@ func stopInsolard() error {
 var insgorundCleaner func()
 
 func startInsgorund() (err error) {
-	insgorundCleaner, err = testutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:18181", "tcp", "127.0.0.1:18182")
+	insgorundCleaner, err = goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:18181", "tcp", "127.0.0.1:18182")
 	if err != nil {
 		return errors.Wrap(err, "[ startInsolard ] could't wait for insolard to start completely: ")
 	}

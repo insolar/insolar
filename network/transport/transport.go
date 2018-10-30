@@ -70,6 +70,7 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 	case "PURE_UDP":
 		return newUDPTransport(conn, proxy, publicAddress)
 	default:
+		closeVerbose(conn)
 		return nil, errors.New("invalid transport configuration")
 	}
 }
@@ -82,13 +83,17 @@ func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) 
 	}
 	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
 	if err != nil {
-		err2 := conn.Close()
-		if err2 != nil {
-			log.Warn(err2)
-		}
+		closeVerbose(conn)
 		return nil, "", errors.Wrap(err, "Failed to create resolver")
 	}
 	return conn, publicAddress, nil
+}
+
+func closeVerbose(conn net.PacketConn) {
+	err := conn.Close()
+	if err != nil {
+		log.Warn(err)
+	}
 }
 
 func createResolver(stun bool) resolver.PublicAddressResolver {
