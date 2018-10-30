@@ -147,7 +147,6 @@ type UpdateObject struct {
 	RecordSign []byte
 	Class      *core.RecordRef // Only used for activation.
 	Object     core.RecordRef
-	Memory     []byte
 }
 
 // Type implementation of Message interface.

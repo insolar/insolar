@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -534,22 +535,51 @@ func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.Record
 func (m *LedgerArtifactManager) updateObject(
 	rec record.Record, object core.RecordRef, class *core.RecordRef, memory []byte,
 ) (*reply.Object, error) {
-	genericReact, err := m.messageBus.Send(
-		context.TODO(),
-		&message.UpdateObject{
-			Record:     record.SerializeRecord(rec),
-			RecordSign: nil,
-			Object:     object,
-			Class:      class,
-			Memory:     memory,
-		},
-	)
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	if err != nil {
-		return nil, err
+	var genericReact core.Reply
+	var genericError error
+	go func() {
+		genericReact, genericError = m.messageBus.Send(
+			context.TODO(),
+			&message.UpdateObject{
+				Record:     record.SerializeRecord(rec),
+				RecordSign: nil,
+				Object:     object,
+				Class:      class,
+			},
+		)
+		wg.Done()
+	}()
+
+	var blobReact core.Reply
+	var blobError error
+	go func() {
+		blobReact, blobError = m.messageBus.Send(
+			context.TODO(),
+			&message.SetBlob{
+				TargetRef: object,
+				Memory:    memory,
+			},
+		)
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	if genericError != nil {
+		return nil, genericError
+	}
+	if blobError != nil {
+		return nil, blobError
 	}
 
 	rep, ok := genericReact.(*reply.Object)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+	_, ok = blobReact.(*reply.ID)
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}
