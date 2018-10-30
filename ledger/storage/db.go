@@ -42,7 +42,7 @@ const (
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
 	scopeIDMessage  byte = 6
-	scopeIdBlob     byte = 7
+	scopeIDBlob     byte = 7
 
 	sysGenesis     byte = 1
 	sysLatestPulse byte = 2

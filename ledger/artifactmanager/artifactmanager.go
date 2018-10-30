@@ -255,10 +255,10 @@ func (m *LedgerArtifactManager) DeployCode(
 			request,
 		)
 	}()
-	var setBlob *core.RecordID
+
 	var setBlobErr error
 	go func() {
-		setBlob, setBlobErr = m.setBlob(
+		_, setBlobErr = m.setBlob(
 			code,
 			request,
 		)
