@@ -233,17 +233,46 @@ func (m *LedgerArtifactManager) DeployCode(
 	code []byte,
 	machineType core.MachineType,
 ) (*core.RecordID, error) {
-	return m.setRecord(
-		&record.CodeRecord{
-			SideEffectRecord: record.SideEffectRecord{
-				Domain:  domain,
-				Request: request,
+	pulseNumber, err := m.db.GetLatestPulseNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	var setRecord *core.RecordID
+	var setRecordErr error
+	go func() {
+		setRecord, setRecordErr = m.setRecord(
+			&record.CodeRecord{
+				SideEffectRecord: record.SideEffectRecord{
+					Domain:  domain,
+					Request: request,
+				},
+				Code:        record.CalculateIDForBlob(pulseNumber, code),
+				MachineType: machineType,
 			},
-			Code:        code,
-			MachineType: machineType,
-		},
-		request,
-	)
+			request,
+		)
+	}()
+	var setBlob *core.RecordID
+	var setBlobErr error
+	go func() {
+		setBlob, setBlobErr = m.setBlob(
+			code,
+			request,
+		)
+	}()
+	wg.Wait()
+
+	if setRecordErr != nil {
+		return nil, setRecordErr
+	}
+	if setBlobErr != nil {
+		return nil, setBlobErr
+	}
+
+	return setRecord, nil
 }
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
