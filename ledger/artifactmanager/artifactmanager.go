@@ -243,13 +243,19 @@ func (m *LedgerArtifactManager) DeployCode(
 	var setRecord *core.RecordID
 	var setRecordErr error
 	go func() {
+		id, setRecordErr := record.CalculateIDForBlob(pulseNumber, code)
+		if setRecordErr != nil {
+			wg.Done()
+			return
+		}
+
 		setRecord, setRecordErr = m.setRecord(
 			&record.CodeRecord{
 				SideEffectRecord: record.SideEffectRecord{
 					Domain:  domain,
 					Request: request,
 				},
-				Code:        record.CalculateIDForBlob(pulseNumber, code),
+				Code:        id,
 				MachineType: machineType,
 			},
 			request,
@@ -365,6 +371,11 @@ func (m *LedgerArtifactManager) ActivateObject(
 		return nil, err
 	}
 
+	blobId, err := record.CalculateIDForBlob(pulseNumber, memory)
+	if err != nil {
+		return nil, err
+	}
+
 	obj, err := m.updateObject(
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -372,7 +383,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: record.CalculateIDForBlob(pulseNumber, memory),
+				Memory: blobId,
 			},
 			Class:    class,
 			Parent:   parent,

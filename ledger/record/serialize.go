@@ -112,8 +112,11 @@ func DeserializeRecord(buf []byte) Record {
 }
 
 //CalculateIDForBlob calculate id for blob with using current pulse number
-func CalculateIDForBlob(pulseNumber core.PulseNumber, blob []byte) *core.RecordID {
+func CalculateIDForBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	recHash := hash.NewIDHash()
-	recHash.Write(blob)
-	return core.NewRecordID(pulseNumber, recHash.Sum(nil))
+	_, err := recHash.Write(blob)
+	if err != nil {
+		return nil, err
+	}
+	return core.NewRecordID(pulseNumber, recHash.Sum(nil)), nil
 }
