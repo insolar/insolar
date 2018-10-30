@@ -120,9 +120,13 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	if err != nil {
 		return nil, err
 	}
+	code, err := h.db.GetBlob(codeRec.Code)
+	if err != nil {
+		return nil, err
+	}
 
 	rep := reply.Code{
-		Code:        codeRec.Code,
+		Code:        code,
 		MachineType: codeRec.MachineType,
 	}
 
