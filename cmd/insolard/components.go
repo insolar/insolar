@@ -35,7 +35,7 @@ import (
 )
 
 // InitComponents creates and links all insolard components
-func InitComponents(cfg configuration.Configuration) (*component.Manager, *componentManager, *Repl, error) {
+func InitComponents(cfg configuration.Configuration) (*component.Manager, *ComponentManager, *Repl, error) {
 
 	var cert *certificate.Certificate
 	var err error
@@ -92,7 +92,7 @@ func InitComponents(cfg configuration.Configuration) (*component.Manager, *compo
 		networkCoordinator,
 	)
 
-	cmOld := componentManager{components: core.Components{
+	cmOld := ComponentManager{components: core.Components{
 		Certificate:        cert,
 		NodeNetwork:        nodeNetwork,
 		LogicRunner:        logicRunner,

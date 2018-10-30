@@ -36,13 +36,13 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 )
 
-// componentManager is deprecated and will be removed after completly switching to component.Manager
-type componentManager struct {
+// ComponentManager is deprecated and will be removed after completly switching to component.Manager
+type ComponentManager struct {
 	components core.Components
 }
 
 // linkAll - link dependency for all components
-func (cm *componentManager) linkAll(ctx context.Context) {
+func (cm *ComponentManager) linkAll(ctx context.Context) {
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
 
@@ -55,23 +55,6 @@ func (cm *componentManager) linkAll(ctx context.Context) {
 			}
 			log.Infof("==== Old ComponentManager: Component `%s` successfully started", componentName)
 		}
-	}
-}
-
-// stopAll - reverse order stop all components
-func (cm *componentManager) stopAll(ctx context.Context) {
-	v := reflect.ValueOf(cm.components)
-	for i := v.NumField() - 1; i >= 0; i-- {
-
-		if component, ok := v.Field(i).Interface().(core.Component); ok {
-			componentName := v.Field(i).String()
-			err := component.Stop(ctx)
-			log.Infoln("==== Old ComponentManager: Stop component: ", componentName)
-			if err != nil {
-				log.Errorf("==== Old ComponentManager: failed to stop component %s : %s", v.String(), err.Error())
-			}
-		}
-
 	}
 }
 
@@ -171,7 +154,7 @@ func main() {
 
 	cmOld.linkAll(ctx)
 
-	//err = cm.Start(ctx)
+	err = cm.Start(ctx)
 	checkError("Failed to start components", err)
 
 	defer func() {
