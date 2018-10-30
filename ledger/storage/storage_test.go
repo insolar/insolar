@@ -142,10 +142,11 @@ func TestDB_CreateDrop(t *testing.T) {
 	for i := 1; i < 4; i++ {
 		setRecordMessage := message.SetRecord{
 			Record: record.SerializeRecord(&record.CodeRecord{
-				Code: []byte{byte(i)},
+				Code: record.CalculateIDForBlob(pulse, []byte{byte(i)}),
 			}),
 		}
 		db.SetMessage(pulse, &setRecordMessage)
+		db.SetBlob(pulse, []byte{byte(i)})
 	}
 
 	drop, messages, err := db.CreateDrop(pulse, []byte{4, 5, 6})
