@@ -26,26 +26,17 @@ import (
 	"syscall"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/nodekeeper"
-	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/networkcoordinator"
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
+// componentManager is deprecated and will be removed after completly switching to component.Manager
 type componentManager struct {
 	components core.Components
 }
@@ -54,14 +45,16 @@ type componentManager struct {
 func (cm *componentManager) linkAll(ctx context.Context) {
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
-		componentName := v.Field(i).String()
-		log.Infof("Starting component `%s` ...", componentName)
-		err := v.Field(i).Interface().(core.Component).Start(ctx, cm.components)
-		if err != nil {
-			log.Fatalf("failed to start component %s : %s", componentName, err.Error())
-		}
 
-		log.Infof("Component `%s` successfully started", componentName)
+		if component, ok := v.Field(i).Interface().(core.Component); ok {
+			componentName := v.Field(i).String()
+			log.Infof("==== Old ComponentManager: Starting component `%s` ...", componentName)
+			err := component.Start(ctx, cm.components)
+			if err != nil {
+				log.Fatalf("==== Old ComponentManager: failed to start component %s : %s", componentName, err.Error())
+			}
+			log.Infof("==== Old ComponentManager: Component `%s` successfully started", componentName)
+		}
 	}
 }
 
@@ -69,11 +62,16 @@ func (cm *componentManager) linkAll(ctx context.Context) {
 func (cm *componentManager) stopAll(ctx context.Context) {
 	v := reflect.ValueOf(cm.components)
 	for i := v.NumField() - 1; i >= 0; i-- {
-		err := v.Field(i).Interface().(core.Component).Stop(ctx)
-		log.Infoln("Stop component: ", v.String())
-		if err != nil {
-			log.Errorf("failed to stop component %s : %s", v.String(), err.Error())
+
+		if component, ok := v.Field(i).Interface().(core.Component); ok {
+			componentName := v.Field(i).String()
+			err := component.Stop(ctx)
+			log.Infoln("==== Old ComponentManager: Stop component: ", componentName)
+			if err != nil {
+				log.Errorf("==== Old ComponentManager: failed to stop component %s : %s", v.String(), err.Error())
+			}
 		}
+
 	}
 }
 
@@ -98,7 +96,7 @@ func parseInputParams() {
 	}
 }
 
-func registerCurrentNode(cfgHolder *configuration.Holder, cert *certificate.Certificate, nc core.NetworkCoordinator) {
+func registerCurrentNode(cfgHolder *configuration.Holder, cert core.Certificate, nc core.NetworkCoordinator) {
 	roles := []string{"virtual", "heavy_material", "light_material"}
 	host := cfgHolder.Configuration.Host.Transport.Address
 	publicKey, err := cert.GetPublicKey()
@@ -158,65 +156,28 @@ func main() {
 		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
-	config := &cfgHolder.Configuration
-
 	if !isBootstrap {
-		mergeConfigAndCertificate(config)
+		mergeConfigAndCertificate(&cfgHolder.Configuration)
 	}
 
-	initLogger(config.Log)
+	initLogger(cfgHolder.Configuration.Log)
 
-	fmt.Print("Starts with configuration:\n", configuration.ToString(config))
+	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	ctx := inslogger.ContextWithTrace(context.Background(), api.RandTraceID())
 
-	cm := componentManager{}
+	cm, cmOld, repl, err := InitComponents(cfgHolder.Configuration)
+	checkError("failed to init components", err)
 
-	var cert *certificate.Certificate
-	if isBootstrap {
-		cert, err = certificate.NewCertificatesWithKeys(config.KeysPath)
-		checkError("failed to start Certificate ( bootstrap mode ): ", err)
-	} else {
-		cert, err = certificate.NewCertificate(config.KeysPath, config.CertificatePath)
-		checkError("failed to start Certificate: ", err)
-	}
-	cm.components.Certificate = cert
+	cmOld.linkAll(ctx)
 
-	cm.components.NodeNetwork, err = nodekeeper.NewNodeNetwork(*config)
-	checkError("failed to start NodeNetwork: ", err)
-
-	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&config.LogicRunner)
-	checkError("failed to start LogicRunner: ", err)
-
-	cm.components.Ledger, err = ledger.NewLedger(config.Ledger)
-	checkError("failed to start Ledger: ", err)
-
-	nw, err := servicenetwork.NewServiceNetwork(*config)
-	checkError("failed to start Network: ", err)
-	cm.components.Network = nw
-
-	cm.components.MessageBus, err = messagebus.NewMessageBus(*config)
-	checkError("failed to start MessageBus: ", err)
-
-	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(config.Bootstrap)
-	checkError("failed to start Bootstrapper: ", err)
-
-	cm.components.APIRunner, err = api.NewRunner(&config.APIRunner)
-	checkError("failed to start ApiRunner: ", err)
-
-	cm.components.Metrics, err = metrics.NewMetrics(config.Metrics)
-	checkError("failed to start Metrics: ", err)
-
-	cm.components.NetworkCoordinator, err = networkcoordinator.New()
-	checkError("failed to start NetworkCoordinator: ", err)
-
-	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(config.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	checkError("failed init pulse for LogicRunner: ", err)
-
-	cm.linkAll(ctx)
+	//err = cm.Start(ctx)
+	checkError("Failed to start components", err)
 
 	defer func() {
-		cm.stopAll(ctx)
+		log.Warn("DEFER STOP APP")
+		err = cm.Stop(ctx)
+		checkError("Failed to stop components", err)
 	}()
 
 	var gracefulStop = make(chan os.Signal)
@@ -227,19 +188,22 @@ func main() {
 		sig := <-gracefulStop
 		log.Debugln("caught sig: ", sig)
 
-		cm.stopAll(ctx)
+		log.Warn("GRACEFULL STOP APP")
+		err = cm.Stop(ctx)
+		checkError("Failed to graceful stop components", err)
 		os.Exit(0)
 	}()
 
+	// move to bootstrap component
 	if isBootstrap {
-		registerCurrentNode(cfgHolder, cert, cm.components.NetworkCoordinator)
+		registerCurrentNode(cfgHolder, cmOld.components.Certificate, cmOld.components.NetworkCoordinator)
 		log.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
 		gracefulStop <- syscall.SIGINT
 	}
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")
-	repl(nw, cm.components.Ledger.GetPulseManager())
+	repl.Start()
 }
 
 func initLogger(cfg configuration.Log) {
