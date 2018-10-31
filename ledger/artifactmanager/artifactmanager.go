@@ -98,39 +98,6 @@ func (m *LedgerArtifactManager) GetCode(
 	return &desc, nil
 }
 
-// GetClass returns descriptor for provided state.
-//
-// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
-// provide methods for fetching all related data.
-func (m *LedgerArtifactManager) GetClass(
-	ctx context.Context, head core.RecordRef, state *core.RecordID,
-) (core.ClassDescriptor, error) {
-	genericReact, err := m.messageBus.Send(
-		context.TODO(),
-		&message.GetClass{
-			Head:  head,
-			State: state,
-		},
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	react, ok := genericReact.(*reply.Class)
-	if !ok {
-		return nil, ErrUnexpectedReply
-	}
-	desc := ClassDescriptor{
-		am:          m,
-		head:        react.Head,
-		state:       react.State,
-		code:        react.Code,
-		machineType: react.MachineType,
-	}
-	return &desc, nil
-}
-
 // GetObject returns descriptor for provided state.
 //
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
@@ -245,36 +212,12 @@ func (m *LedgerArtifactManager) DeployCode(
 	)
 }
 
-// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 //
-// Request reference will be this class'es identifier and referred as "class head".
-func (m *LedgerArtifactManager) ActivateClass(
-	ctx context.Context, domain, request, code core.RecordRef, machineType core.MachineType,
-) (*core.RecordID, error) {
-	return m.updateClass(
-		&record.ClassActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
-				Domain:  domain,
-				Request: request,
-			},
-			ClassStateRecord: record.ClassStateRecord{
-				MachineType: machineType,
-				Code:        code,
-			},
-		},
-		request,
-	)
 }
 
-// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
-// the class. If class is already deactivated, an error should be returned.
 //
-// Deactivated class cannot be changed or instantiate objects.
-func (m *LedgerArtifactManager) DeactivateClass(
 	ctx context.Context,
-	domain, request, class core.RecordRef, state core.RecordID,
 ) (*core.RecordID, error) {
-	return m.updateClass(
 		&record.DeactivationRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -286,28 +229,10 @@ func (m *LedgerArtifactManager) DeactivateClass(
 	)
 }
 
-// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
-// the class. Migrations are references to code records.
 //
-// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
-// migrate objects memory in the order they appear in provided slice.
-func (m *LedgerArtifactManager) UpdateClass(
 	ctx context.Context,
-	domain, request, class, code core.RecordRef, machineType core.MachineType, state core.RecordID,
 ) (*core.RecordID, error) {
-	return m.updateClass(
-		&record.ClassAmendRecord{
-			SideEffectRecord: record.SideEffectRecord{
-				Domain:  domain,
-				Request: request,
-			},
-			ClassStateRecord: record.ClassStateRecord{
-				Code:        code,
-				MachineType: machineType,
-			},
-			PrevState: state,
 		},
-		class,
 	)
 }
 
