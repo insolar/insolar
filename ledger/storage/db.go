@@ -42,6 +42,7 @@ const (
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
 	scopeIDMessage  byte = 6
+	scopeIDBlob     byte = 7
 
 	sysGenesis     byte = 1
 	sysLatestPulse byte = 2
@@ -191,6 +192,39 @@ func (db *DB) Set(key, value []byte) error {
 	})
 }
 
+// GetBlob returns a blob for the id
+func (db *DB) GetBlob(id *core.RecordID) ([]byte, error) {
+	var (
+		blob []byte
+		err  error
+	)
+
+	err = db.View(func(tx *TransactionManager) error {
+		blob, err = tx.GetBlob(id)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return blob, nil
+}
+
+// SetBlob saves a blob with a specified id
+func (db *DB) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+	var (
+		id  *core.RecordID
+		err error
+	)
+	err = db.Update(func(tx *TransactionManager) error {
+		id, err = tx.SetBlob(pulseNumber, blob)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return id, nil
+}
+
 // GetRequest wraps matching transaction manager method.
 func (db *DB) GetRequest(id *core.RecordID) (record.Request, error) {
 	tx := db.BeginTransaction(false)
@@ -200,13 +234,19 @@ func (db *DB) GetRequest(id *core.RecordID) (record.Request, error) {
 
 // GetRecord wraps matching transaction manager method.
 func (db *DB) GetRecord(id *core.RecordID) (record.Record, error) {
-	tx := db.BeginTransaction(false)
-	defer tx.Discard()
-	rec, err := tx.GetRecord(id)
+	var (
+		fetchedRecord record.Record
+		err           error
+	)
+
+	err = db.View(func(tx *TransactionManager) error {
+		fetchedRecord, err = tx.GetRecord(id)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
-	return rec, nil
+	return fetchedRecord, nil
 }
 
 // SetRecord wraps matching transaction manager method.

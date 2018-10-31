@@ -118,6 +118,8 @@ const (
 	TypeSetRecord
 	// TypeValidateRecord saves record in storage.
 	TypeValidateRecord
+	// TypeSetBlob saves blob in storage.
+	TypeSetBlob
 
 	// Bootstrap
 

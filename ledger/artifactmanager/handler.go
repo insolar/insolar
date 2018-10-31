@@ -59,6 +59,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeRegisterChild, h.messagePersistingWrapper(h.handleRegisterChild))
 	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
 	bus.MustRegister(core.TypeSetRecord, h.messagePersistingWrapper(h.handleSetRecord))
+	bus.MustRegister(core.TypeSetBlob, h.messagePersistingWrapper(h.handleSetBlob))
 	bus.MustRegister(core.TypeUpdateClass, h.messagePersistingWrapper(h.handleUpdateClass))
 	bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
 
@@ -102,6 +103,26 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 	return &reply.ID{ID: *id}, nil
 }
 
+func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.SetBlob)
+
+	calculatedID := record.CalculateIDForBlob(pulseNumber, msg.Memory)
+	_, err := h.db.GetBlob(calculatedID)
+	if err == nil {
+		return &reply.ID{ID: *calculatedID}, nil
+	}
+	if err != nil && err != storage.ErrNotFound {
+		return nil, err
+	}
+
+	id, err := h.db.SetBlob(pulseNumber, msg.Memory)
+	if err != nil {
+		return nil, err
+	}
+
+	return &reply.ID{ID: *id}, nil
+}
+
 func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetCode)
 
@@ -109,9 +130,13 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	if err != nil {
 		return nil, err
 	}
+	code, err := h.db.GetBlob(codeRec.Code)
+	if err != nil {
+		return nil, err
+	}
 
 	rep := reply.Code{
-		Code:        codeRec.Code,
+		Code:        code,
 		MachineType: codeRec.MachineType,
 	}
 
@@ -167,7 +192,13 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 		State:        *stateID,
 		Class:        idx.ClassRef,
 		ChildPointer: childPointer,
-		Memory:       state.GetMemory(),
+	}
+
+	if state.GetMemory() != nil {
+		rep.Memory, err = h.db.GetBlob(state.GetMemory())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &rep, nil
