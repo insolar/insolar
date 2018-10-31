@@ -88,7 +88,7 @@ func (udpT *udpTransport) Stop() {
 	udpT.mutex.Lock()
 	defer udpT.mutex.Unlock()
 
-	log.Info("Stop UTP transport")
+	log.Info("Stop UDP transport")
 	udpT.prepareDisconnect()
 
 	err := udpT.serverConn.Close()
