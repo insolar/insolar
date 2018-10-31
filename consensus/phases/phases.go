@@ -16,24 +16,31 @@
 
 package phases
 
+import (
+	"github.com/pkg/errors"
+)
+
 // FirstPhase is a first phase.
 type FirstPhase struct {
 	next *SecondPhase
 }
 
 func (fp *FirstPhase) HandlePulse(data *PulseData) error {
-	result := fp.getPulseProof(data)
-	return fp.next.Calculate(result)
+	result, claims, err := fp.getPulseProof(data)
+	if err != nil {
+		return errors.Wrap(err, "Failed to get a pulse proof")
+	}
+	return fp.next.Calculate(result, claims)
 }
 
-func (fp *FirstPhase) getPulseProof(pulse *PulseData) *NodePulseProof {
-	return NewNodePulseProof()
+func (fp *FirstPhase) getPulseProof(pulse *PulseData) ([]NodePulseProof, []ReferendumClaim, error) {
+	return nil, nil, nil
 }
 
 // SecondPhase is a second phase.
 type SecondPhase struct {
 }
 
-func (sp *SecondPhase) Calculate(proof *NodePulseProof) error {
+func (sp *SecondPhase) Calculate(proof []NodePulseProof, claims []ReferendumClaim) error {
 	return nil
 }
