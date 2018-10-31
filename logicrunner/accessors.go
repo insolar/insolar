@@ -114,3 +114,19 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 	}
 	return c, ok
 }
+
+func (lr *LogicRunner) RefreshConsensus() {
+	lr.consensusMutex.Lock()
+	defer lr.consensusMutex.Unlock()
+	if lr.consensus == nil {
+		lr.consensus = make(map[Ref]*Consensus)
+		return
+	}
+	for k, c := range lr.consensus {
+		if c.ready {
+			delete(lr.consensus, k)
+		} else {
+			c.ready = true
+		}
+	}
+}

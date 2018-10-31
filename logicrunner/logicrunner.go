@@ -437,7 +437,8 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	insctx := context.TODO()
-	lr.consensus = make(map[Ref]*Consensus)
+
+	lr.RefreshConsensus()
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind()
 
