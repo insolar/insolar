@@ -18,6 +18,7 @@ package transport
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 
 	"github.com/insolar/insolar/log"
@@ -43,8 +44,11 @@ func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 }
 
 func (udpT *udpTransport) send(recvAddress string, data []byte) error {
-
 	log.Debug("Sending PURE_UDP request")
+	if len(data) > udpMaxPacketSize {
+		return errors.New(fmt.Sprintf("udpTransport.send: too big input data. Maximum: %d. Current: %d",
+			udpMaxPacketSize, len(data)))
+	}
 
 	// TODO: may be try to send second time if error
 	// TODO: skip resolving every time by caching result
