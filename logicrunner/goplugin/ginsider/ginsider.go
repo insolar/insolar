@@ -17,6 +17,7 @@
 package ginsider
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/rpc"
@@ -31,6 +32,7 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
@@ -60,7 +62,7 @@ type RPC struct {
 	GI *GoInsider
 }
 
-func recoverRPC(err *error) {
+func recoverRPC(ctx context.Context, err *error) {
 	if r := recover(); r != nil {
 		if err != nil {
 			if *err == nil {
@@ -76,10 +78,11 @@ func recoverRPC(err *error) {
 // CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) (err error) {
+	ctx := inslogger.ContextWithTrace(context.Background(), args.TraceID)
 	log.Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
-	defer recoverRPC(&err)
+	defer recoverRPC(ctx, &err)
 
-	p, err := t.GI.Plugin(args.Code)
+	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
 		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
 	}
@@ -112,10 +115,11 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 // CallConstructor is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (err error) {
+	ctx := inslogger.ContextWithTrace(context.Background(), args.TraceID)
 	log.Debugf("Calling constructor %q in code %q", args.Name, args.Code)
-	defer recoverRPC(&err)
+	defer recoverRPC(ctx, &err)
 
-	p, err := t.GI.Plugin(args.Code)
+	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
 		return err
 	}
@@ -157,7 +161,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
-func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
+func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string, error) {
 	path := filepath.Join(gi.dir, ref.String())
 	_, err := os.Stat(path)
 
@@ -189,7 +193,7 @@ func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
-func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
+func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Plugin, error) {
 	gi.pluginsMutex.Lock()
 	defer gi.pluginsMutex.Unlock()
 	key := ref.String()
@@ -197,7 +201,7 @@ func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 		return gi.plugins[key], nil
 	}
 
-	path, err := gi.ObtainCode(ref)
+	path, err := gi.ObtainCode(ctx, ref)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't obtain code")
 	}

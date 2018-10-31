@@ -25,7 +25,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -105,6 +105,7 @@ func (gp *GoPlugin) CallMethod(
 
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{
+		TraceID:   inslogger.TraceID(ctx),
 		Context:   callContext,
 		Code:      code,
 		Data:      data,
@@ -137,7 +138,12 @@ func (gp *GoPlugin) CallConstructor(
 	}
 
 	res := rpctypes.DownCallConstructorResp{}
-	req := rpctypes.DownCallConstructorReq{Code: code, Name: name, Arguments: args}
+	req := rpctypes.DownCallConstructorReq{
+		TraceID:   inslogger.TraceID(ctx),
+		Code:      code,
+		Name:      name,
+		Arguments: args,
+	}
 
 	select {
 	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:
