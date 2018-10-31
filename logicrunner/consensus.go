@@ -127,9 +127,8 @@ func (c *Consensus) FindRequestBefore(steps int) *core.RecordID {
 		if cr[i].Type == core.CaseRecordTypeRequest {
 			if req, ok := cr[i].Resp.(Ref); ok {
 				return req.Record()
-			} else {
-				return nil
 			}
+			return nil
 		}
 	}
 	return nil
