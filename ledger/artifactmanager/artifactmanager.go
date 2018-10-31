@@ -144,13 +144,13 @@ func (m *LedgerArtifactManager) GetObject(
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
 // be returned.
 func (m *LedgerArtifactManager) GetDelegate(
-	ctx context.Context, head, asClass core.RecordRef,
+	ctx context.Context, head, asType core.RecordRef,
 ) (*core.RecordRef, error) {
 	genericReact, err := m.messageBus.Send(
 		context.TODO(),
 		&message.GetDelegate{
-			Head:    head,
-			AsClass: asClass,
+			Head:   head,
+			AsType: asType,
 		},
 	)
 
@@ -403,13 +403,13 @@ func (m *LedgerArtifactManager) activateObject(
 
 	var (
 		prevChild *core.RecordID
-		asClass   *core.RecordRef
+		asType    *core.RecordRef
 	)
 	if parentDesc.ChildPointer() != nil {
 		prevChild = parentDesc.ChildPointer()
 	}
 	if asDelegate {
-		asClass = &prototype
+		asType = &prototype
 	}
 	_, err = m.registerChild(
 		&record.ChildRecord{
@@ -418,7 +418,7 @@ func (m *LedgerArtifactManager) activateObject(
 		},
 		parent,
 		object,
-		asClass,
+		asType,
 	)
 	if err != nil {
 		return nil, err
@@ -538,27 +538,6 @@ func (m *LedgerArtifactManager) setBlob(blob []byte, target core.RecordRef) (*co
 	return &react.ID, nil
 }
 
-func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.RecordRef) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(
-		context.TODO(),
-		&message.UpdateClass{
-			Record: record.SerializeRecord(rec),
-			Class:  class,
-		},
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	react, ok := genericReact.(*reply.ID)
-	if !ok {
-		return nil, ErrUnexpectedReply
-	}
-
-	return &react.ID, nil
-}
-
 func (m *LedgerArtifactManager) sendUpdateObject(
 	rec record.Record, object core.RecordRef, memory []byte,
 ) (*reply.Object, error) {
@@ -613,14 +592,14 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 }
 
 func (m *LedgerArtifactManager) registerChild(
-	rec record.Record, parent, child core.RecordRef, asClass *core.RecordRef,
+	rec record.Record, parent, child core.RecordRef, asType *core.RecordRef,
 ) (*core.RecordID, error) {
 	genericReact, err := m.messageBus.Send(context.TODO(),
 		&message.RegisterChild{
-			Record:  record.SerializeRecord(rec),
-			Parent:  parent,
-			Child:   child,
-			AsClass: asClass,
+			Record: record.SerializeRecord(rec),
+			Parent: parent,
+			Child:  child,
+			AsType: asType,
 		},
 	)
 

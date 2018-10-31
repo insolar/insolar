@@ -184,7 +184,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 		return nil, err
 	}
 
-	delegateRef, ok := idx.Delegates[msg.AsClass]
+	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
 		return nil, ErrNotFound
 	}
@@ -319,8 +319,8 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 			return err
 		}
 		idx.ChildPointer = child
-		if msg.AsClass != nil {
-			idx.Delegates[*msg.AsClass] = msg.Child
+		if msg.AsType != nil {
+			idx.Delegates[*msg.AsType] = msg.Child
 		}
 		err = tx.SetObjectIndex(msg.Parent.Record(), idx)
 		if err != nil {
