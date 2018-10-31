@@ -91,7 +91,7 @@ func (eq *ExpiryQueue) startExpirationProcessing() {
 					break
 				}
 				elem := e.Value.(*Item)
-				sleepTime = elem.expireAt.Sub(time.Now())
+				sleepTime = time.Until(elem.expireAt)
 				if sleepTime <= 0 {
 					eq.items.Remove(e)
 				} else {
