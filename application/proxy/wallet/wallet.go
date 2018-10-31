@@ -43,8 +43,8 @@ func GetObject(ref core.RecordRef) (r *Wallet) {
 	return &Wallet{Reference: ref}
 }
 
-// GetClass returns reference to the class
-func GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func GetPrototype() core.RecordRef {
 	return ClassReference
 }
 
@@ -76,8 +76,8 @@ func (r *Wallet) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass returns reference to the class
-func (r *Wallet) GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func (r *Wallet) GetPrototype() core.RecordRef {
 	return ClassReference
 }
 
