@@ -193,13 +193,19 @@ func (db *DB) Set(key, value []byte) error {
 }
 
 func (db *DB) GetBlob(id *core.RecordID) ([]byte, error) {
-	tx := db.BeginTransaction(false)
-	defer tx.Discard()
-	rec, err := tx.GetBlob(id)
+	var (
+		blob []byte
+		err  error
+	)
+
+	err = db.View(func(tx *TransactionManager) error {
+		blob, err = tx.GetBlob(id)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
-	return rec, nil
+	return blob, nil
 }
 
 func (db *DB) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
