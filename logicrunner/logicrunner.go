@@ -288,18 +288,26 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't get object")
 	}
-
-	classDesc, err := lr.ArtifactManager.GetClass(ctx, *objDesc.Class(), nil)
+	protoRef, err := objDesc.Prototype()
+	if err != nil {
+		return errors.Wrap(err, "couldn't get prototype reference")
+	}
+	protoDesc, err := lr.ArtifactManager.GetObject(ctx, *protoRef, nil, false)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get object's class")
 	}
-
-	codeDesc := classDesc.CodeDescriptor()
-
+	codeRef, err := protoDesc.Code()
+	if err != nil {
+		return errors.Wrap(err, "couldn't get code reference")
+	}
+	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
+	if err != nil {
+		return errors.Wrap(err, "couldn't get code")
+	}
 	es.objectbody = &ObjectBody{
 		objDescriptor:   objDesc,
 		Object:          objDesc.Memory(),
-		ClassHeadRef:    classDesc.HeadRef(),
+		ClassHeadRef:    protoDesc.HeadRef(),
 		CodeMachineType: codeDesc.MachineType(),
 		CodeRef:         codeDesc.Ref(),
 	}
@@ -327,7 +335,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	es.callContext.Class = es.objectbody.ClassHeadRef
+	es.callContext.Prototype = es.objectbody.ClassHeadRef
 	vb.ModifyContext(es.callContext)
 
 	executor, err := lr.GetExecutor(es.objectbody.CodeMachineType)
@@ -400,13 +408,20 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	defer func() {
 		es.Unlock()
 	}()
-	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
+	protoDesc, err := lr.ArtifactManager.GetObject(insctx, m.PrototypeRef, nil, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get class")
+		return nil, errors.Wrap(err, "couldn't get prototype")
 	}
-	es.callContext.Class = classDesc.HeadRef()
+	es.callContext.Prototype = protoDesc.HeadRef()
 
-	codeDesc := classDesc.CodeDescriptor()
+	codeRef, err := protoDesc.Code()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't code reference")
+	}
+	codeDesc, err := lr.ArtifactManager.GetCode(insctx, *codeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't code")
+	}
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "no executer registered")
@@ -422,7 +437,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
 				insctx,
-				Ref{}, *es.request, m.ClassRef, m.ParentRef, m.SaveAs == message.Delegate, newData,
+				Ref{}, *es.request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 			)
 		}
 		vb.End(m.GetReference(), core.CaseRecord{

@@ -60,37 +60,6 @@ func TestDB_SetRecord(t *testing.T) {
 	assert.Equalf(t, err, storage.ErrOverride, "records override should be forbidden")
 }
 
-func TestDB_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
-	defer cleaner()
-
-	idx, err := db.GetClassIndex(core.NewRecordID(1, nil), false)
-	assert.Equal(t, err, storage.ErrNotFound)
-	assert.Nil(t, idx)
-}
-
-func TestDB_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
-	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
-	defer cleaner()
-
-	idgen := func() core.RecordID {
-		return *core.NewRecordID(0, randhash())
-	}
-	latestRef := idgen()
-	idx := index.ClassLifeline{
-		LatestState: &latestRef,
-	}
-	zeroID := core.NewRecordID(0, hexhash("122444"))
-	err := db.SetClassIndex(zeroID, &idx)
-	assert.Nil(t, err)
-
-	storedIndex, err := db.GetClassIndex(zeroID, false)
-	assert.NoError(t, err)
-	assert.Equal(t, *storedIndex, idx)
-}
-
 func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
@@ -107,7 +76,6 @@ func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
-		ClassRef:    referenceWithHashes("50", "60"),
 		LatestState: core.NewRecordID(0, hexhash("20")),
 	}
 	zeroid := core.NewRecordID(0, hexhash(""))
@@ -142,10 +110,11 @@ func TestDB_CreateDrop(t *testing.T) {
 	for i := 1; i < 4; i++ {
 		setRecordMessage := message.SetRecord{
 			Record: record.SerializeRecord(&record.CodeRecord{
-				Code: []byte{byte(i)},
+				Code: record.CalculateIDForBlob(pulse, []byte{byte(i)}),
 			}),
 		}
 		db.SetMessage(pulse, &setRecordMessage)
+		db.SetBlob(pulse, []byte{byte(i)})
 	}
 
 	drop, messages, err := db.CreateDrop(pulse, []byte{4, 5, 6})
