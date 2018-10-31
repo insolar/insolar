@@ -95,11 +95,11 @@ type ArtifactManager interface {
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
 
-	// GetDelegate returns provided object's delegate reference for provided class.
+	// GetDelegate returns provided object's delegate reference for provided type.
 	//
 	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
 	// be returned.
-	GetDelegate(ctx context.Context, head, asClass RecordRef) (*RecordRef, error)
+	GetDelegate(ctx context.Context, head, asType RecordRef) (*RecordRef, error)
 
 	// GetChildren returns children iterator.
 	//
@@ -113,7 +113,7 @@ type ArtifactManager interface {
 
 	// DeployCode creates new code record in storage.
 	//
-	// CodeRef records are used to activate class or as migration code for an object.
+	// CodeRef records are used to activate prototype.
 	DeployCode(ctx context.Context, domain, request RecordRef, code []byte, machineType MachineType) (*RecordID, error)
 
 	ActivatePrototype(
@@ -122,8 +122,8 @@ type ArtifactManager interface {
 		memory []byte,
 	) (ObjectDescriptor, error)
 
-	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's
-	// class. If memory is not provided, the class default memory will be used.
+	// ActivateObject creates activate object record in storage. If memory is not provided, the prototype default
+	// memory will be used.
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(

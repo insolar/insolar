@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CodeRef is code from storage.
+// Code is code from storage.
 type Code struct {
 	Code        []byte
 	MachineType core.MachineType

@@ -51,7 +51,7 @@ func (e *SetRecord) Target() *core.RecordRef {
 	return &e.TargetRef
 }
 
-// GetImage retrieves code from storage.
+// GetCode retrieves code from storage.
 type GetCode struct {
 	ledgerMessage
 	Code core.RecordRef

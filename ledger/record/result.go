@@ -125,7 +125,7 @@ func (r *ObjectStateRecord) GetIsPrototype() bool {
 	return r.IsPrototype
 }
 
-// ObjectActivateRecord is produced when we instantiate new object from an available class.
+// ObjectActivateRecord is produced when we instantiate new object from an available prototype.
 type ObjectActivateRecord struct {
 	SideEffectRecord
 	ObjectStateRecord
