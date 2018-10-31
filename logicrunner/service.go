@@ -63,7 +63,7 @@ type RPC struct {
 	lr *LogicRunner
 }
 
-// GetCode is an RPC retrieving a code by its reference
+// GetImage is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.lr.ArtifactManager
 	insctx := context.TODO()
@@ -157,7 +157,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 	msg := &message.CallConstructor{
 		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		ClassRef:         req.Class,
+		PrototypeRef:     req.Prototype,
 		ParentRef:        req.Parent,
 		Name:             req.ConstructorName,
 		Arguments:        req.ArgsSerialized,
@@ -211,15 +211,17 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 		}
 		o, err := am.GetObject(ctx, *r, nil, false)
 		if err != nil {
-			// TODO: we should detect deactivated objects
-			continue
+			if err == core.ErrDeactivated {
+				continue
+			}
+			return errors.Wrap(err, "[ GetObjChildren ] Can't get Next")
 		}
-		cd, err := am.GetClass(ctx, *o.Class(), nil)
+		protoRef, err := o.Prototype()
 		if err != nil {
-			return errors.Wrap(err, "Have ref, have no object")
+			return errors.Wrap(err, "[ GetObjChildren ] Can't get prototype reference")
 		}
-		ref := cd.HeadRef()
-		if ref.Equal(req.Class) {
+
+		if protoRef.Equal(req.Prototype) {
 			rep.Children = append(rep.Children, *r)
 		}
 	}
@@ -249,7 +251,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 
 	msg := &message.CallConstructor{
 		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		ClassRef:         req.Class,
+		PrototypeRef:     req.Prototype,
 		ParentRef:        req.Into,
 		Name:             req.ConstructorName,
 		Arguments:        req.ArgsSerialized,

@@ -262,9 +262,9 @@ func (lr *LogicRunner) pulse() *core.Pulse {
 }
 
 type ObjectBody struct {
-	Object core.ObjectDescriptor
-	Class  core.ClassDescriptor
-	Code   core.CodeDescriptor
+	Object    core.ObjectDescriptor
+	Prototype core.ObjectDescriptor
+	Code      core.CodeDescriptor
 }
 
 func init() {
@@ -289,17 +289,26 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*ObjectBody, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
-
-	classDesc, err := lr.ArtifactManager.GetClass(ctx, *objDesc.Class(), nil)
+	protoRef, err := objDesc.Prototype()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get prototype reference")
+	}
+	protoDesc, err := lr.ArtifactManager.GetObject(ctx, *protoRef, nil, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
-
-	codeDesc := classDesc.CodeDescriptor()
+	codeRef, err := protoDesc.Code()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get code reference")
+	}
+	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get code")
+	}
 	ob := &ObjectBody{
-		Object: objDesc,
-		Class:  classDesc,
-		Code:   codeDesc,
+		Object:    objDesc,
+		Prototype: protoDesc,
+		Code:      codeDesc,
 	}
 	lr.addObjectCaseRecord(objref, core.CaseRecord{
 		Type:   core.CaseRecordTypeGetObject,
@@ -321,7 +330,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 	}
 
 	ctx.Callee = &m.ObjectRef
-	ctx.Class = objbody.Class.HeadRef()
+	ctx.Prototype = objbody.Prototype.HeadRef()
 	vb.ModifyContext(&ctx)
 
 	executor, err := lr.GetExecutor(objbody.Code.MachineType())
@@ -379,13 +388,20 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
 	insctx := context.TODO()
-	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
+	protoDesc, err := lr.ArtifactManager.GetObject(insctx, m.PrototypeRef, nil, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get class")
+		return nil, errors.Wrap(err, "couldn't get prototype")
 	}
-	ctx.Class = classDesc.HeadRef()
+	ctx.Prototype = protoDesc.HeadRef()
 
-	codeDesc := classDesc.CodeDescriptor()
+	codeRef, err := protoDesc.Code()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't code reference")
+	}
+	codeDesc, err := lr.ArtifactManager.GetCode(insctx, *codeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't code")
+	}
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "no executer registered")
@@ -401,10 +417,10 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
 				insctx,
-				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, m.SaveAs == message.Delegate, newData,
+				Ref{}, *ctx.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 			)
 		}
-		vb.End(m.ClassRef, core.CaseRecord{
+		vb.End(m.PrototypeRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
 			Resp: &reply.CallConstructor{Object: ctx.Request},
 		})

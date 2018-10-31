@@ -61,14 +61,14 @@ type UpBaseReq struct {
 // UpRespIface interface for UpBaseReq descendant responses
 type UpRespIface interface{}
 
-// UpGetCodeReq is a set of arguments for GetCode RPC in goplugin
+// UpGetCodeReq is a set of arguments for GetImage RPC in goplugin
 type UpGetCodeReq struct {
 	UpBaseReq
 	MType core.MachineType
 	Code  core.RecordRef
 }
 
-// UpGetCodeResp is response from GetCode RPC in goplugin
+// UpGetCodeResp is response from GetImage RPC in goplugin
 type UpGetCodeResp struct {
 	Code []byte
 }
@@ -91,7 +91,7 @@ type UpRouteResp struct {
 type UpSaveAsChildReq struct {
 	UpBaseReq
 	Parent          core.RecordRef
-	Class           core.RecordRef
+	Prototype       core.RecordRef
 	ConstructorName string
 	ArgsSerialized  []byte
 }
@@ -104,8 +104,8 @@ type UpSaveAsChildResp struct {
 // UpGetObjChildrenReq is a set of arguments for GetObjChildren RPC in goplugin
 type UpGetObjChildrenReq struct {
 	UpBaseReq
-	Obj   core.RecordRef
-	Class core.RecordRef
+	Obj       core.RecordRef
+	Prototype core.RecordRef
 }
 
 // UpGetObjChildrenResp is response from GetObjChildren RPC in goplugin
@@ -117,7 +117,7 @@ type UpGetObjChildrenResp struct {
 type UpSaveAsDelegateReq struct {
 	UpBaseReq
 	Into            core.RecordRef
-	Class           core.RecordRef
+	Prototype       core.RecordRef
 	ConstructorName string
 	ArgsSerialized  []byte
 }
