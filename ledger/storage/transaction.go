@@ -116,10 +116,7 @@ func (m *TransactionManager) GetBlob(id *core.RecordID) ([]byte, error) {
 }
 
 func (m *TransactionManager) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
-	id, err := record.CalculateIDForBlob(pulseNumber, blob)
-	if err != nil {
-		return nil, err
-	}
+	id := record.CalculateIDForBlob(pulseNumber, blob)
 	k := prefixkey(scopeIDBlob, id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
