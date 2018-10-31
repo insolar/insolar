@@ -70,8 +70,7 @@ func (t *utpTransport) Stop() {
 	defer t.mutex.Unlock()
 
 	log.Info("Stop UTP transport")
-	t.disconnectStarted <- true
-	close(t.disconnectStarted)
+	t.prepareDisconnect()
 
 	err := t.socket.CloseNow()
 	if err != nil {

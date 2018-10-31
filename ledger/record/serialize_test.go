@@ -37,10 +37,8 @@ var type2idTests = []struct {
 	{"CallRequest", &CallRequest{}, typeCallRequest},
 
 	// result records
-	{"ClassActivateRecord", &ClassActivateRecord{}, typeClassActivate},
 	{"ObjectActivateRecord", &ObjectActivateRecord{}, typeObjectActivate},
 	{"CodeRecord", &CodeRecord{}, typeCode},
-	{"ClassAmendRecord", &ClassAmendRecord{}, typeClassAmend},
 	{"DeactivationRecord", &DeactivationRecord{}, typeDeactivate},
 	{"ObjectAmendRecord", &ObjectAmendRecord{}, typeObjectAmend},
 	{"TypeRecord", &TypeRecord{}, typeType},

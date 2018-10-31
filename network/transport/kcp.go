@@ -56,7 +56,7 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 
 // Start starts networking.
 func (t *kcpTransport) Start() error {
-	log.Info("Stop KCP transport")
+	log.Info("Start KCP transport")
 	for {
 		if session, err := t.listener.AcceptKCP(); err == nil {
 			go t.handleAcceptedConnection(session)
@@ -78,8 +78,7 @@ func (t *kcpTransport) Stop() {
 		log.Errorln("Failed to close socket:", err.Error())
 	}
 
-	t.disconnectStarted <- true
-	close(t.disconnectStarted)
+	t.prepareDisconnect()
 }
 
 func (t *kcpTransport) socketDialTimeout(addr string, timeout time.Duration) (*kcp.UDPSession, error) {

@@ -67,23 +67,6 @@ func (e *GetCode) Target() *core.RecordRef {
 	return &e.Code
 }
 
-// GetClass retrieves class from storage.
-type GetClass struct {
-	ledgerMessage
-	Head  core.RecordRef
-	State *core.RecordID // If nil, will fetch the latest state.
-}
-
-// Type implementation of Message interface.
-func (e *GetClass) Type() core.MessageType {
-	return core.TypeGetClass
-}
-
-// Target implementation of Message interface.
-func (e *GetClass) Target() *core.RecordRef {
-	return &e.Head
-}
-
 // GetObject retrieves object from storage.
 type GetObject struct {
 	ledgerMessage
@@ -102,11 +85,11 @@ func (e *GetObject) Target() *core.RecordRef {
 	return &e.Head
 }
 
-// GetDelegate retrieves object represented as provided class.
+// GetDelegate retrieves object represented as provided type.
 type GetDelegate struct {
 	ledgerMessage
-	Head    core.RecordRef
-	AsClass core.RecordRef
+	Head   core.RecordRef
+	AsType core.RecordRef
 }
 
 // Type implementation of Message interface.
@@ -119,30 +102,11 @@ func (e *GetDelegate) Target() *core.RecordRef {
 	return &e.Head
 }
 
-// UpdateClass amends class.
-type UpdateClass struct {
-	ledgerMessage
-
-	Record []byte
-	Class  core.RecordRef
-}
-
-// Type implementation of Message interface.
-func (e *UpdateClass) Type() core.MessageType {
-	return core.TypeUpdateClass
-}
-
-// Target implementation of Message interface.
-func (e *UpdateClass) Target() *core.RecordRef {
-	return &e.Class
-}
-
 // UpdateObject amends object.
 type UpdateObject struct {
 	ledgerMessage
 
 	Record []byte
-	Class  *core.RecordRef // Only used for activation.
 	Object core.RecordRef
 }
 
@@ -159,10 +123,10 @@ func (e *UpdateObject) Target() *core.RecordRef {
 // RegisterChild amends object.
 type RegisterChild struct {
 	ledgerMessage
-	Record  []byte
-	Parent  core.RecordRef
-	Child   core.RecordRef
-	AsClass *core.RecordRef // If not nil, considered as delegate.
+	Record []byte
+	Parent core.RecordRef
+	Child  core.RecordRef
+	AsType *core.RecordRef // If not nil, considered as delegate.
 }
 
 // Type implementation of Message interface.

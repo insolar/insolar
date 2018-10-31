@@ -211,12 +211,12 @@ func (r *One) Hello(s string) (string, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return "", err
+		return "1", err
 	}
 
 	res, err := friend.Hello(s)
 	if err != nil {
-		return "", err
+		return "2", err
 	}
 	
 	r.Friend = friend.GetReference()
@@ -274,8 +274,8 @@ func (r *Two) Hello(s string) (string, error) {
 	_, err = am.ActivateObject(
 		ctx,
 		core.RecordRef{}, *obj,
-		*cb.Classes["one"],
 		*am.GenesisRef(),
+		*cb.Prototypes["one"],
 		false,
 		goplugintestutils.CBORMarshal(t, &struct{}{}),
 	)
@@ -434,8 +434,8 @@ func (r *Two) Hello(s string) (string, error) {
 	_, err = am.ActivateObject(
 		ctx,
 		core.RecordRef{}, *obj,
-		*cb.Classes["one"],
 		*am.GenesisRef(),
+		*cb.Prototypes["one"],
 		false,
 		data,
 	)
@@ -544,8 +544,8 @@ func (r *Two) Hello() (string, error) {
 		ctx,
 		core.RecordRef{},
 		*obj,
-		*cb.Classes["one"],
 		*am.GenesisRef(),
+		*cb.Prototypes["one"],
 		false,
 		goplugintestutils.CBORMarshal(t, &struct{}{}),
 	)
@@ -580,7 +580,7 @@ type One struct {
 }
 
 func (r *One) Hello() (string, error) {
-	return r.GetClass().String(), nil
+	return r.GetPrototype().String(), nil
 }
 `
 	lr, _, cb, _, cleaner := PrepareLrAmCbPm(t)
@@ -594,13 +594,13 @@ func (r *One) Hello() (string, error) {
 	assert.NoError(t, err)
 
 	_, res, err := gp.CallMethod(
-		&core.LogicCallContext{Class: cb.Classes["one"]}, *cb.Codes["one"],
+		&core.LogicCallContext{Prototype: cb.Prototypes["one"]}, *cb.Codes["one"],
 		data, "Hello", argsSerialized,
 	)
 	assert.NoError(t, err)
 
 	resParsed := goplugintestutils.CBORUnMarshalToSlice(t, res)
-	assert.Equal(t, cb.Classes["one"].String(), resParsed[0])
+	assert.Equal(t, cb.Prototypes["one"].String(), resParsed[0])
 }
 
 func TestDeactivation(t *testing.T) {
@@ -634,8 +634,8 @@ func (r *One) Kill() error {
 	_, err = am.ActivateObject(
 		ctx,
 		core.RecordRef{}, *obj,
-		*cb.Classes["one"],
 		*am.GenesisRef(),
+		*cb.Prototypes["one"],
 		false,
 		goplugintestutils.CBORMarshal(t, &struct{}{}),
 	)
@@ -689,8 +689,8 @@ func (r *One) NotPanic() error {
 	_, err = am.ActivateObject(
 		ctx,
 		core.RecordRef{}, *obj,
-		*cb.Classes["one"],
 		*am.GenesisRef(),
+		*cb.Prototypes["one"],
 		false,
 		goplugintestutils.CBORMarshal(t, &struct{}{}),
 	)
@@ -748,7 +748,7 @@ func (c *Contract) NewChilds(cnt int) (int, error) {
 
 func (c *Contract) SumChilds() (int, error) {
 	s := 0
-	childs, err := c.GetChildrenTyped(child.GetClass())
+	childs, err := c.GetChildrenTyped(child.GetPrototype())
 	if err != nil {
 		return 0, err
 	}
@@ -764,7 +764,7 @@ func (c *Contract) SumChilds() (int, error) {
 }
 
 func (c *Contract) GetChildRefs() (ret []string, err error) {
-	childs, err := c.GetChildrenTyped(child.GetClass())
+	childs, err := c.GetChildrenTyped(child.GetPrototype())
 	if err != nil {
 		return nil, err
 	}
@@ -803,10 +803,18 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
+	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), false, goplugintestutils.CBORMarshal(t, nil))
+	_, err = am.ActivateObject(
+		ctx,
+		domain,
+		*contract,
+		*am.GenesisRef(),
+		*cb.Prototypes["contract"],
+		false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -875,11 +883,16 @@ func (c *Contract) Rand() (int, error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
+	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
-		ctx, domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), false,
+		ctx,
+		domain,
+		*contract,
+		*am.GenesisRef(),
+		*cb.Prototypes["contract"],
+		false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
@@ -979,7 +992,12 @@ func (r *Two) NoError() error {
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
-		ctx, domain, *contract, *cb.Classes["one"], *am.GenesisRef(), false,
+		ctx,
+		domain,
+		*contract,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
@@ -1082,7 +1100,12 @@ func (r *Two) Hello() (*string, error) {
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
-		ctx, domain, *contract, *cb.Classes["one"], *am.GenesisRef(), false,
+		ctx,
+		domain,
+		*contract,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
@@ -1188,7 +1211,12 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
-		ctx, core.RecordRef{}, *rootDomainRef, *cb.Classes["rootdomain"], *am.GenesisRef(), false,
+		ctx,
+		core.RecordRef{},
+		*rootDomainRef,
+		*am.GenesisRef(),
+		*cb.Prototypes["rootdomain"],
+		false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
@@ -1208,7 +1236,12 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = am.ActivateObject(
-		ctx, core.RecordRef{}, *rootMemberRef, *cb.Classes["member"], *rootDomainRef, false,
+		ctx,
+		core.RecordRef{},
+		*rootMemberRef,
+		*rootDomainRef,
+		*cb.Prototypes["member"],
+		false,
 		goplugintestutils.CBORMarshal(t, m),
 	)
 	assert.NoError(t, err)
@@ -1280,7 +1313,7 @@ func (c *Contract) NewChilds(cnt int) (int, error) {
 
 func (c *Contract) SumChilds() (int, error) {
 	s := 0
-	childs, err := c.GetChildrenTyped(child.GetClass())
+	childs, err := c.GetChildrenTyped(child.GetImage())
 	if err != nil {
 		return 0, err
 	}
@@ -1296,7 +1329,7 @@ func (c *Contract) SumChilds() (int, error) {
 }
 
 func (c *Contract) GetChildRefs() (ret []string, err error) {
-	childs, err := c.GetChildrenTyped(child.GetClass())
+	childs, err := c.GetChildrenTyped(child.GetImage())
 	if err != nil {
 		return nil, err
 	}
@@ -1333,11 +1366,16 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
+	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
-		ctx, domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), false,
+		ctx,
+		domain,
+		*contract,
+		*am.GenesisRef(),
+		*cb.Prototypes["contract"],
+		false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
@@ -1452,7 +1490,12 @@ func (r *Two) Hello() (*string, error) {
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
-		ctx, domain, *contract, *cb.Classes["one"], *am.GenesisRef(), false,
+		ctx,
+		domain,
+		*contract,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")

@@ -49,8 +49,8 @@ func GetObject(ref core.RecordRef) (r *NodeRecord) {
 	return &NodeRecord{Reference: ref}
 }
 
-// GetClass returns reference to the class
-func GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func GetPrototype() core.RecordRef {
 	return ClassReference
 }
 
@@ -84,8 +84,8 @@ func (r *NodeRecord) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass returns reference to the class
-func (r *NodeRecord) GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func (r *NodeRecord) GetPrototype() core.RecordRef {
 	return ClassReference
 }
 

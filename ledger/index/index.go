@@ -21,15 +21,8 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 )
 
-// ClassLifeline represents meta information for record object
-type ClassLifeline struct {
-	LatestState *core.RecordID // Amend or activate record
-	State       record.State
-}
-
 // ObjectLifeline represents meta information for record object.
 type ObjectLifeline struct {
-	ClassRef            core.RecordRef
 	LatestState         *core.RecordID // Amend or activate record.
 	LatestStateApproved *core.RecordID // State approved by VM.
 	ChildPointer        *core.RecordID // Meta record about child activation.

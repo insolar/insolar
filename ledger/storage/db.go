@@ -272,25 +272,6 @@ func (db *DB) SetRecordBinary(key, rec []byte) error {
 	return db.Set(prefixkey(scopeIDRecord, key), rec)
 }
 
-// GetClassIndex wraps matching transaction manager method.
-func (db *DB) GetClassIndex(id *core.RecordID, forupdate bool) (*index.ClassLifeline, error) {
-	tx := db.BeginTransaction(forupdate)
-	defer tx.Discard()
-
-	idx, err := tx.GetClassIndex(id, false)
-	if err != nil {
-		return nil, err
-	}
-	return idx, nil
-}
-
-// SetClassIndex wraps matching transaction manager method.
-func (db *DB) SetClassIndex(id *core.RecordID, idx *index.ClassLifeline) error {
-	return db.Update(func(tx *TransactionManager) error {
-		return tx.SetClassIndex(id, idx)
-	})
-}
-
 // GetObjectIndex wraps matching transaction manager method.
 func (db *DB) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)

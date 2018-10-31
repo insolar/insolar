@@ -45,8 +45,6 @@ const (
 
 	// TypeCode is code from storage.
 	TypeCode
-	// TypeClass is class from storage.
-	TypeClass
 	// TypeObject is object from storage.
 	TypeObject
 	// TypeDelegate is delegate reference from storage.
@@ -74,8 +72,6 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &CallConstructor{}, nil
 	case TypeCode:
 		return &Code{}, nil
-	case TypeClass:
-		return &Class{}, nil
 	case TypeObject:
 		return &Object{}, nil
 	case TypeDelegate:
@@ -127,7 +123,6 @@ func init() {
 	gob.Register(&CallMethod{})
 	gob.Register(&CallConstructor{})
 	gob.Register(&Code{})
-	gob.Register(&Class{})
 	gob.Register(&Object{})
 	gob.Register(&Delegate{})
 	gob.Register(&ID{})
