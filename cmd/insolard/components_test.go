@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -33,4 +34,11 @@ func TestInitComponents(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, cm)
 	assert.NotNil(t, repl)
+
+	ctx := context.Background()
+	err = cm.Start(ctx)
+	assert.NoError(t, err)
+
+	err = cm.Stop(ctx)
+	assert.NoError(t, err)
 }
