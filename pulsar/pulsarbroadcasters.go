@@ -216,7 +216,8 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 }
 
 func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
-	inslogger.FromContext(ctx).Debug("[sendPulseToNodesAndPulsars]. Pulse - %v", time.Now())
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[sendPulseToNodesAndPulsars]. Pulse - %v", time.Now())
 
 	if currentPulsar.IsStateFailed() {
 		return
@@ -231,13 +232,15 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	}
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
-	pulsarHost, t, err := currentPulsar.prepareForSendingPulse()
+	logger.Debug("Start a process of sending pulse")
+	pulsarHost, t, err := currentPulsar.prepareForSendingPulse(ctx)
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
 	go func() {
+		logger.Debug("Before sending to network")
 		currentPulsar.sendPulseToNetwork(pulsarHost, t, pulseForSending)
 		defer func() {
 			go t.Stop()
@@ -260,8 +263,10 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
 }
 
-func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t transport.Transport, err error) {
+func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsarHost *host.Host, t transport.Transport, err error) {
+	logger := inslogger.FromContext(ctx)
 
+	logger.Debug("New transport creation")
 	t, err = transport.NewTransport(currentPulsar.Config.BootstrapListener, relay.NewProxy())
 	if err != nil {
 		return
@@ -270,7 +275,7 @@ func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t 
 	go func() {
 		err = t.Start()
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 	}()
 
@@ -278,6 +283,7 @@ func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t 
 		return
 	}
 
+	logger.Debug("Init output port")
 	pulsarHostAddress, err := host.NewAddress(currentPulsar.Config.BootstrapListener.Address)
 	if err != nil {
 		return
@@ -288,20 +294,22 @@ func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t 
 	}
 	pulsarHost = host.NewHost(pulsarHostAddress)
 	pulsarHost.ID = pulsarHostID
+	logger.Debug("Network is ready")
 
 	return
 }
 
-func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
+func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
+	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {
-			log.Fatalf("run time panic: %v", x)
+			logger.Fatalf("run time panic: %v", x)
 		}
 	}()
 	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
 		receiverAddress, err := host.NewAddress(bootstrapNode)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			continue
 		}
 		receiverHost := host.NewHost(receiverAddress)
@@ -310,7 +318,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 		pingPacket := packet.NewPingPacket(pulsarHost, receiverHost)
 		pingCall, err := t.SendRequest(pingPacket)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			continue
 		}
 		pingResult := <-pingCall.Result()
@@ -321,24 +329,24 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 
 		call, err := t.SendRequest(request)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			continue
 		}
 		result := <-call.Result()
 		if result.Error != nil {
-			log.Error(result.Error)
+			logger.Error(result.Error)
 			continue
 		}
 		body := result.Data.(*packet.ResponseGetRandomHosts)
 		if len(body.Error) != 0 {
-			log.Error(body.Error)
+			logger.Error(body.Error)
 			continue
 		}
 
 		if body.Hosts == nil || len(body.Hosts) == 0 {
 			err := sendPulseToHost(pulsarHost, t, receiverHost, &pulse)
 			if err != nil {
-				log.Error(err)
+				logger.Error(err)
 			}
 			continue
 		}

@@ -58,6 +58,7 @@ func main() {
 	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
+	time.Sleep(8 * time.Minute)
 	fmt.Println("Press any button to exit")
 	rl, err := readline.New("")
 	if err != nil {
@@ -85,7 +86,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
-	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
+	cert, err := certificate.NewCertificatesWithKeys("scripts/insolard/configs/pulsar_keys.json")
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
