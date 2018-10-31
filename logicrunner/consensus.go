@@ -95,12 +95,16 @@ func (c *Consensus) CheckReady(ctx context.Context) {
 			stepsSame = r.Steps
 		}
 	}
+	var err error
 	if maxSame < c.Need && c.Total == c.Have {
 		c.ready = true
-		c.lr.ArtifactManager.RegisterValidation(ctx, c.GetReference(), *c.FindRequestBefore(stepsSame), false, c.GetValidatorSignatures())
+		err = c.lr.ArtifactManager.RegisterValidation(ctx, c.GetReference(), *c.FindRequestBefore(stepsSame), false, c.GetValidatorSignatures())
 	} else if maxSame >= c.Need && stepsSame == len(c.CaseRecords) {
 		c.ready = true
-		c.lr.ArtifactManager.RegisterValidation(ctx, c.GetReference(), *c.FindRequestBefore(stepsSame), true, c.GetValidatorSignatures())
+		err = c.lr.ArtifactManager.RegisterValidation(ctx, c.GetReference(), *c.FindRequestBefore(stepsSame), true, c.GetValidatorSignatures())
+	}
+	if err != nil {
+		panic(err)
 	}
 }
 
