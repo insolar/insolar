@@ -1475,5 +1475,5 @@ func (r *Two) Hello() (*string, error) {
 	err = signer.UnmarshalParams(resp.(*reply.CallMethod).Result, &result, &contractErr)
 	assert.NoError(t, err, "unmarshal answer")
 	assert.NotNil(t, contractErr)
-	assert.Contains(t, contractErr.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Contractor returns nil")
+	assert.Contains(t, contractErr.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil")
 }
