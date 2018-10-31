@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
+	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
@@ -86,6 +87,8 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 		return m.dumpUserInfoCall(rootDomain, params)
 	case "DumpAllUsers":
 		return m.dumpAllUsersCall(rootDomain)
+	case "RegisterNode":
+		return m.RegisterNodeCall(rootDomain, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -155,4 +158,29 @@ func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{
 func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(ref)
 	return rootDomain.DumpAllUsers()
+}
+
+func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
+	var publicKey string
+	var numberOfBootstrapNodes int
+	var majorityRule int
+	var roles []string
+	var ip string
+	if err := signer.UnmarshalParams(params, &publicKey, &numberOfBootstrapNodes, &majorityRule, &roles, &ip); err != nil {
+		return nil, fmt.Errorf("[ registerNodeCall ] Can't unmarshal params: %s", err.Error())
+	}
+
+	rootDomain := rootdomain.GetObject(ref)
+	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
+	if err != nil {
+		return nil, fmt.Errorf("[ registerNodeCall ] %s", err.Error())
+	}
+
+	nd := nodedomain.GetObject(nodeDomainRef)
+	cert, err := nd.RegisterNode(publicKey, numberOfBootstrapNodes, majorityRule, roles, ip)
+	if err != nil {
+		return nil, fmt.Errorf("[ registerNodeCall ] Problems with RegisterNode: %s", err.Error())
+	}
+
+	return string(cert), nil
 }

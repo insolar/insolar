@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -34,9 +33,9 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	service      core.Network
-	ledger       core.Ledger
-	activeNodes  core.NodeNetwork
+	Service      core.Network     `inject:""`
+	Ledger       core.Ledger      `inject:""`
+	ActiveNodes  core.NodeNetwork `inject:""`
 	handlers     map[core.MessageType]core.MessageHandler
 	queue        *ExpiryQueue
 	signmessages bool
@@ -51,12 +50,9 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 }
 
 // Start initializes message bus
-func (mb *MessageBus) Start(ctx context.Context, c core.Components) error {
-	mb.service = c.Network
-	mb.service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
-	mb.ledger = c.Ledger
-	mb.activeNodes = c.NodeNetwork
-	mb.queue = NewExpiryQueue(10 * time.Second)
+func (mb *MessageBus) Start(ctx context.Context) error {
+	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
+
 	return nil
 }
 
@@ -85,14 +81,14 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Reply` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
-	signedMsg, err := message.NewSignedMessage(msg, mb.service.GetNodeID(), mb.service.GetPrivateKey())
+	signedMsg, err := message.NewSignedMessage(ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey())
 	if err != nil {
 		return nil, err
 	}
 	mb.queue.Push(msg)
 
-	jc := mb.ledger.GetJetCoordinator()
-	pm := mb.ledger.GetPulseManager()
+	jc := mb.Ledger.GetJetCoordinator()
+	pm := mb.Ledger.GetPulseManager()
 	pulse, err := pm.Current()
 	if err != nil {
 		return nil, err
@@ -110,16 +106,16 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mb.service.SendCascadeMessage(cascade, deliverRPCMethodName, signedMsg)
+		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, signedMsg)
 		return nil, err
 	}
 
 	// Short path when sending to self node. Skip serialization
-	if nodes[0].Equal(mb.service.GetNodeID()) {
+	if nodes[0].Equal(mb.Service.GetNodeID()) {
 		return mb.doDeliver(signedMsg)
 	}
 
-	res, err := mb.service.SendMessage(nodes[0], deliverRPCMethodName, signedMsg)
+	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, signedMsg)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +137,8 @@ func (mb *MessageBus) doDeliver(msg core.SignedMessage) (core.Reply, error) {
 		return nil, errors.New("no handler for received message type")
 	}
 
-	resp, err := handler(context.TODO(), msg)
+	ctx := msg.Context(context.Background())
+	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
@@ -160,7 +157,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if mb.signmessages && !msg.IsValid(mb.activeNodes.GetActiveNode(msg.GetSender()).PublicKey) {
+	if mb.signmessages && !msg.IsValid(mb.ActiveNodes.GetActiveNode(msg.GetSender()).PublicKey) {
 		return nil, errors.New("failed to check a message sign")
 	}
 

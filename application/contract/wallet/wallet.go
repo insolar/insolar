@@ -105,7 +105,7 @@ func (w *Wallet) Accept(aRef *core.RecordRef) error {
 // GetTotalBalance gets total balance
 func (w *Wallet) GetTotalBalance() (uint, error) {
 	var totalAllowanced uint
-	crefs, err := w.GetChildrenTyped(allowance.GetClass())
+	crefs, err := w.GetChildrenTyped(allowance.GetPrototype())
 	if err != nil {
 		return 0, fmt.Errorf("[ GetTotalBalance ] Can't get children: %s", err.Error())
 	}
@@ -123,7 +123,7 @@ func (w *Wallet) GetTotalBalance() (uint, error) {
 
 // ReturnAndDeleteExpiredAllowances gets all allowances destroy them and update balance
 func (w *Wallet) ReturnAndDeleteExpiredAllowances() error {
-	crefs, err := w.GetChildrenTyped(allowance.GetClass())
+	crefs, err := w.GetChildrenTyped(allowance.GetPrototype())
 	if err != nil {
 		return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't get children: %s", err.Error())
 	}

@@ -43,8 +43,8 @@ func GetObject(ref core.RecordRef) (r *RootDomain) {
 	return &RootDomain{Reference: ref}
 }
 
-// GetClass returns reference to the class
-func GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func GetPrototype() core.RecordRef {
 	return ClassReference
 }
 
@@ -75,71 +75,9 @@ func (r *RootDomain) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass returns reference to the class
-func (r *RootDomain) GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func (r *RootDomain) GetPrototype() core.RecordRef {
 	return ClassReference
-}
-
-// RegisterNode is proxy generated method
-func (r *RootDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
-	var args [5]interface{}
-	args[0] = publicKey
-	args[1] = numberOfBootstrapNodes
-	args[2] = majorityRule
-	args[3] = roles
-	args[4] = ip
-
-	var argsSerialized []byte
-
-	ret := [2]interface{}{}
-	var ret0 []byte
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, err
-	}
-
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// RegisterNodeNoWait is proxy generated method
-func (r *RootDomain) RegisterNodeNoWait(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) error {
-	var args [5]interface{}
-	args[0] = publicKey
-	args[1] = numberOfBootstrapNodes
-	args[2] = majorityRule
-	args[3] = roles
-	args[4] = ip
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Authorize is proxy generated method

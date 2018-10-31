@@ -21,6 +21,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/ugorji/go/codec"
 )
 
@@ -40,11 +42,9 @@ const (
 	typeResult         TypeID = 30
 	typeType           TypeID = 31
 	typeCode           TypeID = 32
-	typeClassActivate  TypeID = 33
-	typeClassAmend     TypeID = 34
-	typeObjectActivate TypeID = 35
-	typeObjectAmend    TypeID = 36
-	typeDeactivate     TypeID = 37
+	typeObjectActivate TypeID = 33
+	typeObjectAmend    TypeID = 34
+	typeDeactivate     TypeID = 35
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -54,14 +54,10 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 	// request records
 	case typeCallRequest:
 		return &CallRequest{}
-	case typeClassActivate:
-		return &ClassActivateRecord{}
 	case typeObjectActivate:
 		return &ObjectActivateRecord{}
 	case typeCode:
 		return &CodeRecord{}
-	case typeClassAmend:
-		return &ClassAmendRecord{}
 	case typeDeactivate:
 		return &DeactivationRecord{}
 	case typeObjectAmend:
@@ -107,4 +103,14 @@ func DeserializeRecord(buf []byte) Record {
 	rec := getRecordByTypeID(t)
 	dec.MustDecode(&rec)
 	return rec
+}
+
+//CalculateIDForBlob calculate id for blob with using current pulse number
+func CalculateIDForBlob(pulseNumber core.PulseNumber, blob []byte) *core.RecordID {
+	recHash := hash.NewIDHash()
+	_, err := recHash.Write(blob)
+	if err != nil {
+		panic(err)
+	}
+	return core.NewRecordID(pulseNumber, recHash.Sum(nil))
 }

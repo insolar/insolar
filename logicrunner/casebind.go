@@ -46,7 +46,8 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		return 0, errors.New("casebind is empty")
 	}
 	es := lr.UpsertExecution(ref)
-	es.insContext = context.TODO()
+	ctx := context.TODO()
+	es.insContext = ctx
 	es.validate = true
 	es.objectbody = nil
 	err := func() error {
@@ -85,7 +86,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		msg := start.Resp.(core.Message)
-		signed, err := message.NewSignedMessage(msg, ref, lr.Network.GetPrivateKey())
+		signed, err := message.NewSignedMessage(ctx, msg, ref, lr.Network.GetPrivateKey())
 		if err != nil {
 			return 0, errors.New("failed to create a signed message")
 		}
@@ -127,13 +128,11 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMe
 	}
 	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
 	_, err := lr.MessageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.ValidationResults{
-			Caller:           lr.Network.GetNodeID(),
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
-			Error:            validationError,
-			// TODO: INS-663 use signatures here
+			Error:            validationError.Error(),
 		},
 	)
 
@@ -146,7 +145,9 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 	c, _ := lr.GetConsensus(msg.RecordRef)
-	c.AddValidated(msg)
+	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -156,7 +157,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.SignedMes
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 	c, _ := lr.GetConsensus(msg.RecordRef)
-	c.AddExecutor(msg)
+	c.AddExecutor(ctx, inmsg, msg)
 	return nil, nil
 }
 
