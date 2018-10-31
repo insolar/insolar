@@ -43,8 +43,8 @@ func GetObject(ref core.RecordRef) (r *Allowance) {
 	return &Allowance{Reference: ref}
 }
 
-// GetClass returns reference to the class
-func GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func GetPrototype() core.RecordRef {
 	return ClassReference
 }
 
@@ -78,8 +78,8 @@ func (r *Allowance) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass returns reference to the class
-func (r *Allowance) GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func (r *Allowance) GetPrototype() core.RecordRef {
 	return ClassReference
 }
 

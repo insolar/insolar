@@ -43,8 +43,8 @@ func GetObject(ref core.RecordRef) (r *RootDomain) {
 	return &RootDomain{Reference: ref}
 }
 
-// GetClass returns reference to the class
-func GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func GetPrototype() core.RecordRef {
 	return ClassReference
 }
 
@@ -75,8 +75,8 @@ func (r *RootDomain) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass returns reference to the class
-func (r *RootDomain) GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func (r *RootDomain) GetPrototype() core.RecordRef {
 	return ClassReference
 }
 

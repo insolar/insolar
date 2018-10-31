@@ -49,9 +49,14 @@ func (*GenesisRecord) GetMemory() *core.RecordID {
 	return nil
 }
 
-// GetCode returns state code.
-func (*GenesisRecord) GetCode() *core.RecordRef {
+// GetImage returns state code.
+func (*GenesisRecord) GetImage() *core.RecordRef {
 	return nil
+}
+
+// GetIsPrototype returns state code.
+func (*GenesisRecord) GetIsPrototype() bool {
+	return false
 }
 
 // ChildRecord is a child activation record. Its used for children iterating.
