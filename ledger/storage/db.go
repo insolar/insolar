@@ -226,13 +226,19 @@ func (db *DB) GetRequest(id *core.RecordID) (record.Request, error) {
 
 // GetRecord wraps matching transaction manager method.
 func (db *DB) GetRecord(id *core.RecordID) (record.Record, error) {
-	tx := db.BeginTransaction(false)
-	defer tx.Discard()
-	rec, err := tx.GetRecord(id)
+	var (
+		fetchedRecord record.Record
+		err           error
+	)
+
+	err = db.View(func(tx *TransactionManager) error {
+		fetchedRecord, err = tx.GetRecord(id)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
-	return rec, nil
+	return fetchedRecord, nil
 }
 
 // SetRecord wraps matching transaction manager method.
