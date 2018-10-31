@@ -104,12 +104,29 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 	defer lr.consensusMutex.Unlock()
 	c, ok := lr.consensus[r]
 	if !ok {
-		// arr, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, r, lr.Pulse.PulseNumber)
-		//if err != nil {
-		//	panic("cannot QueryRole")
-		//}
-		c = newConsensus(nil)
+		validators, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, r, lr.pulse().PulseNumber)
+		if err != nil {
+			panic("cannot QueryRole")
+		}
+		// TODO INS-732 check pulse of message and ensure we deal with right validator
+		c = newConsensus(lr, validators)
 		lr.consensus[r] = c
 	}
 	return c, ok
+}
+
+func (lr *LogicRunner) RefreshConsensus() {
+	lr.consensusMutex.Lock()
+	defer lr.consensusMutex.Unlock()
+	if lr.consensus == nil {
+		lr.consensus = make(map[Ref]*Consensus)
+		return
+	}
+	for k, c := range lr.consensus {
+		if c.ready {
+			delete(lr.consensus, k)
+		} else {
+			c.ready = true
+		}
+	}
 }
