@@ -45,7 +45,7 @@ func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
 }
 
 // GetMemory returns state memory.
-func (*GenesisRecord) GetMemory() []byte {
+func (*GenesisRecord) GetMemory() *core.RecordID {
 	return nil
 }
 

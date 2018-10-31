@@ -105,6 +105,30 @@ func (m *TransactionManager) set(key, val []byte) {
 	m.txupdates[string(key)] = keyval{k: key, v: val}
 }
 
+func (m *TransactionManager) GetBlob(id *core.RecordID) ([]byte, error) {
+	k := prefixkey(scopeIDBlob, id[:])
+	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
+	return m.Get(k)
+}
+
+func (m *TransactionManager) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+	id := record.CalculateIDForBlob(pulseNumber, blob)
+	k := prefixkey(scopeIDBlob, id[:])
+	geterr := m.db.db.View(func(tx *badger.Txn) error {
+		_, err := tx.Get(k)
+		return err
+	})
+	if geterr == nil {
+		return id, ErrOverride
+	}
+	if geterr != badger.ErrKeyNotFound {
+		return nil, ErrNotFound
+	}
+
+	m.set(k, blob)
+	return id, nil
+}
+
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.

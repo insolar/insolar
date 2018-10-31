@@ -256,3 +256,21 @@ func (m *ValidateRecord) Target() *core.RecordRef {
 func (*ValidateRecord) TargetRole() core.JetRole {
 	return core.RoleLightExecutor
 }
+
+// SetBlob saves blob in storage.
+type SetBlob struct {
+	ledgerMessage
+
+	TargetRef core.RecordRef
+	Memory    []byte
+}
+
+// Type implementation of Message interface.
+func (*SetBlob) Type() core.MessageType {
+	return core.TypeSetBlob
+}
+
+// Target implementation of Message interface.
+func (m *SetBlob) Target() *core.RecordRef {
+	return &m.TargetRef
+}

@@ -118,7 +118,7 @@ func TestBasicGeneration(t *testing.T) {
 		t.Parallel()
 
 		buf := bytes.Buffer{}
-		err = parsed.WriteWrapper(&buf)
+		err := parsed.WriteWrapper(&buf)
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -130,7 +130,7 @@ func TestBasicGeneration(t *testing.T) {
 		t.Parallel()
 
 		buf := bytes.Buffer{}
-		err = parsed.WriteProxy("testRef", &buf)
+		err := parsed.WriteProxy("testRef", &buf)
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)

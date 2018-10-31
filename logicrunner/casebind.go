@@ -41,39 +41,15 @@ func HashInterface(in interface{}) []byte {
 	return sh.Sum(s)
 }
 
-func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
-	lr.caseBindMutex.Lock()
-	lr.caseBind.Records[ref] = append(lr.caseBind.Records[ref], cr)
-	lr.caseBindMutex.Unlock()
-}
-
-func (lr *LogicRunner) lastObjectCaseRecord(ref Ref) core.CaseRecord {
-	lr.caseBindMutex.Lock()
-	defer lr.caseBindMutex.Unlock()
-	list := lr.caseBind.Records[ref]
-	return list[len(list)-1]
-}
-
-func (lr *LogicRunner) getNextValidationStep(ref Ref) (*core.CaseRecord, int) {
-	lr.caseBindReplaysMutex.Lock()
-	defer lr.caseBindReplaysMutex.Unlock()
-	r, ok := lr.caseBindReplays[ref]
-	if !ok {
-		return nil, -1
-	} else if r.RecordsLen <= r.Step {
-		return nil, r.Step
-	}
-	ret := r.Records[r.Step]
-	r.Step++
-	lr.caseBindReplays[ref] = r
-	return &ret, r.Step
-}
-
 func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
-
+	es := lr.UpsertExecution(ref)
+	ctx := context.TODO()
+	es.insContext = ctx
+	es.validate = true
+	es.objectbody = nil
 	err := func() error {
 		lr.caseBindReplaysMutex.Lock()
 		defer lr.caseBindReplaysMutex.Unlock()
@@ -99,7 +75,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 	}()
 
 	for {
-		start, step := lr.getNextValidationStep(ref)
+		start, step := lr.nextValidationStep(ref)
 		if step < 0 {
 			return step, errors.New("no validation data")
 		} else if start == nil { // finish
@@ -110,15 +86,15 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		msg := start.Resp.(core.Message)
-		signed, err := message.NewSignedMessage(msg, ref, lr.Network.GetPrivateKey())
+		signed, err := message.NewSignedMessage(ctx, msg, ref, lr.Network.GetPrivateKey())
 		if err != nil {
 			return 0, errors.New("failed to create a signed message")
 		}
-		ret, err := lr.Execute(context.TODO(), signed)
+		ret, err := lr.Execute(es.insContext, signed)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
-		stop, step := lr.getNextValidationStep(ref)
+		stop, step := lr.nextValidationStep(ref)
 		if step < 0 {
 			return 0, errors.New("validation container broken")
 		} else if stop.Type != core.CaseRecordTypeResult {
@@ -152,7 +128,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMe
 	}
 	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
 	_, err := lr.MessageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.ValidationResults{
 			Caller:           lr.Network.GetNodeID(),
 			RecordRef:        msg.GetReference(),
@@ -163,21 +139,6 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMe
 	)
 
 	return nil, err
-}
-
-func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
-	lr.consensusMutex.Lock()
-	defer lr.consensusMutex.Unlock()
-	c, ok := lr.consensus[r]
-	if !ok {
-		// arr, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, r, lr.Pulse.PulseNumber)
-		//if err != nil {
-		//	panic("cannot QueryRole")
-		//}
-		c = newConsensus(nil)
-		lr.consensus[r] = c
-	}
-	return c, ok
 }
 
 func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
@@ -258,7 +219,7 @@ type ValidationChecker struct {
 }
 
 func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
-	cr, _ := vb.lr.getNextValidationStep(m.GetReference())
+	cr, _ := vb.lr.nextValidationStep(m.GetReference())
 	if core.CaseRecordTypeRequest != cr.Type {
 		return nil, errors.New("Wrong validation type on Request")
 	}

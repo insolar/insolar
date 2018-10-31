@@ -101,7 +101,7 @@ type CallConstructor struct {
 }
 
 func (m *CallConstructor) GetReference() core.RecordRef {
-	return m.PrototypeRef
+	return *core.GenRequest(m.PulseNum, MustSerializeBytes(m))
 }
 
 // Type returns TypeCallConstructor.

@@ -21,6 +21,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/ugorji/go/codec"
 )
 
@@ -101,4 +103,14 @@ func DeserializeRecord(buf []byte) Record {
 	rec := getRecordByTypeID(t)
 	dec.MustDecode(&rec)
 	return rec
+}
+
+//CalculateIDForBlob calculate id for blob with using current pulse number
+func CalculateIDForBlob(pulseNumber core.PulseNumber, blob []byte) *core.RecordID {
+	recHash := hash.NewIDHash()
+	_, err := recHash.Write(blob)
+	if err != nil {
+		panic(err)
+	}
+	return core.NewRecordID(pulseNumber, recHash.Sum(nil))
 }

@@ -55,6 +55,7 @@ type SignedMessage interface {
 	Signature
 
 	Message() Message
+	Context(context.Context) context.Context
 }
 
 // Reply for an `Message`
@@ -117,6 +118,8 @@ const (
 	TypeSetRecord
 	// TypeValidateRecord saves record in storage.
 	TypeValidateRecord
+	// TypeSetBlob saves blob in storage.
+	TypeSetBlob
 
 	// Bootstrap
 

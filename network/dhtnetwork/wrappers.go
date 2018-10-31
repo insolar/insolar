@@ -92,7 +92,7 @@ func (w *Wrapper) SendMessage(nodeID core.RecordRef, method string, msg core.Sig
 		return nil, errors.New("message is nil")
 	}
 	hostID := resolver.ResolveHostID(nodeID)
-	buff, err := message.ToBytes(msg)
+	buff, err := message.SignedToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
@@ -111,7 +111,7 @@ func (w *Wrapper) SendCascadeMessage(data core.Cascade, method string, msg core.
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	buff, err := message.ToBytes(msg)
+	buff, err := message.SignedToBytes(msg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize event")
 	}
@@ -159,16 +159,20 @@ func (w *Wrapper) GetNodeID() core.RecordRef {
 	return w.HostNetwork.GetNodeID()
 }
 
-// Listen start listening to network requests, should be started in goroutine.
-func (w *Wrapper) Listen() error {
-	return w.HostNetwork.Listen()
+// Start listening to network requests.
+func (w *Wrapper) Start() {
+	go func() {
+		err := w.HostNetwork.Listen()
+		if err != nil {
+			log.Error(err)
+		}
+	}()
 }
 
 // Disconnect stop listening to network requests.
-func (w *Wrapper) Disconnect() error {
+func (w *Wrapper) Stop() {
 	log.Infoln("Stop network")
 	w.HostNetwork.Disconnect()
-	return nil
 }
 
 // PublicAddress returns public address that can be published for all nodes.
@@ -177,7 +181,7 @@ func (w *Wrapper) PublicAddress() string {
 }
 
 // SendRequest send request to a remote node.
-func (w *Wrapper) SendRequest(network.Request) (network.Future, error) {
+func (w *Wrapper) SendRequest(network.Request, core.RecordRef) (network.Future, error) {
 	panic("not used in DHT implementation")
 }
 
@@ -188,6 +192,10 @@ func (w *Wrapper) RegisterRequestHandler(t types.PacketType, handler network.Req
 
 // NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 func (w *Wrapper) NewRequestBuilder() network.RequestBuilder {
+	panic("not used in DHT implementation")
+}
+
+func (w *Wrapper) BuildResponse(request network.Request, responseData interface{}) network.Response {
 	panic("not used in DHT implementation")
 }
 

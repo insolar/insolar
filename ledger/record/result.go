@@ -45,7 +45,7 @@ type ObjectState interface {
 	// GetIsPrototype returns state code.
 	GetIsPrototype() bool
 	// GetMemory returns state memory.
-	GetMemory() []byte
+	GetMemory() *core.RecordID
 	// PrevStateID returns previous state id.
 	PrevStateID() *core.RecordID
 }
@@ -91,7 +91,7 @@ func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
 type CodeRecord struct {
 	SideEffectRecord
 
-	Code        []byte
+	Code        *core.RecordID
 	MachineType core.MachineType
 }
 
@@ -105,13 +105,13 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
-	Memory      []byte
+	Memory      *core.RecordID
 	Image       core.RecordRef // If code or prototype object reference.
 	IsPrototype bool           // If true, Image should point to a prototype object. Otherwise to a code.
 }
 
 // GetMemory returns state memory.
-func (r *ObjectStateRecord) GetMemory() []byte {
+func (r *ObjectStateRecord) GetMemory() *core.RecordID {
 	return r.Memory
 }
 
@@ -208,7 +208,7 @@ func (*DeactivationRecord) GetMachineType() core.MachineType {
 }
 
 // GetMemory returns state memory.
-func (*DeactivationRecord) GetMemory() []byte {
+func (*DeactivationRecord) GetMemory() *core.RecordID {
 	return nil
 }
 

@@ -64,7 +64,7 @@ func TestOrigin_Contains(t *testing.T) {
 		if i < 10 {
 			contains = true
 		}
-		assert.Equal(t, contains, origin.Contains(&Host{ids[i], addr}))
-		assert.False(t, origin.Contains(&Host{ids[i], addr2}))
+		assert.Equal(t, contains, origin.Contains(&Host{ID: ids[i], Address: addr}))
+		assert.False(t, origin.Contains(&Host{ID: ids[i], Address: addr2}))
 	}
 }
