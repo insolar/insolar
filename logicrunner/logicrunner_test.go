@@ -1462,7 +1462,7 @@ func (r *Two) Hello() (*string, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
 		context.TODO(),
 		signed,
