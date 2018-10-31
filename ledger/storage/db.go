@@ -191,13 +191,6 @@ func (db *DB) Set(key, value []byte) error {
 	})
 }
 
-// GetRequest wraps matching transaction manager method.
-func (db *DB) GetRequest(id *core.RecordID) (record.Request, error) {
-	tx := db.BeginTransaction(false)
-	defer tx.Discard()
-	return tx.GetRequest(id)
-}
-
 // GetRecord wraps matching transaction manager method.
 func (db *DB) GetRecord(id *core.RecordID) (record.Record, error) {
 	tx := db.BeginTransaction(false)
