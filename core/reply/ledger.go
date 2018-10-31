@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// Code is code from storage.
+// CodeRef is code from storage.
 type Code struct {
 	Code        []byte
 	MachineType core.MachineType
@@ -31,7 +31,7 @@ func (e *Code) Type() core.ReplyType {
 	return TypeCode
 }
 
-// Class is class from storage.
+// Image is class from storage.
 type Class struct {
 	Head        core.RecordRef
 	State       core.RecordID
@@ -48,7 +48,8 @@ func (e *Class) Type() core.ReplyType {
 type Object struct {
 	Head         core.RecordRef
 	State        core.RecordID
-	Class        core.RecordRef
+	Prototype    *core.RecordRef
+	IsPrototype  bool
 	ChildPointer *core.RecordID
 	Memory       []byte
 }

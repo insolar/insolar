@@ -92,16 +92,16 @@ const (
 // CallConstructor is a message for calling constructor and obtain its reply
 type CallConstructor struct {
 	BaseLogicMessage
-	ParentRef core.RecordRef
-	SaveAs    SaveAs
-	ClassRef  core.RecordRef
-	Name      string
-	Arguments core.Arguments
-	PulseNum  core.PulseNumber
+	ParentRef    core.RecordRef
+	SaveAs       SaveAs
+	PrototypeRef core.RecordRef
+	Name         string
+	Arguments    core.Arguments
+	PulseNum     core.PulseNumber
 }
 
 func (m *CallConstructor) GetReference() core.RecordRef {
-	return m.ClassRef
+	return m.PrototypeRef
 }
 
 // Type returns TypeCallConstructor.
