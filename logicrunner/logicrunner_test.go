@@ -1479,3 +1479,105 @@ func (r *Two) Hello() (*string, error) {
 	assert.NotNil(t, contractErr)
 	assert.Contains(t, contractErr.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil")
 }
+
+func TestContractsDeadlock(t *testing.T) {
+
+	// TODO сделать контракт который вызывает сам себя и сделать вызов с wait и noWait и проверить что они оба лочаться
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/application/proxy/deadlocktesttwo"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
+}
+
+func (r *One) Hello() (*deadlocktesttwo.Two, error) {
+	holder := deadlocktesttwo.New()
+	two, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return nil, err
+	}
+
+	err = two.Hello()
+	if err != nil {
+		return nil, err
+	}
+
+	return two, err
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/application/proxy/deadlocktestone"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() (*Two, error) {
+	return &Two{}, nil
+}
+func (r *Two) Hello() error {
+	holder := deadlocktestone.New()
+	one, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+	
+	one.Hello()
+	return nil
+}
+`
+	ctx := context.TODO()
+	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{
+		"deadlocktestone": contractOneCode,
+		"deadlocktesttwo": contractTwoCode,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("deadlocktestone")})
+	assert.NoError(t, err)
+	contract := getRefFromID(contractID)
+	_, err = am.ActivateObject(
+		ctx, domain, *contract, *cb.Classes["deadlocktestone"], *am.GenesisRef(), false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	msg := &message.CallMethod{
+		ObjectRef:  *contract,
+		Method:     "Hello",
+		Arguments:  goplugintestutils.CBORMarshal(t, []interface{}{}),
+		ReturnMode: message.ReturnResult,
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
+	resp, err := lr.Execute(
+		context.TODO(),
+		signed,
+	)
+	assert.NoError(t, err, "contract call")
+	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, []interface{}{"Hi, ins! Two said: Hello you too, ins. 644 times!", nil}, r)
+
+}
