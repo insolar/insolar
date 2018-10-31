@@ -237,8 +237,15 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 		return
 	}
 
-	currentPulsar.sendPulseToNetwork(pulsarHost, t, pulseForSending)
-	currentPulsar.sendPulseToPulsars(ctx)
+	go func() {
+		currentPulsar.sendPulseToNetwork(pulsarHost, t, pulseForSending)
+		defer func() {
+			go t.Stop()
+			<-t.Stopped()
+			t.Close()
+		}()
+	}()
+	go currentPulsar.sendPulseToPulsars(ctx)
 
 	err = currentPulsar.Storage.SavePulse(&pulseForSending)
 	if err != nil {
@@ -251,11 +258,6 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	currentPulsar.SetLastPulse(&pulseForSending)
 
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
-	defer func() {
-		go t.Stop()
-		<-t.Stopped()
-		t.Close()
-	}()
 }
 
 func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t transport.Transport, err error) {
@@ -366,6 +368,11 @@ func sendPulseToHost(sender *host.Host, t transport.Transport, pulseReceiver *ho
 }
 
 func sendPulseToHosts(sender *host.Host, t transport.Transport, hosts []host.Host, pulse *core.Pulse) {
+	defer func() {
+		if x := recover(); x != nil {
+			log.Fatalf("run time panic: %v", x)
+		}
+	}()
 	for _, pulseReceiver := range hosts {
 		err := sendPulseToHost(sender, t, &pulseReceiver, pulse)
 		if err != nil {
