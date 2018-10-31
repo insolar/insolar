@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -130,7 +129,7 @@ func (cert *Certificate) GetEcdsaPrivateKey() *ecdsa.PrivateKey {
 }
 
 // Start is method from Component interface and it do nothing
-func (cert *Certificate) Start(ctx context.Context, components core.Components) error {
+func (cert *Certificate) Start(ctx context.Context) error {
 	return nil
 }
 
