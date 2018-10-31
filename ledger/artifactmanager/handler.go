@@ -136,7 +136,8 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 	rep := reply.Object{
 		Head:         msg.Head,
 		State:        *stateID,
-		Class:        idx.ClassRef,
+		Prototype:    state.GetImage(),
+		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: childPointer,
 		Memory:       state.GetMemory(),
 	}
@@ -243,12 +244,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		idx.LatestState = id
 		idx.State = state.State()
-		if state.State() == record.StateActivation {
-			if msg.Class == nil {
-				return errors.New("not enough data for activation provided")
-			}
-			idx.ClassRef = *msg.Class
-		}
 		return tx.SetObjectIndex(msg.Object.Record(), idx)
 	})
 	if err != nil {
@@ -261,7 +256,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	rep := reply.Object{
 		Head:         msg.Object,
 		State:        *idx.LatestState,
-		Class:        idx.ClassRef,
+		Prototype:    state.GetImage(),
+		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: idx.ChildPointer,
 	}
 	return &rep, nil
@@ -339,7 +335,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(msg.Object.Record(), true)
 		if err != nil {
-			return errors.Wrap(err, "inconsistent object index")
+			return errors.Wrap(err, "failed to fetch object index")
 		}
 
 		// Rewinding to validated record.
@@ -451,7 +447,6 @@ func getObject(
 	return idx, stateID, stateRec, nil
 }
 
-
 func getObjectIndex(s storage.Store, head *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
 	idx, err := s.GetObjectIndex(head, forupdate)
 	if err == storage.ErrNotFound {
@@ -462,7 +457,7 @@ func getObjectIndex(s storage.Store, head *core.RecordID, forupdate bool) (*inde
 
 func validateState(old record.State, new record.State) error {
 	if old == record.StateDeactivation {
-		return ErrClassDeactivated
+		return ErrObjectDeactivated
 	}
 	if old == record.StateUndefined && new != record.StateActivation {
 		return errors.New("object is not activated")
