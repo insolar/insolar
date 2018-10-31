@@ -17,21 +17,19 @@
 package phases
 
 type PhaseManager struct {
-	phase Phase
+	phase *FirstPhase
 }
 
 // Start starts calculate args on phases.
-func (pm *PhaseManager) Start(args ...interface{}) error {
-	return pm.phase.Calculate(args)
+func (pm *PhaseManager) Start(pulse *PulseData) error {
+	return pm.phase.Calculate(pulse)
 }
 
 // NewPhaseManager creates and returns a new phase manager.
 func NewPhaseManager() *PhaseManager {
 	return &PhaseManager{
 		phase: &FirstPhase{
-			next: &SecondPhase{
-				next: nil,
-			},
+			next: &SecondPhase{},
 		},
 	}
 }

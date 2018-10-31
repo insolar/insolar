@@ -16,22 +16,14 @@
 
 package phases
 
-import (
-	"github.com/pkg/errors"
-)
-
 // FirstPhase is a first phase.
 type FirstPhase struct {
-	next Phase
+	next *SecondPhase
 }
 
-func (fp *FirstPhase) Calculate(args ...interface{}) error {
-	pulse, ok := args[0].(*PulseData)
-	if !ok {
-		return errors.New("failed to cast to pulse")
-	}
+func (fp *FirstPhase) Calculate(data *PulseData) error {
 	// do work with pulse
-	result := fp.work(pulse)
+	result := fp.work(data)
 	return fp.next.Calculate(result)
 }
 
@@ -41,13 +33,8 @@ func (fp *FirstPhase) work(pulse *PulseData) *NodePulseProof {
 
 // SecondPhase is a second phase.
 type SecondPhase struct {
-	next Phase
 }
 
-func (sp *SecondPhase) Calculate(args ...interface{}) error {
-	_, ok := args[0].(*NodePulseProof)
-	if !ok {
-		return errors.New("failed to cast to pulse proof")
-	}
+func (sp *SecondPhase) Calculate(proof *NodePulseProof) error {
 	return nil
 }
