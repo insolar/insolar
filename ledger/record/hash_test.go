@@ -88,16 +88,9 @@ var hashtestsRecordsMutate = []struct {
 		"CodeRecord",
 		[]Record{
 			&CodeRecord{},
-			&CodeRecord{Code: func() *core.RecordID {
-				res, _ := CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3})
-				return res
-			}(),
-			},
+			&CodeRecord{},
 			&CodeRecord{
-				Code: func() *core.RecordID {
-					res, _ := CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3})
-					return res
-				}(),
+				Code: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 				SideEffectRecord: SideEffectRecord{
 					Domain: core.RecordRef{1, 2, 3},
 				},

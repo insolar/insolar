@@ -140,10 +140,9 @@ func TestDB_CreateDrop(t *testing.T) {
 		Entropy:     core.Entropy{1, 2, 3},
 	})
 	for i := 1; i < 4; i++ {
-		memoryId, _ := record.CalculateIDForBlob(pulse, []byte{byte(i)})
 		setRecordMessage := message.SetRecord{
 			Record: record.SerializeRecord(&record.CodeRecord{
-				Code: memoryId,
+				Code: record.CalculateIDForBlob(pulse, []byte{byte(i)}),
 			}),
 		}
 		db.SetMessage(pulse, &setRecordMessage)

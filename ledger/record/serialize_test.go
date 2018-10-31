@@ -60,9 +60,10 @@ func Test_TypeIDConversion(t *testing.T) {
 }
 
 func TestSerializeDeserializeRecord(t *testing.T) {
-	memoryId, _ := CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3})
 	rec := ObjectActivateRecord{
-		ObjectStateRecord: ObjectStateRecord{Memory: memoryId},
+		ObjectStateRecord: ObjectStateRecord{
+			Memory: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+		},
 	}
 	serialized := SerializeRecord(&rec)
 	deserialized := DeserializeRecord(serialized)
