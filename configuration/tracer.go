@@ -14,22 +14,26 @@
  *    limitations under the License.
  */
 
-package functest
+package configuration
 
-import (
-	"testing"
-
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-)
-
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, 1000, firstBalance)
+// Tracer configures tracer.
+type Tracer struct {
+	Jaeger JaegerConfig
+	// TODO: add SamplingRules configuration
+	SamplingRules struct{}
 }
 
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
+// JaegerConfig holds Jaeger settings.
+type JaegerConfig struct {
+	CollectorEndpoint string
+	AgentEndpoint     string
+}
+
+// NewTracer creates new default Tracer configuration.
+func NewTracer() Tracer {
+	return Tracer{
+		Jaeger: JaegerConfig{
+			AgentEndpoint: "",
+		},
+	}
 }

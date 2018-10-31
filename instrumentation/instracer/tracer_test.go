@@ -14,22 +14,22 @@
  *    limitations under the License.
  */
 
-package functest
+package instracer_test
 
 import (
+	"context"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, 1000, firstBalance)
-}
-
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
+func TestTracerBasics(t *testing.T) {
+	ctx := inslogger.ContextWithTrace(context.Background(), "tracenotdefined")
+	_, err := instracer.RegisterJaeger("server", "localhost:6831", "")
+	assert.NoError(t, err)
+	_, span := instracer.StartSpan(ctx, "root")
+	assert.NotNil(t, span)
 }

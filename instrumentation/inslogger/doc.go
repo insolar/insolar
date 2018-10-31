@@ -14,22 +14,25 @@
  *    limitations under the License.
  */
 
-package functest
+/*
+Package inslogger contains context helpers for log
 
-import (
-	"testing"
+Examples:
 
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-)
+	// initialize base context with default logger with provided trace id
+	ctx, inslog := inslogger.WithTraceField(context.Background(), "TraceID")
+	inslog.Warn("warn")
 
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, 1000, firstBalance)
-}
+	// get logger from context
+	inslog := inslogger.FromContext(ctx)
 
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
-}
+	// initalize logger (SomeNewLogger() should return core.Logger)
+	inslogger.SetLogger(ctx, SomeNewLogger())
+
+Hints:
+
+	Use environment variables for log level setup:
+
+	export INSOLAR_LOG_LEVEL=debug go test ./yourpackage/...
+*/
+package inslogger

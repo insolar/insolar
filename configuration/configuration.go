@@ -41,6 +41,7 @@ type Configuration struct {
 	VersionManager  VersionManager
 	KeysPath        string
 	CertificatePath string
+	Tracer          Tracer
 }
 
 // Holder provides methods to manage configuration
@@ -65,6 +66,7 @@ func NewConfiguration() Configuration {
 		VersionManager:  NewVersionManager(),
 		KeysPath:        "./",
 		CertificatePath: "",
+		Tracer:          NewTracer(),
 	}
 
 	return cfg

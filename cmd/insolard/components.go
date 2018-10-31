@@ -104,7 +104,6 @@ func InitComponents(cfg configuration.Configuration, isBootstrap bool) (*compone
 		Ledger:             ledger,
 		Network:            nw,
 		MessageBus:         messageBus,
-		Metrics:            metricsHandler,
 		Bootstrapper:       bootstrapper,
 		APIRunner:          apiRunner,
 		NetworkCoordinator: networkCoordinator,

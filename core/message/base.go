@@ -48,16 +48,12 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &RequestCall{}, nil
 	case core.TypeGetCode:
 		return &GetCode{}, nil
-	case core.TypeGetClass:
-		return &GetClass{}, nil
 	case core.TypeGetObject:
 		return &GetObject{}, nil
 	case core.TypeGetDelegate:
 		return &GetDelegate{}, nil
 	case core.TypeGetChildren:
 		return &GetChildren{}, nil
-	case core.TypeUpdateClass:
-		return &UpdateClass{}, nil
 	case core.TypeUpdateObject:
 		return &UpdateObject{}, nil
 	case core.TypeRegisterChild:
@@ -167,10 +163,8 @@ func init() {
 	// Ledger
 	gob.Register(&RequestCall{})
 	gob.Register(&GetCode{})
-	gob.Register(&GetClass{})
 	gob.Register(&GetObject{})
 	gob.Register(&GetDelegate{})
-	gob.Register(&UpdateClass{})
 	gob.Register(&UpdateObject{})
 	gob.Register(&RegisterChild{})
 	gob.Register(&JetDrop{})

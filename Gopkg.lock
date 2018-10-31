@@ -3,6 +3,15 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:e95de5c830369d6592224de57a31cd87a2ba1cec2abaf050d06a63ee8f7babd8"
+  name = "git.apache.org/thrift.git"
+  packages = ["lib/go/thrift"]
+  pruneopts = "UT"
+  revision = "cd829a0b9a5c66203b63350fa029589669ec43f6"
+  source = "github.com/apache/thrift"
+
+[[projects]]
+  branch = "master"
   digest = "1:b02e5e3f836f077a3249d1dfe3c57d305e007f71a98f2e69c170a2dd8d2b266c"
   name = "github.com/AndreasBriese/bbloom"
   packages = ["."]
@@ -421,6 +430,23 @@
   version = "v4.3.1"
 
 [[projects]]
+  digest = "1:58fa2af58add3f3edee4556ac8589fcdc1348caa301f3c322275c84484e3bf0b"
+  name = "go.opencensus.io"
+  packages = [
+    ".",
+    "exemplar",
+    "exporter/jaeger",
+    "exporter/jaeger/internal/gen-go/jaeger",
+    "internal",
+    "trace",
+    "trace/internal",
+    "trace/tracestate",
+  ]
+  pruneopts = "UT"
+  revision = "b7bf3cdb64150a8c8c53b769fdeb2ba581bd4d4b"
+  version = "v0.18.0"
+
+[[projects]]
   branch = "master"
   digest = "1:886c37423371473271b6b490f5b270fe778bd9ae2fdff9324f2060b096c81b9e"
   name = "golang.org/x/crypto"
@@ -458,6 +484,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:e0140c0c868c6e0f01c0380865194592c011fe521d6e12d78bfd33e756fe018a"
+  name = "golang.org/x/sync"
+  packages = ["semaphore"]
+  pruneopts = "UT"
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
+
+[[projects]]
+  branch = "master"
   digest = "1:6c93c46c00889c28f5a105e7cb5ba56672fd4a2351375fa819acb44e66d427df"
   name = "golang.org/x/sys"
   packages = [
@@ -481,6 +515,14 @@
   pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:938b0c4e4e71e191c52c959ae60ab4d814b4402e5d53a6db6ceec06cd2150058"
+  name = "google.golang.org/api"
+  packages = ["support/bundler"]
+  pruneopts = "UT"
+  revision = "511bab8e55decfbe784cd2d1868fa5cda62dc6c1"
 
 [[projects]]
   digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
@@ -518,6 +560,8 @@
     "github.com/tylerb/gls",
     "github.com/ugorji/go/codec",
     "github.com/xtaci/kcp-go",
+    "go.opencensus.io/exporter/jaeger",
+    "go.opencensus.io/trace",
     "golang.org/x/crypto/sha3",
     "gopkg.in/yaml.v2",
   ]

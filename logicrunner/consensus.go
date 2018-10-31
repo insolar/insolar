@@ -19,27 +19,34 @@
 package logicrunner
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
 type ConsensusRecord struct {
-	Steps int
-	Error error
+	Steps   int
+	Error   string
+	Message core.SignedMessage
 }
 
 // Consensus is an object for one validation process where all validated results will be compared.
 type Consensus struct {
+	lr          *LogicRunner
+	ready       bool
 	Have        int
 	Need        int
 	Total       int
 	Results     map[Ref]ConsensusRecord
 	CaseRecords []core.CaseRecord
+	Message     core.SignedMessage
 }
 
-func newConsensus(refs []Ref) *Consensus {
+func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
 	c := &Consensus{
+		lr:      lr,
 		Results: make(map[Ref]ConsensusRecord),
 	}
 	for _, r := range refs {
@@ -51,34 +58,36 @@ func newConsensus(refs []Ref) *Consensus {
 }
 
 // AddValidated adds results from validators
-func (c *Consensus) AddValidated(m *message.ValidationResults) {
-	caller := *m.GetCaller()
-	if _, ok := c.Results[caller]; !ok {
-		// why ??
+func (c *Consensus) AddValidated(ctx context.Context, sm core.SignedMessage, msg *message.ValidationResults) error {
+	source := sm.GetSender()
+	if _, ok := c.Results[source]; !ok {
+		return errors.Errorf("Validation packet from non validation node for %#v", sm)
 	} else {
-		c.Results[caller] = ConsensusRecord{
-			Steps: m.PassedStepsCount,
-			Error: m.Error,
+		c.Results[source] = ConsensusRecord{
+			Steps: msg.PassedStepsCount,
+			Error: msg.Error,
 		}
 	}
 	c.Have++
-	c.CheckReady()
+	c.CheckReady(ctx)
+	return nil
 }
 
-func (c *Consensus) AddExecutor(m *message.ExecutorResults) {
-	c.CaseRecords = m.CaseRecords
-	c.CheckReady()
+func (c *Consensus) AddExecutor(ctx context.Context, sm core.SignedMessage, msg *message.ExecutorResults) {
+	c.CaseRecords = msg.CaseRecords
+	c.Message = sm
+	c.CheckReady(ctx)
 }
 
-func (c *Consensus) CheckReady() {
+func (c *Consensus) CheckReady(ctx context.Context) {
 	if c.CaseRecords == nil {
 		return
 	} else if c.Have < c.Need {
 		return
 	}
 	steps := make(map[int]int)
-	maxSame := 0
-	stepsSame := 0
+	maxSame := 0   // count of nodes with same result
+	stepsSame := 0 // steps agreed by maximum nodes
 	for _, r := range c.Results {
 		steps[r.Steps]++
 		if maxSame < steps[r.Steps] {
@@ -86,8 +95,41 @@ func (c *Consensus) CheckReady() {
 			stepsSame = r.Steps
 		}
 	}
+	var err error
 	if maxSame < c.Need && c.Total == c.Have {
-		log.Debugf("Contract failed, agrred for %d steps by %d nodes", stepsSame, maxSame)
+		c.ready = true
+		err = c.lr.ArtifactManager.RegisterValidation(ctx, c.GetReference(), *c.FindRequestBefore(stepsSame), false, c.GetValidatorSignatures())
+	} else if maxSame >= c.Need && stepsSame == len(c.CaseRecords) {
+		c.ready = true
+		err = c.lr.ArtifactManager.RegisterValidation(ctx, c.GetReference(), *c.FindRequestBefore(stepsSame), true, c.GetValidatorSignatures())
 	}
-	log.Debugf("Contract checking validation")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *Consensus) GetReference() Ref {
+	return c.Message.Message().(*message.ExecutorResults).RecordRef
+}
+
+//
+func (c *Consensus) GetValidatorSignatures() (messages []core.Message) {
+	for _, x := range c.Results {
+		messages = append(messages, x.Message)
+	}
+	return messages
+}
+
+// FindRequestBefore returns request placed before step (last valid request)
+func (c *Consensus) FindRequestBefore(steps int) *core.RecordID {
+	cr := c.CaseRecords
+	for i := steps; i > 0; i-- {
+		if cr[i].Type == core.CaseRecordTypeRequest {
+			if req, ok := cr[i].Resp.(Ref); ok {
+				return req.Record()
+			}
+			return nil
+		}
+	}
+	return nil
 }
