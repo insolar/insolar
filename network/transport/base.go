@@ -40,9 +40,10 @@ type baseTransport struct {
 	mutex   *sync.RWMutex
 	futures map[packet.RequestID]Future
 
-	proxy         relay.Proxy
-	publicAddress string
-	sendFunc      func(recvAddress string, data []byte) error
+	proxy          relay.Proxy
+	publicAddress  string
+	sendFunc       func(recvAddress string, data []byte) error
+	serializerFunc func(q *packet.Packet) ([]byte, error)
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
@@ -56,8 +57,9 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 		mutex:   &sync.RWMutex{},
 		futures: make(map[packet.RequestID]Future),
 
-		proxy:         proxy,
-		publicAddress: publicAddress,
+		proxy:          proxy,
+		publicAddress:  publicAddress,
+		serializerFunc: packet.SerializePacket,
 	}
 }
 
@@ -181,7 +183,7 @@ func (t *baseTransport) sendPacket(p *packet.Packet) error {
 		recvAddress = p.Receiver.Address.String()
 	}
 
-	data, err := packet.SerializePacket(p)
+	data, err := t.serializerFunc(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
