@@ -16,18 +16,44 @@
 
 package phases
 
-import "github.com/damnever/bitarray"
+import (
+	"crypto/ecdsa"
+
+	"github.com/insolar/insolar/core"
+)
+
+type PacketType uint8
+type ClaimType uint8
+type ReferendumType uint8
+
+const (
+	Type1 = PacketType(iota + 1)
+)
+
+const (
+	TypeNodeClaim = ClaimType(iota + 1)
+	TypeNodeViolationBlame
+	TypeCapabilityPollingAndActivation
+	TypeNodeBroadcast
+)
 
 // ----------------------------------PHASE 1--------------------------------
+
+type PacketHeader struct {
+	Routing      uint8
+	Pulse        uint32
+	OriginNodeID uint32
+	TargetNodeID uint32
+}
 
 // PulseDataExt is a pulse data extension.
 type PulseDataExt struct {
 	NextPulseDelta uint16
 	PrevPulseDelta uint16
+	OriginID       uint16
 	EpochPulseNo   uint32
 	PulseTimestamp uint32
-	OriginID       *bitarray.BitArray
-	Entropy        *bitarray.BitArray
+	Entropy        core.Entropy
 }
 
 // PulseData is a pulse data.
@@ -37,52 +63,30 @@ type PulseData struct {
 }
 
 type NodePulseProof struct {
-	NodeStateHash *bitarray.BitArray
-	NodeSignature *bitarray.BitArray
-}
-
-func NewNodePulseProof() *NodePulseProof {
-	return &NodePulseProof{
-		NodeSignature: bitarray.New(512),
-		NodeStateHash: bitarray.New(512),
-	}
-}
-
-// NewPulseData creates and returns a pulse data.
-func NewPulseData() *PulseData {
-	return &PulseData{
-		Data: NewPulseDataExt(),
-	}
-}
-
-// NewPulseDataExt creates and returns a pulse data extension.
-func NewPulseDataExt() *PulseDataExt {
-	return &PulseDataExt{
-		OriginID: bitarray.New(128),
-		Entropy:  bitarray.New(256),
-	}
+	NodeStateHash uint64
+	NodeSignature uint64
 }
 
 // --------------REFERENDUM--------------
 
 type ReferendumClaim interface {
-	Type() *bitarray.BitArray
-	Length() *bitarray.BitArray
+	Type() ClaimType
+	Length() uint16
 }
 
 // NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
 // Type 4.
 type NodeBroadcast struct {
-	EmergencyLevel *bitarray.BitArray
-	claimType      *bitarray.BitArray
-	length         *bitarray.BitArray
+	EmergencyLevel uint8
+	claimType      ClaimType
+	length         uint16
 }
 
-func (nb *NodeBroadcast) Type() *bitarray.BitArray {
+func (nb *NodeBroadcast) Type() ClaimType {
 	return nb.claimType
 }
 
-func (nb *NodeBroadcast) Length() *bitarray.BitArray {
+func (nb *NodeBroadcast) Length() uint16 {
 	return nb.length
 }
 
@@ -90,32 +94,32 @@ func (nb *NodeBroadcast) Length() *bitarray.BitArray {
 type CapabilityPoolingAndActivation struct {
 	PollingFlags   uint16
 	CapabilityType uint16
-	CapabilityRef  *bitarray.BitArray
-	claimType      *bitarray.BitArray
-	length         *bitarray.BitArray
+	CapabilityRef  uint64
+	claimType      ClaimType
+	length         uint16
 }
 
-func (cpa *CapabilityPoolingAndActivation) Type() *bitarray.BitArray {
+func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
 	return cpa.claimType
 }
 
-func (cpa *CapabilityPoolingAndActivation) Length() *bitarray.BitArray {
+func (cpa *CapabilityPoolingAndActivation) Length() uint16 {
 	return cpa.length
 }
 
 // NodeViolationBlame is a type 2.
 type NodeViolationBlame struct {
 	BlameNodeID   uint32
-	TypeViolation *bitarray.BitArray
-	claimType     *bitarray.BitArray
-	length        *bitarray.BitArray
+	TypeViolation uint8
+	claimType     ClaimType
+	length        uint16
 }
 
-func (nvb *NodeViolationBlame) Type() *bitarray.BitArray {
+func (nvb *NodeViolationBlame) Type() ClaimType {
 	return nvb.claimType
 }
 
-func (nvb *NodeViolationBlame) Length() *bitarray.BitArray {
+func (nvb *NodeViolationBlame) Length() uint16 {
 	return nvb.length
 }
 
@@ -125,100 +129,75 @@ type NodeJoinClaim struct {
 	RelayNodeID             uint32
 	ProtocolVersionAndFlags uint32
 	JoinsAfter              uint32
-	NodeRoleRecID           *bitarray.BitArray
-	NodeRef                 *bitarray.BitArray
-	NodePK                  *bitarray.BitArray
-	claimType               *bitarray.BitArray
-	length                  *bitarray.BitArray
+	NodeRoleRecID           uint32
+	NodeRef                 core.RecordRef
+	NodePK                  ecdsa.PrivateKey
+	claimType               ClaimType
+	length                  uint16
 }
 
-func (njc *NodeJoinClaim) Type() *bitarray.BitArray {
+func (njc *NodeJoinClaim) Type() ClaimType {
 	return njc.claimType
 }
 
-func (njc *NodeJoinClaim) Length() *bitarray.BitArray {
+func (njc *NodeJoinClaim) Length() uint16 {
 	return njc.length
 }
 
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
-	claimType *bitarray.BitArray
-	length    *bitarray.BitArray
+	claimType ClaimType
+	length    uint16
 }
 
-func (nlc *NodeLeaveClaim) Type() *bitarray.BitArray {
+func (nlc *NodeLeaveClaim) Type() ClaimType {
 	return nlc.claimType
 }
 
-func (nlc *NodeLeaveClaim) Length() *bitarray.BitArray {
+func (nlc *NodeLeaveClaim) Length() uint16 {
 	return nlc.length
 }
 
 func NewNodeLeaveClaim() *NodeLeaveClaim {
 	return &NodeLeaveClaim{
-		claimType: bitarray.New(6),
-		length:    bitarray.New(10),
+		claimType: TypeNodeClaim,
 	}
 }
 
 func NewNodeJoinClaim() *NodeJoinClaim {
 	return &NodeJoinClaim{
-		NodeRoleRecID: bitarray.New(256),
-		NodeRef:       bitarray.New(512),
-		NodePK:        bitarray.New(512),
-		claimType:     bitarray.New(6),
-		length:        bitarray.New(10),
+		claimType: TypeNodeClaim,
+		length:    272,
 	}
 }
 
 func NewNodViolationBlame() *NodeViolationBlame {
 	return &NodeViolationBlame{
-		TypeViolation: bitarray.New(8),
-		claimType:     bitarray.New(6),
-		length:        bitarray.New(10),
+		claimType: TypeNodeViolationBlame,
 	}
 }
 
 func NewCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
 	return &CapabilityPoolingAndActivation{
-		CapabilityRef: bitarray.New(512),
-		claimType:     bitarray.New(6),
-		length:        bitarray.New(10),
+		claimType: TypeCapabilityPollingAndActivation,
 	}
 }
 
 func NewNodeBroadcast() *NodeBroadcast {
 	return &NodeBroadcast{
-		EmergencyLevel: bitarray.New(8),
-		claimType:      bitarray.New(6),
-		length:         bitarray.New(10),
+		claimType: TypeNodeBroadcast,
 	}
 }
 
 // ----------------------------------PHASE 2--------------------------------
 
 type ReferendumVote struct {
-	Type   *bitarray.BitArray
-	Length *bitarray.BitArray
+	Type   ReferendumType
+	Length uint16
 }
 
 type NodeListVote struct {
 	NodeListCount uint16
-	NodeListHash  *bitarray.BitArray
-}
-
-// NewNodeListVote creates and returns a node list vote.
-func NewNodeListVote() *NodeListVote {
-	return &NodeListVote{
-		NodeListHash: bitarray.New(256),
-	}
-}
-
-// NewReferendumVote creates and returns a referendum vote.
-func NewReferendumVote() *ReferendumVote {
-	return &ReferendumVote{
-		Type:   bitarray.New(6),
-		Length: bitarray.New(10),
-	}
+	NodeListHash  uint32
 }
