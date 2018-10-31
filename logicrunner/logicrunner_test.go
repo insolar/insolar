@@ -1390,3 +1390,90 @@ func New(n int) (*Child, error) {
 		lr.ProcessValidationResults(context.TODO(), m)
 	}
 }
+
+func TestConstructorReturnNil(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/application/proxy/two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() (*string, error) {
+	holder := two.New()
+	_, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return nil, err
+	}
+	ok := "all was well"
+	return &ok, nil
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() (*Two, error) {
+	return nil, nil
+}
+func (r *Two) Hello() (*string, error) {
+	return nil, nil
+}
+`
+	ctx := context.TODO()
+	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{
+		"one": contractOneCode,
+		"two": contractTwoCode,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	assert.NoError(t, err)
+	contract := getRefFromID(contractID)
+	_, err = am.ActivateObject(
+		ctx, domain, *contract, *cb.Classes["one"], *am.GenesisRef(), false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	msg := &message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "Hello",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
+	resp, err := lr.Execute(
+		context.TODO(),
+		signed,
+	)
+	assert.NoError(t, err, "contract call")
+
+	var result interface{}
+	var contractErr *foundation.Error
+
+	err = signer.UnmarshalParams(resp.(*reply.CallMethod).Result, &result, &contractErr)
+	assert.NoError(t, err, "unmarshal answer")
+	assert.NotNil(t, contractErr)
+	assert.Contains(t, contractErr.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Contractor returns nil")
+}
