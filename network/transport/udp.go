@@ -101,5 +101,5 @@ func (udpT *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
 	}
 	log.Debug("[ handleAcceptedConnection ] Packet processed. size: ", len(data), ". Address: ", addr)
 
-	udpT.baseTransport.handlePacket(msg)
+	udpT.handlePacket(msg)
 }
