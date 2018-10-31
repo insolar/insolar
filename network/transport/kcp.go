@@ -78,8 +78,7 @@ func (t *kcpTransport) Stop() {
 		log.Errorln("Failed to close socket:", err.Error())
 	}
 
-	t.disconnectStarted <- true
-	close(t.disconnectStarted)
+	t.prepareDisconnect()
 }
 
 func (t *kcpTransport) socketDialTimeout(addr string, timeout time.Duration) (*kcp.UDPSession, error) {

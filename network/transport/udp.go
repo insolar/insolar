@@ -26,6 +26,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const udpMaxPacketSize = 1400
+
 type udpTransport struct {
 	baseTransport
 	serverConn net.PacketConn
@@ -66,7 +68,7 @@ func (udpT *udpTransport) send(recvAddress string, data []byte) error {
 func (udpT *udpTransport) Start() error {
 	log.Info("Start UDP transport")
 	for {
-		buf := make([]byte, 1400)
+		buf := make([]byte, udpMaxPacketSize)
 		n, addr, err := udpT.serverConn.ReadFrom(buf)
 		if err != nil {
 			<-udpT.disconnectFinished
@@ -83,8 +85,7 @@ func (udpT *udpTransport) Stop() {
 	defer udpT.mutex.Unlock()
 
 	log.Info("Stop UTP transport")
-	udpT.disconnectStarted <- true
-	close(udpT.disconnectStarted)
+	udpT.prepareDisconnect()
 
 	err := udpT.serverConn.Close()
 	if err != nil {

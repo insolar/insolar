@@ -110,6 +110,11 @@ func (t *baseTransport) Stopped() <-chan bool {
 	return t.disconnectStarted
 }
 
+func (t *baseTransport) prepareDisconnect() {
+	t.disconnectStarted <- true
+	close(t.disconnectStarted)
+}
+
 func (t *baseTransport) generateID() packet.RequestID {
 	id := AtomicLoadAndIncrementUint64(t.sequence)
 	return packet.RequestID(id)
