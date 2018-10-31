@@ -78,6 +78,11 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
         return nil, err
     }
 
+    if ret0 == nil {
+        e := &ExtendableError{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Contractor returns nil" }
+        return nil, e
+    }
+
     return ret, err
 }
 {{ end }}
