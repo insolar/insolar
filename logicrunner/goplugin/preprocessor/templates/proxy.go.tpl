@@ -47,8 +47,8 @@ func GetObject(ref core.RecordRef) (r *{{ .ContractType }}) {
 	return &{{ .ContractType }}{Reference: ref}
 }
 
-// GetClass returns reference to the class
-func GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func GetPrototype() core.RecordRef {
 	return ClassReference
 }
 
@@ -81,8 +81,8 @@ func (r *{{ $.ContractType }}) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass returns reference to the class
-func (r *{{ $.ContractType }}) GetClass() core.RecordRef {
+// GetPrototype returns reference to the class
+func (r *{{ $.ContractType }}) GetPrototype() core.RecordRef {
 	return ClassReference
 }
 

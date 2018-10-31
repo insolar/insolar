@@ -121,8 +121,8 @@ func (b *Bootstrapper) activateRootDomain(
 		ctx,
 		core.RecordRef{},
 		*contract,
-		*cb.Classes[rootDomain],
 		*am.GenesisRef(),
+		*cb.Prototypes[rootDomain],
 		false,
 		instanceData,
 	)
@@ -156,8 +156,8 @@ func (b *Bootstrapper) activateNodeDomain(
 		ctx,
 		core.RecordRef{},
 		*contract,
-		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
+		*cb.Prototypes[nodeDomain],
 		false,
 		instanceData,
 	)
@@ -192,8 +192,8 @@ func (b *Bootstrapper) activateRootMember(
 		ctx,
 		core.RecordRef{},
 		*contract,
-		*cb.Classes[memberContract],
 		*b.rootDomainRef,
+		*cb.Prototypes[memberContract],
 		false,
 		instanceData,
 	)
@@ -249,8 +249,8 @@ func (b *Bootstrapper) activateRootMemberWallet(
 		ctx,
 		core.RecordRef{},
 		*contract,
-		*cb.Classes[walletContract],
 		*b.rootMemberRef,
+		*cb.Prototypes[walletContract],
 		true,
 		instanceData,
 	)
@@ -324,7 +324,7 @@ func (b *Bootstrapper) Start(ctx context.Context, c core.Components) error {
 
 	am := c.Ledger.GetArtifactManager()
 	cb := goplugintestutils.NewContractBuilder(am, insgocc)
-	b.classRefs = cb.Classes
+	b.classRefs = cb.Prototypes
 	defer cb.Clean()
 
 	err = buildSmartContracts(ctx, cb)

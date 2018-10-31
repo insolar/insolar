@@ -64,54 +64,43 @@ func (d *CodeDescriptor) Code() ([]byte, error) {
 	return d.cache.code, nil
 }
 
-// ClassDescriptor represents meta info required to fetch all class data.
-type ClassDescriptor struct {
-	cache struct {
-		codeDescriptor core.CodeDescriptor
-	}
-
-	am core.ArtifactManager
-
-	head        core.RecordRef
-	state       core.RecordID
-	code        *core.RecordRef // Can be nil.
-	machineType core.MachineType
-}
-
-// HeadRef returns head reference to represented class record.
-func (d *ClassDescriptor) HeadRef() *core.RecordRef {
-	return &d.head
-}
-
-// StateID returns reference to represented class state record.
-func (d *ClassDescriptor) StateID() *core.RecordID {
-	return &d.state
-}
-
-// CodeDescriptor returns descriptor for fetching object's code data.
-func (d *ClassDescriptor) CodeDescriptor() core.CodeDescriptor {
-	if d.cache.codeDescriptor == nil {
-		d.cache.codeDescriptor = &CodeDescriptor{
-			ref:         *d.code,
-			machineType: d.machineType,
-		}
-	}
-
-	return d.cache.codeDescriptor
-}
-
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor struct {
-	cache struct {
-		classDescriptor core.ClassDescriptor
-	}
 	am *LedgerArtifactManager
 
 	head         core.RecordRef
 	state        core.RecordID
-	class        core.RecordRef
+	prototype    *core.RecordRef
+	isPrototype  bool
 	childPointer *core.RecordID // can be nil.
 	memory       []byte
+}
+
+// IsPrototype determines if the object is a prototype.
+func (d *ObjectDescriptor) IsPrototype() bool {
+	return d.isPrototype
+}
+
+// Code returns code reference.
+func (d *ObjectDescriptor) Code() (*core.RecordRef, error) {
+	if !d.IsPrototype() {
+		return nil, errors.New("object is not a prototype")
+	}
+	if d.prototype == nil {
+		return nil, errors.New("object has no code")
+	}
+	return d.prototype, nil
+}
+
+// Prototype returns prototype reference.
+func (d *ObjectDescriptor) Prototype() (*core.RecordRef, error) {
+	if d.IsPrototype() {
+		return nil, errors.New("object is not an instance")
+	}
+	if d.prototype == nil {
+		return nil, errors.New("object has no prototype")
+	}
+	return d.prototype, nil
 }
 
 // HeadRef returns reference to represented object record.
@@ -138,11 +127,6 @@ func (d *ObjectDescriptor) Memory() []byte {
 func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, error) {
 	ctx := context.TODO()
 	return d.am.GetChildren(ctx, d.head, pulse)
-}
-
-// Class returns object's class reference.
-func (d *ObjectDescriptor) Class() *core.RecordRef {
-	return &d.class
 }
 
 // ChildIterator is used to iterate over objects children.

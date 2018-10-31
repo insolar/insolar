@@ -169,30 +169,6 @@ func (m *TransactionManager) SetRecord(pulseNumber core.PulseNumber, rec record.
 	return id, nil
 }
 
-// GetClassIndex fetches class lifeline's index.
-func (m *TransactionManager) GetClassIndex(id *core.RecordID, forupdate bool) (*index.ClassLifeline, error) {
-	if forupdate {
-		m.lockOnID(id)
-	}
-	k := prefixkey(scopeIDLifeline, id[:])
-	buf, err := m.Get(k)
-	if err != nil {
-		return nil, err
-	}
-	return index.DecodeClassLifeline(buf)
-}
-
-// SetClassIndex stores class lifeline index.
-func (m *TransactionManager) SetClassIndex(id *core.RecordID, idx *index.ClassLifeline) error {
-	k := prefixkey(scopeIDLifeline, id[:])
-	encoded, err := index.EncodeClassLifeline(idx)
-	if err != nil {
-		return err
-	}
-	m.set(k, encoded)
-	return nil
-}
-
 // GetObjectIndex fetches object lifeline index.
 func (m *TransactionManager) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
 	if forupdate {
