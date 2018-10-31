@@ -36,11 +36,14 @@ const (
 	StateDeactivation
 )
 
-
 // ObjectState is common object state record.
 type ObjectState interface {
 	// State returns state id.
 	State() State
+	// GetImage returns state code.
+	GetImage() *core.RecordRef
+	// GetIsPrototype returns state code.
+	GetIsPrototype() bool
 	// GetMemory returns state memory.
 	GetMemory() []byte
 	// PrevStateID returns previous state id.
@@ -100,10 +103,11 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
-
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
-	Memory []byte
+	Memory      []byte
+	Image       core.RecordRef // If code or prototype object reference.
+	IsPrototype bool           // If true, Image should point to a prototype object. Otherwise to a code.
 }
 
 // GetMemory returns state memory.
@@ -111,14 +115,23 @@ func (r *ObjectStateRecord) GetMemory() []byte {
 	return r.Memory
 }
 
+// GetImage returns state code.
+func (r *ObjectStateRecord) GetImage() *core.RecordRef {
+	return &r.Image
+}
+
+// GetIsPrototype returns state code.
+func (r *ObjectStateRecord) GetIsPrototype() bool {
+	return r.IsPrototype
+}
+
 // ObjectActivateRecord is produced when we instantiate new object from an available class.
 type ObjectActivateRecord struct {
 	SideEffectRecord
 	ObjectStateRecord
 
-	Class    core.RecordRef
-	Parent   core.RecordRef
-	Delegate bool
+	Parent     core.RecordRef
+	IsDelegate bool
 }
 
 // PrevStateID returns previous state id.
@@ -199,7 +212,12 @@ func (*DeactivationRecord) GetMemory() []byte {
 	return nil
 }
 
-// GetCode returns state code.
-func (*DeactivationRecord) GetCode() *core.RecordRef {
+// GetImage returns state code.
+func (r *DeactivationRecord) GetImage() *core.RecordRef {
 	return nil
+}
+
+// GetIsPrototype returns state code.
+func (r *DeactivationRecord) GetIsPrototype() bool {
+	return false
 }
