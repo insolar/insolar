@@ -98,16 +98,12 @@ const (
 	TypeRequestCall
 	// TypeGetCode retrieves code from storage.
 	TypeGetCode
-	// TypeGetClass retrieves class from storage.
-	TypeGetClass
 	// TypeGetObject retrieves object from storage.
 	TypeGetObject
 	// TypeGetDelegate retrieves object represented as provided class.
 	TypeGetDelegate
 	// TypeGetChildren retrieves object represented as provided class.
 	TypeGetChildren
-	// TypeUpdateClass amends class.
-	TypeUpdateClass
 	// TypeUpdateObject amends object.
 	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.
