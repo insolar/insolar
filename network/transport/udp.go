@@ -48,18 +48,17 @@ func (udpT *udpTransport) send(recvAddress string, data []byte) error {
 	// TODO: skip resolving every time by caching result
 	udpAddr, err := net.ResolveUDPAddr("udp", recvAddress)
 	if err != nil {
-		return errors.Wrap(err, "udpT.send")
+		return errors.Wrap(err, "udpTransport.send")
 	}
 
 	udpConn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
-		return errors.Wrap(err, "udpT.send")
+		return errors.Wrap(err, "udpTransport.send")
 	}
 	defer udpConn.Close()
 
-	log.Debug("=======WRITE: len = ", len(data))
+	log.Debug("udpTransport.send: len = ", len(data))
 	_, err = udpConn.Write(data)
-	log.Debug("=======AFTER_WRITE")
 	return errors.Wrap(err, "Failed to write data")
 }
 
@@ -67,9 +66,8 @@ func (udpT *udpTransport) send(recvAddress string, data []byte) error {
 func (udpT *udpTransport) Start() error {
 	log.Info("Start UDP transport")
 	for {
-		buf := make([]byte, 1700)
+		buf := make([]byte, 1400)
 		n, addr, err := udpT.serverConn.ReadFrom(buf)
-		log.Debug("__________ Start: n = ", n, ". addr = ", addr)
 		if err != nil {
 			<-udpT.disconnectFinished
 			return err
@@ -92,19 +90,16 @@ func (udpT *udpTransport) Stop() {
 	if err != nil {
 		log.Errorln("Failed to close socket:", err.Error())
 	}
-
 }
 
 func (udpT *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
-	log.Debug("++++++++++handleAcceptedConnection")
 	r := bytes.NewReader(data)
 	msg, err := packet.DeserializePacket(r)
 	if err != nil {
 		log.Error("[ handleAcceptedConnection ] ", err)
 		return
 	}
-	log.Debug("++++++++++AFTER_DESERIALIZING")
-	log.Info("[ handleAcceptedConnection ] Packet processed. size: ", len(data), ". Address: ", addr)
+	log.Debug("[ handleAcceptedConnection ] Packet processed. size: ", len(data), ". Address: ", addr)
 
 	udpT.baseTransport.handlePacket(msg)
 }
