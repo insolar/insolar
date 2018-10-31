@@ -34,7 +34,7 @@ import (
 )
 
 // StartRPC starts RPC server for isolated executors to use
-func StartRPC(lr *LogicRunner) *RPC {
+func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
 	rpcService := &RPC{lr: lr}
 
 	rpcServer := rpc.NewServer()

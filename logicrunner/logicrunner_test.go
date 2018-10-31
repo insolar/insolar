@@ -594,6 +594,7 @@ func (r *One) Hello() (string, error) {
 	assert.NoError(t, err)
 
 	_, res, err := gp.CallMethod(
+		context.Background(),
 		&core.LogicCallContext{Prototype: cb.Prototypes["one"]}, *cb.Codes["one"],
 		data, "Hello", argsSerialized,
 	)

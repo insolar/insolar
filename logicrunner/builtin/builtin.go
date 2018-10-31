@@ -51,7 +51,7 @@ func NewBuiltIn(eb core.MessageBus, am core.ArtifactManager) *BuiltIn {
 	return &bi
 }
 
-func (bi *BuiltIn) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) (objectState []byte, err error) {
+func (bi *BuiltIn) CallConstructor(ctx context.Context, callCtx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) (objectState []byte, err error) {
 	panic("implement me")
 }
 
@@ -60,10 +60,9 @@ func (bi *BuiltIn) Stop() error {
 }
 
 // CallMethod runs a method on contract
-func (bi *BuiltIn) CallMethod(ctx *core.LogicCallContext, codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
+func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *core.LogicCallContext, codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
 	am := bi.AM
-	insctx := context.TODO()
-	codeDescriptor, err := am.GetCode(insctx, codeRef)
+	codeDescriptor, err := am.GetCode(ctx, codeRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Can't find code")
 	}

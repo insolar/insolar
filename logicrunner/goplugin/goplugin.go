@@ -18,6 +18,7 @@
 package goplugin
 
 import (
+	"context"
 	"net/rpc"
 	"os/exec"
 	"time"
@@ -89,7 +90,13 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 const timeout = time.Minute * 10
 
 // CallMethod runs a method on an object in controlled environment
-func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+func (gp *GoPlugin) CallMethod(
+	ctx context.Context, callContext *core.LogicCallContext,
+	code core.RecordRef, data []byte,
+	method string, args core.Arguments,
+) (
+	[]byte, core.Arguments, error,
+) {
 	start := time.Now()
 	client, err := gp.Downstream()
 	if err != nil {
@@ -98,7 +105,7 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{
-		Context:   ctx,
+		Context:   callContext,
 		Code:      code,
 		Data:      data,
 		Method:    method,
@@ -118,7 +125,12 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
-func (gp *GoPlugin) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
+func (gp *GoPlugin) CallConstructor(
+	ctx context.Context, callContext *core.LogicCallContext,
+	code core.RecordRef, name string, args core.Arguments,
+) (
+	[]byte, error,
+) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with rpc connection")

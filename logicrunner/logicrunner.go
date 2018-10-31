@@ -108,7 +108,7 @@ func (lr *LogicRunner) Start(ctx context.Context, c core.Components) error {
 
 	if lr.Cfg.GoPlugin != nil {
 		if lr.Cfg.RPCListen != "" {
-			StartRPC(lr)
+			StartRPC(ctx, lr)
 		}
 
 		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
@@ -322,7 +322,8 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 }
 
 func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := es.insContext
+	ctx := es.insContext
+
 	es.noWait = false
 	defer func() {
 		if !es.noWait {
@@ -350,7 +351,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			}
 		}()
 		newData, result, err := executor.CallMethod(
-			es.callContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
+			ctx, es.callContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "executor error")
@@ -360,17 +361,17 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			am := lr.ArtifactManager
 			if es.deactivate {
 				_, err = am.DeactivateObject(
-					insctx, Ref{}, *es.request, es.objectbody.objDescriptor,
+					ctx, Ref{}, *es.request, es.objectbody.objDescriptor,
 				)
 			} else {
 				es.objectbody.objDescriptor, err = am.UpdateObject(
-					insctx, Ref{}, *es.request, es.objectbody.objDescriptor, newData,
+					ctx, Ref{}, *es.request, es.objectbody.objDescriptor, newData,
 				)
 			}
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
 			}
-			_, err = am.RegisterResult(insctx, *es.request, result)
+			_, err = am.RegisterResult(ctx, *es.request, result)
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't save results")
 			}
@@ -404,11 +405,11 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 }
 
 func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := es.insContext
+	ctx := es.insContext
 	defer func() {
 		es.Unlock()
 	}()
-	protoDesc, err := lr.ArtifactManager.GetObject(insctx, m.PrototypeRef, nil, false)
+	protoDesc, err := lr.ArtifactManager.GetObject(ctx, m.PrototypeRef, nil, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get prototype")
 	}
@@ -418,7 +419,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't code reference")
 	}
-	codeDesc, err := lr.ArtifactManager.GetCode(insctx, *codeRef)
+	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't code")
 	}
@@ -427,7 +428,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 		return nil, errors.Wrap(err, "no executer registered")
 	}
 
-	newData, err := executor.CallConstructor(es.callContext, *codeDesc.Ref(), m.Name, m.Arguments)
+	newData, err := executor.CallConstructor(ctx, es.callContext, *codeDesc.Ref(), m.Name, m.Arguments)
 	if err != nil {
 		return nil, errors.Wrap(err, "executer error")
 	}
@@ -436,7 +437,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	case message.Child, message.Delegate:
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
-				insctx,
+				ctx,
 				Ref{}, *es.request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 			)
 		}
