@@ -36,6 +36,18 @@ type PulseData struct {
 	Data       *PulseDataExt
 }
 
+type NodePulseProof struct {
+	NodeStateHash *bitarray.BitArray
+	NodeSignature *bitarray.BitArray
+}
+
+func NewNodePulseProof() *NodePulseProof {
+	return &NodePulseProof{
+		NodeSignature: bitarray.New(512),
+		NodeStateHash: bitarray.New(512),
+	}
+}
+
 // NewPulseData creates and returns a pulse data.
 func NewPulseData() *PulseData {
 	return &PulseData{
@@ -64,20 +76,20 @@ type NodeBroadcast struct {
 	EmergencyLevel *bitarray.BitArray
 }
 
-// CapabilityPoolingAndActivation is type 3.
+// CapabilityPoolingAndActivation is a type 3.
 type CapabilityPoolingAndActivation struct {
 	PollingFlags   uint16
 	CapabilityType uint16
 	CapabilityRef  *bitarray.BitArray
 }
 
-// NodeViolationBlame is type 2.
+// NodeViolationBlame is a type 2.
 type NodeViolationBlame struct {
 	BlameNodeID   uint32
 	TypeViolation *bitarray.BitArray
 }
 
-// NodeJoinClaim is type 1, len == 272.
+// NodeJoinClaim is a type 1, len == 272.
 type NodeJoinClaim struct {
 	NodeID                  uint32
 	RelayNodeID             uint32

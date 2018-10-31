@@ -16,7 +16,7 @@
 
 package phases
 
-// Phase is consensus phase.
+// Phase is a consensus phase.
 type Phase interface {
 	Calculate(args ...interface{}) error
 }
