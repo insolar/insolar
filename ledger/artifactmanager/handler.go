@@ -111,6 +111,9 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
+	if err != nil && err != storage.ErrNotFound {
+		return nil, err
+	}
 
 	id, err := h.db.SetBlob(pulseNumber, msg.Memory)
 	if err != nil {
