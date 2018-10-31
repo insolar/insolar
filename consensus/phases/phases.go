@@ -21,13 +21,12 @@ type FirstPhase struct {
 	next *SecondPhase
 }
 
-func (fp *FirstPhase) Calculate(data *PulseData) error {
-	// do work with pulse
-	result := fp.work(data)
+func (fp *FirstPhase) HandlePulse(data *PulseData) error {
+	result := fp.getPulseProof(data)
 	return fp.next.Calculate(result)
 }
 
-func (fp *FirstPhase) work(pulse *PulseData) *NodePulseProof {
+func (fp *FirstPhase) getPulseProof(pulse *PulseData) *NodePulseProof {
 	return NewNodePulseProof()
 }
 
