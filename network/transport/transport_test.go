@@ -57,8 +57,9 @@ func setupNode(t *transportSuite, n *node) {
 	n.host = host.NewHost(n.address)
 
 	n.transport, err = NewTransport(n.config, relay.NewProxy())
-	t.Assert().NoError(err)
-	t.Assert().Implements((*Transport)(nil), n.transport)
+	t.Require().NoError(err)
+	t.Require().NotNil(n.transport)
+	t.Require().Implements((*Transport)(nil), n.transport)
 }
 
 func (t *transportSuite) SetupTest() {
@@ -146,6 +147,13 @@ func TestUTPTransport(t *testing.T) {
 func TestKCPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17012", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17013", BehindNAT: false}
+
+	suite.Run(t, NewSuite(cfg1, cfg2))
+}
+
+func TestUDPTransport(t *testing.T) {
+	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014", BehindNAT: false}
+	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015", BehindNAT: false}
 
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }
