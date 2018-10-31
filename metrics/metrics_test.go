@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,7 +47,7 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	m, err := NewMetrics(cfg)
 	assert.NoError(t, err)
 	ctx := context.TODO()
-	err = m.Start(ctx, core.Components{})
+	err = m.Start(ctx)
 	assert.NoError(t, err)
 
 	NetworkMessageSentTotal.Inc()

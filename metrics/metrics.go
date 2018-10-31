@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -60,7 +59,7 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 }
 
 // Start is implementation of core.Component interface.
-func (m *Metrics) Start(ctx context.Context, components core.Components) error {
+func (m *Metrics) Start(ctx context.Context) error {
 	log.Infoln("Starting metrics server")
 	http.Handle("/metrics", m.httpHandler)
 
