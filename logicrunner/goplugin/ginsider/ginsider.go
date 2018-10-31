@@ -71,7 +71,7 @@ func recoverRPC(ctx context.Context, err *error) {
 				*err = errors.New(fmt.Sprint(*err, r))
 			}
 		}
-		log.Errorln("panic: ", r, string(debug.Stack()))
+		inslogger.FromContext(ctx).Errorln("panic: ", r, string(debug.Stack()))
 	}
 }
 
@@ -79,7 +79,7 @@ func recoverRPC(ctx context.Context, err *error) {
 // returns a new state of the object and result of the method
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) (err error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), args.TraceID)
-	log.Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
+	inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	defer recoverRPC(ctx, &err)
 
 	p, err := t.GI.Plugin(ctx, args.Code)
@@ -116,7 +116,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 // returns a new state of the object and result of the method
 func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (err error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), args.TraceID)
-	log.Debugf("Calling constructor %q in code %q", args.Name, args.Code)
+	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
 	defer recoverRPC(ctx, &err)
 
 	p, err := t.GI.Plugin(ctx, args.Code)
@@ -176,7 +176,7 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 		return "", err
 	}
 
-	log.Debugf("obtaining code %q", ref)
+	inslogger.FromContext(ctx).Debugf("obtaining code %q", ref)
 	res := rpctypes.UpGetCodeResp{}
 	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Code: ref, MType: core.MachineTypeGoPlugin}, &res)
 	if err != nil {
@@ -206,7 +206,7 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 		return nil, errors.Wrap(err, "couldn't obtain code")
 	}
 
-	log.Debugf("Opening plugin %q from file %q", ref, path)
+	inslogger.FromContext(ctx).Debugf("Opening plugin %q from file %q", ref, path)
 	p, err := plugin.Open(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open plugin")

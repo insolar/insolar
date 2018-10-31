@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -45,14 +45,14 @@ func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
 
 	l, e := net.Listen(lr.Cfg.RPCProtocol, lr.Cfg.RPCListen)
 	if e != nil {
-		log.Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"' over "+lr.Cfg.RPCProtocol+": ", e)
+		inslogger.FromContext(ctx).Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"' over "+lr.Cfg.RPCProtocol+": ", e)
 	}
 	lr.sock = l
 
-	log.Infof("starting LogicRunner RPC service on %q over %s", lr.Cfg.RPCListen, lr.Cfg.RPCProtocol)
+	inslogger.FromContext(ctx).Infof("starting LogicRunner RPC service on %q over %s", lr.Cfg.RPCListen, lr.Cfg.RPCProtocol)
 	go func() {
 		rpcServer.Accept(l)
-		log.Info("LogicRunner RPC service stopped")
+		inslogger.FromContext(ctx).Info("LogicRunner RPC service stopped")
 	}()
 
 	return rpcService

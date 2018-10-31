@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
@@ -396,7 +396,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		go func() {
 			_, err := executer()
 			if err != nil {
-				log.Error(err)
+				inslogger.FromContext(ctx).Error(err)
 			}
 		}()
 		return &reply.CallMethod{}, nil

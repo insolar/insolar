@@ -115,7 +115,7 @@ func (gp *GoPlugin) CallMethod(
 
 	select {
 	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
-		log.Debugf("CallMethod done work, time spend in here - %s", time.Since(start))
+		inslogger.FromContext(ctx).Debugf("CallMethod done work, time spend in here - %s", time.Since(start))
 		if call.Error != nil {
 			return nil, nil, errors.Wrap(call.Error, "problem with API call")
 		}
