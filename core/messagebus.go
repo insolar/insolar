@@ -55,6 +55,7 @@ type SignedMessage interface {
 	Signature
 
 	Message() Message
+	Context(context.Context) context.Context
 }
 
 // Reply for an `Message`
