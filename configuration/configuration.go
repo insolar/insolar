@@ -40,6 +40,7 @@ type Configuration struct {
 	Bootstrap       Bootstrap
 	KeysPath        string
 	CertificatePath string
+	Tracer          Tracer
 }
 
 // Holder provides methods to manage configuration
@@ -63,6 +64,7 @@ func NewConfiguration() Configuration {
 		Bootstrap:       NewBootstrap(),
 		KeysPath:        "./",
 		CertificatePath: "",
+		Tracer:          NewTracer(),
 	}
 
 	return cfg
