@@ -75,7 +75,7 @@ func (t *TestCodeDescriptor) MachineType() core.MachineType {
 	return t.AMachineType
 }
 
-// CodeRef implementation for tests
+// Code implementation for tests
 func (t *TestCodeDescriptor) Code() ([]byte, error) {
 	return t.ACode, nil
 }
@@ -129,7 +129,7 @@ func (t *TestObjectDescriptor) Prototype() (*core.RecordRef, error) {
 	return t.PrototypeRef, nil
 }
 
-// CodeRef implementation for tests
+// Code implementation for tests
 func (t *TestObjectDescriptor) Code() (*core.RecordRef, error) {
 	if t.PrototypeRef == nil {
 		panic("No code")

@@ -61,14 +61,14 @@ type UpBaseReq struct {
 // UpRespIface interface for UpBaseReq descendant responses
 type UpRespIface interface{}
 
-// UpGetCodeReq is a set of arguments for GetImage RPC in goplugin
+// UpGetCodeReq is a set of arguments for GetCode RPC in goplugin
 type UpGetCodeReq struct {
 	UpBaseReq
 	MType core.MachineType
 	Code  core.RecordRef
 }
 
-// UpGetCodeResp is response from GetImage RPC in goplugin
+// UpGetCodeResp is response from GetCode RPC in goplugin
 type UpGetCodeResp struct {
 	Code []byte
 }

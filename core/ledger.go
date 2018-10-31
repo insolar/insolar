@@ -171,7 +171,7 @@ type CodeDescriptor interface {
 	// MachineType returns code machine type for represented code.
 	MachineType() MachineType
 
-	// CodeRef returns code data.
+	// Code returns code data.
 	Code() ([]byte, error)
 }
 
@@ -189,7 +189,7 @@ type ObjectDescriptor interface {
 	// IsPrototype determines if the object is a prototype.
 	IsPrototype() bool
 
-	// CodeRef returns code reference.
+	// Code returns code reference.
 	Code() (*RecordRef, error)
 
 	// Prototype returns prototype reference.

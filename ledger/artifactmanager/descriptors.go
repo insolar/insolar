@@ -46,7 +46,7 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 	return d.machineType
 }
 
-// CodeRef returns code data.
+// Code returns code data.
 func (d *CodeDescriptor) Code() ([]byte, error) {
 	ctx := context.TODO()
 	if d.cache.code == nil {
@@ -81,7 +81,7 @@ func (d *ObjectDescriptor) IsPrototype() bool {
 	return d.isPrototype
 }
 
-// CodeRef returns code reference.
+// Code returns code reference.
 func (d *ObjectDescriptor) Code() (*core.RecordRef, error) {
 	if !d.IsPrototype() {
 		return nil, errors.New("object is not a prototype")

@@ -63,7 +63,7 @@ type RPC struct {
 	lr *LogicRunner
 }
 
-// GetImage is an RPC retrieving a code by its reference
+// GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.lr.ArtifactManager
 	insctx := context.TODO()
