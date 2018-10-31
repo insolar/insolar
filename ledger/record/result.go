@@ -53,7 +53,7 @@ type ObjectState interface {
 	// State returns state id.
 	State() State
 	// GetMemory returns state memory.
-	GetMemory() []byte
+	GetMemory() *core.RecordID
 	// PrevStateID returns previous state id.
 	PrevStateID() *core.RecordID
 }
@@ -99,7 +99,7 @@ func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
 type CodeRecord struct {
 	SideEffectRecord
 
-	Code        []byte
+	Code        *core.RecordID
 	MachineType core.MachineType
 }
 
@@ -179,11 +179,11 @@ func (r *ClassAmendRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
-	Memory []byte
+	Memory *core.RecordID
 }
 
 // GetMemory returns state memory.
-func (r *ObjectStateRecord) GetMemory() []byte {
+func (r *ObjectStateRecord) GetMemory() *core.RecordID {
 	return r.Memory
 }
 
@@ -271,7 +271,7 @@ func (*DeactivationRecord) GetMachineType() core.MachineType {
 }
 
 // GetMemory returns state memory.
-func (*DeactivationRecord) GetMemory() []byte {
+func (*DeactivationRecord) GetMemory() *core.RecordID {
 	return nil
 }
 

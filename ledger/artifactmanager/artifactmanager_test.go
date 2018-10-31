@@ -124,7 +124,7 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 			Domain:  domainRef,
 			Request: requestRef,
 		},
-		Code:        []byte{1, 2, 3},
+		Code:        record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		MachineType: core.MachineTypeBuiltin,
 	})
 }
@@ -263,7 +263,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
 		},
-		Code: []byte{1},
+		Code: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1}),
 	})
 	updateID, err := am.UpdateClass(
 		ctx,
@@ -334,7 +334,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 			Request: objRef,
 		},
 		ObjectStateRecord: record.ObjectStateRecord{
-			Memory: memory,
+			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, memory),
 		},
 		Class:    *genRefWithID(classID),
 		Parent:   *genRefWithID(parentID),
@@ -417,7 +417,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 			Request: requestRef,
 		},
 		ObjectStateRecord: record.ObjectStateRecord{
-			Memory: memory,
+			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, memory),
 		},
 		PrevState: *objID,
 	})
@@ -510,17 +510,19 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 			Domain: domainRef,
 		},
 		ObjectStateRecord: record.ObjectStateRecord{
-			Memory: []byte{3},
+			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{3}),
 		},
 	})
+	db.SetBlob(core.GenesisPulse.PulseNumber, []byte{3})
 	objectAmendID, _ := db.SetRecord(core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
 		},
 		ObjectStateRecord: record.ObjectStateRecord{
-			Memory: []byte{4},
+			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{4}),
 		},
 	})
+	db.SetBlob(core.GenesisPulse.PulseNumber, []byte{4})
 	objectIndex := index.ObjectLifeline{
 		LatestState: objectAmendID,
 		ClassRef:    *genRefWithID(classID),
@@ -552,7 +554,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 			Domain: domainRef,
 		},
 		ObjectStateRecord: record.ObjectStateRecord{
-			Memory: []byte{0},
+			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{0}),
 		},
 	})
 	child1Ref := genRandomRef(1)
@@ -660,7 +662,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	defer cleaner()
 
 	codeRecord := record.CodeRecord{
-		Code: []byte{1, 2, 3, 3, 2, 1},
+		Code: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
 	}
 	recHash := hash.NewIDHash()
 	_, err := codeRecord.WriteHashData(recHash)

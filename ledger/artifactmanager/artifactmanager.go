@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -232,17 +233,48 @@ func (m *LedgerArtifactManager) DeployCode(
 	code []byte,
 	machineType core.MachineType,
 ) (*core.RecordID, error) {
-	return m.setRecord(
-		&record.CodeRecord{
-			SideEffectRecord: record.SideEffectRecord{
-				Domain:  domain,
-				Request: request,
+	pulseNumber, err := m.db.GetLatestPulseNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	var setRecord *core.RecordID
+	var setRecordErr error
+	go func() {
+		setRecord, setRecordErr = m.setRecord(
+			&record.CodeRecord{
+				SideEffectRecord: record.SideEffectRecord{
+					Domain:  domain,
+					Request: request,
+				},
+				Code:        record.CalculateIDForBlob(pulseNumber, code),
+				MachineType: machineType,
 			},
-			Code:        code,
-			MachineType: machineType,
-		},
-		request,
-	)
+			request,
+		)
+		wg.Done()
+	}()
+
+	var setBlobErr error
+	go func() {
+		_, setBlobErr = m.setBlob(
+			code,
+			request,
+		)
+		wg.Done()
+	}()
+	wg.Wait()
+
+	if setRecordErr != nil {
+		return nil, setRecordErr
+	}
+	if setBlobErr != nil {
+		return nil, setBlobErr
+	}
+
+	return setRecord, nil
 }
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
@@ -328,6 +360,10 @@ func (m *LedgerArtifactManager) ActivateObject(
 	if err != nil {
 		return nil, err
 	}
+	pulseNumber, err := m.db.GetLatestPulseNumber()
+	if err != nil {
+		return nil, err
+	}
 
 	obj, err := m.updateObject(
 		&record.ObjectActivateRecord{
@@ -336,7 +372,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: memory,
+				Memory: record.CalculateIDForBlob(pulseNumber, memory),
 			},
 			Class:    class,
 			Parent:   parent,
@@ -344,6 +380,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 		},
 		object,
 		&class,
+		memory,
 	)
 	if err != nil {
 		return nil, err
@@ -399,6 +436,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 		},
 		*object.HeadRef(),
 		nil,
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -416,6 +454,14 @@ func (m *LedgerArtifactManager) UpdateObject(
 	object core.ObjectDescriptor,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
+	pulseNumber, err := m.db.GetLatestPulseNumber()
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	obj, err := m.updateObject(
 		&record.ObjectAmendRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -423,12 +469,13 @@ func (m *LedgerArtifactManager) UpdateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: memory,
+				Memory: record.CalculateIDForBlob(pulseNumber, memory),
 			},
 			PrevState: *object.StateID(),
 		},
 		*object.HeadRef(),
 		nil,
+		memory,
 	)
 	if err != nil {
 		return nil, err
@@ -498,6 +545,27 @@ func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordR
 	return &react.ID, nil
 }
 
+func (m *LedgerArtifactManager) setBlob(blob []byte, target core.RecordRef) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(
+		context.TODO(),
+		&message.SetBlob{
+			Memory:    blob,
+			TargetRef: target,
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+
+	return &react.ID, nil
+}
+
 func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.RecordRef) (*core.RecordID, error) {
 	genericReact, err := m.messageBus.Send(
 		context.TODO(),
@@ -520,22 +588,52 @@ func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.Record
 }
 
 func (m *LedgerArtifactManager) updateObject(
-	rec record.Record, object core.RecordRef, class *core.RecordRef,
+	rec record.Record, object core.RecordRef, class *core.RecordRef, memory []byte,
 ) (*reply.Object, error) {
-	genericReact, err := m.messageBus.Send(
-		context.TODO(),
-		&message.UpdateObject{
-			Record: record.SerializeRecord(rec),
-			Object: object,
-			Class:  class,
-		},
-	)
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	if err != nil {
-		return nil, err
+	var genericReact core.Reply
+	var genericError error
+	go func() {
+		genericReact, genericError = m.messageBus.Send(
+			context.TODO(),
+			&message.UpdateObject{
+				Record: record.SerializeRecord(rec),
+				Object: object,
+				Class:  class,
+			},
+		)
+		wg.Done()
+	}()
+
+	var blobReact core.Reply
+	var blobError error
+	go func() {
+		blobReact, blobError = m.messageBus.Send(
+			context.TODO(),
+			&message.SetBlob{
+				TargetRef: object,
+				Memory:    memory,
+			},
+		)
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	if genericError != nil {
+		return nil, genericError
+	}
+	if blobError != nil {
+		return nil, blobError
 	}
 
 	rep, ok := genericReact.(*reply.Object)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+	_, ok = blobReact.(*reply.ID)
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}
