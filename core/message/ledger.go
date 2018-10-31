@@ -266,10 +266,12 @@ type SetBlob struct {
 	Memory    []byte
 }
 
+// Type implementation of Message interface.
 func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
 }
 
+// Target implementation of Message interface.
 func (m *SetBlob) Target() *core.RecordRef {
 	return &m.TargetRef
 }
