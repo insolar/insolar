@@ -80,7 +80,6 @@ func (t *utpTransport) Stop() {
 }
 
 func (t *utpTransport) send(recvAddress string, data []byte) error {
-	log.Debug("utpTransport.send: address: ", recvAddress)
 	conn, err := t.socketDialTimeout(recvAddress, time.Second)
 	if err != nil {
 		return errors.Wrap(err, "Failed to socket dial")
@@ -92,7 +91,6 @@ func (t *utpTransport) send(recvAddress string, data []byte) error {
 }
 
 func (t *utpTransport) socketDialTimeout(addr string, timeout time.Duration) (net.Conn, error) {
-	log.Debug("utpTransport.socketDialTimeout")
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
 	defer cancel()
 
@@ -100,7 +98,6 @@ func (t *utpTransport) socketDialTimeout(addr string, timeout time.Duration) (ne
 }
 
 func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
-	log.Debug("utpTransport.handleAcceptedConnection: address: ", conn.RemoteAddr())
 	for {
 		// Wait for Packets
 		msg, err := packet.DeserializePacket(conn)
