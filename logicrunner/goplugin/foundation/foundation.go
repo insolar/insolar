@@ -48,7 +48,7 @@ func (bc *BaseContract) GetReference() core.RecordRef {
 	return *ctx.Callee
 }
 
-// GetImage - Returns class of contract
+// GetPrototype - Returns prototype of contract
 func (bc *BaseContract) GetPrototype() core.RecordRef {
 	return *bc.GetContext().Prototype
 }

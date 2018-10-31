@@ -113,9 +113,13 @@ type ArtifactManager interface {
 
 	// DeployCode creates new code record in storage.
 	//
-	// CodeRef records are used to activate prototype.
+	// Code records are used to activate prototype.
 	DeployCode(ctx context.Context, domain, request RecordRef, code []byte, machineType MachineType) (*RecordID, error)
 
+	// ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
+	// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
+	//
+	// Request reference will be this object's identifier and referred as "object head".
 	ActivatePrototype(
 		ctx context.Context,
 		domain, request, parent, code RecordRef,
