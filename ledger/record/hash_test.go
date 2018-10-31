@@ -31,10 +31,8 @@ var emptyRecordsGens = []recordgen{
 	// request records
 	func() Record { return &CallRequest{} },
 	// result records
-	func() Record { return &ClassActivateRecord{} },
 	func() Record { return &ObjectActivateRecord{} },
 	func() Record { return &CodeRecord{} },
-	func() Record { return &ClassAmendRecord{} },
 	func() Record { return &DeactivationRecord{} },
 	func() Record { return &ObjectAmendRecord{} },
 	func() Record { return &TypeRecord{} },
