@@ -26,8 +26,6 @@ import (
 type Store interface {
 	GetRecord(ref *core.RecordID) (record.Record, error)
 	SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
-	GetClassIndex(ref *core.RecordID, forupdate bool) (*index.ClassLifeline, error)
-	SetClassIndex(ref *core.RecordID, idx *index.ClassLifeline) error
 	GetObjectIndex(ref *core.RecordID, forupdate bool) (*index.ObjectLifeline, error)
 	SetObjectIndex(ref *core.RecordID, idx *index.ObjectLifeline) error
 	GetLatestPulseNumber() (core.PulseNumber, error)
