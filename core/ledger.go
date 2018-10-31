@@ -89,12 +89,6 @@ type ArtifactManager interface {
 	// This method is used by VM to fetch code for execution.
 	GetCode(ctx context.Context, ref RecordRef) (CodeDescriptor, error)
 
-	// GetClass returns descriptor for provided state.
-	//
-	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
-	// provide methods for fetching all related data.
-	GetClass(ctx context.Context, head RecordRef, state *RecordID) (ClassDescriptor, error)
-
 	// GetObject returns descriptor for provided state.
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
@@ -119,33 +113,47 @@ type ArtifactManager interface {
 
 	// DeployCode creates new code record in storage.
 	//
-	// Code records are used to activate class or as migration code for an object.
+	// CodeRef records are used to activate class or as migration code for an object.
 	DeployCode(ctx context.Context, domain, request RecordRef, code []byte, machineType MachineType) (*RecordID, error)
 
-	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
-	//
-	// Request reference will be this class'es identifier and referred as "class head".
-	ActivateClass(ctx context.Context, domain, request, code RecordRef, machineType MachineType) (*RecordID, error)
+	ActivatePrototype(
+		ctx context.Context,
+		domain, request, parent, code RecordRef,
+		memory []byte,
+	) (ObjectDescriptor, error)
 
-	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
-	// the class. If class is already deactivated, an error should be returned.
-	//
-	// Deactivated class cannot be changed or instantiate objects.
-	DeactivateClass(ctx context.Context, domain, request, class RecordRef, state RecordID) (*RecordID, error)
-
-	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
-	// the class. Migrations are references to code records.
-	//
-	// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
-	// migrate objects memory in the order they appear in provided slice.
-	UpdateClass(ctx context.Context, domain, request, class, code RecordRef, machineType MachineType, state RecordID) (*RecordID, error)
-
-	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's class.
-	// If memory is not provided, the class default memory will be used.
+	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's
+	// class. If memory is not provided, the class default memory will be used.
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(
-		ctx context.Context, domain, request, class, parent RecordRef, asDelegate bool, memory []byte,
+		ctx context.Context,
+		domain, request, parent, prototype RecordRef,
+		asDelegate bool,
+		memory []byte,
+	) (ObjectDescriptor, error)
+
+	// UpdatePrototype creates amend object record in storage. Provided reference should be a reference to the head of
+	// the prototype. Provided memory well be the new object memory.
+	//
+	// Returned reference will be the latest object state (exact) reference.
+	UpdatePrototype(
+		ctx context.Context,
+		domain, request RecordRef,
+		obj ObjectDescriptor,
+		memory []byte,
+		code *RecordRef,
+	) (ObjectDescriptor, error)
+
+	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
+	// object. Provided memory well be the new object memory.
+	//
+	// Returned reference will be the latest object state (exact) reference.
+	UpdateObject(
+		ctx context.Context,
+		domain, request RecordRef,
+		obj ObjectDescriptor,
+		memory []byte,
 	) (ObjectDescriptor, error)
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
@@ -153,12 +161,6 @@ type ArtifactManager interface {
 	//
 	// Deactivated object cannot be changed.
 	DeactivateObject(ctx context.Context, domain, request RecordRef, obj ObjectDescriptor) (*RecordID, error)
-
-	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
-	// object. Provided memory well be the new object memory.
-	//
-	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(ctx context.Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
@@ -169,20 +171,8 @@ type CodeDescriptor interface {
 	// MachineType returns code machine type for represented code.
 	MachineType() MachineType
 
-	// Code returns code data.
+	// CodeRef returns code data.
 	Code() ([]byte, error)
-}
-
-// ClassDescriptor represents meta info required to fetch all object data.
-type ClassDescriptor interface {
-	// HeadRef returns head reference to represented class record.
-	HeadRef() *RecordRef
-
-	// StateID returns reference to represented class state record.
-	StateID() *RecordID
-
-	// CodeDescriptor returns descriptor for fetching class's code data.
-	CodeDescriptor() CodeDescriptor
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
@@ -196,8 +186,14 @@ type ObjectDescriptor interface {
 	// Memory fetches object memory from storage.
 	Memory() []byte
 
-	// Class
-	Class() *RecordRef
+	// IsPrototype determines if the object is a prototype.
+	IsPrototype() bool
+
+	// CodeRef returns code reference.
+	Code() (*RecordRef, error)
+
+	// Prototype returns prototype reference.
+	Prototype() (*RecordRef, error)
 
 	// Children returns object's children references.
 	Children(pulse *PulseNumber) (RefIterator, error)

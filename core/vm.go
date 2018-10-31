@@ -52,13 +52,13 @@ type LogicRunner interface {
 
 // LogicCallContext is a context of contract execution
 type LogicCallContext struct {
-	Callee  *RecordRef // Contract that was called
-	Request *RecordRef // ref of request
-	Class   *RecordRef // Class of the callee
-	Parent  *RecordRef // Parent of the callee
-	Caller  *RecordRef // Contract that made the call
-	Time    time.Time  // Time when call was made
-	Pulse   Pulse      // Number of the pulse
+	Callee    *RecordRef // Contract that was called
+	Request   *RecordRef // ref of request
+	Prototype *RecordRef // Image of the callee
+	Parent    *RecordRef // Parent of the callee
+	Caller    *RecordRef // Contract that made the call
+	Time      time.Time  // Time when call was made
+	Pulse     Pulse      // Number of the pulse
 }
 
 // CaseRecordType is a type of caserecord
