@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -124,7 +125,8 @@ func (m *LedgerArtifactManager) GetObject(
 			am:           m,
 			head:         r.Head,
 			state:        r.State,
-			class:        r.Class,
+			prototype:    r.Prototype,
+			isPrototype:  r.IsPrototype,
 			childPointer: r.ChildPointer,
 			memory:       r.Memory,
 		}
@@ -136,7 +138,7 @@ func (m *LedgerArtifactManager) GetObject(
 	return nil, ErrUnexpectedReply
 }
 
-// GetDelegate returns provided object's delegate reference for provided class.
+// GetDelegate returns provided object's delegate reference for provided prototype.
 //
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
 // be returned.
@@ -191,7 +193,7 @@ func (m *LedgerArtifactManager) DeclareType(
 
 // DeployCode creates new code record in storage.
 //
-// Code records are used to activate class or as migration code for an object.
+// CodeRef records are used to activate prototype or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
 	ctx context.Context,
 	domain core.RecordRef,
@@ -212,99 +214,29 @@ func (m *LedgerArtifactManager) DeployCode(
 	)
 }
 
+// ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
+// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 //
-}
-
-//
+// Request reference will be this object's identifier and referred as "object head".
+func (m *LedgerArtifactManager) ActivatePrototype(
 	ctx context.Context,
-) (*core.RecordID, error) {
-		&record.DeactivationRecord{
-			SideEffectRecord: record.SideEffectRecord{
-				Domain:  domain,
-				Request: request,
-			},
-			PrevState: state,
-		},
-		class,
-	)
+	domain, object, parent, code core.RecordRef,
+	memory []byte,
+) (core.ObjectDescriptor, error) {
+	return m.activateObject(ctx, domain, object, code, true, parent, false, memory)
 }
 
-//
-	ctx context.Context,
-) (*core.RecordID, error) {
-		},
-	)
-}
-
-// ActivateObject creates activate object record in storage. Provided class reference will be used as objects class
-// memory as memory of created object. If memory is not provided, the class default memory will be used.
+// ActivateObject creates activate object record in storage. Provided prototype reference will be used as objects prototype
+// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 //
 // Request reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObject(
 	ctx context.Context,
-	domain core.RecordRef,
-	object core.RecordRef,
-	class core.RecordRef,
-	parent core.RecordRef,
+	domain, object, parent, prototype core.RecordRef,
 	asDelegate bool,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
-	parendDesc, err := m.GetObject(ctx, parent, nil, false)
-	if err != nil {
-		return nil, err
-	}
-
-	obj, err := m.updateObject(
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
-				Domain:  domain,
-				Request: object,
-			},
-			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: memory,
-			},
-			Class:    class,
-			Parent:   parent,
-			Delegate: asDelegate,
-		},
-		object,
-		&class,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		prevChild *core.RecordID
-		asClass   *core.RecordRef
-	)
-	if parendDesc.ChildPointer() != nil {
-		prevChild = parendDesc.ChildPointer()
-	}
-	if asDelegate {
-		asClass = &class
-	}
-	_, err = m.registerChild(
-		&record.ChildRecord{
-			Ref:       object,
-			PrevChild: prevChild,
-		},
-		parent,
-		object,
-		asClass,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ObjectDescriptor{
-		am:           m,
-		head:         obj.Head,
-		state:        obj.State,
-		class:        obj.Class,
-		childPointer: obj.ChildPointer,
-		memory:       memory,
-	}, nil
+	return m.activateObject(ctx, domain, object, prototype, false, parent, asDelegate, memory)
 }
 
 // DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
@@ -314,7 +246,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 func (m *LedgerArtifactManager) DeactivateObject(
 	ctx context.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
 ) (*core.RecordID, error) {
-	desc, err := m.updateObject(
+	desc, err := m.sendUpdateObject(
 		&record.DeactivationRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -323,12 +255,28 @@ func (m *LedgerArtifactManager) DeactivateObject(
 			PrevState: *object.StateID(),
 		},
 		*object.HeadRef(),
-		nil,
 	)
 	if err != nil {
 		return nil, err
 	}
 	return &desc.State, nil
+}
+
+// UpdatePrototype creates amend object record in storage. Provided reference should be a reference to the head of the
+// prototype. Provided memory well be the new object memory.
+//
+// Returned reference will be the latest object state (exact) reference.
+func (m *LedgerArtifactManager) UpdatePrototype(
+	ctx context.Context,
+	domain, request core.RecordRef,
+	object core.ObjectDescriptor,
+	memory []byte,
+	code *core.RecordRef,
+) (core.ObjectDescriptor, error) {
+	if !object.IsPrototype() {
+		return nil, errors.New("object is not a prototype")
+	}
+	return m.updateObject(ctx, domain, request, object, code, memory)
 }
 
 // UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -341,32 +289,10 @@ func (m *LedgerArtifactManager) UpdateObject(
 	object core.ObjectDescriptor,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
-	obj, err := m.updateObject(
-		&record.ObjectAmendRecord{
-			SideEffectRecord: record.SideEffectRecord{
-				Domain:  domain,
-				Request: request,
-			},
-			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: memory,
-			},
-			PrevState: *object.StateID(),
-		},
-		*object.HeadRef(),
-		nil,
-	)
-	if err != nil {
-		return nil, err
+	if object.IsPrototype() {
+		return nil, errors.New("object is not an instance")
 	}
-
-	return &ObjectDescriptor{
-		am:           m,
-		head:         obj.Head,
-		state:        obj.State,
-		class:        obj.Class,
-		childPointer: obj.ChildPointer,
-		memory:       memory,
-	}, nil
+	return m.updateObject(ctx, domain, request, object, nil, memory)
 }
 
 // RegisterValidation marks provided object state as approved or disapproved.
@@ -400,6 +326,127 @@ func (m *LedgerArtifactManager) RegisterResult(
 		},
 		request,
 	)
+}
+
+func (m *LedgerArtifactManager) activateObject(
+	ctx context.Context,
+	domain core.RecordRef,
+	object core.RecordRef,
+	prototype core.RecordRef,
+	isPrototype bool,
+	parent core.RecordRef,
+	asDelegate bool,
+	memory []byte,
+) (core.ObjectDescriptor, error) {
+	parentDesc, err := m.GetObject(ctx, parent, nil, false)
+	if err != nil {
+		return nil, err
+	}
+
+	obj, err := m.sendUpdateObject(
+		&record.ObjectActivateRecord{
+			SideEffectRecord: record.SideEffectRecord{
+				Domain:  domain,
+				Request: object,
+			},
+			ObjectStateRecord: record.ObjectStateRecord{
+				Memory:      memory,
+				Image:       prototype,
+				IsPrototype: isPrototype,
+			},
+			Parent:     parent,
+			IsDelegate: asDelegate,
+		},
+		object,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		prevChild *core.RecordID
+		asClass   *core.RecordRef
+	)
+	if parentDesc.ChildPointer() != nil {
+		prevChild = parentDesc.ChildPointer()
+	}
+	if asDelegate {
+		asClass = &prototype
+	}
+	_, err = m.registerChild(
+		&record.ChildRecord{
+			Ref:       object,
+			PrevChild: prevChild,
+		},
+		parent,
+		object,
+		asClass,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ObjectDescriptor{
+		am:           m,
+		head:         obj.Head,
+		state:        obj.State,
+		prototype:    obj.Prototype,
+		childPointer: obj.ChildPointer,
+		memory:       memory,
+	}, nil
+}
+
+func (m *LedgerArtifactManager) updateObject(
+	ctx context.Context,
+	domain, request core.RecordRef,
+	object core.ObjectDescriptor,
+	code *core.RecordRef,
+	memory []byte,
+) (core.ObjectDescriptor, error) {
+	var (
+		image *core.RecordRef
+		err   error
+	)
+	if object.IsPrototype() {
+		if code != nil {
+			image = code
+		} else {
+			image, err = object.Code()
+		}
+	} else {
+		image, err = object.Prototype()
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update object")
+	}
+
+	obj, err := m.sendUpdateObject(
+		&record.ObjectAmendRecord{
+			SideEffectRecord: record.SideEffectRecord{
+				Domain:  domain,
+				Request: request,
+			},
+			ObjectStateRecord: record.ObjectStateRecord{
+				Memory:      memory,
+				Image:       *image,
+				IsPrototype: object.IsPrototype(),
+			},
+			PrevState: *object.StateID(),
+		},
+		*object.HeadRef(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ObjectDescriptor{
+		am:           m,
+		head:         obj.Head,
+		state:        obj.State,
+		prototype:    obj.Prototype,
+		childPointer: obj.ChildPointer,
+		memory:       memory,
+	}, nil
 }
 
 func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordRef) (*core.RecordID, error) {
@@ -444,15 +491,14 @@ func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.Record
 	return &react.ID, nil
 }
 
-func (m *LedgerArtifactManager) updateObject(
-	rec record.Record, object core.RecordRef, class *core.RecordRef,
+func (m *LedgerArtifactManager) sendUpdateObject(
+	rec record.Record, object core.RecordRef,
 ) (*reply.Object, error) {
 	genericReact, err := m.messageBus.Send(
 		context.TODO(),
 		&message.UpdateObject{
 			Record: record.SerializeRecord(rec),
 			Object: object,
-			Class:  class,
 		},
 	)
 
