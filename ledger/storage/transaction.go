@@ -108,11 +108,7 @@ func (m *TransactionManager) set(key, val []byte) {
 func (m *TransactionManager) GetBlob(id *core.RecordID) ([]byte, error) {
 	k := prefixkey(scopeIDBlob, id[:])
 	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
-	buf, err := m.Get(k)
-	if err != nil {
-		return nil, err
-	}
-	return buf, nil
+	return m.Get(k)
 }
 
 func (m *TransactionManager) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
