@@ -17,7 +17,6 @@
 package certificate
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
@@ -126,16 +125,6 @@ func (cert *Certificate) GetPrivateKey() (string, error) {
 // GetEcdsaPrivateKey returns private key in ecdsa format
 func (cert *Certificate) GetEcdsaPrivateKey() *ecdsa.PrivateKey {
 	return cert.privateKey
-}
-
-// Start is method from Component interface and it do nothing
-func (cert *Certificate) Start(ctx context.Context) error {
-	return nil
-}
-
-// Stop is method from Component interface and it do nothing
-func (cert *Certificate) Stop(ctx context.Context) error {
-	return nil
 }
 
 func readPrivateKey(keysPath string) (*ecdsa.PrivateKey, error) {
