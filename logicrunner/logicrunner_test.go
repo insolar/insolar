@@ -1480,20 +1480,18 @@ func (r *Two) Hello() (*string, error) {
 	assert.Contains(t, contractErr.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil")
 }
 
-func TestContractsDeadlock(t *testing.T) {
-
-	// TODO сделать контракт который вызывает сам себя и сделать вызов с wait и noWait и проверить что они оба лочаться
+func TestRecursiveCall(t *testing.T) {
 	if parallel {
 		t.Parallel()
 	}
-	var contractOneCode = `
+
+	var recursiveContractCode = `
 package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/application/proxy/deadlocktesttwo"
+	"github.com/insolar/insolar/application/proxy/recursive"
 )
-
 type One struct {
 	foundation.BaseContract
 }
@@ -1502,63 +1500,29 @@ func New() (*One, error) {
 	return &One{}, nil
 }
 
-func (r *One) Hello() (*deadlocktesttwo.Two, error) {
-	holder := deadlocktesttwo.New()
-	two, err := holder.AsChild(r.GetReference())
-	if err != nil {
-		return nil, err
-	}
-
-	err = two.Hello()
-	if err != nil {
-		return nil, err
-	}
-
-	return two, err
+func (r *One) Recursive() (error) {
+	remoteSelf := recursive.GetObject(r.GetReference())
+	err := remoteSelf.Recursive()
+	return err
 }
+
 `
 
-	var contractTwoCode = `
-package main
-
-import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/application/proxy/deadlocktestone"
-)
-
-type Two struct {
-	foundation.BaseContract
-}
-func New() (*Two, error) {
-	return &Two{}, nil
-}
-func (r *Two) Hello() error {
-	holder := deadlocktestone.New()
-	one, err := holder.AsChild(r.GetReference())
-	if err != nil {
-		return err
-	}
-	
-	one.Hello()
-	return nil
-}
-`
 	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
 	err := cb.Build(map[string]string{
-		"deadlocktestone": contractOneCode,
-		"deadlocktesttwo": contractTwoCode,
+		"recursive": recursiveContractCode,
 	})
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("deadlocktestone")})
+	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("recursive")})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
-		ctx, domain, *contract, *cb.Classes["deadlocktestone"], *am.GenesisRef(), false,
+		ctx, domain, *contract, *cb.Classes["recursive"], *am.GenesisRef(), false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
@@ -1566,12 +1530,12 @@ func (r *Two) Hello() error {
 
 	msg := &message.CallMethod{
 		ObjectRef:  *contract,
-		Method:     "Hello",
+		Method:     "Recursive",
 		Arguments:  goplugintestutils.CBORMarshal(t, []interface{}{}),
 		ReturnMode: message.ReturnResult,
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
 		context.TODO(),
 		signed,
@@ -1579,5 +1543,4 @@ func (r *Two) Hello() error {
 	assert.NoError(t, err, "contract call")
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{"Hi, ins! Two said: Hello you too, ins. 644 times!", nil}, r)
-
 }
