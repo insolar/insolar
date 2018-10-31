@@ -145,7 +145,9 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 	c, _ := lr.GetConsensus(msg.RecordRef)
-	c.AddValidated(ctx, inmsg, msg)
+	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
