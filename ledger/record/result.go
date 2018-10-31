@@ -36,17 +36,6 @@ const (
 	StateDeactivation
 )
 
-// ClassState is common class state record.
-type ClassState interface {
-	// State returns state id.
-	State() State
-	// GetCode returns state code.
-	GetCode() *core.RecordRef
-	// GetMachineType returns state code machine type.
-	GetMachineType() core.MachineType
-	// PrevStateID returns previous state id.
-	PrevStateID() *core.RecordID
-}
 
 // ObjectState is common object state record.
 type ObjectState interface {
@@ -111,71 +100,6 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
-// ClassStateRecord is a record containing data for a class state.
-type ClassStateRecord struct {
-	Code        core.RecordRef
-	MachineType core.MachineType
-}
-
-// GetMachineType returns state code machine type.
-func (r *ClassStateRecord) GetMachineType() core.MachineType {
-	return r.MachineType
-}
-
-// GetCode returns state code.
-func (r *ClassStateRecord) GetCode() *core.RecordRef {
-	return &r.Code
-}
-
-// ClassActivateRecord is produced when we "activate" new contract class.
-type ClassActivateRecord struct {
-	SideEffectRecord
-	ClassStateRecord
-}
-
-// PrevStateID returns previous state id.
-func (r *ClassActivateRecord) PrevStateID() *core.RecordID {
-	return nil
-}
-
-// State returns state id.
-func (r *ClassActivateRecord) State() State {
-	return StateActivation
-}
-
-// Type implementation of Record interface.
-func (r *ClassActivateRecord) Type() TypeID { return typeClassActivate }
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ClassActivateRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
-}
-
-// ClassAmendRecord is an amendment record for classes.
-type ClassAmendRecord struct {
-	SideEffectRecord
-	ClassStateRecord
-
-	PrevState core.RecordID
-}
-
-// PrevStateID returns previous state id.
-func (r *ClassAmendRecord) PrevStateID() *core.RecordID {
-	return &r.PrevState
-}
-
-// State returns state id.
-func (r *ClassAmendRecord) State() State {
-	return StateAmend
-}
-
-// Type implementation of Record interface.
-func (r *ClassAmendRecord) Type() TypeID { return typeClassAmend }
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ClassAmendRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
-}
 
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
