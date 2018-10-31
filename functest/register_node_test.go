@@ -18,7 +18,6 @@ package functest
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -41,7 +40,6 @@ func registerNodeSignedCall(params ...interface{}) (*registerAnswer, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(res.(string))
 	var cert registerAnswer
 	err = json.Unmarshal([]byte(res.(string)), &cert)
 	if err != nil {
