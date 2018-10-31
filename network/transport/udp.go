@@ -87,6 +87,12 @@ func (udpT *udpTransport) Stop() {
 	log.Info("Stop UTP transport")
 	udpT.disconnectStarted <- true
 	close(udpT.disconnectStarted)
+
+	err := udpT.serverConn.Close()
+	if err != nil {
+		log.Errorln("Failed to close socket:", err.Error())
+	}
+
 }
 
 func (udpT *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
