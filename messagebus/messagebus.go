@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -46,6 +47,8 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	return &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
 		signmessages: config.Host.SignMessages,
+		// TODO: pass value from config
+		queue: NewExpiryQueue(10 * time.Second),
 	}, nil
 }
 
