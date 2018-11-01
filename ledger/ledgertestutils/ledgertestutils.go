@@ -41,7 +41,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t.(*testing.T))
 	conf := configuration.NewLedger()
-	db, dbcancel := storagetest.TmpDB(t, ctx, dir)
+	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
 	handler, err := artifactmanager.NewMessageHandler(db)
 	assert.NoError(t, err)
 	am, err := artifactmanager.NewArtifactManger(db)

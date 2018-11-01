@@ -64,7 +64,7 @@ func getTestData(t *testing.T) (
 	func(), // cleaner
 ) {
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, ctx, "")
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	mb := testmessagebus.NewTestMessageBus()
 	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}}
 	handler.Link(core.Components{MessageBus: mb})

@@ -36,7 +36,7 @@ import (
 func TestDB_GetRecordNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, ctx, "")
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	rec, err := db.GetRecord(ctx, &core.RecordID{})
@@ -47,7 +47,7 @@ func TestDB_GetRecordNotFound(t *testing.T) {
 func TestDB_SetRecord(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, ctx, "")
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	rec := &record.CallRequest{}
@@ -65,7 +65,7 @@ func TestDB_SetRecord(t *testing.T) {
 func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, ctx, "")
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	idx, err := db.GetObjectIndex(ctx, core.NewRecordID(0, hexhash("5000")), false)
@@ -76,7 +76,7 @@ func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, ctx, "")
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
@@ -94,7 +94,7 @@ func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, ctx, "")
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	drop, err := db.GetDrop(ctx, 1)
@@ -105,7 +105,7 @@ func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 func TestDB_CreateDrop(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, ctx, "")
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
@@ -142,7 +142,7 @@ func TestDB_CreateDrop(t *testing.T) {
 func TestDB_SetDrop(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, ctx, "")
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	drop42 := jetdrop.JetDrop{
@@ -160,7 +160,7 @@ func TestDB_SetDrop(t *testing.T) {
 func TestDB_AddPulse(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, ctx, "")
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	err := db.AddPulse(
