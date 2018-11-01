@@ -74,6 +74,7 @@ type ObjectDescriptor struct {
 	isPrototype  bool
 	childPointer *core.RecordID // can be nil.
 	memory       []byte
+	parent       *core.RecordRef
 }
 
 // IsPrototype determines if the object is a prototype.
@@ -127,6 +128,11 @@ func (d *ObjectDescriptor) Memory() []byte {
 func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, error) {
 	ctx := context.TODO()
 	return d.am.GetChildren(ctx, d.head, pulse)
+}
+
+// Parent returns object's parent.
+func (d *ObjectDescriptor) Parent() *core.RecordRef {
+	return d.parent
 }
 
 // ChildIterator is used to iterate over objects children.
