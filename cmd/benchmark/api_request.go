@@ -105,7 +105,7 @@ func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 }
 
 type infoResponse struct {
-	Classes    map[string]string `json:"classes"`
+	Prototypes map[string]string `json:"prototypes"`
 	RootDomain string            `json:"root_domain"`
 	RootMember string            `json:"root_member"`
 }
