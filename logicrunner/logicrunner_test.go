@@ -1561,11 +1561,11 @@ func (r *One) Recursive() (error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("recursive")})
+	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("recursive")})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
-		ctx, domain, *contract, *cb.Classes["recursive"], *am.GenesisRef(), false,
+		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["recursive"], false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
