@@ -65,7 +65,8 @@ type RPC struct {
 
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
-	ctx := inslogger.ContextWithTrace(context.Background(), req.TraceID)
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
 
 	am := gpr.lr.ArtifactManager
 	codeDescriptor, err := am.GetCode(ctx, req.Code)
@@ -92,8 +93,9 @@ func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
 
 // RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
-	// ctx := inslogger.ContextWithTrace(context.Background(), req.TraceID)
-	ctx := gpr.lr.UpsertExecution(req.Callee)
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
+
 	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeRouteCall != cr.Type {
@@ -123,7 +125,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		Arguments:        req.Arguments,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx.insContext, msg)
+	res, err := gpr.lr.MessageBus.Send(ctx, msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -140,7 +142,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
-	ctx := inslogger.ContextWithTrace(context.Background(), req.TraceID)
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
 
 	if gpr.lr.MessageBus == nil {
 		return errors.New("event bus was not set during initialization")
@@ -187,7 +190,8 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 // GetObjChildren is an RPC returns set of object children
 func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.UpGetObjChildrenResp) error {
-	ctx := inslogger.ContextWithTrace(context.Background(), req.TraceID)
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
 
 	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
@@ -239,7 +243,8 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
-	ctx := inslogger.ContextWithTrace(context.Background(), req.TraceID)
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
 
 	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
@@ -282,7 +287,8 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
-	ctx := inslogger.ContextWithTrace(context.Background(), req.TraceID)
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
 
 	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate

@@ -55,7 +55,6 @@ type DownCallConstructorResp struct {
 
 // UpBaseReq  is a base type for all insgorund -> logicrunner requests
 type UpBaseReq struct {
-	TraceID string
 	Callee  core.RecordRef
 	Request core.RecordRef
 }

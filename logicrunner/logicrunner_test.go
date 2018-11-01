@@ -583,24 +583,38 @@ func (r *One) Hello() (string, error) {
 	return r.GetPrototype().String(), nil
 }
 `
-	lr, _, cb, _, cleaner := PrepareLrAmCbPm(t)
-	gp := lr.(*LogicRunner).Executors[core.MachineTypeGoPlugin]
+	ctx := context.TODO()
+	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-
-	data := goplugintestutils.CBORMarshal(t, &struct{}{})
-	argsSerialized := goplugintestutils.CBORMarshal(t, []struct{}{})
 
 	err := cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
-	_, res, err := gp.CallMethod(
-		context.Background(),
-		&core.LogicCallContext{Prototype: cb.Prototypes["one"]}, *cb.Codes["one"],
-		data, "Hello", argsSerialized,
+	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	assert.NoError(t, err)
+	obj := getRefFromID(objID)
+	_, err = am.ActivateObject(
+		ctx,
+		core.RecordRef{},
+		*obj,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
+		goplugintestutils.CBORMarshal(t, &struct{}{}),
 	)
 	assert.NoError(t, err)
 
-	resParsed := goplugintestutils.CBORUnMarshalToSlice(t, res)
+	msg := &message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Hello",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+	key, _ := cryptoHelper.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	res, err := lr.Execute(context.TODO(), signed)
+	assert.NoError(t, err)
+
+	resParsed := goplugintestutils.CBORUnMarshalToSlice(t, res.(*reply.CallMethod).Result)
 	assert.Equal(t, cb.Prototypes["one"].String(), resParsed[0])
 }
 

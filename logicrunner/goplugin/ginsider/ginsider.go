@@ -82,6 +82,9 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	defer recoverRPC(ctx, &err)
 
+	gls.Set("callCtx", args.Context)
+	defer gls.Cleanup()
+
 	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
 		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
@@ -100,10 +103,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	gls.Set("callCtx", args.Context)
-	gls.Set("ctx", ctx)
 	state, result, err := wrapper(args.Data, args.Arguments) // may be entire args???
-	gls.Cleanup()
 
 	if err != nil {
 		return errors.Wrapf(err, "Method call returned error")
@@ -120,6 +120,9 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
 	defer recoverRPC(ctx, &err)
 
+	gls.Set("callCtx", args.Context)
+	defer gls.Cleanup()
+
 	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
 		return err
@@ -135,10 +138,7 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	gls.Set("callCtx", args.Context)
-	gls.Set("ctx", ctx)
 	resValues, err := f(args.Arguments)
-	gls.Cleanup()
 	if err != nil {
 		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
@@ -182,10 +182,10 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 
 	inslogger.FromContext(ctx).Debugf("obtaining code %q", ref)
 	req := rpctypes.UpGetCodeReq{
-		Code:  ref,
-		MType: core.MachineTypeGoPlugin,
+		UpBaseReq: MakeUpBaseReq(),
+		Code:      ref,
+		MType:     core.MachineTypeGoPlugin,
 	}
-	req.TraceID = inslogger.TraceID(ctx)
 	res := rpctypes.UpGetCodeResp{}
 	err = client.Call("RPC.GetCode", req, &res)
 	if err != nil {
@@ -227,17 +227,12 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 
 // MakeUpBaseReq makes base of request from current CallContext
 func MakeUpBaseReq() rpctypes.UpBaseReq {
-	ctx, ok := gls.Get("ctx").(context.Context)
-	if !ok {
-		panic("Wrong or unexistent context, you probably started a goroutine")
-	}
 	callCtx, ok := gls.Get("callCtx").(*core.LogicCallContext)
 	if !ok {
 		panic("Wrong or unexistent call context, you probably started a goroutine")
 	}
 
 	return rpctypes.UpBaseReq{
-		TraceID: inslogger.TraceID(ctx),
 		Callee:  *callCtx.Callee,
 		Request: *callCtx.Request,
 	}
