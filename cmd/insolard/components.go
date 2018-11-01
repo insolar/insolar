@@ -17,6 +17,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
@@ -36,7 +38,7 @@ import (
 )
 
 // InitComponents creates and links all insolard components
-func InitComponents(cfg configuration.Configuration, isBootstrap bool) (*component.Manager, *ComponentManager, *Repl, error) {
+func InitComponents(ctx context.Context, cfg configuration.Configuration, isBootstrap bool) (*component.Manager, *ComponentManager, *Repl, error) {
 
 	var cert *certificate.Certificate
 	var err error
@@ -54,7 +56,7 @@ func InitComponents(cfg configuration.Configuration, isBootstrap bool) (*compone
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError("failed to start LogicRunner: ", err)
 
-	ledger, err := ledger.NewLedger(cfg.Ledger)
+	ledger, err := ledger.NewLedger(ctx, cfg.Ledger)
 	checkError("failed to start Ledger: ", err)
 
 	nw, err := servicenetwork.NewServiceNetwork(cfg)

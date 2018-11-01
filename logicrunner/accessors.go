@@ -19,6 +19,8 @@
 package logicrunner
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
@@ -92,7 +94,7 @@ func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 }
 
 func (lr *LogicRunner) pulse() *core.Pulse {
-	pulse, err := lr.Ledger.GetPulseManager().Current()
+	pulse, err := lr.Ledger.GetPulseManager().Current(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -104,7 +106,12 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 	defer lr.consensusMutex.Unlock()
 	c, ok := lr.consensus[r]
 	if !ok {
-		validators, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, r, lr.pulse().PulseNumber)
+		validators, err := lr.Ledger.GetJetCoordinator().QueryRole(
+			context.TODO(),
+			core.RoleVirtualValidator,
+			r,
+			lr.pulse().PulseNumber,
+		)
 		if err != nil {
 			panic("cannot QueryRole")
 		}

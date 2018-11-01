@@ -207,7 +207,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	code []byte,
 	machineType core.MachineType,
 ) (*core.RecordID, error) {
-	pulseNumber, err := m.db.GetLatestPulseNumber()
+	pulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func (m *LedgerArtifactManager) activateObject(
 	if err != nil {
 		return nil, err
 	}
-	pulseNumber, err := m.db.GetLatestPulseNumber()
+	pulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +466,7 @@ func (m *LedgerArtifactManager) updateObject(
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
-	pulseNumber, err := m.db.GetLatestPulseNumber()
+	pulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
 		return nil, err
 	}

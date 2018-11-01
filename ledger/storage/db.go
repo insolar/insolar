@@ -18,17 +18,19 @@ package storage
 
 import (
 	"bytes"
+	"context"
 	"path/filepath"
 	"sync"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/core/message"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
@@ -105,7 +107,9 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 }
 
 // Bootstrap creates initial records in storage.
-func (db *DB) Bootstrap() error {
+func (db *DB) Bootstrap(ctx context.Context) error {
+	inslog := inslogger.FromContext(ctx)
+	inslog.Debug("start storage bootstrap")
 	getGenesisRef := func() (*core.RecordRef, error) {
 		buff, err := db.Get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
@@ -117,27 +121,31 @@ func (db *DB) Bootstrap() error {
 	}
 
 	createGenesisRecord := func() (*core.RecordRef, error) {
-		err := db.AddPulse(core.Pulse{
-			PulseNumber: core.GenesisPulse.PulseNumber,
-			Entropy:     core.GenesisPulse.Entropy,
-		})
+		err := db.AddPulse(
+			ctx,
+			core.Pulse{
+				PulseNumber: core.GenesisPulse.PulseNumber,
+				Entropy:     core.GenesisPulse.Entropy,
+			},
+		)
 		if err != nil {
 			return nil, err
 		}
-		err = db.SetDrop(&jetdrop.JetDrop{})
+		err = db.SetDrop(ctx, &jetdrop.JetDrop{})
 		if err != nil {
 			return nil, err
 		}
 
-		lastPulse, err := db.GetLatestPulseNumber()
+		lastPulse, err := db.GetLatestPulseNumber(ctx)
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := db.SetRecord(lastPulse, &record.GenesisRecord{})
+		genesisID, err := db.SetRecord(ctx, lastPulse, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
 		err = db.SetObjectIndex(
+			ctx,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
@@ -193,14 +201,14 @@ func (db *DB) Set(key, value []byte) error {
 }
 
 // GetBlob returns binary value stored by record ID.
-func (db *DB) GetBlob(id *core.RecordID) ([]byte, error) {
+func (db *DB) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 	var (
 		blob []byte
 		err  error
 	)
 
 	err = db.View(func(tx *TransactionManager) error {
-		blob, err = tx.GetBlob(id)
+		blob, err = tx.GetBlob(ctx, id)
 		return err
 	})
 	if err != nil {
@@ -210,13 +218,13 @@ func (db *DB) GetBlob(id *core.RecordID) ([]byte, error) {
 }
 
 // SetBlob saves binary value for provided pulse.
-func (db *DB) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+func (db *DB) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
 	)
 	err = db.Update(func(tx *TransactionManager) error {
-		id, err = tx.SetBlob(pulseNumber, blob)
+		id, err = tx.SetBlob(ctx, pulseNumber, blob)
 		return err
 	})
 	if err != nil {
@@ -226,21 +234,21 @@ func (db *DB) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID
 }
 
 // GetRequest wraps matching transaction manager method.
-func (db *DB) GetRequest(id *core.RecordID) (record.Request, error) {
+func (db *DB) GetRequest(ctx context.Context, id *core.RecordID) (record.Request, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
-	return tx.GetRequest(id)
+	return tx.GetRequest(ctx, id)
 }
 
 // GetRecord wraps matching transaction manager method.
-func (db *DB) GetRecord(id *core.RecordID) (record.Record, error) {
+func (db *DB) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	var (
 		fetchedRecord record.Record
 		err           error
 	)
 
 	err = db.View(func(tx *TransactionManager) error {
-		fetchedRecord, err = tx.GetRecord(id)
+		fetchedRecord, err = tx.GetRecord(ctx, id)
 		return err
 	})
 	if err != nil {
@@ -250,13 +258,13 @@ func (db *DB) GetRecord(id *core.RecordID) (record.Record, error) {
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (db *DB) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
 	)
 	err = db.Update(func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(pulseNumber, rec)
+		id, err = tx.SetRecord(ctx, pulseNumber, rec)
 		return err
 	})
 	if err != nil {
@@ -273,11 +281,15 @@ func (db *DB) SetRecordBinary(key, rec []byte) error {
 }
 
 // GetObjectIndex wraps matching transaction manager method.
-func (db *DB) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
+func (db *DB) GetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	forupdate bool,
+) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	idx, err := tx.GetObjectIndex(id, forupdate)
+	idx, err := tx.GetObjectIndex(ctx, id, forupdate)
 	if err != nil {
 		return nil, err
 	}
@@ -285,14 +297,18 @@ func (db *DB) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLi
 }
 
 // SetObjectIndex wraps matching transaction manager method.
-func (db *DB) SetObjectIndex(id *core.RecordID, idx *index.ObjectLifeline) error {
+func (db *DB) SetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	idx *index.ObjectLifeline,
+) error {
 	return db.Update(func(tx *TransactionManager) error {
-		return tx.SetObjectIndex(id, idx)
+		return tx.SetObjectIndex(ctx, id, idx)
 	})
 }
 
 // GetDrop returns jet drop for a given pulse number.
-func (db *DB) GetDrop(pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
+func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
 	buf, err := db.Get(k)
 	if err != nil {
@@ -312,7 +328,7 @@ func (db *DB) waitinflight() {
 // CreateDrop creates and stores jet drop for given pulse number.
 //
 // Previous JetDrop hash should be provided. On success returns saved drop and slot records.
-func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
+func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash []byte) (
 	*jetdrop.JetDrop,
 	[][]byte,
 	error,
@@ -357,7 +373,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 }
 
 // SetDrop saves provided JetDrop in db.
-func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
+func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
 	_, err := db.Get(k)
 	if err == nil {
@@ -373,10 +389,10 @@ func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
 }
 
 // AddPulse saves new pulse data and updates index.
-func (db *DB) AddPulse(pulse core.Pulse) error {
+func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 	return db.Update(func(tx *TransactionManager) error {
 		var latest core.PulseNumber
-		latest, err := tx.GetLatestPulseNumber()
+		latest, err := tx.GetLatestPulseNumber(ctx)
 		if err != nil && err != ErrNotFound {
 			return err
 		}
@@ -400,7 +416,7 @@ func (db *DB) AddPulse(pulse core.Pulse) error {
 }
 
 // GetPulse returns pulse for provided pulse number.
-func (db *DB) GetPulse(num core.PulseNumber) (*record.PulseRecord, error) {
+func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*record.PulseRecord, error) {
 	buf, err := db.Get(prefixkey(scopeIDPulse, num.Bytes()))
 	if err != nil {
 		return nil, err
@@ -416,11 +432,11 @@ func (db *DB) GetPulse(num core.PulseNumber) (*record.PulseRecord, error) {
 }
 
 // GetLatestPulseNumber returns current pulse number.
-func (db *DB) GetLatestPulseNumber() (core.PulseNumber, error) {
+func (db *DB) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	return tx.GetLatestPulseNumber()
+	return tx.GetLatestPulseNumber(ctx)
 }
 
 // BeginTransaction opens a new transaction.

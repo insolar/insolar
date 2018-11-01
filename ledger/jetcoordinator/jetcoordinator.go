@@ -17,6 +17,8 @@
 package jetcoordinator
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
@@ -63,9 +65,13 @@ func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
 
 // IsAuthorized checks for role on concrete pulse for the address.
 func (jc *JetCoordinator) IsAuthorized(
-	role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef,
+	ctx context.Context,
+	role core.JetRole,
+	obj core.RecordRef,
+	pulse core.PulseNumber,
+	node core.RecordRef,
 ) (bool, error) {
-	nodes, err := jc.QueryRole(role, obj, pulse)
+	nodes, err := jc.QueryRole(ctx, role, obj, pulse)
 	if err != nil {
 		return false, err
 	}
@@ -79,9 +85,12 @@ func (jc *JetCoordinator) IsAuthorized(
 
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
 func (jc *JetCoordinator) QueryRole(
-	role core.JetRole, obj core.RecordRef, pulse core.PulseNumber,
+	ctx context.Context,
+	role core.JetRole,
+	obj core.RecordRef,
+	pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	pulseData, err := jc.db.GetPulse(pulse)
+	pulseData, err := jc.db.GetPulse(ctx, pulse)
 	if err != nil {
 		return nil, err
 	}

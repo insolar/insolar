@@ -18,6 +18,7 @@ package inslogger
 
 import (
 	"context"
+	"testing"
 
 	"github.com/insolar/insolar/core"
 	logger "github.com/insolar/insolar/log"
@@ -74,4 +75,10 @@ func TraceID(ctx context.Context) string {
 
 func setTraceID(ctx context.Context, traceid string) context.Context {
 	return context.WithValue(ctx, traceIDKey{}, traceid)
+}
+
+// TestContext returns context with initalized log field "testname" equal t.Name() value.
+func TestContext(t *testing.T) context.Context {
+	ctx, _ := WithField(context.Background(), "testname", t.Name())
+	return ctx
 }

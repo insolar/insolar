@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -46,7 +47,8 @@ which try reads and writes the same key simultaneously
 
 func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	objid := core.NewRecordID(100500, nil)
@@ -54,7 +56,7 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	objvalue0 := &index.ObjectLifeline{
 		LatestState: objid,
 	}
-	db.SetObjectIndex(idxid, objvalue0)
+	db.SetObjectIndex(ctx, idxid, objvalue0)
 
 	lockfn := func(t *testing.T, withlock bool) *index.ObjectLifeline {
 		started2 := make(chan bool)
@@ -68,13 +70,13 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 				// log.Debugf("tx1: start")
 				<-started2
 				// log.Debug("tx1: GetObjectIndex before")
-				idxlife, geterr := tx.GetObjectIndex(idxid, true)
+				idxlife, geterr := tx.GetObjectIndex(ctx, idxid, true)
 				// log.Debug("tx1: GetObjectIndex after")
 				if geterr != nil {
 					return geterr
 				}
 
-				seterr := tx.SetObjectIndex(idxid, idxlife)
+				seterr := tx.SetObjectIndex(ctx, idxid, idxlife)
 				if seterr != nil {
 					return seterr
 				}
@@ -93,13 +95,13 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 				// log.Debug("tx2: start")
 				<-proceed2
 				// log.Debug("tx2: GetObjectIndex before")
-				idxlife, geterr := tx.GetObjectIndex(idxid, withlock)
+				idxlife, geterr := tx.GetObjectIndex(ctx, idxid, withlock)
 				// log.Debug("tx2: GetObjectIndex after")
 				if geterr != nil {
 					return geterr
 				}
 
-				seterr := tx.SetObjectIndex(idxid, idxlife)
+				seterr := tx.SetObjectIndex(ctx, idxid, idxlife)
 				if seterr != nil {
 					return seterr
 				}
@@ -113,12 +115,12 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 
 		assert.NoError(t, tx1err)
 		assert.NoError(t, tx2err)
-		idxlife, geterr := db.GetObjectIndex(idxid, false)
+		idxlife, geterr := db.GetObjectIndex(ctx, idxid, false)
 		assert.NoError(t, geterr)
 		// log.Debugf("withlock=%v) result: got %+v", withlock, idxlife)
 
 		// cleanup AmendRefs
-		assert.NoError(t, db.SetObjectIndex(idxid, objvalue0))
+		assert.NoError(t, db.SetObjectIndex(ctx, idxid, objvalue0))
 		return idxlife
 	}
 	t.Run("with lock", func(t *testing.T) {

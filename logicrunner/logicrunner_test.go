@@ -105,7 +105,10 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 
 	MessageBusTrivialBehavior(messageBus, lr)
 	pm := l.GetPulseManager()
-	err = lr.Ledger.GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
+	err = lr.Ledger.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
+	)
 	//err = pm.Set(*pulsar.NewPulse(0, 10, &entropygenerator.StandardEntropyGenerator{}))
 	assert.NoError(t, err)
 	if err != nil {
@@ -1428,7 +1431,10 @@ func New(n int) (*Child, error) {
 		return nil, nil
 	})
 
-	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}})
+	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}},
+	)
 	assert.NoError(t, err)
 
 	for _, m := range toValidate {
