@@ -27,6 +27,6 @@ func TestGetInfo(t *testing.T) {
 	assert.NotNil(t, info)
 	assert.NotEqual(t, "", info.RootDomain)
 	assert.NotEqual(t, "", info.RootMember)
-	assert.NotNil(t, info.Classes)
-	assert.NotEqual(t, 0, len(info.Classes))
+	assert.NotNil(t, info.Prototypes)
+	assert.NotEqual(t, 0, len(info.Prototypes))
 }

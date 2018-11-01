@@ -115,7 +115,7 @@ type infoResponse struct {
 	Error      string            `json:"error"`
 	RootDomain string            `json:"root_domain"`
 	RootMember string            `json:"root_member"`
-	Classes    map[string]string `json:"classes"`
+	Prototypes map[string]string `json:"prototypes"`
 }
 
 func createMember(t *testing.T, name string) *user {
