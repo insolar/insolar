@@ -24,22 +24,75 @@ import (
 	"github.com/pkg/errors"
 )
 
+var defaultByteOrder = binary.BigEndian
+
 type Serializer interface {
 	Serialize() ([]byte, error)
 	Deserialize(data io.Reader) error
 }
 
-// Deserialize implements interface method
-func (ph *PacketHeader) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &ph.Routing)
-	if err != nil {
-		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read Routing")
+func (ph *PacketHeader) parseRouteInfo(routInfo uint8) {
+	ph.PacketT = PacketType((routInfo & 0xf0) >> 4)
+	ph.SubType = (routInfo & 0xe) >> 1
+	ph.HasRouting = (routInfo & 0x1) == 1
+}
+
+func (ph *PacketHeader) compactRouteInfo() uint8 {
+	var result uint8
+	result |= uint8(ph.PacketT) << 4
+	result |= ph.SubType << 1
+
+	if ph.HasRouting {
+		result |= 0x1
 	}
 
-	err = binary.Read(data, defaultByteOrder, &ph.Pulse)
-	if err != nil {
-		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read Pulse")
+	return result
+}
+
+// PacketHeader masks
+const (
+	// take bit before high bit
+	f00Mask = 0x40000000
+
+	// take high bit
+	f01Mask   = 0x80000000
+	pulseMask = 0x3fffffff
+)
+
+func (ph *PacketHeader) parsePulseAndCustomFlags(pulseAndCustomFlags uint32) {
+	ph.F01 = (pulseAndCustomFlags >> 31) == 1
+	ph.F00 = ((pulseAndCustomFlags & f00Mask) >> 30) == 1
+	ph.Pulse = pulseAndCustomFlags & pulseMask
+}
+
+func (ph *PacketHeader) compactPulseAndCustomFlags() uint32 {
+	var result uint32
+	if ph.F01 {
+		result |= f01Mask
 	}
+	if ph.F00 {
+		result |= f00Mask
+	}
+	result |= ph.Pulse & pulseMask
+
+	return result
+}
+
+// Deserialize implements interface method
+func (ph *PacketHeader) Deserialize(data io.Reader) error {
+	var routInfo uint8
+	err := binary.Read(data, defaultByteOrder, &routInfo)
+	if err != nil {
+		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read routInfo")
+	}
+	ph.parseRouteInfo(routInfo)
+
+	var pulseAndCustomFlags uint32
+	err = binary.Read(data, defaultByteOrder, &pulseAndCustomFlags)
+	if err != nil {
+		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read pulseAndCustomFlags")
+	}
+	ph.parsePulseAndCustomFlags(pulseAndCustomFlags)
 
 	err = binary.Read(data, defaultByteOrder, &ph.OriginNodeID)
 	if err != nil {
@@ -57,14 +110,16 @@ func (ph *PacketHeader) Deserialize(data io.Reader) error {
 // Serialize implements interface method
 func (ph *PacketHeader) Serialize() ([]byte, error) {
 	result := new(bytes.Buffer)
-	err := binary.Write(result, defaultByteOrder, ph.Routing)
+	routeInfo := ph.compactRouteInfo()
+	err := binary.Write(result, defaultByteOrder, routeInfo)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't write Routing")
+		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't write routeInfo")
 	}
 
-	err = binary.Write(result, defaultByteOrder, ph.Pulse)
+	pulseAndCustomFlags := ph.compactPulseAndCustomFlags()
+	err = binary.Write(result, defaultByteOrder, pulseAndCustomFlags)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't write Pulse")
+		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't write pulseAndCustomFlags")
 	}
 
 	err = binary.Write(result, defaultByteOrder, ph.OriginNodeID)
@@ -227,11 +282,6 @@ func (nb *NodeBroadcast) Deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read EmergencyLevel")
 	}
 
-	err = binary.Read(data, defaultByteOrder, &nb.claimType)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read claimType")
-	}
-
 	err = binary.Read(data, defaultByteOrder, &nb.length)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read length")
@@ -246,11 +296,6 @@ func (nb *NodeBroadcast) Serialize() ([]byte, error) {
 	err := binary.Write(result, defaultByteOrder, nb.EmergencyLevel)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeBroadcast.Serialize ] Can't write EmergencyLevel")
-	}
-
-	err = binary.Write(result, defaultByteOrder, nb.claimType)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeBroadcast.Serialize ] Can't write claimType")
 	}
 
 	err = binary.Write(result, defaultByteOrder, nb.length)
@@ -278,11 +323,6 @@ func (cpa *CapabilityPoolingAndActivation) Deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read CapabilityRef")
 	}
 
-	err = binary.Read(data, defaultByteOrder, &cpa.claimType)
-	if err != nil {
-		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read claimType")
-	}
-
 	err = binary.Read(data, defaultByteOrder, &cpa.length)
 	if err != nil {
 		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read length")
@@ -307,11 +347,6 @@ func (cpa *CapabilityPoolingAndActivation) Serialize() ([]byte, error) {
 	err = binary.Write(result, defaultByteOrder, cpa.CapabilityRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write CapabilityRef")
-	}
-
-	err = binary.Write(result, defaultByteOrder, cpa.claimType)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write claimType")
 	}
 
 	err = binary.Write(result, defaultByteOrder, cpa.length)

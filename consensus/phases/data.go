@@ -18,7 +18,6 @@ package phases
 
 import (
 	"crypto/ecdsa"
-	"encoding/binary"
 
 	"github.com/insolar/insolar/core"
 )
@@ -41,17 +40,17 @@ const (
 
 // ----------------------------------PHASE 1--------------------------------
 
-var defaultByteOrder = binary.BigEndian
-
 type PacketHeader struct {
-	HasRouting   bool
-	F01          bool
-	F00          bool
-	SubType      uint8
-	Pulse        uint32
+	PacketT    PacketType
+	SubType    uint8
+	HasRouting bool
+	//-----------------
+	F01   bool
+	F00   bool
+	Pulse uint32
+	//-----------------
 	OriginNodeID uint32
 	TargetNodeID uint32
-	PacketT      PacketType
 }
 
 // PulseDataExt is a pulse data extension.

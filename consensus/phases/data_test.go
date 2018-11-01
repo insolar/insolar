@@ -27,7 +27,13 @@ import (
 
 func makeDefaultPacketHeader() *PacketHeader {
 	packetHeader := &PacketHeader{}
-	packetHeader.Routing = uint8(2)
+	packetHeader.HasRouting = true
+	packetHeader.SubType = 3
+	packetHeader.PacketT = Referendum
+	// -------------------
+	packetHeader.F00 = true
+	packetHeader.F01 = true
+	// -------------------
 	packetHeader.Pulse = uint32(22)
 	packetHeader.OriginNodeID = uint32(42)
 	packetHeader.TargetNodeID = uint32(62)
@@ -124,7 +130,6 @@ func TestNodePulseProofReadWrite_BadData(t *testing.T) {
 func makeNodeBroadCast() *NodeBroadcast {
 	nodeBroadcast := &NodeBroadcast{}
 	nodeBroadcast.length = uint16(3)
-	nodeBroadcast.claimType = TypeNodeViolationBlame
 	nodeBroadcast.EmergencyLevel = uint8(4)
 
 	return nodeBroadcast
@@ -143,7 +148,6 @@ func makeCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
 	capabilityPoolingAndActivation := &CapabilityPoolingAndActivation{}
 	capabilityPoolingAndActivation.PollingFlags = uint16(10)
 	capabilityPoolingAndActivation.length = uint16(7)
-	capabilityPoolingAndActivation.claimType = TypeNodeViolationBlame
 	capabilityPoolingAndActivation.CapabilityType = uint16(11)
 	capabilityPoolingAndActivation.CapabilityRef = uint64(13)
 
