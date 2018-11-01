@@ -200,7 +200,11 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 		ctx,
 		domainRef,
 		requestRef,
-		&ObjectDescriptor{head: *genRefWithID(objID), state: *objID},
+		&ObjectDescriptor{
+			ctx:   ctx,
+			head:  *genRefWithID(objID),
+			state: *objID,
+		},
 	)
 	assert.Nil(t, err)
 	deactivateRec, err := db.GetRecord(deactivateID)
@@ -234,7 +238,12 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 		ctx,
 		domainRef,
 		requestRef,
-		&ObjectDescriptor{head: *genRefWithID(objID), state: *objID, prototype: prototype},
+		&ObjectDescriptor{
+			ctx:       ctx,
+			head:      *genRefWithID(objID),
+			state:     *objID,
+			prototype: prototype,
+		},
 		memory,
 	)
 	assert.Nil(t, err)
@@ -307,7 +316,8 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	objDesc, err := am.GetObject(ctx, *genRefWithID(objectID), nil, false)
 	assert.NoError(t, err)
 	expectedObjDesc := &ObjectDescriptor{
-		am: am,
+		ctx: ctx,
+		am:  am,
 
 		head:         *genRefWithID(objectID),
 		state:        *objectAmendID,

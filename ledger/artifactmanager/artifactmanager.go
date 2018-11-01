@@ -124,6 +124,7 @@ func (m *LedgerArtifactManager) GetObject(
 	switch r := genericReact.(type) {
 	case *reply.Object:
 		desc := ObjectDescriptor{
+			ctx:          ctx,
 			am:           m,
 			head:         r.Head,
 			state:        r.State,
@@ -426,6 +427,7 @@ func (m *LedgerArtifactManager) activateObject(
 	}
 
 	return &ObjectDescriptor{
+		ctx:          ctx,
 		am:           m,
 		head:         obj.Head,
 		state:        obj.State,
@@ -488,6 +490,7 @@ func (m *LedgerArtifactManager) updateObject(
 	}
 
 	return &ObjectDescriptor{
+		ctx:          ctx,
 		am:           m,
 		head:         obj.Head,
 		state:        obj.State,

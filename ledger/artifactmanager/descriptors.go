@@ -66,7 +66,8 @@ func (d *CodeDescriptor) Code() ([]byte, error) {
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor struct {
-	am *LedgerArtifactManager
+	ctx context.Context
+	am  *LedgerArtifactManager
 
 	head         core.RecordRef
 	state        core.RecordID
@@ -125,8 +126,7 @@ func (d *ObjectDescriptor) Memory() []byte {
 
 // Children returns object's children references.
 func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, error) {
-	ctx := context.TODO()
-	return d.am.GetChildren(ctx, d.head, pulse)
+	return d.am.GetChildren(d.ctx, d.head, pulse)
 }
 
 // ChildIterator is used to iterate over objects children.
