@@ -133,6 +133,7 @@ func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, 
 //
 // During iteration children refs will be fetched from remote source (parent object).
 type ChildIterator struct {
+	ctx        context.Context
 	messageBus core.MessageBus
 	parent     core.RecordRef
 	chunkSize  int
@@ -145,9 +146,14 @@ type ChildIterator struct {
 
 // NewChildIterator creates new child iterator.
 func NewChildIterator(
-	mb core.MessageBus, parent core.RecordRef, fromPulse *core.PulseNumber, chunkSize int,
+	ctx context.Context,
+	mb core.MessageBus,
+	parent core.RecordRef,
+	fromPulse *core.PulseNumber,
+	chunkSize int,
 ) (*ChildIterator, error) {
 	iter := ChildIterator{
+		ctx:        ctx,
 		messageBus: mb,
 		parent:     parent,
 		fromPulse:  fromPulse,
@@ -198,7 +204,7 @@ func (i *ChildIterator) fetch() error {
 		return errors.New("failed to fetch record")
 	}
 	genericReply, err := i.messageBus.Send(
-		context.TODO(),
+		i.ctx,
 		&message.GetChildren{
 			Parent:    i.parent,
 			FromPulse: i.fromPulse,

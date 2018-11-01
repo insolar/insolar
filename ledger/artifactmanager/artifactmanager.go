@@ -173,7 +173,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 func (m *LedgerArtifactManager) GetChildren(
 	ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber,
 ) (core.RefIterator, error) {
-	return NewChildIterator(m.messageBus, parent, pulse, m.getChildrenChunkSize)
+	return NewChildIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
 }
 
 // DeclareType creates new type record in storage.
