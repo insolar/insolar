@@ -25,6 +25,9 @@ import (
 	"reflect"
 	"syscall"
 
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
@@ -33,8 +36,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/version"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 // ComponentManager is deprecated and will be removed after completly switching to component.Manager
@@ -44,17 +45,18 @@ type ComponentManager struct {
 
 // linkAll - link dependency for all components
 func (cm *ComponentManager) linkAll(ctx context.Context) {
+	inslog := inslogger.FromContext(ctx)
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
 
 		if component, ok := v.Field(i).Interface().(core.Component); ok {
 			componentName := v.Field(i).String()
-			log.Infof("==== Old ComponentManager: Starting component `%s` ...", componentName)
+			inslog.Infof("==== Old ComponentManager: Starting component `%s` ...", componentName)
 			err := component.Start(ctx, cm.components)
 			if err != nil {
-				log.Fatalf("==== Old ComponentManager: failed to start component %s : %s", componentName, err.Error())
+				inslog.Fatalf("==== Old ComponentManager: failed to start component %s : %s", componentName, err.Error())
 			}
-			log.Infof("==== Old ComponentManager: Component `%s` successfully started", componentName)
+			inslog.Infof("==== Old ComponentManager: Component `%s` successfully started", componentName)
 		}
 	}
 }
@@ -87,20 +89,13 @@ func parseInputParams() inputParams {
 func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, cert core.Certificate, nc core.NetworkCoordinator) {
 	roles := []string{"virtual", "heavy_material", "light_material"}
 	publicKey, err := cert.GetPublicKey()
-	checkError("failed to get public key: ", err)
+	checkError(ctx, err, "failed to get public key")
 
 	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, roles, host)
-	checkError("Can't register node: ", err)
+	checkError(ctx, err, "can't register node")
 
 	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)
-	checkError("Can't write certificate: ", err)
-}
-
-func checkError(msg string, err error) {
-	if err != nil {
-		log.Fatalln(msg, err)
-		os.Exit(1)
-	}
+	checkError(ctx, err, "can't write certificate")
 }
 
 func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration) {
@@ -110,7 +105,7 @@ func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configura
 		return
 	}
 	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
-	checkError("Can't create certificate", err)
+	checkError(ctx, err, "can't create certificate")
 
 	cfg.Host.BootstrapHosts = []string{}
 	for _, bn := range cert.BootstrapNodes {
@@ -163,17 +158,17 @@ func main() {
 	defer jaegerflush()
 
 	cm, cmOld, repl, err := InitComponents(ctx, cfgHolder.Configuration, params.isBootstrap)
-	checkError("failed to init components", err)
+	checkError(ctx, err, "failed to init components")
 
 	cmOld.linkAll(ctx)
 
 	err = cm.Start(ctx)
-	checkError("Failed to start components", err)
+	checkError(ctx, err, "failed to start components")
 
 	defer func() {
-		log.Warn("DEFER STOP APP")
+		inslog.Warn("DEFER STOP APP")
 		err = cm.Stop(ctx)
-		checkError("Failed to stop components", err)
+		checkError(ctx, err, "failed to stop components")
 	}()
 
 	var gracefulStop = make(chan os.Signal)
@@ -187,7 +182,7 @@ func main() {
 		inslog.Warn("GRACEFULL STOP APP")
 		err = cm.Stop(ctx)
 		jaegerflush()
-		checkError("Failed to graceful stop components", err)
+		checkError(ctx, err, "failed to graceful stop components")
 		os.Exit(0)
 	}()
 
@@ -220,4 +215,12 @@ func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, co
 	}
 	ctx = inslogger.SetLogger(ctx, inslog)
 	return ctx, inslog
+}
+
+func checkError(ctx context.Context, err error, message string) {
+	if err == nil {
+		return
+	}
+	inslog := inslogger.FromContext(ctx)
+	inslog.Fatalf("%v: %v", message, err.Error())
 }
