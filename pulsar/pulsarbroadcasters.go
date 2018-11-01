@@ -306,6 +306,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 			logger.Fatalf("run time panic: %v", x)
 		}
 	}()
+	logger.Infof("Before sending pulse to bootstraps - %v", currentPulsar.Config.BootstrapNodes)
 	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
 		receiverAddress, err := host.NewAddress(bootstrapNode)
 		if err != nil {
@@ -323,6 +324,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 		}
 		pingResult := <-pingCall.Result()
 		receiverHost.ID = pingResult.Sender.ID
+		logger.Debugf("ping request is done")
 
 		b = packet.NewBuilder(pulsarHost)
 		request := b.Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(types.TypeGetRandomHosts).Build()
@@ -337,6 +339,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 			logger.Error(result.Error)
 			continue
 		}
+		logger.Debugf("request get random hosts is done")
 		body := result.Data.(*packet.ResponseGetRandomHosts)
 		if len(body.Error) != 0 {
 			logger.Error(body.Error)
@@ -344,23 +347,25 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 		}
 
 		if body.Hosts == nil || len(body.Hosts) == 0 {
-			err := sendPulseToHost(pulsarHost, t, receiverHost, &pulse)
+			err := sendPulseToHost(ctx, pulsarHost, t, receiverHost, &pulse)
 			if err != nil {
 				logger.Error(err)
 			}
 			continue
 		}
 
-		sendPulseToHosts(pulsarHost, t, body.Hosts, &pulse)
+		sendPulseToHosts(ctx, pulsarHost, t, body.Hosts, &pulse)
 	}
 }
 
-func sendPulseToHost(sender *host.Host, t transport.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
+func sendPulseToHost(ctx context.Context, sender *host.Host, t transport.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
+	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {
-			log.Fatalf("run time panic: %v", x)
+			logger.Fatalf("run time panic: %v", x)
 		}
 	}()
+
 	pb := packet.NewBuilder(sender)
 	pulseRequest := pb.Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.TypePulse).Build()
 	call, err := t.SendRequest(pulseRequest)
@@ -375,16 +380,18 @@ func sendPulseToHost(sender *host.Host, t transport.Transport, pulseReceiver *ho
 	return nil
 }
 
-func sendPulseToHosts(sender *host.Host, t transport.Transport, hosts []host.Host, pulse *core.Pulse) {
+func sendPulseToHosts(ctx context.Context, sender *host.Host, t transport.Transport, hosts []host.Host, pulse *core.Pulse) {
+	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {
-			log.Fatalf("run time panic: %v", x)
+			logger.Fatalf("run time panic: %v", x)
 		}
 	}()
+	logger.Infof("Before sending pulse to nodes - %v", hosts)
 	for _, pulseReceiver := range hosts {
-		err := sendPulseToHost(sender, t, &pulseReceiver, pulse)
+		err := sendPulseToHost(ctx, sender, t, &pulseReceiver, pulse)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 	}
 }
