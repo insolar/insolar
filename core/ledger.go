@@ -59,10 +59,10 @@ type PulseManager interface {
 // (e.g. to which Jet a message should be sent).
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(role JetRole, obj RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
+	IsAuthorized(ctx context.Context, role JetRole, obj RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(role JetRole, obj RecordRef, pulse PulseNumber) ([]RecordRef, error)
+	QueryRole(ctx context.Context, role JetRole, obj RecordRef, pulse PulseNumber) ([]RecordRef, error)
 }
 
 // ArtifactManager is a high level storage interface.

@@ -106,7 +106,12 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 	defer lr.consensusMutex.Unlock()
 	c, ok := lr.consensus[r]
 	if !ok {
-		validators, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, r, lr.pulse().PulseNumber)
+		validators, err := lr.Ledger.GetJetCoordinator().QueryRole(
+			context.TODO(),
+			core.RoleVirtualValidator,
+			r,
+			lr.pulse().PulseNumber,
+		)
 		if err != nil {
 			panic("cannot QueryRole")
 		}

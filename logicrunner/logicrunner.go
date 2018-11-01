@@ -190,7 +190,13 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	}
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(vb.GetRole(), *msg.Target(), lr.pulse().PulseNumber, lr.Network.GetNodeID())
+	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(
+		ctx,
+		vb.GetRole(),
+		*msg.Target(),
+		lr.pulse().PulseNumber,
+		lr.Network.GetNodeID(),
+	)
 
 	if err != nil {
 		return nil, errors.New("Authorization failed with error: " + err.Error())

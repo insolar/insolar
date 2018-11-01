@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/network/nodekeeper"
@@ -45,7 +46,8 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	pm := ledger.GetPulseManager()
 	jc := ledger.GetJetCoordinator()
 
-	pulse, err := pm.Current(context.Background())
+	ctx, _ := inslogger.WithField(context.Background(), "testname", t.Name())
+	pulse, err := pm.Current(ctx)
 	assert.NoError(t, err)
 
 	ref := func(r string) core.RecordRef { return core.NewRefFromBase58(r) }
@@ -62,14 +64,14 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		return list
 	}
 
-	selected, err := jc.QueryRole(core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber)
+	selected, err := jc.QueryRole(ctx, core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
 	assert.Equal(t, []core.RecordRef{ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf")}, selected)
 
-	selected, err = jc.QueryRole(core.RoleLightValidator, *am.GenesisRef(), pulse.PulseNumber)
+	selected, err = jc.QueryRole(ctx, core.RoleLightValidator, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
 	assert.Equal(t, sorted([]core.RecordRef{ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")}), sorted(selected))
 
-	selected, err = jc.QueryRole(core.RoleHeavyExecutor, *am.GenesisRef(), pulse.PulseNumber)
+	selected, err = jc.QueryRole(ctx, core.RoleHeavyExecutor, *am.GenesisRef(), pulse.PulseNumber)
 	assert.Error(t, err)
 }
