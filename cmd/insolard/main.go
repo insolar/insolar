@@ -106,11 +106,11 @@ func checkError(msg string, err error) {
 func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration) {
 	inslog := inslogger.FromContext(ctx)
 	if len(cfg.CertificatePath) == 0 {
-		inslog.Info("[ mergeConfigAndCertificate ] No certificate path - No merge")
+		inslog.Info("No certificate path - No merge")
 		return
 	}
 	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
-	checkError("[ mergeConfigAndCertificate ] Can't create certificate", err)
+	checkError("Can't create certificate", err)
 
 	cfg.Host.BootstrapHosts = []string{}
 	for _, bn := range cert.BootstrapNodes {
@@ -119,7 +119,7 @@ func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configura
 	cfg.Node.Node.ID = cert.Reference
 	cfg.Host.MajorityRule = cert.MajorityRule
 
-	inslog.Infof("[ mergeConfigAndCertificate ] Add %d bootstrap nodes. Set node id to %s. Set majority rule to %d",
+	inslog.Infof("Add %d bootstrap nodes. Set node id to %s. Set majority rule to %d",
 		len(cfg.Host.BootstrapHosts), cfg.Node.Node.ID, cfg.Host.MajorityRule)
 }
 
