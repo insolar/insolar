@@ -31,10 +31,8 @@ var emptyRecordsGens = []recordgen{
 	// request records
 	func() Record { return &CallRequest{} },
 	// result records
-	func() Record { return &ClassActivateRecord{} },
 	func() Record { return &ObjectActivateRecord{} },
 	func() Record { return &CodeRecord{} },
-	func() Record { return &ClassAmendRecord{} },
 	func() Record { return &DeactivationRecord{} },
 	func() Record { return &ObjectAmendRecord{} },
 	func() Record { return &TypeRecord{} },
@@ -88,9 +86,9 @@ var hashtestsRecordsMutate = []struct {
 		"CodeRecord",
 		[]Record{
 			&CodeRecord{},
-			&CodeRecord{Code: []byte{1, 2, 3}},
+			&CodeRecord{Code: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
 			&CodeRecord{
-				Code: []byte{1, 2, 3},
+				Code: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 				SideEffectRecord: SideEffectRecord{
 					Domain: core.RecordRef{1, 2, 3},
 				},

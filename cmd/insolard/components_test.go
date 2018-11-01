@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -24,13 +25,20 @@ import (
 )
 
 func TestInitComponents(t *testing.T) {
+	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
 	cfg.Bootstrap.RootKeys = "testdata/root_member_keys.json"
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 
-	cm, _, repl, err := InitComponents(cfg, false)
+	cm, _, repl, err := InitComponents(ctx, cfg, false)
 	assert.NoError(t, err)
 	assert.NotNil(t, cm)
 	assert.NotNil(t, repl)
+
+	err = cm.Start(ctx)
+	assert.NoError(t, err)
+
+	err = cm.Stop(ctx)
+	assert.NoError(t, err)
 }

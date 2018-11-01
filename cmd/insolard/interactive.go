@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
@@ -36,11 +37,11 @@ type Repl struct {
 }
 
 // Start method starts interactive console
-func (r *Repl) Start() {
+func (r *Repl) Start(ctx context.Context) {
 	displayInteractiveHelp()
-	dhtNetwork, ctx := r.Service.GetHostNetwork()
+	dhtNetwork, hostctx := r.Service.GetHostNetwork()
 
-	doInfo(r.Service, dhtNetwork, ctx)
+	doInfo(r.Service, dhtNetwork, hostctx)
 
 	rl, err := readline.New("> ")
 	if err != nil {
@@ -67,32 +68,31 @@ func (r *Repl) Start() {
 		case "help":
 			displayInteractiveHelp()
 		case "findhost":
-			doFindHost(input, dhtNetwork, ctx)
+			doFindHost(input, dhtNetwork, hostctx)
 		case "info":
-			doInfo(r.Service, dhtNetwork, ctx)
+			doInfo(r.Service, dhtNetwork, hostctx)
 		case "relay":
-			doSendRelay(input[2], input[1], dhtNetwork, ctx)
+			doSendRelay(input[2], input[1], dhtNetwork, hostctx)
 		case "rpc":
 			input = input[1:]
-			doRPC(input, dhtNetwork, ctx)
+			doRPC(input, dhtNetwork, hostctx)
 		case "activenodes":
 			doActiveNodes(dhtNetwork)
 		case "pulse":
-			doPulse(r.Manager)
+			doPulse(ctx, r.Manager)
 		default:
 			displayInteractiveHelp()
 		}
 	}
 }
 
-func doPulse(pm core.PulseManager) {
-	pulse, err := pm.Current()
+func doPulse(ctx context.Context, pm core.PulseManager) {
+	pulse, err := pm.Current(ctx)
 	if err != nil {
 		fmt.Println("Failed to get pulse")
 	} else {
 		fmt.Printf("Current pulse number: %d \n", pulse.PulseNumber)
 	}
-
 }
 
 func doActiveNodes(dhtNetwork hosthandler.HostHandler) {

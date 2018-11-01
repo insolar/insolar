@@ -155,12 +155,12 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	currentPulse, err := usualLedger.GetPulseManager().Current()
+	currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
 		time.Sleep(50 * time.Millisecond)
-		currentPulse, err = usualLedger.GetPulseManager().Current()
+		currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
 		assert.NoError(t, err)
 		count--
 	}
@@ -260,12 +260,12 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	currentPulse, err := usualLedger.GetPulseManager().Current()
+	currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
 		time.Sleep(50 * time.Millisecond)
-		currentPulse, err = usualLedger.GetPulseManager().Current()
+		currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
 		assert.NoError(t, err)
 		count--
 	}
@@ -390,12 +390,12 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	go pulsars[0].StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
 
 	// Need to wait for the moment of brodcasting pulse in the network
-	currentPulse, err := usualLedger.GetPulseManager().Current()
+	currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
 		time.Sleep(50 * time.Millisecond)
-		currentPulse, err = usualLedger.GetPulseManager().Current()
+		currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
 		assert.NoError(t, err)
 		count--
 	}

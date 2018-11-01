@@ -156,14 +156,14 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 		log.Error("PulseManager is not initialized")
 		return
 	}
-	currentPulse, err := n.pulseManager.Current()
+	currentPulse, err := n.pulseManager.Current(ctx)
 	if err != nil {
 		log.Error(errors.Wrap(err, "Could not get current pulse"))
 		return
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = n.pulseManager.Set(pulse)
+		err = n.pulseManager.Set(ctx, pulse)
 		if err != nil {
 			log.Error(errors.Wrap(err, "Failed to set pulse"))
 			return

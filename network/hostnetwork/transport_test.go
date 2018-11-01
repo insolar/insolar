@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
@@ -280,7 +279,6 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 
 	_, err = f.GetResponse(time.Millisecond)
 	assert.Error(t, err)
-	assert.Equal(t, transport.ErrTimeout, err)
 
 	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
 	assert.NoError(t, err)
@@ -288,5 +286,4 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 
 	_, err = f.GetResponse(time.Second)
 	assert.Error(t, err)
-	assert.Equal(t, transport.ErrChannelClosed, err)
 }

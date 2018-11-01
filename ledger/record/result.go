@@ -36,24 +36,16 @@ const (
 	StateDeactivation
 )
 
-// ClassState is common class state record.
-type ClassState interface {
-	// State returns state id.
-	State() State
-	// GetCode returns state code.
-	GetCode() *core.RecordRef
-	// GetMachineType returns state code machine type.
-	GetMachineType() core.MachineType
-	// PrevStateID returns previous state id.
-	PrevStateID() *core.RecordID
-}
-
 // ObjectState is common object state record.
 type ObjectState interface {
 	// State returns state id.
 	State() State
+	// GetImage returns state code.
+	GetImage() *core.RecordRef
+	// GetIsPrototype returns state code.
+	GetIsPrototype() bool
 	// GetMemory returns state memory.
-	GetMemory() []byte
+	GetMemory() *core.RecordID
 	// PrevStateID returns previous state id.
 	PrevStateID() *core.RecordID
 }
@@ -99,7 +91,7 @@ func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
 type CodeRecord struct {
 	SideEffectRecord
 
-	Code        []byte
+	Code        *core.RecordID
 	MachineType core.MachineType
 }
 
@@ -111,90 +103,35 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
-// ClassStateRecord is a record containing data for a class state.
-type ClassStateRecord struct {
-	Code        core.RecordRef
-	MachineType core.MachineType
-}
-
-// GetMachineType returns state code machine type.
-func (r *ClassStateRecord) GetMachineType() core.MachineType {
-	return r.MachineType
-}
-
-// GetCode returns state code.
-func (r *ClassStateRecord) GetCode() *core.RecordRef {
-	return &r.Code
-}
-
-// ClassActivateRecord is produced when we "activate" new contract class.
-type ClassActivateRecord struct {
-	SideEffectRecord
-	ClassStateRecord
-}
-
-// PrevStateID returns previous state id.
-func (r *ClassActivateRecord) PrevStateID() *core.RecordID {
-	return nil
-}
-
-// State returns state id.
-func (r *ClassActivateRecord) State() State {
-	return StateActivation
-}
-
-// Type implementation of Record interface.
-func (r *ClassActivateRecord) Type() TypeID { return typeClassActivate }
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ClassActivateRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
-}
-
-// ClassAmendRecord is an amendment record for classes.
-type ClassAmendRecord struct {
-	SideEffectRecord
-	ClassStateRecord
-
-	PrevState core.RecordID
-}
-
-// PrevStateID returns previous state id.
-func (r *ClassAmendRecord) PrevStateID() *core.RecordID {
-	return &r.PrevState
-}
-
-// State returns state id.
-func (r *ClassAmendRecord) State() State {
-	return StateAmend
-}
-
-// Type implementation of Record interface.
-func (r *ClassAmendRecord) Type() TypeID { return typeClassAmend }
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ClassAmendRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
-}
-
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
-	Memory []byte
+	Memory      *core.RecordID
+	Image       core.RecordRef // If code or prototype object reference.
+	IsPrototype bool           // If true, Image should point to a prototype object. Otherwise to a code.
 }
 
 // GetMemory returns state memory.
-func (r *ObjectStateRecord) GetMemory() []byte {
+func (r *ObjectStateRecord) GetMemory() *core.RecordID {
 	return r.Memory
 }
 
-// ObjectActivateRecord is produced when we instantiate new object from an available class.
+// GetImage returns state code.
+func (r *ObjectStateRecord) GetImage() *core.RecordRef {
+	return &r.Image
+}
+
+// GetIsPrototype returns state code.
+func (r *ObjectStateRecord) GetIsPrototype() bool {
+	return r.IsPrototype
+}
+
+// ObjectActivateRecord is produced when we instantiate new object from an available prototype.
 type ObjectActivateRecord struct {
 	SideEffectRecord
 	ObjectStateRecord
 
-	Class    core.RecordRef
-	Parent   core.RecordRef
-	Delegate bool
+	Parent     core.RecordRef
+	IsDelegate bool
 }
 
 // PrevStateID returns previous state id.
@@ -271,11 +208,16 @@ func (*DeactivationRecord) GetMachineType() core.MachineType {
 }
 
 // GetMemory returns state memory.
-func (*DeactivationRecord) GetMemory() []byte {
+func (*DeactivationRecord) GetMemory() *core.RecordID {
 	return nil
 }
 
-// GetCode returns state code.
-func (*DeactivationRecord) GetCode() *core.RecordRef {
+// GetImage returns state code.
+func (r *DeactivationRecord) GetImage() *core.RecordRef {
 	return nil
+}
+
+// GetIsPrototype returns state code.
+func (r *DeactivationRecord) GetIsPrototype() bool {
+	return false
 }

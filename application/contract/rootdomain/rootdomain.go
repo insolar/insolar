@@ -38,26 +38,6 @@ type RootDomain struct {
 	NodeDomainRef core.RecordRef
 }
 
-// RegisterNode processes register node request
-func (rd *RootDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
-	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
-	if err != nil {
-		return nil, fmt.Errorf("[ RegisterNode ] %s", err.Error())
-	}
-
-	if len(domainRefs) == 0 {
-		return nil, fmt.Errorf("[ RegisterNode ] No NodeDomain references")
-	}
-	nd := nodedomain.GetObject(domainRefs[0])
-
-	cert, err := nd.RegisterNode(publicKey, numberOfBootstrapNodes, majorityRule, roles, ip)
-	if err != nil {
-		return nil, fmt.Errorf("[ RegisterNode ] Problems with RegisterNode: %s", err.Error())
-	}
-
-	return cert, nil
-}
-
 func makeSeed() []byte {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
@@ -88,7 +68,8 @@ func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
 		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't export public key: %s", err.Error())
 	}
 
-	rawJSON, err := rd.RegisterNode(serPubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
+	nd := nodedomain.GetObject(rd.NodeDomainRef)
+	rawJSON, err := nd.RegisterNode(serPubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
 	if err != nil {
 		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't register node: %s", err.Error())
 	}
@@ -99,12 +80,6 @@ func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
 	}
 
 	// Validate
-	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
-	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't get children: %s", err.Error())
-	}
-	nd := nodedomain.GetObject(domainRefs[0])
-
 	return nd.Authorize(core.NewRefFromBase58(nodeRef), seed, signature)
 }
 
@@ -172,7 +147,7 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Only root can call this method")
 	}
 	res := []map[string]interface{}{}
-	crefs, err := rd.GetChildrenTyped(member.ClassReference)
+	crefs, err := rd.GetChildrenTyped(member.PrototypeReference)
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get children: %s", err.Error())
 	}

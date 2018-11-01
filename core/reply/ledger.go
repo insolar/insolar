@@ -31,26 +31,15 @@ func (e *Code) Type() core.ReplyType {
 	return TypeCode
 }
 
-// Class is class from storage.
-type Class struct {
-	Head        core.RecordRef
-	State       core.RecordID
-	Code        *core.RecordRef // Can be nil.
-	MachineType core.MachineType
-}
-
-// Type implementation of Reply interface.
-func (e *Class) Type() core.ReplyType {
-	return TypeClass
-}
-
 // Object is object from storage.
 type Object struct {
 	Head         core.RecordRef
 	State        core.RecordID
-	Class        core.RecordRef
+	Prototype    *core.RecordRef
+	IsPrototype  bool
 	ChildPointer *core.RecordID
 	Memory       []byte
+	Parent       *core.RecordRef
 }
 
 // Type implementation of Reply interface.

@@ -14,22 +14,22 @@
  *    limitations under the License.
  */
 
-package functest
+package phases
 
-import (
-	"testing"
-
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-)
-
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, 1000, firstBalance)
+type PhaseManager struct {
+	phase *FirstPhase
 }
 
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
+// Start starts calculate args on phases.
+func (pm *PhaseManager) OnPulse(pulse *PulseData) error {
+	return pm.phase.HandlePulse(nil, pulse)
+}
+
+// NewPhaseManager creates and returns a new phase manager.
+func NewPhaseManager() *PhaseManager {
+	return &PhaseManager{
+		phase: &FirstPhase{
+			next: &SecondPhase{},
+		},
+	}
 }

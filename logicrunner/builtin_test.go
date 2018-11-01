@@ -68,16 +68,19 @@ func TestBareHelloworld(t *testing.T) {
 	}), "starting logicrunner")
 
 	MessageBusTrivialBehavior(mb, lr)
-	l.GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
+	l.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
+	)
 
 	hw := helloworld.NewHelloWorld()
 
 	domain := byteRecorRef(2)
 	request := byteRecorRef(3)
-	_, _, classRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
+	_, _, protoRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
-	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: byteRecorRef(4)})
+	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: byteRecorRef(4)})
 	assert.NoError(t, err)
 
 	// TODO: use proper conversion
@@ -85,7 +88,7 @@ func TestBareHelloworld(t *testing.T) {
 	reqref.SetRecord(*contract)
 
 	_, err = am.ActivateObject(
-		ctx, domain, reqref, *classRef, *am.GenesisRef(), false,
+		ctx, domain, reqref, *am.GenesisRef(), *protoRef, false,
 		goplugintestutils.CBORMarshal(t, hw),
 	)
 	assert.NoError(t, err)

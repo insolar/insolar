@@ -40,9 +40,10 @@ type baseTransport struct {
 	mutex   *sync.RWMutex
 	futures map[packet.RequestID]Future
 
-	proxy         relay.Proxy
-	publicAddress string
-	sendFunc      func(recvAddress string, data []byte) error
+	proxy          relay.Proxy
+	publicAddress  string
+	sendFunc       func(recvAddress string, data []byte) error
+	serializerFunc func(q *packet.Packet) ([]byte, error)
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
@@ -50,14 +51,15 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 		received: make(chan *packet.Packet),
 		sequence: new(uint64),
 
-		disconnectStarted:  make(chan bool),
+		disconnectStarted:  make(chan bool, 1),
 		disconnectFinished: make(chan bool),
 
 		mutex:   &sync.RWMutex{},
 		futures: make(map[packet.RequestID]Future),
 
-		proxy:         proxy,
-		publicAddress: publicAddress,
+		proxy:          proxy,
+		publicAddress:  publicAddress,
+		serializerFunc: packet.SerializePacket,
 	}
 }
 
@@ -106,6 +108,11 @@ func (t *baseTransport) Packets() <-chan *packet.Packet {
 // Stopped checks if networking is stopped already.
 func (t *baseTransport) Stopped() <-chan bool {
 	return t.disconnectStarted
+}
+
+func (t *baseTransport) prepareDisconnect() {
+	t.disconnectStarted <- true
+	close(t.disconnectStarted)
 }
 
 func (t *baseTransport) generateID() packet.RequestID {
@@ -181,7 +188,7 @@ func (t *baseTransport) sendPacket(p *packet.Packet) error {
 		recvAddress = p.Receiver.Address.String()
 	}
 
-	data, err := packet.SerializePacket(p)
+	data, err := t.serializerFunc(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}

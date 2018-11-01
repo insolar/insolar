@@ -6,8 +6,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-// ClassReference to class of this contract
-var ClassReference = core.NewRefFromBase58("")
+// PrototypeReference to prototype of this contract
+var PrototypeReference = core.NewRefFromBase58("")
 
 // Wallet holds proxy type
 type Wallet struct {
@@ -22,7 +22,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Wallet, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Wallet, err
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*Wallet, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -43,14 +43,14 @@ func GetObject(ref core.RecordRef) (r *Wallet) {
 	return &Wallet{Reference: ref}
 }
 
-// GetClass returns reference to the class
-func GetClass() core.RecordRef {
-	return ClassReference
+// GetPrototype returns reference to the prototype
+func GetPrototype() core.RecordRef {
+	return PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*Wallet, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
+	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -76,9 +76,9 @@ func (r *Wallet) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass returns reference to the class
-func (r *Wallet) GetClass() core.RecordRef {
-	return ClassReference
+// GetPrototype returns reference to the prototype
+func (r *Wallet) GetPrototype() core.RecordRef {
+	return PrototypeReference
 }
 
 // Allocate is proxy generated method
