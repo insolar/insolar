@@ -49,10 +49,10 @@ type Ledger interface {
 // PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {
 	// Current returns current pulse structure.
-	Current() (*Pulse, error)
+	Current(context.Context) (*Pulse, error)
 
 	// Set set's new pulse and closes current jet drop.
-	Set(Pulse) error
+	Set(context.Context, Pulse) error
 }
 
 // JetCoordinator provides methods for calculating Jet affinity

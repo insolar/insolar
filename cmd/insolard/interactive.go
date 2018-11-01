@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
@@ -86,7 +87,7 @@ func (r *Repl) Start() {
 }
 
 func doPulse(pm core.PulseManager) {
-	pulse, err := pm.Current()
+	pulse, err := pm.Current(context.TODO())
 	if err != nil {
 		fmt.Println("Failed to get pulse")
 	} else {

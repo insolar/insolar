@@ -83,7 +83,7 @@ func isLightExecutor(ctx context.Context, c core.Components) (bool, error) {
 	am := c.Ledger.GetArtifactManager()
 	jc := c.Ledger.GetJetCoordinator()
 	pm := c.Ledger.GetPulseManager()
-	currentPulse, err := pm.Current()
+	currentPulse, err := pm.Current(ctx)
 	if err != nil {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
 	}

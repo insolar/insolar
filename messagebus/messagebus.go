@@ -92,7 +92,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 
 	jc := mb.Ledger.GetJetCoordinator()
 	pm := mb.Ledger.GetPulseManager()
-	pulse, err := pm.Current()
+	pulse, err := pm.Current(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -17,6 +17,7 @@
 package pulsemanager_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -37,7 +38,7 @@ func TestPulseManager_Current(t *testing.T) {
 
 	pm := ledger.GetPulseManager()
 
-	pulse, err := pm.Current()
+	pulse, err := pm.Current(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, core.Pulse{PulseNumber: core.FirstPulseNumber}, *pulse)
 }

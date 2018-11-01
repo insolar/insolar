@@ -18,6 +18,7 @@ package jetcoordinator_test
 
 import (
 	"bytes"
+	"context"
 	"sort"
 	"testing"
 
@@ -44,7 +45,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	pm := ledger.GetPulseManager()
 	jc := ledger.GetJetCoordinator()
 
-	pulse, err := pm.Current()
+	pulse, err := pm.Current(context.Background())
 	assert.NoError(t, err)
 
 	ref := func(r string) core.RecordRef { return core.NewRefFromBase58(r) }

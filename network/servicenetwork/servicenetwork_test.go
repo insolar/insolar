@@ -376,7 +376,7 @@ func Test_processPulse(t *testing.T) {
 	}()
 
 	// pulse number is zero in MockPulseManager before receiving any pulses (default)
-	firstStoredPulse, _ := firstLedger.GetPulseManager().Current()
+	firstStoredPulse, _ := firstLedger.GetPulseManager().Current(ctx)
 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
 
 	hh := firstNode.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
@@ -388,13 +388,13 @@ func Test_processPulse(t *testing.T) {
 	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
-	firstStoredPulse, _ = firstLedger.GetPulseManager().Current()
+	firstStoredPulse, _ = firstLedger.GetPulseManager().Current(ctx)
 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 
 	// pulse is passed to the second node and stored there, too
 	success := waitTimeout(&wg, time.Millisecond*100)
 	assert.True(t, success)
-	secondStoredPulse, _ := secondLedger.GetPulseManager().Current()
+	secondStoredPulse, _ := secondLedger.GetPulseManager().Current(ctx)
 	assert.Equal(t, core.PulseNumber(1), secondStoredPulse.PulseNumber)
 }
 
@@ -464,7 +464,7 @@ func Test_processPulse2(t *testing.T) {
 
 	// pulse number is zero in MockPulseManager before receiving any pulses (default)
 	ll := ledgers[lastIndex]
-	firstStoredPulse, _ := ll.GetPulseManager().Current()
+	firstStoredPulse, _ := ll.GetPulseManager().Current(ctx)
 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
 
 	// time.Sleep(time.Millisecond * 100)
@@ -478,7 +478,7 @@ func Test_processPulse2(t *testing.T) {
 	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
-	firstStoredPulse, _ = ll.GetPulseManager().Current()
+	firstStoredPulse, _ = ll.GetPulseManager().Current(ctx)
 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 
 	// pulse is passed to the other 4 nodes and stored there, too
@@ -486,7 +486,7 @@ func Test_processPulse2(t *testing.T) {
 	assert.True(t, success)
 
 	for _, ldgr := range ledgers {
-		pulse, _ := ldgr.GetPulseManager().Current()
+		pulse, _ := ldgr.GetPulseManager().Current(ctx)
 		assert.Equal(t, core.PulseNumber(1), pulse.PulseNumber)
 	}
 }
