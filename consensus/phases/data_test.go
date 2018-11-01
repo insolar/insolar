@@ -118,5 +118,23 @@ func TestNodePulseProofReadWrite_BadData(t *testing.T) {
 	nodePulseProof.NodeSignature = uint64(63)
 	nodePulseProof.NodeStateHash = uint64(64)
 	checkBadDataSerialization(t, nodePulseProof, &NodePulseProof{},
-		"[ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+		"[ NodePulseProof.Deserialize ] Can't read NodeSignature: unexpected EOF")
+}
+
+func makeNodeBroadCast() *NodeBroadcast {
+	nodeBroadcast := &NodeBroadcast{}
+	nodeBroadcast.length = uint16(3)
+	nodeBroadcast.claimType = TypeNodeViolationBlame
+	nodeBroadcast.EmergencyLevel = uint8(4)
+
+	return nodeBroadcast
+}
+
+func TestNodeBroadcast(t *testing.T) {
+	checkSerialization(t, makeNodeBroadCast(), &NodeBroadcast{})
+}
+
+func TestNodeBroadcast_BadData(t *testing.T) {
+	checkBadDataSerialization(t, makeNodeBroadCast(), &NodeBroadcast{},
+		"[ NodeBroadcast.Deserialize ] Can't read length: unexpected EOF")
 }

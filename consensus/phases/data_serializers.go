@@ -219,3 +219,44 @@ func (npp *NodePulseProof) Serialize() ([]byte, error) {
 
 	return result.Bytes(), nil
 }
+
+// Deserialize implements interface method
+func (nb *NodeBroadcast) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &nb.EmergencyLevel)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read EmergencyLevel")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &nb.claimType)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read claimType")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &nb.length)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read length")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (nb *NodeBroadcast) Serialize() ([]byte, error) {
+	result := new(bytes.Buffer)
+	err := binary.Write(result, defaultByteOrder, nb.EmergencyLevel)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeBroadcast.Serialize ] Can't write EmergencyLevel")
+	}
+
+	err = binary.Write(result, defaultByteOrder, nb.claimType)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeBroadcast.Serialize ] Can't write claimType")
+	}
+
+	err = binary.Write(result, defaultByteOrder, nb.length)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeBroadcast.Serialize ] Can't write length")
+	}
+
+	return result.Bytes(), nil
+}
