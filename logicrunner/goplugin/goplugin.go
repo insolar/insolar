@@ -105,7 +105,6 @@ func (gp *GoPlugin) CallMethod(
 
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{
-		TraceID:   inslogger.TraceID(ctx),
 		Context:   callContext,
 		Code:      code,
 		Data:      data,
@@ -139,7 +138,7 @@ func (gp *GoPlugin) CallConstructor(
 
 	res := rpctypes.DownCallConstructorResp{}
 	req := rpctypes.DownCallConstructorReq{
-		TraceID:   inslogger.TraceID(ctx),
+		Context:   callContext,
 		Code:      code,
 		Name:      name,
 		Arguments: args,

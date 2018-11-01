@@ -92,8 +92,8 @@ func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
 
 // RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
-	ctx := inslogger.ContextWithTrace(context.Background(), req.TraceID)
-
+	// ctx := inslogger.ContextWithTrace(context.Background(), req.TraceID)
+	ctx := gpr.lr.UpsertExecution(req.Callee)
 	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeRouteCall != cr.Type {
@@ -123,7 +123,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		Arguments:        req.Arguments,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg)
+	res, err := gpr.lr.MessageBus.Send(ctx.insContext, msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}

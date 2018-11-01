@@ -26,7 +26,6 @@ import (
 
 // DownCallMethodReq is a set of arguments for CallMethod RPC in the runner
 type DownCallMethodReq struct { // todo it may use foundation.Context
-	TraceID   string
 	Context   *core.LogicCallContext
 	Code      core.RecordRef
 	Data      []byte
@@ -43,10 +42,10 @@ type DownCallMethodResp struct {
 // DownCallConstructorReq is a set of arguments for CallConstructor RPC
 // in the runner
 type DownCallConstructorReq struct {
-	TraceID   string
 	Code      core.RecordRef
 	Name      string
 	Arguments core.Arguments
+	Context   *core.LogicCallContext
 }
 
 // DownCallConstructorResp is response from CallConstructor RPC in the runner

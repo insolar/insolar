@@ -78,7 +78,7 @@ func recoverRPC(ctx context.Context, err *error) {
 // CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) (err error) {
-	ctx := inslogger.ContextWithTrace(context.Background(), args.TraceID)
+	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
 	inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	defer recoverRPC(ctx, &err)
 
@@ -116,7 +116,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 // CallConstructor is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (err error) {
-	ctx := inslogger.ContextWithTrace(context.Background(), args.TraceID)
+	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
 	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
 	defer recoverRPC(ctx, &err)
 
@@ -135,7 +135,10 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 		return errors.New("Wrapper with wrong signature")
 	}
 
+	gls.Set("callCtx", args.Context)
+	gls.Set("ctx", ctx)
 	resValues, err := f(args.Arguments)
+	gls.Cleanup()
 	if err != nil {
 		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}

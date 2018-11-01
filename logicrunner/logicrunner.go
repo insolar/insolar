@@ -216,6 +216,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 		Request: es.request,
 		Time:    time.Now(), // TODO: probably we should take it from e
 		Pulse:   *lr.pulse(),
+		TraceID: inslogger.TraceID(ctx),
 	}
 
 	switch m := msg.(type) {

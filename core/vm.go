@@ -70,6 +70,7 @@ type LogicCallContext struct {
 	Caller    *RecordRef // Contract that made the call
 	Time      time.Time  // Time when call was made
 	Pulse     Pulse      // Number of the pulse
+	TraceID   string
 }
 
 // CaseRecordType is a type of caserecord
