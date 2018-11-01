@@ -158,3 +158,21 @@ func TestCapabilityPoolingAndActivation_BadData(t *testing.T) {
 	checkBadDataSerialization(t, makeCapabilityPoolingAndActivation(), &CapabilityPoolingAndActivation{},
 		"[ CapabilityPoolingAndActivation.Deserialize ] Can't read length: unexpected EOF")
 }
+
+func makeNodeViolationBlame() *NodeViolationBlame {
+	nodeViolationBlame := &NodeViolationBlame{}
+	nodeViolationBlame.length = uint16(2)
+	nodeViolationBlame.claimType = TypeNodeViolationBlame
+	nodeViolationBlame.TypeViolation = uint8(4)
+
+	return nodeViolationBlame
+}
+
+func TestNodeViolationBlame(t *testing.T) {
+	checkSerialization(t, makeNodeViolationBlame(), &NodeViolationBlame{})
+}
+
+func TestNodeViolationBlame_BadData(t *testing.T) {
+	checkBadDataSerialization(t, makeNodeViolationBlame(), &NodeViolationBlame{},
+		"[ NodeViolationBlame.Deserialize ] Can't read length: unexpected EOF")
+}

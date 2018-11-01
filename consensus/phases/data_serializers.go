@@ -321,3 +321,54 @@ func (cpa *CapabilityPoolingAndActivation) Serialize() ([]byte, error) {
 
 	return result.Bytes(), nil
 }
+
+// Deserialize implements interface method
+func (nvb *NodeViolationBlame) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &nvb.BlameNodeID)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeViolationBlame.Deserialize ] Can't read BlameNodeID")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &nvb.TypeViolation)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeViolationBlame.Deserialize ] Can't read TypeViolation")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &nvb.claimType)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeViolationBlame.Deserialize ] Can't read claimType")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &nvb.length)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeViolationBlame.Deserialize ] Can't read length")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (nvb *NodeViolationBlame) Serialize() ([]byte, error) {
+	result := new(bytes.Buffer)
+	err := binary.Write(result, defaultByteOrder, nvb.BlameNodeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeViolationBlame.Serialize ] Can't write BlameNodeID")
+	}
+
+	err = binary.Write(result, defaultByteOrder, nvb.TypeViolation)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeViolationBlame.Serialize ] Can't write TypeViolation")
+	}
+
+	err = binary.Write(result, defaultByteOrder, nvb.claimType)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeViolationBlame.Serialize ] Can't write claimType")
+	}
+
+	err = binary.Write(result, defaultByteOrder, nvb.length)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeViolationBlame.Serialize ] Can't write length")
+	}
+
+	return result.Bytes(), nil
+}
