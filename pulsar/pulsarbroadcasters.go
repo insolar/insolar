@@ -241,7 +241,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 
 	go func() {
 		logger.Debug("Before sending to network")
-		currentPulsar.sendPulseToNetwork(pulsarHost, t, pulseForSending)
+		currentPulsar.sendPulseToNetwork(ctx, pulsarHost, t, pulseForSending)
 		defer func() {
 			go t.Stop()
 			<-t.Stopped()

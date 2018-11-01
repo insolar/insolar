@@ -296,12 +296,14 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 	[][]byte,
 	error,
 ) {
+	log.Infof("create drop - %v", pulse)
 	var err error
 	db.waitinflight()
 
 	hw := hash.NewIDHash()
 	_, err = hw.Write(prevHash)
 	if err != nil {
+		log.Error(err)
 		return nil, nil, err
 	}
 
@@ -317,6 +319,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			val, err := it.Item().ValueCopy(nil)
 			if err != nil {
+				log.Error(err)
 				return err
 			}
 			messages = append(messages, val)
@@ -324,6 +327,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		return nil
 	})
 	if err != nil {
+		log.Error(err)
 		return nil, nil, err
 	}
 
@@ -337,9 +341,12 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 
 // SetDrop saves provided JetDrop in db.
 func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
+	log.Infof("set drop pulse - %v", drop.Pulse)
 	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
+	log.Infof("set drop key - %v", k)
 	_, err := db.Get(k)
 	if err == nil {
+		log.Error(err)
 		return ErrOverride
 	}
 
