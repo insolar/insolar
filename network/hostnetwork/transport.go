@@ -102,11 +102,12 @@ type future struct {
 func (f future) Response() <-chan network.Response {
 	in := transport.Future(f).Result()
 	out := make(chan network.Response, cap(in))
-	go func() {
+	go func(in <-chan *packet.Packet, out chan<- network.Response) {
 		for packet := range in {
 			out <- (*packetWrapper)(packet)
 		}
-	}()
+		close(out)
+	}(in, out)
 	return out
 }
 
