@@ -188,3 +188,34 @@ func (pd *PulseData) Serialize() ([]byte, error) {
 
 	return result.Bytes(), nil
 }
+
+// Deserialize implements interface method
+func (npp *NodePulseProof) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &npp.NodeStateHash)
+	if err != nil {
+		return errors.Wrap(err, "[ NodePulseProof.Deserialize ] Can't read NodeStateHash")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &npp.NodeSignature)
+	if err != nil {
+		return errors.Wrap(err, "[ NodePulseProof.Deserialize ] Can't read NodeSignature")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (npp *NodePulseProof) Serialize() ([]byte, error) {
+	result := new(bytes.Buffer)
+	err := binary.Write(result, defaultByteOrder, npp.NodeStateHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodePulseProof.Serialize ] Can't write NodeStateHash")
+	}
+
+	err = binary.Write(result, defaultByteOrder, npp.NodeSignature)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodePulseProof.Serialize ] Can't write NodeSignature")
+	}
+
+	return result.Bytes(), nil
+}

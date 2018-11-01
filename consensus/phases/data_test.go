@@ -18,6 +18,7 @@ package phases
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -51,6 +52,7 @@ func checkSerialization(t *testing.T, orig interface{}, target interface{}) {
 }
 
 func checkBadDataSerialization(t *testing.T, orig interface{}, target interface{}, msg string) {
+	require.Equal(t, reflect.TypeOf(orig), reflect.TypeOf(target), "Types must be the same")
 	data := serializeData(t, orig.(Serializer))
 	r := bytes.NewReader(data[:len(data)-1])
 	err := target.(Serializer).Deserialize(r)
@@ -102,4 +104,19 @@ func TestPulseDataReadWrite_BadData(t *testing.T) {
 	pulseData.Data = makeDefaultPulseDataExt()
 	checkBadDataSerialization(t, pulseData, &PulseData{},
 		"[ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+}
+
+func TestNodePulseProofReadWrite(t *testing.T) {
+	nodePulseProof := &NodePulseProof{}
+	nodePulseProof.NodeSignature = uint64(63)
+	nodePulseProof.NodeStateHash = uint64(64)
+	checkSerialization(t, nodePulseProof, &NodePulseProof{})
+}
+
+func TestNodePulseProofReadWrite_BadData(t *testing.T) {
+	nodePulseProof := &NodePulseProof{}
+	nodePulseProof.NodeSignature = uint64(63)
+	nodePulseProof.NodeStateHash = uint64(64)
+	checkBadDataSerialization(t, nodePulseProof, &NodePulseProof{},
+		"[ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
 }
