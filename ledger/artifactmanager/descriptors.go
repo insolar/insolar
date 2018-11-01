@@ -33,7 +33,8 @@ type CodeDescriptor struct {
 	machineType core.MachineType
 	ref         core.RecordRef
 
-	am core.ArtifactManager
+	ctx context.Context
+	am  core.ArtifactManager
 }
 
 // Ref returns reference to represented code record.
@@ -48,9 +49,8 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 
 // Code returns code data.
 func (d *CodeDescriptor) Code() ([]byte, error) {
-	ctx := context.TODO()
 	if d.cache.code == nil {
-		desc, err := d.am.GetCode(ctx, d.ref)
+		desc, err := d.am.GetCode(d.ctx, d.ref)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +66,8 @@ func (d *CodeDescriptor) Code() ([]byte, error) {
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor struct {
-	am *LedgerArtifactManager
+	ctx context.Context
+	am  *LedgerArtifactManager
 
 	head         core.RecordRef
 	state        core.RecordID
@@ -74,6 +75,7 @@ type ObjectDescriptor struct {
 	isPrototype  bool
 	childPointer *core.RecordID // can be nil.
 	memory       []byte
+	parent       *core.RecordRef
 }
 
 // IsPrototype determines if the object is a prototype.
@@ -125,14 +127,19 @@ func (d *ObjectDescriptor) Memory() []byte {
 
 // Children returns object's children references.
 func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, error) {
-	ctx := context.TODO()
-	return d.am.GetChildren(ctx, d.head, pulse)
+	return d.am.GetChildren(d.ctx, d.head, pulse)
+}
+
+// Parent returns object's parent.
+func (d *ObjectDescriptor) Parent() *core.RecordRef {
+	return d.parent
 }
 
 // ChildIterator is used to iterate over objects children.
 //
 // During iteration children refs will be fetched from remote source (parent object).
 type ChildIterator struct {
+	ctx        context.Context
 	messageBus core.MessageBus
 	parent     core.RecordRef
 	chunkSize  int
@@ -145,9 +152,14 @@ type ChildIterator struct {
 
 // NewChildIterator creates new child iterator.
 func NewChildIterator(
-	mb core.MessageBus, parent core.RecordRef, fromPulse *core.PulseNumber, chunkSize int,
+	ctx context.Context,
+	mb core.MessageBus,
+	parent core.RecordRef,
+	fromPulse *core.PulseNumber,
+	chunkSize int,
 ) (*ChildIterator, error) {
 	iter := ChildIterator{
+		ctx:        ctx,
 		messageBus: mb,
 		parent:     parent,
 		fromPulse:  fromPulse,
@@ -198,7 +210,7 @@ func (i *ChildIterator) fetch() error {
 		return errors.New("failed to fetch record")
 	}
 	genericReply, err := i.messageBus.Send(
-		context.TODO(),
+		i.ctx,
 		&message.GetChildren{
 			Parent:    i.parent,
 			FromPulse: i.fromPulse,
