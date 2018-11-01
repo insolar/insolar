@@ -60,7 +60,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)
-	ctx := context.TODO()
+	ctx := context.Background()
 	err = l.Start(ctx, c)
 	assert.NoError(t, err)
 

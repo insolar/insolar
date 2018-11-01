@@ -10,8 +10,8 @@ import (
 	{{- $typeStruct }}
 {{ end }}
 
-// ClassReference to class of this contract
-var ClassReference = core.NewRefFromBase58("{{ .ClassReference }}")
+// PrototypeReference to prototype of this contract
+var PrototypeReference = core.NewRefFromBase58("{{ .ClassReference }}")
 
 // {{ .ContractType }} holds proxy type
 type {{ .ContractType }} struct {
@@ -26,7 +26,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*{{ .ContractType }}, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*{{ .Contrac
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*{{ .ContractType }}, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +47,14 @@ func GetObject(ref core.RecordRef) (r *{{ .ContractType }}) {
 	return &{{ .ContractType }}{Reference: ref}
 }
 
-// GetPrototype returns reference to the class
+// GetPrototype returns reference to the prototype
 func GetPrototype() core.RecordRef {
-	return ClassReference
+	return PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*{{ .ContractType }}, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
+	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -81,9 +81,9 @@ func (r *{{ $.ContractType }}) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetPrototype returns reference to the class
+// GetPrototype returns reference to the prototype
 func (r *{{ $.ContractType }}) GetPrototype() core.RecordRef {
-	return ClassReference
+	return PrototypeReference
 }
 
 {{ range $method := .MethodsProxies }}

@@ -147,7 +147,7 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Only root can call this method")
 	}
 	res := []map[string]interface{}{}
-	crefs, err := rd.GetChildrenTyped(member.ClassReference)
+	crefs, err := rd.GetChildrenTyped(member.PrototypeReference)
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get children: %s", err.Error())
 	}

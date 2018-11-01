@@ -45,6 +45,7 @@ type DownCallConstructorReq struct {
 	Code      core.RecordRef
 	Name      string
 	Arguments core.Arguments
+	Context   *core.LogicCallContext
 }
 
 // DownCallConstructorResp is response from CallConstructor RPC in the runner

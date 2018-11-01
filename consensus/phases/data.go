@@ -28,7 +28,8 @@ type ClaimType uint8
 type ReferendumType uint8
 
 const (
-	Type1 = PacketType(iota + 1)
+	NetworkConsistency = PacketType(iota + 1)
+	Referendum
 )
 
 const (
@@ -43,10 +44,14 @@ const (
 var defaultByteOrder = binary.BigEndian
 
 type PacketHeader struct {
-	Routing      uint8
+	HasRouting   bool
+	F01          bool
+	F00          bool
+	SubType      uint8
 	Pulse        uint32
 	OriginNodeID uint32
 	TargetNodeID uint32
+	PacketT      PacketType
 }
 
 // PulseDataExt is a pulse data extension.
@@ -81,12 +86,11 @@ type ReferendumClaim interface {
 // Type 4.
 type NodeBroadcast struct {
 	EmergencyLevel uint8
-	claimType      ClaimType
 	length         uint16
 }
 
 func (nb *NodeBroadcast) Type() ClaimType {
-	return nb.claimType
+	return TypeNodeBroadcast
 }
 
 func (nb *NodeBroadcast) Length() uint16 {
@@ -98,12 +102,11 @@ type CapabilityPoolingAndActivation struct {
 	PollingFlags   uint16
 	CapabilityType uint16
 	CapabilityRef  uint64
-	claimType      ClaimType
 	length         uint16
 }
 
 func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
-	return cpa.claimType
+	return TypeCapabilityPollingAndActivation
 }
 
 func (cpa *CapabilityPoolingAndActivation) Length() uint16 {
@@ -119,7 +122,7 @@ type NodeViolationBlame struct {
 }
 
 func (nvb *NodeViolationBlame) Type() ClaimType {
-	return nvb.claimType
+	return TypeNodeViolationBlame
 }
 
 func (nvb *NodeViolationBlame) Length() uint16 {
@@ -135,12 +138,11 @@ type NodeJoinClaim struct {
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
 	NodePK                  ecdsa.PrivateKey
-	claimType               ClaimType
 	length                  uint16
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
-	return njc.claimType
+	return TypeNodeClaim
 }
 
 func (njc *NodeJoinClaim) Length() uint16 {
@@ -150,46 +152,26 @@ func (njc *NodeJoinClaim) Length() uint16 {
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
-	claimType ClaimType
-	length    uint16
+	length uint16
 }
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {
-	return nlc.claimType
+	return TypeNodeClaim
 }
 
 func (nlc *NodeLeaveClaim) Length() uint16 {
 	return nlc.length
 }
 
-func NewNodeLeaveClaim() *NodeLeaveClaim {
-	return &NodeLeaveClaim{
-		claimType: TypeNodeClaim,
-	}
-}
-
 func NewNodeJoinClaim() *NodeJoinClaim {
 	return &NodeJoinClaim{
-		claimType: TypeNodeClaim,
-		length:    272,
+		length: 272,
 	}
 }
 
 func NewNodViolationBlame() *NodeViolationBlame {
 	return &NodeViolationBlame{
 		claimType: TypeNodeViolationBlame,
-	}
-}
-
-func NewCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
-	return &CapabilityPoolingAndActivation{
-		claimType: TypeCapabilityPollingAndActivation,
-	}
-}
-
-func NewNodeBroadcast() *NodeBroadcast {
-	return &NodeBroadcast{
-		claimType: TypeNodeBroadcast,
 	}
 }
 
@@ -203,4 +185,12 @@ type ReferendumVote struct {
 type NodeListVote struct {
 	NodeListCount uint16
 	NodeListHash  uint32
+}
+
+type DeviantBitSet struct {
+	CompressedSet   uint8
+	HiBitLengthFlag uint8
+	LowBitLength    uint8
+	HiBitLength     uint8
+	Payload         []byte
 }

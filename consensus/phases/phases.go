@@ -25,7 +25,7 @@ type FirstPhase struct {
 	next *SecondPhase
 }
 
-func (fp *FirstPhase) HandlePulse(data *PulseData) error {
+func (fp *FirstPhase) HandlePulse(localClaims []ReferendumClaim, data *PulseData) error {
 	result, claims, err := fp.getPulseProof(data)
 	if err != nil {
 		return errors.Wrap(err, "Failed to get a pulse proof")
