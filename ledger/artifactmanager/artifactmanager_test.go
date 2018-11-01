@@ -466,7 +466,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	assert.NoError(t, err)
 
 	rep, err := am.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.JetDrop{
 			Messages: [][]byte{
 				messageBytes,

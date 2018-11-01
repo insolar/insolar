@@ -109,7 +109,7 @@ func (m *LedgerArtifactManager) GetObject(
 	ctx context.Context, head core.RecordRef, state *core.RecordID, approved bool,
 ) (core.ObjectDescriptor, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.GetObject{
 			Head:     head,
 			State:    state,
@@ -149,7 +149,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 	ctx context.Context, head, asType core.RecordRef,
 ) (*core.RecordRef, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.GetDelegate{
 			Head:   head,
 			AsType: asType,
