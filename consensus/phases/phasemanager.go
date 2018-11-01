@@ -14,19 +14,22 @@
  *    limitations under the License.
  */
 
-package functest
+package phases
 
-import (
-	"testing"
+type PhaseManager struct {
+	phase *FirstPhase
+}
 
-	"github.com/stretchr/testify/assert"
-)
+// Start starts calculate args on phases.
+func (pm *PhaseManager) OnPulse(pulse *PulseData) error {
+	return pm.phase.HandlePulse(nil, pulse)
+}
 
-func TestGetInfo(t *testing.T) {
-	info := getInfo(t)
-	assert.NotNil(t, info)
-	assert.NotEqual(t, "", info.RootDomain)
-	assert.NotEqual(t, "", info.RootMember)
-	assert.NotNil(t, info.Prototypes)
-	assert.NotEqual(t, 0, len(info.Prototypes))
+// NewPhaseManager creates and returns a new phase manager.
+func NewPhaseManager() *PhaseManager {
+	return &PhaseManager{
+		phase: &FirstPhase{
+			next: &SecondPhase{},
+		},
+	}
 }

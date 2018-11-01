@@ -204,6 +204,9 @@ type ObjectDescriptor interface {
 
 	// ChildPointer returns the latest child for this object.
 	ChildPointer() *RecordID
+
+	// Parent returns object's parent.
+	Parent() *RecordRef
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.

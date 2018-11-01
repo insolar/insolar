@@ -12,8 +12,8 @@ type RecordInfo struct {
 	IP        string
 }
 
-// ClassReference to class of this contract
-var ClassReference = core.NewRefFromBase58("")
+// PrototypeReference to prototype of this contract
+var PrototypeReference = core.NewRefFromBase58("")
 
 // NodeRecord holds proxy type
 type NodeRecord struct {
@@ -28,7 +28,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeRecord, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeRecord,
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeRecord, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -49,14 +49,14 @@ func GetObject(ref core.RecordRef) (r *NodeRecord) {
 	return &NodeRecord{Reference: ref}
 }
 
-// GetPrototype returns reference to the class
+// GetPrototype returns reference to the prototype
 func GetPrototype() core.RecordRef {
-	return ClassReference
+	return PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*NodeRecord, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
+	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +84,9 @@ func (r *NodeRecord) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetPrototype returns reference to the class
+// GetPrototype returns reference to the prototype
 func (r *NodeRecord) GetPrototype() core.RecordRef {
-	return ClassReference
+	return PrototypeReference
 }
 
 // GetNodeInfo is proxy generated method

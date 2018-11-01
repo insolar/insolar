@@ -35,8 +35,19 @@ const (
 
 // MachineLogicExecutor is an interface for implementers of one particular machine type
 type MachineLogicExecutor interface {
-	CallMethod(ctx *LogicCallContext, code RecordRef, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
-	CallConstructor(ctx *LogicCallContext, code RecordRef, name string, args Arguments) (objectState []byte, err error)
+	CallMethod(
+		ctx context.Context, callContext *LogicCallContext,
+		code RecordRef, data []byte,
+		method string, args Arguments,
+	) (
+		newObjectState []byte, methodResults Arguments, err error,
+	)
+	CallConstructor(
+		ctx context.Context, callContext *LogicCallContext,
+		code RecordRef, name string, args Arguments,
+	) (
+		objectState []byte, err error,
+	)
 	Stop() error
 }
 
@@ -59,6 +70,7 @@ type LogicCallContext struct {
 	Caller    *RecordRef // Contract that made the call
 	Time      time.Time  // Time when call was made
 	Pulse     Pulse      // Number of the pulse
+	TraceID   string
 }
 
 // CaseRecordType is a type of caserecord
