@@ -18,6 +18,8 @@ package servicenetwork
 
 import (
 	"context"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,10 +39,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const keysPath = "../../testdata/functional/bootstrap_keys.json"
+var keysPath = path.Join("..", "..", "testdata", "functional", "bootstrap_keys.json")
 
 func initComponents(t *testing.T, nodeId core.RecordRef) core.Components {
-	cert, err := certificate.NewCertificatesWithKeys(keysPath)
+	pwd, _ := os.Getwd()
+	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
 	assert.NoError(t, err)
 	return core.Components{Certificate: cert, NodeNetwork: nodekeeper.NewNodeKeeper(testutils.TestNode(nodeId)), Ledger: &dhtnetwork.MockLedger{}}
 }
