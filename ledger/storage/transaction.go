@@ -105,12 +105,14 @@ func (m *TransactionManager) set(key, val []byte) {
 	m.txupdates[string(key)] = keyval{k: key, v: val}
 }
 
+// GetBlob returns binary value stored by record ID.
 func (m *TransactionManager) GetBlob(id *core.RecordID) ([]byte, error) {
 	k := prefixkey(scopeIDBlob, id[:])
 	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
 	return m.Get(k)
 }
 
+// SetBlob saves binary value for provided pulse.
 func (m *TransactionManager) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	id := record.CalculateIDForBlob(pulseNumber, blob)
 	k := prefixkey(scopeIDBlob, id[:])

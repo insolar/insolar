@@ -200,7 +200,11 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 		ctx,
 		domainRef,
 		requestRef,
-		&ObjectDescriptor{head: *genRefWithID(objID), state: *objID},
+		&ObjectDescriptor{
+			ctx:   ctx,
+			head:  *genRefWithID(objID),
+			state: *objID,
+		},
 	)
 	assert.Nil(t, err)
 	deactivateRec, err := db.GetRecord(deactivateID)
@@ -234,7 +238,12 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 		ctx,
 		domainRef,
 		requestRef,
-		&ObjectDescriptor{head: *genRefWithID(objID), state: *objID, prototype: prototype},
+		&ObjectDescriptor{
+			ctx:       ctx,
+			head:      *genRefWithID(objID),
+			state:     *objID,
+			prototype: prototype,
+		},
 		memory,
 	)
 	assert.Nil(t, err)
@@ -279,6 +288,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	defer cleaner()
 
 	prototypeRef := genRandomRef(0)
+	parentRef := genRandomRef(0)
 	objectID, _ := db.SetRecord(core.GenesisPulse.PulseNumber, &record.ObjectActivateRecord{
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
@@ -286,6 +296,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		ObjectStateRecord: record.ObjectStateRecord{
 			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{3}),
 		},
+		Parent: *parentRef,
 	})
 	db.SetBlob(core.GenesisPulse.PulseNumber, []byte{3})
 	objectAmendID, _ := db.SetRecord(core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
@@ -307,7 +318,8 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	objDesc, err := am.GetObject(ctx, *genRefWithID(objectID), nil, false)
 	assert.NoError(t, err)
 	expectedObjDesc := &ObjectDescriptor{
-		am: am,
+		ctx: ctx,
+		am:  am,
 
 		head:         *genRefWithID(objectID),
 		state:        *objectAmendID,
@@ -315,6 +327,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		isPrototype:  false,
 		childPointer: objectIndex.ChildPointer,
 		memory:       []byte{4},
+		parent:       parentRef,
 	}
 
 	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
@@ -456,7 +469,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	assert.NoError(t, err)
 
 	rep, err := am.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.JetDrop{
 			Messages: [][]byte{
 				messageBytes,

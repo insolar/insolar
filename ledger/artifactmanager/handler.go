@@ -74,7 +74,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 }
 
 func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
-	return func(context context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	return func(ctx context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 		err := persistMessageToDb(h.db, genericMsg.Message())
 		if err != nil {
 			return nil, err
@@ -85,7 +85,7 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 			return nil, err
 		}
 
-		return handler(context, lastPulseNumber, genericMsg)
+		return handler(ctx, lastPulseNumber, genericMsg)
 	}
 }
 
@@ -154,6 +154,16 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 		}
 	}
 
+	var parent *core.RecordRef
+	rec, err := h.db.GetRecord(msg.Head.Record())
+	if err != nil {
+		return nil, errors.New("failed to fetch activation record")
+	}
+	activation, ok := rec.(*record.ObjectActivateRecord)
+	if ok {
+		parent = &activation.Parent
+	}
+
 	var childPointer *core.RecordID
 	if idx.ChildPointer != nil {
 		childPointer = idx.ChildPointer
@@ -164,6 +174,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: childPointer,
+		Parent:       parent,
 	}
 
 	if state.GetMemory() != nil {

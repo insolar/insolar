@@ -83,7 +83,7 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 		Messages:    messages,
 		PulseNumber: latestPulseNumber,
 	}
-	_, err = m.bus.Send(context.TODO(), msg)
+	_, err = m.bus.Send(context.Background(), msg)
 	if err != nil {
 		return err
 	}
