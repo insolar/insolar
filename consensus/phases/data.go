@@ -43,8 +43,8 @@ type PacketHeader struct {
 	PacketT      uint8
 	SubType      uint8
 	Routing      uint8
-	f01          uint8
-	f00          uint8
+	F01          uint8
+	F00          uint8
 	Pulse        uint32
 	OriginNodeID uint32
 	TargetNodeID uint32
