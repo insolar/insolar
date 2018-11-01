@@ -123,6 +123,7 @@ func (db *DB) Bootstrap() error {
 		if err != nil {
 			return nil, err
 		}
+		log.Infof("bootstrap")
 		err = db.SetDrop(&jetdrop.JetDrop{})
 		if err != nil {
 			return nil, err
@@ -186,6 +187,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 
 // Set wraps matching transaction manager method.
 func (db *DB) Set(key, value []byte) error {
+	log.Infof("key - %v", key)
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.Set(key, value)
 	})
@@ -336,6 +338,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		PrevHash: prevHash,
 		Hash:     hw.Sum(nil),
 	}
+	log.Info(drop)
 	return &drop, messages, nil
 }
 
@@ -344,7 +347,10 @@ func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
 	log.Infof("set drop pulse - %v", drop.Pulse)
 	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
 	log.Infof("set drop key - %v", k)
-	_, err := db.Get(k)
+	obj, err := db.Get(k)
+	log.Infof("here it is - %v", obj)
+	decoded, _ := jetdrop.Decode(obj)
+	log.Infof("here it is decoded - %v", decoded)
 	if err == nil {
 		log.Error(err)
 		return ErrOverride
@@ -354,7 +360,7 @@ func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
 	if err != nil {
 		return err
 	}
-
+	log.Info(drop)
 	return db.Set(k, encoded)
 }
 
