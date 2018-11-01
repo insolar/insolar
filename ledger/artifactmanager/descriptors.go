@@ -33,7 +33,8 @@ type CodeDescriptor struct {
 	machineType core.MachineType
 	ref         core.RecordRef
 
-	am core.ArtifactManager
+	ctx context.Context
+	am  core.ArtifactManager
 }
 
 // Ref returns reference to represented code record.
@@ -48,9 +49,8 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 
 // Code returns code data.
 func (d *CodeDescriptor) Code() ([]byte, error) {
-	ctx := context.TODO()
 	if d.cache.code == nil {
-		desc, err := d.am.GetCode(ctx, d.ref)
+		desc, err := d.am.GetCode(d.ctx, d.ref)
 		if err != nil {
 			return nil, err
 		}

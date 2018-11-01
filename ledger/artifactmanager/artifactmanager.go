@@ -79,7 +79,7 @@ func (m *LedgerArtifactManager) GetCode(
 	ctx context.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.GetCode{Code: code},
 	)
 
@@ -92,6 +92,7 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, ErrUnexpectedReply
 	}
 	desc := CodeDescriptor{
+		ctx:         ctx,
 		ref:         code,
 		machineType: react.MachineType,
 	}
