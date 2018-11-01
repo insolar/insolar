@@ -38,7 +38,6 @@ var (
 	domainID   = *genRandomID(0)
 	domainRef  = *core.NewRecordRef(domainID, domainID)
 	requestRef = *genRandomRef(0)
-	ctx        = context.Background()
 )
 
 func genRandomID(pulse core.PulseNumber) *core.RecordID {
@@ -58,7 +57,13 @@ func genRandomRef(pulse core.PulseNumber) *core.RecordRef {
 	return genRefWithID(genRandomID(pulse))
 }
 
-func getTestData(t *testing.T) (*storage.DB, *LedgerArtifactManager, func()) {
+func getTestData(t *testing.T) (
+	context.Context,
+	*storage.DB,
+	*LedgerArtifactManager,
+	func(), // cleaner
+) {
+	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	mb := testmessagebus.NewTestMessageBus()
 	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}}
@@ -69,13 +74,12 @@ func getTestData(t *testing.T) (*storage.DB, *LedgerArtifactManager, func()) {
 		getChildrenChunkSize: 100,
 	}
 
-	return db, &am, cleaner
+	return ctx, db, &am, cleaner
 }
 
 func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	msg := message.BootstrapRequest{Name: "my little message"}
@@ -88,8 +92,7 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 
 func TestLedgerArtifactManager_DeclareType(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	typeDec := []byte{1, 2, 3}
@@ -108,8 +111,7 @@ func TestLedgerArtifactManager_DeclareType(t *testing.T) {
 
 func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	id, err := am.DeployCode(
@@ -134,8 +136,7 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 
 func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	memory := []byte{1, 2, 3}
@@ -193,8 +194,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 
 func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	objID, _ := db.SetRecord(
@@ -234,8 +234,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 
 func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	objID, _ := db.SetRecord(
@@ -284,8 +283,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 
 func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	objID := genRandomID(0)
@@ -304,8 +302,7 @@ func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 
 func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	prototypeRef := genRandomRef(0)
@@ -362,8 +359,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 
 func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	parentID, _ := db.SetRecord(
@@ -487,8 +483,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 
 func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	codeRecord := record.CodeRecord{
@@ -526,7 +521,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 
 func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	t.Parallel()
-	_, am, cleaner := getTestData(t)
+	ctx, _, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	objID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "object"})
@@ -586,8 +581,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 func TestLedgerArtifactManager_RegisterResult(t *testing.T) {
 	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, am, cleaner := getTestData(t)
+	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
 	request := genRandomRef(0)

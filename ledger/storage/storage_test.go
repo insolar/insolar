@@ -18,7 +18,6 @@ package storage_test
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/jbenet/go-base58"
@@ -37,7 +36,7 @@ import (
 func TestDB_GetRecordNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	defer cleaner()
 
 	rec, err := db.GetRecord(ctx, &core.RecordID{})
@@ -48,7 +47,7 @@ func TestDB_GetRecordNotFound(t *testing.T) {
 func TestDB_SetRecord(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	defer cleaner()
 
 	rec := &record.CallRequest{}
@@ -66,7 +65,7 @@ func TestDB_SetRecord(t *testing.T) {
 func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	defer cleaner()
 
 	idx, err := db.GetObjectIndex(ctx, core.NewRecordID(0, hexhash("5000")), false)
@@ -77,7 +76,7 @@ func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
@@ -95,7 +94,7 @@ func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	defer cleaner()
 
 	drop, err := db.GetDrop(ctx, 1)
@@ -143,7 +142,7 @@ func TestDB_CreateDrop(t *testing.T) {
 func TestDB_SetDrop(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	defer cleaner()
 
 	drop42 := jetdrop.JetDrop{

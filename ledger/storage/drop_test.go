@@ -17,7 +17,6 @@
 package storage_test
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -41,7 +40,7 @@ import (
 func TestStore_DropWaitWrites(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	defer cleaner()
 
 	var txFin time.Time
