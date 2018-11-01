@@ -65,6 +65,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	ctx context.Context, msg core.Message,
 ) (*core.RecordID, error) {
 	return m.setRecord(
+		ctx,
 		&record.CallRequest{
 			Payload: message.MustSerializeBytes(msg),
 		},
@@ -183,6 +184,7 @@ func (m *LedgerArtifactManager) DeclareType(
 	ctx context.Context, domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordID, error) {
 	return m.setRecord(
+		ctx,
 		&record.TypeRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -215,6 +217,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	var setRecordErr error
 	go func() {
 		setRecord, setRecordErr = m.setRecord(
+			ctx,
 			&record.CodeRecord{
 				SideEffectRecord: record.SideEffectRecord{
 					Domain:  domain,
@@ -355,6 +358,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 	ctx context.Context, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	return m.setRecord(
+		ctx,
 		&record.ResultRecord{
 			Request: request,
 			Payload: payload,
@@ -500,9 +504,9 @@ func (m *LedgerArtifactManager) updateObject(
 	}, nil
 }
 
-func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordRef) (*core.RecordID, error) {
+func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record, target core.RecordRef) (*core.RecordID, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.SetRecord{
 			Record:    record.SerializeRecord(rec),
 			TargetRef: target,
