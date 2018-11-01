@@ -150,3 +150,41 @@ func (pde *PulseDataExt) Serialize() ([]byte, error) {
 
 	return result.Bytes(), nil
 }
+
+// Deserialize implements interface method
+func (pd *PulseData) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &pd.PulseNumer)
+	if err != nil {
+		return errors.Wrap(err, "[ PulseData.Deserialize ] Can't read PulseNumer")
+	}
+
+	pd.Data = &PulseDataExt{}
+
+	err = pd.Data.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ PulseData.Deserialize ] Can't read PulseDataExt")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (pd *PulseData) Serialize() ([]byte, error) {
+	result := new(bytes.Buffer)
+	err := binary.Write(result, defaultByteOrder, pd.PulseNumer)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ PulseData.Serialize ] Can't write PulseNumer")
+	}
+
+	pulseDataExtRaw, err := pd.Data.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ PulseData.Serialize ] Can't write PulseDataExt")
+	}
+
+	_, err = result.Write(pulseDataExtRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ PulseData.Serialize ] Can't append PulseDataExt")
+	}
+
+	return result.Bytes(), nil
+}
