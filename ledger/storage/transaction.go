@@ -92,8 +92,8 @@ func (m *TransactionManager) Discard() {
 // GetRequest returns request record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRequest(id *core.RecordID) (record.Request, error) {
-	rec, err := m.GetRecord(context.TODO(), id)
+func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) (record.Request, error) {
+	rec, err := m.GetRecord(ctx, id)
 	if err != nil {
 		return nil, err
 	}

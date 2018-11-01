@@ -234,10 +234,10 @@ func (db *DB) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []
 }
 
 // GetRequest wraps matching transaction manager method.
-func (db *DB) GetRequest(id *core.RecordID) (record.Request, error) {
+func (db *DB) GetRequest(ctx context.Context, id *core.RecordID) (record.Request, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
-	return tx.GetRequest(id)
+	return tx.GetRequest(ctx, id)
 }
 
 // GetRecord wraps matching transaction manager method.
