@@ -87,7 +87,7 @@ func (eq *ExpiryQueue) startExpirationProcessing() {
 			eq.mutex.Lock()
 			for {
 				e := eq.items.Front()
-				if e == nil {
+				if e == nil || e.Value == nil {
 					break
 				}
 				elem := e.Value.(*Item)
