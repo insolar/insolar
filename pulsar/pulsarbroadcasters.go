@@ -18,6 +18,7 @@ package pulsar
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -241,11 +242,14 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 
 	go func() {
 		logger.Debug("Before sending to network")
-		currentPulsar.sendPulseToNetwork(ctx, pulsarHost, t, pulseForSending)
+		err := currentPulsar.sendPulseToNetwork(ctx, pulsarHost, t, pulseForSending)
+
 		defer func() {
-			go t.Stop()
-			<-t.Stopped()
-			t.Close()
+			if err != nil {
+				go t.Stop()
+				<-t.Stopped()
+				t.Close()
+			}
 		}()
 	}()
 	go currentPulsar.sendPulseToPulsars(ctx)
@@ -265,12 +269,6 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 
 func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsarHost *host.Host, t transport.Transport, err error) {
 	logger := inslogger.FromContext(ctx)
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Fatalf("run time panic: %v", r)
-		}
-	}()
-
 	logger.Debug("New transport creation")
 	t, err = transport.NewTransport(currentPulsar.Config.BootstrapListener, relay.NewProxy())
 	if err != nil {
@@ -304,11 +302,12 @@ func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsar
 	return
 }
 
-func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
+func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) (err error) {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Fatalf("run time panic: %v", r)
+			logger.Fatalf("sendPulseToNetwork failed with panic: %v", r)
+			err = errors.New("sending failed")
 		}
 	}()
 
@@ -362,13 +361,14 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 
 		sendPulseToHosts(ctx, pulsarHost, t, body.Hosts, &pulse)
 	}
+	return
 }
 
 func sendPulseToHost(ctx context.Context, sender *host.Host, t transport.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {
-			logger.Fatalf("run time panic: %v", x)
+			logger.Fatalf("sendPulseToHost failed with panic: %v", x)
 		}
 	}()
 
@@ -390,7 +390,7 @@ func sendPulseToHosts(ctx context.Context, sender *host.Host, t transport.Transp
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {
-			logger.Fatalf("run time panic: %v", x)
+			logger.Fatalf("sendPulseToHosts failed with panic: %v", x)
 		}
 	}()
 	logger.Infof("Before sending pulse to nodes - %v", hosts)
