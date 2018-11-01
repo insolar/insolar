@@ -279,6 +279,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	defer cleaner()
 
 	prototypeRef := genRandomRef(0)
+	parentRef := genRandomRef(0)
 	objectID, _ := db.SetRecord(core.GenesisPulse.PulseNumber, &record.ObjectActivateRecord{
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
@@ -286,6 +287,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		ObjectStateRecord: record.ObjectStateRecord{
 			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{3}),
 		},
+		Parent: *parentRef,
 	})
 	db.SetBlob(core.GenesisPulse.PulseNumber, []byte{3})
 	objectAmendID, _ := db.SetRecord(core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
@@ -315,6 +317,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		isPrototype:  false,
 		childPointer: objectIndex.ChildPointer,
 		memory:       []byte{4},
+		parent:       parentRef,
 	}
 
 	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
