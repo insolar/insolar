@@ -230,7 +230,7 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 	}
 	callCtx, ok := gls.Get("callCtx").(*core.LogicCallContext)
 	if !ok {
-		panic("Wrong or unexistent context, you probably started a goroutine")
+		panic("Wrong or unexistent call context, you probably started a goroutine")
 	}
 
 	return rpctypes.UpBaseReq{
