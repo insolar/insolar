@@ -17,6 +17,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/binary"
 
 	"github.com/dgraph-io/badger"
@@ -217,7 +218,7 @@ func (m *TransactionManager) Get(key []byte) ([]byte, error) {
 }
 
 // GetLatestPulseNumber returns current pulse number.
-func (m *TransactionManager) GetLatestPulseNumber() (core.PulseNumber, error) {
+func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
 	buf, err := m.Get(prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
 	if err != nil {
 		return 0, err

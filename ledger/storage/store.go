@@ -17,6 +17,8 @@
 package storage
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
@@ -30,5 +32,5 @@ type Store interface {
 	SetBlob(number core.PulseNumber, blob []byte) (*core.RecordID, error)
 	GetObjectIndex(ref *core.RecordID, forupdate bool) (*index.ObjectLifeline, error)
 	SetObjectIndex(ref *core.RecordID, idx *index.ObjectLifeline) error
-	GetLatestPulseNumber() (core.PulseNumber, error)
+	GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error)
 }

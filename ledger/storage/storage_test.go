@@ -26,6 +26,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
@@ -102,11 +103,15 @@ func TestDB_CreateDrop(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
 	defer cleaner()
 
+	ctx, _ := inslogger.WithField(context.Background(), "testname", t.Name())
 	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
-	err := db.AddPulse(core.Pulse{
-		PulseNumber: pulse,
-		Entropy:     core.Entropy{1, 2, 3},
-	})
+	err := db.AddPulse(
+		ctx,
+		core.Pulse{
+			PulseNumber: pulse,
+			Entropy:     core.Entropy{1, 2, 3},
+		},
+	)
 	for i := 1; i < 4; i++ {
 		setRecordMessage := message.SetRecord{
 			Record: record.SerializeRecord(&record.CodeRecord{
@@ -152,9 +157,14 @@ func TestDB_AddPulse(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
 	defer cleaner()
 
-	err := db.AddPulse(core.Pulse{PulseNumber: 42, Entropy: core.Entropy{1, 2, 3}})
+	ctx, _ := inslogger.WithField(context.Background(), "testname", t.Name())
+
+	err := db.AddPulse(
+		ctx,
+		core.Pulse{PulseNumber: 42, Entropy: core.Entropy{1, 2, 3}},
+	)
 	assert.NoError(t, err)
-	latestPulse, err := db.GetLatestPulseNumber()
+	latestPulse, err := db.GetLatestPulseNumber(ctx)
 	assert.Equal(t, core.PulseNumber(42), latestPulse)
 	pulse, err := db.GetPulse(latestPulse)
 	assert.NoError(t, err)

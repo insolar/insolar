@@ -34,7 +34,7 @@ type PulseManager struct {
 
 // Current returns current pulse structure.
 func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
-	latestPulse, err := m.db.GetLatestPulseNumber()
+	latestPulse, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
-	latestPulseNumber, err := m.db.GetLatestPulseNumber()
+	latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 		return err
 	}
 
-	err = m.db.AddPulse(pulse)
+	err = m.db.AddPulse(ctx, pulse)
 	if err != nil {
 		return err
 	}

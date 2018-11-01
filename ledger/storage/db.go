@@ -121,10 +121,13 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*core.RecordRef, error) {
-		err := db.AddPulse(core.Pulse{
-			PulseNumber: core.GenesisPulse.PulseNumber,
-			Entropy:     core.GenesisPulse.Entropy,
-		})
+		err := db.AddPulse(
+			ctx,
+			core.Pulse{
+				PulseNumber: core.GenesisPulse.PulseNumber,
+				Entropy:     core.GenesisPulse.Entropy,
+			},
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +136,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 			return nil, err
 		}
 
-		lastPulse, err := db.GetLatestPulseNumber()
+		lastPulse, err := db.GetLatestPulseNumber(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -377,10 +380,10 @@ func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
 }
 
 // AddPulse saves new pulse data and updates index.
-func (db *DB) AddPulse(pulse core.Pulse) error {
+func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 	return db.Update(func(tx *TransactionManager) error {
 		var latest core.PulseNumber
-		latest, err := tx.GetLatestPulseNumber()
+		latest, err := tx.GetLatestPulseNumber(ctx)
 		if err != nil && err != ErrNotFound {
 			return err
 		}
@@ -420,11 +423,11 @@ func (db *DB) GetPulse(num core.PulseNumber) (*record.PulseRecord, error) {
 }
 
 // GetLatestPulseNumber returns current pulse number.
-func (db *DB) GetLatestPulseNumber() (core.PulseNumber, error) {
+func (db *DB) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	return tx.GetLatestPulseNumber()
+	return tx.GetLatestPulseNumber(ctx)
 }
 
 // BeginTransaction opens a new transaction.

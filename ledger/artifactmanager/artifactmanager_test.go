@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
@@ -451,6 +452,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	t.Parallel()
 	db, am, cleaner := getTestData(t)
 	defer cleaner()
+	ctx, _ := inslogger.WithField(context.Background(), "testname", t.Name())
 
 	codeRecord := record.CodeRecord{
 		Code: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
@@ -458,7 +460,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	recHash := hash.NewIDHash()
 	_, err := codeRecord.WriteHashData(recHash)
 	assert.NoError(t, err)
-	latestPulse, err := db.GetLatestPulseNumber()
+	latestPulse, err := db.GetLatestPulseNumber(ctx)
 	assert.NoError(t, err)
 	id := core.NewRecordID(latestPulse, recHash.Sum(nil))
 

@@ -80,7 +80,7 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 			return nil, err
 		}
 
-		lastPulseNumber, err := h.db.GetLatestPulseNumber()
+		lastPulseNumber, err := h.db.GetLatestPulseNumber(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -426,7 +426,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 }
 
 func persistMessageToDb(db *storage.DB, genericMsg core.Message) error {
-	lastPulse, err := db.GetLatestPulseNumber()
+	lastPulse, err := db.GetLatestPulseNumber(context.TODO())
 	if err != nil {
 		return err
 	}
