@@ -122,7 +122,7 @@ func TestDB_CreateDrop(t *testing.T) {
 			}),
 		}
 		db.SetMessage(pulse, &setRecordMessage)
-		db.SetBlob(pulse, []byte{byte(i)})
+		db.SetBlob(ctx, pulse, []byte{byte(i)})
 	}
 
 	drop, messages, err := db.CreateDrop(ctx, pulse, []byte{4, 5, 6})

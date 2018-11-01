@@ -103,7 +103,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 	msg := genericMsg.Message().(*message.SetBlob)
 
 	calculatedID := record.CalculateIDForBlob(pulseNumber, msg.Memory)
-	_, err := h.db.GetBlob(calculatedID)
+	_, err := h.db.GetBlob(ctx, calculatedID)
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
@@ -111,7 +111,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 		return nil, err
 	}
 
-	id, err := h.db.SetBlob(pulseNumber, msg.Memory)
+	id, err := h.db.SetBlob(ctx, pulseNumber, msg.Memory)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	if err != nil {
 		return nil, err
 	}
-	code, err := h.db.GetBlob(codeRec.Code)
+	code, err := h.db.GetBlob(ctx, codeRec.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 	}
 
 	if state.GetMemory() != nil {
-		rep.Memory, err = h.db.GetBlob(state.GetMemory())
+		rep.Memory, err = h.db.GetBlob(ctx, state.GetMemory())
 		if err != nil {
 			return nil, err
 		}

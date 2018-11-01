@@ -28,8 +28,8 @@ import (
 type Store interface {
 	GetRecord(ref *core.RecordID) (record.Record, error)
 	SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
-	GetBlob(ref *core.RecordID) ([]byte, error)
-	SetBlob(number core.PulseNumber, blob []byte) (*core.RecordID, error)
+	GetBlob(ctx context.Context, ref *core.RecordID) ([]byte, error)
+	SetBlob(ctx context.Context, number core.PulseNumber, blob []byte) (*core.RecordID, error)
 	GetObjectIndex(ctx context.Context, ref *core.RecordID, forupdate bool) (*index.ObjectLifeline, error)
 	SetObjectIndex(ctx context.Context, ref *core.RecordID, idx *index.ObjectLifeline) error
 	GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error)
