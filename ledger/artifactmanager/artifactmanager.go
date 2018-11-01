@@ -281,6 +281,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 	ctx context.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	desc, err := m.sendUpdateObject(
+		ctx,
 		&record.DeactivationRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -384,6 +385,7 @@ func (m *LedgerArtifactManager) activateObject(
 	}
 
 	obj, err := m.sendUpdateObject(
+		ctx,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -471,6 +473,7 @@ func (m *LedgerArtifactManager) updateObject(
 	}
 
 	obj, err := m.sendUpdateObject(
+		ctx,
 		&record.ObjectAmendRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -544,7 +547,10 @@ func (m *LedgerArtifactManager) setBlob(ctx context.Context, blob []byte, target
 }
 
 func (m *LedgerArtifactManager) sendUpdateObject(
-	rec record.Record, object core.RecordRef, memory []byte,
+	ctx context.Context,
+	rec record.Record,
+	object core.RecordRef,
+	memory []byte,
 ) (*reply.Object, error) {
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -553,7 +559,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	var genericError error
 	go func() {
 		genericReact, genericError = m.messageBus.Send(
-			context.TODO(),
+			ctx,
 			&message.UpdateObject{
 				Record: record.SerializeRecord(rec),
 				Object: object,
@@ -566,7 +572,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	var blobError error
 	go func() {
 		blobReact, blobError = m.messageBus.Send(
-			context.TODO(),
+			ctx,
 			&message.SetBlob{
 				TargetRef: object,
 				Memory:    memory,
