@@ -40,7 +40,7 @@ type RootDomain struct {
 
 // RegisterNode processes register node request
 func (rd *RootDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
-	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
+	domainRefs, err := rd.GetChildrenTyped(nodedomain.PrototypeReference)
 	if err != nil {
 		return nil, fmt.Errorf("[ RegisterNode ] %s", err.Error())
 	}
@@ -99,7 +99,7 @@ func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
 	}
 
 	// Validate
-	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
+	domainRefs, err := rd.GetChildrenTyped(nodedomain.PrototypeReference)
 	if err != nil {
 		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't get children: %s", err.Error())
 	}
@@ -172,7 +172,7 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Only root can call this method")
 	}
 	res := []map[string]interface{}{}
-	crefs, err := rd.GetChildrenTyped(member.ClassReference)
+	crefs, err := rd.GetChildrenTyped(member.PrototypeReference)
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get children: %s", err.Error())
 	}
