@@ -260,3 +260,64 @@ func (nb *NodeBroadcast) Serialize() ([]byte, error) {
 
 	return result.Bytes(), nil
 }
+
+// Deserialize implements interface method
+func (cpa *CapabilityPoolingAndActivation) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &cpa.PollingFlags)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read PollingFlags")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &cpa.CapabilityType)
+	if err != nil {
+		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read CapabilityType")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &cpa.CapabilityRef)
+	if err != nil {
+		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read CapabilityRef")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &cpa.claimType)
+	if err != nil {
+		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read claimType")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &cpa.length)
+	if err != nil {
+		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read length")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (cpa *CapabilityPoolingAndActivation) Serialize() ([]byte, error) {
+	result := new(bytes.Buffer)
+	err := binary.Write(result, defaultByteOrder, cpa.PollingFlags)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write PollingFlags")
+	}
+
+	err = binary.Write(result, defaultByteOrder, cpa.CapabilityType)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write CapabilityType")
+	}
+
+	err = binary.Write(result, defaultByteOrder, cpa.CapabilityRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write CapabilityRef")
+	}
+
+	err = binary.Write(result, defaultByteOrder, cpa.claimType)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write claimType")
+	}
+
+	err = binary.Write(result, defaultByteOrder, cpa.length)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write length")
+	}
+
+	return result.Bytes(), nil
+}
