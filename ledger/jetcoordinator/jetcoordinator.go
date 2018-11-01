@@ -90,7 +90,7 @@ func (jc *JetCoordinator) QueryRole(
 	obj core.RecordRef,
 	pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	pulseData, err := jc.db.GetPulse(pulse)
+	pulseData, err := jc.db.GetPulse(ctx, pulse)
 	if err != nil {
 		return nil, err
 	}

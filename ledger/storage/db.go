@@ -131,7 +131,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		err = db.SetDrop(&jetdrop.JetDrop{})
+		err = db.SetDrop(ctx, &jetdrop.JetDrop{})
 		if err != nil {
 			return nil, err
 		}
@@ -299,7 +299,7 @@ func (db *DB) SetObjectIndex(id *core.RecordID, idx *index.ObjectLifeline) error
 }
 
 // GetDrop returns jet drop for a given pulse number.
-func (db *DB) GetDrop(pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
+func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
 	buf, err := db.Get(k)
 	if err != nil {
@@ -319,7 +319,7 @@ func (db *DB) waitinflight() {
 // CreateDrop creates and stores jet drop for given pulse number.
 //
 // Previous JetDrop hash should be provided. On success returns saved drop and slot records.
-func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
+func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash []byte) (
 	*jetdrop.JetDrop,
 	[][]byte,
 	error,
@@ -364,7 +364,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 }
 
 // SetDrop saves provided JetDrop in db.
-func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
+func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
 	_, err := db.Get(k)
 	if err == nil {
@@ -407,7 +407,7 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 }
 
 // GetPulse returns pulse for provided pulse number.
-func (db *DB) GetPulse(num core.PulseNumber) (*record.PulseRecord, error) {
+func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*record.PulseRecord, error) {
 	buf, err := db.Get(prefixkey(scopeIDPulse, num.Bytes()))
 	if err != nil {
 		return nil, err

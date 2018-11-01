@@ -90,10 +90,11 @@ func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 
 func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
 	defer cleaner()
 
-	drop, err := db.GetDrop(1)
+	drop, err := db.GetDrop(ctx, 1)
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, drop)
 }
@@ -122,7 +123,7 @@ func TestDB_CreateDrop(t *testing.T) {
 		db.SetBlob(pulse, []byte{byte(i)})
 	}
 
-	drop, messages, err := db.CreateDrop(pulse, []byte{4, 5, 6})
+	drop, messages, err := db.CreateDrop(ctx, pulse, []byte{4, 5, 6})
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(messages))
 	assert.Equal(t, pulse, drop.Pulse)
@@ -137,6 +138,7 @@ func TestDB_CreateDrop(t *testing.T) {
 
 func TestDB_SetDrop(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
 	defer cleaner()
 
@@ -144,10 +146,10 @@ func TestDB_SetDrop(t *testing.T) {
 		Pulse: 42,
 		Hash:  []byte{0xFF},
 	}
-	err := db.SetDrop(&drop42)
+	err := db.SetDrop(ctx, &drop42)
 	assert.NoError(t, err)
 
-	got, err := db.GetDrop(42)
+	got, err := db.GetDrop(ctx, 42)
 	assert.NoError(t, err)
 	assert.Equal(t, *got, drop42)
 }
@@ -165,7 +167,7 @@ func TestDB_AddPulse(t *testing.T) {
 	assert.NoError(t, err)
 	latestPulse, err := db.GetLatestPulseNumber(ctx)
 	assert.Equal(t, core.PulseNumber(42), latestPulse)
-	pulse, err := db.GetPulse(latestPulse)
+	pulse, err := db.GetPulse(ctx, latestPulse)
 	assert.NoError(t, err)
 	assert.Equal(t, record.PulseRecord{PrevPulse: core.FirstPulseNumber, Entropy: core.Entropy{1, 2, 3}}, *pulse)
 }

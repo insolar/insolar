@@ -38,7 +38,7 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	if err != nil {
 		return nil, err
 	}
-	pulse, err := m.db.GetPulse(latestPulse)
+	pulse, err := m.db.GetPulse(ctx, latestPulse)
 	if err != nil {
 		return nil, err
 	}
@@ -56,19 +56,19 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	if err != nil {
 		return err
 	}
-	latestPulse, err := m.db.GetPulse(latestPulseNumber)
+	latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
 	if err != nil {
 		return err
 	}
-	prevDrop, err := m.db.GetDrop(latestPulse.PrevPulse)
+	prevDrop, err := m.db.GetDrop(ctx, latestPulse.PrevPulse)
 	if err != nil {
 		return err
 	}
-	drop, messages, err := m.db.CreateDrop(latestPulseNumber, prevDrop.Hash)
+	drop, messages, err := m.db.CreateDrop(ctx, latestPulseNumber, prevDrop.Hash)
 	if err != nil {
 		return err
 	}
-	err = m.db.SetDrop(drop)
+	err = m.db.SetDrop(ctx, drop)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 		Messages:    messages,
 		PulseNumber: latestPulseNumber,
 	}
-	_, err = m.bus.Send(context.Background(), msg)
+	_, err = m.bus.Send(ctx, msg)
 	if err != nil {
 		return err
 	}
