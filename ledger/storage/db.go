@@ -355,10 +355,9 @@ func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
 	log.Infof("set drop key - %v", k)
 	obj, err := db.Get(k)
 	log.Infof("here it is - %v", obj)
-	decoded, _ := jetdrop.Decode(obj)
-	log.Infof("here it is decoded - %v", decoded)
+	log.Error("here error it is - %v", err)
 	if err == nil {
-		log.Error(err)
+		log.Infof("IT'S BROKEN")
 		return ErrOverride
 	}
 

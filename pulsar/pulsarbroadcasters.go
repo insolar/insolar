@@ -265,6 +265,11 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 
 func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsarHost *host.Host, t transport.Transport, err error) {
 	logger := inslogger.FromContext(ctx)
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Fatalf("run time panic: %v", r)
+		}
+	}()
 
 	logger.Debug("New transport creation")
 	t, err = transport.NewTransport(currentPulsar.Config.BootstrapListener, relay.NewProxy())
@@ -302,10 +307,11 @@ func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsar
 func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
-		if x := recover(); x != nil {
-			logger.Fatalf("run time panic: %v", x)
+		if r := recover(); r != nil {
+			logger.Fatalf("run time panic: %v", r)
 		}
 	}()
+
 	logger.Infof("Before sending pulse to bootstraps - %v", currentPulsar.Config.BootstrapNodes)
 	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
 		receiverAddress, err := host.NewAddress(bootstrapNode)

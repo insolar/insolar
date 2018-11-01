@@ -103,7 +103,7 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	_, err = m.bus.Send(context.TODO(), msg)
 	if err != nil {
 		log.Error("Send")
-		log.Error(err)
+		log.Error(err.Error())
 		return err
 	}
 	log.Info("Все хорошо")
