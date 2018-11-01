@@ -417,6 +417,7 @@ func (m *LedgerArtifactManager) activateObject(
 		asType = &prototype
 	}
 	_, err = m.registerChild(
+		ctx,
 		&record.ChildRecord{
 			Ref:       object,
 			PrevChild: prevChild,
@@ -603,9 +604,14 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 }
 
 func (m *LedgerArtifactManager) registerChild(
-	rec record.Record, parent, child core.RecordRef, asType *core.RecordRef,
+	ctx context.Context,
+	rec record.Record,
+	parent core.RecordRef,
+	child core.RecordRef,
+	asType *core.RecordRef,
 ) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(context.TODO(),
+	genericReact, err := m.messageBus.Send(
+		ctx,
 		&message.RegisterChild{
 			Record: record.SerializeRecord(rec),
 			Parent: parent,
