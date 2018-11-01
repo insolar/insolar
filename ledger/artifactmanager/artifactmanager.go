@@ -130,6 +130,7 @@ func (m *LedgerArtifactManager) GetObject(
 			isPrototype:  r.IsPrototype,
 			childPointer: r.ChildPointer,
 			memory:       r.Memory,
+			parent:       r.Parent,
 		}
 		return &desc, nil
 	case *reply.Error:
