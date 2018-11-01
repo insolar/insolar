@@ -18,6 +18,7 @@ package storage
 
 import (
 	"bytes"
+	"context"
 	"path/filepath"
 	"sync"
 
@@ -105,7 +106,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 }
 
 // Bootstrap creates initial records in storage.
-func (db *DB) Bootstrap() error {
+func (db *DB) Bootstrap(cxt context.Context) error {
 	getGenesisRef := func() (*core.RecordRef, error) {
 		buff, err := db.Get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {

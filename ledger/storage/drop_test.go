@@ -17,6 +17,7 @@
 package storage_test
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -38,7 +39,7 @@ import (
 // SetDrop should happen after transaction (after 'waittime' timeout happens)
 func TestStore_DropWaitWrites(t *testing.T) {
 	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
 	defer cleaner()
 
 	var txFin time.Time

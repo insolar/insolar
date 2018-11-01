@@ -39,8 +39,9 @@ import (
 func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, func()) {
 	var err error
 	// Init subcomponents.
+	ctx := context.TODO()
 	conf := configuration.NewLedger()
-	db, dbcancel := storagetest.TmpDB(t, dir)
+	db, dbcancel := storagetest.TmpDB(t, ctx, dir)
 	handler, err := artifactmanager.NewMessageHandler(db)
 	assert.NoError(t, err)
 	am, err := artifactmanager.NewArtifactManger(db)
@@ -60,7 +61,6 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)
-	ctx := context.Background()
 	err = l.Start(ctx, c)
 	assert.NoError(t, err)
 

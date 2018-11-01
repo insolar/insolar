@@ -53,7 +53,7 @@ func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 }
 
 // NewLedger creates new ledger instance.
-func NewLedger(conf configuration.Ledger) (*Ledger, error) {
+func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) {
 	var err error
 	db, err := storage.NewDB(conf, nil)
 	if err != nil {
@@ -76,7 +76,7 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 		return nil, err
 	}
 
-	err = db.Bootstrap()
+	err = db.Bootstrap(ctx)
 	if err != nil {
 		return nil, err
 	}

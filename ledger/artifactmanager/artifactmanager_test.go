@@ -58,7 +58,7 @@ func genRandomRef(pulse core.PulseNumber) *core.RecordRef {
 }
 
 func getTestData(t *testing.T) (*storage.DB, *LedgerArtifactManager, func()) {
-	db, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	mb := testmessagebus.NewTestMessageBus()
 	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}}
 	handler.Link(core.Components{MessageBus: mb})

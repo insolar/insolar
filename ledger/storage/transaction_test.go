@@ -17,6 +17,7 @@
 package storage_test
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -46,7 +47,7 @@ which try reads and writes the same key simultaneously
 
 func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
 	defer cleaner()
 
 	objid := core.NewRecordID(100500, nil)

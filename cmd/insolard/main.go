@@ -162,7 +162,7 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, cmOld, repl, err := InitComponents(cfgHolder.Configuration, params.isBootstrap)
+	cm, cmOld, repl, err := InitComponents(ctx, cfgHolder.Configuration, params.isBootstrap)
 	checkError("failed to init components", err)
 
 	cmOld.linkAll(ctx)
