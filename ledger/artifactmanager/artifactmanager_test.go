@@ -452,7 +452,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	t.Parallel()
 	db, am, cleaner := getTestData(t)
 	defer cleaner()
-	ctx, _ := inslogger.WithField(context.Background(), "testname", t.Name())
+	ctx := inslogger.TestContext(t)
 
 	codeRecord := record.CodeRecord{
 		Code: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),

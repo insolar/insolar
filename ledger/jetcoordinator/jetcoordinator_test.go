@@ -18,7 +18,6 @@ package jetcoordinator_test
 
 import (
 	"bytes"
-	"context"
 	"sort"
 	"testing"
 
@@ -33,6 +32,7 @@ import (
 )
 
 func TestJetCoordinator_QueryRole(t *testing.T) {
+	ctx := inslogger.TestContext(t)
 	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -46,7 +46,6 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	pm := ledger.GetPulseManager()
 	jc := ledger.GetJetCoordinator()
 
-	ctx, _ := inslogger.WithField(context.Background(), "testname", t.Name())
 	pulse, err := pm.Current(ctx)
 	assert.NoError(t, err)
 

@@ -100,10 +100,10 @@ func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 
 func TestDB_CreateDrop(t *testing.T) {
 	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	defer cleaner()
 
-	ctx, _ := inslogger.WithField(context.Background(), "testname", t.Name())
 	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
 	err := db.AddPulse(
 		ctx,
@@ -154,10 +154,9 @@ func TestDB_SetDrop(t *testing.T) {
 
 func TestDB_AddPulse(t *testing.T) {
 	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(t, ctx, "")
 	defer cleaner()
-
-	ctx, _ := inslogger.WithField(context.Background(), "testname", t.Name())
 
 	err := db.AddPulse(
 		ctx,
