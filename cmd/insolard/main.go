@@ -84,12 +84,11 @@ func parseInputParams() inputParams {
 	return result
 }
 
-func registerCurrentNode(host string, bootstrapCertificatePath string, cert core.Certificate, nc core.NetworkCoordinator) {
+func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, cert core.Certificate, nc core.NetworkCoordinator) {
 	roles := []string{"virtual", "heavy_material", "light_material"}
 	publicKey, err := cert.GetPublicKey()
 	checkError("failed to get public key: ", err)
 
-	ctx := context.TODO()
 	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, roles, host)
 	checkError("Can't register node: ", err)
 
@@ -193,7 +192,9 @@ func main() {
 
 	// move to bootstrap component
 	if params.isBootstrap {
-		registerCurrentNode(cfgHolder.Configuration.Host.Transport.Address,
+		registerCurrentNode(
+			ctx,
+			cfgHolder.Configuration.Host.Transport.Address,
 			params.bootstrapCertificatePath,
 			cmOld.components.Certificate,
 			cmOld.components.NetworkCoordinator,
