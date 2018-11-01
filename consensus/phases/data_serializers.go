@@ -31,10 +31,19 @@ type Serializer interface {
 	Deserialize(data io.Reader) error
 }
 
+// routInfoMasks masks
+const (
+	// take low bit
+	hasRoutingMask = 0x1
+
+	packetTypeMask = 0xf0
+	subtypeMask    = 0xe
+)
+
 func (ph *PacketHeader) parseRouteInfo(routInfo uint8) {
-	ph.PacketT = PacketType((routInfo & 0xf0) >> 4)
-	ph.SubType = (routInfo & 0xe) >> 1
-	ph.HasRouting = (routInfo & 0x1) == 1
+	ph.PacketT = PacketType((routInfo & packetTypeMask) >> 4)
+	ph.SubType = (routInfo & subtypeMask) >> 1
+	ph.HasRouting = (routInfo & hasRoutingMask) == 1
 }
 
 func (ph *PacketHeader) compactRouteInfo() uint8 {
@@ -43,13 +52,13 @@ func (ph *PacketHeader) compactRouteInfo() uint8 {
 	result |= ph.SubType << 1
 
 	if ph.HasRouting {
-		result |= 0x1
+		result |= hasRoutingMask
 	}
 
 	return result
 }
 
-// PacketHeader masks
+// PulseAndCustomFlags masks
 const (
 	// take bit before high bit
 	f00Mask = 0x40000000
