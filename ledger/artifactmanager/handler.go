@@ -74,7 +74,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 }
 
 func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
-	return func(context context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	return func(ctx context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 		err := persistMessageToDb(h.db, genericMsg.Message())
 		if err != nil {
 			return nil, err
@@ -85,7 +85,7 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 			return nil, err
 		}
 
-		return handler(context, lastPulseNumber, genericMsg)
+		return handler(ctx, lastPulseNumber, genericMsg)
 	}
 }
 
