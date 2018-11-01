@@ -40,7 +40,11 @@ const (
 // ----------------------------------PHASE 1--------------------------------
 
 type PacketHeader struct {
+	PacketT      uint8
+	SubType      uint8
 	Routing      uint8
+	f01          uint8
+	f00          uint8
 	Pulse        uint32
 	OriginNodeID uint32
 	TargetNodeID uint32
@@ -177,4 +181,12 @@ type ReferendumVote struct {
 type NodeListVote struct {
 	NodeListCount uint16
 	NodeListHash  uint32
+}
+
+type DeviantBitSet struct {
+	CompressedSet   uint8
+	HiBitLengthFlag uint8
+	LowBitLength    uint8
+	HiBitLength     uint8
+	Payload         []byte
 }
