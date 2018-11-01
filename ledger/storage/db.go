@@ -145,6 +145,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 			return nil, err
 		}
 		err = db.SetObjectIndex(
+			ctx,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
@@ -280,11 +281,15 @@ func (db *DB) SetRecordBinary(key, rec []byte) error {
 }
 
 // GetObjectIndex wraps matching transaction manager method.
-func (db *DB) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
+func (db *DB) GetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	forupdate bool,
+) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	idx, err := tx.GetObjectIndex(id, forupdate)
+	idx, err := tx.GetObjectIndex(ctx, id, forupdate)
 	if err != nil {
 		return nil, err
 	}
@@ -292,9 +297,13 @@ func (db *DB) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLi
 }
 
 // SetObjectIndex wraps matching transaction manager method.
-func (db *DB) SetObjectIndex(id *core.RecordID, idx *index.ObjectLifeline) error {
+func (db *DB) SetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	idx *index.ObjectLifeline,
+) error {
 	return db.Update(func(tx *TransactionManager) error {
-		return tx.SetObjectIndex(id, idx)
+		return tx.SetObjectIndex(ctx, id, idx)
 	})
 }
 

@@ -173,7 +173,11 @@ func (m *TransactionManager) SetRecord(pulseNumber core.PulseNumber, rec record.
 }
 
 // GetObjectIndex fetches object lifeline index.
-func (m *TransactionManager) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
+func (m *TransactionManager) GetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	forupdate bool,
+) (*index.ObjectLifeline, error) {
 	if forupdate {
 		m.lockOnID(id)
 	}
@@ -186,7 +190,11 @@ func (m *TransactionManager) GetObjectIndex(id *core.RecordID, forupdate bool) (
 }
 
 // SetObjectIndex stores object lifeline index.
-func (m *TransactionManager) SetObjectIndex(id *core.RecordID, idx *index.ObjectLifeline) error {
+func (m *TransactionManager) SetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	idx *index.ObjectLifeline,
+) error {
 	k := prefixkey(scopeIDLifeline, id[:])
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}

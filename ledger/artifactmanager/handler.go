@@ -142,7 +142,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetObject)
 
-	idx, stateID, state, err := getObject(h.db, msg.Head.Record(), msg.State, msg.Approved)
+	idx, stateID, state, err := getObject(ctx, h.db, msg.Head.Record(), msg.State, msg.Approved)
 	if err != nil {
 		switch err {
 		case ErrObjectDeactivated:
@@ -190,7 +190,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetDelegate)
 
-	idx, _, _, err := getObject(h.db, msg.Head.Record(), nil, false)
+	idx, _, _, err := getObject(ctx, h.db, msg.Head.Record(), nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetChildren)
 
-	idx, _, _, err := getObject(h.db, msg.Parent.Record(), nil, false)
+	idx, _, _, err := getObject(ctx, h.db, msg.Parent.Record(), nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +268,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	var idx *index.ObjectLifeline
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
 		var err error
-		idx, err = getObjectIndex(tx, msg.Object.Record(), true)
+		idx, err = getObjectIndex(ctx, tx, msg.Object.Record(), true)
 		if err != nil {
 			return err
 		}
@@ -286,7 +286,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		idx.LatestState = id
 		idx.State = state.State()
-		return tx.SetObjectIndex(msg.Object.Record(), idx)
+		return tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
 	})
 	if err != nil {
 		if err == ErrObjectDeactivated {
@@ -316,7 +316,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 
 	var child *core.RecordID
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, msg.Parent.Record(), nil, false)
+		idx, _, _, err := getObject(ctx, tx, msg.Parent.Record(), nil, false)
 		if err != nil {
 			return err
 		}
@@ -333,7 +333,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		if msg.AsType != nil {
 			idx.Delegates[*msg.AsType] = msg.Child
 		}
-		err = tx.SetObjectIndex(msg.Parent.Record(), idx)
+		err = tx.SetObjectIndex(ctx, msg.Parent.Record(), idx)
 		if err != nil {
 			return err
 		}
@@ -375,7 +375,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	msg := genericMsg.Message().(*message.ValidateRecord)
 
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err := tx.GetObjectIndex(msg.Object.Record(), true)
+		idx, err := tx.GetObjectIndex(ctx, msg.Object.Record(), true)
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch object index")
 		}
@@ -405,7 +405,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 				} else {
 					idx.LatestState = currentState.PrevStateID()
 				}
-				err := tx.SetObjectIndex(msg.Object.Record(), idx)
+				err := tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
 				if err != nil {
 					return err
 				}
@@ -452,9 +452,13 @@ func getCode(s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
 }
 
 func getObject(
-	s storage.Store, head *core.RecordID, state *core.RecordID, approved bool,
+	ctx context.Context,
+	s storage.Store,
+	head *core.RecordID,
+	state *core.RecordID,
+	approved bool,
 ) (*index.ObjectLifeline, *core.RecordID, record.ObjectState, error) {
-	idx, err := s.GetObjectIndex(head, false)
+	idx, err := s.GetObjectIndex(ctx, head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to fetch object index")
 	}
@@ -489,8 +493,8 @@ func getObject(
 	return idx, stateID, stateRec, nil
 }
 
-func getObjectIndex(s storage.Store, head *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
-	idx, err := s.GetObjectIndex(head, forupdate)
+func getObjectIndex(ctx context.Context, s storage.Store, head *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
+	idx, err := s.GetObjectIndex(ctx, head, forupdate)
 	if err == storage.ErrNotFound {
 		return &index.ObjectLifeline{State: record.StateUndefined}, nil
 	}

@@ -131,6 +131,7 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 
 func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, am, cleaner := getTestData(t)
 	defer cleaner()
 
@@ -141,7 +142,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 			Domain: *genRandomRef(0),
 		},
 	})
-	db.SetObjectIndex(parentID, &index.ObjectLifeline{
+	db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 
@@ -172,19 +173,20 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		IsDelegate: false,
 	})
 
-	idx, err := db.GetObjectIndex(parentID, false)
+	idx, err := db.GetObjectIndex(ctx, parentID, false)
 	assert.NoError(t, err)
 	childRec, err := db.GetRecord(idx.ChildPointer)
 	assert.NoError(t, err)
 	assert.Equal(t, objRef, childRec.(*record.ChildRecord).Ref)
 
-	idx, err = db.GetObjectIndex(objRef.Record(), false)
+	idx, err = db.GetObjectIndex(ctx, objRef.Record(), false)
 	assert.NoError(t, err)
 	assert.Equal(t, *objDesc.StateID(), *idx.LatestState)
 }
 
 func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, am, cleaner := getTestData(t)
 	defer cleaner()
 
@@ -193,7 +195,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 			Domain: *genRandomRef(0),
 		},
 	})
-	db.SetObjectIndex(objID, &index.ObjectLifeline{
+	db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
@@ -221,6 +223,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 
 func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, am, cleaner := getTestData(t)
 	defer cleaner()
 
@@ -229,7 +232,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 			Domain: *genRandomRef(0),
 		},
 	})
-	db.SetObjectIndex(objID, &index.ObjectLifeline{
+	db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
@@ -266,6 +269,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 
 func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, am, cleaner := getTestData(t)
 	defer cleaner()
 
@@ -277,7 +281,7 @@ func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 	objectIndex := index.ObjectLifeline{
 		LatestState: deactivateID,
 	}
-	db.SetObjectIndex(objID, &objectIndex)
+	db.SetObjectIndex(ctx, objID, &objectIndex)
 
 	_, err = am.GetObject(ctx, *genRefWithID(objID), nil, false)
 	assert.Equal(t, core.ErrDeactivated, err)
@@ -285,6 +289,7 @@ func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 
 func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, am, cleaner := getTestData(t)
 	defer cleaner()
 
@@ -314,7 +319,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		LatestState:  objectAmendID,
 		ChildPointer: genRandomID(0),
 	}
-	db.SetObjectIndex(objectID, &objectIndex)
+	db.SetObjectIndex(ctx, objectID, &objectIndex)
 
 	objDesc, err := am.GetObject(ctx, *genRefWithID(objectID), nil, false)
 	assert.NoError(t, err)
@@ -338,6 +343,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 
 func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, am, cleaner := getTestData(t)
 	defer cleaner()
 
@@ -369,7 +375,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 		LatestState:  parentID,
 		ChildPointer: childMeta3,
 	}
-	db.SetObjectIndex(parentID, &parentIndex)
+	db.SetObjectIndex(ctx, parentID, &parentIndex)
 
 	t.Run("returns correct children without pulse", func(t *testing.T) {
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), nil)

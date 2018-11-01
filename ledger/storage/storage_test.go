@@ -63,16 +63,18 @@ func TestDB_SetRecord(t *testing.T) {
 
 func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
 	defer cleaner()
 
-	idx, err := db.GetObjectIndex(core.NewRecordID(0, hexhash("5000")), false)
+	idx, err := db.GetObjectIndex(ctx, core.NewRecordID(0, hexhash("5000")), false)
 	assert.Equal(t, storage.ErrNotFound, err)
 	assert.Nil(t, idx)
 }
 
 func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
+	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(t, context.Background(), "")
 	defer cleaner()
 
@@ -80,10 +82,10 @@ func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 		LatestState: core.NewRecordID(0, hexhash("20")),
 	}
 	zeroid := core.NewRecordID(0, hexhash(""))
-	err := db.SetObjectIndex(zeroid, &idx)
+	err := db.SetObjectIndex(ctx, zeroid, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, err := db.GetObjectIndex(zeroid, false)
+	storedIndex, err := db.GetObjectIndex(ctx, zeroid, false)
 	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }
