@@ -122,7 +122,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetCode)
 
-	codeRec, err := getCode(h.db, msg.Code.Record())
+	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
 	if err != nil {
 		return nil, err
 	}
@@ -438,8 +438,8 @@ func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Mes
 	return nil
 }
 
-func getCode(s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
-	rec, err := s.GetRecord(context.TODO(), id)
+func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
+	rec, err := s.GetRecord(ctx, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code record")
 	}
