@@ -23,13 +23,14 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/core/message"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
@@ -106,7 +107,9 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 }
 
 // Bootstrap creates initial records in storage.
-func (db *DB) Bootstrap(cxt context.Context) error {
+func (db *DB) Bootstrap(ctx context.Context) error {
+	inslog := inslogger.FromContext(ctx)
+	inslog.Debug("start storage bootstrap")
 	getGenesisRef := func() (*core.RecordRef, error) {
 		buff, err := db.Get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
