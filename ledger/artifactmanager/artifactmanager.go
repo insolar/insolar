@@ -233,10 +233,7 @@ func (m *LedgerArtifactManager) DeployCode(
 
 	var setBlobErr error
 	go func() {
-		_, setBlobErr = m.setBlob(
-			code,
-			request,
-		)
+		_, setBlobErr = m.setBlob(ctx, code, request)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -525,9 +522,9 @@ func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record
 	return &react.ID, nil
 }
 
-func (m *LedgerArtifactManager) setBlob(blob []byte, target core.RecordRef) (*core.RecordID, error) {
+func (m *LedgerArtifactManager) setBlob(ctx context.Context, blob []byte, target core.RecordRef) (*core.RecordID, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.SetBlob{
 			Memory:    blob,
 			TargetRef: target,
