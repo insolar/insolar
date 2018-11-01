@@ -22,7 +22,7 @@ type PhaseManager struct {
 
 // Start starts calculate args on phases.
 func (pm *PhaseManager) OnPulse(pulse *PulseData) error {
-	return pm.phase.HandlePulse(pulse)
+	return pm.phase.HandlePulse(nil, pulse)
 }
 
 // NewPhaseManager creates and returns a new phase manager.
