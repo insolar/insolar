@@ -289,7 +289,7 @@ func (r *Two) Hello(s string) (string, error) {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -307,7 +307,7 @@ func (r *Two) Hello(s string) (string, error) {
 		key, _ := cryptoHelper.GeneratePrivateKey()
 		signed, _ := message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
 		resp, err := lr.Execute(
-			context.TODO(),
+			ctx,
 			signed,
 		)
 		assert.NoError(t, err, "contract call")
@@ -324,7 +324,7 @@ func (r *Two) Hello(s string) (string, error) {
 	key, _ = cryptoHelper.GeneratePrivateKey()
 	signed, _ = message.NewSignedMessage(ctx, msg2, testutils.RandomRef(), key)
 	resp, err = lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -345,7 +345,7 @@ func (r *Two) Hello(s string) (string, error) {
 		key, _ := cryptoHelper.GeneratePrivateKey()
 		signed, _ := message.NewSignedMessage(ctx, msg3, testutils.RandomRef(), key)
 		resp, err := lr.Execute(
-			context.TODO(),
+			ctx,
 			signed,
 		)
 		assert.NoError(t, err, "contract call")
@@ -449,7 +449,7 @@ func (r *Two) Hello(s string) (string, error) {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err)
@@ -465,7 +465,7 @@ func (r *Two) Hello(s string) (string, error) {
 	key, _ = cryptoHelper.GeneratePrivateKey()
 	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
 	resp, err = lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 
@@ -559,7 +559,7 @@ func (r *Two) Hello() (string, error) {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	_, err = lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -649,7 +649,7 @@ func (r *One) Kill() error {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	_, err = lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -703,7 +703,8 @@ func (r *One) NotPanic() error {
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
-	_, err = lr.Execute(context.TODO(),
+	_, err = lr.Execute(
+		ctx,
 		signed,
 	)
 	assert.Error(t, err)
@@ -715,7 +716,8 @@ func (r *One) NotPanic() error {
 	}
 	key, _ = cryptoHelper.GeneratePrivateKey()
 	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
-	_, err = lr.Execute(context.TODO(),
+	_, err = lr.Execute(
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err)
@@ -826,7 +828,7 @@ func New(n int) (*Child, error) {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -841,7 +843,7 @@ func New(n int) (*Child, error) {
 	key, _ = cryptoHelper.GeneratePrivateKey()
 	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
 	resp, err = lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -909,7 +911,7 @@ func (c *Contract) Rand() (int, error) {
 		key, _ := cryptoHelper.GeneratePrivateKey()
 		signed, _ := message.NewSignedMessage(ctx, msg[i], testutils.RandomRef(), key)
 		_, err = lr.Execute(
-			context.TODO(),
+			ctx,
 			signed,
 		)
 		assert.NoError(t, err, "contract call")
@@ -1011,7 +1013,7 @@ func (r *Two) NoError() error {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -1030,7 +1032,7 @@ func (r *Two) NoError() error {
 	key, _ = cryptoHelper.GeneratePrivateKey()
 	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
 	resp, err = lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -1119,7 +1121,7 @@ func (r *Two) Hello() (*string, error) {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -1164,7 +1166,7 @@ func (s *Caller) SignedCall(rootDomain core.RecordRef, method string, params []i
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	res, err := s.lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(s.t, err, "contract call")
@@ -1389,7 +1391,7 @@ func New(n int) (*Child, error) {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -1417,15 +1419,15 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err)
 
 	for _, m := range toValidate {
-		lr.ValidateCaseBind(context.TODO(), m)
+		lr.ValidateCaseBind(ctx, m)
 	}
 
 	for _, m := range toExecute {
-		lr.ExecutorResults(context.TODO(), m)
+		lr.ExecutorResults(ctx, m)
 	}
 
 	for _, m := range toCheckValidate {
-		lr.ProcessValidationResults(context.TODO(), m)
+		lr.ProcessValidationResults(ctx, m)
 	}
 }
 
@@ -1509,7 +1511,7 @@ func (r *Two) Hello() (*string, error) {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -1551,7 +1553,8 @@ func (r *One) Recursive() (error) {
 
 `
 
-	ctx := context.TODO()
+	ctx := context.WithValue(context.Background(), "loopTraceId", "this is test loop trace id")
+
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -1580,7 +1583,7 @@ func (r *One) Recursive() (error) {
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	resp, err := lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
