@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,30 +34,56 @@ func makeDefaultPacketHeader() *PacketHeader {
 	return packetHeader
 }
 
-func serializePacketHeader(t *testing.T, packetHeader *PacketHeader) []byte {
-	data, err := packetHeader.Serialize()
+func serializeData(t *testing.T, serializer Serializer) []byte {
+	data, err := serializer.Serialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, data)
 
 	return data
 }
 
-func TestPacketHeaderReadWrite(t *testing.T) {
-	packetHeader := makeDefaultPacketHeader()
-	data := serializePacketHeader(t, packetHeader)
-
-	newPacketHeader := PacketHeader{}
+func checkSerialization(t *testing.T, orig interface{}, target interface{}) {
+	data := serializeData(t, orig.(Serializer))
 	r := bytes.NewReader(data)
-	err := newPacketHeader.Deserialize(r)
+	err := target.(Serializer).Deserialize(r)
 	require.NoError(t, err)
+	require.Equal(t, orig, target)
+}
 
-	require.Equal(t, packetHeader, newPacketHeader)
+func checkBadDataSerialization(t *testing.T, orig interface{}, target interface{}, msg string) {
+	data := serializeData(t, orig.(Serializer))
+	r := bytes.NewReader(data[:len(data)-1])
+	err := target.(Serializer).Deserialize(r)
+	require.EqualError(t, err, msg)
+}
+
+func TestPacketHeaderReadWrite(t *testing.T) {
+	checkSerialization(t, makeDefaultPacketHeader(), &PacketHeader{})
 }
 
 func TestPacketHeaderReadWrite_BadData(t *testing.T) {
-	data := serializePacketHeader(t, makeDefaultPacketHeader())
-	newPacketHeader := PacketHeader{}
-	r := bytes.NewReader(data[:len(data)-2])
-	err := newPacketHeader.Deserialize(r)
-	require.EqualError(t, err, "[ Deserialize ] Can't read TargetNodeID: unexpected EOF")
+	checkBadDataSerialization(t, makeDefaultPacketHeader(), &PacketHeader{},
+		"[ PacketHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
+}
+
+func makeDefaultPulseDataExt() *PulseDataExt {
+	pulseDataExt := &PulseDataExt{}
+	pulseDataExt.NextPulseDelta = uint16(11)
+	pulseDataExt.PrevPulseDelta = uint16(12)
+	pulseDataExt.Entropy = core.Entropy{}
+	pulseDataExt.Entropy[1] = '3'
+	pulseDataExt.EpochPulseNo = uint32(21)
+	pulseDataExt.PulseTimestamp = uint32(33)
+	pulseDataExt.OriginID = uint16(43)
+
+	return pulseDataExt
+}
+
+func TestPulseDataExtReadWrite(t *testing.T) {
+	checkSerialization(t, makeDefaultPulseDataExt(), &PulseDataExt{})
+}
+
+func TestPulseDataExtReadWrite_BadData(t *testing.T) {
+	checkBadDataSerialization(t, makeDefaultPulseDataExt(), &PulseDataExt{},
+		"[ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
 }

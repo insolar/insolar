@@ -17,13 +17,10 @@
 package phases
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
-	"io"
 
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 type PacketType uint8
@@ -52,55 +49,6 @@ type PacketHeader struct {
 	TargetNodeID uint32
 }
 
-func (ph *PacketHeader) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &ph.Routing)
-	if err != nil {
-		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read Routing")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &ph.Pulse)
-	if err != nil {
-		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read Pulse")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &ph.OriginNodeID)
-	if err != nil {
-		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read OriginNodeID")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &ph.TargetNodeID)
-	if err != nil {
-		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read TargetNodeID")
-	}
-
-	return nil
-}
-
-func (ph *PacketHeader) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
-	err := binary.Write(result, defaultByteOrder, ph.Routing)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't read Routing")
-	}
-
-	err = binary.Write(result, defaultByteOrder, ph.Pulse)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't read Pulse")
-	}
-
-	err = binary.Write(result, defaultByteOrder, ph.OriginNodeID)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't read OriginNodeID")
-	}
-
-	err = binary.Write(result, defaultByteOrder, ph.TargetNodeID)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't read TargetNodeID")
-	}
-
-	return result.Bytes(), nil
-}
-
 // PulseDataExt is a pulse data extension.
 type PulseDataExt struct {
 	NextPulseDelta uint16
@@ -109,65 +57,6 @@ type PulseDataExt struct {
 	EpochPulseNo   uint32
 	PulseTimestamp uint32
 	Entropy        core.Entropy
-}
-
-func (pde *PulseDataExt) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &pde.NextPulseDelta)
-	if err != nil {
-		return errors.Wrap(err, "[ PulseDataExt.Deserialize ] Can't read NextPulseDelta")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &pde.PrevPulseDelta)
-	if err != nil {
-		return errors.Wrap(err, "[ PulseDataExt.Deserialize ] Can't read PrevPulseDelta")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &pde.OriginID)
-	if err != nil {
-		return errors.Wrap(err, "[ PulseDataExt.Deserialize ] Can't read OriginID")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &pde.EpochPulseNo)
-	if err != nil {
-		return errors.Wrap(err, "[ PulseDataExt.Deserialize ] Can't read EpochPulseNo")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &pde.PulseTimestamp)
-	if err != nil {
-		return errors.Wrap(err, "[ PulseDataExt.Deserialize ] Can't read PulseTimestamp")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &pde.Entropy)
-	if err != nil {
-		return errors.Wrap(err, "[ PulseDataExt.Deserialize ] Can't read Entropy")
-	}
-
-	return nil
-}
-
-func (pde *PulseDataExt) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
-	err := binary.Write(result, defaultByteOrder, pde.NextPulseDelta)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PulseDataExt.Serialize ] Can't read NextPulseDelta")
-	}
-
-	err = binary.Write(result, defaultByteOrder, pde.OriginID)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PulseDataExt.Serialize ] Can't read OriginID")
-	}
-
-	err = binary.Write(result, defaultByteOrder, pde.EpochPulseNo)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PulseDataExt.Serialize ] Can't read EpochPulseNo")
-	}
-
-	err = binary.Write(result, defaultByteOrder, pde.PulseTimestamp)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PulseDataExt.Serialize ] Can't read PulseTimestamp")
-	}
-
-	return result.Bytes(), nil
 }
 
 // PulseData is a pulse data.
