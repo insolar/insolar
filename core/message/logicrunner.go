@@ -184,7 +184,7 @@ type ValidationResults struct {
 	Caller           core.RecordRef
 	RecordRef        core.RecordRef
 	PassedStepsCount int
-	Error            error
+	Error            string
 }
 
 func (m *ValidationResults) Type() core.MessageType {
