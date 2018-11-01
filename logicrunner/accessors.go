@@ -49,13 +49,17 @@ func (lr *LogicRunner) GetExecution(ref Ref) *ExecutionState {
 	return res
 }
 
-func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
+func (lr *LogicRunner) UpsertExecution(ref Ref, trace string) (*ExecutionState, error) {
 	lr.executionMutex.Lock()
 	defer lr.executionMutex.Unlock()
+
+	// TODO when traceId works everywhere remove check on empty, by now we call this only from tests
 	if _, ok := lr.execution[ref]; !ok {
-		lr.execution[ref] = &ExecutionState{}
+		lr.execution[ref] = &ExecutionState{traces: map[string]struct{}{trace: struct{}{}}}
+	} else if _, ok := lr.execution[ref].traces[trace]; ok && trace != "" {
+		return nil, errors.New("Loop detected!")
 	}
-	return lr.execution[ref]
+	return lr.execution[ref], nil
 }
 
 // refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy

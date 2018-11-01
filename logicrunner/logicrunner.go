@@ -49,6 +49,8 @@ type ExecutionState struct {
 	request     *Ref
 
 	objectbody *ObjectBody
+
+	traces map[string]struct{}
 }
 
 // LogicRunner is a general interface of contract executor
@@ -171,10 +173,12 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
-
 	ref := msg.GetReference()
 
-	es := lr.UpsertExecution(ref)
+	// TODO when traceId works everywhere add check of it
+	loopTraceId, _ := ctx.Value("loopTraceId").(string)
+
+	es, err := lr.UpsertExecution(ref, loopTraceId)
 	es.Lock()
 	es.insContext = ctx
 

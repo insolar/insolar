@@ -45,12 +45,18 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
-	es := lr.UpsertExecution(ref)
+
+	// TODO fix
+	es, err := lr.UpsertExecution(ref, "123")
+	if err != nil {
+		// todo
+		panic("LOOP!")
+	}
 	ctx := context.TODO()
 	es.insContext = ctx
 	es.validate = true
 	es.objectbody = nil
-	err := func() error {
+	err = func() error {
 		lr.caseBindReplaysMutex.Lock()
 		defer lr.caseBindReplaysMutex.Unlock()
 		if _, ok := lr.caseBindReplays[ref]; ok {
