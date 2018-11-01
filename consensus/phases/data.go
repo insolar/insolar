@@ -27,7 +27,8 @@ type ClaimType uint8
 type ReferendumType uint8
 
 const (
-	Type1 = PacketType(iota + 1)
+	NetworkConsistency = PacketType(iota + 1)
+	Referendum
 )
 
 const (
@@ -40,14 +41,14 @@ const (
 // ----------------------------------PHASE 1--------------------------------
 
 type PacketHeader struct {
-	PacketT      uint8
+	HasRouting   bool
+	F01          bool
+	F00          bool
 	SubType      uint8
 	Pulse        uint32
 	OriginNodeID uint32
 	TargetNodeID uint32
-	HasRouting   bool
-	F01          bool
-	F00          bool
+	PacketT      PacketType
 }
 
 // PulseDataExt is a pulse data extension.
