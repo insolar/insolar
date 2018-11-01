@@ -18,13 +18,14 @@
 package goplugin
 
 import (
+	"context"
 	"net/rpc"
 	"os/exec"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -89,7 +90,13 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 const timeout = time.Minute * 10
 
 // CallMethod runs a method on an object in controlled environment
-func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+func (gp *GoPlugin) CallMethod(
+	ctx context.Context, callContext *core.LogicCallContext,
+	code core.RecordRef, data []byte,
+	method string, args core.Arguments,
+) (
+	[]byte, core.Arguments, error,
+) {
 	start := time.Now()
 	client, err := gp.Downstream()
 	if err != nil {
@@ -98,7 +105,7 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{
-		Context:   ctx,
+		Context:   callContext,
 		Code:      code,
 		Data:      data,
 		Method:    method,
@@ -107,7 +114,7 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 
 	select {
 	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
-		log.Debugf("CallMethod done work, time spend in here - %s", time.Since(start))
+		inslogger.FromContext(ctx).Debugf("CallMethod done work, time spend in here - %s", time.Since(start))
 		if call.Error != nil {
 			return nil, nil, errors.Wrap(call.Error, "problem with API call")
 		}
@@ -118,14 +125,24 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
-func (gp *GoPlugin) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
+func (gp *GoPlugin) CallConstructor(
+	ctx context.Context, callContext *core.LogicCallContext,
+	code core.RecordRef, name string, args core.Arguments,
+) (
+	[]byte, error,
+) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with rpc connection")
 	}
 
 	res := rpctypes.DownCallConstructorResp{}
-	req := rpctypes.DownCallConstructorReq{Code: code, Name: name, Arguments: args}
+	req := rpctypes.DownCallConstructorReq{
+		Context:   callContext,
+		Code:      code,
+		Name:      name,
+		Arguments: args,
+	}
 
 	select {
 	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:
