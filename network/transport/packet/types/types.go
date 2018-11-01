@@ -20,6 +20,8 @@ package types
 type PacketType int
 
 const (
+	// legacy packet types, should be removed after switch to new network
+
 	// TypePing is packet type for ping method.
 	TypePing PacketType = iota + 1
 	// TypeStore is packet type for store method.
@@ -60,4 +62,25 @@ const (
 	TypeExchangeUnsyncHash
 	// TypeDisconnect is packet to disconnect from active list.
 	TypeDisconnect
+
+	// new packet types for new network
+
+	//
+	Ping
+	//
+	RPC
+	//
+	CascadeSend
+	//
+	Pulse
+	//
+	GetRandomHosts
+	//
+	Bootstrap
+	//
+	GetNonce
+	//
+	Connect
+	//
+	Disconnect
 )
