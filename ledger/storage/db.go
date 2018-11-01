@@ -192,7 +192,7 @@ func (db *DB) Set(key, value []byte) error {
 	})
 }
 
-// GetBlob returns a blob for the id
+// GetBlob returns binary value stored by record ID.
 func (db *DB) GetBlob(id *core.RecordID) ([]byte, error) {
 	var (
 		blob []byte
@@ -209,7 +209,7 @@ func (db *DB) GetBlob(id *core.RecordID) ([]byte, error) {
 	return blob, nil
 }
 
-// SetBlob saves a blob with a specified id
+// SetBlob saves binary value for provided pulse.
 func (db *DB) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID

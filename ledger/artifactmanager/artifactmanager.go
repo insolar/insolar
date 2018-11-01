@@ -65,6 +65,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	ctx context.Context, msg core.Message,
 ) (*core.RecordID, error) {
 	return m.setRecord(
+		ctx,
 		&record.CallRequest{
 			Payload: message.MustSerializeBytes(msg),
 		},
@@ -79,7 +80,7 @@ func (m *LedgerArtifactManager) GetCode(
 	ctx context.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.GetCode{Code: code},
 	)
 
@@ -92,6 +93,7 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, ErrUnexpectedReply
 	}
 	desc := CodeDescriptor{
+		ctx:         ctx,
 		ref:         code,
 		machineType: react.MachineType,
 	}
@@ -108,7 +110,7 @@ func (m *LedgerArtifactManager) GetObject(
 	ctx context.Context, head core.RecordRef, state *core.RecordID, approved bool,
 ) (core.ObjectDescriptor, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.GetObject{
 			Head:     head,
 			State:    state,
@@ -123,6 +125,7 @@ func (m *LedgerArtifactManager) GetObject(
 	switch r := genericReact.(type) {
 	case *reply.Object:
 		desc := ObjectDescriptor{
+			ctx:          ctx,
 			am:           m,
 			head:         r.Head,
 			state:        r.State,
@@ -148,7 +151,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 	ctx context.Context, head, asType core.RecordRef,
 ) (*core.RecordRef, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.GetDelegate{
 			Head:   head,
 			AsType: asType,
@@ -172,7 +175,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 func (m *LedgerArtifactManager) GetChildren(
 	ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber,
 ) (core.RefIterator, error) {
-	return NewChildIterator(m.messageBus, parent, pulse, m.getChildrenChunkSize)
+	return NewChildIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
 }
 
 // DeclareType creates new type record in storage.
@@ -182,6 +185,7 @@ func (m *LedgerArtifactManager) DeclareType(
 	ctx context.Context, domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordID, error) {
 	return m.setRecord(
+		ctx,
 		&record.TypeRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -214,6 +218,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	var setRecordErr error
 	go func() {
 		setRecord, setRecordErr = m.setRecord(
+			ctx,
 			&record.CodeRecord{
 				SideEffectRecord: record.SideEffectRecord{
 					Domain:  domain,
@@ -229,10 +234,7 @@ func (m *LedgerArtifactManager) DeployCode(
 
 	var setBlobErr error
 	go func() {
-		_, setBlobErr = m.setBlob(
-			code,
-			request,
-		)
+		_, setBlobErr = m.setBlob(ctx, code, request)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -280,6 +282,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 	ctx context.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	desc, err := m.sendUpdateObject(
+		ctx,
 		&record.DeactivationRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -354,6 +357,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 	ctx context.Context, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	return m.setRecord(
+		ctx,
 		&record.ResultRecord{
 			Request: request,
 			Payload: payload,
@@ -382,6 +386,7 @@ func (m *LedgerArtifactManager) activateObject(
 	}
 
 	obj, err := m.sendUpdateObject(
+		ctx,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -413,6 +418,7 @@ func (m *LedgerArtifactManager) activateObject(
 		asType = &prototype
 	}
 	_, err = m.registerChild(
+		ctx,
 		&record.ChildRecord{
 			Ref:       object,
 			PrevChild: prevChild,
@@ -426,6 +432,7 @@ func (m *LedgerArtifactManager) activateObject(
 	}
 
 	return &ObjectDescriptor{
+		ctx:          ctx,
 		am:           m,
 		head:         obj.Head,
 		state:        obj.State,
@@ -468,6 +475,7 @@ func (m *LedgerArtifactManager) updateObject(
 	}
 
 	obj, err := m.sendUpdateObject(
+		ctx,
 		&record.ObjectAmendRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain:  domain,
@@ -488,6 +496,7 @@ func (m *LedgerArtifactManager) updateObject(
 	}
 
 	return &ObjectDescriptor{
+		ctx:          ctx,
 		am:           m,
 		head:         obj.Head,
 		state:        obj.State,
@@ -497,9 +506,9 @@ func (m *LedgerArtifactManager) updateObject(
 	}, nil
 }
 
-func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordRef) (*core.RecordID, error) {
+func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record, target core.RecordRef) (*core.RecordID, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.SetRecord{
 			Record:    record.SerializeRecord(rec),
 			TargetRef: target,
@@ -518,9 +527,9 @@ func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordR
 	return &react.ID, nil
 }
 
-func (m *LedgerArtifactManager) setBlob(blob []byte, target core.RecordRef) (*core.RecordID, error) {
+func (m *LedgerArtifactManager) setBlob(ctx context.Context, blob []byte, target core.RecordRef) (*core.RecordID, error) {
 	genericReact, err := m.messageBus.Send(
-		context.TODO(),
+		ctx,
 		&message.SetBlob{
 			Memory:    blob,
 			TargetRef: target,
@@ -540,7 +549,10 @@ func (m *LedgerArtifactManager) setBlob(blob []byte, target core.RecordRef) (*co
 }
 
 func (m *LedgerArtifactManager) sendUpdateObject(
-	rec record.Record, object core.RecordRef, memory []byte,
+	ctx context.Context,
+	rec record.Record,
+	object core.RecordRef,
+	memory []byte,
 ) (*reply.Object, error) {
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -549,7 +561,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	var genericError error
 	go func() {
 		genericReact, genericError = m.messageBus.Send(
-			context.TODO(),
+			ctx,
 			&message.UpdateObject{
 				Record: record.SerializeRecord(rec),
 				Object: object,
@@ -562,7 +574,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	var blobError error
 	go func() {
 		blobReact, blobError = m.messageBus.Send(
-			context.TODO(),
+			ctx,
 			&message.SetBlob{
 				TargetRef: object,
 				Memory:    memory,
@@ -593,9 +605,14 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 }
 
 func (m *LedgerArtifactManager) registerChild(
-	rec record.Record, parent, child core.RecordRef, asType *core.RecordRef,
+	ctx context.Context,
+	rec record.Record,
+	parent core.RecordRef,
+	child core.RecordRef,
+	asType *core.RecordRef,
 ) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(context.TODO(),
+	genericReact, err := m.messageBus.Send(
+		ctx,
 		&message.RegisterChild{
 			Record: record.SerializeRecord(rec),
 			Parent: parent,
