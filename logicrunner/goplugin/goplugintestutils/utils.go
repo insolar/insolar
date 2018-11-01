@@ -150,6 +150,11 @@ type TestArtifactManager struct {
 	Prototypes map[core.RecordRef]*TestObjectDescriptor
 }
 
+// State implementation for tests
+func (t *TestArtifactManager) State() ([]byte, error) {
+	panic("implement me")
+}
+
 // GetChildren implementation for tests
 func (t *TestArtifactManager) GetChildren(ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
 	panic("implement me")
