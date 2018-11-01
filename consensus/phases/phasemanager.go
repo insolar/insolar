@@ -21,7 +21,7 @@ type PhaseManager struct {
 }
 
 // Start starts calculate args on phases.
-func (pm *PhaseManager) Start(pulse *PulseData) error {
+func (pm *PhaseManager) OnPulse(pulse *PulseData) error {
 	return pm.phase.HandlePulse(pulse)
 }
 
