@@ -142,17 +142,17 @@ func main() {
 		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
+	traceid := api.RandTraceID()
+	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
+	initLogger(ctx, cfgHolder.Configuration.Log)
+
 	if !params.isBootstrap {
 		mergeConfigAndCertificate(&cfgHolder.Configuration)
 	}
 
-	initLogger(cfgHolder.Configuration.Log)
-
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	// instrumentation
-	traceid := api.RandTraceID()
-	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
+	// jaeger instrumentation
 	jaegerflush := func() {}
 	if params.traceEnabled {
 		jconf := cfgHolder.Configuration.Tracer.Jaeger
@@ -208,9 +208,10 @@ func main() {
 	repl.Start(ctx)
 }
 
-func initLogger(cfg configuration.Log) {
-	err := log.SetLevel(cfg.Level)
+func initLogger(ctx context.Context, cfg configuration.Log) {
+	inslog := inslogger.FromContext(ctx)
+	err := inslog.SetLevel(cfg.Level)
 	if err != nil {
-		log.Errorln(err.Error())
+		inslog.Errorln(err.Error())
 	}
 }
