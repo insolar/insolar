@@ -103,9 +103,10 @@ func checkError(msg string, err error) {
 	}
 }
 
-func mergeConfigAndCertificate(cfg *configuration.Configuration) {
+func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration) {
+	inslog := inslogger.FromContext(ctx)
 	if len(cfg.CertificatePath) == 0 {
-		log.Info("[ mergeConfigAndCertificate ] No certificate path - No merge")
+		inslog.Info("[ mergeConfigAndCertificate ] No certificate path - No merge")
 		return
 	}
 	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
@@ -118,7 +119,7 @@ func mergeConfigAndCertificate(cfg *configuration.Configuration) {
 	cfg.Node.Node.ID = cert.Reference
 	cfg.Host.MajorityRule = cert.MajorityRule
 
-	log.Infof("[ mergeConfigAndCertificate ] Add %d bootstrap nodes. Set node id to %s. Set majority rule to %d",
+	inslog.Infof("[ mergeConfigAndCertificate ] Add %d bootstrap nodes. Set node id to %s. Set majority rule to %d",
 		len(cfg.Host.BootstrapHosts), cfg.Node.Node.ID, cfg.Host.MajorityRule)
 }
 
@@ -144,10 +145,10 @@ func main() {
 
 	traceid := api.RandTraceID()
 	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
-	initLogger(ctx, cfgHolder.Configuration.Log)
+	ctx, inslog := initLogger(ctx, cfgHolder.Configuration.Log)
 
 	if !params.isBootstrap {
-		mergeConfigAndCertificate(&cfgHolder.Configuration)
+		mergeConfigAndCertificate(ctx, &cfgHolder.Configuration)
 	}
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
@@ -181,9 +182,9 @@ func main() {
 
 	go func() {
 		sig := <-gracefulStop
-		log.Debugln("caught sig: ", sig)
+		inslog.Debugln("caught sig: ", sig)
 
-		log.Warn("GRACEFULL STOP APP")
+		inslog.Warn("GRACEFULL STOP APP")
 		err = cm.Stop(ctx)
 		jaegerflush()
 		checkError("Failed to graceful stop components", err)
@@ -199,7 +200,7 @@ func main() {
 			cmOld.components.Certificate,
 			cmOld.components.NetworkCoordinator,
 		)
-		log.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
+		inslog.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
 		gracefulStop <- syscall.SIGINT
 	}
 
@@ -208,10 +209,15 @@ func main() {
 	repl.Start(ctx)
 }
 
-func initLogger(ctx context.Context, cfg configuration.Log) {
-	inslog := inslogger.FromContext(ctx)
-	err := inslog.SetLevel(cfg.Level)
+func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, core.Logger) {
+	inslog, err := log.NewLog(cfg)
+	if err != nil {
+		panic(err)
+	}
+	err = inslog.SetLevel(cfg.Level)
 	if err != nil {
 		inslog.Errorln(err.Error())
 	}
+	ctx = inslogger.SetLogger(ctx, inslog)
+	return ctx, inslog
 }
