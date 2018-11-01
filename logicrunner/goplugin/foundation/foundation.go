@@ -60,7 +60,7 @@ func (bc *BaseContract) GetContext() *core.LogicCallContext {
 
 // GetContext returns current calling context.
 func GetContext() *core.LogicCallContext {
-	ctx := gls.Get("ctx")
+	ctx := gls.Get("callCtx")
 	if ctx == nil {
 		panic("object has no context")
 	} else if ctx, ok := ctx.(*core.LogicCallContext); ok {

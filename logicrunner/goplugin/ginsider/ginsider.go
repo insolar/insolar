@@ -100,7 +100,8 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	gls.Set("ctx", args.Context)
+	gls.Set("callCtx", args.Context)
+	gls.Set("ctx", ctx)
 	state, result, err := wrapper(args.Data, args.Arguments) // may be entire args???
 	gls.Cleanup()
 
@@ -177,8 +178,13 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 	}
 
 	inslogger.FromContext(ctx).Debugf("obtaining code %q", ref)
+	req := rpctypes.UpGetCodeReq{
+		Code:  ref,
+		MType: core.MachineTypeGoPlugin,
+	}
+	req.TraceID = inslogger.TraceID(ctx)
 	res := rpctypes.UpGetCodeResp{}
-	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Code: ref, MType: core.MachineTypeGoPlugin}, &res)
+	err = client.Call("RPC.GetCode", req, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}
@@ -218,13 +224,20 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 
 // MakeUpBaseReq makes base of request from current CallContext
 func MakeUpBaseReq() rpctypes.UpBaseReq {
-	if ctx, ok := gls.Get("ctx").(*core.LogicCallContext); ok {
-		return rpctypes.UpBaseReq{
-			Callee:  *ctx.Callee,
-			Request: *ctx.Request,
-		}
+	ctx, ok := gls.Get("ctx").(context.Context)
+	if !ok {
+		panic("Wrong or unexistent context, you probably started a goroutine")
 	}
-	panic("Wrong or unexistent context")
+	callCtx, ok := gls.Get("callCtx").(*core.LogicCallContext)
+	if !ok {
+		panic("Wrong or unexistent context, you probably started a goroutine")
+	}
+
+	return rpctypes.UpBaseReq{
+		TraceID: inslogger.TraceID(ctx),
+		Callee:  *callCtx.Callee,
+		Request: *callCtx.Request,
+	}
 }
 
 // RouteCall ...
