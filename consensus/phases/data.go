@@ -42,12 +42,12 @@ const (
 type PacketHeader struct {
 	PacketT      uint8
 	SubType      uint8
-	Routing      uint8
-	F01          uint8
-	F00          uint8
 	Pulse        uint32
 	OriginNodeID uint32
 	TargetNodeID uint32
+	HasRouting   bool
+	F01          bool
+	F00          bool
 }
 
 // PulseDataExt is a pulse data extension.
