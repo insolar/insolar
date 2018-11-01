@@ -145,6 +145,12 @@ func (db *DB) Bootstrap() error {
 			return nil, err
 		}
 
+		testKey := prefixkey(scopeIDJetDrop, core.PulseNumber(999).Bytes())
+		log.Infof("test set drop key - %v", testKey)
+		obj, err := db.Get(testKey)
+		log.Infof("test here it is - %v", obj)
+		log.Infof("test errror here it is - %v", err)
+
 		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
 		return genesisRef, db.Set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
 	}

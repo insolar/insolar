@@ -83,6 +83,7 @@ func (m *TransactionManager) Commit() error {
 // Discard terminates transaction without disk writes.
 func (m *TransactionManager) Discard() {
 	m.releaseLocks()
+	m.txupdates = nil
 	if m.update {
 		m.db.dropWG.Done()
 	}
