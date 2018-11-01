@@ -75,7 +75,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 
 func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
 	return func(ctx context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
-		err := persistMessageToDb(h.db, genericMsg.Message())
+		err := persistMessageToDb(ctx, h.db, genericMsg.Message())
 		if err != nil {
 			return nil, err
 		}
@@ -425,8 +425,8 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	return &reply.OK{}, nil
 }
 
-func persistMessageToDb(db *storage.DB, genericMsg core.Message) error {
-	lastPulse, err := db.GetLatestPulseNumber(context.TODO())
+func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Message) error {
+	lastPulse, err := db.GetLatestPulseNumber(ctx)
 	if err != nil {
 		return err
 	}
