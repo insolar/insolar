@@ -140,7 +140,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := db.SetRecord(lastPulse, &record.GenesisRecord{})
+		genesisID, err := db.SetRecord(ctx, lastPulse, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
@@ -241,14 +241,14 @@ func (db *DB) GetRequest(id *core.RecordID) (record.Request, error) {
 }
 
 // GetRecord wraps matching transaction manager method.
-func (db *DB) GetRecord(id *core.RecordID) (record.Record, error) {
+func (db *DB) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	var (
 		fetchedRecord record.Record
 		err           error
 	)
 
 	err = db.View(func(tx *TransactionManager) error {
-		fetchedRecord, err = tx.GetRecord(id)
+		fetchedRecord, err = tx.GetRecord(ctx, id)
 		return err
 	})
 	if err != nil {
@@ -258,13 +258,13 @@ func (db *DB) GetRecord(id *core.RecordID) (record.Record, error) {
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (db *DB) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
 	)
 	err = db.Update(func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(pulseNumber, rec)
+		id, err = tx.SetRecord(ctx, pulseNumber, rec)
 		return err
 	})
 	if err != nil {

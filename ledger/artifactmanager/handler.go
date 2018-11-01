@@ -91,7 +91,7 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetRecord)
-	id, err := h.db.SetRecord(pulseNumber, record.DeserializeRecord(msg.Record))
+	id, err := h.db.SetRecord(ctx, pulseNumber, record.DeserializeRecord(msg.Record))
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 	}
 
 	var parent *core.RecordRef
-	rec, err := h.db.GetRecord(msg.Head.Record())
+	rec, err := h.db.GetRecord(ctx, msg.Head.Record())
 	if err != nil {
 		return nil, errors.New("failed to fetch activation record")
 	}
@@ -235,7 +235,7 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 		}
 		counter++
 
-		rec, err := h.db.GetRecord(currentChild)
+		rec, err := h.db.GetRecord(ctx, currentChild)
 		if err != nil {
 			return nil, errors.New("failed to retrieve children")
 		}
@@ -280,7 +280,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 			return errors.New("invalid state record")
 		}
 
-		id, err := tx.SetRecord(pulseNumber, rec)
+		id, err := tx.SetRecord(ctx, pulseNumber, rec)
 		if err != nil {
 			return err
 		}
@@ -325,7 +325,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 			return errors.New("invalid child record")
 		}
 
-		child, err = tx.SetRecord(pulseNumber, childRec)
+		child, err = tx.SetRecord(ctx, pulseNumber, childRec)
 		if err != nil {
 			return err
 		}
@@ -389,7 +389,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 			}
 
 			// Fetching actual record.
-			rec, err := tx.GetRecord(currentID)
+			rec, err := tx.GetRecord(ctx, currentID)
 			if err != nil {
 				return nil
 			}
@@ -439,7 +439,7 @@ func persistMessageToDb(db *storage.DB, genericMsg core.Message) error {
 }
 
 func getCode(s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
-	rec, err := s.GetRecord(id)
+	rec, err := s.GetRecord(context.TODO(), id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code record")
 	}
@@ -478,7 +478,7 @@ func getObject(
 		return nil, nil, nil, ErrStateNotAvailable
 	}
 
-	rec, err := s.GetRecord(stateID)
+	rec, err := s.GetRecord(ctx, stateID)
 	if err != nil {
 		return nil, nil, nil, err
 	}

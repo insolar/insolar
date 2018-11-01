@@ -93,7 +93,7 @@ func (m *TransactionManager) Discard() {
 //
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRequest(id *core.RecordID) (record.Request, error) {
-	rec, err := m.GetRecord(id)
+	rec, err := m.GetRecord(context.TODO(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(id *core.RecordID) (record.Record, error) {
+func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, id[:])
 	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
 	buf, err := m.Get(k)
@@ -149,7 +149,7 @@ func (m *TransactionManager) GetRecord(id *core.RecordID) (record.Record, error)
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	recHash := hash.NewIDHash()
 	_, err := rec.WriteHashData(recHash)
 	if err != nil {
