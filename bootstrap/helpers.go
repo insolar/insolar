@@ -83,7 +83,7 @@ func isLightExecutor(ctx context.Context, c core.Components) (bool, error) {
 	am := c.Ledger.GetArtifactManager()
 	jc := c.Ledger.GetJetCoordinator()
 	pm := c.Ledger.GetPulseManager()
-	currentPulse, err := pm.Current()
+	currentPulse, err := pm.Current(ctx)
 	if err != nil {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
 	}
@@ -91,7 +91,13 @@ func isLightExecutor(ctx context.Context, c core.Components) (bool, error) {
 	network := c.Network
 	nodeID := network.GetNodeID()
 
-	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.GenesisRef(), currentPulse.PulseNumber, nodeID)
+	isLightExecutor, err := jc.IsAuthorized(
+		ctx,
+		core.RoleLightExecutor,
+		*am.GenesisRef(),
+		currentPulse.PulseNumber,
+		nodeID,
+	)
 	if err != nil {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
 	}

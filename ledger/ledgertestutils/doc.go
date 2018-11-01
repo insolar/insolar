@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package ledgertestutil contains high level API tests and test utils for other modules.
+// Package ledgertestutils contains high level API tests and test utils for other modules.
 package ledgertestutils
