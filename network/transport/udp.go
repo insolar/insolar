@@ -29,8 +29,8 @@ import (
 
 const udpMaxPacketSize = 1400
 
-// GetUdpMaxPacketSize returns udp max packet size
-func GetUdpMaxPacketSize() int {
+// GetUDPMaxPacketSize returns udp max packet size
+func GetUDPMaxPacketSize() int {
 	return udpMaxPacketSize
 }
 

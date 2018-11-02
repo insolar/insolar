@@ -642,7 +642,7 @@ func (dbs *DeviantBitSet) Deserialize(data io.Reader) error {
 	}
 
 	// TODO: calc correct size
-	dbs.Payload = make([]byte, transport.GetUdpMaxPacketSize())
+	dbs.Payload = make([]byte, transport.GetUDPMaxPacketSize())
 	n, err := data.Read(dbs.Payload)
 	if err != nil {
 		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read Payload")
