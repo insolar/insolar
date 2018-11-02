@@ -100,7 +100,7 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
 	key, _ := ecdsa.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	// #1
 	resp, err := lr.Execute(
 		context.TODO(),
@@ -119,7 +119,7 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
 	key, _ = ecdsa.GeneratePrivateKey()
-	signed, _ = message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ = message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	// #2
 	resp, err = lr.Execute(
 		context.TODO(),
