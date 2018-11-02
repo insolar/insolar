@@ -64,7 +64,7 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	parts := make([]string, 0)
 	for i, activeNode := range activeNodes {
 		participants[i] = &participantWrapper{activeNode}
-		parts = append(parts, activeNode.NodeID.String())
+		parts = append(parts, activeNode.ID().String())
 	}
 	log.Debugf("Consensus participants: %s", strings.Join(parts, ", "))
 	success, unsyncList := ic.keeper.SetPulse(pulse.PulseNumber)
@@ -74,7 +74,7 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	}
 	candidates := make([]string, 0)
 	for _, candidate := range unsyncList.GetUnsync() {
-		candidates = append(candidates, candidate.NodeID.String())
+		candidates = append(candidates, candidate.ID().String())
 	}
 	log.Infof("Consensus unsync candidates: %s", strings.Join(candidates, ", "))
 	unsyncCandidates, err := ic.consensus.DoConsensus(ctx, unsyncList, ic.self, participants)
