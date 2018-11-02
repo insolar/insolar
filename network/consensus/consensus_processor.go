@@ -26,7 +26,7 @@ import (
 // CommunicatorReceiver
 type CommunicatorReceiver interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*core.Node) ([]*core.Node, error)
+	ExchangeData(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []core.Node) ([]core.Node, error)
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
 	ExchangeHash(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*network.NodeUnsyncHash) ([]*network.NodeUnsyncHash, error)
 }

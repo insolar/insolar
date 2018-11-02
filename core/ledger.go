@@ -165,6 +165,9 @@ type ArtifactManager interface {
 	//
 	// Deactivated object cannot be changed.
 	DeactivateObject(ctx context.Context, domain, request RecordRef, obj ObjectDescriptor) (*RecordID, error)
+
+	// State returns hash state for artifact manager.
+	State() ([]byte, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.

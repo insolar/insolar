@@ -22,11 +22,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/pprof"
+	"github.com/insolar/insolar/log"
 )
 
 const insolarNamespace = "insolar"
@@ -60,8 +62,10 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 
 // Start is implementation of core.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
-	log.Infoln("Starting metrics server")
+	log.Infoln("Starting metrics server", m.server.Addr)
+
 	http.Handle("/metrics", m.httpHandler)
+	pprof.Handle(http.DefaultServeMux)
 
 	listener, err := net.Listen("tcp", m.server.Addr)
 	if err != nil {

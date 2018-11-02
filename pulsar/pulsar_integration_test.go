@@ -28,9 +28,11 @@ import (
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
+	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -109,13 +111,17 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 	assert.NoError(t, err)
 
 	c := core.Components{LogicRunner: lr}
+	c.MessageBus = testmessagebus.NewTestMessageBus()
+	c.NodeNetwork = nodekeeper.NewNodeKeeper(nodekeeper.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
+
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	nodeConfig := configuration.NewConfiguration()
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	nodeNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig)
+	c.Ledger = tempLedger
 
 	assert.NoError(t, err)
-	err = nodeNetwork.Start(ctx, core.Components{Ledger: tempLedger})
+	err = nodeNetwork.Start(ctx, c)
 	assert.NoError(t, err)
 	address := nodeNetwork.GetAddress()
 	return tempLedger, cleaner, nodeNetwork, address
@@ -123,13 +129,13 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 
 func TestPulsar_SendPulseToNode(t *testing.T) {
 	ctx := context.TODO()
-	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
-	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
-	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
+	bootstrapLedger, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
+	storage.SavePulseFunc = func(p *core.Pulse) (r error) { return nil }
+	storage.SetLastPulseFunc = func(p *core.Pulse) (r error) { return nil }
 	stateSwitcher := &StateSwitcherImpl{}
 
 	newPulsar, err := NewPulsar(
@@ -155,12 +161,12 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
+	currentPulse, err := bootstrapLedger.GetPulseManager().Current(ctx)
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
 		time.Sleep(50 * time.Millisecond)
-		currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
+		currentPulse, err = bootstrapLedger.GetPulseManager().Current(ctx)
 		assert.NoError(t, err)
 		count--
 	}
@@ -171,16 +177,12 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	assert.Equal(t, currentPulse.PulseNumber, core.GenesisPulse.PulseNumber+1)
 
 	defer func() {
-		err := usualNodeNetwork.Stop(ctx)
-		assert.NoError(t, err)
-
 		err = bootstrapNodeNetwork.Stop(ctx)
 		assert.NoError(t, err)
 
 		newPulsar.StopServer(ctx)
 
 		bootstrapLedgerCleaner()
-		usualLedgerCleaner()
 	}()
 }
 

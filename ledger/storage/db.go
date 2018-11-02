@@ -384,7 +384,6 @@ func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 	if err != nil {
 		return err
 	}
-
 	return db.Set(k, encoded)
 }
 

@@ -23,17 +23,20 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/nodekeeper"
 )
 
-func newActiveNode(ref byte, pulse int) *core.Node {
+func newActiveNode(ref byte, pulse int) core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
-	return &core.Node{
-		NodeID:   core.RecordRef{ref},
-		PulseNum: core.PulseNumber(pulse),
-		State:    core.NodeActive,
-		Roles:    []core.NodeRole{core.RoleUnknown},
-		// PublicKey: &key.PublicKey,
-	}
+	return nodekeeper.NewNode(
+		core.RecordRef{ref},
+		[]core.NodeRole{core.RoleUnknown},
+		nil, // TODO publicKey
+		core.PulseNumber(pulse),
+		core.NodeActive,
+		"",
+		"",
+	)
 }
 
 type TestNode struct {
@@ -44,24 +47,24 @@ type TestNode struct {
 }
 
 type TestParticipant struct {
-	node   *core.Node
+	node   core.Node
 	holder mockUnsyncHolder
 }
 
-func NewParticipant(ref byte, list []*core.Node) *TestParticipant {
+func NewParticipant(ref byte, list []core.Node) *TestParticipant {
 	return &TestParticipant{node: newActiveNode(ref, 0),
 		holder: mockUnsyncHolder{list}}
 }
 
 func (p *TestParticipant) GetID() core.RecordRef {
-	return p.node.NodeID
+	return p.node.ID()
 }
 
-func (p *TestParticipant) GetActiveNode() *core.Node {
+func (p *TestParticipant) GetActiveNode() core.Node {
 	return p.node
 }
 
-func (m *TestParticipant) GetUnsync() []*core.Node {
+func (m *TestParticipant) GetUnsync() []core.Node {
 	return m.holder.GetUnsync()
 }
 
@@ -79,10 +82,10 @@ func (TestParticipant) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyn
 // =====
 
 type mockUnsyncHolder struct {
-	list []*core.Node
+	list []core.Node
 }
 
-func (m *mockUnsyncHolder) GetUnsync() []*core.Node {
+func (m *mockUnsyncHolder) GetUnsync() []core.Node {
 	return m.list
 }
 
@@ -101,7 +104,7 @@ type testCommunicator struct {
 	self Participant
 }
 
-func (c *testCommunicator) ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []*core.Node) ([]*core.Node, error) {
+func (c *testCommunicator) ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []core.Node) ([]core.Node, error) {
 	log.Infof("returns data: %v", data)
 	tp := p.(*TestParticipant)
 	return tp.holder.GetUnsync(), nil
