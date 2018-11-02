@@ -14,6 +14,7 @@ type LocalStorage struct {
 	db *storage.DB
 }
 
+// NewLocalStorage create new storage instance.
 func NewLocalStorage(db *storage.DB) (*LocalStorage, error) {
 	return &LocalStorage{db: db}, nil
 }

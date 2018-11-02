@@ -83,6 +83,9 @@ func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) 
 		return nil, err
 	}
 	ls, err := localstorage.NewLocalStorage(db)
+	if err != nil {
+		return nil, err
+	}
 
 	err = db.Bootstrap(ctx)
 	if err != nil {
