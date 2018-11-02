@@ -19,9 +19,17 @@ package merkle
 import (
 	"context"
 
+	"github.com/insolar/insolar/core"
 )
+
 type Calculator interface {
 	GetNodeProof(context.Context) (*NodeProof, error)
 	GetGlobuleProof(context.Context) (*GlobuleProof, error)
 	GetCloudProof(context.Context) (*CloudProof, error)
+}
+
+type calculator struct {
+	Ledger      core.Ledger      `inject:""`
+	NodeNetwork core.NodeNetwork `inject:""`
+	Certificate core.Certificate `inject:""`
 }
