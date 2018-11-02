@@ -110,3 +110,10 @@ func (n *node) SetPulse(pulseNum core.PulseNumber) {
 
 type mutableNodes []mutableNode
 
+func (mn mutableNodes) Export() []core.Node {
+	nodes := make([]core.Node, len(mn))
+	for i := range mn {
+		nodes[i] = mn[i]
+	}
+	return nodes
+}
