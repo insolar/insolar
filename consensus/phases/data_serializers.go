@@ -39,20 +39,23 @@ const (
 	// take low bit
 	hasRoutingMask = 0x1
 
-	packetTypeMask = 0xf0
-	subtypeMask    = 0xe
+	packetTypeMask   = 0xf0
+	packetTypeOffset = 4
+
+	subtypeMask   = 0xe
+	subtypeOffset = 1
 )
 
 func (ph *PacketHeader) parseRouteInfo(routInfo uint8) {
-	ph.PacketT = PacketType((routInfo & packetTypeMask) >> 4)
-	ph.SubType = (routInfo & subtypeMask) >> 1
+	ph.PacketT = PacketType((routInfo & packetTypeMask) >> packetTypeOffset)
+	ph.SubType = (routInfo & subtypeMask) >> subtypeOffset
 	ph.HasRouting = (routInfo & hasRoutingMask) == 1
 }
 
 func (ph *PacketHeader) compactRouteInfo() uint8 {
 	var result uint8
-	result |= uint8(ph.PacketT) << 4
-	result |= ph.SubType << 1
+	result |= uint8(ph.PacketT) << packetTypeOffset
+	result |= ph.SubType << subtypeOffset
 
 	if ph.HasRouting {
 		result |= hasRoutingMask
@@ -64,16 +67,18 @@ func (ph *PacketHeader) compactRouteInfo() uint8 {
 // PulseAndCustomFlags masks
 const (
 	// take bit before high bit
-	f00Mask = 0x40000000
+	f00Mask  = 0x40000000
+	f00Shift = 30
 
 	// take high bit
 	f01Mask   = 0x80000000
+	f01Shift  = 31
 	pulseMask = 0x3fffffff
 )
 
 func (ph *PacketHeader) parsePulseAndCustomFlags(pulseAndCustomFlags uint32) {
-	ph.F01 = (pulseAndCustomFlags >> 31) == 1
-	ph.F00 = ((pulseAndCustomFlags & f00Mask) >> 30) == 1
+	ph.F01 = (pulseAndCustomFlags >> f01Shift) == 1
+	ph.F00 = ((pulseAndCustomFlags & f00Mask) >> f00Shift) == 1
 	ph.Pulse = pulseAndCustomFlags & pulseMask
 }
 
@@ -599,15 +604,17 @@ func (nlv *NodeListVote) Serialize() ([]byte, error) {
 // DeviantBitSet masks
 const (
 	// take high bit
-	compressedSetMask = 0x80
+	compressedSetMask   = 0x80
+	compressedSetOffset = 7
 
-	highBitLengthFlagMask = 0x40
-	lowBitLengthMask      = 0x3f
+	highBitLengthFlagMask   = 0x40
+	highBitLengthFlagOffset = 6
+	lowBitLengthMask        = 0x3f
 )
 
 func (dbs *DeviantBitSet) parsePackedData(packedData uint8) {
-	dbs.CompressedSet = (packedData >> 7) == 1
-	dbs.HighBitLengthFlag = ((packedData & highBitLengthFlagMask) >> 6) == 1
+	dbs.CompressedSet = (packedData >> compressedSetOffset) == 1
+	dbs.HighBitLengthFlag = ((packedData & highBitLengthFlagMask) >> highBitLengthFlagOffset) == 1
 	dbs.LowBitLength = packedData & lowBitLengthMask
 }
 
