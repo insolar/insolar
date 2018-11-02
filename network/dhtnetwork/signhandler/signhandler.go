@@ -17,8 +17,6 @@
 package signhandler
 
 import (
-	"crypto/ecdsa"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/id"
 )
@@ -27,5 +25,4 @@ type SignHandler interface {
 	AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef)
 	SignedNonceIsCorrect(coordinator core.NetworkCoordinator, hostID id.ID, signedNonce []byte) bool
 	SignNonce(nonce []byte) ([]byte, error)
-	GetPrivateKey() *ecdsa.PrivateKey
 }

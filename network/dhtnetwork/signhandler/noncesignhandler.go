@@ -18,7 +18,6 @@ package signhandler
 
 import (
 	"context"
-	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/core"
 	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -74,9 +73,4 @@ func (handler *NonceSignHandler) SignNonce(nonce []byte) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to sign a message")
 	}
 	return sign, nil
-}
-
-// GetPrivateKey returns private key
-func (handler *NonceSignHandler) GetPrivateKey() *ecdsa.PrivateKey {
-	return handler.certificate.GetEcdsaPrivateKey()
 }

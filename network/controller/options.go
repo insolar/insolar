@@ -32,8 +32,7 @@ type Options struct {
 	// The maximum time to wait for a response to any packet.
 	PacketTimeout time.Duration
 
-	//
-	InfiniteBootstrap bool
+	// InfiniteBootstrap bool
 
 	// Bootstrap reconnect timeout
 	BootstrapTimeout time.Duration
