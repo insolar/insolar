@@ -373,7 +373,7 @@ func TestUnsyncList_GetHash3(t *testing.T) {
 
 func TestUnsyncList_AddUnsyncList(t *testing.T) {
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), nil)
-	unsyncList.AddUnsyncList(core.RecordRef{1}, []*core.Node{})
+	unsyncList.AddUnsyncList(core.RecordRef{1}, []core.Node{})
 	_, exists := unsyncList.GetUnsyncList(core.RecordRef{1})
 	assert.True(t, exists)
 }
