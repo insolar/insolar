@@ -16,12 +16,7 @@
 
 package merkle
 
-import (
-	"context"
-
-)
-type Calculator interface {
-	GetNodeProof(context.Context) (*NodeProof, error)
-	GetGlobuleProof(context.Context) (*GlobuleProof, error)
-	GetCloudProof(context.Context) (*CloudProof, error)
+type CloudProof struct {
+	Signature []byte
 }
+
