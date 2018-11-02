@@ -83,7 +83,6 @@ func (m *TransactionManager) Commit() error {
 // Discard terminates transaction without disk writes.
 func (m *TransactionManager) Discard() {
 	m.releaseLocks()
-	m.txupdates = nil
 	if m.update {
 		m.db.dropWG.Done()
 	}
@@ -127,22 +126,18 @@ func (m *TransactionManager) SetRecord(pulseNumber core.PulseNumber, rec record.
 	recHash := hash.NewIDHash()
 	_, err := rec.WriteHashData(recHash)
 	if err != nil {
-		log.Errorf("set record - %v", err)
 		return nil, err
 	}
 	id := core.NewRecordID(pulseNumber, recHash.Sum(nil))
 	k := prefixkey(scopeIDRecord, id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
-		log.Errorf("set IKIKIKIK - %v", err)
 		return err
 	})
 	if geterr == nil {
-		log.Errorf("set record - %v", geterr)
 		return id, ErrOverride
 	}
 	if geterr != badger.ErrKeyNotFound {
-		log.Errorf("set record - %v", geterr)
 		return nil, ErrNotFound
 	}
 
