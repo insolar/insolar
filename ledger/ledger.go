@@ -55,7 +55,7 @@ func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 }
 
 // GetLocalStorage returns local storage to work with.
-func (l *Ledger) GetLocalStorage() *localstorage.LocalStorage {
+func (l *Ledger) GetLocalStorage() core.LocalStorage {
 	return l.ls
 }
 
@@ -112,6 +112,7 @@ func NewTestLedger(
 	pm *pulsemanager.PulseManager,
 	jc *jetcoordinator.JetCoordinator,
 	amh *artifactmanager.MessageHandler,
+	ls *localstorage.LocalStorage,
 ) *Ledger {
 	return &Ledger{
 		db:      db,
@@ -119,6 +120,7 @@ func NewTestLedger(
 		pm:      pm,
 		jc:      jc,
 		handler: amh,
+		ls:      ls,
 	}
 }
 

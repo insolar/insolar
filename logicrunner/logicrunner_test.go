@@ -173,27 +173,6 @@ func getRefFromID(id *core.RecordID) *core.RecordRef {
 	return &ref
 }
 
-type testLedger struct {
-	am core.ArtifactManager
-	jc core.JetCoordinator
-}
-
-func (r *testLedger) GetPulseManager() core.PulseManager {
-	panic("implement me")
-}
-
-func (r *testLedger) GetJetCoordinator() core.JetCoordinator {
-	return r.jc
-}
-
-func (r *testLedger) Start(components core.Components) error   { return nil }
-func (r *testLedger) Stop() error                              { return nil }
-func (r *testLedger) GetArtifactManager() core.ArtifactManager { return r.am }
-
-func (r *testLedger) HandleMessage(core.Message) (core.Reply, error) {
-	panic("implement me")
-}
-
 func TestContractCallingContract(t *testing.T) {
 	if parallel {
 		t.Parallel()

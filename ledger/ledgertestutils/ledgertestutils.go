@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
@@ -49,6 +50,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	assert.NoError(t, err)
 	pm, err := pulsemanager.NewPulseManager(db)
 	assert.NoError(t, err)
+	ls, err := localstorage.NewLocalStorage(db)
 
 	// Init components.
 	if c.MessageBus == nil {
@@ -59,7 +61,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	}
 
 	// Create ledger.
-	l := ledger.NewTestLedger(db, am, pm, jc, handler)
+	l := ledger.NewTestLedger(db, am, pm, jc, handler, ls)
 	err = l.Start(ctx, c)
 	assert.NoError(t, err)
 
