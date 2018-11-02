@@ -125,7 +125,7 @@ func (nc *NetworkCoordinator) fetchNodeDomainRef(ctx context.Context) (*core.Rec
 }
 
 // WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []*core.Node) error {
+func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
 	return errors.New("not implemented")
 }
 

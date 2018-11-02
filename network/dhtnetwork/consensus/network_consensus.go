@@ -28,11 +28,11 @@ import (
 )
 
 type participantWrapper struct {
-	node *core.Node
+	node core.Node
 }
 
 // GetActiveNode implements Participant interface for Node wrapper.
-func (an *participantWrapper) GetActiveNode() *core.Node {
+func (an *participantWrapper) GetActiveNode() core.Node {
 	return an.node
 }
 
@@ -41,7 +41,7 @@ type selfWrapper struct {
 }
 
 // GetActiveNode implements Participant interface for NodeKeeper wrapper.
-func (s *selfWrapper) GetActiveNode() *core.Node {
+func (s *selfWrapper) GetActiveNode() core.Node {
 	return s.keeper.GetOrigin()
 }
 
@@ -64,7 +64,7 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	parts := make([]string, 0)
 	for i, activeNode := range activeNodes {
 		participants[i] = &participantWrapper{activeNode}
-		parts = append(parts, activeNode.NodeID.String())
+		parts = append(parts, activeNode.ID().String())
 	}
 	log.Debugf("Consensus participants: %s", strings.Join(parts, ", "))
 	success, unsyncList := ic.keeper.SetPulse(pulse.PulseNumber)
@@ -74,7 +74,7 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	}
 	candidates := make([]string, 0)
 	for _, candidate := range unsyncList.GetUnsync() {
-		candidates = append(candidates, candidate.NodeID.String())
+		candidates = append(candidates, candidate.ID().String())
 	}
 	log.Infof("Consensus unsync candidates: %s", strings.Join(candidates, ", "))
 	unsyncCandidates, err := ic.consensus.DoConsensus(ctx, unsyncList, ic.self, participants)
@@ -93,7 +93,7 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 
 // IsPartOfConsensus returns whether we should perform all consensus interactions or not
 func (ic *NetworkConsensus) IsPartOfConsensus() bool {
-	return ic.keeper.GetOrigin().State == core.NodeActive
+	return ic.keeper.GetOrigin().State() == core.NodeActive
 }
 
 // ReceiverHandler return handler that is responsible to handle consensus network requests

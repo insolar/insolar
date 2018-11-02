@@ -25,5 +25,5 @@ type NetworkCoordinator interface {
 	// RegisterNode registers node in nodedomain
 	RegisterNode(ctx context.Context, publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error)
 	// WriteActiveNodes write active nodes to ledger
-	WriteActiveNodes(ctx context.Context, number PulseNumber, activeNodes []*Node) error
+	WriteActiveNodes(ctx context.Context, number PulseNumber, activeNodes []Node) error
 }

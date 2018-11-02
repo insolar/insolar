@@ -85,7 +85,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
-	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
+	cert, err := certificate.NewCertificatesWithKeys(cfg.KeysPath)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
@@ -133,7 +133,7 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 	pulseTicker = time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
 	go func() {
 		for range pulseTicker.C {
-			err = server.StartConsensusProcess(ctx, core.PulseNumber(server.GetLastPulse().PulseNumber+10))
+			err = server.StartConsensusProcess(ctx, core.PulseNumber(server.GetLastPulse().PulseNumber+core.PulseNumber(cfg.NumberDelta)))
 			if err != nil {
 				inslogger.FromContext(ctx).Fatal(err)
 				panic(err)

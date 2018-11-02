@@ -37,30 +37,30 @@ const (
 	NodeSuspended
 )
 
-type Node struct {
-	// NodeID is the unique identifier of the node
-	NodeID RecordRef
-	// PulseNum is the pulse number after which the new state is assigned to the node
-	PulseNum PulseNumber
+type Node interface {
+	// ID is the unique identifier of the node
+	ID() RecordRef
 	// State is the node state
-	State NodeState
-	// JetRoles is the set of candidate JetRoles for the node
-	Roles []NodeRole
+	State() NodeState
+	// Pulse is the pulse number after which the new state is assigned to the node
+	Pulse() PulseNumber
+	// Roles is the set of candidate Roles for the node
+	Roles() []NodeRole
 	// PublicKey is the public key of the node
-	PublicKey *ecdsa.PublicKey
-	// Addess is the network adress of the node
-	Address string
+	PublicKey() *ecdsa.PublicKey
+	// PhysicalAddress is the network address of the node
+	PhysicalAddress() string
 	// Version of node software
-	Version string
+	Version() string
 }
 
 type NodeNetwork interface {
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
-	GetOrigin() *Node
+	GetOrigin() Node
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.
-	GetActiveNode(ref RecordRef) *Node
+	GetActiveNode(ref RecordRef) Node
 	// GetActiveNodes get active nodes.
-	GetActiveNodes() []*Node
+	GetActiveNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
 	GetActiveNodesByRole(role JetRole) []RecordRef
 }

@@ -161,7 +161,7 @@ func processCheckSignedNonce(
 	if err != nil {
 		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err.Error()}).Build(), nil
 	}
-	var self *core.Node
+	var self core.Node
 	select {
 	case d := <-ch:
 		if d == nil {
@@ -186,12 +186,12 @@ func getActiveHostsList(hostHandler hosthandler.HostHandler) []host.Host {
 	nodes := hostHandler.GetActiveNodesList()
 	hosts := make([]host.Host, 0)
 	for _, node := range nodes {
-		address, err := host.NewAddress(node.Address)
+		address, err := host.NewAddress(node.PhysicalAddress())
 		if err != nil {
-			log.Warnf("Error resolving address %s for node %s", node.Address, node.NodeID)
+			log.Warnf("Error resolving address %s for node %s", node.PhysicalAddress(), node.ID())
 			continue
 		}
-		idd := resolver.ResolveHostID(node.NodeID)
+		idd := resolver.ResolveHostID(node.ID())
 		hosts = append(hosts, host.Host{ID: id.FromBase58(idd), Address: address})
 	}
 	return hosts
