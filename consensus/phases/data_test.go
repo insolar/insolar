@@ -282,3 +282,30 @@ func TestDeviantBitSet_BadData(t *testing.T) {
 
 	require.NotEqual(t, deviantBitSet.Payload, newDeviantBitSet.Payload)
 }
+
+func TestParseAndCompactRouteInfo(t *testing.T) {
+	var routInfoTests = []PacketHeader{
+		PacketHeader{
+			PacketT:    NetworkConsistency,
+			SubType:    1,
+			HasRouting: true,
+		},
+		PacketHeader{
+			PacketT:    NetworkConsistency,
+			SubType:    1,
+			HasRouting: false,
+		},
+		PacketHeader{
+			PacketT:    Referendum,
+			SubType:    0,
+			HasRouting: false,
+		},
+	}
+
+	for _, ph := range routInfoTests {
+		raw := ph.compactRouteInfo()
+		newPh := PacketHeader{}
+		newPh.parseRouteInfo(raw)
+		require.Equal(t, ph, newPh)
+	}
+}
