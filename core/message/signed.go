@@ -36,7 +36,12 @@ type SignedMessage struct {
 	Signature     []byte
 	LogTraceID    string
 	TraceSpanData []byte
-	Pulse         core.PulseNumber
+	PulseNumber   core.PulseNumber
+}
+
+// Pulse returns pulse when message was sent.
+func (sm *SignedMessage) Pulse() core.PulseNumber {
+	return sm.PulseNumber
 }
 
 func (sm *SignedMessage) Message() core.Message {
@@ -74,7 +79,7 @@ func NewSignedMessage(
 		Signature:     sign,
 		LogTraceID:    inslogger.TraceID(ctx),
 		TraceSpanData: instracer.MustSerialize(ctx),
-		Pulse:         pulse,
+		PulseNumber:   pulse,
 	}, nil
 }
 
