@@ -17,6 +17,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/binary"
 
 	"github.com/dgraph-io/badger"
@@ -91,8 +92,8 @@ func (m *TransactionManager) Discard() {
 // GetRequest returns request record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRequest(id *core.RecordID) (record.Request, error) {
-	rec, err := m.GetRecord(id)
+func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) (record.Request, error) {
+	rec, err := m.GetRecord(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +107,14 @@ func (m *TransactionManager) set(key, val []byte) {
 }
 
 // GetBlob returns binary value stored by record ID.
-func (m *TransactionManager) GetBlob(id *core.RecordID) ([]byte, error) {
+func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 	k := prefixkey(scopeIDBlob, id[:])
 	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
 	return m.Get(k)
 }
 
 // SetBlob saves binary value for provided pulse.
-func (m *TransactionManager) SetBlob(pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	id := record.CalculateIDForBlob(pulseNumber, blob)
 	k := prefixkey(scopeIDBlob, id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
@@ -134,7 +135,7 @@ func (m *TransactionManager) SetBlob(pulseNumber core.PulseNumber, blob []byte) 
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(id *core.RecordID) (record.Record, error) {
+func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, id[:])
 	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
 	buf, err := m.Get(k)
@@ -148,7 +149,7 @@ func (m *TransactionManager) GetRecord(id *core.RecordID) (record.Record, error)
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	recHash := hash.NewIDHash()
 	_, err := rec.WriteHashData(recHash)
 	if err != nil {
@@ -172,7 +173,11 @@ func (m *TransactionManager) SetRecord(pulseNumber core.PulseNumber, rec record.
 }
 
 // GetObjectIndex fetches object lifeline index.
-func (m *TransactionManager) GetObjectIndex(id *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
+func (m *TransactionManager) GetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	forupdate bool,
+) (*index.ObjectLifeline, error) {
 	if forupdate {
 		m.lockOnID(id)
 	}
@@ -185,7 +190,11 @@ func (m *TransactionManager) GetObjectIndex(id *core.RecordID, forupdate bool) (
 }
 
 // SetObjectIndex stores object lifeline index.
-func (m *TransactionManager) SetObjectIndex(id *core.RecordID, idx *index.ObjectLifeline) error {
+func (m *TransactionManager) SetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	idx *index.ObjectLifeline,
+) error {
 	k := prefixkey(scopeIDLifeline, id[:])
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
@@ -217,7 +226,7 @@ func (m *TransactionManager) Get(key []byte) ([]byte, error) {
 }
 
 // GetLatestPulseNumber returns current pulse number.
-func (m *TransactionManager) GetLatestPulseNumber() (core.PulseNumber, error) {
+func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
 	buf, err := m.Get(prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
 	if err != nil {
 		return 0, err

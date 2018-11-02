@@ -17,11 +17,11 @@
 package ledgertestutils
 
 import (
-	"context"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -39,8 +39,9 @@ import (
 func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, func()) {
 	var err error
 	// Init subcomponents.
+	ctx := inslogger.TestContext(t.(*testing.T))
 	conf := configuration.NewLedger()
-	db, dbcancel := storagetest.TmpDB(t, dir)
+	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
 	handler, err := artifactmanager.NewMessageHandler(db)
 	assert.NoError(t, err)
 	am, err := artifactmanager.NewArtifactManger(db)
@@ -60,7 +61,6 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)
-	ctx := context.Background()
 	err = l.Start(ctx, c)
 	assert.NoError(t, err)
 

@@ -14,31 +14,22 @@
  *    limitations under the License.
  */
 
-package main
+package phases
 
-import (
-	"context"
-	"testing"
+type PhaseManager struct {
+	phase *FirstPhase
+}
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/stretchr/testify/assert"
-)
+// Start starts calculate args on phases.
+func (pm *PhaseManager) OnPulse(pulse *PulseData) error {
+	return pm.phase.HandlePulse(nil, pulse)
+}
 
-func TestInitComponents(t *testing.T) {
-	ctx := context.Background()
-	cfg := configuration.NewConfiguration()
-	cfg.Bootstrap.RootKeys = "testdata/root_member_keys.json"
-	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.CertificatePath = "testdata/certificate.json"
-
-	cm, _, repl, err := InitComponents(ctx, cfg, false)
-	assert.NoError(t, err)
-	assert.NotNil(t, cm)
-	assert.NotNil(t, repl)
-
-	err = cm.Start(ctx)
-	assert.NoError(t, err)
-
-	err = cm.Stop(ctx)
-	assert.NoError(t, err)
+// NewPhaseManager creates and returns a new phase manager.
+func NewPhaseManager() *PhaseManager {
+	return &PhaseManager{
+		phase: &FirstPhase{
+			next: &SecondPhase{},
+		},
+	}
 }

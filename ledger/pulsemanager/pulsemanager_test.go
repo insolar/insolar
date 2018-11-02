@@ -21,12 +21,14 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPulseManager_Current(t *testing.T) {
+	ctx := inslogger.TestContext(t)
 	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -37,7 +39,7 @@ func TestPulseManager_Current(t *testing.T) {
 
 	pm := ledger.GetPulseManager()
 
-	pulse, err := pm.Current()
+	pulse, err := pm.Current(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Pulse{PulseNumber: core.FirstPulseNumber}, *pulse)
 }

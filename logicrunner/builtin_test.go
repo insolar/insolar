@@ -68,7 +68,10 @@ func TestBareHelloworld(t *testing.T) {
 	}), "starting logicrunner")
 
 	MessageBusTrivialBehavior(mb, lr)
-	l.GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
+	l.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
+	)
 
 	hw := helloworld.NewHelloWorld()
 
