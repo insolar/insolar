@@ -43,3 +43,9 @@ func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
 		Signature: nil,
 	}, nil
 }
+
+func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error) {
+	return &GlobuleProof{
+		Signature: nil,
+	}, nil
+}
