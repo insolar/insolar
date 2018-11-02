@@ -52,6 +52,11 @@ type ExecutionState struct {
 	objectbody *ObjectBody
 }
 
+func (es *ExecutionState) Unlock() {
+	es.Mutex.Unlock()
+	es.traceID = "Done"
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
@@ -176,7 +181,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 
 	es := lr.UpsertExecution(ref)
 	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
-		return nil, errors.New("loop detected")
+		return nil, errors.Errorf("loop detected for '%s'", inslogger.TraceID(ctx))
 	}
 	es.Lock()
 	lr.execution[ref].traceID = inslogger.TraceID(ctx)
