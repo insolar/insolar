@@ -47,9 +47,9 @@ func NewNodeNetwork(configuration configuration.Configuration) (core.NodeNetwork
 	}
 
 	if len(configuration.Host.BootstrapHosts) == 0 {
-		origin.State = core.NodeActive
+		origin.SetState(core.NodeActive)
 		log.Info("Bootstrap nodes is not set. Init zeronet.")
-		nodeKeeper.AddActiveNodes([]*core.Node{origin})
+		nodeKeeper.AddActiveNodes([]core.Node{origin})
 	}
 
 	return nodeKeeper, nil
