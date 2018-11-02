@@ -222,5 +222,5 @@ func checkError(ctx context.Context, err error, message string) {
 		return
 	}
 	inslog := inslogger.FromContext(ctx)
-	inslog.Fatalf("%v: %v", message, err.Error())
+	log.WithSkipDelta(inslog, +1).Fatalf("%v: %v", message, err.Error())
 }
