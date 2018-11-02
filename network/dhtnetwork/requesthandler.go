@@ -234,7 +234,7 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
-func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*core.Node, error) {
+func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]core.Node, error) {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build a context")
