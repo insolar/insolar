@@ -107,3 +107,6 @@ func (n *node) SetState(state core.NodeState) {
 func (n *node) SetPulse(pulseNum core.PulseNumber) {
 	n.pulseNum = pulseNum
 }
+
+type mutableNodes []mutableNode
+
