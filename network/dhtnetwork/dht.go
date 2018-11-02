@@ -458,9 +458,9 @@ func (dht *DHT) StartAuthorize() error {
 	}
 
 	discoveryNodesCount := len(dht.options.BootstrapHosts)
-	ch := make(chan []*core.Node, discoveryNodesCount)
+	ch := make(chan []core.Node, discoveryNodesCount)
 	for _, h := range dht.options.BootstrapHosts {
-		go func(ch chan []*core.Node, h *host.Host) {
+		go func(ch chan []core.Node, h *host.Host) {
 			activeNodes, err := GetNonceRequest(dht, h.ID.String())
 			if err != nil {
 				log.Warnf("error authorizing on %s host: %s", h, err.Error())
@@ -471,7 +471,7 @@ func (dht *DHT) StartAuthorize() error {
 		}(ch, h)
 	}
 
-	receivedResults := make([][]*core.Node, 0)
+	receivedResults := make([][]core.Node, 0)
 	i := 0
 LOOP:
 	for {
