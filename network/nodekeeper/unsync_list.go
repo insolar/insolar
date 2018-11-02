@@ -26,14 +26,14 @@ import (
 )
 
 type UnsyncList struct {
-	unsync []*core.Node
+	unsync []core.Node
 	pulse  core.PulseNumber
 	hash   []*network.NodeUnsyncHash
 
 	waiters     []chan []*network.NodeUnsyncHash
 	waitersLock sync.Mutex
 
-	unsyncListCache map[core.RecordRef][]*core.Node
+	unsyncListCache map[core.RecordRef][]core.Node
 	unsyncListLock  sync.Mutex
 	unsyncHashCache map[core.RecordRef][]*network.NodeUnsyncHash
 	unsyncHashLock  sync.Mutex
