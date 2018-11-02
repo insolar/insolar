@@ -51,7 +51,7 @@ func NewUnsyncHolder(pulse core.PulseNumber, unsync []core.Node) *UnsyncList {
 }
 
 // GetUnsync returns list of local unsync nodes. This list is created
-func (u *UnsyncList) GetUnsync() []*core.Node {
+func (u *UnsyncList) GetUnsync() []core.Node {
 	return u.unsync
 }
 
