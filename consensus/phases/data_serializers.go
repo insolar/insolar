@@ -416,3 +416,92 @@ func (nvb *NodeViolationBlame) Serialize() ([]byte, error) {
 
 	return result.Bytes(), nil
 }
+
+// Deserialize implements interface method
+func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &njc.NodeID)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeID")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &njc.RelayNodeID)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read RelayNodeID")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &njc.ProtocolVersionAndFlags)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read ProtocolVersionAndFlags")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &njc.JoinsAfter)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read JoinsAfter")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &njc.NodeRoleRecID)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRoleRecID")
+	}
+	err = binary.Read(data, defaultByteOrder, &njc.NodeRef)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRef")
+	}
+	// err = binary.Read(data, defaultByteOrder, &njc.NodePK)
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodePK")
+	// }
+
+	err = binary.Read(data, defaultByteOrder, &njc.length)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read length")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
+	result := new(bytes.Buffer)
+	err := binary.Write(result, defaultByteOrder, njc.NodeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodeID")
+	}
+
+	err = binary.Write(result, defaultByteOrder, njc.RelayNodeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write RelayNodeID")
+	}
+
+	err = binary.Write(result, defaultByteOrder, njc.ProtocolVersionAndFlags)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write ProtocolVersionAndFlags")
+	}
+
+	err = binary.Write(result, defaultByteOrder, njc.JoinsAfter)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write JoinsAfter")
+	}
+
+	err = binary.Write(result, defaultByteOrder, njc.NodeRoleRecID)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodeRoleRecID")
+	}
+
+	err = binary.Write(result, defaultByteOrder, njc.NodeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodeRef")
+	}
+
+	// err = binary.Write(result, defaultByteOrder, njc.NodePK)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodePK")
+	// }
+
+	err = binary.Write(result, defaultByteOrder, njc.length)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write length")
+	}
+
+	return result.Bytes(), nil
+}
