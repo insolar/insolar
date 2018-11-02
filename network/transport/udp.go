@@ -29,6 +29,11 @@ import (
 
 const udpMaxPacketSize = 1400
 
+// GetUdpMaxPacketSize returns udp max packet size
+func GetUdpMaxPacketSize() int {
+	return udpMaxPacketSize
+}
+
 type udpTransport struct {
 	baseTransport
 	serverConn net.PacketConn
