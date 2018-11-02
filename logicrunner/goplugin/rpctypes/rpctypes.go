@@ -45,6 +45,7 @@ type DownCallConstructorReq struct {
 	Code      core.RecordRef
 	Name      string
 	Arguments core.Arguments
+	Context   *core.LogicCallContext
 }
 
 // DownCallConstructorResp is response from CallConstructor RPC in the runner
@@ -91,7 +92,7 @@ type UpRouteResp struct {
 type UpSaveAsChildReq struct {
 	UpBaseReq
 	Parent          core.RecordRef
-	Class           core.RecordRef
+	Prototype       core.RecordRef
 	ConstructorName string
 	ArgsSerialized  []byte
 }
@@ -104,8 +105,8 @@ type UpSaveAsChildResp struct {
 // UpGetObjChildrenReq is a set of arguments for GetObjChildren RPC in goplugin
 type UpGetObjChildrenReq struct {
 	UpBaseReq
-	Obj   core.RecordRef
-	Class core.RecordRef
+	Obj       core.RecordRef
+	Prototype core.RecordRef
 }
 
 // UpGetObjChildrenResp is response from GetObjChildren RPC in goplugin
@@ -117,7 +118,7 @@ type UpGetObjChildrenResp struct {
 type UpSaveAsDelegateReq struct {
 	UpBaseReq
 	Into            core.RecordRef
-	Class           core.RecordRef
+	Prototype       core.RecordRef
 	ConstructorName string
 	ArgsSerialized  []byte
 }

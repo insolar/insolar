@@ -17,6 +17,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
@@ -35,48 +37,47 @@ import (
 )
 
 // InitComponents creates and links all insolard components
-func InitComponents(cfg configuration.Configuration, isBootstrap bool) (*component.Manager, *ComponentManager, *Repl, error) {
-
+func InitComponents(ctx context.Context, cfg configuration.Configuration, isBootstrap bool) (*component.Manager, *ComponentManager, *Repl, error) {
 	var cert *certificate.Certificate
 	var err error
 	if isBootstrap {
 		cert, err = certificate.NewCertificatesWithKeys(cfg.KeysPath)
-		checkError("failed to start Certificate ( bootstrap mode ): ", err)
+		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
 	} else {
 		cert, err = certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
-		checkError("failed to start Certificate: ", err)
+		checkError(ctx, err, "failed to start Certificate")
 	}
 
 	nodeNetwork, err := nodekeeper.NewNodeNetwork(cfg)
-	checkError("failed to start NodeNetwork: ", err)
+	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
-	checkError("failed to start LogicRunner: ", err)
+	checkError(ctx, err, "failed to start LogicRunner")
 
-	ledger, err := ledger.NewLedger(cfg.Ledger)
-	checkError("failed to start Ledger: ", err)
+	ledger, err := ledger.NewLedger(ctx, cfg.Ledger)
+	checkError(ctx, err, "failed to start Ledger")
 
 	nw, err := servicenetwork.NewServiceNetwork(cfg)
-	checkError("failed to start Network: ", err)
+	checkError(ctx, err, "failed to start Network")
 
 	messageBus, err := messagebus.NewMessageBus(cfg)
-	checkError("failed to start MessageBus: ", err)
+	checkError(ctx, err, "failed to start MessageBus")
 
 	bootstrapper, err := bootstrap.NewBootstrapper(cfg.Bootstrap)
-	checkError("failed to start Bootstrapper: ", err)
+	checkError(ctx, err, "failed to start Bootstrapper")
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
-	checkError("failed to start ApiRunner: ", err)
+	checkError(ctx, err, "failed to start ApiRunner")
 
 	metricsHandler, err := metrics.NewMetrics(cfg.Metrics)
-	checkError("failed to start Metrics: ", err)
+	checkError(ctx, err, "failed to start Metrics")
 
 	networkCoordinator, err := networkcoordinator.New()
-	checkError("failed to start NetworkCoordinator: ", err)
+	checkError(ctx, err, "failed to start NetworkCoordinator")
 
 	// move to logic runner ??
 	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	checkError("failed init pulse for LogicRunner: ", err)
+	checkError(ctx, err, "failed init pulse for LogicRunner")
 
 	cm := component.Manager{}
 	cm.Register(

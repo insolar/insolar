@@ -14,22 +14,23 @@
  *    limitations under the License.
  */
 
-package functest
+package pprof
 
 import (
-	"testing"
-
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/http/pprof"
 )
 
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, 1000, firstBalance)
+// init disables default handlers registered by importing net/http/pprof.
+func init() {
+	http.DefaultServeMux = http.NewServeMux()
 }
 
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
+// Handle adds standard pprof handlers to mux.
+func Handle(mux *http.ServeMux) {
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 }

@@ -6,8 +6,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-// ClassReference to class of this contract
-var ClassReference = core.NewRefFromBase58("")
+// PrototypeReference to prototype of this contract
+var PrototypeReference = core.NewRefFromBase58("")
 
 // Allowance holds proxy type
 type Allowance struct {
@@ -22,7 +22,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Allowance, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Allowance, 
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*Allowance, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -43,14 +43,14 @@ func GetObject(ref core.RecordRef) (r *Allowance) {
 	return &Allowance{Reference: ref}
 }
 
-// GetClass returns reference to the class
-func GetClass() core.RecordRef {
-	return ClassReference
+// GetPrototype returns reference to the prototype
+func GetPrototype() core.RecordRef {
+	return PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*Allowance, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
+	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -78,9 +78,9 @@ func (r *Allowance) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass returns reference to the class
-func (r *Allowance) GetClass() core.RecordRef {
-	return ClassReference
+// GetPrototype returns reference to the prototype
+func (r *Allowance) GetPrototype() core.RecordRef {
+	return PrototypeReference
 }
 
 // TakeAmount is proxy generated method

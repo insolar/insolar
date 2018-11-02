@@ -17,6 +17,7 @@
 package dhtnetwork
 
 import (
+	"context"
 	"sync"
 
 	"github.com/insolar/insolar/core"
@@ -49,14 +50,14 @@ func (l *MockLedger) GetPulseManager() core.PulseManager {
 	return &l.pm
 }
 
-func (pm *MockPulseManager) Current() (*core.Pulse, error) {
+func (pm *MockPulseManager) Current(context.Context) (*core.Pulse, error) {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
 
 	return &pm.currentPulse, nil
 }
 
-func (pm *MockPulseManager) Set(pulse core.Pulse) error {
+func (pm *MockPulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
 

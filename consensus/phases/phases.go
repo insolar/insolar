@@ -14,32 +14,33 @@
  *    limitations under the License.
  */
 
-package index
+package phases
 
 import (
-	"bytes"
-
-	"github.com/ugorji/go/codec"
+	"github.com/pkg/errors"
 )
 
-// EncodeObjectLifeline converts lifeline index into binary format.
-func EncodeObjectLifeline(index *ObjectLifeline) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-	err := enc.Encode(index)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+// FirstPhase is a first phase.
+type FirstPhase struct {
+	next *SecondPhase
 }
 
-// DecodeObjectLifeline converts byte array into lifeline index struct.
-func DecodeObjectLifeline(buf []byte) (*ObjectLifeline, error) {
-	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
-	var index ObjectLifeline
-	err := dec.Decode(&index)
+func (fp *FirstPhase) HandlePulse(localClaims []ReferendumClaim, data *PulseData) error {
+	result, claims, err := fp.getPulseProof(data)
 	if err != nil {
-		return nil, err
+		return errors.Wrap(err, "Failed to get a pulse proof")
 	}
-	return &index, nil
+	return fp.next.Calculate(result, claims)
+}
+
+func (fp *FirstPhase) getPulseProof(pulse *PulseData) ([]NodePulseProof, []ReferendumClaim, error) {
+	return nil, nil, nil
+}
+
+// SecondPhase is a second phase.
+type SecondPhase struct {
+}
+
+func (sp *SecondPhase) Calculate(proof []NodePulseProof, claims []ReferendumClaim) error {
+	return nil
 }

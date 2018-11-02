@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,10 +37,8 @@ var type2idTests = []struct {
 	{"CallRequest", &CallRequest{}, typeCallRequest},
 
 	// result records
-	{"ClassActivateRecord", &ClassActivateRecord{}, typeClassActivate},
 	{"ObjectActivateRecord", &ObjectActivateRecord{}, typeObjectActivate},
 	{"CodeRecord", &CodeRecord{}, typeCode},
-	{"ClassAmendRecord", &ClassAmendRecord{}, typeClassAmend},
 	{"DeactivationRecord", &DeactivationRecord{}, typeDeactivate},
 	{"ObjectAmendRecord", &ObjectAmendRecord{}, typeObjectAmend},
 	{"TypeRecord", &TypeRecord{}, typeType},
@@ -60,7 +59,9 @@ func Test_TypeIDConversion(t *testing.T) {
 
 func TestSerializeDeserializeRecord(t *testing.T) {
 	rec := ObjectActivateRecord{
-		ObjectStateRecord: ObjectStateRecord{Memory: []byte{1, 2, 3}},
+		ObjectStateRecord: ObjectStateRecord{
+			Memory: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+		},
 	}
 	serialized := SerializeRecord(&rec)
 	deserialized := DeserializeRecord(serialized)

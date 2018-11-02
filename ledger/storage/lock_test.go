@@ -39,7 +39,7 @@ func Test_IDLockTheSame(t *testing.T) {
 		tl.Lock("lock1", &id1)
 		close(start2)
 
-		time.Sleep(time.Millisecond * 250)
+		time.Sleep(time.Millisecond * 50)
 		tl.Unlock("unlock1", &id1)
 		wg.Done()
 	}()
@@ -54,13 +54,9 @@ func Test_IDLockTheSame(t *testing.T) {
 
 	expectsteps := []string{
 		"before-lock1",
-		"after-lock1",
 		"before-lock2",
 		"before-unlock1",
-		"after-unlock1",
-		"after-lock2",
 		"before-unlock2",
-		"after-unlock2",
 	}
 	assert.Equal(t, expectsteps, tl.synclist.list, "steps in proper order")
 }
@@ -85,13 +81,9 @@ func Test_IDLockDifferent(t *testing.T) {
 
 	expectsteps := []string{
 		"before-lock1",
-		"after-lock1",
 		"before-lock2",
-		"after-lock2",
 		"before-unlock1",
-		"after-unlock1",
 		"before-unlock2",
-		"after-unlock2",
 	}
 	assert.Equal(t, expectsteps, tl.synclist.list, "steps in proper order")
 }
@@ -132,11 +124,9 @@ func (l *synclist) String() string {
 func (tl *testlock) Lock(name string, id *core.RecordID) {
 	tl.synclist.Add("before-" + name)
 	tl.lock.Lock(id)
-	tl.synclist.Add("after-" + name)
 }
 
 func (tl *testlock) Unlock(name string, id *core.RecordID) {
 	tl.synclist.Add("before-" + name)
 	tl.lock.Unlock(id)
-	tl.synclist.Add("after-" + name)
 }

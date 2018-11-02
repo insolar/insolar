@@ -6,8 +6,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-// ClassReference to class of this contract
-var ClassReference = core.NewRefFromBase58("")
+// PrototypeReference to prototype of this contract
+var PrototypeReference = core.NewRefFromBase58("")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -22,7 +22,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*RootDomain, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*RootDomain,
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*RootDomain, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -43,14 +43,14 @@ func GetObject(ref core.RecordRef) (r *RootDomain) {
 	return &RootDomain{Reference: ref}
 }
 
-// GetClass returns reference to the class
-func GetClass() core.RecordRef {
-	return ClassReference
+// GetPrototype returns reference to the prototype
+func GetPrototype() core.RecordRef {
+	return PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*RootDomain, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
+	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -75,71 +75,9 @@ func (r *RootDomain) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass returns reference to the class
-func (r *RootDomain) GetClass() core.RecordRef {
-	return ClassReference
-}
-
-// RegisterNode is proxy generated method
-func (r *RootDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
-	var args [5]interface{}
-	args[0] = publicKey
-	args[1] = numberOfBootstrapNodes
-	args[2] = majorityRule
-	args[3] = roles
-	args[4] = ip
-
-	var argsSerialized []byte
-
-	ret := [2]interface{}{}
-	var ret0 []byte
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, err
-	}
-
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// RegisterNodeNoWait is proxy generated method
-func (r *RootDomain) RegisterNodeNoWait(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) error {
-	var args [5]interface{}
-	args[0] = publicKey
-	args[1] = numberOfBootstrapNodes
-	args[2] = majorityRule
-	args[3] = roles
-	args[4] = ip
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	return nil
+// GetPrototype returns reference to the prototype
+func (r *RootDomain) GetPrototype() core.RecordRef {
+	return PrototypeReference
 }
 
 // Authorize is proxy generated method

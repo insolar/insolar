@@ -62,7 +62,7 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 		return []map[string]string{}, nil
 	}
 
-	nodeRefs, err := nd.GetChildrenTyped(noderecord.GetClass())
+	nodeRefs, err := nd.GetChildrenTyped(noderecord.GetPrototype())
 	if err != nil {
 		return nil, fmt.Errorf("[ makeBootstrapNodesConfig ] Problem with taking records: %s", err.Error())
 	}

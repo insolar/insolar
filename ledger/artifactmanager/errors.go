@@ -23,7 +23,6 @@ import (
 // Custom errors possibly useful to check by artifact manager callers.
 var (
 	ErrInvalidRef        = errors.New("invalid reference")
-	ErrClassDeactivated  = errors.New("class is deactivated")
 	ErrObjectDeactivated = errors.New("object is deactivated")
 	ErrNotFound          = errors.New("object not found")
 	ErrUnexpectedReply   = errors.New("unexpected reply")

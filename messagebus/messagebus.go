@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -37,6 +38,7 @@ type MessageBus struct {
 	Ledger       core.Ledger      `inject:""`
 	ActiveNodes  core.NodeNetwork `inject:""`
 	handlers     map[core.MessageType]core.MessageHandler
+	queue        *ExpiryQueue
 	signmessages bool
 }
 
@@ -45,6 +47,8 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	return &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
 		signmessages: config.Host.SignMessages,
+		// TODO: pass value from config
+		queue: NewExpiryQueue(10 * time.Second),
 	}, nil
 }
 
@@ -84,15 +88,17 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 	if err != nil {
 		return nil, err
 	}
+	mb.queue.Push(msg)
+
 	jc := mb.Ledger.GetJetCoordinator()
 	pm := mb.Ledger.GetPulseManager()
-	pulse, err := pm.Current()
+	pulse, err := pm.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: send to all actors of the role if nil Target
-	nodes, err := jc.QueryRole(signedMsg.TargetRole(), *signedMsg.Target(), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(ctx, signedMsg.TargetRole(), *signedMsg.Target(), pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}

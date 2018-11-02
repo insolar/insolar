@@ -14,22 +14,17 @@
  *    limitations under the License.
  */
 
-package functest
+package pprof
 
-import (
-	"testing"
+/*
+Package pprof provides http pprof handlers
 
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-)
+How to use and examples:
 
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, 1000, firstBalance)
-}
+ curl localhost:9090/debug/pprof/trace?seconds=10 > trace.out
 
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
-}
+ For more information about pprof, see https://github.com/google/pprof/blob/master/doc/README.md
+ and https://golang.org/pkg/runtime/pprof/
+
+
+*/
