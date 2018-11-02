@@ -41,6 +41,25 @@ type node struct {
 	version         string
 }
 
+func newMutableNode(
+	id core.RecordRef,
+	roles []core.NodeRole,
+	publicKey *ecdsa.PublicKey,
+	pulseNum core.PulseNumber,
+	state core.NodeState,
+	physicalAddress,
+	version string) mutableNode {
+	return &node{
+		id:              id,
+		roles:           roles,
+		publicKey:       publicKey,
+		pulseNum:        pulseNum,
+		state:           state,
+		physicalAddress: physicalAddress,
+		version:         version,
+	}
+}
+
 func NewNode(
 	id core.RecordRef,
 	roles []core.NodeRole,
@@ -79,4 +98,12 @@ func (n *node) PhysicalAddress() string {
 
 func (n *node) Version() string {
 	return n.version
+}
+
+func (n *node) SetState(state core.NodeState) {
+	n.state = state
+}
+
+func (n *node) SetPulse(pulseNum core.PulseNumber) {
+	n.pulseNum = pulseNum
 }
