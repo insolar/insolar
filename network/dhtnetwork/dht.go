@@ -1026,7 +1026,7 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 }
 
 // GetActiveNodesList returns an active nodes list.
-func (dht *DHT) GetActiveNodesList() []*core.Node {
+func (dht *DHT) GetActiveNodesList() []core.Node {
 	return dht.activeNodeKeeper.GetActiveNodes()
 }
 
