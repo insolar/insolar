@@ -26,13 +26,13 @@ import (
 
 // Participant describes one consensus participant
 type Participant interface {
-	GetActiveNode() *core.Node
+	GetActiveNode() core.Node
 }
 
 // UnsyncHolder
 type UnsyncHolder interface {
 	// GetUnsync returns list of local unsync nodes. This list is created
-	GetUnsync() []*core.Node
+	GetUnsync() []core.Node
 	// GetPulse returns actual pulse for current consensus process.
 	GetPulse() core.PulseNumber
 	// SetHash sets hash of unsync lists for each node of consensus.
@@ -46,13 +46,13 @@ type UnsyncHolder interface {
 type Consensus interface {
 	// DoConsensus is sync method, it performs all consensus steps and returns list of synced nodes
 	// method should be executed in goroutine
-	DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]*core.Node, error)
+	DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]core.Node, error)
 }
 
 // Communicator interface is used to exchange messages between participants
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []*core.Node) ([]*core.Node, error)
+	ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []core.Node) ([]core.Node, error)
 
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
 	ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*network.NodeUnsyncHash) ([]*network.NodeUnsyncHash, error)

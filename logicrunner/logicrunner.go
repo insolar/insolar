@@ -47,8 +47,14 @@ type ExecutionState struct {
 	callContext *core.LogicCallContext
 	deactivate  bool
 	request     *Ref
+	traceID     string
 
 	objectbody *ObjectBody
+}
+
+func (es *ExecutionState) Unlock() {
+	es.Mutex.Unlock()
+	es.traceID = "Done"
 }
 
 // LogicRunner is a general interface of contract executor
@@ -171,11 +177,20 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
-
 	ref := msg.GetReference()
 
 	es := lr.UpsertExecution(ref)
+	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
+		return nil, errors.Errorf("loop detected")
+	}
+	fuse := true
 	es.Lock()
+	defer func() {
+		if fuse {
+			es.Unlock()
+		}
+	}()
+	lr.execution[ref].traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
 
 	lr.caseBindReplaysMutex.Lock()
@@ -210,6 +225,11 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 		Resp: msg,
 	})
 
+	vb.Begin(ref, core.CaseRecord{
+		Type: core.CaseRecordTypeTraceID,
+		Resp: inslogger.TraceID(ctx),
+	})
+
 	es.request, err = vb.RegisterRequest(msg)
 
 	if err != nil {
@@ -229,10 +249,12 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
+		fuse = false
 		re, err := lr.executeMethodCall(es, m, vb)
 		return re, err
 
 	case *message.CallConstructor:
+		fuse = false
 		re, err := lr.executeConstructorCall(es, m, vb)
 		return re, err
 

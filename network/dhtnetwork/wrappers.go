@@ -205,12 +205,12 @@ func (w *Wrapper) ResendPulseToKnownHosts(pulse core.Pulse) {
 	activeNodes := w.HostNetwork.GetActiveNodesList()
 	hosts := make([]host.Host, 0)
 	for _, node := range activeNodes {
-		address, err := host.NewAddress(node.Address)
+		address, err := host.NewAddress(node.PhysicalAddress())
 		if err != nil {
-			log.Error("error resolving address while resending pulse: " + node.Address)
+			log.Error("error resolving address while resending pulse: " + node.PhysicalAddress())
 			continue
 		}
-		id := id.FromBase58(resolver.ResolveHostID(node.NodeID))
+		id := id.FromBase58(resolver.ResolveHostID(node.ID()))
 		hosts = append(hosts, host.Host{ID: id, Address: address})
 	}
 	ResendPulseToKnownHosts(w.HostNetwork, hosts, p)

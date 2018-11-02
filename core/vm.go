@@ -81,6 +81,7 @@ type CaseRecordType int
 const (
 	caseRecordTypeUnexistent CaseRecordType = iota
 	CaseRecordTypeStart
+	CaseRecordTypeTraceID
 	CaseRecordTypeResult
 	CaseRecordTypeRequest
 	CaseRecordTypeGetObject

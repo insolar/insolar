@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package nodekeeper
+package nodenetwork
 
 import (
 	"errors"
@@ -26,32 +26,32 @@ import (
 )
 
 type UnsyncList struct {
-	unsync []*core.Node
+	unsync []core.Node
 	pulse  core.PulseNumber
 	hash   []*network.NodeUnsyncHash
 
 	waiters     []chan []*network.NodeUnsyncHash
 	waitersLock sync.Mutex
 
-	unsyncListCache map[core.RecordRef][]*core.Node
+	unsyncListCache map[core.RecordRef][]core.Node
 	unsyncListLock  sync.Mutex
 	unsyncHashCache map[core.RecordRef][]*network.NodeUnsyncHash
 	unsyncHashLock  sync.Mutex
 }
 
 // NewUnsyncHolder create new object to hold data for consensus
-func NewUnsyncHolder(pulse core.PulseNumber, unsync []*core.Node) *UnsyncList {
+func NewUnsyncHolder(pulse core.PulseNumber, unsync []core.Node) *UnsyncList {
 	return &UnsyncList{
 		pulse:           pulse,
 		unsync:          unsync,
 		waiters:         make([]chan []*network.NodeUnsyncHash, 0),
-		unsyncListCache: make(map[core.RecordRef][]*core.Node),
+		unsyncListCache: make(map[core.RecordRef][]core.Node),
 		unsyncHashCache: make(map[core.RecordRef][]*network.NodeUnsyncHash),
 	}
 }
 
 // GetUnsync returns list of local unsync nodes. This list is created
-func (u *UnsyncList) GetUnsync() []*core.Node {
+func (u *UnsyncList) GetUnsync() []core.Node {
 	return u.unsync
 }
 
@@ -102,7 +102,7 @@ func (u *UnsyncList) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyncH
 }
 
 // AddUnsyncList add unsync list for remote ref
-func (u *UnsyncList) AddUnsyncList(ref core.RecordRef, unsync []*core.Node) {
+func (u *UnsyncList) AddUnsyncList(ref core.RecordRef, unsync []core.Node) {
 	u.unsyncListLock.Lock()
 	defer u.unsyncListLock.Unlock()
 
@@ -118,7 +118,7 @@ func (u *UnsyncList) AddUnsyncHash(ref core.RecordRef, hash []*network.NodeUnsyn
 }
 
 // GetUnsyncList get unsync list for remote ref
-func (u *UnsyncList) GetUnsyncList(ref core.RecordRef) ([]*core.Node, bool) {
+func (u *UnsyncList) GetUnsyncList(ref core.RecordRef) ([]core.Node, bool) {
 	u.unsyncListLock.Lock()
 	defer u.unsyncListLock.Unlock()
 

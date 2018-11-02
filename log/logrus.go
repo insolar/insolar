@@ -168,3 +168,22 @@ func (l logrusAdapter) GetLevel() string {
 func (l logrusAdapter) SetOutput(w io.Writer) {
 	l.entry.Logger.SetOutput(w)
 }
+
+// WithSkipDelta changes current skip stack frames value for underlying logrus adapter
+// on delta value. More about skip value is here https://golang.org/pkg/runtime/#Caller.
+//
+// This is useful than logger methods called not from place they should report,
+// like helper functions.
+func WithSkipDelta(cl core.Logger, delta int) core.Logger {
+	l, ok := cl.(logrusAdapter)
+	if !ok {
+		return cl
+	}
+	newskip := l.skipCallNumber + delta
+	out := l
+	if newskip < 0 {
+		newskip = 0
+	}
+	out.skipCallNumber = newskip
+	return out
+}

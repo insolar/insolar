@@ -20,6 +20,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/insolar/insolar/core/utils"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -28,7 +30,7 @@ import (
 func (ar *Runner) infoHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
-		_, inslog := inslogger.WithTraceField(context.Background(), RandTraceID())
+		_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 		data, err := c.Bootstrapper.Info()
 		if err != nil {
