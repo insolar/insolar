@@ -563,3 +563,34 @@ func (rv *ReferendumVote) Serialize() ([]byte, error) {
 
 	return result.Bytes(), nil
 }
+
+// Deserialize implements interface method
+func (nlv *NodeListVote) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &nlv.NodeListCount)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeListVote.Deserialize ] Can't read NodeListCount")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &nlv.NodeListHash)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeListVote.Deserialize ] Can't read NodeListHash")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (nlv *NodeListVote) Serialize() ([]byte, error) {
+	result := new(bytes.Buffer)
+	err := binary.Write(result, defaultByteOrder, nlv.NodeListCount)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeListVote.Serialize ] Can't write NodeListCount")
+	}
+
+	err = binary.Write(result, defaultByteOrder, nlv.NodeListHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeListVote.Serialize ] Can't write NodeListHash")
+	}
+
+	return result.Bytes(), nil
+}
