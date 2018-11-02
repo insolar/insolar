@@ -102,21 +102,21 @@ func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
 
 		go func(wg *sync.WaitGroup, participant Participant) {
 			defer wg.Done()
-			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
-				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
+			if participant.GetActiveNode().ID() != c.self.GetActiveNode().ID() {
+				log.Infof("data exchage with %s", participant.GetActiveNode().ID().String())
 
 				data, err := c.communicator.ExchangeData(ctx, c.holder.GetPulse(), participant, c.holder.GetUnsync())
 				receivedNodes := make([]string, 0)
 				for _, node := range data {
-					receivedNodes = append(receivedNodes, node.NodeID.String())
+					receivedNodes = append(receivedNodes, node.ID().String())
 				}
-				log.Debugf("received from %s unsync list: %s", participant.GetActiveNode().NodeID, strings.Join(receivedNodes, ", "))
+				log.Debugf("received from %s unsync list: %s", participant.GetActiveNode().ID(), strings.Join(receivedNodes, ", "))
 				if err != nil {
 					log.Errorln(err.Error())
 				}
-				c.results.writeResultData(participant.GetActiveNode().NodeID, data)
+				c.results.writeResultData(participant.GetActiveNode().ID(), data)
 			} else {
-				c.results.writeResultData(participant.GetActiveNode().NodeID, c.holder.GetUnsync())
+				c.results.writeResultData(participant.GetActiveNode().ID(), c.holder.GetUnsync())
 			}
 		}(wg, p)
 	}
