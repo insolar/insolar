@@ -57,7 +57,7 @@ func NewParticipant(ref byte, list []core.Node) *TestParticipant {
 }
 
 func (p *TestParticipant) GetID() core.RecordRef {
-	return p.node.NodeID
+	return p.node.ID()
 }
 
 func (p *TestParticipant) GetActiveNode() *core.Node {
