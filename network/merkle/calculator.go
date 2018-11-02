@@ -82,6 +82,17 @@ func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error)
 }
 
 func (c *calculator) GetCloudProof(ctx context.Context) (*CloudProof, error) {
+	cloudHash := make([]byte, 0) // TODO: calculate tree
+
+	signature, err := ecdsa.Sign(cloudHash, c.Certificate.GetEcdsaPrivateKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetCloudProof ] Could't sign cloud hash")
+	}
+
+	return &CloudProof{
+		Signature: signature,
+	}, nil
+
 	return &CloudProof{
 		Signature: nil,
 	}, nil
