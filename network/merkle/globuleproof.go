@@ -16,7 +16,16 @@
 
 package merkle
 
+import (
+	"context"
+
+	"github.com/insolar/insolar/core"
+)
+
 type GlobuleProof struct {
 	Signature []byte
 }
 
+func (gp *GlobuleProof) IsValid(ctx context.Context, node core.Node, globuleHash []byte) bool {
+	return true
+}

@@ -26,6 +26,7 @@ type NodeProof struct {
 	StateHash []byte
 	Signature []byte
 }
+
 func (np *NodeProof) IsValid(ctx context.Context, node core.Node, pulseHash []byte) bool {
 	return true
 }
