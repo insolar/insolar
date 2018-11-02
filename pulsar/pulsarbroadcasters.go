@@ -259,6 +259,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 		log.Error(err)
 	}
 	currentPulsar.SetLastPulse(&pulseForSending)
+	logger.Infof("Latest pulse is %v", pulseForSending.PulseNumber)
 
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
 }
