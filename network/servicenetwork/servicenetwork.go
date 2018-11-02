@@ -45,26 +45,26 @@ type ServiceNetwork struct {
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
-	network := &ServiceNetwork{}
+	serviceNetwork := &ServiceNetwork{}
 
 	// workaround before DI
 	cert, err := certificate.NewCertificate(conf.KeysPath, conf.CertificatePath)
 	if err != nil {
 		log.Warnf("failed to read certificate: %s", err.Error())
 	}
-	hostnetwork, err := NewHostNetwork(conf, cert, network.onPulse)
+	hostnetwork, err := NewHostNetwork(conf, cert, serviceNetwork.onPulse)
 	if err != nil {
 		log.Error("failed to create hostnetwork: %s", err.Error())
 	}
 	controller, err := NewNetworkController(conf, hostnetwork)
 	if err != nil {
-		log.Error("failed to create network controller: %s", err.Error())
+		log.Error("failed to create serviceNetwork controller: %s", err.Error())
 	}
-	network.hostNetwork = hostnetwork
-	network.controller = controller
-	network.certificate = cert
-	network.consensus = NewConsensus(network.hostNetwork)
-	return network, nil
+	serviceNetwork.hostNetwork = hostnetwork
+	serviceNetwork.controller = controller
+	serviceNetwork.certificate = cert
+	serviceNetwork.consensus = NewConsensus(serviceNetwork.hostNetwork)
+	return serviceNetwork, nil
 }
 
 // GetAddress returns host public address.
