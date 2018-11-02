@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -41,8 +42,22 @@ func NewSigner(certificate core.Certificate) *Signer {
 	return &Signer{lock: &sync.Mutex{}, certificate: certificate, nonces: make(map[core.RecordRef]Nonce)}
 }
 
-// AddPendingNode adds a pending node.
-func (signer *Signer) AddPendingNode(ref core.RecordRef, nonce Nonce) {
+// AddPendingNode adds a pending node and returns a corresponding nonce.
+func (signer *Signer) AddPendingNode(ref core.RecordRef) (Nonce, error) {
+	nonce, err := signer.generateNonce()
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error generating nonce for node %s", ref.String())
+	}
+	signer.addNonce(ref, nonce)
+	return nonce, nil
+}
+
+func (signer *Signer) generateNonce() (Nonce, error) {
+	// TODO: add entropy.
+	return time.Now().MarshalBinary()
+}
+
+func (signer *Signer) addNonce(ref core.RecordRef, nonce Nonce) {
 	signer.lock.Lock()
 	defer signer.lock.Unlock()
 

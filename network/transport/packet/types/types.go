@@ -80,7 +80,7 @@ const (
 	//
 	GetNonce
 	//
-	Connect
+	Authorize
 	//
 	Disconnect
 )
