@@ -90,7 +90,7 @@ func NewNetworkController(
 
 	c := Controller{}
 	c.network = network
-	c.bootstrapController = NewBootstrapController(&c.options, network, NewPinger(transport))
+	c.bootstrapController = NewBootstrapController(&c.options, transport)
 
 	return &c
 }

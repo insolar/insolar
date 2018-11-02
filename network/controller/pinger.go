@@ -19,7 +19,6 @@ package controller
 import (
 	"time"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -32,22 +31,22 @@ type Pinger struct {
 }
 
 // PingWithTimeout ping remote host with timeout
-func (p *Pinger) Ping(address string, timeout time.Duration) (core.RecordRef, error) {
+func (p *Pinger) Ping(address string, timeout time.Duration) (*host.Host, error) {
 	request := p.transport.NewRequestBuilder().Type(types.Ping).Build()
 	addr, err := host.NewAddress(address)
 	if err != nil {
-		return core.RecordRef{}, errors.Wrapf(err, "failed to resolve address %s", address)
+		return nil, errors.Wrapf(err, "failed to resolve address %s", address)
 	}
 	h := host.NewHost(addr)
 	future, err := p.transport.SendRequestPacket(request, h)
 	if err != nil {
-		return core.RecordRef{}, errors.Wrapf(err, "failed to ping address %s", address)
+		return nil, errors.Wrapf(err, "failed to ping address %s", address)
 	}
 	result, err := future.GetResponse(timeout)
 	if err != nil {
-		return core.RecordRef{}, errors.Wrapf(err, "failed to receive ping response from address %s", address)
+		return nil, errors.Wrapf(err, "failed to receive ping response from address %s", address)
 	}
-	return result.GetSender(), nil
+	return result.GetSenderHost(), nil
 }
 
 func NewPinger(transport hostnetwork.InternalTransport) *Pinger {

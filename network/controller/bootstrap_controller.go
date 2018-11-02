@@ -23,15 +23,18 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
 
 type BootstrapController struct {
-	options *Options
-	network network.HostNetwork
-	pinger  *Pinger
+	options   *Options
+	transport hostnetwork.InternalTransport
+	pinger    *Pinger
+
+	bootstrapHosts []*host.Host
 }
 
 type BootstrapRequest struct {
@@ -57,22 +60,21 @@ func init() {
 	gob.Register(&BootstrapResponse{})
 }
 
+func (bc *BootstrapController) GetBootstrapHosts() []*host.Host {
+	return bc.bootstrapHosts
+}
+
 func (bc *BootstrapController) Bootstrap() error {
 	bootstrapCount := len(bc.options.BootstrapHosts)
 	bootstrapHosts := make(chan *host.Host, bootstrapCount)
 	for _, bootstrapAddress := range bc.options.BootstrapHosts {
 		go func(address string, ch chan<- *host.Host) {
 			log.Infof("Starting bootstrap to address %s", address)
-			ref, err := bc.bootstrap(address)
+			bootstrapHost, err := bc.bootstrap(address)
 			if err != nil {
 				log.Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return
 			}
-			addr, err := host.NewAddress(address)
-			if err != nil {
-				log.Errorf("Failed to resolve address: %s", address)
-			}
-			bootstrapHost := &host.Host{NodeID: ref, Address: addr}
 			bootstrapHosts <- bootstrapHost
 		}(bootstrapAddress, bootstrapHosts)
 	}
@@ -97,43 +99,44 @@ Loop:
 	if counter == 0 {
 		return errors.New("Failed to bootstrap to any of discovery nodes")
 	}
+	bc.bootstrapHosts = result
 	return nil
 }
 
-func (bc *BootstrapController) bootstrap(address string) (core.RecordRef, error) {
+func (bc *BootstrapController) bootstrap(address string) (*host.Host, error) {
 	// TODO: add infinite bootstrap
-	ref, err := bc.pinger.Ping(address, bc.options.PingTimeout)
+	bootstrapHost, err := bc.pinger.Ping(address, bc.options.PingTimeout)
 	if err != nil {
-		return core.RecordRef{}, errors.Wrapf(err, "Failed to ping address %s", address)
+		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
 	}
-	request := bc.network.NewRequestBuilder().Type(types.Bootstrap).Data(&BootstrapRequest{}).Build()
-	future, err := bc.network.SendRequest(request, ref)
+	request := bc.transport.NewRequestBuilder().Type(types.Bootstrap).Data(&BootstrapRequest{}).Build()
+	future, err := bc.transport.SendRequestPacket(request, bootstrapHost)
 	if err != nil {
-		return core.RecordRef{}, errors.Wrapf(err, "Failed to ping address %s", address)
+		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
 	}
 	response, err := future.GetResponse(bc.options.BootstrapTimeout)
 	if err != nil {
-		return core.RecordRef{}, errors.Wrap(err, "Failed to get response to bootstrap request")
+		return nil, errors.Wrap(err, "Failed to get response to bootstrap request")
 	}
 	data := response.GetData().(*BootstrapResponse)
 	if data.Code == BootstrapRejected {
-		return core.RecordRef{}, errors.New("Rejected: " + data.RejectReason)
+		return nil, errors.New("Rejected: " + data.RejectReason)
 	}
 	if data.Code == BootstrapRedirected {
 		return bc.bootstrap(data.RedirectHost)
 	}
-	return response.GetSender(), nil
+	return response.GetSenderHost(), nil
 }
 
 func (bc *BootstrapController) processBootstrap(request network.Request) (network.Response, error) {
 	// TODO: check certificate and redirect logic
-	return bc.network.BuildResponse(request, &BootstrapResponse{Code: BootstrapAccepted}), nil
+	return bc.transport.BuildResponse(request, &BootstrapResponse{Code: BootstrapAccepted}), nil
 }
 
 func (bc *BootstrapController) Start(components core.Components) {
-	bc.network.RegisterRequestHandler(types.Bootstrap, bc.processBootstrap)
+	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 }
 
-func NewBootstrapController(options *Options, network network.HostNetwork, pinger *Pinger) *BootstrapController {
-	return &BootstrapController{options: options, network: network, pinger: pinger}
+func NewBootstrapController(options *Options, transport hostnetwork.InternalTransport) *BootstrapController {
+	return &BootstrapController{options: options, transport: transport, pinger: NewPinger(transport)}
 }
