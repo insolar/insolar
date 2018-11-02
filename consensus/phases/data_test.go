@@ -207,21 +207,21 @@ func TestNodeJoinClaim_BadData(t *testing.T) {
 
 func TestNodeLeaveClaim(t *testing.T) {
 	nodeLeaveClaim := &NodeLeaveClaim{}
-	nodeLeaveClaim.length = 333
+	nodeLeaveClaim.length = uint16(333)
 	checkSerialization(t, nodeLeaveClaim, &NodeLeaveClaim{})
 }
 
 func TestNodeLeaveClaim_BadData(t *testing.T) {
 	nodeLeaveClaim := &NodeLeaveClaim{}
-	nodeLeaveClaim.length = 333
+	nodeLeaveClaim.length = uint16(333)
 	checkBadDataSerialization(t, nodeLeaveClaim, &NodeLeaveClaim{},
 		"[ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 }
 
 func makeReferendumVote() *ReferendumVote {
 	referendumVote := &ReferendumVote{}
-	referendumVote.Length = 444
-	referendumVote.Type = 23
+	referendumVote.Length = uint16(44)
+	referendumVote.Type = ReferendumType(23)
 
 	return referendumVote
 }
@@ -233,4 +233,21 @@ func TestReferendumVote(t *testing.T) {
 func TestReferendumVote_BadData(t *testing.T) {
 	checkBadDataSerialization(t, makeReferendumVote(), &ReferendumVote{},
 		"[ ReferendumVote.Deserialize ] Can't read Length: unexpected EOF")
+}
+
+func makeNodeListVote() *NodeListVote {
+	nodeListVote := &NodeListVote{}
+	nodeListVote.NodeListHash = uint32(13)
+	nodeListVote.NodeListCount = uint16(77)
+
+	return nodeListVote
+}
+
+func TestNodeListVote(t *testing.T) {
+	checkSerialization(t, makeNodeListVote(), &NodeListVote{})
+}
+
+func TestNodeListVote_BadData(t *testing.T) {
+	checkBadDataSerialization(t, makeNodeListVote(), &NodeListVote{},
+		"[ NodeListVote.Deserialize ] Can't read NodeListHash: unexpected EOF")
 }
