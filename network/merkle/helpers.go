@@ -17,6 +17,7 @@
 package merkle
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 func hashConcat(args ...[]byte) []byte {
@@ -27,4 +28,7 @@ func hashConcat(args ...[]byte) []byte {
 	}
 
 	return hash.SHA3Bytes256(result)
+}
+func pulseHash(pulse *core.Pulse) []byte {
+	return hashConcat(pulse.PulseNumber.Bytes(), pulse.Entropy[:])
 }
