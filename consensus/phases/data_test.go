@@ -33,8 +33,8 @@ func makeDefaultPacketHeader() *PacketHeader {
 	packetHeader.SubType = 3
 	packetHeader.PacketT = Referendum
 	// -------------------
-	packetHeader.F00 = true
-	packetHeader.F01 = true
+	packetHeader.f00 = true
+	packetHeader.f01 = true
 	// -------------------
 	packetHeader.Pulse = uint32(22)
 	packetHeader.OriginNodeID = uint32(42)
@@ -315,28 +315,28 @@ func TestParseAndCompactRouteInfo(t *testing.T) {
 func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 	var pulseAndCustomFlagsTests = []PacketHeader{
 		PacketHeader{
-			F00:   true,
-			F01:   true,
+			f00:   true,
+			f01:   true,
 			Pulse: 0,
 		},
 		PacketHeader{
-			F00:   false,
-			F01:   true,
+			f00:   false,
+			f01:   true,
 			Pulse: 1,
 		},
 		PacketHeader{
-			F00:   true,
-			F01:   false,
+			f00:   true,
+			f01:   false,
 			Pulse: 2,
 		},
 		PacketHeader{
-			F00:   false,
-			F01:   false,
+			f00:   false,
+			f01:   false,
 			Pulse: 2,
 		},
 		PacketHeader{
-			F00:   false,
-			F01:   false,
+			f00:   false,
+			f01:   false,
 			Pulse: 0,
 		},
 	}
