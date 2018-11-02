@@ -16,7 +16,9 @@
 
 package core
 
-import "context"
+import (
+	"context"
+)
 
 // JetRole is number representing a node role.
 type JetRole int
@@ -44,6 +46,9 @@ type Ledger interface {
 
 	// GetPulseManager returns pulse manager to work with.
 	GetPulseManager() PulseManager
+
+	// GetLocalStorage returns local storage to work with.
+	GetLocalStorage() LocalStorage
 }
 
 // PulseManager provides Ledger's methods related to Pulse.
@@ -216,4 +221,13 @@ type ObjectDescriptor interface {
 type RefIterator interface {
 	Next() (*RecordRef, error)
 	HasNext() bool
+}
+
+// LocalStorage allows a node to save local data.
+type LocalStorage interface {
+	// SetMessage saves message in storage.
+	SetMessage(msg Message) (*RecordID, error)
+
+	// GetMessage retrieves message from storage.
+	GetMessage(ctx context.Context, id RecordID) (SignedMessage, error)
 }

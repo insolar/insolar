@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
@@ -35,6 +36,7 @@ type Ledger struct {
 	pm      *pulsemanager.PulseManager
 	jc      *jetcoordinator.JetCoordinator
 	handler *artifactmanager.MessageHandler
+	ls      *localstorage.LocalStorage
 }
 
 // GetPulseManager returns PulseManager.
@@ -50,6 +52,11 @@ func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
 // GetArtifactManager returns artifact manager to work with.
 func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	return l.am
+}
+
+// GetLocalStorage returns local storage to work with.
+func (l *Ledger) GetLocalStorage() *localstorage.LocalStorage {
+	return l.ls
 }
 
 // NewLedger creates new ledger instance.
@@ -75,6 +82,7 @@ func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) 
 	if err != nil {
 		return nil, err
 	}
+	ls, err := localstorage.NewLocalStorage(db)
 
 	err = db.Bootstrap(ctx)
 	if err != nil {
@@ -87,6 +95,7 @@ func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) 
 		pm:      pm,
 		jc:      jc,
 		handler: handler,
+		ls:      ls,
 	}
 
 	return &ledger, nil
