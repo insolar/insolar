@@ -185,9 +185,10 @@ type NodeListVote struct {
 }
 
 type DeviantBitSet struct {
-	CompressedSet   bool
-	HiBitLengthFlag bool
-	LowBitLength    uint8
-	HiBitLength     uint8
-	Payload         []byte
+	CompressedSet     bool
+	HighBitLengthFlag bool
+	LowBitLength      uint8
+	//------------------
+	HighBitLength uint8
+	Payload       []byte
 }

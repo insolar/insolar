@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
 )
 
@@ -590,6 +591,86 @@ func (nlv *NodeListVote) Serialize() ([]byte, error) {
 	err = binary.Write(result, defaultByteOrder, nlv.NodeListHash)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeListVote.Serialize ] Can't write NodeListHash")
+	}
+
+	return result.Bytes(), nil
+}
+
+// DeviantBitSet masks
+const (
+	// take high bit
+	compressedSet = 0x80
+
+	highBitLengthFlag = 0x40
+	lowBitLength      = 0x3f
+)
+
+func (dbs *DeviantBitSet) parsePackedData(packedData uint8) {
+	dbs.CompressedSet = (packedData >> 7) == 1
+	dbs.HighBitLengthFlag = ((packedData & highBitLengthFlag) >> 6) == 1
+	dbs.LowBitLength = packedData & lowBitLength
+}
+
+func (dbs *DeviantBitSet) compactPacketData() uint8 {
+	var result uint8
+
+	if dbs.CompressedSet {
+		result |= compressedSet
+	}
+	if dbs.HighBitLengthFlag {
+		result |= highBitLengthFlag
+	}
+
+	result |= dbs.LowBitLength & lowBitLength
+
+	return result
+}
+
+// Deserialize implements interface method
+func (dbs *DeviantBitSet) Deserialize(data io.Reader) error {
+	var packedData uint8
+	err := binary.Read(data, defaultByteOrder, &packedData)
+	if err != nil {
+		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read packedData")
+	}
+	dbs.parsePackedData(packedData)
+
+	// TODO: these fields are optional
+	err = binary.Read(data, defaultByteOrder, &dbs.HighBitLength)
+	if err != nil {
+		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read HighBitLength")
+	}
+
+	// TODO: calc correct size
+	dbs.Payload = make([]byte, transport.GetUdpMaxPacketSize())
+	n, err := data.Read(dbs.Payload)
+	if err != nil {
+		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read Payload")
+	}
+	dbs.Payload = dbs.Payload[:n]
+
+	return nil
+}
+
+// Serialize implements interface method
+func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
+	result := new(bytes.Buffer)
+
+	packedData := dbs.compactPacketData()
+	err := binary.Write(result, defaultByteOrder, packedData)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write packedData")
+	}
+
+	// TODO: these fields are optional
+	err = binary.Write(result, defaultByteOrder, dbs.HighBitLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write HighBitLength")
+	}
+
+	_, err = result.Write(dbs.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write Payload")
 	}
 
 	return result.Bytes(), nil
