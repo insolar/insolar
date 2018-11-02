@@ -20,6 +20,8 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/pkg/errors"
 )
 
 type Calculator interface {
@@ -37,10 +39,28 @@ type calculator struct {
 func NewCalculator() Calculator {
 	return &calculator{}
 }
+
 func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
+	pulse, err := c.Ledger.GetPulseManager().Current(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get current pulse")
+	}
+
+	stateHash, err := c.Ledger.GetArtifactManager().State()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get node stateHash")
+	}
+
+	nodeInfoHash := nodeInfoHash(pulseHash(pulse), stateHash)
+
+	signature, err := ecdsa.Sign(nodeInfoHash, c.Certificate.GetEcdsaPrivateKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't sign node info hash")
+	}
+
 	return &NodeProof{
-		StateHash: nil,
-		Signature: nil,
+		StateHash: stateHash,
+		Signature: signature,
 	}, nil
 }
 
