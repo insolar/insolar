@@ -110,20 +110,20 @@ const (
 )
 
 type nodekeeper struct {
-	origin *core.Node
+	origin core.Node
 	state  nodekeeperState
 	pulse  core.PulseNumber
 
 	activeLock sync.RWMutex
-	active     map[core.RecordRef]*core.Node
+	active     map[core.RecordRef]core.Node
 	index      map[core.NodeRole][]core.RecordRef
-	sync       []*core.Node
+	sync       []core.Node
 
 	unsyncLock  sync.Mutex
-	unsync      []*core.Node
+	unsync      []mutableNode
 	unsyncList  *UnsyncList
 	listWaiters []chan *UnsyncList
-	nodeWaiters map[core.RecordRef]chan *core.Node
+	nodeWaiters map[core.RecordRef]chan core.Node
 }
 
 func (nk *nodekeeper) Start(ctx context.Context, components core.Components) error {
