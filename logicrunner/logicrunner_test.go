@@ -1576,8 +1576,7 @@ func (r *One) Recursive() (error) {
 
 `
 
-	ctx := context.Background()
-	ctx = inslogger.ContextWithTrace(ctx, "TestRecursiveCall")
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestRecursiveCall")
 
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()

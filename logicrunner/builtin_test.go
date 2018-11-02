@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
@@ -45,7 +47,7 @@ func byteRecorRef(b byte) core.RecordRef {
 }
 
 func TestBareHelloworld(t *testing.T) {
-	ctx := context.TODO()
+	ctx := context.Background()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -102,8 +104,9 @@ func TestBareHelloworld(t *testing.T) {
 	key, _ := ecdsa.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	// #1
+	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
@@ -121,8 +124,9 @@ func TestBareHelloworld(t *testing.T) {
 	key, _ = ecdsa.GeneratePrivateKey()
 	signed, _ = message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
 	// #2
+	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(
-		context.TODO(),
+		ctx,
 		signed,
 	)
 	assert.NoError(t, err, "contract call")
