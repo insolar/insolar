@@ -125,11 +125,11 @@ func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseN
 	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, -1)
 	if err != nil {
 		log.Debugf("ExchangeHash: error getting cache in consensus: " + err.Error())
-	} else if result, ok := unsyncHolder.GetUnsyncHash(p.GetActiveNode().NodeID); ok {
-		log.Debugf("ExchangeHash: got unsync hash of remote party %s from cache", p.GetActiveNode().NodeID)
+	} else if result, ok := unsyncHolder.GetUnsyncHash(p.GetActiveNode().ID()); ok {
+		log.Debugf("ExchangeHash: got unsync hash of remote party %s from cache", p.GetActiveNode().ID())
 		return result, nil
 	}
-	log.Debugf("Sending consensus unsync hash exchange request to %s", p.GetActiveNode().NodeID)
+	log.Debugf("Sending consensus unsync hash exchange request to %s", p.GetActiveNode().ID())
 	sender, receiver, err := c.getSenderAndReceiver(ctx, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")
@@ -138,7 +138,7 @@ func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseN
 		Type(types.TypeExchangeUnsyncHash).
 		Receiver(receiver).
 		Request(&packet.RequestExchangeUnsyncHash{
-			SenderID:   c.keeper.GetOrigin().NodeID,
+			SenderID:   c.keeper.GetOrigin().ID(),
 			Pulse:      pulse,
 			UnsyncHash: data,
 		}).
@@ -158,7 +158,7 @@ func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseN
 	if responseData.Error != "" {
 		return nil, errors.New("ExchangeHash: got error from remote party: " + responseData.Error)
 	}
-	log.Debugf("ExchangeHash: got unsync hash of remote party %s from network", p.GetActiveNode().NodeID)
+	log.Debugf("ExchangeHash: got unsync hash of remote party %s from network", p.GetActiveNode().ID())
 	return responseData.UnsyncHash, nil
 }
 
