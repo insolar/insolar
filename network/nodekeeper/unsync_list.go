@@ -102,7 +102,7 @@ func (u *UnsyncList) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyncH
 }
 
 // AddUnsyncList add unsync list for remote ref
-func (u *UnsyncList) AddUnsyncList(ref core.RecordRef, unsync []*core.Node) {
+func (u *UnsyncList) AddUnsyncList(ref core.RecordRef, unsync []core.Node) {
 	u.unsyncListLock.Lock()
 	defer u.unsyncListLock.Unlock()
 
