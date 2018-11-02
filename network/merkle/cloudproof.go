@@ -27,5 +27,5 @@ type CloudProof struct {
 }
 
 func (cp *CloudProof) IsValid(ctx context.Context, node core.Node, cloudHash []byte) bool {
-	return true
+	return verifySignature(ctx, cloudHash, cp.Signature, node.PublicKey())
 }
