@@ -53,7 +53,7 @@ func newNodeKeeper() network.NodeKeeper {
 
 func TestNodekeeper_GetOrigin(t *testing.T) {
 	id := core.RecordRef{255}
-	n := testutils.TestNode(id)
+	n := testNode(id)
 	keeper := NewNodeKeeper(n)
 	assert.Equal(t, n, keeper.GetOrigin())
 }
