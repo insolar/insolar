@@ -55,7 +55,7 @@ func NewNodeNetwork(configuration configuration.Configuration) (core.NodeNetwork
 	return nodeKeeper, nil
 }
 
-func createOrigin(configuration configuration.Configuration) (*core.Node, error) {
+func createOrigin(configuration configuration.Configuration) (mutableNode, error) {
 	nodeID := core.NewRefFromBase58(configuration.Node.Node.ID)
 	publicAddress, err := resolveAddress(configuration)
 	if err != nil {
@@ -64,15 +64,15 @@ func createOrigin(configuration configuration.Configuration) (*core.Node, error)
 
 	// TODO: get roles from certificate
 	// TODO: pass public key
-	return &core.Node{
-		NodeID:   nodeID,
-		PulseNum: 0,
-		State:    core.NodeJoined,
-		Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
-		Address:  publicAddress,
-		Version:  version.Version,
-		// PublicKey: ???
-	}, nil
+	return newMutableNode(
+		nodeID,
+		[]core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+		nil,
+		0,
+		core.NodeJoined,
+		publicAddress,
+		version.Version,
+	), nil
 }
 
 func resolveAddress(configuration configuration.Configuration) (string, error) {
