@@ -82,7 +82,7 @@ type baseConsensus struct {
 }
 
 // DoConsensus implements consensus interface
-func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]*core.Node, error) {
+func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]core.Node, error) {
 	log.Infof("Start consensus between %d participants about %d unsyncs", len(allParticipants), len(holder.GetUnsync()))
 	c.self = self
 	c.allParticipants = allParticipants
