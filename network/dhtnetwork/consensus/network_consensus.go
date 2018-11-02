@@ -32,7 +32,7 @@ type participantWrapper struct {
 }
 
 // GetActiveNode implements Participant interface for Node wrapper.
-func (an *participantWrapper) GetActiveNode() *core.Node {
+func (an *participantWrapper) GetActiveNode() core.Node {
 	return an.node
 }
 
