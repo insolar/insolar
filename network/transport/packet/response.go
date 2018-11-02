@@ -127,7 +127,7 @@ type ResponseCheckSignedNonce struct {
 
 // RequestExchangeUnsyncLists is request to exchange unsync lists during consensus
 type ResponseExchangeUnsyncLists struct {
-	UnsyncList []*core.Node
+	UnsyncList []core.Node
 	Error      string
 }
 
