@@ -165,7 +165,7 @@ func (hh *mockHostHandler) CascadeSendMessage(data core.Cascade, targetID string
 	return nil
 }
 
-func (hh *mockHostHandler) GetActiveNodesList() []*core.Node {
+func (hh *mockHostHandler) GetActiveNodesList() []core.Node {
 	return nil
 }
 
