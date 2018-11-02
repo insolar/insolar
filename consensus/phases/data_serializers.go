@@ -34,7 +34,7 @@ type Serializer interface {
 
 // ----------------------------------PHASE 1--------------------------------
 
-// routInfoMasks masks
+// routInfoMasks auxiliar constants
 const (
 	// take low bit
 	hasRoutingMask = 0x1
@@ -64,7 +64,7 @@ func (ph *PacketHeader) compactRouteInfo() uint8 {
 	return result
 }
 
-// PulseAndCustomFlags masks
+// PulseAndCustomFlags auxiliar constants
 const (
 	// take bit before high bit
 	f00Mask  = 0x40000000
@@ -124,9 +124,15 @@ func (ph *PacketHeader) Deserialize(data io.Reader) error {
 	return nil
 }
 
+func allocateBuffer(n int) *bytes.Buffer {
+	buf := make([]byte, 0, n)
+	result := bytes.NewBuffer(buf)
+	return result
+}
+
 // Serialize implements interface method
 func (ph *PacketHeader) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(64)
 	routeInfo := ph.compactRouteInfo()
 	err := binary.Write(result, defaultByteOrder, routeInfo)
 	if err != nil {
@@ -189,7 +195,8 @@ func (pde *PulseDataExt) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (pde *PulseDataExt) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+
+	result := allocateBuffer(256)
 	err := binary.Write(result, defaultByteOrder, pde.NextPulseDelta)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ PulseDataExt.Serialize ] Can't write NextPulseDelta")
@@ -225,7 +232,7 @@ func (pde *PulseDataExt) Serialize() ([]byte, error) {
 
 // Deserialize implements interface method
 func (pd *PulseData) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &pd.PulseNumer)
+	err := binary.Read(data, defaultByteOrder, &pd.PulseNumber)
 	if err != nil {
 		return errors.Wrap(err, "[ PulseData.Deserialize ] Can't read PulseNumer")
 	}
@@ -242,8 +249,8 @@ func (pd *PulseData) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (pd *PulseData) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
-	err := binary.Write(result, defaultByteOrder, pd.PulseNumer)
+	result := allocateBuffer(64)
+	err := binary.Write(result, defaultByteOrder, pd.PulseNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ PulseData.Serialize ] Can't write PulseNumer")
 	}
@@ -278,7 +285,7 @@ func (npp *NodePulseProof) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (npp *NodePulseProof) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(128)
 	err := binary.Write(result, defaultByteOrder, npp.NodeStateHash)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodePulseProof.Serialize ] Can't write NodeStateHash")
@@ -309,7 +316,7 @@ func (nb *NodeBroadcast) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (nb *NodeBroadcast) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(64)
 	err := binary.Write(result, defaultByteOrder, nb.EmergencyLevel)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeBroadcast.Serialize ] Can't write EmergencyLevel")
@@ -350,7 +357,7 @@ func (cpa *CapabilityPoolingAndActivation) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (cpa *CapabilityPoolingAndActivation) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(128)
 	err := binary.Write(result, defaultByteOrder, cpa.PollingFlags)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write PollingFlags")
@@ -401,7 +408,7 @@ func (nvb *NodeViolationBlame) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (nvb *NodeViolationBlame) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(64)
 	err := binary.Write(result, defaultByteOrder, nvb.BlameNodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeViolationBlame.Serialize ] Can't write BlameNodeID")
@@ -472,7 +479,7 @@ func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(1024)
 	err := binary.Write(result, defaultByteOrder, njc.NodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodeID")
@@ -528,7 +535,7 @@ func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(64)
 	err := binary.Write(result, defaultByteOrder, nlc.length)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeLeaveClaim.Serialize ] Can't write length")
@@ -556,7 +563,7 @@ func (rv *ReferendumVote) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (rv *ReferendumVote) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(64)
 	err := binary.Write(result, defaultByteOrder, rv.Type)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ReferendumVote.Serialize ] Can't write Type")
@@ -587,7 +594,7 @@ func (nlv *NodeListVote) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (nlv *NodeListVote) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(64)
 	err := binary.Write(result, defaultByteOrder, nlv.NodeListCount)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeListVote.Serialize ] Can't write NodeListCount")
@@ -601,7 +608,7 @@ func (nlv *NodeListVote) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-// DeviantBitSet masks
+// DeviantBitSet auxiliar constants
 const (
 	// take high bit
 	compressedSetMask   = 0x80
@@ -661,7 +668,7 @@ func (dbs *DeviantBitSet) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
-	result := new(bytes.Buffer)
+	result := allocateBuffer(2048)
 
 	packedData := dbs.compactPacketData()
 	err := binary.Write(result, defaultByteOrder, packedData)

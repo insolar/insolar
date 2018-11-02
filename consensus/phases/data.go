@@ -63,8 +63,8 @@ type PulseDataExt struct {
 
 // PulseData is a pulse data.
 type PulseData struct {
-	PulseNumer uint32
-	Data       *PulseDataExt
+	PulseNumber uint32
+	Data        *PulseDataExt
 }
 
 type NodePulseProof struct {

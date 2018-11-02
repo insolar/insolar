@@ -102,7 +102,7 @@ func TestPulseDataExtReadWrite_BadData(t *testing.T) {
 
 func TestPulseDataReadWrite(t *testing.T) {
 	pulseData := &PulseData{}
-	pulseData.PulseNumer = uint32(32)
+	pulseData.PulseNumber = uint32(32)
 	pulseData.Data = makeDefaultPulseDataExt()
 
 	checkSerializationDeserialization(t, pulseData)
@@ -110,7 +110,7 @@ func TestPulseDataReadWrite(t *testing.T) {
 
 func TestPulseDataReadWrite_BadData(t *testing.T) {
 	pulseData := &PulseData{}
-	pulseData.PulseNumer = uint32(32)
+	pulseData.PulseNumber = uint32(32)
 	pulseData.Data = makeDefaultPulseDataExt()
 	checkBadDataSerialization(t, pulseData, &PulseData{},
 		"[ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
