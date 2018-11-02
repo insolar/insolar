@@ -25,7 +25,8 @@ import (
 	"reflect"
 	"syscall"
 
-	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/core/utils"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -152,7 +153,7 @@ func main() {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	// instrumentation
-	traceid := api.RandTraceID()
+	traceid := utils.RandTraceID()
 	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
 	jaegerflush := func() {}
 	if params.traceEnabled {
