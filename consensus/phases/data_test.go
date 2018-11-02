@@ -311,7 +311,7 @@ func TestParseAndCompactRouteInfo(t *testing.T) {
 }
 
 func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
-	var routInfoTests = []PacketHeader{
+	var pulseAndCustomFlagsTests = []PacketHeader{
 		PacketHeader{
 			F00:   true,
 			F01:   true,
@@ -339,7 +339,7 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 		},
 	}
 
-	for _, ph := range routInfoTests {
+	for _, ph := range pulseAndCustomFlagsTests {
 		raw := ph.compactPulseAndCustomFlags()
 		newPh := PacketHeader{}
 		newPh.parsePulseAndCustomFlags(raw)
