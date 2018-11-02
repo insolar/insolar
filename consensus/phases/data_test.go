@@ -51,12 +51,14 @@ func serializeData(t *testing.T, serializer Serializer) []byte {
 	return data
 }
 
-func checkSerialization(t *testing.T, orig interface{}, target interface{}) {
-	data := serializeData(t, orig.(Serializer))
+func checkSerializationDeserialization(t *testing.T, orig Serializer) {
+	newObj := reflect.New(reflect.TypeOf(orig).Elem()).Interface()
+
+	data := serializeData(t, orig)
 	r := bytes.NewReader(data)
-	err := target.(Serializer).Deserialize(r)
+	err := newObj.(Serializer).Deserialize(r)
 	require.NoError(t, err)
-	require.Equal(t, orig, target)
+	require.Equal(t, orig, newObj)
 }
 
 func checkBadDataSerialization(t *testing.T, orig interface{}, target interface{}, msg string) {
@@ -68,7 +70,7 @@ func checkBadDataSerialization(t *testing.T, orig interface{}, target interface{
 }
 
 func TestPacketHeaderReadWrite(t *testing.T) {
-	checkSerialization(t, makeDefaultPacketHeader(), &PacketHeader{})
+	checkSerializationDeserialization(t, makeDefaultPacketHeader())
 }
 
 func TestPacketHeaderReadWrite_BadData(t *testing.T) {
@@ -90,7 +92,7 @@ func makeDefaultPulseDataExt() *PulseDataExt {
 }
 
 func TestPulseDataExtReadWrite(t *testing.T) {
-	checkSerialization(t, makeDefaultPulseDataExt(), &PulseDataExt{})
+	checkSerializationDeserialization(t, makeDefaultPulseDataExt())
 }
 
 func TestPulseDataExtReadWrite_BadData(t *testing.T) {
@@ -103,7 +105,7 @@ func TestPulseDataReadWrite(t *testing.T) {
 	pulseData.PulseNumer = uint32(32)
 	pulseData.Data = makeDefaultPulseDataExt()
 
-	checkSerialization(t, pulseData, &PulseData{})
+	checkSerializationDeserialization(t, pulseData)
 }
 
 func TestPulseDataReadWrite_BadData(t *testing.T) {
@@ -118,7 +120,7 @@ func TestNodePulseProofReadWrite(t *testing.T) {
 	nodePulseProof := &NodePulseProof{}
 	nodePulseProof.NodeSignature = uint64(63)
 	nodePulseProof.NodeStateHash = uint64(64)
-	checkSerialization(t, nodePulseProof, &NodePulseProof{})
+	checkSerializationDeserialization(t, nodePulseProof)
 }
 
 func TestNodePulseProofReadWrite_BadData(t *testing.T) {
@@ -138,7 +140,7 @@ func makeNodeBroadCast() *NodeBroadcast {
 }
 
 func TestNodeBroadcast(t *testing.T) {
-	checkSerialization(t, makeNodeBroadCast(), &NodeBroadcast{})
+	checkSerializationDeserialization(t, makeNodeBroadCast())
 }
 
 func TestNodeBroadcast_BadData(t *testing.T) {
@@ -157,7 +159,7 @@ func makeCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
 }
 
 func TestCapabilityPoolingAndActivation(t *testing.T) {
-	checkSerialization(t, makeCapabilityPoolingAndActivation(), &CapabilityPoolingAndActivation{})
+	checkSerializationDeserialization(t, makeCapabilityPoolingAndActivation())
 }
 
 func TestCapabilityPoolingAndActivation_BadData(t *testing.T) {
@@ -175,7 +177,7 @@ func makeNodeViolationBlame() *NodeViolationBlame {
 }
 
 func TestNodeViolationBlame(t *testing.T) {
-	checkSerialization(t, makeNodeViolationBlame(), &NodeViolationBlame{})
+	checkSerializationDeserialization(t, makeNodeViolationBlame())
 }
 
 func TestNodeViolationBlame_BadData(t *testing.T) {
@@ -198,7 +200,7 @@ func makeNodeJoinClaim() *NodeJoinClaim {
 }
 
 func TestNodeJoinClaim(t *testing.T) {
-	checkSerialization(t, makeNodeJoinClaim(), &NodeJoinClaim{})
+	checkSerializationDeserialization(t, makeNodeJoinClaim())
 }
 
 func TestNodeJoinClaim_BadData(t *testing.T) {
@@ -209,7 +211,7 @@ func TestNodeJoinClaim_BadData(t *testing.T) {
 func TestNodeLeaveClaim(t *testing.T) {
 	nodeLeaveClaim := &NodeLeaveClaim{}
 	nodeLeaveClaim.length = uint16(333)
-	checkSerialization(t, nodeLeaveClaim, &NodeLeaveClaim{})
+	checkSerializationDeserialization(t, nodeLeaveClaim)
 }
 
 func TestNodeLeaveClaim_BadData(t *testing.T) {
@@ -230,7 +232,7 @@ func makeReferendumVote() *ReferendumVote {
 }
 
 func TestReferendumVote(t *testing.T) {
-	checkSerialization(t, makeReferendumVote(), &ReferendumVote{})
+	checkSerializationDeserialization(t, makeReferendumVote())
 }
 
 func TestReferendumVote_BadData(t *testing.T) {
@@ -247,7 +249,7 @@ func makeNodeListVote() *NodeListVote {
 }
 
 func TestNodeListVote(t *testing.T) {
-	checkSerialization(t, makeNodeListVote(), &NodeListVote{})
+	checkSerializationDeserialization(t, makeNodeListVote())
 }
 
 func TestNodeListVote_BadData(t *testing.T) {
@@ -268,7 +270,7 @@ func makeDeviantBitSet() *DeviantBitSet {
 }
 
 func TestDeviantBitSet(t *testing.T) {
-	checkSerialization(t, makeDeviantBitSet(), &DeviantBitSet{})
+	checkSerializationDeserialization(t, makeDeviantBitSet())
 }
 
 func TestDeviantBitSet_BadData(t *testing.T) {
