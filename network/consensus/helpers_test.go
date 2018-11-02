@@ -60,7 +60,7 @@ func (p *TestParticipant) GetID() core.RecordRef {
 	return p.node.ID()
 }
 
-func (p *TestParticipant) GetActiveNode() *core.Node {
+func (p *TestParticipant) GetActiveNode() core.Node {
 	return p.node
 }
 
