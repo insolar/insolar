@@ -196,7 +196,7 @@ func makeNodeJoinClaim() *NodeJoinClaim {
 }
 
 func TestNodeJoinClaim(t *testing.T) {
-	checkSerialization(t, makeNodeViolationBlame(), &NodeViolationBlame{})
+	checkSerialization(t, makeNodeJoinClaim(), &NodeJoinClaim{})
 }
 
 func TestNodeJoinClaim_BadData(t *testing.T) {
