@@ -123,7 +123,6 @@ func (db *DB) Bootstrap() error {
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("bootstrap")
 		err = db.SetDrop(&jetdrop.JetDrop{})
 		if err != nil {
 			return nil, err
@@ -144,12 +143,6 @@ func (db *DB) Bootstrap() error {
 		if err != nil {
 			return nil, err
 		}
-
-		testKey := prefixkey(scopeIDJetDrop, core.PulseNumber(999).Bytes())
-		log.Infof("test set drop key - %v", testKey)
-		obj, err := db.Get(testKey)
-		log.Infof("test here it is - %v", obj)
-		log.Infof("test errror here it is - %v", err)
 
 		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
 		return genesisRef, db.Set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
@@ -193,7 +186,6 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 
 // Set wraps matching transaction manager method.
 func (db *DB) Set(key, value []byte) error {
-	log.Infof("key - %v", key)
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.Set(key, value)
 	})
@@ -304,14 +296,12 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 	[][]byte,
 	error,
 ) {
-	log.Infof("create drop - %v", pulse)
 	var err error
 	db.waitinflight()
 
 	hw := hash.NewIDHash()
 	_, err = hw.Write(prevHash)
 	if err != nil {
-		log.Error(err)
 		return nil, nil, err
 	}
 
@@ -327,7 +317,6 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			val, err := it.Item().ValueCopy(nil)
 			if err != nil {
-				log.Error(err)
 				return err
 			}
 			messages = append(messages, val)
@@ -335,7 +324,6 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		return nil
 	})
 	if err != nil {
-		log.Error(err)
 		return nil, nil, err
 	}
 
@@ -350,14 +338,9 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 
 // SetDrop saves provided JetDrop in db.
 func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
-	log.Infof("set drop pulse - %v", drop.Pulse)
 	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
-	log.Infof("set drop key - %v", k)
-	obj, err := db.Get(k)
-	log.Infof("here it is - %v", obj)
-	log.Error("here error it is - %v", err)
+	_, err := db.Get(k)
 	if err == nil {
-		log.Infof("IT'S BROKEN")
 		return ErrOverride
 	}
 
@@ -365,7 +348,6 @@ func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
 	if err != nil {
 		return err
 	}
-	log.Info(drop)
 	return db.Set(k, encoded)
 }
 
