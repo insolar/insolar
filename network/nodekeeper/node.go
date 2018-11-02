@@ -21,6 +21,14 @@ import (
 
 	"github.com/insolar/insolar/core"
 )
+
+type mutableNode interface {
+	core.Node
+
+	SetState(core.NodeState)
+	SetPulse(core.PulseNumber)
+}
+
 type node struct {
 	id        core.RecordRef
 	roles     []core.NodeRole
