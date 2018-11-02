@@ -51,7 +51,7 @@ type TestParticipant struct {
 	holder mockUnsyncHolder
 }
 
-func NewParticipant(ref byte, list []*core.Node) *TestParticipant {
+func NewParticipant(ref byte, list []core.Node) *TestParticipant {
 	return &TestParticipant{node: newActiveNode(ref, 0),
 		holder: mockUnsyncHolder{list}}
 }
