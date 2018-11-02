@@ -161,7 +161,7 @@ func processCheckSignedNonce(
 	if err != nil {
 		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err.Error()}).Build(), nil
 	}
-	var self *core.Node
+	var self core.Node
 	select {
 	case d := <-ch:
 		if d == nil {
