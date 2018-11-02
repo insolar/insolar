@@ -332,7 +332,6 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		PrevHash: prevHash,
 		Hash:     hw.Sum(nil),
 	}
-	log.Info(drop)
 	return &drop, messages, nil
 }
 

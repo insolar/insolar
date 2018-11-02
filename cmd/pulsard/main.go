@@ -58,7 +58,6 @@ func main() {
 	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
-	time.Sleep(8 * time.Minute)
 	fmt.Println("Press any button to exit")
 	rl, err := readline.New("")
 	if err != nil {
