@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -270,7 +271,14 @@ func TestDeviantBitSet(t *testing.T) {
 	checkSerialization(t, makeDeviantBitSet(), &DeviantBitSet{})
 }
 
-func TestDeviantBitSete_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makeDeviantBitSet(), &DeviantBitSet{},
-		"[ NodeListVote.Deserialize ] Can't read NodeListHash: unexpected EOF")
+func TestDeviantBitSet_BadData(t *testing.T) {
+	deviantBitSet := makeDeviantBitSet()
+	newDeviantBitSet := &DeviantBitSet{}
+
+	data := serializeData(t, deviantBitSet)
+	r := bytes.NewReader(data[:len(data)-2])
+	err := newDeviantBitSet.Deserialize(r)
+	assert.NoError(t, err)
+
+	require.NotEqual(t, deviantBitSet.Payload, newDeviantBitSet.Payload)
 }
