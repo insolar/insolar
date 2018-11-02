@@ -969,33 +969,31 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 	key1, _ := ecdsa.GeneratePrivateKey()
 	key2, _ := ecdsa.GeneratePrivateKey()
 
-	keeper1 := nodekeeper.NewNodeKeeper(testutils.TestNode(dht1.nodeID))
-	keeper2 := nodekeeper.NewNodeKeeper(testutils.TestNode(dht2.nodeID))
+	keeper1 := nodekeeper.NewNodeKeeper(nodekeeper.NewNode(dht1.nodeID, nil, nil, 0, 0, "", ""))
+	keeper2 := nodekeeper.NewNodeKeeper(nodekeeper.NewNode(dht1.nodeID, nil, nil, 0, 0, "", ""))
 
-	keeper1.AddActiveNodes([]*core.Node{
-		{
+	keeper1.AddActiveNodes([]core.Node{
+		nodekeeper.NewNode(
 			dht2.nodeID,
-			5,
-			2,
 			[]core.NodeRole{core.RoleUnknown},
 			&key2.PublicKey,
-			"address",
-			"",
-		},
-	},
-	)
-	keeper2.AddActiveNodes([]*core.Node{
-		{
-			dht1.nodeID,
 			5,
 			2,
-			[]core.NodeRole{core.RoleUnknown},
-			&key1.PublicKey,
 			"address",
 			"",
-		},
-	},
-	)
+		),
+	})
+	keeper2.AddActiveNodes([]core.Node{
+		nodekeeper.NewNode(
+			dht1.nodeID,
+			[]core.NodeRole{core.RoleUnknown},
+			&key1.PublicKey,
+			5,
+			2,
+			"address",
+			"",
+		),
+	})
 
 	dht1.SetNodeKeeper(keeper1)
 	dht2.SetNodeKeeper(keeper2)
