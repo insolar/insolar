@@ -31,6 +31,8 @@ type Serializer interface {
 	Deserialize(data io.Reader) error
 }
 
+// ----------------------------------PHASE 1--------------------------------
+
 // routInfoMasks masks
 const (
 	// take low bit
@@ -449,6 +451,11 @@ func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
 	// 	return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodePK")
 	// }
 
+	err = binary.Read(data, defaultByteOrder, &njc.NodeRef)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRef")
+	}
+
 	err = binary.Read(data, defaultByteOrder, &njc.length)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read length")
@@ -519,6 +526,39 @@ func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
 	err := binary.Write(result, defaultByteOrder, nlc.length)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeLeaveClaim.Serialize ] Can't write length")
+	}
+
+	return result.Bytes(), nil
+}
+
+// ----------------------------------PHASE 2--------------------------------
+
+// Deserialize implements interface method
+func (rv *ReferendumVote) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &rv.Type)
+	if err != nil {
+		return errors.Wrap(err, "[ ReferendumVote.Deserialize ] Can't read Type")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &rv.Length)
+	if err != nil {
+		return errors.Wrap(err, "[ ReferendumVote.Deserialize ] Can't read Length")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (rv *ReferendumVote) Serialize() ([]byte, error) {
+	result := new(bytes.Buffer)
+	err := binary.Write(result, defaultByteOrder, rv.Type)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ReferendumVote.Serialize ] Can't write Type")
+	}
+
+	err = binary.Write(result, defaultByteOrder, rv.Length)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ReferendumVote.Serialize ] Can't write Length")
 	}
 
 	return result.Bytes(), nil
