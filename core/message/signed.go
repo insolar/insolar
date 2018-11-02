@@ -36,6 +36,7 @@ type SignedMessage struct {
 	Signature     []byte
 	LogTraceID    string
 	TraceSpanData []byte
+	Pulse         core.PulseNumber
 }
 
 func (sm *SignedMessage) Message() core.Message {
@@ -55,6 +56,7 @@ func NewSignedMessage(
 	msg core.Message,
 	sender core.RecordRef,
 	key *ecdsa.PrivateKey,
+	pulse core.PulseNumber,
 ) (*SignedMessage, error) {
 	if key == nil {
 		return nil, errors.New("failed to sign a message: private key == nil")
@@ -72,6 +74,7 @@ func NewSignedMessage(
 		Signature:     sign,
 		LogTraceID:    inslogger.TraceID(ctx),
 		TraceSpanData: instracer.MustSerialize(ctx),
+		Pulse:         pulse,
 	}, nil
 }
 
