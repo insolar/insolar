@@ -54,12 +54,9 @@ func (lr *LogicRunner) GetExecution(ref Ref) *ExecutionState {
 func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 	lr.executionMutex.Lock()
 	defer lr.executionMutex.Unlock()
-
-	// TODO when traceId works everywhere remove check on empty, by now we call this only from tests
 	if _, ok := lr.execution[ref]; !ok {
 		lr.execution[ref] = &ExecutionState{}
 	}
-
 	return lr.execution[ref]
 }
 
