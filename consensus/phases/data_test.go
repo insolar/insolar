@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -179,4 +180,26 @@ func TestNodeViolationBlame(t *testing.T) {
 func TestNodeViolationBlame_BadData(t *testing.T) {
 	checkBadDataSerialization(t, makeNodeViolationBlame(), &NodeViolationBlame{},
 		"[ NodeViolationBlame.Deserialize ] Can't read length: unexpected EOF")
+}
+
+func makeNodeJoinClaim() *NodeJoinClaim {
+	nodeJoinClaim := &NodeJoinClaim{}
+	nodeJoinClaim.length = uint16(2)
+	nodeJoinClaim.NodeRoleRecID = uint32(32)
+	nodeJoinClaim.JoinsAfter = uint32(67)
+	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
+	nodeJoinClaim.NodeID = uint32(77)
+	nodeJoinClaim.NodeRef = testutils.RandomRef()
+	// nodeJoinClaim.NodePK = // TODO:
+
+	return nodeJoinClaim
+}
+
+func TestNodeJoinClaim(t *testing.T) {
+	checkSerialization(t, makeNodeViolationBlame(), &NodeViolationBlame{})
+}
+
+func TestNodeJoinClaim_BadData(t *testing.T) {
+	checkBadDataSerialization(t, makeNodeJoinClaim(), &NodeJoinClaim{},
+		"[ NodeJoinClaim.Deserialize ] Can't read length: unexpected EOF")
 }
