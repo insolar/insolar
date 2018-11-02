@@ -348,11 +348,14 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) network.UnsyncList 
 	nk.state = pulseSet
 
 	for _, node := range nk.unsync {
-		node.PulseNum = nk.pulse
+		node.SetPulse(nk.pulse)
 	}
 	tmp := nk.unsync
-	nk.unsync = make([]*core.Node, 0)
-	nk.unsyncList = NewUnsyncHolder(nk.pulse, tmp)
+	nk.unsync = make([]mutableNode, 0)
+
+	unsyncNodes := mutableNodes(tmp).Export()
+
+	nk.unsyncList = NewUnsyncHolder(nk.pulse, unsyncNodes)
 	if len(nk.listWaiters) == 0 {
 		return nk.unsyncList
 	}
