@@ -105,18 +105,18 @@ type OnPulse func(pulse core.Pulse)
 type NodeKeeper interface {
 	core.NodeNetwork
 	// AddActiveNodes add active nodes.
-	AddActiveNodes([]*core.Node)
+	AddActiveNodes([]core.Node)
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
 	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list.
 	SetPulse(number core.PulseNumber) (bool, UnsyncList)
 	// Sync initiates transferring syncCandidates -> sync, sync -> active.
 	// If number is less than internal PulseNumber then ignore Sync.
-	Sync(syncCandidates []*core.Node, number core.PulseNumber)
+	Sync(syncCandidates []core.Node, number core.PulseNumber)
 	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
 	// Channel will return nil node if added node has not passed the consensus.
 	// Returns error if current node is not active and cannot participate in consensus.
 	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-		version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.Node, error)
+		version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error)
 	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
 	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
 	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
