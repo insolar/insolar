@@ -315,30 +315,30 @@ func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Dura
 	return result, nil
 }
 
-func (nk *nodekeeper) syncUnsafe(syncCandidates []*core.Node) {
+func (nk *nodekeeper) syncUnsafe(syncCandidates []core.Node) {
 	// sync -> active
 	for _, node := range nk.sync {
-		nk.active[node.NodeID] = node
+		nk.active[node.ID()] = node
 	}
 	// unsync -> sync
 	nk.sync = syncCandidates
 
 	// first notify all synced nodes that they have passed the consensus
 	for _, node := range nk.sync {
-		ch, exists := nk.nodeWaiters[node.NodeID]
+		ch, exists := nk.nodeWaiters[node.ID()]
 		if !exists {
 			return
 		}
 		ch <- node
 		close(ch)
-		delete(nk.nodeWaiters, node.NodeID)
+		delete(nk.nodeWaiters, node.ID())
 	}
 	// then notify all the others that they have not passed the consensus
 	for _, ch := range nk.nodeWaiters {
 		close(ch)
 	}
 	// drop old waiters map and create new
-	nk.nodeWaiters = make(map[core.RecordRef]chan *core.Node)
+	nk.nodeWaiters = make(map[core.RecordRef]chan core.Node)
 	nk.state = synced
 	log.Infof("Sync success for pulse %d", nk.pulse)
 }
