@@ -324,9 +324,9 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 			continue
 		}
 		logger.Debugf("before ping request")
-		pingResult := <-pingCall.Result()
-		if pingResult == nil {
-			logger.Error("problems with network")
+		pingResult, err := pingCall.GetResult(2 * time.Second)
+		if err != nil {
+			logger.Error(err)
 			continue
 		}
 		if pingResult.Error != nil {
@@ -344,9 +344,9 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 			logger.Error(err)
 			continue
 		}
-		result := <-call.Result()
-		if result == nil {
-			logger.Error("problems with network")
+		result, err := call.GetResult(2 * time.Second)
+		if err != nil {
+			logger.Error(err)
 			continue
 		}
 		if result.Error != nil {
@@ -386,9 +386,12 @@ func sendPulseToHost(ctx context.Context, sender *host.Host, t transport.Transpo
 	if err != nil {
 		return err
 	}
-	result := <-call.Result()
-	if result.Error != nil {
+	result, err := call.GetResult(2 * time.Second)
+	if err != nil{
 		return err
+	}
+	if result.Error != nil {
+		return result.Error
 	}
 
 	return nil
@@ -396,11 +399,6 @@ func sendPulseToHost(ctx context.Context, sender *host.Host, t transport.Transpo
 
 func sendPulseToHosts(ctx context.Context, sender *host.Host, t transport.Transport, hosts []host.Host, pulse *core.Pulse) {
 	logger := inslogger.FromContext(ctx)
-	defer func() {
-		if x := recover(); x != nil {
-			logger.Errorf("sendPulseToHosts failed with panic: %v", x)
-		}
-	}()
 	logger.Debugf("Before sending pulse to nodes - %v", hosts)
 	for _, pulseReceiver := range hosts {
 		err := sendPulseToHost(ctx, sender, t, &pulseReceiver, pulse)
