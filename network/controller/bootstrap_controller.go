@@ -130,6 +130,7 @@ func (bc *BootstrapController) bootstrap(address string) (*host.Host, error) {
 }
 
 func (bc *BootstrapController) processBootstrap(request network.Request) (network.Response, error) {
+	log.Debugf("Got bootstrap request from node %s", request.GetSender().String())
 	// TODO: check certificate and redirect logic
 	return bc.transport.BuildResponse(request, &BootstrapResponse{Code: BootstrapAccepted}), nil
 }
