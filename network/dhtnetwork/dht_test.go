@@ -1063,6 +1063,7 @@ func TestDHT_Getters(t *testing.T) {
 }
 
 func TestDHT_GetHostsFromBootstrap(t *testing.T) {
+	t.Skip("skip slow legacy test")
 	// prefix := "127.0.0.1:"
 	port := 10000
 	bootstrapAddresses := make([]string, 0)
