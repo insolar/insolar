@@ -17,8 +17,6 @@
 package phases
 
 import (
-	"crypto/ecdsa"
-
 	"github.com/insolar/insolar/core"
 )
 
@@ -136,8 +134,8 @@ type NodeJoinClaim struct {
 	JoinsAfter              uint32
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
-	NodePK                  ecdsa.PrivateKey
-	length                  uint16
+	//NodePK                  ecdsa.PrivateKey // WTF: should it be Public key?
+	length uint16
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
