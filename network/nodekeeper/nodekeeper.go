@@ -171,26 +171,26 @@ func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
 	return result
 }
 
-func (nk *nodekeeper) AddActiveNodes(nodes []*core.Node) {
+func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
 	activeNodes := make([]string, len(nodes))
 	for i, node := range nodes {
-		if node.NodeID.Equal(nk.origin.NodeID) {
+		if node.ID().Equal(nk.origin.ID()) {
 			nk.origin = node
-			log.Infof("Added origin node %s to active list", nk.origin.NodeID)
+			log.Infof("Added origin node %s to active list", nk.origin.ID())
 		}
-		nk.active[node.NodeID] = node
-		activeNodes[i] = node.NodeID.String()
+		nk.active[node.ID()] = node
+		activeNodes[i] = node.ID().String()
 
-		for _, role := range node.Roles {
+		for _, role := range node.Roles() {
 			list, ok := nk.index[role]
 			if !ok {
 				list := make([]core.RecordRef, 0)
 				nk.index[role] = list
 			}
-			nk.index[role] = append(list, node.NodeID)
+			nk.index[role] = append(list, node.ID())
 		}
 	}
 	log.Debugf("Added active nodes: %s", strings.Join(activeNodes, ", "))
