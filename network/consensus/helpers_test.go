@@ -104,7 +104,7 @@ type testCommunicator struct {
 	self Participant
 }
 
-func (c *testCommunicator) ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []*core.Node) ([]*core.Node, error) {
+func (c *testCommunicator) ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []core.Node) ([]core.Node, error) {
 	log.Infof("returns data: %v", data)
 	tp := p.(*TestParticipant)
 	return tp.holder.GetUnsync(), nil
