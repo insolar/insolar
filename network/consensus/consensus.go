@@ -32,7 +32,7 @@ type Participant interface {
 // UnsyncHolder
 type UnsyncHolder interface {
 	// GetUnsync returns list of local unsync nodes. This list is created
-	GetUnsync() []*core.Node
+	GetUnsync() []core.Node
 	// GetPulse returns actual pulse for current consensus process.
 	GetPulse() core.PulseNumber
 	// SetHash sets hash of unsync lists for each node of consensus.
