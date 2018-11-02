@@ -19,7 +19,9 @@ package phases
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
+	"io/ioutil"
 
 	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
@@ -77,22 +79,187 @@ const (
 )
 
 func (ph *PacketHeader) parsePulseAndCustomFlags(pulseAndCustomFlags uint32) {
-	ph.F01 = (pulseAndCustomFlags >> f01Shift) == 1
-	ph.F00 = ((pulseAndCustomFlags & f00Mask) >> f00Shift) == 1
+	ph.f01 = (pulseAndCustomFlags >> f01Shift) == 1
+	ph.f00 = ((pulseAndCustomFlags & f00Mask) >> f00Shift) == 1
 	ph.Pulse = pulseAndCustomFlags & pulseMask
 }
 
 func (ph *PacketHeader) compactPulseAndCustomFlags() uint32 {
 	var result uint32
-	if ph.F01 {
+	if ph.f01 {
 		result |= f01Mask
 	}
-	if ph.F00 {
+	if ph.f00 {
 		result |= f00Mask
 	}
 	result |= ph.Pulse & pulseMask
 
 	return result
+}
+
+func extractClaimTypeFromHeader(claimHeader uint16) uint8 {
+	return uint8((claimHeader & 0xfc00) >> 10)
+}
+
+func extractClaimLengthFromHeader(claimHeader uint16) uint16 {
+	return claimHeader & 0x3ff
+}
+
+func makeClaimHeader(claim ReferendumClaim) uint16 {
+	var result uint16
+	result = claim.Length()
+	result |= uint16(claim.Type()) << 10
+
+	return result
+}
+
+func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
+	claimsSize := len(data)
+	claimsBufReader := bytes.NewReader(data)
+	for claimsSize > 0 {
+		var claimHeader uint16
+		err := binary.Read(claimsBufReader, defaultByteOrder, &claimHeader)
+		if err != nil {
+			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't read claimHeader")
+		}
+
+		claimType := ClaimType(extractClaimTypeFromHeader(claimHeader))
+		claimLength := extractClaimLengthFromHeader(claimHeader)
+		var refClaim ReferendumClaim
+
+		switch claimType {
+		case TypeNodeJoinClaim:
+			refClaim = &NodeJoinClaim{length: claimLength}
+		case TypeCapabilityPollingAndActivation:
+			refClaim = &CapabilityPoolingAndActivation{length: claimLength}
+		case TypeNodeViolationBlame:
+			refClaim = &NodeViolationBlame{length: claimLength}
+		case TypeNodeBroadcast:
+			refClaim = &NodeBroadcast{length: claimLength}
+		case TypeNodeLeaveClaim:
+			refClaim = &NodeLeaveClaim{length: claimLength}
+		}
+		refClaim.Deserialize(claimsBufReader)
+		p1p.claims = append(p1p.claims, refClaim)
+
+		claimsSize -= 16 + int(claimLength)
+	}
+
+	return nil
+}
+
+func (p1p *Phase1Packet) compactReferendumClaim() ([]byte, error) {
+	result := allocateBuffer(2048)
+	for _, claim := range p1p.claims {
+		claimHeader := makeClaimHeader(claim)
+		err := binary.Write(result, defaultByteOrder, claimHeader)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("[ PacketHeader.compactReferendumClaim ] "+
+				"Can't write claim header. Type: %d. Length: %d", claim.Type(), claim.Length()))
+		}
+
+		rawClaim, err := claim.Serialize()
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("[ PacketHeader.compactReferendumClaim ] "+
+				"Can't serialize claim. Type: %d. Length: %d", claim.Type(), claim.Length()))
+		}
+		_, err = result.Write(rawClaim)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("[ PacketHeader.compactReferendumClaim ] "+
+				"Can't append proofNodePulseRaw."+"Type: %d. Length: %d", claim.Type(), claim.Length()))
+		}
+	}
+
+	return result.Bytes(), nil
+}
+
+func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
+	err := p1p.packetHeader.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize packetHeader")
+	}
+
+	err = p1p.pulseData.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize pulseData")
+	}
+
+	err = p1p.proofNodePulse.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize proofNodePulse")
+	}
+
+	if p1p.hasSection2() {
+		claimsBuf, err := ioutil.ReadAll(data)
+		if err != nil {
+			return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't read Section 2")
+		}
+		claimsSize := len(claimsBuf) - 64
+
+		p1p.parseReferendumClaim(claimsBuf[:claimsSize])
+
+		data = bytes.NewReader(claimsBuf[claimsSize:])
+	}
+
+	err = binary.Read(data, defaultByteOrder, &p1p.signature)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't read signature")
+	}
+
+	return nil
+}
+
+func (p1p *Phase1Packet) Serialize() ([]byte, error) {
+	result := allocateBuffer(2048)
+
+	// serializing of  PacketHeader
+	packetHeaderRaw, err := p1p.packetHeader.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't serialize packetHeader")
+	}
+	_, err = result.Write(packetHeaderRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append packetHeader")
+	}
+
+	// serializing of  PulseData
+	pulseDataRaw, err := p1p.pulseData.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't serialize pulseDataRaw")
+	}
+	_, err = result.Write(pulseDataRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append pulseDataRaw")
+	}
+
+	// serializing of ProofNodePulse
+	proofNodePulseRaw, err := p1p.proofNodePulse.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't serialize proofNodePulseRaw")
+	}
+	_, err = result.Write(proofNodePulseRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append proofNodePulseRaw")
+	}
+
+	// serializing of ReferendumClaim
+	claimRaw, err := p1p.compactReferendumClaim()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
+	}
+	_, err = result.Write(claimRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
+	}
+
+	// serializing of signature
+	err = binary.Write(result, defaultByteOrder, p1p.signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't write signature")
+	}
+
+	return result.Bytes(), nil
+
 }
 
 // Deserialize implements interface method
@@ -195,7 +362,6 @@ func (pde *PulseDataExt) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (pde *PulseDataExt) Serialize() ([]byte, error) {
-
 	result := allocateBuffer(256)
 	err := binary.Write(result, defaultByteOrder, pde.NextPulseDelta)
 	if err != nil {
