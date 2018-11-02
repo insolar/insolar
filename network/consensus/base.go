@@ -54,11 +54,11 @@ func (r *exchangeResults) calculateResultHash() []*network.NodeUnsyncHash {
 	return r.hash
 }
 
-func (r *exchangeResults) getAllCollectedNodes() []*core.Node {
+func (r *exchangeResults) getAllCollectedNodes() []core.Node {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	result := make([]*core.Node, 0)
+	result := make([]core.Node, 0)
 	for _, nodes := range r.data {
 		result = append(result, nodes...)
 	}
