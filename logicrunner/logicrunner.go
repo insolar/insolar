@@ -181,7 +181,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 
 	es := lr.UpsertExecution(ref)
 	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
-		return nil, errors.Errorf("loop detected for '%s'", inslogger.TraceID(ctx))
+		return nil, errors.Errorf("loop detected")
 	}
 	fuse := true
 	es.Lock()
