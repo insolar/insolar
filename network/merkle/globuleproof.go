@@ -27,5 +27,5 @@ type GlobuleProof struct {
 }
 
 func (gp *GlobuleProof) IsValid(ctx context.Context, node core.Node, globuleHash []byte) bool {
-	return true
+	return verifySignature(ctx, globuleHash, gp.Signature, node.PublicKey())
 }
