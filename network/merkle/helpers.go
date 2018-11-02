@@ -17,9 +17,15 @@
 package merkle
 
 import (
+	"context"
+	ecdsa2 "crypto/ecdsa"
+
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
+
 func hashConcat(args ...[]byte) []byte {
 	var result []byte
 	for _, arg := range args {
@@ -29,6 +35,25 @@ func hashConcat(args ...[]byte) []byte {
 
 	return hash.SHA3Bytes256(result)
 }
+
+func verifySignature(ctx context.Context, data, signature []byte, publicKey *ecdsa2.PublicKey) bool {
+	log := inslogger.FromContext(ctx)
+
+	key, err := ecdsa.ExportPublicKey(publicKey)
+	if err != nil {
+		log.Error("Failed to export a public key: ", err)
+		return false
+	}
+
+	verified, err := ecdsa.Verify(data, signature, key)
+	if err != nil {
+		log.Error("Failed to verify signature: ", err)
+		return false
+	}
+
+	return verified
+}
+
 func pulseHash(pulse *core.Pulse) []byte {
 	return hashConcat(pulse.PulseNumber.Bytes(), pulse.Entropy[:])
 }
