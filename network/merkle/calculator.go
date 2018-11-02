@@ -37,3 +37,9 @@ type calculator struct {
 func NewCalculator() Calculator {
 	return &calculator{}
 }
+func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
+	return &NodeProof{
+		StateHash: nil,
+		Signature: nil,
+	}, nil
+}
