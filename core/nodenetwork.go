@@ -37,24 +37,7 @@ const (
 	NodeSuspended
 )
 
-type Node struct {
-	// NodeID is the unique identifier of the node
-	NodeID RecordRef
-	// PulseNum is the pulse number after which the new state is assigned to the node
-	PulseNum PulseNumber
-	// State is the node state
-	State NodeState
-	// JetRoles is the set of candidate JetRoles for the node
-	Roles []NodeRole
-	// PublicKey is the public key of the node
-	PublicKey *ecdsa.PublicKey
-	// Addess is the network adress of the node
-	Address string
-	// Version of node software
-	Version string
-}
-
-type NodeInterface interface {
+type Node interface {
 	// ID is the unique identifier of the node
 	ID() RecordRef
 	// State is the node state
