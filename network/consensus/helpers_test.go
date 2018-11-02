@@ -64,7 +64,7 @@ func (p *TestParticipant) GetActiveNode() core.Node {
 	return p.node
 }
 
-func (m *TestParticipant) GetUnsync() []*core.Node {
+func (m *TestParticipant) GetUnsync() []core.Node {
 	return m.holder.GetUnsync()
 }
 
