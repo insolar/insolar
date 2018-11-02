@@ -86,7 +86,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
-	cert, err := certificate.NewCertificatesWithKeys("scripts/insolard/configs/pulsar_keys.json")
+	cert, err := certificate.NewCertificatesWithKeys(cfg.KeysPath)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
