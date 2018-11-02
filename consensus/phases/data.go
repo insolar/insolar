@@ -24,27 +24,53 @@ type PacketType uint8
 type ClaimType uint8
 type ReferendumType uint8
 
+// !!! Amount of constants here must be less then 8 !!!
 const (
 	NetworkConsistency = PacketType(iota + 1)
 	Referendum
 )
 
 const (
-	TypeNodeClaim = ClaimType(iota + 1)
-	TypeNodeViolationBlame
+	TypeNodeJoinClaim = ClaimType(iota + 1)
 	TypeCapabilityPollingAndActivation
+	TypeNodeViolationBlame
 	TypeNodeBroadcast
+	TypeNodeLeaveClaim
 )
 
 // ----------------------------------PHASE 1--------------------------------
+
+type Phase1Packet struct {
+	// -------------------- Header
+	packetHeader PacketHeader
+
+	// -------------------- Section 1 ( Pulse )
+	pulseData      PulseDataExt // optional
+	proofNodePulse NodePulseProof
+
+	// -------------------- Section 2 ( Claims ) ( optional )
+	claims []ReferendumClaim
+
+	// --------------------
+	// signature contains signature of Header + Section 1 + Section 2
+	signature uint64
+}
+
+func (p1p *Phase1Packet) hasPulseDataExt() bool {
+	return p1p.packetHeader.f00
+}
+
+func (p1p *Phase1Packet) hasSection2() bool {
+	return p1p.packetHeader.f01
+}
 
 type PacketHeader struct {
 	PacketT    PacketType
 	SubType    uint8
 	HasRouting bool
 	//-----------------
-	F01   bool
-	F00   bool
+	f01   bool
+	f00   bool
 	Pulse uint32
 	//-----------------
 	OriginNodeID uint32
@@ -75,6 +101,7 @@ type NodePulseProof struct {
 // --------------REFERENDUM--------------
 
 type ReferendumClaim interface {
+	Serializer
 	Type() ClaimType
 	Length() uint16
 }
@@ -139,7 +166,7 @@ type NodeJoinClaim struct {
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
-	return TypeNodeClaim
+	return TypeNodeJoinClaim
 }
 
 func (njc *NodeJoinClaim) Length() uint16 {
@@ -153,7 +180,7 @@ type NodeLeaveClaim struct {
 }
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {
-	return TypeNodeClaim
+	return TypeNodeLeaveClaim
 }
 
 func (nlc *NodeLeaveClaim) Length() uint16 {
