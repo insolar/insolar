@@ -48,7 +48,6 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		return 0, errors.New("casebind is empty")
 	}
 
-	// TODO fix
 	es := lr.UpsertExecution(ref)
 	ctx := context.TODO()
 	es.insContext = ctx
