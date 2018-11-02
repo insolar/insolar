@@ -162,7 +162,7 @@ type NodeJoinClaim struct {
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
 	//NodePK                  ecdsa.PrivateKey // WTF: should it be Public key?
-	length uint16
+	//length uint16
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
@@ -170,7 +170,7 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 }
 
 func (njc *NodeJoinClaim) Length() uint16 {
-	return njc.length
+	return 0
 }
 
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
@@ -189,7 +189,7 @@ func (nlc *NodeLeaveClaim) Length() uint16 {
 
 func NewNodeJoinClaim() *NodeJoinClaim {
 	return &NodeJoinClaim{
-		length: 272,
+		//length: 272,
 	}
 }
 
