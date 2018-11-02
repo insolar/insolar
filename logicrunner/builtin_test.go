@@ -47,7 +47,7 @@ func byteRecorRef(b byte) core.RecordRef {
 }
 
 func TestBareHelloworld(t *testing.T) {
-	ctx := context.Background()
+	ctx := context.TODO()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
