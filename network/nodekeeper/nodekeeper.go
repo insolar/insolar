@@ -226,7 +226,7 @@ func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, network.UnsyncLis
 	return true, nk.collectUnsync(number)
 }
 
-func (nk *nodekeeper) Sync(syncCandidates []*core.Node, number core.PulseNumber) {
+func (nk *nodekeeper) Sync(syncCandidates []core.Node, number core.PulseNumber) {
 	nk.unsyncLock.Lock()
 	nk.activeLock.Lock()
 
@@ -248,7 +248,7 @@ func (nk *nodekeeper) Sync(syncCandidates []*core.Node, number core.PulseNumber)
 
 	var candidates string
 	for _, node := range syncCandidates {
-		candidates += node.NodeID.String() + ", "
+		candidates += node.ID().String() + ", "
 	}
 	log.Debugf("Moving unsync to sync: %s", candidates)
 
