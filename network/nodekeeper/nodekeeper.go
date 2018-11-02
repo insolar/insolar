@@ -256,28 +256,28 @@ func (nk *nodekeeper) Sync(syncCandidates []core.Node, number core.PulseNumber) 
 }
 
 func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.Node, error) {
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error) {
 
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
-	if nk.origin.State != core.NodeActive {
+	if nk.origin.State() != core.NodeActive {
 		return nil, errors.New("cannot add node to unsync list: current node is not active")
 	}
 
-	node := &core.Node{
-		NodeID:   nodeID,
-		PulseNum: nk.pulse,
-		State:    core.NodeJoined,
-		Roles:    roles,
-		Address:  address,
-		Version:  version,
-		// PublicKey: publicKey,
-	}
+	node := newMutableNode(
+		nodeID,
+		roles,
+		nil, // TODO publicKey
+		nk.pulse,
+		core.NodeJoined,
+		address,
+		version,
+	)
 
 	nk.unsync = append(nk.unsync, node)
-	ch := make(chan *core.Node, 1)
-	nk.nodeWaiters[node.NodeID] = ch
+	ch := make(chan core.Node, 1)
+	nk.nodeWaiters[node.ID()] = ch
 	return ch, nil
 }
 
