@@ -304,7 +304,7 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 }
 
 func TestUnsyncList_GetUnsync(t *testing.T) {
-	unsyncNodes := []*core.Node{}
+	unsyncNodes := []core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	assert.Empty(t, unsyncList.GetUnsync())
 	assert.Equal(t, core.PulseNumber(10), unsyncList.GetPulse())
