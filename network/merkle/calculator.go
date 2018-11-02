@@ -49,3 +49,9 @@ func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error)
 		Signature: nil,
 	}, nil
 }
+
+func (c *calculator) GetCloudProof(ctx context.Context) (*CloudProof, error) {
+	return &CloudProof{
+		Signature: nil,
+	}, nil
+}
