@@ -25,8 +25,7 @@ import (
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/network/nodekeeper"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger"
@@ -56,7 +55,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 		c.MessageBus = testmessagebus.NewTestMessageBus()
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodekeeper.NewNodeKeeper(testutils.TestNode(core.RecordRef{}))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
 	}
 
 	// Create ledger.

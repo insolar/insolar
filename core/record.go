@@ -103,6 +103,11 @@ func (ref RecordRef) String() string {
 	return base58.Encode(ref[:])
 }
 
+// Bytes returns byte slice of RecordRef.
+func (ref RecordRef) Bytes() []byte {
+	return ref[:]
+}
+
 // Equal checks if reference points to the same record.
 func (ref RecordRef) Equal(other RecordRef) bool {
 	return ref == other
