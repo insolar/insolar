@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/log"
 )
 
 // PulseManager implements core.PulseManager.
@@ -53,45 +52,29 @@ func (m *PulseManager) Current() (*core.Pulse, error) {
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(pulse core.Pulse) error {
-	log.Infof("pn - %v", pulse.PulseNumber)
 	latestPulseNumber, err := m.db.GetLatestPulseNumber()
 	if err != nil {
-		log.Error("GetLatestPulseNumber")
-		log.Error(err)
 		return err
 	}
 	latestPulse, err := m.db.GetPulse(latestPulseNumber)
 	if err != nil {
-		log.Error("GetPulse")
-		log.Error(err)
 		return err
 	}
 	prevDrop, err := m.db.GetDrop(latestPulse.PrevPulse)
 	if err != nil {
-		log.Error("GetDrop")
-		log.Error(err)
 		return err
 	}
-	log.Infof("before create drop pr ne pul - %v", latestPulse.PredictedNextPulse)
-	log.Infof("before create drop prev pul - %v", latestPulse.PrevPulse)
-	log.Infof("latest pulse - %v", latestPulseNumber)
 	drop, messages, err := m.db.CreateDrop(latestPulseNumber, prevDrop.Hash)
 	if err != nil {
-		log.Error("CreateDrop")
-		log.Error(err)
 		return err
 	}
 	err = m.db.SetDrop(drop)
 	if err != nil {
-		log.Error("SetDrop")
-		log.Error(err)
 		return err
 	}
 
 	dropSerialized, err := jetdrop.Encode(drop)
 	if err != nil {
-		log.Error("Encode")
-		log.Error(err)
 		return err
 	}
 
@@ -102,11 +85,8 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	}
 	_, err = m.bus.Send(context.TODO(), msg)
 	if err != nil {
-		log.Error("Send")
-		log.Error(err.Error())
 		return err
 	}
-	log.Info("Все хорошо")
 	err = m.db.AddPulse(pulse)
 	if err != nil {
 		return err
