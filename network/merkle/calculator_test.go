@@ -17,6 +17,7 @@
 package merkle
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
@@ -32,6 +33,13 @@ type calculatorSuite struct {
 	suite.Suite
 
 	calculator Calculator
+}
+
+func (t *calculatorSuite) TestGetNodeProof() {
+	np, err := t.calculator.GetNodeProof(context.Background())
+
+	t.Assert().NoError(err)
+	t.Assert().NotNil(np)
 }
 
 func TestCalculator(t *testing.T) {
