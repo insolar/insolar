@@ -96,7 +96,7 @@ type mockHostHandler struct {
 }
 
 func newMockHostHandler() *mockHostHandler {
-	return &mockHostHandler{ncf: newMockNetworkCommonFacade(), keeper: nodekeeper.NewNodeKeeper(testutils.TestNode(core.RecordRef{}))}
+	return &mockHostHandler{ncf: newMockNetworkCommonFacade(), keeper: nodekeeper.NewNodeKeeper(nodekeeper.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))}
 }
 
 func (hh *mockHostHandler) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
