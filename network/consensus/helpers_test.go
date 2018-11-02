@@ -23,17 +23,20 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/nodekeeper"
 )
 
-func newActiveNode(ref byte, pulse int) *core.Node {
+func newActiveNode(ref byte, pulse int) core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
-	return &core.Node{
-		NodeID:   core.RecordRef{ref},
-		PulseNum: core.PulseNumber(pulse),
-		State:    core.NodeActive,
-		Roles:    []core.NodeRole{core.RoleUnknown},
-		// PublicKey: &key.PublicKey,
-	}
+	return nodekeeper.NewNode(
+		core.RecordRef{ref},
+		[]core.NodeRole{core.RoleUnknown},
+		nil, // TODO publicKey
+		core.PulseNumber(pulse),
+		core.NodeActive,
+		"",
+		"",
+	)
 }
 
 type TestNode struct {
