@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/controller/auth"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -32,6 +33,7 @@ type Controller struct {
 	network network.HostNetwork
 
 	bootstrapController common.BootstrapController
+	authController      *auth.AuthorizationController
 }
 
 // SendMessage send message to nodeID.
@@ -62,7 +64,7 @@ func (c *Controller) AnalyzeNetwork() error {
 
 // Authorize start authorization process on discovery node.
 func (c *Controller) Authorize() error {
-	return nil
+	return c.authController.Authorize()
 }
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
@@ -80,6 +82,7 @@ func (c *Controller) Inject(components core.Components) {
 	c.network.RegisterRequestHandler(types.Ping, func(request network.Request) (network.Response, error) {
 		return c.network.BuildResponse(request, nil), nil
 	})
+	c.authController.Start(components)
 }
 
 // NewNetworkController create new network controller.
@@ -91,6 +94,7 @@ func NewNetworkController(
 	c := Controller{}
 	c.network = network
 	c.bootstrapController = NewBootstrapController(&c.options, transport)
+	c.authController = auth.NewAuthorizationController(&c.options, c.bootstrapController, transport)
 
 	return &c
 }

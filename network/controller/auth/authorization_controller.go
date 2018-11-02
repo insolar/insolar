@@ -40,15 +40,6 @@ type AuthorizationController struct {
 	keeper              network.NodeKeeper
 }
 
-func (ac *AuthorizationController) Authorize() error {
-	hosts := ac.bootstrapController.GetBootstrapHosts()
-	if len(hosts) == 0 {
-		return errors.New("Empty list of bootstrap hosts")
-	}
-
-	return nil
-}
-
 // RequestGetNonce
 type RequestGetNonce struct{}
 
@@ -70,6 +61,49 @@ type RequestAuthorize struct {
 type ResponseAuthorize struct {
 	ActiveNodes []core.Node
 	Error       string
+}
+
+func (ac *AuthorizationController) Authorize() error {
+	hosts := ac.bootstrapController.GetBootstrapHosts()
+	if len(hosts) == 0 {
+		return errors.New("Empty list of bootstrap hosts")
+	}
+	ch := make(chan []core.Node, len(hosts))
+	for _, h := range hosts {
+		go func(ch chan<- []core.Node, h *host.Host) {
+			activeNodes, err := ac.authorizeOnHost(h)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			ch <- activeNodes
+		}(ch, h)
+	}
+
+	receivedResults := make([][]core.Node, 0)
+Loop:
+	for {
+		select {
+		case activeNodeList := <-ch:
+			receivedResults = append(receivedResults, activeNodeList)
+			if len(receivedResults) == len(hosts) {
+				break Loop
+			}
+		case <-time.After(ac.options.AuthorizeTimeout):
+			log.Warnf("Authorize timeout, successful auths: %d/%d", len(receivedResults), len(hosts))
+			break Loop
+		}
+	}
+
+	if len(receivedResults) == 0 {
+		return errors.New("Failed to authorize on any of discovery nodes")
+	}
+	activeNodes, success := MajorityRuleCheck(receivedResults, ac.options.MajorityRule)
+	if !success {
+		return errors.New("Majority rule check failed")
+	}
+	ac.keeper.AddActiveNodes(activeNodes)
+	return nil
 }
 
 // authorizeOnHost send all authorize requests to host and get list of active nodes

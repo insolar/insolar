@@ -36,6 +36,10 @@ func (t *Table) resolveRemoteNode(ref core.RecordRef) (string, error) {
 	return "", errors.New("not implemented")
 }
 
+func (t *Table) addRemoteHost(h *host.Host) {
+	log.Warn("not implemented")
+}
+
 // Resolve NodeID -> Address. Can initiate network requests.
 func (t *Table) Resolve(ref core.RecordRef) (string, error) {
 	if t.isLocalNode(ref) {
@@ -49,11 +53,19 @@ func (t *Table) Resolve(ref core.RecordRef) (string, error) {
 }
 
 // AddToKnownHosts add host to routing table.
-func (t *Table) AddToKnownHosts(*host.Host) {
-	log.Warn("not implemented")
+func (t *Table) AddToKnownHosts(h *host.Host) {
+	if t.isLocalNode(h.NodeID) {
+		// we should already have this node in NodeNetwork active list, do nothing
+		return
+	}
+	t.addRemoteHost(h)
 }
 
 // Rebalance recreate shards of routing table with known hosts according to new partition policy.
 func (t *Table) Rebalance(PartitionPolicy) {
 	log.Warn("not implemented")
+}
+
+func NewTable(keeper network.NodeKeeper) Resolver {
+	return &Table{keeper: keeper}
 }

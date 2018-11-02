@@ -14,31 +14,13 @@
  *    limitations under the License.
  */
 
-package common
+package auth
 
 import (
-	"time"
+	"github.com/insolar/insolar/core"
 )
 
-// Options contains configuration options for the local host.
-type Options struct {
-	// The hosts being used to bootstrap the network. Without a bootstrap
-	// host there is no way to connect to the network.
-	BootstrapHosts []string
-
-	// The maximum time to wait for a response to ping request.
-	PingTimeout time.Duration
-
-	// The maximum time to wait for a response to any packet.
-	PacketTimeout time.Duration
-
-	// InfiniteBootstrap bool
-
-	// Bootstrap reconnect timeout
-	BootstrapTimeout time.Duration
-
-	// The maximum time to wait for authorization response
-	AuthorizeTimeout time.Duration
-
-	MajorityRule int
+func MajorityRuleCheck(activeNodesLists [][]core.Node, majorityRule int) (activeNodesList []core.Node, success bool) {
+	// TODO: fair majorityRule check keeping in mind possible discovery redirects
+	return activeNodesLists[0], true
 }
