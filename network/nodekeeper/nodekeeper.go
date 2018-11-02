@@ -134,7 +134,7 @@ func (nk *nodekeeper) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (nk *nodekeeper) GetOrigin() *core.Node {
+func (nk *nodekeeper) GetOrigin() core.Node {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
