@@ -1031,7 +1031,7 @@ func (dht *DHT) GetActiveNodesList() []core.Node {
 }
 
 // AddActiveNodes adds an active nodes slice.
-func (dht *DHT) AddActiveNodes(activeNodes []*core.Node) error {
+func (dht *DHT) AddActiveNodes(activeNodes []core.Node) error {
 	err := dht.checkMajorityRule(activeNodes)
 	if err != nil {
 		return err
