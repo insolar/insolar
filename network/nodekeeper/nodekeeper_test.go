@@ -276,11 +276,11 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 		ch, err := keeper.AddUnsync(newActiveNode(byte(i)))
 		assert.NoError(t, err)
 
-		go func(t *testing.T, ch chan *core.Node, ref core.RecordRef, wg *sync.WaitGroup) {
+		go func(t *testing.T, ch chan core.Node, ref core.RecordRef, wg *sync.WaitGroup) {
 			node := <-ch
 			if nodePassesConsensus(ref) {
 				assert.NotNil(t, node)
-				assert.Equal(t, ref, node.NodeID)
+				assert.Equal(t, ref, node.ID())
 			} else {
 				assert.Nil(t, node)
 			}
@@ -293,9 +293,9 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 	assert.NotNil(t, list)
 	assert.Equal(t, refsCount, len(list.GetUnsync()))
 
-	syncCandidates := make([]*core.Node, 0)
+	syncCandidates := make([]core.Node, 0)
 	for _, node := range list.GetUnsync() {
-		if nodePassesConsensus(node.NodeID) {
+		if nodePassesConsensus(node.ID()) {
 			syncCandidates = append(syncCandidates, node)
 		}
 	}
