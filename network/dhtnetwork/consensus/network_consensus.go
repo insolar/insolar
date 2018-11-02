@@ -28,7 +28,7 @@ import (
 )
 
 type participantWrapper struct {
-	node *core.Node
+	node core.Node
 }
 
 // GetActiveNode implements Participant interface for Node wrapper.
