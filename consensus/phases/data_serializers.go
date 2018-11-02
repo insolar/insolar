@@ -116,7 +116,7 @@ func extractClaimLengthFromHeader(claimHeader uint16) uint16 {
 func makeClaimHeader(claim ReferendumClaim) uint16 {
 	var result uint16
 	result = claim.Length()
-	result |= uint16(claim.Type()) << claimTypeShift
+	result |= (uint16(claim.Type()) << claimTypeShift)
 
 	return result
 }
@@ -125,6 +125,7 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 	claimsSize := len(data)
 	claimsBufReader := bytes.NewReader(data)
 	for claimsSize > 0 {
+		startSize := claimsBufReader.Len()
 		var claimHeader uint16
 		err := binary.Read(claimsBufReader, defaultByteOrder, &claimHeader)
 		if err != nil {
@@ -132,25 +133,33 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 		}
 
 		claimType := ClaimType(extractClaimTypeFromHeader(claimHeader))
-		claimLength := extractClaimLengthFromHeader(claimHeader)
+		// TODO: Do we need claimLength?
+		//claimLength := extractClaimLengthFromHeader(claimHeader)
 		var refClaim ReferendumClaim
 
 		switch claimType {
 		case TypeNodeJoinClaim:
-			refClaim = &NodeJoinClaim{length: claimLength}
+			refClaim = &NodeJoinClaim{}
 		case TypeCapabilityPollingAndActivation:
-			refClaim = &CapabilityPoolingAndActivation{length: claimLength}
+			refClaim = &CapabilityPoolingAndActivation{}
 		case TypeNodeViolationBlame:
-			refClaim = &NodeViolationBlame{length: claimLength}
+			refClaim = &NodeViolationBlame{}
 		case TypeNodeBroadcast:
-			refClaim = &NodeBroadcast{length: claimLength}
+			refClaim = &NodeBroadcast{}
 		case TypeNodeLeaveClaim:
-			refClaim = &NodeLeaveClaim{length: claimLength}
+			refClaim = &NodeLeaveClaim{}
 		}
-		refClaim.Deserialize(claimsBufReader)
+		err = refClaim.Deserialize(claimsBufReader)
+		if err != nil {
+			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't deserialize claim.")
+		}
 		p1p.claims = append(p1p.claims, refClaim)
 
-		claimsSize -= claimHeaderSize + int(claimLength)
+		claimsSize -= startSize - claimsBufReader.Len()
+	}
+
+	if claimsSize != 0 {
+		// TODO: return error
 	}
 
 	return nil
@@ -202,9 +211,12 @@ func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
 		if err != nil {
 			return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't read Section 2")
 		}
-		claimsSize := len(claimsBuf) - 64
+		claimsSize := len(claimsBuf) - 8
 
-		p1p.parseReferendumClaim(claimsBuf[:claimsSize])
+		err = p1p.parseReferendumClaim(claimsBuf[:claimsSize])
+		if err != nil {
+			return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't parseReferendumClaim")
+		}
 
 		data = bytes.NewReader(claimsBuf[claimsSize:])
 	}
@@ -643,10 +655,10 @@ func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRef")
 	}
 
-	err = binary.Read(data, defaultByteOrder, &njc.length)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read length")
-	}
+	// err = binary.Read(data, defaultByteOrder, &njc.length)
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read length")
+	// }
 
 	return nil
 }
@@ -689,10 +701,10 @@ func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
 	// 	return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodePK")
 	// }
 
-	err = binary.Write(result, defaultByteOrder, njc.length)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write length")
-	}
+	// err = binary.Write(result, defaultByteOrder, njc.length)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write length")
+	// }
 
 	return result.Bytes(), nil
 }
