@@ -190,6 +190,7 @@ func makeNodeJoinClaim() *NodeJoinClaim {
 	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
 	nodeJoinClaim.NodeID = uint32(77)
 	nodeJoinClaim.NodeRef = testutils.RandomRef()
+	nodeJoinClaim.RelayNodeID = uint32(26)
 	// nodeJoinClaim.NodePK = // TODO:
 
 	return nodeJoinClaim
@@ -215,4 +216,21 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 	nodeLeaveClaim.length = 333
 	checkBadDataSerialization(t, nodeLeaveClaim, &NodeLeaveClaim{},
 		"[ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
+}
+
+func makeReferendumVote() *ReferendumVote {
+	referendumVote := &ReferendumVote{}
+	referendumVote.Length = 444
+	referendumVote.Type = 23
+
+	return referendumVote
+}
+
+func TestReferendumVote(t *testing.T) {
+	checkSerialization(t, makeReferendumVote(), &ReferendumVote{})
+}
+
+func TestReferendumVote_BadData(t *testing.T) {
+	checkBadDataSerialization(t, makeReferendumVote(), &ReferendumVote{},
+		"[ ReferendumVote.Deserialize ] Can't read Length: unexpected EOF")
 }
