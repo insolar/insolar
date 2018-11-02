@@ -21,17 +21,17 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
 // Controller contains network logic.
 type Controller struct {
-	options Options
+	options common.Options
 	network network.HostNetwork
 
-	pinger              *Pinger
-	bootstrapController *BootstrapController
+	bootstrapController common.BootstrapController
 }
 
 // SendMessage send message to nodeID.
