@@ -68,9 +68,9 @@ func calculateNodeHash(node core.Node) []byte {
 }
 
 // CalculateHash calculates hash of active node list
-func CalculateHash(list []*core.Node) (result []byte, err error) {
+func CalculateHash(list []core.Node) (result []byte, err error) {
 	sort.Slice(list[:], func(i, j int) bool {
-		return bytes.Compare(list[i].NodeID[:], list[j].NodeID[:]) < 0
+		return bytes.Compare(list[i].ID().Bytes(), list[j].ID().Bytes()) < 0
 	})
 
 	// catch possible panic from hashWriteChecked in this function and in all calculateNodeHash funcs
