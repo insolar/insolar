@@ -33,3 +33,7 @@ type calculator struct {
 	NodeNetwork core.NodeNetwork `inject:""`
 	Certificate core.Certificate `inject:""`
 }
+
+func NewCalculator() Calculator {
+	return &calculator{}
+}
