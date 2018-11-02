@@ -203,3 +203,16 @@ func TestNodeJoinClaim_BadData(t *testing.T) {
 	checkBadDataSerialization(t, makeNodeJoinClaim(), &NodeJoinClaim{},
 		"[ NodeJoinClaim.Deserialize ] Can't read length: unexpected EOF")
 }
+
+func TestNodeLeaveClaim(t *testing.T) {
+	nodeLeaveClaim := &NodeLeaveClaim{}
+	nodeLeaveClaim.length = 333
+	checkSerialization(t, nodeLeaveClaim, &NodeLeaveClaim{})
+}
+
+func TestNodeLeaveClaim_BadData(t *testing.T) {
+	nodeLeaveClaim := &NodeLeaveClaim{}
+	nodeLeaveClaim.length = 333
+	checkBadDataSerialization(t, nodeLeaveClaim, &NodeLeaveClaim{},
+		"[ NodeJoinClaim.Deserialize ] Can't read length: unexpected EOF")
+}
