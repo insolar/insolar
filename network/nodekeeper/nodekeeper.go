@@ -141,9 +141,9 @@ func (nk *nodekeeper) GetOrigin() core.Node {
 	return nk.origin
 }
 
-func (nk *nodekeeper) GetActiveNodes() []*core.Node {
+func (nk *nodekeeper) GetActiveNodes() []core.Node {
 	nk.activeLock.RLock()
-	result := make([]*core.Node, len(nk.active))
+	result := make([]core.Node, len(nk.active))
 	index := 0
 	for _, node := range nk.active {
 		result[index] = node
@@ -153,7 +153,7 @@ func (nk *nodekeeper) GetActiveNodes() []*core.Node {
 	// Sort active nodes to return list with determinate order on every node.
 	// If we have more than 10k nodes, we need to optimize this
 	sort.Slice(result, func(i, j int) bool {
-		return bytes.Compare(result[i].NodeID[:], result[j].NodeID[:]) < 0
+		return bytes.Compare(result[i].ID().Bytes(), result[j].ID().Bytes()) < 0
 	})
 	return result
 }
