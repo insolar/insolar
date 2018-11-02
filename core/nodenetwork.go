@@ -56,11 +56,11 @@ type Node interface {
 
 type NodeNetwork interface {
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
-	GetOrigin() *Node
+	GetOrigin() Node
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.
-	GetActiveNode(ref RecordRef) *Node
+	GetActiveNode(ref RecordRef) Node
 	// GetActiveNodes get active nodes.
-	GetActiveNodes() []*Node
+	GetActiveNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
 	GetActiveNodesByRole(role JetRole) []RecordRef
 }
