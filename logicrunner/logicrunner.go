@@ -225,6 +225,11 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 		Resp: msg,
 	})
 
+	lr.addObjectCaseRecord(ref, core.CaseRecord{
+		Type: core.CaseRecordTypeTraceID,
+		Resp: inslogger.TraceID(ctx),
+	})
+
 	es.request, err = vb.RegisterRequest(msg)
 
 	if err != nil {

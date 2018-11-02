@@ -57,10 +57,7 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 
 	// TODO when traceId works everywhere remove check on empty, by now we call this only from tests
 	if _, ok := lr.execution[ref]; !ok {
-		lr.execution[ref] = &ExecutionState{
-			// TODO FIX IMMEDIATE!
-			traceID: "Init",
-		}
+		lr.execution[ref] = &ExecutionState{}
 	}
 
 	return lr.execution[ref]

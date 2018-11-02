@@ -22,6 +22,8 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -93,8 +95,17 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			return 0, errors.New("failed to create a signed message")
 		}
 
-		// todo - wtf ?
-		//es.insContext = inslogger.ContextWithTrace(es.insContext, utils.RandTraceID())
+		traceStep, step := lr.nextValidationStep(ref)
+		if traceStep == nil {
+			return step, errors.New("trace is missing")
+		}
+
+		traceID, ok := traceStep.Resp.(string)
+		if !ok {
+			return step, errors.New("trace is wrong type")
+		}
+
+		es.insContext = inslogger.ContextWithTrace(es.insContext, traceID)
 		ret, err := lr.Execute(es.insContext, signed)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
