@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,11 +42,12 @@ func testNode(ref core.RecordRef) core.Node {
 		"",
 	)
 }
+
 func newNodeKeeper() network.NodeKeeper {
 	id := core.RecordRef{255}
-	n := testutils.TestNode(id)
+	n := testNode(id)
 	keeper := NewNodeKeeper(n)
-	keeper.AddActiveNodes([]*core.Node{testutils.TestNode(id)})
+	keeper.AddActiveNodes([]core.Node{testNode(id)})
 	return keeper
 }
 
