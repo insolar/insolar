@@ -183,7 +183,13 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
 		return nil, errors.Errorf("loop detected for '%s'", inslogger.TraceID(ctx))
 	}
+	fuse := true
 	es.Lock()
+	defer func() {
+		if fuse {
+			es.Unlock()
+		}
+	}()
 	lr.execution[ref].traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
 
@@ -236,10 +242,12 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
+		fuse = false
 		re, err := lr.executeMethodCall(es, m, vb)
 		return re, err
 
 	case *message.CallConstructor:
+		fuse = false
 		re, err := lr.executeConstructorCall(es, m, vb)
 		return re, err
 
