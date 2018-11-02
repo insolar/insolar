@@ -41,7 +41,7 @@ type selfWrapper struct {
 }
 
 // GetActiveNode implements Participant interface for NodeKeeper wrapper.
-func (s *selfWrapper) GetActiveNode() *core.Node {
+func (s *selfWrapper) GetActiveNode() core.Node {
 	return s.keeper.GetOrigin()
 }
 
