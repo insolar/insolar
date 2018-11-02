@@ -1205,7 +1205,7 @@ func (dht *DHT) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time
 	return time.Now().Add(dur)
 }
 
-func (dht *DHT) checkMajorityRule(nodes []*core.Node) error {
+func (dht *DHT) checkMajorityRule(nodes []core.Node) error {
 	if len(nodes) < dht.majorityRule {
 		return errors.New("failed majority role check")
 	}
@@ -1213,7 +1213,7 @@ func (dht *DHT) checkMajorityRule(nodes []*core.Node) error {
 	count := 0
 	for _, activeNode := range nodes {
 		for _, bootstrapNode := range dht.options.BootstrapHosts {
-			if strings.EqualFold(bootstrapNode.ID.String(), resolver.ResolveHostID(activeNode.NodeID)) {
+			if strings.EqualFold(bootstrapNode.ID.String(), resolver.ResolveHostID(activeNode.ID())) {
 				count++
 			}
 		}
