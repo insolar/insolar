@@ -309,3 +309,41 @@ func TestParseAndCompactRouteInfo(t *testing.T) {
 		require.Equal(t, ph, newPh)
 	}
 }
+
+func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
+	var routInfoTests = []PacketHeader{
+		PacketHeader{
+			F00:   true,
+			F01:   true,
+			Pulse: 0,
+		},
+		PacketHeader{
+			F00:   false,
+			F01:   true,
+			Pulse: 1,
+		},
+		PacketHeader{
+			F00:   true,
+			F01:   false,
+			Pulse: 2,
+		},
+		PacketHeader{
+			F00:   false,
+			F01:   false,
+			Pulse: 2,
+		},
+		PacketHeader{
+			F00:   false,
+			F01:   false,
+			Pulse: 0,
+		},
+	}
+
+	for _, ph := range routInfoTests {
+		raw := ph.compactPulseAndCustomFlags()
+		newPh := PacketHeader{}
+		newPh.parsePulseAndCustomFlags(raw)
+		require.Equal(t, ph, newPh)
+	}
+
+}
