@@ -43,7 +43,7 @@ func (t *Table) Resolve(ref core.RecordRef) (string, error) {
 		if node == nil {
 			return "", errors.New("no such local node")
 		}
-		return node.Address, nil
+		return node.PhysicalAddress(), nil
 	}
 	return t.resolveRemoteNode(ref)
 }
