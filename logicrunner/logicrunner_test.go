@@ -25,6 +25,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/core/utils"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/testutils/network"
@@ -265,7 +267,7 @@ func (r *Two) Hello(s string) (string, error) {
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
 }
 `
-	ctx := context.TODO()
+	ctx := context.Background()
 
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
@@ -293,6 +295,7 @@ func (r *Two) Hello(s string) (string, error) {
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
 	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,
 		signed,
@@ -311,6 +314,7 @@ func (r *Two) Hello(s string) (string, error) {
 		}
 		key, _ := cryptoHelper.GeneratePrivateKey()
 		signed, _ := message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
+		ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 		resp, err := lr.Execute(
 			ctx,
 			signed,
@@ -328,6 +332,7 @@ func (r *Two) Hello(s string) (string, error) {
 	}
 	key, _ = cryptoHelper.GeneratePrivateKey()
 	signed, _ = message.NewSignedMessage(ctx, msg2, testutils.RandomRef(), key)
+	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err = lr.Execute(
 		ctx,
 		signed,
@@ -349,6 +354,7 @@ func (r *Two) Hello(s string) (string, error) {
 		}
 		key, _ := cryptoHelper.GeneratePrivateKey()
 		signed, _ := message.NewSignedMessage(ctx, msg3, testutils.RandomRef(), key)
+		ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 		resp, err := lr.Execute(
 			ctx,
 			signed,
@@ -1576,8 +1582,7 @@ func (r *One) Recursive() (error) {
 
 `
 
-	ctx := inslogger.ContextWithTrace(context.Background(), "TestRecursiveCall")
-
+	ctx := inslogger.ContextWithTrace(context.Background(), utils.RandTraceID())
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 

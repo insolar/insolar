@@ -92,6 +92,9 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		if err != nil {
 			return 0, errors.New("failed to create a signed message")
 		}
+
+		// todo - wtf ?
+		//es.insContext = inslogger.ContextWithTrace(es.insContext, utils.RandTraceID())
 		ret, err := lr.Execute(es.insContext, signed)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
