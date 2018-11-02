@@ -225,7 +225,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 		Resp: msg,
 	})
 
-	lr.addObjectCaseRecord(ref, core.CaseRecord{
+	vb.Begin(ref, core.CaseRecord{
 		Type: core.CaseRecordTypeTraceID,
 		Resp: inslogger.TraceID(ctx),
 	})
