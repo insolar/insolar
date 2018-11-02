@@ -348,7 +348,7 @@ func TestUnsyncList_GetHash2(t *testing.T) {
 }
 
 func TestUnsyncList_GetHash3(t *testing.T) {
-	unsyncNodes := []*core.Node{}
+	unsyncNodes := []core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
 	h := make([]*network.NodeUnsyncHash, 0)
