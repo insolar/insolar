@@ -28,5 +28,6 @@ type NodeProof struct {
 }
 
 func (np *NodeProof) IsValid(ctx context.Context, node core.Node, pulseHash []byte) bool {
-	return true
+	nodeInfoHash := nodeInfoHash(pulseHash, np.StateHash)
+	return verifySignature(ctx, nodeInfoHash, np.Signature, node.PublicKey())
 }
