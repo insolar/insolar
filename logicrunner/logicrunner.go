@@ -216,13 +216,15 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 		return nil, errors.Wrap(err, "Can't create request")
 	}
 
+	callerPrototype := msg.GetCallerPrototype()
 	es.callContext = &core.LogicCallContext{
-		Caller:  msg.GetCaller(),
-		Callee:  &ref,
-		Request: es.request,
-		Time:    time.Now(), // TODO: probably we should take it from e
-		Pulse:   *lr.pulse(),
-		TraceID: inslogger.TraceID(ctx),
+		Caller:          msg.GetCaller(),
+		Callee:          &ref,
+		Request:         es.request,
+		Time:            time.Now(), // TODO: probably we should take it from e
+		Pulse:           *lr.pulse(),
+		TraceID:         inslogger.TraceID(ctx),
+		CallerPrototype: &callerPrototype,
 	}
 
 	switch m := msg.(type) {
