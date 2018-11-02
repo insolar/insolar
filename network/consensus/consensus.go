@@ -26,7 +26,7 @@ import (
 
 // Participant describes one consensus participant
 type Participant interface {
-	GetActiveNode() *core.Node
+	GetActiveNode() core.Node
 }
 
 // UnsyncHolder
