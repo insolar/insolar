@@ -51,6 +51,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	pm, err := pulsemanager.NewPulseManager(db)
 	assert.NoError(t, err)
 	ls, err := localstorage.NewLocalStorage(db)
+	assert.NoError(t, err)
 
 	// Init components.
 	if c.MessageBus == nil {
