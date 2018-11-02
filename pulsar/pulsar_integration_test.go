@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
@@ -112,7 +112,7 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 
 	c := core.Components{LogicRunner: lr}
 	c.MessageBus = testmessagebus.NewTestMessageBus()
-	c.NodeNetwork = nodekeeper.NewNodeKeeper(nodekeeper.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
+	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
 
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	nodeConfig := configuration.NewConfiguration()

@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/dhtnetwork/signhandler"
-	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
@@ -969,11 +969,11 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 	key1, _ := ecdsa.GeneratePrivateKey()
 	key2, _ := ecdsa.GeneratePrivateKey()
 
-	keeper1 := nodekeeper.NewNodeKeeper(nodekeeper.NewNode(dht1.nodeID, nil, nil, 0, 0, "", ""))
-	keeper2 := nodekeeper.NewNodeKeeper(nodekeeper.NewNode(dht1.nodeID, nil, nil, 0, 0, "", ""))
+	keeper1 := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(dht1.nodeID, nil, nil, 0, 0, "", ""))
+	keeper2 := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(dht1.nodeID, nil, nil, 0, 0, "", ""))
 
 	keeper1.AddActiveNodes([]core.Node{
-		nodekeeper.NewNode(
+		nodenetwork.NewNode(
 			dht2.nodeID,
 			[]core.NodeRole{core.RoleUnknown},
 			&key2.PublicKey,
@@ -984,7 +984,7 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 		),
 	})
 	keeper2.AddActiveNodes([]core.Node{
-		nodekeeper.NewNode(
+		nodenetwork.NewNode(
 			dht1.nodeID,
 			[]core.NodeRole{core.RoleUnknown},
 			&key1.PublicKey,

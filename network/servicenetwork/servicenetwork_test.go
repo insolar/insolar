@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/dhtnetwork"
-	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
@@ -45,7 +45,7 @@ func initComponents(t *testing.T, nodeId core.RecordRef) core.Components {
 	pwd, _ := os.Getwd()
 	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
 	assert.NoError(t, err)
-	return core.Components{Certificate: cert, NodeNetwork: nodekeeper.NewNodeKeeper(nodekeeper.NewNode(nodeId, nil, nil, 0, 0, "", "")), Ledger: &dhtnetwork.MockLedger{}}
+	return core.Components{Certificate: cert, NodeNetwork: nodenetwork.NewNodeKeeper(nodenetwork.NewNode(nodeId, nil, nil, 0, 0, "", "")), Ledger: &dhtnetwork.MockLedger{}}
 }
 
 /*

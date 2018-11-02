@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/pulsar"
@@ -48,7 +48,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		checkError(ctx, err, "failed to start Certificate")
 	}
 
-	nodeNetwork, err := nodekeeper.NewNodeNetwork(cfg)
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)

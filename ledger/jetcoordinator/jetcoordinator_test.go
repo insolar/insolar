@@ -26,13 +26,13 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 )
 
 func newActiveNode(ref core.RecordRef, role core.NodeRole) core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
-	return nodekeeper.NewNode(
+	return nodenetwork.NewNode(
 		ref,
 		[]core.NodeRole{role},
 		nil, // TODO publicKey
@@ -49,7 +49,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	keeper := nodekeeper.NewNodeKeeper(nodekeeper.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
+	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
 	c := core.Components{LogicRunner: lr, NodeNetwork: keeper}
 	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
