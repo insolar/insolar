@@ -54,6 +54,23 @@ type Node struct {
 	Version string
 }
 
+type NodeInterface interface {
+	// ID is the unique identifier of the node
+	ID() RecordRef
+	// State is the node state
+	State() NodeState
+	// Pulse is the pulse number after which the new state is assigned to the node
+	Pulse() PulseNumber
+	// Roles is the set of candidate Roles for the node
+	Roles() []NodeRole
+	// PublicKey is the public key of the node
+	PublicKey() *ecdsa.PublicKey
+	// PhysicalAddress is the network address of the node
+	PhysicalAddress() string
+	// Version of node software
+	Version() string
+}
+
 type NodeNetwork interface {
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
 	GetOrigin() *Node
