@@ -874,7 +874,7 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 		case msg := <-dht.transport.Packets():
 
 			go func(msg *packet.Packet) {
-				if msg == nil || !msg.IsForMe(*dht.origin) {
+				if msg == nil || !msg.IsForMe(*dht.origin) || !msg.IsValid() {
 					return
 				}
 

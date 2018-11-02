@@ -168,10 +168,8 @@ func (t *baseTransport) processResponse(msg *packet.Packet) {
 }
 
 func (t *baseTransport) processRequest(msg *packet.Packet) {
-	if msg.IsValid() {
-		log.Debugf("Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
-		t.received <- msg
-	}
+	log.Debugf("Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
+	t.received <- msg
 }
 
 // PublicAddress returns transport public ip address
