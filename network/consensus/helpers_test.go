@@ -85,7 +85,7 @@ type mockUnsyncHolder struct {
 	list []core.Node
 }
 
-func (m *mockUnsyncHolder) GetUnsync() []*core.Node {
+func (m *mockUnsyncHolder) GetUnsync() []core.Node {
 	return m.list
 }
 
