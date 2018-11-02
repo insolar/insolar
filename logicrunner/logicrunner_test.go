@@ -290,7 +290,7 @@ func (r *Two) Hello(s string) (string, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	resp, err := lr.Execute(
 		context.TODO(),
 		signed,
@@ -308,7 +308,7 @@ func (r *Two) Hello(s string) (string, error) {
 			BaseLogicMessage: message.BaseLogicMessage{Nonce: uint64(i)},
 		}
 		key, _ := cryptoHelper.GeneratePrivateKey()
-		signed, _ := message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
+		signed, _ := message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key, 0)
 		resp, err := lr.Execute(
 			context.TODO(),
 			signed,
@@ -325,7 +325,7 @@ func (r *Two) Hello(s string) (string, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ = cryptoHelper.GeneratePrivateKey()
-	signed, _ = message.NewSignedMessage(ctx, msg2, testutils.RandomRef(), key)
+	signed, _ = message.NewSignedMessage(ctx, msg2, testutils.RandomRef(), key, 0)
 	resp, err = lr.Execute(
 		context.TODO(),
 		signed,
@@ -346,7 +346,7 @@ func (r *Two) Hello(s string) (string, error) {
 			BaseLogicMessage: message.BaseLogicMessage{Nonce: uint64(i)},
 		}
 		key, _ := cryptoHelper.GeneratePrivateKey()
-		signed, _ := message.NewSignedMessage(ctx, msg3, testutils.RandomRef(), key)
+		signed, _ := message.NewSignedMessage(ctx, msg3, testutils.RandomRef(), key, 0)
 		resp, err := lr.Execute(
 			context.TODO(),
 			signed,
@@ -450,7 +450,7 @@ func (r *Two) Hello(s string) (string, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	resp, err := lr.Execute(
 		context.TODO(),
 		signed,
@@ -466,7 +466,7 @@ func (r *Two) Hello(s string) (string, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
 	}
 	key, _ = cryptoHelper.GeneratePrivateKey()
-	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
+	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key, 0)
 	resp, err = lr.Execute(
 		context.TODO(),
 		signed,
@@ -560,7 +560,7 @@ func (r *Two) Hello() (string, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	_, err = lr.Execute(
 		context.TODO(),
 		signed,
@@ -613,7 +613,7 @@ func (r *One) Hello() (string, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	res, err := lr.Execute(context.TODO(), signed)
 	assert.NoError(t, err)
 
@@ -665,7 +665,7 @@ func (r *One) Kill() error {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	_, err = lr.Execute(
 		context.TODO(),
 		signed,
@@ -720,7 +720,7 @@ func (r *One) NotPanic() error {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	_, err = lr.Execute(context.TODO(),
 		signed,
 	)
@@ -732,7 +732,7 @@ func (r *One) NotPanic() error {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ = cryptoHelper.GeneratePrivateKey()
-	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
+	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key, 0)
 	_, err = lr.Execute(context.TODO(),
 		signed,
 	)
@@ -842,7 +842,7 @@ func New(n int) (*Child, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{10}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	resp, err := lr.Execute(
 		context.TODO(),
 		signed,
@@ -857,7 +857,7 @@ func New(n int) (*Child, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ = cryptoHelper.GeneratePrivateKey()
-	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
+	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key, 0)
 	resp, err = lr.Execute(
 		context.TODO(),
 		signed,
@@ -925,7 +925,7 @@ func (c *Contract) Rand() (int, error) {
 			BaseLogicMessage: message.BaseLogicMessage{Nonce: uint64(i)},
 		}
 		key, _ := cryptoHelper.GeneratePrivateKey()
-		signed, _ := message.NewSignedMessage(ctx, msg[i], testutils.RandomRef(), key)
+		signed, _ := message.NewSignedMessage(ctx, msg[i], testutils.RandomRef(), key, 0)
 		_, err = lr.Execute(
 			context.TODO(),
 			signed,
@@ -1027,7 +1027,7 @@ func (r *Two) NoError() error {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	resp, err := lr.Execute(
 		context.TODO(),
 		signed,
@@ -1046,7 +1046,7 @@ func (r *Two) NoError() error {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ = cryptoHelper.GeneratePrivateKey()
-	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key)
+	signed, _ = message.NewSignedMessage(ctx, msg1, testutils.RandomRef(), key, 0)
 	resp, err = lr.Execute(
 		context.TODO(),
 		signed,
@@ -1135,7 +1135,7 @@ func (r *Two) Hello() (*string, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	resp, err := lr.Execute(
 		context.TODO(),
 		signed,
@@ -1180,7 +1180,7 @@ func (s *Caller) SignedCall(rootDomain core.RecordRef, method string, params []i
 		Arguments: goplugintestutils.CBORMarshal(s.t, []interface{}{rootDomain, method, buf, seed, sign}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	res, err := s.lr.Execute(
 		context.TODO(),
 		signed,
@@ -1405,7 +1405,7 @@ func New(n int) (*Child, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{1}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	resp, err := lr.Execute(
 		context.TODO(),
 		signed,
@@ -1528,7 +1528,7 @@ func (r *Two) Hello() (*string, error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
 	resp, err := lr.Execute(
 		context.TODO(),
 		signed,
