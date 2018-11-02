@@ -16,7 +16,16 @@
 
 package merkle
 
+import (
+	"context"
+
+	"github.com/insolar/insolar/core"
+)
+
 type CloudProof struct {
 	Signature []byte
 }
 
+func (cp *CloudProof) IsValid(ctx context.Context, node core.Node, cloudHash []byte) bool {
+	return true
+}
