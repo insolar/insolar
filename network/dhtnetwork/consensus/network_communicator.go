@@ -77,16 +77,16 @@ func (c *communicatorReceiver) ExchangeHash(ctx context.Context, pulse core.Puls
 }
 
 func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseNumber,
-	p consensus.Participant, data []*core.Node) ([]*core.Node, error) {
+	p consensus.Participant, data []core.Node) ([]core.Node, error) {
 
 	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, -1)
 	if err != nil {
 		log.Debugf("ExchangeData: error getting cache in consensus: " + err.Error())
-	} else if result, ok := unsyncHolder.GetUnsyncList(p.GetActiveNode().NodeID); ok {
-		log.Debugf("ExchangeData: got unsync list of remote party %s from cache", p.GetActiveNode().NodeID)
+	} else if result, ok := unsyncHolder.GetUnsyncList(p.GetActiveNode().ID()); ok {
+		log.Debugf("ExchangeData: got unsync list of remote party %s from cache", p.GetActiveNode().ID())
 		return result, nil
 	}
-	log.Debugf("Sending consensus unsync list exchange request to %s", p.GetActiveNode().NodeID)
+	log.Debugf("Sending consensus unsync list exchange request to %s", p.GetActiveNode().ID())
 	sender, receiver, err := c.getSenderAndReceiver(ctx, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
@@ -95,7 +95,7 @@ func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseN
 		Type(types.TypeExchangeUnsyncLists).
 		Receiver(receiver).
 		Request(&packet.RequestExchangeUnsyncLists{
-			SenderID:   c.keeper.GetOrigin().NodeID,
+			SenderID:   c.keeper.GetOrigin().ID(),
 			Pulse:      pulse,
 			UnsyncList: data,
 		}).
@@ -115,7 +115,7 @@ func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseN
 	if responseData.Error != "" {
 		return nil, errors.New("ExchangeData: got error from remote party: " + responseData.Error)
 	}
-	log.Debugf("ExchangeData: got unsync list of remote party %s from network", p.GetActiveNode().NodeID)
+	log.Debugf("ExchangeData: got unsync list of remote party %s from network", p.GetActiveNode().ID())
 	return responseData.UnsyncList, nil
 }
 
