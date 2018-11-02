@@ -65,6 +65,17 @@ func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
 }
 
 func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error) {
+	globuleHash := make([]byte, 0) // TODO: calculate tree
+
+	signature, err := ecdsa.Sign(globuleHash, c.Certificate.GetEcdsaPrivateKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't sign globule hash")
+	}
+
+	return &GlobuleProof{
+		Signature: signature,
+	}, nil
+
 	return &GlobuleProof{
 		Signature: nil,
 	}, nil
