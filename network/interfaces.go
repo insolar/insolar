@@ -126,7 +126,7 @@ type NodeKeeper interface {
 
 type UnsyncList interface {
 	// GetUnsync returns list of local unsync nodes. This list is created.
-	GetUnsync() []*core.Node
+	GetUnsync() []core.Node
 	// GetPulse returns actual pulse for current consensus process.
 	GetPulse() core.PulseNumber
 	// SetHash sets hash of unsync lists for each node of consensus.
@@ -135,11 +135,11 @@ type UnsyncList interface {
 	// until the hash is calculated with SetHash() call.
 	GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error)
 	// AddUnsyncList add unsync list for remote ref.
-	AddUnsyncList(ref core.RecordRef, unsync []*core.Node)
+	AddUnsyncList(ref core.RecordRef, unsync []core.Node)
 	// AddUnsyncHash add unsync hash for remote ref.
 	AddUnsyncHash(ref core.RecordRef, hash []*NodeUnsyncHash)
 	// GetUnsyncList get unsync list for remote ref.
-	GetUnsyncList(ref core.RecordRef) ([]*core.Node, bool)
+	GetUnsyncList(ref core.RecordRef) ([]core.Node, bool)
 	// GetUnsyncHash get unsync hash for remote ref.
 	GetUnsyncHash(ref core.RecordRef) ([]*NodeUnsyncHash, bool)
 }
