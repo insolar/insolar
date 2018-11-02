@@ -169,7 +169,7 @@ func (hh *mockHostHandler) GetActiveNodesList() []core.Node {
 	return nil
 }
 
-func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.Node) error {
+func (hh *mockHostHandler) AddActiveNodes(activeNodes []core.Node) error {
 	return nil
 }
 
