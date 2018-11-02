@@ -599,29 +599,29 @@ func (nlv *NodeListVote) Serialize() ([]byte, error) {
 // DeviantBitSet masks
 const (
 	// take high bit
-	compressedSet = 0x80
+	compressedSetMask = 0x80
 
-	highBitLengthFlag = 0x40
-	lowBitLength      = 0x3f
+	highBitLengthFlagMask = 0x40
+	lowBitLengthMask      = 0x3f
 )
 
 func (dbs *DeviantBitSet) parsePackedData(packedData uint8) {
 	dbs.CompressedSet = (packedData >> 7) == 1
-	dbs.HighBitLengthFlag = ((packedData & highBitLengthFlag) >> 6) == 1
-	dbs.LowBitLength = packedData & lowBitLength
+	dbs.HighBitLengthFlag = ((packedData & highBitLengthFlagMask) >> 6) == 1
+	dbs.LowBitLength = packedData & lowBitLengthMask
 }
 
 func (dbs *DeviantBitSet) compactPacketData() uint8 {
 	var result uint8
 
 	if dbs.CompressedSet {
-		result |= compressedSet
+		result |= compressedSetMask
 	}
 	if dbs.HighBitLengthFlag {
-		result |= highBitLengthFlag
+		result |= highBitLengthFlagMask
 	}
 
-	result |= dbs.LowBitLength & lowBitLength
+	result |= dbs.LowBitLength & lowBitLengthMask
 
 	return result
 }
