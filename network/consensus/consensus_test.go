@@ -41,7 +41,7 @@ func initNodes(count int) []TestNode {
 			consensus:       c,
 			ctx:             context.Background(),
 		}
-		log.Infof("Node %d has id %s", i, nodes[i].self.GetActiveNode().NodeID.String())
+		log.Infof("Node %d has id %s", i, nodes[i].self.GetActiveNode().ID().String())
 	}
 
 	return nodes
