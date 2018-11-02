@@ -88,15 +88,15 @@ func resolveAddress(configuration configuration.Configuration) (string, error) {
 }
 
 // NewNodeKeeper create new NodeKeeper
-func NewNodeKeeper(origin *core.Node) network.NodeKeeper {
+func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 	return &nodekeeper{
 		origin:      origin,
 		state:       undefined,
-		active:      make(map[core.RecordRef]*core.Node),
-		sync:        make([]*core.Node, 0),
-		unsync:      make([]*core.Node, 0),
+		active:      make(map[core.RecordRef]core.Node),
+		sync:        make([]core.Node, 0),
+		unsync:      make([]mutableNode, 0),
 		listWaiters: make([]chan *UnsyncList, 0),
-		nodeWaiters: make(map[core.RecordRef]chan *core.Node),
+		nodeWaiters: make(map[core.RecordRef]chan core.Node),
 		index:       make(map[core.NodeRole][]core.RecordRef),
 	}
 }
