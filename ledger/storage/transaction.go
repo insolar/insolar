@@ -102,15 +102,11 @@ func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) 
 	return req, nil
 }
 
-func (m *TransactionManager) set(key, val []byte) {
-	m.txupdates[string(key)] = keyval{k: key, v: val}
-}
-
 // GetBlob returns binary value stored by record ID.
 func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 	k := prefixkey(scopeIDBlob, id[:])
 	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
-	return m.Get(k)
+	return m.get(k)
 }
 
 // SetBlob saves binary value for provided pulse.
@@ -138,7 +134,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, id[:])
 	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
-	buf, err := m.Get(k)
+	buf, err := m.get(k)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +178,7 @@ func (m *TransactionManager) GetObjectIndex(
 		m.lockOnID(id)
 	}
 	k := prefixkey(scopeIDLifeline, id[:])
-	buf, err := m.Get(k)
+	buf, err := m.get(k)
 	if err != nil {
 		return nil, err
 	}
@@ -207,8 +203,23 @@ func (m *TransactionManager) SetObjectIndex(
 	return nil
 }
 
-// Get returns value by key.
-func (m *TransactionManager) Get(key []byte) ([]byte, error) {
+// GetLatestPulseNumber returns current pulse number.
+func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
+	buf, err := m.get(prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
+	if err != nil {
+		return 0, err
+	}
+	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
+}
+
+// set stores value by key.
+func (m *TransactionManager) set(key, value []byte) error {
+	m.txupdates[string(key)] = keyval{k: key, v: value}
+	return nil
+}
+
+// get returns value by key.
+func (m *TransactionManager) get(key []byte) ([]byte, error) {
 	if kv, ok := m.txupdates[string(key)]; ok {
 		return kv.v, nil
 	}
@@ -223,19 +234,4 @@ func (m *TransactionManager) Get(key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return item.ValueCopy(nil)
-}
-
-// GetLatestPulseNumber returns current pulse number.
-func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
-	buf, err := m.Get(prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
-	if err != nil {
-		return 0, err
-	}
-	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
-}
-
-// Set stores value by key.
-func (m *TransactionManager) Set(key, value []byte) error {
-	m.set(key, value)
-	return nil
 }

@@ -136,6 +136,10 @@ type mockLedger struct {
 	PM core.PulseManager
 }
 
+func (l *mockLedger) GetLocalStorage() core.LocalStorage {
+	panic("implement me")
+}
+
 func (l *mockLedger) GetArtifactManager() core.ArtifactManager {
 	return nil
 }
