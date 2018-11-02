@@ -82,7 +82,7 @@ func (TestParticipant) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyn
 // =====
 
 type mockUnsyncHolder struct {
-	list []*core.Node
+	list []core.Node
 }
 
 func (m *mockUnsyncHolder) GetUnsync() []*core.Node {
