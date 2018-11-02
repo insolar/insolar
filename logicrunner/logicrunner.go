@@ -47,10 +47,9 @@ type ExecutionState struct {
 	callContext *core.LogicCallContext
 	deactivate  bool
 	request     *Ref
+	traceID     string
 
 	objectbody *ObjectBody
-
-	traces map[string]struct{}
 }
 
 // LogicRunner is a general interface of contract executor
@@ -175,11 +174,12 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	}
 	ref := msg.GetReference()
 
-	// TODO when traceId works everywhere add check of it
-	loopTraceId, _ := ctx.Value("loopTraceId").(string)
-
-	es, err := lr.UpsertExecution(ref, loopTraceId)
+	es := lr.UpsertExecution(ref)
+	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
+		return nil, errors.New("loop detected")
+	}
 	es.Lock()
+	lr.execution[ref].traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
 
 	lr.caseBindReplaysMutex.Lock()

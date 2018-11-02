@@ -25,6 +25,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -1574,7 +1576,8 @@ func (r *One) Recursive() (error) {
 
 `
 
-	ctx := context.WithValue(context.Background(), "loopTraceId", "this is test loop trace id")
+	ctx := context.Background()
+	ctx = inslogger.ContextWithTrace(ctx, "TestRecursiveCall")
 
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
@@ -1609,5 +1612,5 @@ func (r *One) Recursive() (error) {
 	)
 	assert.NoError(t, err, "contract call")
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{"Hi, ins! Two said: Hello you too, ins. 644 times!", nil}, r)
+	assert.Equal(t, []interface{}{map[interface{}]interface{}{"S": "on calling main API: couldn't dispatch event: loop detected"}}, r)
 }

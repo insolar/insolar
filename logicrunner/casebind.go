@@ -47,16 +47,12 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 	}
 
 	// TODO fix
-	es, err := lr.UpsertExecution(ref, "123")
-	if err != nil {
-		// todo
-		panic("LOOP!")
-	}
+	es := lr.UpsertExecution(ref)
 	ctx := context.TODO()
 	es.insContext = ctx
 	es.validate = true
 	es.objectbody = nil
-	err = func() error {
+	err := func() error {
 		lr.caseBindReplaysMutex.Lock()
 		defer lr.caseBindReplaysMutex.Unlock()
 		if _, ok := lr.caseBindReplays[ref]; ok {
