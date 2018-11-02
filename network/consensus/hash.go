@@ -89,7 +89,7 @@ func CalculateHash(list []core.Node) (result []byte, err error) {
 }
 
 // CalculateNodeUnsyncHash calculates hash for a NodeUnsyncHash
-func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []*core.Node) (*network.NodeUnsyncHash, error) {
+func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []core.Node) (*network.NodeUnsyncHash, error) {
 	hash, err := CalculateHash(list)
 	if err != nil {
 		return nil, err
