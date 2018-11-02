@@ -160,7 +160,7 @@ func (t *baseTransport) processResponse(msg *packet.Packet) {
 
 	future := t.getFuture(msg)
 	if future != nil {
-		if !shouldProcessPacket(future, msg) {
+		if shouldProcessPacket(future, msg) {
 			future.SetResult(msg)
 		}
 		future.Cancel()
@@ -198,7 +198,11 @@ func (t *baseTransport) sendPacket(p *packet.Packet) error {
 }
 
 func shouldProcessPacket(future Future, msg *packet.Packet) bool {
-	return !future.Actor().Equal(*msg.Sender) && msg.Type != types.TypePing || msg.Type != future.Request().Type
+	typesShouldBeEqual := msg.Type == future.Request().Type
+	isPingPacket := msg.Type == types.Ping || msg.Type == types.TypePing
+	responseIsForRightSender := future.Actor().Equal(*msg.Sender)
+
+	return typesShouldBeEqual && (responseIsForRightSender || isPingPacket)
 }
 
 // AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
