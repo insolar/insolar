@@ -187,13 +187,12 @@ func TestNodeViolationBlame_BadData(t *testing.T) {
 
 func makeNodeJoinClaim() *NodeJoinClaim {
 	nodeJoinClaim := &NodeJoinClaim{}
-	nodeJoinClaim.length = uint16(2)
-	nodeJoinClaim.NodeRoleRecID = uint32(32)
-	nodeJoinClaim.JoinsAfter = uint32(67)
-	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
 	nodeJoinClaim.NodeID = uint32(77)
-	nodeJoinClaim.NodeRef = testutils.RandomRef()
 	nodeJoinClaim.RelayNodeID = uint32(26)
+	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
+	nodeJoinClaim.JoinsAfter = uint32(67)
+	nodeJoinClaim.NodeRoleRecID = uint32(32)
+	nodeJoinClaim.NodeRef = testutils.RandomRef()
 	// nodeJoinClaim.NodePK = // TODO:
 
 	return nodeJoinClaim
@@ -205,7 +204,7 @@ func TestNodeJoinClaim(t *testing.T) {
 
 func TestNodeJoinClaim_BadData(t *testing.T) {
 	checkBadDataSerialization(t, makeNodeJoinClaim(), &NodeJoinClaim{},
-		"[ NodeJoinClaim.Deserialize ] Can't read length: unexpected EOF")
+		"[ NodeJoinClaim.Deserialize ] Can't read NodeRef: unexpected EOF")
 }
 
 func TestNodeLeaveClaim(t *testing.T) {
@@ -348,4 +347,23 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 		require.Equal(t, ph, newPh)
 	}
 
+}
+
+func makePhase1Packet() *Phase1Packet {
+	phase1Packet := &Phase1Packet{}
+	phase1Packet.packetHeader = *makeDefaultPacketHeader()
+	phase1Packet.pulseData = *makeDefaultPulseDataExt()
+	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: 2, NodeStateHash: 3}
+
+	phase1Packet.claims = append(phase1Packet.claims, makeNodeJoinClaim())
+	phase1Packet.claims = append(phase1Packet.claims, makeNodeViolationBlame())
+	phase1Packet.claims = append(phase1Packet.claims, &NodeLeaveClaim{length: 22})
+
+	phase1Packet.signature = 987
+
+	return phase1Packet
+}
+
+func TestPhase1Packet_Deserialize(t *testing.T) {
+	checkSerializationDeserialization(t, makePhase1Packet())
 }
