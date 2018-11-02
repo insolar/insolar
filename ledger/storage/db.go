@@ -111,7 +111,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
 	getGenesisRef := func() (*core.RecordRef, error) {
-		buff, err := db.Get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
+		buff, err := db.get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
 			return nil, err
 		}
@@ -154,7 +154,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		}
 
 		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
-		return genesisRef, db.Set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
+		return genesisRef, db.set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
 	}
 
 	var err error
@@ -184,20 +184,6 @@ func (db *DB) GenesisRef() *core.RecordRef {
 func (db *DB) Close() error {
 	// TODO: add close flag and mutex guard on Close method
 	return db.db.Close()
-}
-
-// Get wraps matching transaction manager method.
-func (db *DB) Get(key []byte) ([]byte, error) {
-	tx := db.BeginTransaction(false)
-	defer tx.Discard()
-	return tx.Get(key)
-}
-
-// Set wraps matching transaction manager method.
-func (db *DB) Set(key, value []byte) error {
-	return db.Update(func(tx *TransactionManager) error {
-		return tx.Set(key, value)
-	})
 }
 
 // GetBlob returns binary value stored by record ID.
@@ -233,13 +219,6 @@ func (db *DB) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []
 	return id, nil
 }
 
-// GetRequest wraps matching transaction manager method.
-func (db *DB) GetRequest(ctx context.Context, id *core.RecordID) (record.Request, error) {
-	tx := db.BeginTransaction(false)
-	defer tx.Discard()
-	return tx.GetRequest(ctx, id)
-}
-
 // GetRecord wraps matching transaction manager method.
 func (db *DB) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	var (
@@ -273,13 +252,6 @@ func (db *DB) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec r
 	return id, nil
 }
 
-// SetRecordBinary saves binary record for specified key.
-//
-// This method is used for data replication.
-func (db *DB) SetRecordBinary(key, rec []byte) error {
-	return db.Set(prefixkey(scopeIDRecord, key), rec)
-}
-
 // GetObjectIndex wraps matching transaction manager method.
 func (db *DB) GetObjectIndex(
 	ctx context.Context,
@@ -310,7 +282,7 @@ func (db *DB) SetObjectIndex(
 // GetDrop returns jet drop for a given pulse number.
 func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
-	buf, err := db.Get(k)
+	buf, err := db.get(k)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +347,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 // SetDrop saves provided JetDrop in db.
 func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
-	_, err := db.Get(k)
+	_, err := db.get(k)
 	if err == nil {
 		return ErrOverride
 	}
@@ -385,7 +357,7 @@ func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 		return err
 	}
 
-	return db.Set(k, encoded)
+	return db.set(k, encoded)
 }
 
 // AddPulse saves new pulse data and updates index.
@@ -407,17 +379,17 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 		if err != nil {
 			return err
 		}
-		err = tx.Set(prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), buf.Bytes())
+		err = tx.set(prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), buf.Bytes())
 		if err != nil {
 			return err
 		}
-		return tx.Set(prefixkey(scopeIDSystem, []byte{sysLatestPulse}), pulse.PulseNumber.Bytes())
+		return tx.set(prefixkey(scopeIDSystem, []byte{sysLatestPulse}), pulse.PulseNumber.Bytes())
 	})
 }
 
 // GetPulse returns pulse for provided pulse number.
 func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*record.PulseRecord, error) {
-	buf, err := db.Get(prefixkey(scopeIDPulse, num.Bytes()))
+	buf, err := db.get(prefixkey(scopeIDPulse, num.Bytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -514,8 +486,22 @@ func (db *DB) SetMessage(pulseNumber core.PulseNumber, genericMessage core.Messa
 	}
 	hw.Sum(nil)
 
-	return db.Set(
+	return db.set(
 		prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
 		messageBytes,
 	)
+}
+
+// get wraps matching transaction manager method.
+func (db *DB) get(key []byte) ([]byte, error) {
+	tx := db.BeginTransaction(false)
+	defer tx.Discard()
+	return tx.get(key)
+}
+
+// set wraps matching transaction manager method.
+func (db *DB) set(key, value []byte) error {
+	return db.Update(func(tx *TransactionManager) error {
+		return tx.set(key, value)
+	})
 }
