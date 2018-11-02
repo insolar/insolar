@@ -44,7 +44,7 @@ type TestNode struct {
 }
 
 type TestParticipant struct {
-	node   *core.Node
+	node   core.Node
 	holder mockUnsyncHolder
 }
 
