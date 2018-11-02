@@ -218,6 +218,8 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 		"[ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 }
 
+// ----------------------------------PHASE 2--------------------------------
+
 func makeReferendumVote() *ReferendumVote {
 	referendumVote := &ReferendumVote{}
 	referendumVote.Length = uint16(44)
@@ -249,5 +251,26 @@ func TestNodeListVote(t *testing.T) {
 
 func TestNodeListVote_BadData(t *testing.T) {
 	checkBadDataSerialization(t, makeNodeListVote(), &NodeListVote{},
+		"[ NodeListVote.Deserialize ] Can't read NodeListHash: unexpected EOF")
+}
+
+func makeDeviantBitSet() *DeviantBitSet {
+	deviantBitSet := &DeviantBitSet{}
+	deviantBitSet.CompressedSet = true
+	deviantBitSet.HighBitLengthFlag = true
+	deviantBitSet.LowBitLength = uint8(3)
+	//-----------------
+	deviantBitSet.HighBitLength = uint8(9)
+	deviantBitSet.Payload = []byte("Hello, World!")
+
+	return deviantBitSet
+}
+
+func TestDeviantBitSet(t *testing.T) {
+	checkSerialization(t, makeDeviantBitSet(), &DeviantBitSet{})
+}
+
+func TestDeviantBitSete_BadData(t *testing.T) {
+	checkBadDataSerialization(t, makeDeviantBitSet(), &DeviantBitSet{},
 		"[ NodeListVote.Deserialize ] Can't read NodeListHash: unexpected EOF")
 }
