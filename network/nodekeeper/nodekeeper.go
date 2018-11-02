@@ -196,7 +196,7 @@ func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
 	log.Debugf("Added active nodes: %s", strings.Join(activeNodes, ", "))
 }
 
-func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.Node {
+func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) core.Node {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
