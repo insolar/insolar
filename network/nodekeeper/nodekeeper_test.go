@@ -60,16 +60,16 @@ func TestNodekeeper_GetOrigin(t *testing.T) {
 
 func TestNodekeeper_AddUnsync(t *testing.T) {
 	id := core.RecordRef{}
-	n := testutils.TestNode(id)
+	n := testNode(id).(mutableNode)
 	keeper := NewNodeKeeper(n)
 
 	// AddUnsync should return error if we are not an active node
-	n.State = core.NodeJoined
+	n.SetState(core.NodeJoined)
 	_, err := keeper.AddUnsync(newActiveNode(0))
 
 	assert.Error(t, err)
 	// Add active node with NodeKeeper id, so we are now active and can add unsyncs
-	keeper.AddActiveNodes([]*core.Node{testutils.TestNode(id)})
+	keeper.AddActiveNodes([]core.Node{testNode(id)})
 	_, err = keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	success, list := keeper.SetPulse(core.PulseNumber(0))
@@ -129,7 +129,7 @@ func TestNodekeeper_doubleSync(t *testing.T) {
 	keeper.Sync(list.GetUnsync(), pulse)
 	// and added unsync node should not advance to active list (only one origin node would be in the list)
 	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
-	assert.Equal(t, keeper.GetOrigin().NodeID, keeper.GetActiveNodes()[0].NodeID)
+	assert.Equal(t, keeper.GetOrigin().ID(), keeper.GetActiveNodes()[0].ID())
 }
 
 func TestNodekeeper_doubleSetPulse(t *testing.T) {
