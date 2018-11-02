@@ -68,7 +68,7 @@ func (r *exchangeResults) getAllCollectedNodes() []core.Node {
 func newExchangeResults(participantsCount int) *exchangeResults {
 	return &exchangeResults{
 		mutex: &sync.Mutex{},
-		data:  make(map[core.RecordRef][]*core.Node, participantsCount),
+		data:  make(map[core.RecordRef][]core.Node, participantsCount),
 		hash:  make([]*network.NodeUnsyncHash, 0),
 	}
 }
