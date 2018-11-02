@@ -32,3 +32,7 @@ func hashConcat(args ...[]byte) []byte {
 func pulseHash(pulse *core.Pulse) []byte {
 	return hashConcat(pulse.PulseNumber.Bytes(), pulse.Entropy[:])
 }
+
+func nodeInfoHash(pulseHash, stateHash []byte) []byte {
+	return hashConcat(pulseHash, stateHash)
+}
