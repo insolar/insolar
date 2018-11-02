@@ -33,7 +33,7 @@ type exchangeResults struct {
 	hash  []*network.NodeUnsyncHash
 }
 
-func (r *exchangeResults) writeResultData(id core.RecordRef, data []*core.Node) {
+func (r *exchangeResults) writeResultData(id core.RecordRef, data []core.Node) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.data[id] = data
