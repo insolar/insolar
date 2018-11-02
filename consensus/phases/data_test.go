@@ -214,5 +214,5 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 	nodeLeaveClaim := &NodeLeaveClaim{}
 	nodeLeaveClaim.length = 333
 	checkBadDataSerialization(t, nodeLeaveClaim, &NodeLeaveClaim{},
-		"[ NodeJoinClaim.Deserialize ] Can't read length: unexpected EOF")
+		"[ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 }
