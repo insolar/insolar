@@ -105,18 +105,18 @@ type OnPulse func(pulse core.Pulse)
 type NodeKeeper interface {
 	core.NodeNetwork
 	// AddActiveNodes add active nodes.
-	AddActiveNodes([]*core.Node)
+	AddActiveNodes([]core.Node)
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
 	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list.
 	SetPulse(number core.PulseNumber) (bool, UnsyncList)
 	// Sync initiates transferring syncCandidates -> sync, sync -> active.
 	// If number is less than internal PulseNumber then ignore Sync.
-	Sync(syncCandidates []*core.Node, number core.PulseNumber)
+	Sync(syncCandidates []core.Node, number core.PulseNumber)
 	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
 	// Channel will return nil node if added node has not passed the consensus.
 	// Returns error if current node is not active and cannot participate in consensus.
 	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-		version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.Node, error)
+		version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error)
 	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
 	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
 	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
@@ -126,7 +126,7 @@ type NodeKeeper interface {
 
 type UnsyncList interface {
 	// GetUnsync returns list of local unsync nodes. This list is created.
-	GetUnsync() []*core.Node
+	GetUnsync() []core.Node
 	// GetPulse returns actual pulse for current consensus process.
 	GetPulse() core.PulseNumber
 	// SetHash sets hash of unsync lists for each node of consensus.
@@ -135,11 +135,11 @@ type UnsyncList interface {
 	// until the hash is calculated with SetHash() call.
 	GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error)
 	// AddUnsyncList add unsync list for remote ref.
-	AddUnsyncList(ref core.RecordRef, unsync []*core.Node)
+	AddUnsyncList(ref core.RecordRef, unsync []core.Node)
 	// AddUnsyncHash add unsync hash for remote ref.
 	AddUnsyncHash(ref core.RecordRef, hash []*NodeUnsyncHash)
 	// GetUnsyncList get unsync list for remote ref.
-	GetUnsyncList(ref core.RecordRef) ([]*core.Node, bool)
+	GetUnsyncList(ref core.RecordRef) ([]core.Node, bool)
 	// GetUnsyncHash get unsync hash for remote ref.
 	GetUnsyncHash(ref core.RecordRef) ([]*NodeUnsyncHash, bool)
 }

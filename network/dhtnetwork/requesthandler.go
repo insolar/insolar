@@ -234,7 +234,7 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
-func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*core.Node, error) {
+func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]core.Node, error) {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build a context")
@@ -290,7 +290,7 @@ func sendNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host, re
 }
 
 func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host,
-	receiver *host.Host, nonce []byte) ([]*core.Node, error) {
+	receiver *host.Host, nonce []byte) ([]core.Node, error) {
 
 	log.Debug("Started request to discovery node to check signed nonce and add to unsync list")
 

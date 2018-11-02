@@ -130,7 +130,7 @@ type HostHandler interface {
 	AddRelayClient(host *host.Host) error
 	AddReceivedKey(target string, key []byte)
 	AddHost(ctx Context, host *routing.RouteHost)
-	AddActiveNodes(activeNode []*core.Node) error
+	AddActiveNodes(activeNode []core.Node) error
 
 	RemoveAuthHost(key string)
 	RemoveProxyHost(targetID string)
@@ -157,7 +157,7 @@ type HostHandler interface {
 	KeyIsReceived(targetID string) ([]byte, bool)
 	GetNetworkCommonFacade() NetworkCommonFacade
 	GetExpirationTime(ctx Context, key []byte) time.Time
-	GetActiveNodesList() []*core.Node
+	GetActiveNodesList() []core.Node
 	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-		version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.Node, error)
+		version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error)
 }

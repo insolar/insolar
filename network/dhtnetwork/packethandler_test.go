@@ -96,7 +96,7 @@ type mockHostHandler struct {
 }
 
 func newMockHostHandler() *mockHostHandler {
-	return &mockHostHandler{ncf: newMockNetworkCommonFacade(), keeper: nodekeeper.NewNodeKeeper(testutils.TestNode(core.RecordRef{}))}
+	return &mockHostHandler{ncf: newMockNetworkCommonFacade(), keeper: nodekeeper.NewNodeKeeper(nodekeeper.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))}
 }
 
 func (hh *mockHostHandler) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
@@ -165,11 +165,11 @@ func (hh *mockHostHandler) CascadeSendMessage(data core.Cascade, targetID string
 	return nil
 }
 
-func (hh *mockHostHandler) GetActiveNodesList() []*core.Node {
+func (hh *mockHostHandler) GetActiveNodesList() []core.Node {
 	return nil
 }
 
-func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.Node) error {
+func (hh *mockHostHandler) AddActiveNodes(activeNodes []core.Node) error {
 	return nil
 }
 
@@ -335,7 +335,7 @@ func (hh *mockHostHandler) StartAuthorize() error {
 }
 
 func (hh *mockHostHandler) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.Node, error) {
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error) {
 	return nil, nil
 }
 

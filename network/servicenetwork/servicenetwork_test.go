@@ -45,7 +45,7 @@ func initComponents(t *testing.T, nodeId core.RecordRef) core.Components {
 	pwd, _ := os.Getwd()
 	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
 	assert.NoError(t, err)
-	return core.Components{Certificate: cert, NodeNetwork: nodekeeper.NewNodeKeeper(testutils.TestNode(nodeId)), Ledger: &dhtnetwork.MockLedger{}}
+	return core.Components{Certificate: cert, NodeNetwork: nodekeeper.NewNodeKeeper(nodekeeper.NewNode(nodeId, nil, nil, 0, 0, "", "")), Ledger: &dhtnetwork.MockLedger{}}
 }
 
 /*
