@@ -32,6 +32,17 @@ func newActiveNode(ref byte) (core.RecordRef, []core.NodeRole, string, string) {
 	return core.RecordRef{ref}, []core.NodeRole{core.RoleUnknown}, "127.0.0.1:12345", "1.1"
 }
 
+func testNode(ref core.RecordRef) core.Node {
+	return NewNode(
+		ref,
+		[]core.NodeRole{core.RoleUnknown},
+		nil,
+		core.PulseNumber(0),
+		core.NodeActive,
+		"",
+		"",
+	)
+}
 func newNodeKeeper() network.NodeKeeper {
 	id := core.RecordRef{255}
 	n := testutils.TestNode(id)
