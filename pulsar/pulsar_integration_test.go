@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
 )
@@ -113,7 +112,7 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 
 	c := core.Components{LogicRunner: lr}
 	c.MessageBus = testmessagebus.NewTestMessageBus()
-	c.NodeNetwork = nodekeeper.NewNodeKeeper(testutils.TestNode(core.RecordRef{}))
+	c.NodeNetwork = nodekeeper.NewNodeKeeper(nodekeeper.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
 
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	nodeConfig := configuration.NewConfiguration()
