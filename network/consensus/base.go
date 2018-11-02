@@ -150,6 +150,6 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 	log.Debugln("End exchange hashes between consensus participants")
 }
 
-func (c *baseConsensus) analyzeResults() ([]*core.Node, error) {
+func (c *baseConsensus) analyzeResults() ([]core.Node, error) {
 	return c.results.getAllCollectedNodes(), nil
 }
