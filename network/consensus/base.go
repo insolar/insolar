@@ -136,8 +136,8 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 
 		go func(wg *sync.WaitGroup, participant Participant) {
 			defer wg.Done()
-			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
-				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
+			if participant.GetActiveNode().ID() != c.self.GetActiveNode().ID() {
+				log.Infof("data exchage with %s", participant.GetActiveNode().ID().String())
 
 				_, err := c.communicator.ExchangeHash(ctx, c.holder.GetPulse(), participant, hash)
 				if err != nil {
