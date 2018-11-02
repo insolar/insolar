@@ -46,7 +46,7 @@ type UnsyncHolder interface {
 type Consensus interface {
 	// DoConsensus is sync method, it performs all consensus steps and returns list of synced nodes
 	// method should be executed in goroutine
-	DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]*core.Node, error)
+	DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]core.Node, error)
 }
 
 // Communicator interface is used to exchange messages between participants
