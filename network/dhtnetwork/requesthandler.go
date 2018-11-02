@@ -290,7 +290,7 @@ func sendNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host, re
 }
 
 func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host,
-	receiver *host.Host, nonce []byte) ([]*core.Node, error) {
+	receiver *host.Host, nonce []byte) ([]core.Node, error) {
 
 	log.Debug("Started request to discovery node to check signed nonce and add to unsync list")
 
