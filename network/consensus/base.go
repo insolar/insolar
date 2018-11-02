@@ -29,7 +29,7 @@ import (
 // exchangeResults is thread safe results struct
 type exchangeResults struct {
 	mutex *sync.Mutex
-	data  map[core.RecordRef][]*core.Node
+	data  map[core.RecordRef][]core.Node
 	hash  []*network.NodeUnsyncHash
 }
 
