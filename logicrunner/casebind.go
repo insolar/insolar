@@ -22,6 +22,8 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -45,6 +47,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
+
 	es := lr.UpsertExecution(ref)
 	ctx := context.TODO()
 	es.insContext = ctx
@@ -86,10 +89,24 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		msg := start.Resp.(core.Message)
-		signed, err := message.NewSignedMessage(ctx, msg, ref, lr.Network.GetPrivateKey())
+		signed, err := message.NewSignedMessage(
+			ctx, msg, ref, lr.Network.GetPrivateKey(), lr.execution[ref].callContext.Pulse.PulseNumber,
+		)
 		if err != nil {
 			return 0, errors.New("failed to create a signed message")
 		}
+
+		traceStep, step := lr.nextValidationStep(ref)
+		if traceStep == nil {
+			return step, errors.New("trace is missing")
+		}
+
+		traceID, ok := traceStep.Resp.(string)
+		if !ok {
+			return step, errors.New("trace is wrong type")
+		}
+
+		es.insContext = inslogger.ContextWithTrace(es.insContext, traceID)
 		ret, err := lr.Execute(es.insContext, signed)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")

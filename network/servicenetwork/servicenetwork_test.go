@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/dhtnetwork"
-	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
@@ -45,7 +45,7 @@ func initComponents(t *testing.T, nodeId core.RecordRef) core.Components {
 	pwd, _ := os.Getwd()
 	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
 	assert.NoError(t, err)
-	return core.Components{Certificate: cert, NodeNetwork: nodekeeper.NewNodeKeeper(nodekeeper.NewNode(nodeId, nil, nil, 0, 0, "", "")), Ledger: &dhtnetwork.MockLedger{}}
+	return core.Components{Certificate: cert, NodeNetwork: nodenetwork.NewNodeKeeper(nodenetwork.NewNode(nodeId, nil, nil, 0, 0, "", "")), Ledger: &dhtnetwork.MockLedger{}}
 }
 
 /*
@@ -95,7 +95,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	signed, _ := message.NewSignedMessage(ctx, e, network.GetNodeID(), key)
+	signed, _ := message.NewSignedMessage(ctx, e, network.GetNodeID(), key, 0)
 
 	ref := testutils.RandomRef()
 	network.SendMessage(ref, "test", signed)
@@ -134,6 +134,10 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 
 type mockLedger struct {
 	PM core.PulseManager
+}
+
+func (l *mockLedger) GetLocalStorage() core.LocalStorage {
+	panic("implement me")
 }
 
 func (l *mockLedger) GetArtifactManager() core.ArtifactManager {
@@ -185,7 +189,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	signed, _ := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey())
+	signed, _ := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0)
 
 	ref := testutils.RandomRef()
 	firstNode.SendMessage(ref, "test", signed)
@@ -243,7 +247,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	signed, err := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey())
+	signed, err := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0)
 
 	firstNode.SendCascadeMessage(c, "test", signed)
 	success := waitTimeout(&wg, 100*time.Millisecond)
@@ -333,7 +337,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	signed, _ := message.NewSignedMessage(ctx, e, firstService.GetNodeID(), firstService.GetPrivateKey())
+	signed, _ := message.NewSignedMessage(ctx, e, firstService.GetNodeID(), firstService.GetPrivateKey(), 0)
 
 	firstService.SendCascadeMessage(c, "test", signed)
 	success := waitTimeout(&wg, 100*time.Millisecond)

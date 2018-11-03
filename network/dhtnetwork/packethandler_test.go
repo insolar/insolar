@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/network/dhtnetwork/rpc"
 	"github.com/insolar/insolar/network/dhtnetwork/signhandler"
 	"github.com/insolar/insolar/network/dhtnetwork/store"
-	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
@@ -96,7 +96,7 @@ type mockHostHandler struct {
 }
 
 func newMockHostHandler() *mockHostHandler {
-	return &mockHostHandler{ncf: newMockNetworkCommonFacade(), keeper: nodekeeper.NewNodeKeeper(nodekeeper.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))}
+	return &mockHostHandler{ncf: newMockNetworkCommonFacade(), keeper: nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))}
 }
 
 func (hh *mockHostHandler) RemoteProcedureRegister(name string, method core.RemoteProcedure) {

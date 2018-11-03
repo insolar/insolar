@@ -23,12 +23,12 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 )
 
 func newActiveNode(ref byte, pulse int) core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
-	return nodekeeper.NewNode(
+	return nodenetwork.NewNode(
 		core.RecordRef{ref},
 		[]core.NodeRole{core.RoleUnknown},
 		nil, // TODO publicKey

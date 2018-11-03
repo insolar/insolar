@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package nodekeeper
+package nodenetwork
 
 import (
 	"crypto/ecdsa"

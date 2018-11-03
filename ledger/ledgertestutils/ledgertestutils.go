@@ -24,8 +24,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger"
@@ -49,17 +50,19 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	assert.NoError(t, err)
 	pm, err := pulsemanager.NewPulseManager(db)
 	assert.NoError(t, err)
+	ls, err := localstorage.NewLocalStorage(db)
+	assert.NoError(t, err)
 
 	// Init components.
 	if c.MessageBus == nil {
 		c.MessageBus = testmessagebus.NewTestMessageBus()
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodekeeper.NewNodeKeeper(nodekeeper.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
 	}
 
 	// Create ledger.
-	l := ledger.NewTestLedger(db, am, pm, jc, handler)
+	l := ledger.NewTestLedger(db, am, pm, jc, handler, ls)
 	err = l.Start(ctx, c)
 	assert.NoError(t, err)
 
