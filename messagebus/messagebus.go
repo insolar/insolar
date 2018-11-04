@@ -84,18 +84,20 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Reply` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
-	signedMsg, err := message.NewSignedMessage(ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey())
-	if err != nil {
-		return nil, err
-	}
-	mb.queue.Push(msg)
-
 	jc := mb.Ledger.GetJetCoordinator()
 	pm := mb.Ledger.GetPulseManager()
 	pulse, err := pm.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	signedMsg, err := message.NewSignedMessage(
+		ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse.PulseNumber,
+	)
+	if err != nil {
+		return nil, err
+	}
+	mb.queue.Push(msg)
 
 	// TODO: send to all actors of the role if nil Target
 	nodes, err := jc.QueryRole(ctx, signedMsg.TargetRole(), *signedMsg.Target(), pulse.PulseNumber)
@@ -160,7 +162,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if mb.signmessages && !msg.IsValid(mb.ActiveNodes.GetActiveNode(msg.GetSender()).PublicKey) {
+	if mb.signmessages && !msg.IsValid(mb.ActiveNodes.GetActiveNode(msg.GetSender()).PublicKey()) {
 		return nil, errors.New("failed to check a message sign")
 	}
 

@@ -29,11 +29,11 @@ import (
 // exchangeResults is thread safe results struct
 type exchangeResults struct {
 	mutex *sync.Mutex
-	data  map[core.RecordRef][]*core.Node
+	data  map[core.RecordRef][]core.Node
 	hash  []*network.NodeUnsyncHash
 }
 
-func (r *exchangeResults) writeResultData(id core.RecordRef, data []*core.Node) {
+func (r *exchangeResults) writeResultData(id core.RecordRef, data []core.Node) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.data[id] = data
@@ -54,11 +54,11 @@ func (r *exchangeResults) calculateResultHash() []*network.NodeUnsyncHash {
 	return r.hash
 }
 
-func (r *exchangeResults) getAllCollectedNodes() []*core.Node {
+func (r *exchangeResults) getAllCollectedNodes() []core.Node {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	result := make([]*core.Node, 0)
+	result := make([]core.Node, 0)
 	for _, nodes := range r.data {
 		result = append(result, nodes...)
 	}
@@ -68,7 +68,7 @@ func (r *exchangeResults) getAllCollectedNodes() []*core.Node {
 func newExchangeResults(participantsCount int) *exchangeResults {
 	return &exchangeResults{
 		mutex: &sync.Mutex{},
-		data:  make(map[core.RecordRef][]*core.Node, participantsCount),
+		data:  make(map[core.RecordRef][]core.Node, participantsCount),
 		hash:  make([]*network.NodeUnsyncHash, 0),
 	}
 }
@@ -82,7 +82,7 @@ type baseConsensus struct {
 }
 
 // DoConsensus implements consensus interface
-func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]*core.Node, error) {
+func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]core.Node, error) {
 	log.Infof("Start consensus between %d participants about %d unsyncs", len(allParticipants), len(holder.GetUnsync()))
 	c.self = self
 	c.allParticipants = allParticipants
@@ -102,21 +102,21 @@ func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
 
 		go func(wg *sync.WaitGroup, participant Participant) {
 			defer wg.Done()
-			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
-				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
+			if participant.GetActiveNode().ID() != c.self.GetActiveNode().ID() {
+				log.Infof("data exchage with %s", participant.GetActiveNode().ID().String())
 
 				data, err := c.communicator.ExchangeData(ctx, c.holder.GetPulse(), participant, c.holder.GetUnsync())
 				receivedNodes := make([]string, 0)
 				for _, node := range data {
-					receivedNodes = append(receivedNodes, node.NodeID.String())
+					receivedNodes = append(receivedNodes, node.ID().String())
 				}
-				log.Debugf("received from %s unsync list: %s", participant.GetActiveNode().NodeID, strings.Join(receivedNodes, ", "))
+				log.Debugf("received from %s unsync list: %s", participant.GetActiveNode().ID(), strings.Join(receivedNodes, ", "))
 				if err != nil {
 					log.Errorln(err.Error())
 				}
-				c.results.writeResultData(participant.GetActiveNode().NodeID, data)
+				c.results.writeResultData(participant.GetActiveNode().ID(), data)
 			} else {
-				c.results.writeResultData(participant.GetActiveNode().NodeID, c.holder.GetUnsync())
+				c.results.writeResultData(participant.GetActiveNode().ID(), c.holder.GetUnsync())
 			}
 		}(wg, p)
 	}
@@ -136,8 +136,8 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 
 		go func(wg *sync.WaitGroup, participant Participant) {
 			defer wg.Done()
-			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
-				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
+			if participant.GetActiveNode().ID() != c.self.GetActiveNode().ID() {
+				log.Infof("data exchage with %s", participant.GetActiveNode().ID().String())
 
 				_, err := c.communicator.ExchangeHash(ctx, c.holder.GetPulse(), participant, hash)
 				if err != nil {
@@ -150,6 +150,6 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 	log.Debugln("End exchange hashes between consensus participants")
 }
 
-func (c *baseConsensus) analyzeResults() ([]*core.Node, error) {
+func (c *baseConsensus) analyzeResults() ([]core.Node, error) {
 	return c.results.getAllCollectedNodes(), nil
 }

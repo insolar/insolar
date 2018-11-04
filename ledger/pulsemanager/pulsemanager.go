@@ -87,7 +87,6 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	if err != nil {
 		return err
 	}
-
 	err = m.db.AddPulse(ctx, pulse)
 	if err != nil {
 		return err

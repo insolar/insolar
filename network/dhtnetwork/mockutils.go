@@ -35,6 +35,11 @@ type MockLedger struct {
 	pm MockPulseManager
 }
 
+// GetLocalStorage returns local storage to work with.
+func (l *MockLedger) GetLocalStorage() core.LocalStorage {
+	panic("implement me")
+}
+
 // GetArtifactManager returns artifact manager to work with.
 func (l *MockLedger) GetArtifactManager() core.ArtifactManager {
 	return nil

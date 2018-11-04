@@ -99,7 +99,7 @@ func doActiveNodes(dhtNetwork hosthandler.HostHandler) {
 	nodes := dhtNetwork.GetActiveNodesList()
 	fmt.Println("Active nodes:")
 	for _, n := range nodes {
-		fmt.Println(n.NodeID.String())
+		fmt.Println(n.ID().String())
 	}
 }
 

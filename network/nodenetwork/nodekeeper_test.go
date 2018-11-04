@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package nodekeeper
+package nodenetwork
 
 import (
 	"sync"
@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,33 +31,45 @@ func newActiveNode(ref byte) (core.RecordRef, []core.NodeRole, string, string) {
 	return core.RecordRef{ref}, []core.NodeRole{core.RoleUnknown}, "127.0.0.1:12345", "1.1"
 }
 
+func testNode(ref core.RecordRef) core.Node {
+	return NewNode(
+		ref,
+		[]core.NodeRole{core.RoleUnknown},
+		nil,
+		core.PulseNumber(0),
+		core.NodeActive,
+		"",
+		"",
+	)
+}
+
 func newNodeKeeper() network.NodeKeeper {
 	id := core.RecordRef{255}
-	n := testutils.TestNode(id)
+	n := testNode(id)
 	keeper := NewNodeKeeper(n)
-	keeper.AddActiveNodes([]*core.Node{testutils.TestNode(id)})
+	keeper.AddActiveNodes([]core.Node{testNode(id)})
 	return keeper
 }
 
 func TestNodekeeper_GetOrigin(t *testing.T) {
 	id := core.RecordRef{255}
-	n := testutils.TestNode(id)
+	n := testNode(id)
 	keeper := NewNodeKeeper(n)
 	assert.Equal(t, n, keeper.GetOrigin())
 }
 
 func TestNodekeeper_AddUnsync(t *testing.T) {
 	id := core.RecordRef{}
-	n := testutils.TestNode(id)
+	n := testNode(id).(mutableNode)
 	keeper := NewNodeKeeper(n)
 
 	// AddUnsync should return error if we are not an active node
-	n.State = core.NodeJoined
+	n.SetState(core.NodeJoined)
 	_, err := keeper.AddUnsync(newActiveNode(0))
 
 	assert.Error(t, err)
 	// Add active node with NodeKeeper id, so we are now active and can add unsyncs
-	keeper.AddActiveNodes([]*core.Node{testutils.TestNode(id)})
+	keeper.AddActiveNodes([]core.Node{testNode(id)})
 	_, err = keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	success, list := keeper.SetPulse(core.PulseNumber(0))
@@ -118,7 +129,7 @@ func TestNodekeeper_doubleSync(t *testing.T) {
 	keeper.Sync(list.GetUnsync(), pulse)
 	// and added unsync node should not advance to active list (only one origin node would be in the list)
 	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
-	assert.Equal(t, keeper.GetOrigin().NodeID, keeper.GetActiveNodes()[0].NodeID)
+	assert.Equal(t, keeper.GetOrigin().ID(), keeper.GetActiveNodes()[0].ID())
 }
 
 func TestNodekeeper_doubleSetPulse(t *testing.T) {
@@ -265,11 +276,11 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 		ch, err := keeper.AddUnsync(newActiveNode(byte(i)))
 		assert.NoError(t, err)
 
-		go func(t *testing.T, ch chan *core.Node, ref core.RecordRef, wg *sync.WaitGroup) {
+		go func(t *testing.T, ch chan core.Node, ref core.RecordRef, wg *sync.WaitGroup) {
 			node := <-ch
 			if nodePassesConsensus(ref) {
 				assert.NotNil(t, node)
-				assert.Equal(t, ref, node.NodeID)
+				assert.Equal(t, ref, node.ID())
 			} else {
 				assert.Nil(t, node)
 			}
@@ -282,9 +293,9 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 	assert.NotNil(t, list)
 	assert.Equal(t, refsCount, len(list.GetUnsync()))
 
-	syncCandidates := make([]*core.Node, 0)
+	syncCandidates := make([]core.Node, 0)
 	for _, node := range list.GetUnsync() {
-		if nodePassesConsensus(node.NodeID) {
+		if nodePassesConsensus(node.ID()) {
 			syncCandidates = append(syncCandidates, node)
 		}
 	}
@@ -293,14 +304,14 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 }
 
 func TestUnsyncList_GetUnsync(t *testing.T) {
-	unsyncNodes := []*core.Node{}
+	unsyncNodes := []core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	assert.Empty(t, unsyncList.GetUnsync())
 	assert.Equal(t, core.PulseNumber(10), unsyncList.GetPulse())
 }
 
 func TestUnsyncList_GetHash(t *testing.T) {
-	unsyncNodes := []*core.Node{}
+	unsyncNodes := []core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
 	h := make([]*network.NodeUnsyncHash, 0)
@@ -312,7 +323,7 @@ func TestUnsyncList_GetHash(t *testing.T) {
 }
 
 func TestUnsyncList_GetHash2(t *testing.T) {
-	unsyncNodes := []*core.Node{}
+	unsyncNodes := []core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
 	h := make([]*network.NodeUnsyncHash, 0)
@@ -337,7 +348,7 @@ func TestUnsyncList_GetHash2(t *testing.T) {
 }
 
 func TestUnsyncList_GetHash3(t *testing.T) {
-	unsyncNodes := []*core.Node{}
+	unsyncNodes := []core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
 	h := make([]*network.NodeUnsyncHash, 0)
@@ -362,7 +373,7 @@ func TestUnsyncList_GetHash3(t *testing.T) {
 
 func TestUnsyncList_AddUnsyncList(t *testing.T) {
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), nil)
-	unsyncList.AddUnsyncList(core.RecordRef{1}, []*core.Node{})
+	unsyncList.AddUnsyncList(core.RecordRef{1}, []core.Node{})
 	_, exists := unsyncList.GetUnsyncList(core.RecordRef{1})
 	assert.True(t, exists)
 }

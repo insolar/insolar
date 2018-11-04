@@ -22,6 +22,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/insolar/insolar/core/utils"
+
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
@@ -97,7 +99,7 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 		params := request{}
 		resp := answer{}
 
-		traceid := RandTraceID()
+		traceid := utils.RandTraceID()
 		ctx, inslog := inslogger.WithTraceField(context.Background(), traceid)
 		resp.TraceID = traceid
 
