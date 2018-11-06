@@ -35,6 +35,6 @@ type NaiveCommunicator struct {
 }
 
 // ExchangeData used in first consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, pulseData PulseData, claims []ReferendumClaim) (map[core.RecordRef]ReferendumClaim, error) {
+func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, pulseData PulseData, packet Phase1Packet) (map[core.RecordRef]Phase1Packet, error) {
 	panic("implement me")
 }
