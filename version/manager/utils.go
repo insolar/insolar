@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ProcessVersionConsensus(nodes []*core.Node) error {
+func ProcessVersionConsensus(nodes []core.Node) error {
 	if len(nodes) == 0 {
 		return errors.New("List of nodes is empty")
 	}
@@ -48,11 +48,11 @@ func ProcessVersionConsensus(nodes []*core.Node) error {
 	return nil
 }
 
-func getMapOfVersion(nodes []*core.Node) *map[string]int {
+func getMapOfVersion(nodes []core.Node) *map[string]int {
 	mapOfVersions := make(map[string]int)
 
 	for _, node := range nodes {
-		ver := node.Version
+		ver := node.Version()
 		if _, ok := mapOfVersions[ver]; ok {
 			mapOfVersions[ver]++
 		} else {

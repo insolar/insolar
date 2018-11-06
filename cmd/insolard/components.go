@@ -77,7 +77,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	checkError(ctx, err, "failed to start NetworkCoordinator")
 
 	versionManager, err := manager.NewVersionManager(cfg.VersionManager)
-	checkError("failed to load VersionManager: ", err)
+	checkError(ctx, err, "failed to load VersionManager: ")
 
 	// move to logic runner ??
 	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
