@@ -40,9 +40,8 @@ func NewCalculator() Calculator {
 	return &calculator{}
 }
 
-func (c *calculator) getPulseHash(ctx context.Context, pulse *core.Pulse) ([]byte, error) {
-	pulseHash := pulseHash(pulse)
-	return pulseHash, nil
+func (c *calculator) getPulseHash(ctx context.Context, entry *PulseEntry) []byte {
+	return pulseHash(entry.Pulse)
 }
 
 func (c *calculator) getGlobuleHash(ctx context.Context, nodes []core.Node) ([]byte, error) {
@@ -61,17 +60,13 @@ func (c *calculator) getStateHash(role core.NodeRole) ([]byte, error) {
 }
 
 func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]byte, *PulseProof, error) {
-	pulseHash, err := c.getPulseHash(ctx, entry.Pulse)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't get pulse hash")
-	}
-
 	role := c.NodeNetwork.GetOrigin().Roles()[0] // TODO: remove after switch to single role model
 	stateHash, err := c.getStateHash(role)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't get node stateHash")
 	}
 
+	pulseHash := c.getPulseHash(ctx, entry)
 	nodeInfoHash := nodeInfoHash(pulseHash, stateHash)
 
 	signature, err := ecdsa.Sign(nodeInfoHash, c.Certificate.GetEcdsaPrivateKey())
