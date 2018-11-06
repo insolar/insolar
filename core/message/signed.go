@@ -39,6 +39,10 @@ type SignedMessage struct {
 	PulseNumber   core.PulseNumber
 	Token         core.Token
 }
+
+// GetToken return current message token
+func (sm *SignedMessage) GetToken() core.Token {
+	return sm.Token
 }
 
 // Pulse returns pulse when message was sent.
@@ -64,6 +68,7 @@ func NewSignedMessage(
 	sender core.RecordRef,
 	key *ecdsa.PrivateKey,
 	pulse core.PulseNumber,
+	token core.Token,
 ) (*SignedMessage, error) {
 	if key == nil {
 		return nil, errors.New("failed to sign a message: private key == nil")
@@ -82,6 +87,7 @@ func NewSignedMessage(
 		LogTraceID:    inslogger.TraceID(ctx),
 		TraceSpanData: instracer.MustSerialize(ctx),
 		PulseNumber:   pulse,
+		Token:         token,
 	}, nil
 }
 
