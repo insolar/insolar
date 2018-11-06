@@ -57,6 +57,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:79efb3c233322835594954b38c6878ed3778396ba55f7c3e5a24dd38c4170ecd"
+  name = "github.com/cbergoon/merkletree"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "05d5987faac48c14315189ed9c817cd312c5964f"
+
+[[projects]]
+  branch = "master"
   digest = "1:183d68d69d8681294f0b128de41c0defd54777f620cc4d1e88013136306a44d5"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
@@ -70,14 +78,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
-
-[[projects]]
-  digest = "1:5a2b13a339956ea88b7ebe692dc61115b4a1db9a862a345d82bbd43f915192d8"
-  name = "github.com/damnever/bitarray"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "194ec7c5a6fa9fea20be8fa959640749eaca6bff"
-  version = "v1.0.0"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -537,9 +537,9 @@
   analyzer-version = 1
   input-imports = [
     "github.com/anacrolix/utp",
+    "github.com/cbergoon/merkletree",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
-    "github.com/damnever/bitarray",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
     "github.com/huandu/xstrings",
