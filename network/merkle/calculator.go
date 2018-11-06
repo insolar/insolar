@@ -25,9 +25,9 @@ import (
 )
 
 type Calculator interface {
-	GetCloudHash(context.Context) ([]byte, error)
 	GetPulseHash(context.Context, *core.Pulse) ([]byte, error)
 	GetGlobuleHash(context.Context, []core.Node) ([]byte, error)
+	GetCloudHash(context.Context) ([]byte, error) // TODO: design interface for cloud
 
 	GetNodeProof(context.Context) (*NodeProof, error)
 	GetGlobuleProof(context.Context) (*GlobuleProof, error)
