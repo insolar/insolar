@@ -18,6 +18,7 @@ package merkle
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
 )
 
 type PulseEntry struct {
@@ -57,7 +58,7 @@ func (ce *CloudEntry) hash() []byte {
 	}
 
 	if len(result)%2 == 1 {
-		result = append(result, []byte("DEADBEEF"))
+		result = append(result, utils.UInt32ToBytes(reserved))
 	}
 
 	mt, err := fromList(result)

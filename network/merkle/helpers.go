@@ -27,6 +27,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+const reserved = 0xDEADBEEF
+
 func verifySignature(ctx context.Context, data, signature []byte, publicKey *ecdsa2.PublicKey) bool {
 	log := inslogger.FromContext(ctx)
 
@@ -78,7 +80,7 @@ func nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
 }
 
 func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte {
-	reservedHash := hash.SHA3Bytes256(utils.UInt32ToBytes(0xDEADBEEF))
+	reservedHash := hash.SHA3Bytes256(utils.UInt32ToBytes(reserved))
 
 	var tmpResult1 []byte
 
