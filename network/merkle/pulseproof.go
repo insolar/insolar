@@ -22,12 +22,12 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-type NodeProof struct {
+type PulseProof struct {
 	StateHash []byte
 	Signature []byte
 }
 
-func (np *NodeProof) IsValid(ctx context.Context, node core.Node, pulseHash []byte) bool {
+func (np *PulseProof) IsValid(ctx context.Context, node core.Node, pulseHash []byte) bool {
 	nodeInfoHash := nodeInfoHash(pulseHash, np.StateHash)
 	return verifySignature(ctx, nodeInfoHash, np.Signature, node.PublicKey())
 }

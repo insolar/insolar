@@ -39,7 +39,7 @@ type calculatorSuite struct {
 }
 
 func (t *calculatorSuite) TestGetNodeProof() {
-	np, err := t.calculator.GetNodeProof(context.Background())
+	np, err := t.calculator.GetPulseProof(context.Background())
 
 	t.Assert().NoError(err)
 	t.Assert().NotNil(np)
