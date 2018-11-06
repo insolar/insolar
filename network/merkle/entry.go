@@ -42,3 +42,24 @@ type CloudEntry struct {
 	// TODO: implement later
 	// ProofSet map[core.Globule]*GlobuleProof
 }
+
+func (ce *CloudEntry) hash() []byte {
+	var result [][]byte
+
+	for _, proof := range ce.ProofSet {
+		globuleInfoHash := globuleInfoHash(ce.PrevCloudHash, proof.GlobuleIndex, proof.NodeCount)
+		globuleHash := globuleHash(globuleInfoHash, proof.NodeRoot)
+		result = append(result, globuleHash)
+	}
+
+	if len(result)%2 == 1 {
+		result = append(result, []byte("DEADBEEF"))
+	}
+
+	mt, err := fromList(result)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return mt.MerkleRoot()
+}
