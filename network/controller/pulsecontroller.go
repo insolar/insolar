@@ -1,0 +1,67 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package controller
+
+import (
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
+)
+
+type PulseController struct {
+	pulseCallback network.OnPulse
+	hostNetwork   network.HostNetwork
+	routingTable  network.RoutingTable
+}
+
+func (pc *PulseController) ResendPulse(pulse core.Pulse) {
+	// TODO: resend pulse to other globes if needed
+	nodes := pc.routingTable.GetLocalNodes()
+	request := pc.hostNetwork.NewRequestBuilder().Type(types.Pulse).Data(&packet.RequestPulse{
+		Pulse: pulse,
+	}).Build()
+	for _, node := range nodes {
+		_, err := pc.hostNetwork.SendRequest(request, node)
+		if err != nil {
+			log.Warn("Error resending pulse to host %s: %s", node.String(), err.Error())
+		}
+	}
+}
+
+func (pc *PulseController) Start() {
+	pc.hostNetwork.RegisterRequestHandler(types.Pulse, pc.processPulse)
+	pc.hostNetwork.RegisterRequestHandler(types.GetRandomHosts, pc.processGetRandomHosts)
+}
+
+func (pc *PulseController) processPulse(request network.Request) (network.Response, error) {
+	data := request.GetData().(*packet.RequestPulse)
+	go pc.pulseCallback(data.Pulse)
+	return pc.hostNetwork.BuildResponse(request, &packet.ResponsePulse{Success: true, Error: ""}), nil
+}
+
+func (pc *PulseController) processGetRandomHosts(request network.Request) (network.Response, error) {
+	data := request.GetData().(*packet.RequestGetRandomHosts)
+	randomHosts := pc.routingTable.GetRandomNodes(data.HostsNumber)
+	return pc.hostNetwork.BuildResponse(request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
+}
+
+func NewPulseController(pulseCallback network.OnPulse, hostNetwork network.HostNetwork,
+	routingTable network.RoutingTable) *PulseController {
+	return &PulseController{pulseCallback: pulseCallback, hostNetwork: hostNetwork, routingTable: routingTable}
+}

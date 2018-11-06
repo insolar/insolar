@@ -61,6 +61,37 @@ func (t *Table) AddToKnownHosts(h *host.Host) {
 	t.addRemoteHost(h)
 }
 
+// GetLocalNodes get all nodes from the local globe.
+func (t *Table) GetLocalNodes() []core.RecordRef {
+	nodes := t.keeper.GetActiveNodes()
+	result := make([]core.RecordRef, len(nodes))
+	for i, node := range nodes {
+		result[i] = node.ID()
+	}
+	return result
+}
+
+// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
+func (t *Table) GetRandomNodes(count int) []host.Host {
+	// not so random for now
+	nodes := t.keeper.GetActiveNodes()
+	resultCount := count
+	if count > len(nodes) {
+		resultCount = len(nodes)
+	}
+	result := make([]host.Host, 0)
+	for i := 0; i < resultCount; i++ {
+		address, err := host.NewAddress(nodes[i].PhysicalAddress())
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		h := host.Host{NodeID: nodes[i].ID(), Address: address}
+		result = append(result, h)
+	}
+	return result
+}
+
 // Rebalance recreate shards of routing table with known hosts according to new partition policy.
 func (t *Table) Rebalance(network.PartitionPolicy) {
 	log.Warn("not implemented")

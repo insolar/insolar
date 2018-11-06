@@ -164,4 +164,8 @@ type RoutingTable interface {
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
 	Rebalance(PartitionPolicy)
+	// GetLocalNodes get all nodes from the local globe.
+	GetLocalNodes() []core.RecordRef
+	// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
+	GetRandomNodes(count int) []host.Host
 }

@@ -17,12 +17,11 @@
 package common
 
 import (
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
 )
 
 type BootstrapController interface {
-	Start(components core.Components)
+	Start()
 	Bootstrap() error
 	GetBootstrapHosts() []*host.Host
 }

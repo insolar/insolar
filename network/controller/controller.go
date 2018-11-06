@@ -34,6 +34,7 @@ type Controller struct {
 
 	bootstrapController common.BootstrapController
 	authController      *auth.AuthorizationController
+	pulseController     *PulseController
 }
 
 // SendMessage send message to nodeID.
@@ -69,7 +70,7 @@ func (c *Controller) Authorize() error {
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
 func (c *Controller) ResendPulseToKnownHosts(pulse core.Pulse) {
-
+	c.pulseController.ResendPulse(pulse)
 }
 
 // GetNodeID get self node id (should be removed in far future).
@@ -80,21 +81,27 @@ func (c *Controller) GetNodeID() core.RecordRef {
 // Inject inject components.
 func (c *Controller) Inject(components core.Components) {
 	c.network.RegisterRequestHandler(types.Ping, func(request network.Request) (network.Response, error) {
+		log.Debugf("Got ping request from node %s", request.GetSender().String())
 		return c.network.BuildResponse(request, nil), nil
 	})
+	c.bootstrapController.Start()
 	c.authController.Start(components)
+	c.pulseController.Start()
 }
 
 // NewNetworkController create new network controller.
 func NewNetworkController(
+	pulseCallback network.OnPulse,
 	configuration configuration.Configuration,
-	network network.HostNetwork,
-	transport hostnetwork.InternalTransport) network.Controller {
+	transport hostnetwork.InternalTransport,
+	routingTable network.RoutingTable,
+	network network.HostNetwork) network.Controller {
 
 	c := Controller{}
 	c.network = network
 	c.bootstrapController = NewBootstrapController(&c.options, transport)
 	c.authController = auth.NewAuthorizationController(&c.options, c.bootstrapController, transport)
+	c.pulseController = NewPulseController(pulseCallback, network, routingTable)
 
 	return &c
 }

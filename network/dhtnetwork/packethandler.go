@@ -214,7 +214,6 @@ func processGetRandomHosts(
 
 func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestPulse)
-	log.Infof("Got new pulse number: %d", data.Pulse.PulseNumber)
 	go hostHandler.GetNetworkCommonFacade().OnPulse(data.Pulse)
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
 }

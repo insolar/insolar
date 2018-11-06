@@ -20,7 +20,6 @@ import (
 	"encoding/gob"
 	"time"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
@@ -135,7 +134,7 @@ func (bc *BootstrapController) processBootstrap(request network.Request) (networ
 	return bc.transport.BuildResponse(request, &BootstrapResponse{Code: BootstrapAccepted}), nil
 }
 
-func (bc *BootstrapController) Start(components core.Components) {
+func (bc *BootstrapController) Start() {
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 }
 
