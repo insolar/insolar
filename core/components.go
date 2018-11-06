@@ -36,5 +36,6 @@ type Components struct {
 	Metrics            Component
 	Bootstrapper       Bootstrapper
 	APIRunner          Component
+	VersionManager     Component
 	NetworkCoordinator NetworkCoordinator
 }
