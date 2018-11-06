@@ -147,8 +147,9 @@ func main() {
 	if !params.isBootstrap {
 		mergeConfigAndCertificate(ctx, cfg)
 	}
-
 	cfg.Metrics.Namespace = "insolard"
+
+	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	jaegerflush := func() {}
 	if params.traceEnabled {
