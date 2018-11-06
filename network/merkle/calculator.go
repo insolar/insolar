@@ -25,9 +25,9 @@ import (
 )
 
 type Calculator interface {
-	GetGlobuleHash(context.Context) ([]byte, error)
 	GetCloudHash(context.Context) ([]byte, error)
 	GetPulseHash(context.Context, *core.Pulse) ([]byte, error)
+	GetGlobuleHash(context.Context, []core.Node) ([]byte, error)
 
 	GetNodeProof(context.Context) (*NodeProof, error)
 	GetGlobuleProof(context.Context) (*GlobuleProof, error)
@@ -49,7 +49,7 @@ func (c *calculator) GetPulseHash(ctx context.Context, pulse *core.Pulse) ([]byt
 	return pulseHash, nil
 }
 
-func (c *calculator) GetGlobuleHash(ctx context.Context) ([]byte, error) {
+func (c *calculator) GetGlobuleHash(ctx context.Context, nodes []core.Node) ([]byte, error) {
 	globuleHash := make([]byte, 0) // TODO: calculate tree
 	return globuleHash, nil
 }
@@ -95,7 +95,7 @@ func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
 }
 
 func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error) {
-	globuleHash, err := c.GetGlobuleHash(ctx)
+	globuleHash, err := c.GetGlobuleHash(ctx, c.NodeNetwork.GetActiveNodes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't get globule hash")
 	}
