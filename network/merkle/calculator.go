@@ -26,8 +26,8 @@ import (
 
 type Calculator interface {
 	GetPulseProof(context.Context, *PulseEntry) ([]byte, *PulseProof, error)
-	GetCloudProof(context.Context, *GlobuleEntry) (*CloudProof, error)
 	GetGlobuleProof(context.Context, *NodeEntry) ([]byte, *GlobuleProof, error)
+	GetCloudProof(context.Context, *GlobuleEntry) ([]byte, *CloudProof, error)
 }
 
 type calculator struct {
@@ -96,18 +96,18 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *NodeEntry) ([]b
 	}, nil
 }
 
-func (c *calculator) GetCloudProof(ctx context.Context, entry *GlobuleEntry) (*CloudProof, error) {
+func (c *calculator) GetCloudProof(ctx context.Context, entry *GlobuleEntry) ([]byte, *CloudProof, error) {
 	cloudHash, err := c.getCloudHash(ctx, entry)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetCloudProof ] Could't get cloud hash")
+		return nil, nil, errors.Wrap(err, "[ GetCloudProof ] Could't get cloud hash")
 	}
 
 	signature, err := ecdsa.Sign(cloudHash, c.Certificate.GetEcdsaPrivateKey())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetCloudProof ] Could't sign cloud hash")
+		return nil, nil, errors.Wrap(err, "[ GetCloudProof ] Could't sign cloud hash")
 	}
 
-	return &CloudProof{
+	return cloudHash, &CloudProof{
 		Signature: signature,
 	}, nil
 }
