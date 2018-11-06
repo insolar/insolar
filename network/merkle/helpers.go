@@ -26,16 +26,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-func hashConcat(args ...[]byte) []byte {
-	var result []byte
-	for _, arg := range args {
-		argHash := hash.SHA3Bytes256(arg)
-		result = append(result, argHash...)
-	}
-
-	return hash.SHA3Bytes256(result)
-}
-
 func verifySignature(ctx context.Context, data, signature []byte, publicKey *ecdsa2.PublicKey) bool {
 	log := inslogger.FromContext(ctx)
 
@@ -55,9 +45,33 @@ func verifySignature(ctx context.Context, data, signature []byte, publicKey *ecd
 }
 
 func pulseHash(pulse *core.Pulse) []byte {
-	return hashConcat(pulse.PulseNumber.Bytes(), pulse.Entropy[:])
+	var result []byte
+
+	pulseNumberHash := hash.SHA3Bytes256(pulse.PulseNumber.Bytes())
+	result = append(result, pulseNumberHash...)
+
+	entropyHash := hash.SHA3Bytes256(pulse.Entropy[:])
+	result = append(result, entropyHash...)
+
+	return hash.SHA3Bytes256(result)
 }
 
 func nodeInfoHash(pulseHash, stateHash []byte) []byte {
-	return hashConcat(pulseHash, stateHash)
+	var result []byte
+
+	result = append(result, pulseHash...)
+	result = append(result, stateHash...)
+
+	return hash.SHA3Bytes256(result)
+}
+
+func nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
+	var result []byte
+
+	pulseNumberHash := hash.SHA3Bytes256(nodeSignature)
+	result = append(result, pulseNumberHash...)
+
+	result = append(result, nodeInfoHash...)
+
+	return hash.SHA3Bytes256(result)
 }
