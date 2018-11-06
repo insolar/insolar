@@ -113,7 +113,7 @@ func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error)
 func (c *calculator) GetCloudProof(ctx context.Context) (*CloudProof, error) {
 	cloudHash, err := c.GetCloudHash(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't get cloud hash")
+		return nil, errors.Wrap(err, "[ GetCloudProof ] Could't get cloud hash")
 	}
 
 	signature, err := ecdsa.Sign(cloudHash, c.Certificate.GetEcdsaPrivateKey())
