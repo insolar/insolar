@@ -67,10 +67,16 @@ func (t *calculatorSuite) TestGetGlobuleProof() {
 }
 
 func (t *calculatorSuite) TestGetCloudProof() {
-	np, err := t.calculator.GetCloudProof(context.Background())
+	cp, err := t.calculator.GetCloudProof(context.Background())
 
 	t.Assert().NoError(err)
-	t.Assert().NotNil(np)
+	t.Assert().NotNil(cp)
+
+	cloudHash, err := t.calculator.GetCloudHash(context.Background())
+	t.Assert().NoError(err)
+
+	valid := cp.IsValid(context.Background(), t.nodeNetwork.GetOrigin(), cloudHash)
+	t.Assert().True(valid)
 }
 
 func TestCalculator(t *testing.T) {
