@@ -67,3 +67,10 @@ func (ce *CloudEntry) hash() []byte {
 
 	return mt.MerkleRoot()
 }
+
+type nodeEntry struct {
+	PulseEntry
+	PulseProof *PulseProof
+	Node       core.Node
+}
+
