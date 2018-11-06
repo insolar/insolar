@@ -95,3 +95,11 @@ func sortEntries(roleEntries []*nodeEntry) {
 	})
 }
 
+func roleEntryRoot(roleEntries []*nodeEntry) []byte {
+	var roleEntriesHashes [][]byte
+	for index, entry := range roleEntries {
+		bucketEntryHash := bucketEntryHash(uint32(index), entry.hash())
+		roleEntriesHashes = append(roleEntriesHashes, bucketEntryHash)
+	}
+	return fromList(roleEntriesHashes).MerkleRoot()
+}
