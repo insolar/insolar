@@ -22,7 +22,7 @@ type PulseEntry struct {
 	Pulse *core.Pulse
 }
 
-type NodeEntry struct {
+type GlobuleEntry struct {
 	*PulseEntry
 
 	ProofSet map[core.Node]PulseProof
