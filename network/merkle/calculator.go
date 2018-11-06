@@ -76,7 +76,7 @@ func (c *calculator) getStateHash(role core.NodeRole) ([]byte, error) {
 }
 
 func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]byte, *PulseProof, error) {
-	role := c.NodeNetwork.GetOrigin().Roles()[0] // TODO: remove after switch to single role model
+	role := c.NodeNetwork.GetOrigin().Role()
 	stateHash, err := c.getStateHash(role)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't get node stateHash")
