@@ -37,14 +37,16 @@ type TestMetrics struct {
 	ListenAddress string
 }
 
-var oncecfg sync.Once
+var (
+	oncecfg sync.Once
+	cfg     configuration.Metrics
+)
 
 var listenport int32
 
 // Start configures, creates and starts metrics server,
 // returns initialized TestMetrics object.
 func Start(ctx context.Context) TestMetrics {
-	var cfg configuration.Metrics
 	oncecfg.Do(func() {
 		cfg = configuration.NewMetrics()
 		_, listenport = parseAddr(cfg.ListenAddress)
