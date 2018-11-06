@@ -29,8 +29,8 @@ type GlobuleEntry struct {
 }
 
 type CloudEntry struct {
-	ProofSet []*GlobuleProof
-
+	ProofSet      []*GlobuleProof
+	PrevCloudHash []byte
 	// TODO: implement later
 	// ProofSet map[core.Globule]*GlobuleProof
 }

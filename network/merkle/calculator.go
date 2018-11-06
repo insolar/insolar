@@ -50,8 +50,24 @@ func (c *calculator) getGlobuleHash(ctx context.Context, entry *GlobuleEntry) ([
 }
 
 func (c *calculator) getCloudHash(ctx context.Context, entry *CloudEntry) ([]byte, error) {
-	cloudHash := make([]byte, 0) // TODO: calculate tree
-	return cloudHash, nil
+	var result [][]byte
+
+	for _, proof := range entry.ProofSet {
+		globuleInfoHash := globuleInfoHash(entry.PrevCloudHash, proof.GlobuleIndex, proof.NodeCount)
+		globuleHash := globuleHash(globuleInfoHash, proof.NodeRoot)
+		result = append(result, globuleHash)
+	}
+
+	if len(result)%2 == 1 {
+		result = append(result, []byte("DEADBEEF"))
+	}
+
+	mt, err := fromList(result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getCloudHash ] Could't build merkle tree")
+	}
+
+	return mt.MerkleRoot(), nil
 }
 
 func (c *calculator) getStateHash(role core.NodeRole) ([]byte, error) {
