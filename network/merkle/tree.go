@@ -22,6 +22,11 @@ import (
 	"github.com/cbergoon/merkletree"
 	"github.com/insolar/insolar/cryptohelpers/hash"
 )
+
+type tree interface {
+	MerkleRoot() []byte
+}
+
 type treeNode struct {
 	content []byte
 }
