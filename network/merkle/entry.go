@@ -30,10 +30,14 @@ func (pe *PulseEntry) hash() []byte {
 
 type GlobuleEntry struct {
 	PulseEntry
-	ProofSet      map[core.Node]PulseProof
+	ProofSet      map[core.Node]*PulseProof
 	PulseHash     []byte
 	PrevCloudHash []byte
 	GlobuleIndex  uint32
+}
+
+func (ge *GlobuleEntry) hash() []byte {
+	return nil
 }
 
 type CloudEntry struct {

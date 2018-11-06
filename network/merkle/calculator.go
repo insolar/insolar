@@ -40,11 +40,6 @@ func NewCalculator() Calculator {
 	return &calculator{}
 }
 
-
-func (c *calculator) getGlobuleHash(ctx context.Context, entry *GlobuleEntry) ([]byte, *GlobuleProof, error) {
-	globuleHash := make([]byte, 0) // TODO: calculate tree
-	return globuleHash, &GlobuleProof{}, nil
-}
 func (c *calculator) getStateHash(role core.NodeRole) ([]byte, error) {
 	// TODO: do something with role
 	return c.Ledger.GetArtifactManager().State()
@@ -72,19 +67,23 @@ func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]by
 }
 
 func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) ([]byte, *GlobuleProof, error) {
-	globuleHash, proof, err := c.getGlobuleHash(ctx, entry)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't get globule hash")
-	}
+	nodeRoot := entry.hash()
+	nodeCount := uint32(len(entry.ProofSet))
+	globuleInfoHash := globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
+	globuleHash := globuleHash(globuleInfoHash, nodeRoot)
 
 	signature, err := ecdsa.Sign(globuleHash, c.Certificate.GetEcdsaPrivateKey())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't sign globule hash")
 	}
 
-	proof.Signature = signature
-
-	return globuleHash, proof, nil
+	return globuleHash, &GlobuleProof{
+		Signature:     signature,
+		PrevCloudHash: entry.PrevCloudHash,
+		GlobuleIndex:  entry.GlobuleIndex,
+		NodeCount:     nodeCount,
+		NodeRoot:      nodeRoot,
+	}, nil
 }
 
 func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) ([]byte, *CloudProof, error) {
