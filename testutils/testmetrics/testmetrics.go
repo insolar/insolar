@@ -55,7 +55,7 @@ func Start(ctx context.Context) TestMetrics {
 	// it's needed to prevent using same port for concurrent tests
 	cfg.ListenAddress = host + ":" + strconv.Itoa(int(port))
 
-	m, err := metrics.NewMetrics(cfg)
+	m, err := metrics.NewMetrics(ctx, cfg)
 	if err != nil {
 		panic(err)
 	}

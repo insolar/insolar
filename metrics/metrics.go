@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
@@ -44,9 +45,9 @@ type Metrics struct {
 }
 
 // NewMetrics creates new Metrics component.
-func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
+func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error) {
 	m := Metrics{registry: prometheus.NewRegistry()}
-	errlogger := &errorLogger{}
+	errlogger := &errorLogger{inslogger.FromContext(ctx)}
 	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: errlogger})
 
 	m.server = &http.Server{Addr: cfg.ListenAddress}
@@ -108,9 +109,10 @@ func (m *Metrics) Stop(ctx context.Context) error {
 
 // errorLogger wrapper for error logs.
 type errorLogger struct {
+	core.Logger
 }
 
 // Println is wrapper method for ErrorLn.
 func (e *errorLogger) Println(v ...interface{}) {
-	log.Errorln("Metrics error logger:", v)
+	e.Error(v)
 }
