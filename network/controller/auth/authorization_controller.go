@@ -127,8 +127,6 @@ func (ac *AuthorizationController) authorizeOnHost(h *host.Host) ([]core.Node, e
 }
 
 func (ac *AuthorizationController) sendNonceRequest(h *host.Host) (Nonce, error) {
-	log.Debugf("Sending nonce request to host: %s", h)
-
 	request := ac.transport.NewRequestBuilder().Type(types.GetNonce).Data(&RequestGetNonce{}).Build()
 	future, err := ac.transport.SendRequestPacket(request, h)
 	if err != nil {
@@ -146,8 +144,6 @@ func (ac *AuthorizationController) sendNonceRequest(h *host.Host) (Nonce, error)
 }
 
 func (ac *AuthorizationController) sendAuthorizeRequest(signedNonce []byte, h *host.Host) ([]core.Node, error) {
-	log.Debugf("Sending authorize request to host: %s", h)
-
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&RequestAuthorize{
 		SignedNonce: signedNonce,
 		NodeRoles:   []core.NodeRole{core.RoleUnknown},
@@ -171,7 +167,6 @@ func (ac *AuthorizationController) sendAuthorizeRequest(signedNonce []byte, h *h
 }
 
 func (ac *AuthorizationController) processNonceRequest(request network.Request) (network.Response, error) {
-	log.Debugf("Got nonce request from node %s", request.GetSender().String())
 	if ac.signer == nil {
 		return ac.getNonceErrorResponse(request, "Signer is not initialized"), nil
 	}
@@ -188,7 +183,6 @@ func (ac *AuthorizationController) getNonceErrorResponse(request network.Request
 }
 
 func (ac *AuthorizationController) processAuthorizeRequest(request network.Request) (network.Response, error) {
-	log.Debugf("Got auth request from node %s", request.GetSender().String())
 	if ac.signer == nil {
 		return ac.getAuthErrorResponse(request, "Signer is not initialized"), nil
 	}

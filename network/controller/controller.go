@@ -81,7 +81,6 @@ func (c *Controller) GetNodeID() core.RecordRef {
 // Inject inject components.
 func (c *Controller) Inject(components core.Components) {
 	c.network.RegisterRequestHandler(types.Ping, func(request network.Request) (network.Response, error) {
-		log.Debugf("Got ping request from node %s", request.GetSender().String())
 		return c.network.BuildResponse(request, nil), nil
 	})
 	c.bootstrapController.Start()

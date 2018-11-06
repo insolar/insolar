@@ -166,6 +166,7 @@ func (h *hostTransport) listen() {
 }
 
 func (h *hostTransport) processMessage(msg *packet.Packet) {
+	log.Debugf("Got %s request from host %s", msg.Type.String(), msg.Sender.String())
 	handler, exist := h.handlers[msg.Type]
 	if !exist {
 		log.Errorf("No handler set for packet type %s from node %s",
@@ -201,6 +202,7 @@ func (h *hostTransport) PublicAddress() string {
 
 // SendRequestPacket send request packet to a remote node.
 func (h *hostTransport) SendRequestPacket(request network.Request, receiver *host.Host) (network.Future, error) {
+	log.Debugf("Sent %s request to host %s", request.GetType().String(), receiver.String())
 	f, err := h.transport.SendRequest(h.buildRequest(request, receiver))
 	if err != nil {
 		return nil, err
