@@ -34,11 +34,13 @@ type ReplyType byte
 type Message interface {
 	// Type returns message type.
 	Type() MessageType
+
 	// Target returns target for this message. If nil, Message will be sent for all actors for the role returned by
 	// Role method.
-	Target() *RecordRef
+	//Target() *RecordRef
 	// TargetRole returns jet role to actors of which Message should be sent.
-	TargetRole() JetRole
+	//TargetRole() JetRole
+
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
 }
