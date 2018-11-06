@@ -55,7 +55,8 @@ func (c *calculator) GetPulseHash(ctx context.Context) ([]byte, error) {
 }
 
 func (c *calculator) GetGlobuleHash(ctx context.Context) ([]byte, error) {
-	return nil, nil
+	globuleHash := make([]byte, 0) // TODO: calculate tree
+	return globuleHash, nil
 }
 
 func (c *calculator) GetCloudHash(ctx context.Context) ([]byte, error) {
@@ -87,7 +88,10 @@ func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
 }
 
 func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error) {
-	globuleHash := make([]byte, 0) // TODO: calculate tree
+	globuleHash, err := c.GetGlobuleHash(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't get globule hash")
+	}
 
 	signature, err := ecdsa.Sign(globuleHash, c.Certificate.GetEcdsaPrivateKey())
 	if err != nil {
