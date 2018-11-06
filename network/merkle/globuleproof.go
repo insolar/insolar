@@ -23,7 +23,12 @@ import (
 )
 
 type GlobuleProof struct {
-	Signature []byte
+	Signature       []byte
+	GlobuleListHash []byte
+	PrevCloudHash   []byte
+	GlobuleIndex    uint16
+	NodeCount       uint16
+	NodeRoot        []byte
 }
 
 func (gp *GlobuleProof) IsValid(ctx context.Context, node core.Node, globuleHash []byte) bool {
