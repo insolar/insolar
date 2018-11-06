@@ -21,3 +21,16 @@ import "github.com/insolar/insolar/core"
 type PulseEntry struct {
 	Pulse *core.Pulse
 }
+
+type NodeEntry struct {
+	*PulseEntry
+
+	ProofSet map[core.Node]PulseProof
+}
+
+type GlobuleEntry struct {
+	ProofSet []*GlobuleProof
+
+	// TODO: implement later
+	// ProofSet map[core.Globule]*GlobuleProof
+}
