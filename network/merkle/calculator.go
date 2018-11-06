@@ -75,10 +75,6 @@ func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error)
 	return &GlobuleProof{
 		Signature: signature,
 	}, nil
-
-	return &GlobuleProof{
-		Signature: nil,
-	}, nil
 }
 
 func (c *calculator) GetCloudProof(ctx context.Context) (*CloudProof, error) {
@@ -91,9 +87,5 @@ func (c *calculator) GetCloudProof(ctx context.Context) (*CloudProof, error) {
 
 	return &CloudProof{
 		Signature: signature,
-	}, nil
-
-	return &CloudProof{
-		Signature: nil,
 	}, nil
 }
