@@ -65,10 +65,6 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 
 // SendRequest sends request packet and returns future.
 func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
-	if !msg.IsValid() {
-		return nil, errors.New("invalid packet")
-	}
-
 	msg.RequestID = t.generateID()
 
 	future := t.createFuture(msg)
