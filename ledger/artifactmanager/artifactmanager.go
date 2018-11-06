@@ -473,6 +473,7 @@ func (m *LedgerArtifactManager) activateObject(
 		prototype:    obj.Prototype,
 		childPointer: obj.ChildPointer,
 		memory:       memory,
+		parent:       obj.Parent,
 	}, nil
 }
 
@@ -537,6 +538,7 @@ func (m *LedgerArtifactManager) updateObject(
 		prototype:    obj.Prototype,
 		childPointer: obj.ChildPointer,
 		memory:       memory,
+		parent:       obj.Parent,
 	}, nil
 }
 
