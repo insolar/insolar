@@ -56,6 +56,8 @@ type SignedMessage interface {
 
 	Message() Message
 	Context(context.Context) context.Context
+	// Pulse returns pulse when message was sent.
+	Pulse() PulseNumber
 }
 
 // Reply for an `Message`

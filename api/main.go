@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/core/utils"
+
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/configuration"
@@ -33,7 +35,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
 )
 
 const (
@@ -71,8 +72,6 @@ func processQueryType(ctx context.Context, rh *RequestHandler, qTypeStr string) 
 
 	var hError error
 	switch qtype {
-	case RegisterNode:
-		answer, hError = rh.ProcessRegisterNode(ctx)
 	case IsAuth:
 		answer, hError = rh.ProcessIsAuthorized(ctx)
 	case GetSeed:
@@ -117,7 +116,7 @@ func PreprocessRequest(ctx context.Context, req *http.Request) (*Params, error) 
 
 func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
-		traceid := RandTraceID()
+		traceid := utils.RandTraceID()
 		ctx, inslog := inslogger.WithTraceField(context.Background(), traceid)
 		startTime := time.Now()
 		answer := make(map[string]interface{})
@@ -272,13 +271,4 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (string, erro
 	ar.keyCache[ref] = key
 	ar.cacheLock.Unlock()
 	return key, nil
-}
-
-// RandTraceID returns random traceID in uuid format
-func RandTraceID() string {
-	qid, err := uuid.NewV4()
-	if err != nil {
-		return "createRandomTraceIDFailed:" + err.Error()
-	}
-	return qid.String()
 }

@@ -65,18 +65,6 @@ func TestWrongQueryParam(t *testing.T) {
 	assert.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
 }
 
-func TestHandlerError(t *testing.T) {
-	postParams := map[string]string{"query_type": "register_node", "public_key": "test"}
-	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	body, err := ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	a := string(body[:])
-	_ = a
-	assert.Contains(t, string(body[:]), `"message": "Handler error: field 'roles' is required"`)
-}
-
 func TestBadRequest(t *testing.T) {
 	resp, err := http.Get(TestUrl)
 	assert.NoError(t, err)
