@@ -25,6 +25,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -89,7 +90,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	ce := nodekeeper.GetTestCertificate()
+	ce := certificate.GetTestCertificate()
 	nk := nodekeeper.GetTestNodekeeper(ce)
 	messageBus := testmessagebus.NewTestMessageBus()
 	nw := network.GetTestNetwork()

@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
+	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -80,7 +81,7 @@ func (t *calculatorSuite) TestGetCloudProof() {
 }
 
 func TestCalculator(t *testing.T) {
-	c := nodekeeper.GetTestCertificate()
+	c := certificate.GetTestCertificate()
 	nk := nodekeeper.GetTestNodekeeper(c)
 	l, clean := ledgertestutils.TmpLedger(t, "", core.Components{})
 

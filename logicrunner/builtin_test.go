@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -50,7 +51,7 @@ func TestBareHelloworld(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 
-	ce := nodekeeper.GetTestCertificate()
+	ce := certificate.GetTestCertificate()
 	nk := nodekeeper.GetTestNodekeeper(ce)
 	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
