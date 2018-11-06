@@ -50,7 +50,8 @@ func (c *calculator) GetPulseHash(ctx context.Context) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get current pulse")
 	}
 
-	return pulseHash(pulse), nil
+	pulseHash := pulseHash(pulse)
+	return pulseHash, nil
 }
 
 func (c *calculator) GetGlobuleHash(ctx context.Context) ([]byte, error) {
