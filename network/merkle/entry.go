@@ -57,15 +57,7 @@ func (ce *CloudEntry) hash() []byte {
 		result = append(result, globuleHash)
 	}
 
-	if len(result)%2 == 1 {
-		result = append(result, utils.UInt32ToBytes(reserved))
-	}
-
-	mt, err := fromList(result)
-	if err != nil {
-		panic(err.Error())
-	}
-
+	mt := fromList(result)
 	return mt.MerkleRoot()
 }
 
