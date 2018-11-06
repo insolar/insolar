@@ -26,6 +26,15 @@ import (
 	"go.opencensus.io/tag"
 )
 
+// MustTagKey creates new tag.Key, panics on error
+func MustTagKey(key string) tag.Key {
+	k, err := tag.NewKey(key)
+	if err != nil {
+		panic(err)
+	}
+	return k
+}
+
 // InsertTag inserts (add) tag with provided value into context.
 //
 // Panics on error.
