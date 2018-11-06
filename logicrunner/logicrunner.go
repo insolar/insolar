@@ -270,6 +270,7 @@ type ObjectBody struct {
 	ClassHeadRef    *Ref
 	CodeMachineType core.MachineType
 	CodeRef         *Ref
+	Parent          *Ref
 }
 
 func init() {
@@ -340,6 +341,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 		ClassHeadRef:    protoDesc.HeadRef(),
 		CodeMachineType: codeDesc.MachineType(),
 		CodeRef:         codeDesc.Ref(),
+		Parent:          objDesc.Parent(),
 	}
 	bcopy := *es.objectbody
 	copy(bcopy.Object, es.objectbody.Object)

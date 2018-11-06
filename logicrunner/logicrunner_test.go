@@ -1544,3 +1544,72 @@ func (r *One) CreateAllowance(member string) (error) {
 	res3 := root.SignedCall(*rootDomainRef, "GetBalance", []interface{}{memberRef})
 	assert.Equal(t, 1000, int(res3.(uint64)))
 }
+
+func TestGetParent(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+ import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/application/proxy/two"
+import "github.com/insolar/insolar/core"
+ type One struct {
+	foundation.BaseContract
+	FriendObject *two.Two
+}
+ func (r *One) AddChild() (error) {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+ 	r.FriendObject = friend
+ 	return nil
+}
+ func (r *One) GetFriendParent() (core.RecordRef, error) {
+	return r.FriendObject.GetParent()
+}
+`
+	var contractTwoCode = `
+package main
+ import (
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+ type Two struct {
+	foundation.BaseContract
+}
+ func New() (*Two, error) {
+	return &Two{}, nil;
+}
+ func (r *Two) GetParent() (core.RecordRef, error) {
+	return *r.GetContext().Parent, nil
+}
+ `
+	ctx := context.Background()
+	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
+	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	assert.NoError(t, err)
+	obj := getRefFromID(objID)
+	_, err = am.ActivateObject(
+		ctx,
+		core.RecordRef{}, *obj,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
+		goplugintestutils.CBORMarshal(t, &struct{}{}),
+	)
+	assert.NoError(t, err)
+	resp, err := executeMethod(ctx, lr, *obj, 0, "AddChild", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	assert.NoError(t, err, "contract call")
+	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	resp, err = executeMethod(ctx, lr, *obj, 0, "GetFriendParent", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	r1_0 := r.([]interface{})[0].([]byte)
+	assert.Equal(t, *obj, r1_0)
+	ValidateAllResults(t, lr)
+}
