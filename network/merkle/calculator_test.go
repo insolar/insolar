@@ -54,10 +54,16 @@ func (t *calculatorSuite) TestGetNodeProof() {
 }
 
 func (t *calculatorSuite) TestGetGlobuleProof() {
-	np, err := t.calculator.GetGlobuleProof(context.Background())
+	gp, err := t.calculator.GetGlobuleProof(context.Background())
 
 	t.Assert().NoError(err)
-	t.Assert().NotNil(np)
+	t.Assert().NotNil(gp)
+
+	globuleHash, err := t.calculator.GetGlobuleHash(context.Background(), t.nodeNetwork.GetActiveNodes())
+	t.Assert().NoError(err)
+
+	valid := gp.IsValid(context.Background(), t.nodeNetwork.GetOrigin(), globuleHash)
+	t.Assert().True(valid)
 }
 
 func (t *calculatorSuite) TestGetCloudProof() {
