@@ -40,9 +40,6 @@ func NewCalculator() Calculator {
 	return &calculator{}
 }
 
-func (c *calculator) getPulseHash(ctx context.Context, entry *PulseEntry) []byte {
-	return pulseHash(entry.Pulse)
-}
 
 func (c *calculator) getGlobuleHash(ctx context.Context, entry *GlobuleEntry) ([]byte, *GlobuleProof, error) {
 	globuleHash := make([]byte, 0) // TODO: calculate tree
@@ -82,7 +79,7 @@ func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]by
 		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't get node stateHash")
 	}
 
-	pulseHash := c.getPulseHash(ctx, entry)
+	pulseHash := entry.hash()
 	nodeInfoHash := nodeInfoHash(pulseHash, stateHash)
 
 	signature, err := ecdsa.Sign(nodeInfoHash, c.Certificate.GetEcdsaPrivateKey())

@@ -16,10 +16,16 @@
 
 package merkle
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+)
 
 type PulseEntry struct {
 	Pulse *core.Pulse
+}
+
+func (pe *PulseEntry) hash() []byte {
+	return pulseHash(pe.Pulse)
 }
 
 type GlobuleEntry struct {
