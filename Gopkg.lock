@@ -56,6 +56,14 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  digest = "1:705c40022f5c03bf96ffeb6477858d88565064485a513abcd0f11a0911546cb6"
+  name = "github.com/blang/semver"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2ee87856327ba09384cabd113bc6b5d174e9ec0f"
+  version = "v3.5.1"
+
+[[projects]]
   branch = "master"
   digest = "1:183d68d69d8681294f0b128de41c0defd54777f620cc4d1e88013136306a44d5"
   name = "github.com/ccding/go-stun"
@@ -537,6 +545,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/anacrolix/utp",
+    "github.com/blang/semver",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
     "github.com/damnever/bitarray",

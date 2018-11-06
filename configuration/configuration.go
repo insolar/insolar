@@ -38,6 +38,7 @@ type Configuration struct {
 	APIRunner       APIRunner
 	Pulsar          Pulsar
 	Bootstrap       Bootstrap
+	VersionManager  VersionManager
 	KeysPath        string
 	CertificatePath string
 	Tracer          Tracer
@@ -62,6 +63,7 @@ func NewConfiguration() Configuration {
 		APIRunner:       NewAPIRunner(),
 		Pulsar:          NewPulsar(),
 		Bootstrap:       NewBootstrap(),
+		VersionManager:  NewVersionManager(),
 		KeysPath:        "./",
 		CertificatePath: "",
 		Tracer:          NewTracer(),
