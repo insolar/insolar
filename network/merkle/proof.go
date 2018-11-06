@@ -36,8 +36,8 @@ type GlobuleProof struct {
 	Signature       []byte
 	GlobuleListHash []byte
 	PrevCloudHash   []byte
-	GlobuleIndex    uint16
-	NodeCount       uint16
+	GlobuleIndex    uint32
+	NodeCount       uint32
 	NodeRoot        []byte
 }
 
