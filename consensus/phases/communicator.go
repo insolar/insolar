@@ -26,7 +26,7 @@ import (
 // Communicator interface provides methods to exchange data between nodes
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, participants []core.Node, pulseData PulseData, claims []ReferendumClaim) (map[core.RecordRef]ReferendumClaim, error)
+	ExchangeData(ctx context.Context, participants []core.Node, pulseData PulseData, packet Phase1Packet) (map[core.RecordRef]Phase1Packet, error)
 }
 
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
