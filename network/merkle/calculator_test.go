@@ -42,6 +42,13 @@ func (t *calculatorSuite) TestGetNodeProof() {
 	t.Assert().NotNil(np)
 }
 
+func (t *calculatorSuite) TestGetGlobuleProof() {
+	np, err := t.calculator.GetGlobuleProof(context.Background())
+
+	t.Assert().NoError(err)
+	t.Assert().NotNil(np)
+}
+
 func TestCalculator(t *testing.T) {
 	nk := nodekeeper.GetTestNodekeeper()
 	l, clean := ledgertestutils.TmpLedger(t, "", core.Components{})
