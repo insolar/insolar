@@ -102,6 +102,15 @@ func bucketInfoHash(role core.NodeRole, nodeCount uint32) []byte {
 	return hash.SHA3Bytes256(result)
 }
 
+func bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
+	var result []byte
+
+	result = append(result, bucketInfoHash...)
+	result = append(result, bucketEntryHash...)
+
+	return hash.SHA3Bytes256(result)
+}
+
 func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte {
 	reservedHash := hash.SHA3Bytes256(utils.UInt32ToBytes(reserved))
 
