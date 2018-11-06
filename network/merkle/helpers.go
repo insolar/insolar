@@ -103,3 +103,12 @@ func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte
 
 	return hash.SHA3Bytes256(tmpResult3)
 }
+
+func globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
+	var result []byte
+
+	result = append(result, globuleInfoHash...)
+	result = append(result, globuleNodeRoot...)
+
+	return hash.SHA3Bytes256(result)
+}
