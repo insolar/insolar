@@ -20,7 +20,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
@@ -32,6 +31,9 @@ import (
 type calculatorSuite struct {
 	suite.Suite
 
+	pulseManager core.PulseManager
+	nodeNetwork  core.NodeNetwork
+
 	calculator Calculator
 }
 
@@ -40,6 +42,15 @@ func (t *calculatorSuite) TestGetNodeProof() {
 
 	t.Assert().NoError(err)
 	t.Assert().NotNil(np)
+
+	pulse, err := t.pulseManager.Current(context.Background())
+	t.Assert().NoError(err)
+
+	pulseHash, err := t.calculator.GetPulseHash(context.Background(), pulse)
+	t.Assert().NoError(err)
+
+	valid := np.IsValid(context.Background(), t.nodeNetwork.GetOrigin(), pulseHash)
+	t.Assert().True(valid)
 }
 
 func (t *calculatorSuite) TestGetGlobuleProof() {
@@ -71,8 +82,10 @@ func TestCalculator(t *testing.T) {
 	assert.NotNil(t, calculator.Certificate)
 
 	s := &calculatorSuite{
-		Suite:      suite.Suite{},
-		calculator: calculator,
+		Suite:        suite.Suite{},
+		calculator:   calculator,
+		pulseManager: l.GetPulseManager(),
+		nodeNetwork:  nk,
 	}
 	suite.Run(t, s)
 
