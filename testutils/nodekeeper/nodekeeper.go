@@ -2,18 +2,22 @@ package nodekeeper
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	testNetwork "github.com/insolar/insolar/testutils/network"
 )
 
-func GetTestNodekeeper() network.NodeKeeper {
+func GetTestNodekeeper(c core.Certificate) network.NodeKeeper {
+	pks, _ := c.GetPublicKey()
+	pk, _ := ecdsa.ImportPublicKey(pks)
+
 	nw := testNetwork.GetTestNetwork()
 	keeper := nodenetwork.NewNodeKeeper(
 		nodenetwork.NewNode(
 			nw.GetNodeID(),
 			[]core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
-			nil,
+			pk,
 			core.PulseNumber(0),
 			core.NodeJoined,
 			// TODO implement later
@@ -26,7 +30,7 @@ func GetTestNodekeeper() network.NodeKeeper {
 		return nodenetwork.NewNode(
 			nw.GetNodeID(),
 			[]core.NodeRole{core.RoleVirtual, core.RoleLightMaterial},
-			nil,
+			pk,
 			core.PulseNumber(0),
 			core.NodeActive,
 			// TODO implement later

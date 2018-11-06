@@ -50,7 +50,8 @@ func TestBareHelloworld(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 
-	nk := nodekeeper.GetTestNodekeeper()
+	ce := nodekeeper.GetTestCertificate()
+	nk := nodekeeper.GetTestNodekeeper(ce)
 	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)

@@ -89,7 +89,8 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	nk := nodekeeper.GetTestNodekeeper()
+	ce := nodekeeper.GetTestCertificate()
+	nk := nodekeeper.GetTestNodekeeper(ce)
 	messageBus := testmessagebus.NewTestMessageBus()
 	nw := network.GetTestNetwork()
 	c := core.Components{

@@ -57,10 +57,9 @@ func (t *calculatorSuite) TestGetCloudProof() {
 }
 
 func TestCalculator(t *testing.T) {
-	nk := nodekeeper.GetTestNodekeeper()
+	c := nodekeeper.GetTestCertificate()
+	nk := nodekeeper.GetTestNodekeeper(c)
 	l, clean := ledgertestutils.TmpLedger(t, "", core.Components{})
-	c := &certificate.Certificate{}
-	c.GenerateKeys()
 
 	calculator := &calculator{}
 
