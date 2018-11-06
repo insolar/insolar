@@ -58,6 +58,8 @@ type SignedMessage interface {
 	Context(context.Context) context.Context
 	// Pulse returns pulse when message was sent.
 	Pulse() PulseNumber
+	// GetToken returns a routing-token of the message
+	GetToken() Token
 }
 
 // Reply for an `Message`
