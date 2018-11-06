@@ -31,3 +31,24 @@ func (np *PulseProof) IsValid(ctx context.Context, node core.Node, pulseHash []b
 	nodeInfoHash := nodeInfoHash(pulseHash, np.StateHash)
 	return verifySignature(ctx, nodeInfoHash, np.Signature, node.PublicKey())
 }
+
+type GlobuleProof struct {
+	Signature       []byte
+	GlobuleListHash []byte
+	PrevCloudHash   []byte
+	GlobuleIndex    uint16
+	NodeCount       uint16
+	NodeRoot        []byte
+}
+
+func (gp *GlobuleProof) IsValid(ctx context.Context, node core.Node, globuleHash []byte) bool {
+	return verifySignature(ctx, globuleHash, gp.Signature, node.PublicKey())
+}
+
+type CloudProof struct {
+	Signature []byte
+}
+
+func (cp *CloudProof) IsValid(ctx context.Context, node core.Node, cloudHash []byte) bool {
+	return verifySignature(ctx, cloudHash, cp.Signature, node.PublicKey())
+}
