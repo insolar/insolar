@@ -49,6 +49,13 @@ func (t *calculatorSuite) TestGetGlobuleProof() {
 	t.Assert().NotNil(np)
 }
 
+func (t *calculatorSuite) TestGetCloudProof() {
+	np, err := t.calculator.GetCloudProof(context.Background())
+
+	t.Assert().NoError(err)
+	t.Assert().NotNil(np)
+}
+
 func TestCalculator(t *testing.T) {
 	nk := nodekeeper.GetTestNodekeeper()
 	l, clean := ledgertestutils.TmpLedger(t, "", core.Components{})
