@@ -35,21 +35,22 @@ type Controller struct {
 	bootstrapController common.BootstrapController
 	authController      *auth.AuthorizationController
 	pulseController     *PulseController
+	rpcController       *RPCController
 }
 
 // SendMessage send message to nodeID.
 func (c *Controller) SendMessage(nodeID core.RecordRef, name string, msg core.SignedMessage) ([]byte, error) {
-	return nil, nil
+	return c.rpcController.SendMessage(nodeID, name, msg)
 }
 
 // RemoteProcedureRegister register remote procedure that will be executed when message is received.
 func (c *Controller) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
-
+	c.rpcController.RemoteProcedureRegister(name, method)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
 func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error {
-	return nil
+	return c.rpcController.SendCascadeMessage(data, method, msg)
 }
 
 // Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
@@ -86,6 +87,7 @@ func (c *Controller) Inject(components core.Components) {
 	c.bootstrapController.Start()
 	c.authController.Start(components)
 	c.pulseController.Start()
+	c.rpcController.Start()
 }
 
 // NewNetworkController create new network controller.
@@ -101,6 +103,7 @@ func NewNetworkController(
 	c.bootstrapController = NewBootstrapController(&c.options, transport)
 	c.authController = auth.NewAuthorizationController(&c.options, c.bootstrapController, transport)
 	c.pulseController = NewPulseController(pulseCallback, network, routingTable)
+	c.rpcController = NewRPCController(network)
 
 	return &c
 }
