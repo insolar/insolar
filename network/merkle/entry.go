@@ -45,9 +45,11 @@ func (ge *GlobuleEntry) hash() []byte {
 
 	for role, roleEntries := range nodeEntryByRole {
 		sortEntries(roleEntries)
+
 		bucketEntryRoot := roleEntryRoot(roleEntries)
 		bucketInfoHash := bucketInfoHash(role, uint32(len(roleEntries)))
 		bucketHash := bucketHash(bucketInfoHash, bucketEntryRoot)
+
 		bucketHashes = append(bucketHashes, bucketHash)
 	}
 

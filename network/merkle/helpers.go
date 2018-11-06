@@ -48,8 +48,8 @@ func nodeInfoHash(pulseHash, stateHash []byte) []byte {
 func nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
 	var result []byte
 
-	pulseNumberHash := hash.SHA3Bytes256(nodeSignature)
-	result = append(result, pulseNumberHash...)
+	nodeSignatureHash := hash.SHA3Bytes256(nodeSignature)
+	result = append(result, nodeSignatureHash...)
 
 	result = append(result, nodeInfoHash...)
 
