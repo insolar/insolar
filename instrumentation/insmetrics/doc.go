@@ -14,18 +14,7 @@
  *    limitations under the License.
  */
 
-package merkle
-
-import (
-	"context"
-
-	"github.com/insolar/insolar/core"
-)
-
-type GlobuleProof struct {
-	Signature []byte
-}
-
-func (gp *GlobuleProof) IsValid(ctx context.Context, node core.Node, globuleHash []byte) bool {
-	return verifySignature(ctx, globuleHash, gp.Signature, node.PublicKey())
-}
+/*
+Package insmetrics provides helpers for opencesus metrics.
+*/
+package insmetrics

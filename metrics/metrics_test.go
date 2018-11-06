@@ -14,54 +14,67 @@
  *    limitations under the License.
  */
 
-package metrics
+package metrics_test
 
 import (
-	"context"
-	"io/ioutil"
-	"net/http"
-	"strconv"
-	"strings"
+	"math/rand"
 	"testing"
+	"time"
 
-	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/testutils/testmetrics"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 )
 
-func changePort(address *string, t *testing.T) {
-	pair := strings.Split(*address, ":")
-	assert.Len(t, pair, 2)
-
-	currentPort, err := strconv.Atoi(pair[1])
-	assert.NoError(t, err)
-
-	*address = pair[0] + ":" + strconv.Itoa(currentPort+1)
-}
-
 func TestMetrics_NewMetrics(t *testing.T) {
-	cfg := configuration.NewMetrics()
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	testm := testmetrics.Start(ctx)
 
-	// it's needed to prevent using same port for concurrent tests
-	changePort(&cfg.ListenAddress, t)
+	var (
+		// https://godoc.org/go.opencensus.io/stats
+		videoCount = stats.Int64("example.com/measures/video_count", "number of processed videos", stats.UnitDimensionless)
+		videoSize  = stats.Int64("video_size", "size of processed video", stats.UnitBytes)
+	)
+	osxtag := insmetrics.MustTagKey("osx")
 
-	m, err := NewMetrics(cfg)
-	assert.NoError(t, err)
-	ctx := context.TODO()
-	err = m.Start(ctx)
-	assert.NoError(t, err)
+	err := view.Register(
+		&view.View{
+			Measure:     videoCount,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{osxtag},
+		},
+		&view.View{
+			Name:        "video_size",
+			Measure:     videoSize,
+			Aggregation: view.Distribution(0, 1<<16, 1<<32),
+			TagKeys:     []tag.Key{osxtag},
+		},
+	)
+	require.NoError(t, err)
 
-	NetworkMessageSentTotal.Inc()
-	NetworkPacketSentTotal.WithLabelValues("ping").Add(55)
+	newctx := insmetrics.ChangeTags(ctx, tag.Insert(osxtag, "11.12.13"))
 
-	response, err := http.Get("http://" + cfg.ListenAddress + "/metrics")
-	defer response.Body.Close()
+	stats.Record(newctx, videoCount.M(1), videoSize.M(rand.Int63()))
+	time.Sleep(time.Millisecond * 1100)
 
-	content, err := ioutil.ReadAll(response.Body)
-	contentText := string(content)
-	assert.NoError(t, err)
+	metrics.NetworkMessageSentTotal.Inc()
+	metrics.NetworkPacketSentTotal.WithLabelValues("ping").Add(55)
 
-	assert.True(t, strings.Contains(contentText, "insolar_network_message_sent_total 1"))
-	assert.True(t, strings.Contains(contentText, `insolar_network_packet_sent_total{packetType="ping"} 55`))
+	content, err := testm.FetchContent()
+	require.NoError(t, err)
+	// fmt.Println("/metrics => ", content)
 
-	assert.NoError(t, m.Stop(ctx))
+	assert.Contains(t, content, "insolar_network_message_sent_total 1")
+	assert.Contains(t, content, `insolar_network_packet_sent_total{packetType="ping"} 55`)
+	assert.Contains(t, content, `insolar_video_size_count{osx="11.12.13"} 1`)
+	assert.Contains(t, content, `insolar_example_com_measures_video_count{osx="11.12.13"} 1`)
+
+	assert.NoError(t, testm.Stop())
 }

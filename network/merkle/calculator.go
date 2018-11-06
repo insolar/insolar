@@ -25,13 +25,9 @@ import (
 )
 
 type Calculator interface {
-	GetPulseHash(context.Context, *core.Pulse) ([]byte, error)
-	GetGlobuleHash(context.Context, []core.Node) ([]byte, error)
-	GetCloudHash(context.Context) ([]byte, error) // TODO: design interface for cloud
-
-	GetNodeProof(context.Context) (*NodeProof, error)
-	GetGlobuleProof(context.Context) (*GlobuleProof, error)
-	GetCloudProof(context.Context) (*CloudProof, error)
+	GetPulseProof(context.Context, *PulseEntry) ([]byte, *PulseProof, error)
+	GetGlobuleProof(context.Context, *GlobuleEntry) ([]byte, *GlobuleProof, error)
+	GetCloudProof(context.Context, *CloudEntry) ([]byte, *CloudProof, error)
 }
 
 type calculator struct {
@@ -44,84 +40,61 @@ func NewCalculator() Calculator {
 	return &calculator{}
 }
 
-func (c *calculator) GetPulseHash(ctx context.Context, pulse *core.Pulse) ([]byte, error) {
-	pulseHash := pulseHash(pulse)
-	return pulseHash, nil
-}
-
-func (c *calculator) GetGlobuleHash(ctx context.Context, nodes []core.Node) ([]byte, error) {
-	globuleHash := make([]byte, 0) // TODO: calculate tree
-	return globuleHash, nil
-}
-
-func (c *calculator) GetCloudHash(ctx context.Context) ([]byte, error) {
-	cloudHash := make([]byte, 0) // TODO: calculate tree
-	return cloudHash, nil
-}
-
 func (c *calculator) getStateHash(role core.NodeRole) ([]byte, error) {
 	// TODO: do something with role
 	return c.Ledger.GetArtifactManager().State()
 }
 
-func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
-	pulse, err := c.Ledger.GetPulseManager().Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get current pulse")
-	}
-
-	pulseHash, err := c.GetPulseHash(ctx, pulse)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get pulse hash")
-	}
-
-	role := c.NodeNetwork.GetOrigin().Roles()[0] // TODO: remove after switch to single role model
+func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]byte, *PulseProof, error) {
+	role := c.NodeNetwork.GetOrigin().Role()
 	stateHash, err := c.getStateHash(role)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get node stateHash")
+		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't get node stateHash")
 	}
 
+	pulseHash := entry.hash()
 	nodeInfoHash := nodeInfoHash(pulseHash, stateHash)
 
 	signature, err := ecdsa.Sign(nodeInfoHash, c.Certificate.GetEcdsaPrivateKey())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't sign node info hash")
+		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't sign node info hash")
 	}
 
-	return &NodeProof{
+	return pulseHash, &PulseProof{
 		StateHash: stateHash,
 		Signature: signature,
 	}, nil
 }
 
-func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error) {
-	globuleHash, err := c.GetGlobuleHash(ctx, c.NodeNetwork.GetActiveNodes())
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't get globule hash")
-	}
+func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) ([]byte, *GlobuleProof, error) {
+	nodeRoot := entry.hash()
+	nodeCount := uint32(len(entry.ProofSet))
+	globuleInfoHash := globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
+	globuleHash := globuleHash(globuleInfoHash, nodeRoot)
 
 	signature, err := ecdsa.Sign(globuleHash, c.Certificate.GetEcdsaPrivateKey())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't sign globule hash")
+		return nil, nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't sign globule hash")
 	}
 
-	return &GlobuleProof{
-		Signature: signature,
+	return globuleHash, &GlobuleProof{
+		Signature:     signature,
+		PrevCloudHash: entry.PrevCloudHash,
+		GlobuleIndex:  entry.GlobuleIndex,
+		NodeCount:     nodeCount,
+		NodeRoot:      nodeRoot,
 	}, nil
 }
 
-func (c *calculator) GetCloudProof(ctx context.Context) (*CloudProof, error) {
-	cloudHash, err := c.GetCloudHash(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetCloudProof ] Could't get cloud hash")
-	}
+func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) ([]byte, *CloudProof, error) {
+	cloudHash := entry.hash()
 
 	signature, err := ecdsa.Sign(cloudHash, c.Certificate.GetEcdsaPrivateKey())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetCloudProof ] Could't sign cloud hash")
+		return nil, nil, errors.Wrap(err, "[ GetCloudProof ] Could't sign cloud hash")
 	}
 
-	return &CloudProof{
+	return cloudHash, &CloudProof{
 		Signature: signature,
 	}, nil
 }

@@ -70,7 +70,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
-	metricsHandler, err := metrics.NewMetrics(cfg.Metrics)
+	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics)
 	checkError(ctx, err, "failed to start Metrics")
 
 	networkCoordinator, err := networkcoordinator.New()

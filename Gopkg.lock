@@ -65,6 +65,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:79efb3c233322835594954b38c6878ed3778396ba55f7c3e5a24dd38c4170ecd"
+  name = "github.com/cbergoon/merkletree"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "05d5987faac48c14315189ed9c817cd312c5964f"
+
+[[projects]]
+  branch = "master"
   digest = "1:183d68d69d8681294f0b128de41c0defd54777f620cc4d1e88013136306a44d5"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
@@ -250,16 +258,15 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:20a8a18488bdef471795af0413d9a3c9c35dc24ca93342329b884ba3c15cbaab"
+  digest = "1:d14a5f4bfecf017cb780bdde1b6483e5deb87e12c332544d2c430eda58734bcb"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
-    "prometheus/internal",
     "prometheus/promhttp",
   ]
   pruneopts = "UT"
-  revision = "1cafe34db7fdec6022e17e00e1c1ea501022f3e4"
-  version = "v0.9.0"
+  revision = "c5b7fccd204277076155f10851dad72b76a49317"
+  version = "v0.8.0"
 
 [[projects]]
   branch = "master"
@@ -430,14 +437,20 @@
   version = "v4.3.1"
 
 [[projects]]
-  digest = "1:58fa2af58add3f3edee4556ac8589fcdc1348caa301f3c322275c84484e3bf0b"
+  digest = "1:83676b69253565e11fc408b83b4dc803f2e792cc2d855b7efbfd8041c11937ea"
   name = "go.opencensus.io"
   packages = [
     ".",
     "exemplar",
     "exporter/jaeger",
     "exporter/jaeger/internal/gen-go/jaeger",
+    "exporter/prometheus",
     "internal",
+    "internal/tagencoding",
+    "stats",
+    "stats/internal",
+    "stats/view",
+    "tag",
     "trace",
     "trace/internal",
     "trace/tracestate",
@@ -538,6 +551,7 @@
   input-imports = [
     "github.com/anacrolix/utp",
     "github.com/blang/semver",
+    "github.com/cbergoon/merkletree",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
     "github.com/dgraph-io/badger",
@@ -561,6 +575,10 @@
     "github.com/ugorji/go/codec",
     "github.com/xtaci/kcp-go",
     "go.opencensus.io/exporter/jaeger",
+    "go.opencensus.io/exporter/prometheus",
+    "go.opencensus.io/stats",
+    "go.opencensus.io/stats/view",
+    "go.opencensus.io/tag",
     "go.opencensus.io/trace",
     "golang.org/x/crypto/sha3",
     "gopkg.in/yaml.v2",
