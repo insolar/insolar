@@ -17,6 +17,7 @@
 package ecdsa
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 )
 
 // P256Curve is a base curve for ecdsa.
@@ -146,4 +148,16 @@ func ImportSignature(data string) ([]byte, error) {
 // GeneratePrivateKey uses for generating ecdsa-key with defaul settings.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(P256Curve, rand.Reader)
+}
+
+// SignData takes hash fro interface{} and sign it with provided private key
+func SignData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
+	cbor := &codec.CborHandle{}
+	var b bytes.Buffer
+	enc := codec.NewEncoder(&b, cbor)
+	err := enc.Encode(data)
+	if err != nil {
+		return nil, err
+	}
+	return privateKey.Sign(rand.Reader, b.Bytes(), nil)
 }
