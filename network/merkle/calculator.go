@@ -25,6 +25,10 @@ import (
 )
 
 type Calculator interface {
+	GetPulseHash(context.Context) ([]byte, error)
+	GetGlobuleHash(context.Context) ([]byte, error)
+	GetCloudHash(context.Context) ([]byte, error)
+
 	GetNodeProof(context.Context) (*NodeProof, error)
 	GetGlobuleProof(context.Context) (*GlobuleProof, error)
 	GetCloudProof(context.Context) (*CloudProof, error)
@@ -38,6 +42,18 @@ type calculator struct {
 
 func NewCalculator() Calculator {
 	return &calculator{}
+}
+
+func (c *calculator) GetPulseHash(ctx context.Context) ([]byte, error) {
+	return nil, nil
+}
+
+func (c *calculator) GetGlobuleHash(ctx context.Context) ([]byte, error) {
+	return nil, nil
+}
+
+func (c *calculator) GetCloudHash(ctx context.Context) ([]byte, error) {
+	return nil, nil
 }
 
 func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
