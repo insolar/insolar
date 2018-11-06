@@ -23,9 +23,11 @@ type PulseEntry struct {
 }
 
 type GlobuleEntry struct {
-	*PulseEntry
-
-	ProofSet map[core.Node]PulseProof
+	PulseEntry
+	ProofSet      map[core.Node]PulseProof
+	PulseHash     []byte
+	PrevCloudHash []byte
+	GlobuleIndex  uint32
 }
 
 type CloudEntry struct {
