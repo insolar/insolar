@@ -64,15 +64,21 @@ func (c *calculator) GetCloudHash(ctx context.Context) ([]byte, error) {
 	return cloudHash, nil
 }
 
-func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
-	stateHash, err := c.Ledger.GetArtifactManager().State()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get node stateHash")
-	}
+func (c *calculator) getStateHash(role core.NodeRole) ([]byte, error) {
+	// TODO: do something with role
+	return c.Ledger.GetArtifactManager().State()
+}
 
+func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
 	pulseHash, err := c.GetPulseHash(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get pulse hash")
+	}
+
+	role := c.NodeNetwork.GetOrigin().Roles()[0] // TODO: remove after switch to single role model
+	stateHash, err := c.getStateHash(role)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get node stateHash")
 	}
 
 	nodeInfoHash := nodeInfoHash(pulseHash, stateHash)
