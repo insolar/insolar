@@ -61,7 +61,7 @@ func checkSerializationDeserialization(t *testing.T, orig Serializer) {
 	require.Equal(t, orig, newObj)
 }
 
-func checkBadDataSerialization(t *testing.T, orig Serializer, msg string) {
+func checkBadDataSerializationDeserialization(t *testing.T, orig Serializer, msg string) {
 	newObj := reflect.New(reflect.TypeOf(orig).Elem()).Interface()
 	data := serializeData(t, orig)
 	r := bytes.NewReader(data[:len(data)-1])
@@ -74,7 +74,7 @@ func TestPacketHeaderReadWrite(t *testing.T) {
 }
 
 func TestPacketHeaderReadWrite_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makeDefaultPacketHeader(),
+	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(),
 		"[ PacketHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
 }
 
@@ -96,7 +96,7 @@ func TestPulseDataExtReadWrite(t *testing.T) {
 }
 
 func TestPulseDataExtReadWrite_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makeDefaultPulseDataExt(),
+	checkBadDataSerializationDeserialization(t, makeDefaultPulseDataExt(),
 		"[ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
 }
 
@@ -112,7 +112,7 @@ func TestPulseDataReadWrite_BadData(t *testing.T) {
 	pulseData := &PulseData{}
 	pulseData.PulseNumber = uint32(32)
 	pulseData.Data = makeDefaultPulseDataExt()
-	checkBadDataSerialization(t, pulseData,
+	checkBadDataSerializationDeserialization(t, pulseData,
 		"[ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
 }
 
@@ -127,7 +127,7 @@ func TestNodePulseProofReadWrite_BadData(t *testing.T) {
 	nodePulseProof := &NodePulseProof{}
 	nodePulseProof.NodeSignature = uint64(63)
 	nodePulseProof.NodeStateHash = uint64(64)
-	checkBadDataSerialization(t, nodePulseProof,
+	checkBadDataSerializationDeserialization(t, nodePulseProof,
 		"[ NodePulseProof.Deserialize ] Can't read NodeSignature: unexpected EOF")
 }
 
@@ -144,7 +144,7 @@ func TestNodeBroadcast(t *testing.T) {
 }
 
 func TestNodeBroadcast_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makeNodeBroadCast(),
+	checkBadDataSerializationDeserialization(t, makeNodeBroadCast(),
 		"[ NodeBroadcast.Deserialize ] Can't read length: unexpected EOF")
 }
 
@@ -163,7 +163,7 @@ func TestCapabilityPoolingAndActivation(t *testing.T) {
 }
 
 func TestCapabilityPoolingAndActivation_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makeCapabilityPoolingAndActivation(),
+	checkBadDataSerializationDeserialization(t, makeCapabilityPoolingAndActivation(),
 		"[ CapabilityPoolingAndActivation.Deserialize ] Can't read length: unexpected EOF")
 }
 
@@ -181,7 +181,7 @@ func TestNodeViolationBlame(t *testing.T) {
 }
 
 func TestNodeViolationBlame_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makeNodeViolationBlame(),
+	checkBadDataSerializationDeserialization(t, makeNodeViolationBlame(),
 		"[ NodeViolationBlame.Deserialize ] Can't read length: unexpected EOF")
 }
 
@@ -203,7 +203,7 @@ func TestNodeJoinClaim(t *testing.T) {
 }
 
 func TestNodeJoinClaim_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makeNodeJoinClaim(),
+	checkBadDataSerializationDeserialization(t, makeNodeJoinClaim(),
 		"[ NodeJoinClaim.Deserialize ] Can't read NodeRef: unexpected EOF")
 }
 
@@ -216,7 +216,7 @@ func TestNodeLeaveClaim(t *testing.T) {
 func TestNodeLeaveClaim_BadData(t *testing.T) {
 	nodeLeaveClaim := &NodeLeaveClaim{}
 	nodeLeaveClaim.length = uint16(333)
-	checkBadDataSerialization(t, nodeLeaveClaim,
+	checkBadDataSerializationDeserialization(t, nodeLeaveClaim,
 		"[ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 }
 
@@ -235,7 +235,7 @@ func TestReferendumVote(t *testing.T) {
 }
 
 func TestReferendumVote_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makeReferendumVote(),
+	checkBadDataSerializationDeserialization(t, makeReferendumVote(),
 		"[ ReferendumVote.Deserialize ] Can't read Length: unexpected EOF")
 }
 
@@ -252,7 +252,7 @@ func TestNodeListVote(t *testing.T) {
 }
 
 func TestNodeListVote_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makeNodeListVote(),
+	checkBadDataSerializationDeserialization(t, makeNodeListVote(),
 		"[ NodeListVote.Deserialize ] Can't read NodeListHash: unexpected EOF")
 }
 
@@ -369,7 +369,7 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 }
 
 func TestPhase1Packet_BadData(t *testing.T) {
-	checkBadDataSerialization(t, makePhase1Packet(),
+	checkBadDataSerializationDeserialization(t, makePhase1Packet(),
 		"[ Phase1Packet.Deserialize ] Can't parseReferendumClaim: [ PacketHeader.parseReferendumClaim ] "+
 			"Can't deserialize claim.: [ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 }
