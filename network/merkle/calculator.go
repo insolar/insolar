@@ -25,9 +25,9 @@ import (
 )
 
 type Calculator interface {
-	GetPulseHash(context.Context) ([]byte, error)
 	GetGlobuleHash(context.Context) ([]byte, error)
 	GetCloudHash(context.Context) ([]byte, error)
+	GetPulseHash(context.Context, *core.Pulse) ([]byte, error)
 
 	GetNodeProof(context.Context) (*NodeProof, error)
 	GetGlobuleProof(context.Context) (*GlobuleProof, error)
@@ -44,12 +44,7 @@ func NewCalculator() Calculator {
 	return &calculator{}
 }
 
-func (c *calculator) GetPulseHash(ctx context.Context) ([]byte, error) {
-	pulse, err := c.Ledger.GetPulseManager().Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get current pulse")
-	}
-
+func (c *calculator) GetPulseHash(ctx context.Context, pulse *core.Pulse) ([]byte, error) {
 	pulseHash := pulseHash(pulse)
 	return pulseHash, nil
 }
@@ -70,7 +65,12 @@ func (c *calculator) getStateHash(role core.NodeRole) ([]byte, error) {
 }
 
 func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
-	pulseHash, err := c.GetPulseHash(ctx)
+	pulse, err := c.Ledger.GetPulseManager().Current(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get current pulse")
+	}
+
+	pulseHash, err := c.GetPulseHash(ctx, pulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get pulse hash")
 	}
