@@ -1011,7 +1011,7 @@ func TestDHT_MessageSign(t *testing.T) {
 	ref := testutils.RandomRef()
 
 	tmp := core.Message(&message.BootstrapRequest{})
-	msg, err := message.NewSignedMessage(context.TODO(), tmp, ref, key, 0)
+	msg, err := message.NewSignedMessage(context.TODO(), tmp, ref, key, 0, core.Token{})
 	assert.NoError(t, err)
 	assert.True(t, msg.IsValid(&key.PublicKey))
 	assert.False(t, msg.IsValid(&key2.PublicKey))
