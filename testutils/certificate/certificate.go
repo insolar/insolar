@@ -23,6 +23,10 @@ import (
 
 func GetTestCertificate() core.Certificate {
 	c := &certificate.Certificate{}
-	c.GenerateKeys()
+	err := c.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+
 	return c
 }

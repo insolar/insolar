@@ -9,8 +9,15 @@ import (
 )
 
 func GetTestNodekeeper(c core.Certificate) network.NodeKeeper {
-	pks, _ := c.GetPublicKey()
-	pk, _ := ecdsa.ImportPublicKey(pks)
+	pks, err := c.GetPublicKey()
+	if err != nil {
+		panic(err)
+	}
+
+	pk, err := ecdsa.ImportPublicKey(pks)
+	if err != nil {
+		panic(err)
+	}
 
 	nw := testNetwork.GetTestNetwork()
 	keeper := nodenetwork.NewNodeKeeper(
