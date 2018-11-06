@@ -16,7 +16,9 @@
 
 package core
 
-import "context"
+import (
+	"context"
+)
 
 // Component controller methods
 type Component interface {
@@ -37,4 +39,5 @@ type Components struct {
 	Bootstrapper       Bootstrapper
 	APIRunner          Component
 	NetworkCoordinator NetworkCoordinator
+	BlockExp           Component
 }
