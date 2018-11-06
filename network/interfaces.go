@@ -160,6 +160,8 @@ type PartitionPolicy interface {
 
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
+	// Start inject dependencies from components
+	Start(components core.Components)
 	// Resolve NodeID -> Address. Can initiate network requests.
 	Resolve(core.RecordRef) (string, error)
 	// AddToKnownHosts add host to routing table.
