@@ -33,12 +33,11 @@ func (np *PulseProof) IsValid(ctx context.Context, node core.Node, pulseHash []b
 }
 
 type GlobuleProof struct {
-	Signature       []byte
-	GlobuleListHash []byte
-	PrevCloudHash   []byte
-	GlobuleIndex    uint32
-	NodeCount       uint32
-	NodeRoot        []byte
+	Signature     []byte
+	PrevCloudHash []byte
+	GlobuleIndex  uint32
+	NodeCount     uint32
+	NodeRoot      []byte
 }
 
 func (gp *GlobuleProof) IsValid(ctx context.Context, node core.Node, globuleHash []byte) bool {
