@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
 	"github.com/insolar/insolar/log"
@@ -66,7 +67,7 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 
 // Start is implementation of core.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
-	log.Infoln("Starting metrics server", m.server.Addr)
+	inslogger.FromContext(ctx).Infoln("Starting metrics server", m.server.Addr)
 
 	http.Handle("/metrics", m.httpHandler)
 	pprof.Handle(http.DefaultServeMux)
@@ -90,7 +91,7 @@ func (m *Metrics) Start(ctx context.Context) error {
 // Stop is implementation of core.Component interface.
 func (m *Metrics) Stop(ctx context.Context) error {
 	const timeOut = 3
-	log.Infoln("Shutting down metrics server")
+	inslogger.FromContext(ctx).Info("Shutting down metrics server")
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(timeOut)*time.Second)
 	defer cancel()
 	err := m.server.Shutdown(ctxWithTimeout)
@@ -107,5 +108,5 @@ type errorLogger struct {
 
 // Println is wrapper method for ErrorLn.
 func (e *errorLogger) Println(v ...interface{}) {
-	log.Errorln(v)
+	log.Errorln("Metrics error logger:", v)
 }
