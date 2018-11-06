@@ -46,7 +46,8 @@ type Metrics struct {
 // NewMetrics creates new Metrics component.
 func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 	m := Metrics{registry: prometheus.NewRegistry()}
-	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: &errorLogger{}})
+	errlogger := &errorLogger{}
+	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: errlogger})
 
 	m.server = &http.Server{Addr: cfg.ListenAddress}
 
@@ -60,7 +61,10 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 	m.registry.MustRegister(NetworkPacketSentTotal)
 	m.registry.MustRegister(NetworkPacketReceivedTotal)
 
-	insmetrics.RegisterPrometheus(cfg.Namespace, m.registry)
+	_, err := insmetrics.RegisterPrometheus(cfg.Namespace, m.registry)
+	if err != nil {
+		errlogger.Println(err.Error())
+	}
 
 	return &m, nil
 }
