@@ -56,7 +56,7 @@ type Phase1Packet struct {
 	signature uint64
 }
 
-func (p1p *Phase1Packet) hasPulseDataExt() bool {
+func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
 	return p1p.packetHeader.f00
 }
 

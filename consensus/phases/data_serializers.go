@@ -99,23 +99,23 @@ func (ph *PacketHeader) compactPulseAndCustomFlags() uint32 {
 
 // claims auxiliar constants
 const (
-	claimTypeShift        = 10
-	claimHeaderTypeMask   = 0xfc00
-	claimHeaderLengthMask = 0x3ff
-	claimHeaderSize       = 16
+	claimTypeShift      = 10
+	claimHeaderTypeMask = 0xfc00
+
+//	claimHeaderLengthMask = 0x3ff
 )
 
 func extractClaimTypeFromHeader(claimHeader uint16) uint8 {
 	return uint8((claimHeader & claimHeaderTypeMask) >> claimTypeShift)
 }
 
-func extractClaimLengthFromHeader(claimHeader uint16) uint16 {
-	return claimHeader & claimHeaderLengthMask
-}
+// func extractClaimLengthFromHeader(claimHeader uint16) uint16 {
+// 	return claimHeader & claimHeaderLengthMask
+// }
 
 func makeClaimHeader(claim ReferendumClaim) uint16 {
-	var result uint16
-	result = claim.Length()
+	// TODO: we don't need length
+	var result = claim.Length()
 	result |= (uint16(claim.Type()) << claimTypeShift)
 
 	return result
@@ -159,7 +159,7 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 	}
 
 	if claimsSize != 0 {
-		// TODO: return error
+		return errors.New("[ PacketHeader.parseReferendumClaim ] Problem with claims struct")
 	}
 
 	return nil
