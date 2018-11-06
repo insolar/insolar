@@ -74,3 +74,9 @@ type nodeEntry struct {
 	Node       core.Node
 }
 
+func (ne *nodeEntry) hash() []byte {
+	pulseHash := ne.PulseEntry.hash()
+	nodeInfoHash := nodeInfoHash(pulseHash, ne.PulseProof.StateHash)
+	return nodeHash(ne.PulseProof.Signature, nodeInfoHash)
+}
+
