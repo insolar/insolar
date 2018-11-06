@@ -45,7 +45,12 @@ func NewCalculator() Calculator {
 }
 
 func (c *calculator) GetPulseHash(ctx context.Context) ([]byte, error) {
-	return nil, nil
+	pulse, err := c.Ledger.GetPulseManager().Current(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get current pulse")
+	}
+
+	return pulseHash(pulse), nil
 }
 
 func (c *calculator) GetGlobuleHash(ctx context.Context) ([]byte, error) {
@@ -57,17 +62,17 @@ func (c *calculator) GetCloudHash(ctx context.Context) ([]byte, error) {
 }
 
 func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
-	pulse, err := c.Ledger.GetPulseManager().Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get current pulse")
-	}
-
 	stateHash, err := c.Ledger.GetArtifactManager().State()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get node stateHash")
 	}
 
-	nodeInfoHash := nodeInfoHash(pulseHash(pulse), stateHash)
+	pulseHash, err := c.GetPulseHash(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetNodeProof ] Could't get pulse hash")
+	}
+
+	nodeInfoHash := nodeInfoHash(pulseHash, stateHash)
 
 	signature, err := ecdsa.Sign(nodeInfoHash, c.Certificate.GetEcdsaPrivateKey())
 	if err != nil {
