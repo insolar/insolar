@@ -17,8 +17,10 @@
 package merkle
 
 import (
+	"bytes"
+	"sort"
+
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
 )
 
 type PulseEntry struct {
@@ -84,3 +86,12 @@ func nodeEntryByRole(entry *GlobuleEntry) map[core.NodeRole][]*nodeEntry {
 	}
 	return roleMap
 }
+
+func sortEntries(roleEntries []*nodeEntry) {
+	sort.SliceStable(roleEntries, func(i, j int) bool {
+		return bytes.Compare(
+			roleEntries[i].Node.ID().Bytes(),
+			roleEntries[j].Node.ID().Bytes()) < 0
+	})
+}
+
