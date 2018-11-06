@@ -21,7 +21,6 @@ import (
 
 	"github.com/cbergoon/merkletree"
 	"github.com/insolar/insolar/cryptohelpers/hash"
-	"github.com/pkg/errors"
 )
 
 type tree interface {
@@ -41,7 +40,7 @@ func (t *treeNode) Equals(other merkletree.Content) (bool, error) {
 	return equal, nil
 }
 
-func fromList(list [][]byte) (tree, error) {
+func fromList(list [][]byte) tree {
 	var result []merkletree.Content
 
 	for _, content := range list {
@@ -50,8 +49,8 @@ func fromList(list [][]byte) (tree, error) {
 
 	mt, err := merkletree.NewTree(result)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ fromList ] Could get merkle tree")
+		panic(err.Error())
 	}
 
-	return mt, nil
+	return mt
 }
