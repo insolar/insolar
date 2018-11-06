@@ -25,10 +25,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/core/utils"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
-
+	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -39,6 +37,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/log"
@@ -93,7 +92,8 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	nk := nodekeeper.GetTestNodekeeper()
+	ce := certificate.GetTestCertificate()
+	nk := nodekeeper.GetTestNodekeeper(ce)
 	messageBus := testmessagebus.NewTestMessageBus()
 	nw := network.GetTestNetwork()
 	c := core.Components{
