@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/dhtnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -41,11 +42,21 @@ import (
 
 var keysPath = path.Join("..", "..", "testdata", "functional", "bootstrap_keys.json")
 
-func initComponents(t *testing.T, nodeId core.RecordRef) core.Components {
+func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
+	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, 0, address, "")
+	keeper := nodenetwork.NewNodeKeeper(origin)
+	if isBootstrap {
+		keeper.AddActiveNodes([]core.Node{origin})
+	}
+	return keeper
+}
+
+func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) core.Components {
 	pwd, _ := os.Getwd()
 	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
 	assert.NoError(t, err)
-	return core.Components{Certificate: cert, NodeNetwork: nodenetwork.NewNodeKeeper(nodenetwork.NewNode(nodeId, nil, nil, 0, 0, "", "")), Ledger: &dhtnetwork.MockLedger{}}
+	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
+	return core.Components{Certificate: cert, NodeNetwork: keeper, Ledger: &dhtnetwork.MockLedger{}}
 }
 
 /*
@@ -71,6 +82,7 @@ func TestServiceNetwork_GetAddress(t *testing.T) {
 }
 
 func TestServiceNetwork_GetHostNetwork(t *testing.T) {
+	t.Skip()
 	cfg := configuration.NewConfiguration()
 	network, err := NewServiceNetwork(cfg)
 	assert.NoError(t, err)
@@ -86,7 +98,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := context.TODO()
-	err = network.Start(ctx, initComponents(t, testutils.RandomRef()))
+	err = network.Start(ctx, initComponents(t, testutils.RandomRef(), "", true))
 	assert.NoError(t, err)
 
 	e := &message.CallMethod{
@@ -154,21 +166,24 @@ func (l *mockLedger) GetPulseManager() core.PulseManager {
 
 func TestServiceNetwork_SendMessage2(t *testing.T) {
 	ctx := context.TODO()
-	t.Skip("awaiting for big service network mock")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
 
-	firstNode, _ := NewServiceNetwork(mockServiceConfiguration(
+	firstNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10000",
 		[]string{"127.0.0.1:10001"},
 		firstNodeId))
-	secondNode, _ := NewServiceNetwork(mockServiceConfiguration(
+	assert.NoError(t, err)
+	secondNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10001",
 		nil,
 		secondNodeId))
+	assert.NoError(t, err)
 
-	secondNode.Start(ctx, core.Components{})
-	firstNode.Start(ctx, core.Components{})
+	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true))
+	assert.NoError(t, err)
+	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false))
+	assert.NoError(t, err)
 
 	defer func() {
 		firstNode.Stop(ctx)
@@ -191,16 +206,14 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 
 	signed, _ := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0)
 
-	ref := testutils.RandomRef()
-	firstNode.SendMessage(ref, "test", signed)
-	success := waitTimeout(&wg, 20*time.Millisecond)
+	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", signed)
+	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
 }
 
 func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	ctx := context.TODO()
-	t.Skip("wait for DI and network refactoring")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
 
@@ -215,11 +228,10 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		secondNodeId))
 	assert.NoError(t, err)
 
-	// TODO: initComponents
-	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId)))
+	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true))
 	assert.NoError(t, err)
 
-	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId)))
+	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false))
 	assert.NoError(t, err)
 
 	defer func() {

@@ -17,6 +17,7 @@
 package controller
 
 import (
+	"encoding/gob"
 	"fmt"
 	"strings"
 	"time"
@@ -56,6 +57,13 @@ type RequestCascade struct {
 type ResponseCascade struct {
 	Success bool
 	Error   string
+}
+
+func init() {
+	gob.Register(&RequestRPC{})
+	gob.Register(&ResponseRPC{})
+	gob.Register(&RequestCascade{})
+	gob.Register(&ResponseCascade{})
 }
 
 func (rpc *RPCController) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
@@ -110,7 +118,7 @@ func (rpc *RPCController) initCascadeSendMessage(data core.Cascade, findCurrentN
 	for _, nextNode := range nextNodes {
 		err = rpc.requestCascadeSendMessage(data, nextNode, method, args)
 		if err != nil {
-			log.Debugf("failed to send cascade message to node %s: %s", nextNode, err.Error())
+			log.Warnf("failed to send cascade message to node %s: %s", nextNode, err.Error())
 			failedNodes = append(failedNodes, nextNode.String())
 		}
 	}
@@ -141,13 +149,13 @@ func (rpc *RPCController) requestCascadeSendMessage(data core.Cascade, nodeID co
 	go func(f network.Future, duration time.Duration) {
 		response, err := f.GetResponse(duration)
 		if err != nil {
-			log.Debugf("failed to get response to cascade message request from node %s: %s",
-				response.GetSender(), err.Error())
+			log.Warnf("failed to get response to cascade message request from node %s: %s",
+				future.GetRequest().GetSender(), err.Error())
 			return
 		}
 		data := response.GetData().(*ResponseCascade)
 		if !data.Success {
-			log.Debugf("error response to cascade message request from node %s: %s",
+			log.Warnf("error response to cascade message request from node %s: %s",
 				response.GetSender(), data.Error)
 			return
 		}
@@ -220,6 +228,6 @@ func (rpc *RPCController) Start() {
 	rpc.hostNetwork.RegisterRequestHandler(types.Cascade, rpc.processCascade)
 }
 
-func NewRPCController(hostNetwork network.HostNetwork) *RPCController {
-	return &RPCController{hostNetwork: hostNetwork, methodTable: make(map[string]core.RemoteProcedure)}
+func NewRPCController(options *common.Options, hostNetwork network.HostNetwork) *RPCController {
+	return &RPCController{options: options, hostNetwork: hostNetwork, methodTable: make(map[string]core.RemoteProcedure)}
 }

@@ -17,7 +17,6 @@
 package auth
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -67,17 +66,17 @@ func (signer *Signer) addNonce(ref core.RecordRef, nonce Nonce) {
 
 // SignedNonceIsCorrect checks a nonce sign.
 func (signer *Signer) SignedNonceIsCorrect(ref core.RecordRef, signedNonce []byte) error {
-	ctx := context.TODO()
+	// ctx := context.TODO()
 
-	nonce, ok := signer.getNonce(ref)
+	_, ok := signer.getNonce(ref)
 	if !ok {
 		errMsg := fmt.Sprintf("Failed to authorize node %s: could not find previously sent nonce", ref.String())
 		return errors.New(errMsg)
 	}
-	_, _, err := signer.coordinator.Authorize(ctx, ref, nonce, signedNonce)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to authorize node %s", ref.String())
-	}
+	// _, _, err := signer.coordinator.Authorize(ctx, ref, nonce, signedNonce)
+	// if err != nil {
+	// 	return errors.Wrapf(err, "Failed to authorize node %s", ref.String())
+	// }
 	return nil
 }
 

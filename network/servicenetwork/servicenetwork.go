@@ -25,16 +25,20 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/dhtnetwork"
 	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
+	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/routing"
 	"github.com/pkg/errors"
 )
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	hostNetwork network.HostNetwork
-	controller  network.Controller
-	consensus   consensus.Processor
+	hostNetwork  network.HostNetwork
+	controller   network.Controller
+	routingTable network.RoutingTable
+	consensus    consensus.Processor
 
 	certificate  core.Certificate
 	nodeNetwork  core.NodeNetwork
@@ -46,14 +50,11 @@ type ServiceNetwork struct {
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{}
 
-	hostnetwork, err := NewHostNetwork(conf, serviceNetwork.onPulse)
+	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork.onPulse)
 	if err != nil {
-		log.Error("failed to create hostnetwork: %s", err.Error())
+		log.Error("failed to create network components: %s", err.Error())
 	}
-	controller, err := NewNetworkController(conf, hostnetwork)
-	if err != nil {
-		log.Error("failed to create serviceNetwork controller: %s", err.Error())
-	}
+	serviceNetwork.routingTable = routingTable
 	serviceNetwork.hostNetwork = hostnetwork
 	serviceNetwork.controller = controller
 	serviceNetwork.consensus = NewConsensus(serviceNetwork.hostNetwork)
@@ -101,11 +102,14 @@ func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
 // Start implements core.Component
 func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) error {
 	n.inject(components)
+	n.routingTable.Start(components)
 	log.Infoln("Network starts listening")
 	n.hostNetwork.Start()
 
 	n.controller.Inject(components)
-	n.consensus.SetNodeKeeper(components.NodeNetwork.(network.NodeKeeper))
+	if n.consensus != nil {
+		n.consensus.SetNodeKeeper(components.NodeNetwork.(network.NodeKeeper))
+	}
 
 	log.Infoln("Bootstrapping network...")
 	n.bootstrap()
@@ -193,16 +197,40 @@ func (n *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) 
 	go n.consensus.ProcessPulse(ctx, pulse)
 }
 
-// NewHostNetwork create new HostNetwork. Certificate in new network should be removed and pulseCallback should be passed to NewNetworkController.
-func NewHostNetwork(conf configuration.Configuration, pulseCallback network.OnPulse) (network.HostNetwork, error) {
-	return dhtnetwork.NewDhtHostNetwork(conf, pulseCallback)
+// NewNetworkComponentsLegacy create network.HostNetwork and network.Controller for old network
+func NewNetworkComponentsLegacy(conf configuration.Configuration,
+	pulseCallback network.OnPulse) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
+	hostNetwork, err := dhtnetwork.NewDhtHostNetwork(conf, pulseCallback)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to create hostnetwork")
+	}
+	controller, err := dhtnetwork.NewDhtNetworkController(hostNetwork)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to create controller")
+	}
+	return routing.NewTable(), hostNetwork, controller, nil
 }
 
-// NewNetworkController create new network.Controller. In new network it should read conf.
-func NewNetworkController(conf configuration.Configuration, network network.HostNetwork) (network.Controller, error) {
-	return dhtnetwork.NewDhtNetworkController(network)
-}
-
-func NewConsensus(network network.HostNetwork) consensus.Processor {
+// NewConsensusLegacy create consensus for old network
+func NewConsensusLegacy(network network.HostNetwork) consensus.Processor {
 	return dhtnetwork.NewNetworkConsensus(network)
+}
+
+// NewNetworkComponents create network.HostNetwork and network.Controller for new network
+func NewNetworkComponents(conf configuration.Configuration,
+	pulseCallback network.OnPulse) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
+	routingTable := routing.NewTable()
+	internalTransport, err := hostnetwork.NewInternalTransport(conf)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "error creating internal transport")
+	}
+	hostNetwork := hostnetwork.NewHostTransport(internalTransport, routingTable)
+	options := controller.ConfigureOptions(conf.Host)
+	networkController := controller.NewNetworkController(pulseCallback, options, internalTransport, routingTable, hostNetwork)
+	return routingTable, hostNetwork, networkController, nil
+}
+
+// NewConsensus create consensus for new network
+func NewConsensus(network network.HostNetwork) consensus.Processor {
+	return nil
 }

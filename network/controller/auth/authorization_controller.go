@@ -17,6 +17,7 @@
 package auth
 
 import (
+	"encoding/gob"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -64,10 +65,18 @@ type ResponseAuthorize struct {
 	Error       string
 }
 
+func init() {
+	gob.Register(&RequestGetNonce{})
+	gob.Register(&ResponseGetNonce{})
+	gob.Register(&RequestAuthorize{})
+	gob.Register(&ResponseAuthorize{})
+}
+
 func (ac *AuthorizationController) Authorize() error {
 	hosts := ac.bootstrapController.GetBootstrapHosts()
 	if len(hosts) == 0 {
-		return errors.New("Empty list of bootstrap hosts")
+		log.Info("Empty list of bootstrap hosts")
+		return nil
 	}
 	ch := make(chan []core.Node, len(hosts))
 	for _, h := range hosts {

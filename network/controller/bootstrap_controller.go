@@ -66,6 +66,11 @@ func (bc *BootstrapController) GetBootstrapHosts() []*host.Host {
 
 func (bc *BootstrapController) Bootstrap() error {
 	bootstrapCount := len(bc.options.BootstrapHosts)
+	if bootstrapCount == 0 {
+		bc.bootstrapHosts = make([]*host.Host, 0)
+		return nil
+	}
+
 	bootstrapHosts := make(chan *host.Host, bootstrapCount)
 	for _, bootstrapAddress := range bc.options.BootstrapHosts {
 		go func(address string, ch chan<- *host.Host) {
