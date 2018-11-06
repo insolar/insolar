@@ -237,12 +237,13 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	}
 
 	es.callContext = &core.LogicCallContext{
-		Caller:  msg.GetCaller(),
-		Callee:  &ref,
-		Request: es.request,
-		Time:    time.Now(), // TODO: probably we should take it from e
-		Pulse:   *lr.pulse(),
-		TraceID: inslogger.TraceID(ctx),
+		Caller:          msg.GetCaller(),
+		Callee:          &ref,
+		Request:         es.request,
+		Time:            time.Now(), // TODO: probably we should take it from e
+		Pulse:           *lr.pulse(),
+		TraceID:         inslogger.TraceID(ctx),
+		CallerPrototype: msg.GetCallerPrototype(),
 	}
 
 	switch m := msg.(type) {
