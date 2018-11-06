@@ -17,8 +17,10 @@
 package allowance
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -59,5 +61,8 @@ func (a *Allowance) DeleteExpiredAllowance() (uint, error) {
 }
 
 func New(to *core.RecordRef, amount uint, expire int64) (*Allowance, error) {
+	if !wallet.PrototypeReference.Equal(*foundation.GetContext().CallerPrototype) {
+		return nil, fmt.Errorf("[ New Allowance ] : Can't create allowance from not wallet contract")
+	}
 	return &Allowance{To: *to, Amount: amount, ExpireTime: expire}, nil
 }

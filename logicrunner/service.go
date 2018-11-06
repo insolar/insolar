@@ -85,9 +85,10 @@ var serial uint64 = 1
 // MakeBaseMessage makes base of logicrunner event from base of up request
 func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
 	return message.BaseLogicMessage{
-		Caller:  req.Callee,
-		Request: req.Request,
-		Nonce:   atomicLoadAndIncrementUint64(&serial),
+		Caller:          req.Callee,
+		CallerPrototype: req.Prototype,
+		Request:         req.Request,
+		Nonce:           atomicLoadAndIncrementUint64(&serial),
 	}
 }
 
