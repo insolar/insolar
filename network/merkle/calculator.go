@@ -60,7 +60,8 @@ func (c *calculator) GetGlobuleHash(ctx context.Context) ([]byte, error) {
 }
 
 func (c *calculator) GetCloudHash(ctx context.Context) ([]byte, error) {
-	return nil, nil
+	cloudHash := make([]byte, 0) // TODO: calculate tree
+	return cloudHash, nil
 }
 
 func (c *calculator) GetNodeProof(ctx context.Context) (*NodeProof, error) {
@@ -104,7 +105,10 @@ func (c *calculator) GetGlobuleProof(ctx context.Context) (*GlobuleProof, error)
 }
 
 func (c *calculator) GetCloudProof(ctx context.Context) (*CloudProof, error) {
-	cloudHash := make([]byte, 0) // TODO: calculate tree
+	cloudHash, err := c.GetCloudHash(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't get cloud hash")
+	}
 
 	signature, err := ecdsa.Sign(cloudHash, c.Certificate.GetEcdsaPrivateKey())
 	if err != nil {
