@@ -14,18 +14,34 @@
  *    limitations under the License.
  */
 
-package phases
+package manager
 
-type PhaseManager struct {
-	FirstPhase *FirstPhase `inject:""`
+import (
+	"errors"
+
+	"github.com/blang/semver"
+)
+
+type Feature struct {
+	Key          string
+	StartVersion *semver.Version
+	Description  string
 }
 
-// Start starts calculate args on phases.
-func (pm *PhaseManager) OnPulse(pulse *PulseData) error {
-	return pm.FirstPhase.HandlePulse(nil, pulse)
-}
-
-// NewPhaseManager creates and returns a new phase manager.
-func NewPhaseManager() *PhaseManager {
-	return &PhaseManager{}
+func NewFeature(key string, startVersion string, description string) (*Feature, error) {
+	if key == "" {
+		return nil, errors.New("Key cannot be null")
+	}
+	if startVersion == "" {
+		return nil, errors.New("Start version cannot be null")
+	}
+	version, err := ParseVersion(startVersion)
+	if err != nil {
+		return nil, err
+	}
+	return &Feature{
+		Key:          key,
+		StartVersion: version,
+		Description:  description,
+	}, nil
 }

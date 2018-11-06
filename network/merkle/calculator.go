@@ -44,9 +44,9 @@ func (c *calculator) getPulseHash(ctx context.Context, entry *PulseEntry) []byte
 	return pulseHash(entry.Pulse)
 }
 
-func (c *calculator) getGlobuleHash(ctx context.Context, entry *GlobuleEntry) ([]byte, error) {
+func (c *calculator) getGlobuleHash(ctx context.Context, entry *GlobuleEntry) ([]byte, *GlobuleProof, error) {
 	globuleHash := make([]byte, 0) // TODO: calculate tree
-	return globuleHash, nil
+	return globuleHash, &GlobuleProof{}, nil
 }
 
 func (c *calculator) getCloudHash(ctx context.Context, entry *CloudEntry) ([]byte, error) {
@@ -97,7 +97,7 @@ func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]by
 }
 
 func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) ([]byte, *GlobuleProof, error) {
-	globuleHash, err := c.getGlobuleHash(ctx, entry)
+	globuleHash, proof, err := c.getGlobuleHash(ctx, entry)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't get globule hash")
 	}
@@ -107,9 +107,9 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (
 		return nil, nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't sign globule hash")
 	}
 
-	return globuleHash, &GlobuleProof{
-		Signature: signature,
-	}, nil
+	proof.Signature = signature
+
+	return globuleHash, proof, nil
 }
 
 func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) ([]byte, *CloudProof, error) {

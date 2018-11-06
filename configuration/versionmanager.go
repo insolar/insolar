@@ -14,18 +14,14 @@
  *    limitations under the License.
  */
 
-package phases
+package configuration
 
-type PhaseManager struct {
-	FirstPhase *FirstPhase `inject:""`
+// VersionManager holds configuration for VersionManager publishing.
+type VersionManager struct {
+	MinAlowedVersion string
 }
 
-// Start starts calculate args on phases.
-func (pm *PhaseManager) OnPulse(pulse *PulseData) error {
-	return pm.FirstPhase.HandlePulse(nil, pulse)
-}
-
-// NewPhaseManager creates and returns a new phase manager.
-func NewPhaseManager() *PhaseManager {
-	return &PhaseManager{}
+// NewVersionManager creates new default configuration for VersionManager publishing.
+func NewVersionManager() VersionManager {
+	return VersionManager{MinAlowedVersion: "v0.3.0"}
 }

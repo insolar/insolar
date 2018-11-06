@@ -14,18 +14,7 @@
  *    limitations under the License.
  */
 
-package phases
-
-type PhaseManager struct {
-	FirstPhase *FirstPhase `inject:""`
-}
-
-// Start starts calculate args on phases.
-func (pm *PhaseManager) OnPulse(pulse *PulseData) error {
-	return pm.FirstPhase.HandlePulse(nil, pulse)
-}
-
-// NewPhaseManager creates and returns a new phase manager.
-func NewPhaseManager() *PhaseManager {
-	return &PhaseManager{}
-}
+/*
+Package insmetrics provides helpers for opencesus metrics.
+*/
+package insmetrics
