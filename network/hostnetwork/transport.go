@@ -200,6 +200,11 @@ func (h *hostTransport) PublicAddress() string {
 	return h.origin.Address.String()
 }
 
+// GetNodeID get current node ID.
+func (h *hostTransport) GetNodeID() core.RecordRef {
+	return h.origin.NodeID
+}
+
 // SendRequestPacket send request packet to a remote node.
 func (h *hostTransport) SendRequestPacket(request network.Request, receiver *host.Host) (network.Future, error) {
 	log.Debugf("Sent %s request to host %s", request.GetType().String(), receiver.String())

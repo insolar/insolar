@@ -59,6 +59,8 @@ type HostNetwork interface {
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
+	// GetNodeID get current node ID.
+	GetNodeID() core.RecordRef
 
 	// SendRequest send request to a remote node.
 	SendRequest(request Request, receiver core.RecordRef) (Future, error)
@@ -66,7 +68,7 @@ type HostNetwork interface {
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() RequestBuilder
-	// BuildResponse create response to an incoming request with Data set to responseData
+	// BuildResponse create response to an incoming request with Data set to responseData.
 	BuildResponse(request Request, responseData interface{}) Response
 }
 
