@@ -15,6 +15,23 @@
  */
 
 package merkle
+
+import (
+	"bytes"
+
+	"github.com/cbergoon/merkletree"
+	"github.com/insolar/insolar/cryptohelpers/hash"
+)
 type treeNode struct {
 	content []byte
 }
+
+func (t *treeNode) CalculateHash() ([]byte, error) {
+	return hash.SHA3Bytes256(t.content), nil
+}
+
+func (t *treeNode) Equals(other merkletree.Content) (bool, error) {
+	equal := bytes.Equal(t.content, other.(*treeNode).content)
+	return equal, nil
+}
+
