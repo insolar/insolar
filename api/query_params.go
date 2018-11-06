@@ -22,12 +22,6 @@ type QueryType int
 // Supported query types
 const (
 	UNDEFINED QueryType = iota
-	CreateMember
-	DumpUserInfo
-	GetBalance
-	SendMoney
-	DumpAllUsers
-	RegisterNode
 	IsAuth
 	GetSeed
 )
@@ -35,8 +29,6 @@ const (
 // QTypeFromString converts string representation to enum
 func QTypeFromString(strQType string) QueryType {
 	switch strQType {
-	case "register_node":
-		return RegisterNode
 	case "is_auth":
 		return IsAuth
 	case "get_seed":

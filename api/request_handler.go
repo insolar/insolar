@@ -19,7 +19,6 @@ package api
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 
 	"github.com/insolar/insolar/api/seedmanager"
@@ -124,46 +123,6 @@ func (rh *RequestHandler) routeCall(ctx context.Context, ref core.RecordRef, met
 	}
 
 	return res, nil
-}
-
-// ProcessRegisterNode process register node response
-func (rh *RequestHandler) ProcessRegisterNode(ctx context.Context) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-
-	if len(rh.params.PublicKey) == 0 {
-		return nil, errors.New("field 'public_key' is required")
-	}
-
-	if len(rh.params.Roles) == 0 {
-		return nil, errors.New("field 'roles' is required")
-	}
-
-	if len(rh.params.Host) == 0 {
-		return nil, errors.New("field 'host' is required")
-	}
-
-	routResult, err := rh.sendRequest(ctx, "RegisterNode",
-		[]interface{}{rh.params.PublicKey, rh.params.NumberOfBootstrapNodes,
-			rh.params.MajorityRule, rh.params.Roles, rh.params.Host})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
-	}
-
-	rawJSON, err := networkcoordinator.ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
-	}
-
-	var dumpInfo interface{}
-	err = json.Unmarshal(rawJSON, &dumpInfo)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
-	}
-
-	result["certificate"] = dumpInfo
-
-	return result, nil
-
 }
 
 // ProcessIsAuthorized processes is_auth query type
