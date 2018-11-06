@@ -21,6 +21,7 @@ import (
 	ecdsa2 "crypto/ecdsa"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -74,4 +75,31 @@ func nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
 	result = append(result, nodeInfoHash...)
 
 	return hash.SHA3Bytes256(result)
+}
+
+func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte {
+	reservedHash := hash.SHA3Bytes256(utils.UInt32ToBytes(0xDEADBEEF))
+
+	var tmpResult1 []byte
+
+	tmpResult1 = append(tmpResult1, reservedHash...)
+	tmpResult1 = append(tmpResult1, prevCloudHash...)
+
+	var tmpResult2 []byte
+
+	globuleIndexHash := hash.SHA3Bytes256(utils.UInt32ToBytes(gobuleIndex))
+	tmpResult2 = append(tmpResult2, globuleIndexHash...)
+
+	nodeCountHash := hash.SHA3Bytes256(utils.UInt32ToBytes(nodeCount))
+	tmpResult2 = append(tmpResult2, nodeCountHash...)
+
+	var tmpResult3 []byte
+
+	tmpResult1Hash := hash.SHA3Bytes256(tmpResult1)
+	tmpResult3 = append(tmpResult3, tmpResult1Hash...)
+
+	tmpResult2Hash := hash.SHA3Bytes256(tmpResult2)
+	tmpResult3 = append(tmpResult3, tmpResult2Hash...)
+
+	return hash.SHA3Bytes256(tmpResult3)
 }
