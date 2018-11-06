@@ -80,3 +80,14 @@ func (ne *nodeEntry) hash() []byte {
 	return nodeHash(ne.PulseProof.Signature, nodeInfoHash)
 }
 
+func nodeEntryByRole(entry *GlobuleEntry) map[core.NodeRole][]*nodeEntry {
+	roleMap := make(map[core.NodeRole][]*nodeEntry)
+	for node, pulseProof := range entry.ProofSet {
+		role := node.Role()
+		roleMap[role] = append(roleMap[role], &nodeEntry{
+			Node:       node,
+			PulseProof: pulseProof,
+		})
+	}
+	return roleMap
+}
