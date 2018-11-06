@@ -18,8 +18,11 @@ package merkle
 
 import (
 	"context"
+	ecdsa2 "crypto/ecdsa"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type PulseProof struct {
@@ -50,4 +53,22 @@ type CloudProof struct {
 
 func (cp *CloudProof) IsValid(ctx context.Context, node core.Node, cloudHash []byte) bool {
 	return verifySignature(ctx, cloudHash, cp.Signature, node.PublicKey())
+}
+
+func verifySignature(ctx context.Context, data, signature []byte, publicKey *ecdsa2.PublicKey) bool {
+	log := inslogger.FromContext(ctx)
+
+	key, err := ecdsa.ExportPublicKey(publicKey)
+	if err != nil {
+		log.Error("Failed to export a public key: ", err)
+		return false
+	}
+
+	verified, err := ecdsa.Verify(data, signature, key)
+	if err != nil {
+		log.Error("Failed to verify signature: ", err)
+		return false
+	}
+
+	return verified
 }

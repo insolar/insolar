@@ -17,35 +17,12 @@
 package merkle
 
 import (
-	"context"
-	ecdsa2 "crypto/ecdsa"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/cryptohelpers/hash"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 const reserved = 0xDEADBEEF
-
-func verifySignature(ctx context.Context, data, signature []byte, publicKey *ecdsa2.PublicKey) bool {
-	log := inslogger.FromContext(ctx)
-
-	key, err := ecdsa.ExportPublicKey(publicKey)
-	if err != nil {
-		log.Error("Failed to export a public key: ", err)
-		return false
-	}
-
-	verified, err := ecdsa.Verify(data, signature, key)
-	if err != nil {
-		log.Error("Failed to verify signature: ", err)
-		return false
-	}
-
-	return verified
-}
 
 func pulseHash(pulse *core.Pulse) []byte {
 	var result []byte
