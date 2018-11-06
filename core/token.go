@@ -1,22 +1,21 @@
-package message
+package core
 
 import (
 	"crypto/ecdsa"
 
-	"github.com/insolar/insolar/core"
 	crypto_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 // Token is an auth token for coordinating messages
 type Token struct {
-	To    *core.RecordRef
-	From  *core.RecordRef
-	Pulse core.PulseNumber
+	To    *RecordRef
+	From  *RecordRef
+	Pulse PulseNumber
 	Sign  []byte
 }
 
 // NewToken creates new token with sign of its fields
-func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNumber, key *ecdsa.PrivateKey) *Token {
+func NewToken(to *RecordRef, from *RecordRef, pulseNumber PulseNumber, key *ecdsa.PrivateKey) *Token {
 	token := &Token{
 		To:    to,
 		From:  from,
