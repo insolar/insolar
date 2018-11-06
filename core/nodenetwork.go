@@ -54,7 +54,7 @@ type Node interface {
 	Version() string
 }
 
-//go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o ../testutils/network/
+// TODO: fix issue with go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o github.com/insolar/insolar/testutils/network/node_network_mock.go
 type NodeNetwork interface {
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
 	GetOrigin() Node
