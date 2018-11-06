@@ -62,10 +62,10 @@ func (t *Table) AddToKnownHosts(h *host.Host) {
 }
 
 // Rebalance recreate shards of routing table with known hosts according to new partition policy.
-func (t *Table) Rebalance(PartitionPolicy) {
+func (t *Table) Rebalance(network.PartitionPolicy) {
 	log.Warn("not implemented")
 }
 
-func NewTable(keeper network.NodeKeeper) Resolver {
+func NewTable(keeper network.NodeKeeper) network.RoutingTable {
 	return &Table{keeper: keeper}
 }

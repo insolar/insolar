@@ -150,3 +150,18 @@ type NodeUnsyncHash struct {
 	Hash   []byte
 	// TODO: add signature
 }
+
+// PartitionPolicy contains all rules how to initiate globule resharding.
+type PartitionPolicy interface {
+	ShardsCount() int
+}
+
+// RoutingTable contains all routing information of the network.
+type RoutingTable interface {
+	// Resolve NodeID -> Address. Can initiate network requests.
+	Resolve(core.RecordRef) (string, error)
+	// AddToKnownHosts add host to routing table.
+	AddToKnownHosts(*host.Host)
+	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
+	Rebalance(PartitionPolicy)
+}
