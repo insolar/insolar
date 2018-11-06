@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/version"
@@ -195,18 +196,30 @@ func (ac *AuthorizationController) processAuthorizeRequest(request network.Reque
 		return ac.getAuthErrorResponse(request, "NodeKeeper is not initialized"), nil
 	}
 
-	waitToken, err := ac.keeper.AddUnsync(request.GetSender(), data.NodeRoles, data.Address, data.Version)
-	if err != nil {
-		return ac.getAuthErrorResponse(request, "Error adding to unsync list: "+err.Error()), nil
-	}
-	select {
-	case d := <-waitToken:
-		if d == nil {
-			return ac.getAuthErrorResponse(request, "Error adding to unsync list: channel closed"), nil
-		}
-	case <-time.After(ac.options.AuthorizeTimeout):
-		return ac.getAuthErrorResponse(request, "Error adding to unsync list: timeout"), nil
-	}
+	// TODO: fix this with new consensus
+	// waitToken, err := ac.keeper.AddUnsync(request.GetSender(), data.NodeRoles, data.Address, data.Version)
+	// if err != nil {
+	// 	return ac.getAuthErrorResponse(request, "Error adding to unsync list: "+err.Error()), nil
+	// }
+	// select {
+	// case d := <-waitToken:
+	// 	if d == nil {
+	// 		return ac.getAuthErrorResponse(request, "Error adding to unsync list: channel closed"), nil
+	// 	}
+	// case <-time.After(ac.options.AuthorizeTimeout):
+	// 	return ac.getAuthErrorResponse(request, "Error adding to unsync list: timeout"), nil
+	// }
+
+	ac.keeper.AddActiveNodes([]core.Node{
+		nodenetwork.NewNode(
+			request.GetSender(),
+			data.NodeRoles,
+			nil,
+			core.PulseNumber(0),
+			core.NodeJoined,
+			data.Address,
+			data.Version),
+	})
 
 	return ac.transport.BuildResponse(request, &ResponseAuthorize{ActiveNodes: ac.keeper.GetActiveNodes()}), nil
 }

@@ -77,6 +77,7 @@ func TestNewInternalTransport(t *testing.T) {
 	defer tp.Stop()
 	// assert that new address with correct port has been assigned
 	assert.NotEqual(t, address, tp.PublicAddress())
+	assert.Equal(t, core.NewRefFromBase58(ID1), tp.GetNodeID())
 }
 
 func TestNewInternalTransport2(t *testing.T) {
@@ -119,6 +120,8 @@ func TestNewInternalTransport3(t *testing.T) {
 
 func TestNewHostTransport(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
+	assert.Equal(t, core.NewRefFromBase58(ID1), t1.GetNodeID())
+	assert.Equal(t, core.NewRefFromBase58(ID2), t2.GetNodeID())
 	assert.NoError(t, err)
 
 	count := 10

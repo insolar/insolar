@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -47,12 +46,7 @@ type ServiceNetwork struct {
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{}
 
-	// workaround before DI
-	cert, err := certificate.NewCertificate(conf.KeysPath, conf.CertificatePath)
-	if err != nil {
-		log.Warnf("failed to read certificate: %s", err.Error())
-	}
-	hostnetwork, err := NewHostNetwork(conf, cert, serviceNetwork.onPulse)
+	hostnetwork, err := NewHostNetwork(conf, serviceNetwork.onPulse)
 	if err != nil {
 		log.Error("failed to create hostnetwork: %s", err.Error())
 	}
@@ -62,7 +56,6 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	}
 	serviceNetwork.hostNetwork = hostnetwork
 	serviceNetwork.controller = controller
-	serviceNetwork.certificate = cert
 	serviceNetwork.consensus = NewConsensus(serviceNetwork.hostNetwork)
 	return serviceNetwork, nil
 }
@@ -188,6 +181,10 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 }
 
 func (n *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) {
+	if n.consensus == nil {
+		log.Warn("consensus not implemented")
+		return
+	}
 	if !n.consensus.IsPartOfConsensus() {
 		log.Debug("Node is not active and does not participate in consensus")
 		return
@@ -197,8 +194,8 @@ func (n *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) 
 }
 
 // NewHostNetwork create new HostNetwork. Certificate in new network should be removed and pulseCallback should be passed to NewNetworkController.
-func NewHostNetwork(conf configuration.Configuration, certificate core.Certificate, pulseCallback network.OnPulse) (network.HostNetwork, error) {
-	return dhtnetwork.NewDhtHostNetwork(conf, certificate, pulseCallback)
+func NewHostNetwork(conf configuration.Configuration, pulseCallback network.OnPulse) (network.HostNetwork, error) {
+	return dhtnetwork.NewDhtHostNetwork(conf, pulseCallback)
 }
 
 // NewNetworkController create new network.Controller. In new network it should read conf.

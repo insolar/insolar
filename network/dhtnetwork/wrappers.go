@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	consensus2 "github.com/insolar/insolar/network/dhtnetwork/consensus"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
@@ -235,8 +236,12 @@ func (w *Wrapper) GetConsensus() consensus.Processor {
 	return w.HostNetwork.GetNetworkCommonFacade().GetConsensus()
 }
 
-func NewDhtHostNetwork(conf configuration.Configuration, certificate core.Certificate, pulseCallback network.OnPulse) (network.HostNetwork, error) {
+func NewDhtHostNetwork(conf configuration.Configuration, pulseCallback network.OnPulse) (network.HostNetwork, error) {
 	cascade1 := &cascade.Cascade{}
+	certificate, err := certificate.NewCertificate(conf.KeysPath, conf.CertificatePath)
+	if err != nil {
+		log.Warnf("failed to read certificate: %s", err.Error())
+	}
 	dht, err := NewHostNetwork(conf, cascade1, certificate, pulseCallback)
 	if err != nil {
 		return nil, err

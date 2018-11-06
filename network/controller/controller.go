@@ -17,6 +17,8 @@
 package controller
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -29,7 +31,7 @@ import (
 
 // Controller contains network logic.
 type Controller struct {
-	options common.Options
+	options *common.Options
 	network network.HostNetwork
 
 	bootstrapController common.BootstrapController
@@ -90,18 +92,39 @@ func (c *Controller) Inject(components core.Components) {
 	c.rpcController.Start()
 }
 
+// ConfigureOptions convert daemon configuration to controller options
+func ConfigureOptions(config configuration.HostNetwork) *common.Options {
+	options := &common.Options{}
+	options.BootstrapHosts = config.BootstrapHosts
+	options.MajorityRule = config.MajorityRule
+	if options.PingTimeout == 0 {
+		options.PingTimeout = time.Second * 1
+	}
+	if options.PacketTimeout == 0 {
+		options.PacketTimeout = time.Second * 10
+	}
+	if options.BootstrapTimeout == 0 {
+		options.BootstrapTimeout = time.Second * 10
+	}
+	if options.AuthorizeTimeout == 0 {
+		options.AuthorizeTimeout = time.Second * 30
+	}
+	return options
+}
+
 // NewNetworkController create new network controller.
 func NewNetworkController(
 	pulseCallback network.OnPulse,
-	configuration configuration.Configuration,
+	options *common.Options,
 	transport hostnetwork.InternalTransport,
 	routingTable network.RoutingTable,
 	network network.HostNetwork) network.Controller {
 
 	c := Controller{}
 	c.network = network
-	c.bootstrapController = NewBootstrapController(&c.options, transport)
-	c.authController = auth.NewAuthorizationController(&c.options, c.bootstrapController, transport)
+	c.options = options
+	c.bootstrapController = NewBootstrapController(c.options, transport)
+	c.authController = auth.NewAuthorizationController(c.options, c.bootstrapController, transport)
 	c.pulseController = NewPulseController(pulseCallback, network, routingTable)
 	c.rpcController = NewRPCController(network)
 
