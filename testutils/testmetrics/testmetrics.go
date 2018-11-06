@@ -18,23 +18,21 @@ package testmetrics
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 )
 
 // TestMetrics provides testing helpers for metrics.
 type TestMetrics struct {
-	ctx           context.Context
-	Metrics       *metrics.Metrics
-	ListenAddress string
+	ctx     context.Context
+	Metrics *metrics.Metrics
 }
 
 var (
@@ -42,37 +40,34 @@ var (
 	cfg     configuration.Metrics
 )
 
-var listenport int32
-
 // Start configures, creates and starts metrics server,
 // returns initialized TestMetrics object.
 func Start(ctx context.Context) TestMetrics {
+	inslog := inslogger.FromContext(ctx)
 	oncecfg.Do(func() {
 		cfg = configuration.NewMetrics()
-		_, listenport = parseAddr(cfg.ListenAddress)
 	})
 	host, _ := parseAddr(cfg.ListenAddress)
-	port := atomic.AddInt32(&listenport, +1)
 
-	// it's needed to prevent using same port for concurrent tests
-	cfg.ListenAddress = host + ":" + strconv.Itoa(int(port))
+	// just use any available port
+	cfg.ListenAddress = host + ":0"
 
 	m, err := metrics.NewMetrics(ctx, cfg)
 	if err != nil {
 		panic(err)
 	}
+
 	err = m.Start(ctx)
 	if err != nil {
-		panic(err)
+		inslog.Fatal("metrics server failed to start:", err)
 	}
+
 	return TestMetrics{
-		Metrics:       m,
-		ListenAddress: cfg.ListenAddress,
-		ctx:           ctx,
+		ctx:     ctx,
+		Metrics: m,
 	}
 }
 
-// it's needed to prevent using same port for concurrent tests
 func parseAddr(address string) (string, int32) {
 	pair := strings.SplitN(address, ":", 2)
 	currentPort, err := strconv.Atoi(pair[1])
@@ -84,8 +79,8 @@ func parseAddr(address string) (string, int32) {
 
 // FetchContent fetches content from metrics server, returns stringifyed content.
 func (tm TestMetrics) FetchContent() (string, error) {
-	fetchurl := "http://" + tm.ListenAddress + "/metrics"
-	fmt.Println("Fetch:", fetchurl)
+	fetchurl := "http://" + tm.Metrics.AddrString() + "/metrics"
+	// fmt.Println("Fetch:", fetchurl)
 	response, err := http.Get(fetchurl)
 	if err != nil {
 		return "", err

@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -32,7 +33,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
-	"github.com/insolar/insolar/log"
 )
 
 const insolarNamespace = "insolar"
@@ -42,6 +42,8 @@ type Metrics struct {
 	registry    *prometheus.Registry
 	httpHandler http.Handler
 	server      *http.Server
+
+	listener net.Listener
 }
 
 // NewMetrics creates new Metrics component.
@@ -70,24 +72,39 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error
 	return &m, nil
 }
 
+// ErrBind special case for Start method.
+// We can use it for easier check in metrics creation code.
+var ErrBind = errors.New("failed to bind")
+
 // Start is implementation of core.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
-	inslogger.FromContext(ctx).Infoln("Starting metrics server", m.server.Addr)
-
-	http.Handle("/metrics", m.httpHandler)
-	pprof.Handle(http.DefaultServeMux)
+	inslog := inslogger.FromContext(ctx)
+	inslog.Infoln("Starting metrics server", m.server.Addr)
 
 	listener, err := net.Listen("tcp", m.server.Addr)
 	if err != nil {
+		if opErr, ok := err.(*net.OpError); ok {
+			if opErr.Op == "listen" && IsAddrInUse(opErr) {
+				return ErrBind
+			}
+		}
 		return errors.Wrap(err, "Failed to listen at address")
 	}
 
+	m.listener = listener
+	http.Handle("/metrics", m.httpHandler)
+	pprof.Handle(http.DefaultServeMux)
+
 	go func() {
+		inslog.Debugln("metrics server starting on", m.server.Addr)
 		err := m.server.Serve(listener)
-		if err != nil && err.Error() != "http: Server closed" {
-			log.Errorln(err, "falied to start metrics server")
+		if err == nil {
 			return
 		}
+		if IsServerClosed(err) {
+			return
+		}
+		inslog.Errorln("falied to start metrics server", err)
 	}()
 
 	return nil
@@ -107,6 +124,11 @@ func (m *Metrics) Stop(ctx context.Context) error {
 	return nil
 }
 
+// AddrString returns listener address.
+func (m *Metrics) AddrString() string {
+	return m.listener.Addr().String()
+}
+
 // errorLogger wrapper for error logs.
 type errorLogger struct {
 	core.Logger
@@ -115,4 +137,14 @@ type errorLogger struct {
 // Println is wrapper method for ErrorLn.
 func (e *errorLogger) Println(v ...interface{}) {
 	e.Error(v)
+}
+
+// IsAddrInUse checks error text for well known phrase.
+func IsAddrInUse(err error) bool {
+	return strings.Contains(err.Error(), "address already in use")
+}
+
+// IsServerClosed checks error text for well known phrase.
+func IsServerClosed(err error) bool {
+	return strings.Contains(err.Error(), "http: Server closed")
 }
