@@ -37,6 +37,8 @@ type SignedMessage struct {
 	LogTraceID    string
 	TraceSpanData []byte
 	PulseNumber   core.PulseNumber
+	Token         core.Token
+}
 }
 
 // Pulse returns pulse when message was sent.
