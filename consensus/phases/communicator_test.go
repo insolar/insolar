@@ -17,28 +17,42 @@
 package phases
 
 import (
+	"context"
 	"testing"
 
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/suite"
 )
 
 type communicatorSuite struct {
 	suite.Suite
-	communicator Communicator
-	participants []Communicator
+	componentManager component.Manager
+	communicator     Communicator
+	participants     []core.Node
+	hostNetwork      *network.HostNetworkMock
 }
 
 func NewSuite() *communicatorSuite {
 	return &communicatorSuite{
 		Suite:        suite.Suite{},
-		communicator: nil,
+		communicator: NewNaiveCommunicator(),
 		participants: nil,
 	}
 }
 
-func (t *communicatorSuite) SetupTest() {
-	//setupNode(t, &t.node1)
-	//setupNode(t, &t.node2)
+func (s *communicatorSuite) SetupTest() {
+	s.hostNetwork = network.NewHostNetworkMock(s.T())
+	s.componentManager.Register(s.communicator, s.hostNetwork)
+	err := s.componentManager.Start(nil)
+	s.NoError(err)
+}
+
+func (s *communicatorSuite) TestExchangeData() {
+	s.Assert().NotNil(s.communicator)
+	_, err := s.communicator.ExchangeData(context.Background(), s.participants, Phase1Packet{})
+	s.Assert().NoError(err)
 }
 
 func TestNaiveCommunicator(t *testing.T) {
