@@ -27,7 +27,7 @@ import (
 type Calculator interface {
 	GetPulseProof(context.Context, *PulseEntry) ([]byte, *PulseProof, error)
 	GetGlobuleProof(context.Context, *NodeEntry) ([]byte, *GlobuleProof, error)
-	GetCloudProof(context.Context, *GlobuleEntry) ([]byte, *CloudProof, error)
+	GetCloudProof(context.Context, *CloudEntry) ([]byte, *CloudProof, error)
 }
 
 type calculator struct {
@@ -49,7 +49,7 @@ func (c *calculator) getGlobuleHash(ctx context.Context, entry *NodeEntry) ([]by
 	return globuleHash, nil
 }
 
-func (c *calculator) getCloudHash(ctx context.Context, entry *GlobuleEntry) ([]byte, error) {
+func (c *calculator) getCloudHash(ctx context.Context, entry *CloudEntry) ([]byte, error) {
 	cloudHash := make([]byte, 0) // TODO: calculate tree
 	return cloudHash, nil
 }
@@ -96,7 +96,7 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *NodeEntry) ([]b
 	}, nil
 }
 
-func (c *calculator) GetCloudProof(ctx context.Context, entry *GlobuleEntry) ([]byte, *CloudProof, error) {
+func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) ([]byte, *CloudProof, error) {
 	cloudHash, err := c.getCloudHash(ctx, entry)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetCloudProof ] Could't get cloud hash")

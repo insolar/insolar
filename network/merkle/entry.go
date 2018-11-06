@@ -28,7 +28,7 @@ type NodeEntry struct {
 	ProofSet map[core.Node]PulseProof
 }
 
-type GlobuleEntry struct {
+type CloudEntry struct {
 	ProofSet []*GlobuleProof
 
 	// TODO: implement later
