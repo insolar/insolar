@@ -40,7 +40,18 @@ type GlobuleEntry struct {
 }
 
 func (ge *GlobuleEntry) hash() []byte {
-	return nil
+	nodeEntryByRole := nodeEntryByRole(ge)
+	var bucketHashes [][]byte
+
+	for role, roleEntries := range nodeEntryByRole {
+		sortEntries(roleEntries)
+		bucketEntryRoot := roleEntryRoot(roleEntries)
+		bucketInfoHash := bucketInfoHash(role, uint32(len(roleEntries)))
+		bucketHash := bucketHash(bucketInfoHash, bucketEntryRoot)
+		bucketHashes = append(bucketHashes, bucketHash)
+	}
+
+	return fromList(bucketHashes).MerkleRoot()
 }
 
 type CloudEntry struct {
