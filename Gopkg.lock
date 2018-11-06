@@ -72,14 +72,6 @@
   revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
 
 [[projects]]
-  digest = "1:5a2b13a339956ea88b7ebe692dc61115b4a1db9a862a345d82bbd43f915192d8"
-  name = "github.com/damnever/bitarray"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "194ec7c5a6fa9fea20be8fa959640749eaca6bff"
-  version = "v1.0.0"
-
-[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -127,9 +119,15 @@
   revision = "a5502dd2746ee6fc3fd58ad83d701d25e14d68d1"
 
 [[projects]]
-  digest = "1:97df918963298c287643883209a2c3f642e6593379f97ab400c2a2e219ab647d"
+  digest = "1:4c0989ca0bcd10799064318923b9bc2db6b4d6338dd75f3f2d86c3511aaaf5cf"
   name = "github.com/golang/protobuf"
-  packages = ["proto"]
+  packages = [
+    "proto",
+    "ptypes",
+    "ptypes/any",
+    "ptypes/duration",
+    "ptypes/timestamp",
+  ]
   pruneopts = "UT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
   version = "v1.2.0"
@@ -250,16 +248,15 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:20a8a18488bdef471795af0413d9a3c9c35dc24ca93342329b884ba3c15cbaab"
+  digest = "1:d14a5f4bfecf017cb780bdde1b6483e5deb87e12c332544d2c430eda58734bcb"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
-    "prometheus/internal",
     "prometheus/promhttp",
   ]
   pruneopts = "UT"
-  revision = "1cafe34db7fdec6022e17e00e1c1ea501022f3e4"
-  version = "v0.9.0"
+  revision = "c5b7fccd204277076155f10851dad72b76a49317"
+  version = "v0.8.0"
 
 [[projects]]
   branch = "master"
@@ -430,17 +427,27 @@
   version = "v4.3.1"
 
 [[projects]]
-  digest = "1:58fa2af58add3f3edee4556ac8589fcdc1348caa301f3c322275c84484e3bf0b"
+  digest = "1:cd0a556f7c6e6946fbe39b1bbc61db209967c64cbbf0aed5e4108081cd43aea0"
   name = "go.opencensus.io"
   packages = [
     ".",
     "exemplar",
     "exporter/jaeger",
     "exporter/jaeger/internal/gen-go/jaeger",
+    "exporter/prometheus",
     "internal",
+    "internal/tagencoding",
+    "plugin/ocgrpc",
+    "stats",
+    "stats/internal",
+    "stats/view",
+    "tag",
     "trace",
     "trace/internal",
+    "trace/propagation",
     "trace/tracestate",
+    "zpages",
+    "zpages/internal",
   ]
   pruneopts = "UT"
   revision = "b7bf3cdb64150a8c8c53b769fdeb2ba581bd4d4b"
@@ -525,6 +532,28 @@
   revision = "511bab8e55decfbe784cd2d1868fa5cda62dc6c1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:56b0bca90b7e5d1facf5fbdacba23e4e0ce069d25381b8e2f70ef1e7ebfb9c1a"
+  name = "google.golang.org/genproto"
+  packages = ["googleapis/rpc/status"]
+  pruneopts = "UT"
+  revision = "c830210a61dfaa790e1920f8d0470fc27bc2efbe"
+
+[[projects]]
+  digest = "1:736bea44d8f508c2a27f05225a11bfed723125676c26a2fd75977eedb5ef602b"
+  name = "google.golang.org/grpc"
+  packages = [
+    "codes",
+    "grpclog",
+    "metadata",
+    "stats",
+    "status",
+  ]
+  pruneopts = "UT"
+  revision = "2e463a05d100327ca47ac218281906921038fd95"
+  version = "v1.16.0"
+
+[[projects]]
   digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -539,7 +568,6 @@
     "github.com/anacrolix/utp",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
-    "github.com/damnever/bitarray",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
     "github.com/huandu/xstrings",
@@ -561,7 +589,10 @@
     "github.com/ugorji/go/codec",
     "github.com/xtaci/kcp-go",
     "go.opencensus.io/exporter/jaeger",
+    "go.opencensus.io/exporter/prometheus",
+    "go.opencensus.io/stats/view",
     "go.opencensus.io/trace",
+    "go.opencensus.io/zpages",
     "golang.org/x/crypto/sha3",
     "gopkg.in/yaml.v2",
   ]

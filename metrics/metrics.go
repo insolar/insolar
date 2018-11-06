@@ -20,6 +20,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -27,6 +28,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
 	"github.com/insolar/insolar/log"
 )
@@ -48,7 +50,7 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 	m.server = &http.Server{Addr: cfg.ListenAddress}
 
 	// default system collectors
-	m.registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	m.registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), cfg.Namespace))
 	m.registry.MustRegister(prometheus.NewGoCollector())
 
 	// insolar collectors
@@ -56,6 +58,8 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 	m.registry.MustRegister(NetworkFutures)
 	m.registry.MustRegister(NetworkPacketSentTotal)
 	m.registry.MustRegister(NetworkPacketReceivedTotal)
+
+	insmetrics.RegisterPrometheus(cfg.Namespace, m.registry)
 
 	return &m, nil
 }

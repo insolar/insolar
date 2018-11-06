@@ -14,18 +14,7 @@
  *    limitations under the License.
  */
 
-package configuration
-
-// Metrics holds configuration for metrics publishing.
-type Metrics struct {
-	ListenAddress string
-	Namespace     string
-}
-
-// NewMetrics creates new default configuration for metrics publishing.
-func NewMetrics() Metrics {
-	return Metrics{
-		ListenAddress: "0.0.0.0:9090",
-		Namespace:     "insolar",
-	}
-}
+/*
+Package insmetrics provides helpers for opencesus metrics.
+*/
+package insmetrics

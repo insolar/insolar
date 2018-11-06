@@ -147,6 +147,7 @@ func main() {
 		mergeConfigAndCertificate(ctx, &cfgHolder.Configuration)
 	}
 
+	configuration.Metrics.Namespace = "insolard"
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	jaegerflush := func() {}
