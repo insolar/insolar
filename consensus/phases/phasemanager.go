@@ -45,6 +45,10 @@ func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	firstPhaseState := pm.FirstPhase.State
 	pm.FirstPhase.State = &FirstPhaseState{}
 
+	checkError(runPhase(contextTimeout(ctx, pulseDuration, 0.2), func() error {
+		return pm.SecondPhase.Execute(firstPhaseState)
+	}))
+
 	return nil
 }
 
