@@ -131,14 +131,14 @@ func (sm *SignedMessage) Type() core.MessageType {
 
 // Target returns target for this message. If nil, Message will be sent for all actors for the role returned by
 // Role method.
-func (sm *SignedMessage) Target() *core.RecordRef {
-	return sm.Msg.Target()
-}
-
-// TargetRole returns jet role to actors of which Message should be sent.
-func (sm *SignedMessage) TargetRole() core.JetRole {
-	return sm.Msg.TargetRole()
-}
+//func (sm *SignedMessage) Target() *core.RecordRef {
+//	return sm.Msg.Target()
+//}
+//
+//// TargetRole returns jet role to actors of which Message should be sent.
+//func (sm *SignedMessage) TargetRole() core.JetRole {
+//	return sm.Msg.TargetRole()
+//}
 
 // GetCaller returns initiator of this event.
 func (sm *SignedMessage) GetCaller() *core.RecordRef {
