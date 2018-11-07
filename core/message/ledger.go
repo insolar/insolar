@@ -28,11 +28,6 @@ func (ledgerMessage) GetCaller() *core.RecordRef {
 	return nil
 }
 
-// TargetRole implementation of Message interface.
-func (ledgerMessage) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
 // SetRecord saves record in storage.
 type SetRecord struct {
 	ledgerMessage
@@ -46,11 +41,6 @@ func (e *SetRecord) Type() core.MessageType {
 	return core.TypeSetRecord
 }
 
-// Target implementation of Message interface.
-func (e *SetRecord) Target() *core.RecordRef {
-	return &e.TargetRef
-}
-
 // GetCode retrieves code from storage.
 type GetCode struct {
 	ledgerMessage
@@ -60,11 +50,6 @@ type GetCode struct {
 // Type implementation of Message interface.
 func (e *GetCode) Type() core.MessageType {
 	return core.TypeGetCode
-}
-
-// Target implementation of Message interface.
-func (e *GetCode) Target() *core.RecordRef {
-	return &e.Code
 }
 
 // GetObject retrieves object from storage.
@@ -80,11 +65,6 @@ func (e *GetObject) Type() core.MessageType {
 	return core.TypeGetObject
 }
 
-// Target implementation of Message interface.
-func (e *GetObject) Target() *core.RecordRef {
-	return &e.Head
-}
-
 // GetDelegate retrieves object represented as provided type.
 type GetDelegate struct {
 	ledgerMessage
@@ -95,11 +75,6 @@ type GetDelegate struct {
 // Type implementation of Message interface.
 func (e *GetDelegate) Type() core.MessageType {
 	return core.TypeGetDelegate
-}
-
-// Target implementation of Message interface.
-func (e *GetDelegate) Target() *core.RecordRef {
-	return &e.Head
 }
 
 // UpdateObject amends object.
@@ -113,11 +88,6 @@ type UpdateObject struct {
 // Type implementation of Message interface.
 func (e *UpdateObject) Type() core.MessageType {
 	return core.TypeUpdateObject
-}
-
-// Target implementation of Message interface.
-func (e *UpdateObject) Target() *core.RecordRef {
-	return &e.Object
 }
 
 // RegisterChild amends object.
@@ -134,11 +104,6 @@ func (e *RegisterChild) Type() core.MessageType {
 	return core.TypeRegisterChild
 }
 
-// Target implementation of Message interface.
-func (e *RegisterChild) Target() *core.RecordRef {
-	return &e.Parent
-}
-
 // GetChildren retrieves a chunk of children references.
 type GetChildren struct {
 	ledgerMessage
@@ -153,11 +118,6 @@ func (e *GetChildren) Type() core.MessageType {
 	return core.TypeGetChildren
 }
 
-// Target implementation of Message interface.
-func (e *GetChildren) Target() *core.RecordRef {
-	return &e.Parent
-}
-
 // JetDrop spreads jet drop
 type JetDrop struct {
 	ledgerMessage
@@ -170,16 +130,6 @@ type JetDrop struct {
 // Type implementation of Message interface.
 func (e *JetDrop) Type() core.MessageType {
 	return core.TypeJetDrop
-}
-
-// Target implementation of Message interface.
-func (e *JetDrop) Target() *core.RecordRef {
-	return &e.Jet
-}
-
-// TargetRole implementation of Message interface.
-func (JetDrop) TargetRole() core.JetRole {
-	return core.RoleLightValidator
 }
 
 // ValidateRecord creates VM validation for specific object record.
@@ -197,16 +147,6 @@ func (*ValidateRecord) Type() core.MessageType {
 	return core.TypeValidateRecord
 }
 
-// Target implementation of Message interface.
-func (m *ValidateRecord) Target() *core.RecordRef {
-	return &m.Object
-}
-
-// TargetRole implementation of Message interface.
-func (*ValidateRecord) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
 // SetBlob saves blob in storage.
 type SetBlob struct {
 	ledgerMessage
@@ -218,9 +158,4 @@ type SetBlob struct {
 // Type implementation of Message interface.
 func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
-}
-
-// Target implementation of Message interface.
-func (m *SetBlob) Target() *core.RecordRef {
-	return &m.TargetRef
 }
