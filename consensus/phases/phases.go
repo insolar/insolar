@@ -53,6 +53,13 @@ func (tpp *ThirdPhasePulse) Execute(state *SecondPhaseState) error {
 	return nil
 }
 
-func (sp *SecondPhase) Calculate(proof []NodePulseProof, claims []ReferendumClaim) error {
+// ThirdPhaseReferendum.
+type ThirdPhaseReferendum struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *ThirdPhaseReferendumState
+}
+
+func (tpr *ThirdPhaseReferendum) Execute(state *SecondPhaseState) error {
+	// TODO: do something here
 	return nil
 }

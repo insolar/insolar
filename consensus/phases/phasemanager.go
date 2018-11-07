@@ -29,6 +29,7 @@ type PhaseManager struct {
 	FirstPhase           *FirstPhase           `inject:""`
 	SecondPhase          *SecondPhase          `inject:""`
 	ThirdPhasePulse      *ThirdPhasePulse      `inject:""`
+	ThirdPhaseReferendum *ThirdPhaseReferendum `inject:""`
 }
 
 // NewPhaseManager creates and returns a new phase manager.

@@ -25,3 +25,5 @@ type SecondPhaseState struct {
 type ThirdPhasePulseState struct {
 }
 
+type ThirdPhaseReferendumState struct {
+}
