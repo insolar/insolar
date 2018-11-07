@@ -1,41 +1,43 @@
 package message
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/core"
 )
 
 func Extract(msg core.Message) core.RecordRef {
-	switch m := msg.(type) {
+	switch t := msg.(type) {
 	case *BootstrapRequest:
-		return core.NewRefFromBase58(m.Name)
+		return core.NewRefFromBase58(t.Name)
 	case *CallConstructor:
-		if m.SaveAs == Delegate {
-			return m.ParentRef
+		if t.SaveAs == Delegate {
+			return t.ParentRef
 		}
-		return *core.GenRequest(m.PulseNum, MustSerializeBytes(m))
+		return *core.GenRequest(t.PulseNum, MustSerializeBytes(t))
 	case *CallMethod:
-		return m.ObjectRef
+		return t.ObjectRef
 	case *ExecutorResults:
-		return m.RecordRef
+		return t.RecordRef
 	case *GetChildren:
-		return m.Parent
+		return t.Parent
 	case *GetCode:
-		return m.Code
+		return t.Code
 	case *GetDelegate:
-		return m.Head
+		return t.Head
 	case *GetObject:
-		return m.Head
+		return t.Head
 	case *JetDrop:
-		return m.Jet
+		return t.Jet
 	case *RegisterChild:
-		return m.Parent
+		return t.Parent
 	default:
-		panic("unknow message type")
+		panic(fmt.Sprintf("unknow message type - %v", t))
 	}
 }
 
 func ExtractRole(msg core.Message) core.JetRole {
-	switch _ := msg.(type) {
+	switch t := msg.(type) {
 	case *BootstrapRequest:
 		return core.RoleLightExecutor
 	case *CallConstructor:
@@ -57,6 +59,6 @@ func ExtractRole(msg core.Message) core.JetRole {
 	case *RegisterChild:
 		return core.RoleLightExecutor
 	default:
-		panic("unknow message type")
+		panic(fmt.Sprintf("unknow message type - %v", t))
 	}
 }
