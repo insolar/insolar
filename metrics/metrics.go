@@ -79,7 +79,6 @@ var ErrBind = errors.New("failed to bind")
 // Start is implementation of core.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
-	inslog.Infoln("Starting metrics server", m.server.Addr)
 
 	listener, err := net.Listen("tcp", m.server.Addr)
 	if err != nil {
@@ -90,10 +89,13 @@ func (m *Metrics) Start(ctx context.Context) error {
 		}
 		return errors.Wrap(err, "Failed to listen at address")
 	}
-
 	m.listener = listener
-	http.Handle("/metrics", m.httpHandler)
-	pprof.Handle(http.DefaultServeMux)
+	inslog.Infoln("Started metrics server", m.AddrString())
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", m.httpHandler)
+	pprof.Handle(mux)
+	m.server.Handler = mux
 
 	go func() {
 		inslog.Debugln("metrics server starting on", m.server.Addr)

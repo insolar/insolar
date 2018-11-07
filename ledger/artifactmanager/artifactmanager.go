@@ -23,6 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -76,15 +77,17 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 func (m *LedgerArtifactManager) RegisterRequest(
 	ctx context.Context, msg core.Message,
 ) (*core.RecordID, error) {
-	defer instrumentation(ctx, "RegisterRequest", time.Now())
+	var err error
+	defer instrumentWithErr(ctx, &err, "RegisterRequest", time.Now())
 
-	return m.setRecord(
+	recid, err := m.setRecord(
 		ctx,
 		&record.CallRequest{
 			Payload: message.MustSerializeBytes(msg),
 		},
 		*msg.Target(),
 	)
+	return recid, err
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -93,7 +96,8 @@ func (m *LedgerArtifactManager) RegisterRequest(
 func (m *LedgerArtifactManager) GetCode(
 	ctx context.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
-	defer instrumentation(ctx, "GetCode", time.Now())
+	var err error
+	defer instrumentWithErr(ctx, &err, "GetCode", time.Now())
 
 	genericReact, err := m.messageBus.Send(
 		ctx,
@@ -105,7 +109,8 @@ func (m *LedgerArtifactManager) GetCode(
 
 	react, ok := genericReact.(*reply.Code)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		err = ErrUnexpectedReply
+		return nil, err
 	}
 
 	desc := CodeDescriptor{
@@ -122,9 +127,16 @@ func (m *LedgerArtifactManager) GetCode(
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
 func (m *LedgerArtifactManager) GetObject(
-	ctx context.Context, head core.RecordRef, state *core.RecordID, approved bool,
+	ctx context.Context,
+	head core.RecordRef,
+	state *core.RecordID,
+	approved bool,
 ) (core.ObjectDescriptor, error) {
-	defer instrumentation(ctx, "GetObject", time.Now())
+	var (
+		desc *ObjectDescriptor
+		err  error
+	)
+	defer instrumentWithErr(ctx, &err, "GetObject", time.Now())
 
 	genericReact, err := m.messageBus.Send(
 		ctx,
@@ -134,14 +146,13 @@ func (m *LedgerArtifactManager) GetObject(
 			Approved: approved,
 		},
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
 	switch r := genericReact.(type) {
 	case *reply.Object:
-		desc := ObjectDescriptor{
+		desc = &ObjectDescriptor{
 			ctx:          ctx,
 			am:           m,
 			head:         r.Head,
@@ -152,12 +163,12 @@ func (m *LedgerArtifactManager) GetObject(
 			memory:       r.Memory,
 			parent:       r.Parent,
 		}
-		return &desc, nil
 	case *reply.Error:
-		return nil, r.Error()
+		err = r.Error()
+	default:
+		err = ErrUnexpectedReply
 	}
-
-	return nil, ErrUnexpectedReply
+	return desc, err
 }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.
@@ -167,7 +178,8 @@ func (m *LedgerArtifactManager) GetObject(
 func (m *LedgerArtifactManager) GetDelegate(
 	ctx context.Context, head, asType core.RecordRef,
 ) (*core.RecordRef, error) {
-	defer instrumentation(ctx, "GetDelegate", time.Now())
+	var err error
+	defer instrumentWithErr(ctx, &err, "GetDelegate", time.Now())
 
 	genericReact, err := m.messageBus.Send(
 		ctx,
@@ -176,14 +188,14 @@ func (m *LedgerArtifactManager) GetDelegate(
 			AsType: asType,
 		},
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
 	react, ok := genericReact.(*reply.Delegate)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		err = ErrUnexpectedReply
+		return nil, err
 	}
 	return &react.Head, nil
 }
@@ -194,8 +206,10 @@ func (m *LedgerArtifactManager) GetDelegate(
 func (m *LedgerArtifactManager) GetChildren(
 	ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber,
 ) (core.RefIterator, error) {
-	defer instrumentation(ctx, "GetChildren", time.Now())
-	return NewChildIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
+	var err error
+	defer instrumentWithErr(ctx, &err, "GetChildren", time.Now())
+	iter, err := NewChildIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
+	return iter, err
 }
 
 // DeclareType creates new type record in storage.
@@ -204,9 +218,10 @@ func (m *LedgerArtifactManager) GetChildren(
 func (m *LedgerArtifactManager) DeclareType(
 	ctx context.Context, domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordID, error) {
-	defer instrumentation(ctx, "DeclareType", time.Now())
+	var err error
+	defer instrumentWithErr(ctx, &err, "DeclareType", time.Now())
 
-	return m.setRecord(
+	recid, err := m.setRecord(
 		ctx,
 		&record.TypeRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -217,6 +232,7 @@ func (m *LedgerArtifactManager) DeclareType(
 		},
 		request,
 	)
+	return recid, err
 }
 
 // DeployCode creates new code record in storage.
@@ -229,7 +245,8 @@ func (m *LedgerArtifactManager) DeployCode(
 	code []byte,
 	machineType core.MachineType,
 ) (*core.RecordID, error) {
-	defer instrumentation(ctx, "DeployCode", time.Now())
+	var err error
+	defer instrumentWithErr(ctx, &err, "DeployCode", time.Now())
 
 	pulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
@@ -264,10 +281,12 @@ func (m *LedgerArtifactManager) DeployCode(
 	wg.Wait()
 
 	if setRecordErr != nil {
-		return nil, setRecordErr
+		err = setRecordErr
+	} else if setBlobErr != nil {
+		err = setBlobErr
 	}
-	if setBlobErr != nil {
-		return nil, setBlobErr
+	if err != nil {
+		return nil, err
 	}
 
 	return setRecord, nil
@@ -282,8 +301,10 @@ func (m *LedgerArtifactManager) ActivatePrototype(
 	domain, object, parent, code core.RecordRef,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
-	defer instrumentation(ctx, "ActivatePrototype", time.Now())
-	return m.activateObject(ctx, domain, object, code, true, parent, false, memory)
+	var err error
+	defer instrumentWithErr(ctx, &err, "ActivatePrototype", time.Now())
+	desc, err := m.activateObject(ctx, domain, object, code, true, parent, false, memory)
+	return desc, err
 }
 
 // ActivateObject creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -296,8 +317,10 @@ func (m *LedgerArtifactManager) ActivateObject(
 	asDelegate bool,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
-	defer instrumentation(ctx, "ActivateObject", time.Now())
-	return m.activateObject(ctx, domain, object, prototype, false, parent, asDelegate, memory)
+	var err error
+	defer instrumentWithErr(ctx, &err, "ActivateObject", time.Now())
+	desc, err := m.activateObject(ctx, domain, object, prototype, false, parent, asDelegate, memory)
+	return desc, err
 }
 
 // DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
@@ -307,7 +330,8 @@ func (m *LedgerArtifactManager) ActivateObject(
 func (m *LedgerArtifactManager) DeactivateObject(
 	ctx context.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
 ) (*core.RecordID, error) {
-	defer instrumentation(ctx, "DeactivateObject", time.Now())
+	var err error
+	defer instrumentWithErr(ctx, &err, "DeactivateObject", time.Now())
 
 	desc, err := m.sendUpdateObject(
 		ctx,
@@ -338,11 +362,14 @@ func (m *LedgerArtifactManager) UpdatePrototype(
 	memory []byte,
 	code *core.RecordRef,
 ) (core.ObjectDescriptor, error) {
+	var err error
+	defer instrumentWithErr(ctx, &err, "UpdatePrototype", time.Now())
 	if !object.IsPrototype() {
-		return nil, errors.New("object is not a prototype")
+		err = errors.New("object is not a prototype")
+		return nil, err
 	}
-	defer instrumentation(ctx, "UpdatePrototype", time.Now())
-	return m.updateObject(ctx, domain, request, object, code, memory)
+	desc, err := m.updateObject(ctx, domain, request, object, code, memory)
+	return desc, err
 }
 
 // UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -355,20 +382,28 @@ func (m *LedgerArtifactManager) UpdateObject(
 	object core.ObjectDescriptor,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
+	var err error
+	defer instrumentWithErr(ctx, &err, "UpdateObject", time.Now())
 	if object.IsPrototype() {
-		return nil, errors.New("object is not an instance")
+		err = errors.New("object is not an instance")
+		return nil, err
 	}
-	defer instrumentation(ctx, "UpdateObject", time.Now())
-	return m.updateObject(ctx, domain, request, object, nil, memory)
+	desc, err := m.updateObject(ctx, domain, request, object, nil, memory)
+	return desc, err
 }
 
 // RegisterValidation marks provided object state as approved or disapproved.
 //
 // When fetching object, validity can be specified.
 func (m *LedgerArtifactManager) RegisterValidation(
-	ctx context.Context, object core.RecordRef, state core.RecordID, isValid bool, validationMessages []core.Message,
+	ctx context.Context,
+	object core.RecordRef,
+	state core.RecordID,
+	isValid bool,
+	validationMessages []core.Message,
 ) error {
-	defer instrumentation(ctx, "RegisterValidation", time.Now())
+	var err error
+	defer instrumentWithErr(ctx, &err, "RegisterValidation", time.Now())
 
 	msg := message.ValidateRecord{
 		Object:             object,
@@ -376,21 +411,18 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		IsValid:            isValid,
 		ValidationMessages: validationMessages,
 	}
-	_, err := m.messageBus.Send(ctx, &msg)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	_, err = m.messageBus.Send(ctx, &msg)
+	return err
 }
 
 // RegisterResult saves VM method call result.
 func (m *LedgerArtifactManager) RegisterResult(
 	ctx context.Context, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
-	defer instrumentation(ctx, "RegisterResult", time.Now())
+	var err error
+	defer instrumentWithErr(ctx, &err, "RegisterResult", time.Now())
 
-	return m.setRecord(
+	recid, err := m.setRecord(
 		ctx,
 		&record.ResultRecord{
 			Request: request,
@@ -398,6 +430,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 		},
 		request,
 	)
+	return recid, err
 }
 
 func (m *LedgerArtifactManager) activateObject(
@@ -669,9 +702,24 @@ func (m *LedgerArtifactManager) registerChild(
 	return &react.ID, nil
 }
 
-func instrumentation(ctx context.Context, name string, start time.Time) {
-	ctx = insmetrics.InsertTag(ctx, tagMethod, name)
+func instrumentWithErr(ctx context.Context, err *error, name string, start time.Time) {
 	latency := time.Since(start)
+	inslog := inslogger.FromContext(ctx)
+
+	code := "2xx"
+	if err != nil && *err != nil {
+		ctx = insmetrics.InsertTag(ctx, tagMethod, name)
+		code = "5xx"
+		inslog.Error(*err)
+	}
+
+	inslog.Debug("measured time is ", latency)
+
+	ctx = insmetrics.InsertTag(ctx, tagMethod, name)
+	ctx = insmetrics.ChangeTags(
+		ctx,
+		tag.Insert(tagMethod, name),
+		tag.Insert(tagResult, code),
+	)
 	stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
-	inslogger.FromContext(ctx).Debug("measured time is ", latency)
 }
