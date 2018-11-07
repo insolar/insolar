@@ -6,7 +6,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-func Extract(msg core.Message) core.RecordRef {
+func ExtractTarget(msg core.Message) core.RecordRef {
 	switch t := msg.(type) {
 	case *BootstrapRequest:
 		return core.NewRefFromBase58(t.Name)
@@ -43,6 +43,8 @@ func Extract(msg core.Message) core.RecordRef {
 		return t.Object
 	case *ValidationResults:
 		return t.RecordRef
+	case *SignedMessage:
+		return ExtractTarget(t.Msg)
 	default:
 		panic(fmt.Sprintf("unknow message type - %v", t))
 	}
@@ -82,6 +84,8 @@ func ExtractRole(msg core.Message) core.JetRole {
 		return core.RoleLightExecutor
 	case *ValidationResults:
 		return core.RoleVirtualExecutor
+	case *SignedMessage:
+		return ExtractRole(t.Msg)
 	default:
 		panic(fmt.Sprintf("unknow message type - %v", t))
 	}
