@@ -139,21 +139,6 @@ func (e *RegisterChild) Target() *core.RecordRef {
 	return &e.Parent
 }
 
-// RequestCall is a Ledger's message wrapping logicrunner's Call messages.
-type RequestCall struct {
-	core.Message
-}
-
-// TargetRole implementation of Message interface.
-func (*RequestCall) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
-// Type implementation of Message interface.
-func (*RequestCall) Type() core.MessageType {
-	return core.TypeRequestCall
-}
-
 // GetChildren retrieves a chunk of children references.
 type GetChildren struct {
 	ledgerMessage
