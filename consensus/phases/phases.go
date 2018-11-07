@@ -47,6 +47,10 @@ type ThirdPhasePulse struct {
 	NodeNetwork core.NodeNetwork `inject:""`
 	State       *ThirdPhasePulseState
 }
+
+func (tpp *ThirdPhasePulse) Execute(state *SecondPhaseState) error {
+	// TODO: do something here
+	return nil
 }
 
 func (sp *SecondPhase) Calculate(proof []NodePulseProof, claims []ReferendumClaim) error {
