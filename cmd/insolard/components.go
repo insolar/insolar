@@ -20,11 +20,11 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
@@ -64,7 +64,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	bootstrapper, err := bootstrap.NewBootstrapper(cfg.Bootstrap)
+	bootstrapper, err := genesis.NewBootstrapper(cfg.Bootstrap)
 	checkError(ctx, err, "failed to start Bootstrapper")
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)

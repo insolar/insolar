@@ -28,9 +28,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 	api, _ := NewRunner(&cfg)
 
 	cs := core.Components{}
-	b, _ := bootstrap.NewBootstrapper(bootstrapCfg.Bootstrap)
+	b, _ := genesis.NewBootstrapper(bootstrapCfg.Bootstrap)
 	cs.Bootstrapper = b
 	api.Start(ctx, cs)
 
