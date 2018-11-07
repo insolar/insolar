@@ -44,8 +44,6 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &ValidationResults{}, nil
 
 	// Ledger
-	case core.TypeRequestCall:
-		return &RequestCall{}, nil
 	case core.TypeGetCode:
 		return &GetCode{}, nil
 	case core.TypeGetObject:
