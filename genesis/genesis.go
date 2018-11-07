@@ -73,7 +73,7 @@ func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 }
 
 // NewBootstrapper creates new Bootstrapper
-func NewBootstrapper(cfg configuration.Bootstrap) (*Genesis, error) {
+func NewGenesis(cfg configuration.Genesis) (*Genesis, error) {
 	genesis := &Genesis{}
 	genesis.rootKeysFile = cfg.RootKeys
 	genesis.rootBalance = cfg.RootBalance
