@@ -42,6 +42,9 @@ func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 		return pm.FirstPhase.Execute(pulse)
 	}))
 
+	firstPhaseState := pm.FirstPhase.State
+	pm.FirstPhase.State = &FirstPhaseState{}
+
 	return nil
 }
 
