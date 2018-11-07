@@ -41,16 +41,22 @@ func NewPhaseManager() *PhaseManager {
 func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	pulseDuration := pm.getPulseDuration()
 
-	checkError(runPhase(contextTimeout(ctx, pulseDuration, 0.2), func() error {
+	var cancel context.CancelFunc
+
+	ctx, cancel = contextTimeout(ctx, pulseDuration, 0.2)
+	checkError(runPhase(ctx, func() error {
 		return pm.FirstPhase.Execute(pulse)
 	}))
+	cancel()
 
 	firstPhaseState := pm.FirstPhase.State
 	pm.FirstPhase.State = &FirstPhaseState{}
 
-	checkError(runPhase(contextTimeout(ctx, pulseDuration, 0.2), func() error {
+	ctx, cancel = contextTimeout(ctx, pulseDuration, 0.2)
+	checkError(runPhase(ctx, func() error {
 		return pm.SecondPhase.Execute(firstPhaseState)
 	}))
+	cancel()
 
 	secondPhaseState := pm.SecondPhase.State
 	pm.SecondPhase.State = &SecondPhaseState{}
@@ -85,10 +91,10 @@ func runPhase(ctx context.Context, phase func() error) error {
 	}
 }
 
-func contextTimeout(ctx context.Context, duration time.Duration, k float64) context.Context {
+func contextTimeout(ctx context.Context, duration time.Duration, k float64) (context.Context, context.CancelFunc) {
 	timeout := time.Duration(k * float64(duration))
-	timedCtx, _ := context.WithTimeout(ctx, timeout)
-	return timedCtx
+	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
+	return timedCtx, cancelFund
 }
 
 func checkError(err error) {
