@@ -44,3 +44,17 @@ func (pm *PhaseManager) getPulseDuration() time.Duration {
 	// TODO: calculate
 	return 10 * time.Second
 }
+
+func runPhase(ctx context.Context, phase func() error) error {
+	done := make(chan error, 1)
+	go func() {
+		done <- phase()
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-done:
+		return err
+	}
+}
+
