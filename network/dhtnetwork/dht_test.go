@@ -1010,7 +1010,7 @@ func TestDHT_MessageSign(t *testing.T) {
 	key2, _ := ecdsa.GeneratePrivateKey()
 	ref := testutils.RandomRef()
 
-	tmp := core.Message(&message.BootstrapRequest{})
+	tmp := core.Message(&message.GenesisRequest{})
 	msg, err := message.NewSignedMessage(context.TODO(), tmp, ref, key, 0)
 	assert.NoError(t, err)
 	assert.True(t, msg.IsValid(&key.PublicKey))

@@ -43,7 +43,7 @@ const (
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
 
-// Bootstrapper is a component for precreation core contracts types and RootDomain instance
+// Genesis is a component for precreation core contracts types and RootDomain instance
 type Genesis struct {
 	rootDomainRef *core.RecordRef
 	nodeDomainRef *core.RecordRef
@@ -72,7 +72,7 @@ func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 	return g.rootDomainRef
 }
 
-// NewBootstrapper creates new Bootstrapper
+// NewGenesis creates new Genesis
 func NewGenesis(cfg configuration.Genesis) (*Genesis, error) {
 	genesis := &Genesis{}
 	genesis.rootKeysFile = cfg.RootKeys
@@ -112,7 +112,7 @@ func (g *Genesis) activateRootDomain(
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootDomain"})
+	contractID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "RootDomain"})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
@@ -147,7 +147,7 @@ func (g *Genesis) activateNodeDomain(
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "NodeDomain"})
+	contractID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "NodeDomain"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
@@ -183,7 +183,7 @@ func (g *Genesis) activateRootMember(
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
+	contractID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "RootMember"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
@@ -240,7 +240,7 @@ func (g *Genesis) activateRootMemberWallet(
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootWallet"})
+	contractID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "RootWallet"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
