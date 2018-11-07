@@ -98,12 +98,12 @@ func (w *Wrapper) SendMessage(nodeID core.RecordRef, method string, msg core.Sig
 	}
 
 	log.Debugf("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
-		method, msg.Target().String())
+		method,  message.ExtractTarget(msg).String())
 
 	metrics.NetworkMessageSentTotal.Inc()
 	res, err := w.HostNetwork.RemoteProcedureCall(CreateDHTContext(w.HostNetwork), hostID, method, [][]byte{buff})
 	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
-		msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
+		msg.Type(), message.ExtractTarget(msg).String(), msg.GetCaller(), message.ExtractRole(msg), time.Since(start))
 	return res, err
 }
 

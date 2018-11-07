@@ -76,7 +76,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		&record.CallRequest{
 			Payload: message.MustSerializeBytes(msg),
 		},
-		*msg.Target(),
+		message.ExtractTarget(msg),
 	)
 }
 
