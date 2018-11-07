@@ -18,9 +18,8 @@ package artifactmanager
 
 import (
 	"context"
-	"sync"
-
 	"github.com/pkg/errors"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -695,4 +694,15 @@ func (m *LedgerArtifactManager) registerChild(
 	}
 
 	return &react.ID, nil
+}
+
+// GetHistory returns history iterator.
+//
+// During iteration history will be fetched from remote source.
+func (m *LedgerArtifactManager) GetHistory(
+	ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber,
+) (core.RefIterator, error) {
+	var err error
+	defer instrument(ctx, "GetHistory").err(&err).end()
+	return NewHistoryIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
 }

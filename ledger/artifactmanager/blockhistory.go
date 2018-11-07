@@ -60,7 +60,6 @@ func (i *HistoryIterator) Next() (*core.RecordRef, error) {
 			return nil, err
 		}
 	}
-
 	ref := i.nextFromBuffer()
 	if ref == nil {
 		return nil, errors.New("failed to fetch record")

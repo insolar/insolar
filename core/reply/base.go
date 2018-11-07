@@ -53,9 +53,7 @@ const (
 	TypeID
 	// TypeChildren is a reply for fetching objects children in chunks.
 	TypeChildren
-	// TypeHistoryElem is reply for fetching object history.
-	TypeHistoryElem
-	// TypeHistory is reply for fetching object history ([]TypeHistoryElem).
+	// TypeHistory is reply for fetching object history.
 	TypeHistory
 )
 
