@@ -99,9 +99,7 @@ const (
 	TypeValidationResults
 
 	// Ledger
-
-	// TypeRequestCall registers call on storage.
-	TypeRequestCall
+	
 	// TypeGetCode retrieves code from storage.
 	TypeGetCode
 	// TypeGetObject retrieves object from storage.
