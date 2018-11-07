@@ -14,23 +14,13 @@
  *    limitations under the License.
  */
 
-/*
-Package store provides interfaces and default in-memory implementation of storage for DHT metadata.
+package auth
 
-Usage:
+import (
+	"github.com/insolar/insolar/core"
+)
 
-	s := newMemoryStore()
-
-	data := []byte("some data")
-	key := NewKey(data)
-
-	replicationTime := time.Now().Add(time.Second * 1337)
-	expirationTime := time.Now().Add(time.Second * 42)
-
-	s.Store(key, data, replicationTime, expirationTime, true)
-
-	s.Retrieve(key)
-
-	s.Delete(key)
-*/
-package store
+func MajorityRuleCheck(activeNodesLists [][]core.Node, majorityRule int) (activeNodesList []core.Node, success bool) {
+	// TODO: fair majorityRule check keeping in mind possible discovery redirects
+	return activeNodesLists[0], true
+}

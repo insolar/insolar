@@ -40,15 +40,11 @@ func NewNodeNetwork(configuration configuration.Configuration) (core.NodeNetwork
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
-
 	nodeKeeper := NewNodeKeeper(origin)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create active node component")
-	}
 
 	if len(configuration.Host.BootstrapHosts) == 0 {
 		origin.SetState(core.NodeActive)
-		log.Info("Bootstrap nodes is not set. Init zeronet.")
+		log.Info("Bootstrap nodes are not set. Init zeronet.")
 		nodeKeeper.AddActiveNodes([]core.Node{origin})
 	}
 
