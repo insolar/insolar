@@ -72,7 +72,6 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	if amount > w.Balance {
 		return fmt.Errorf("[ Transfer ] Not enough balance for transfer")
 	}
-	w.Balance -= amount
 
 	toWallet, err := wallet.GetImplementationFrom(*to)
 	if err != nil {
@@ -86,6 +85,8 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	if err != nil {
 		return fmt.Errorf("[ Transfer ] Can't save as child: %s", err.Error())
 	}
+
+	w.Balance -= amount
 
 	r := a.GetReference()
 	toWallet.Accept(&r)
