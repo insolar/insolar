@@ -8,7 +8,7 @@ resources:
   type: git
   source:
     uri: https://github.com/insolar/insolar.git
-    branch: NOISSUE-add-jq-to-docker
+    branch: master
 
 - name: insolard
   type: docker-image

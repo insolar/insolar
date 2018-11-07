@@ -45,7 +45,7 @@ jobs:
              FROM node:8-alpine as builder
              ADD . /site 
              WORKDIR /site
-             RUN ls -alh && pwd && npm i && npm run build
+             RUN rm -Rf dist/* && npm i && npm run build
 
              FROM nginx:alpine as site
              COPY --from=builder /site/dist /usr/share/nginx/html
