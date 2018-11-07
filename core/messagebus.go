@@ -61,7 +61,7 @@ type SignedMessage interface {
 	// Pulse returns pulse when message was sent.
 	Pulse() PulseNumber
 	// GetToken returns a routing-token of the message
-	GetToken() Token
+	GetToken() RoutingToken
 }
 
 // Reply for an `Message`

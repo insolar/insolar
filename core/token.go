@@ -6,8 +6,8 @@ import (
 	crypto_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
-// Token is an auth token for coordinating messages
-type Token struct {
+// RoutingToken is an auth token for coordinating messages
+type RoutingToken struct {
 	To    *RecordRef
 	From  *RecordRef
 	Pulse PulseNumber
@@ -15,8 +15,8 @@ type Token struct {
 }
 
 // NewToken creates new token with sign of its fields
-func NewToken(to *RecordRef, from *RecordRef, pulseNumber PulseNumber, key *ecdsa.PrivateKey) *Token {
-	token := &Token{
+func NewToken(to *RecordRef, from *RecordRef, pulseNumber PulseNumber, key *ecdsa.PrivateKey) *RoutingToken {
+	token := &RoutingToken{
 		To:    to,
 		From:  from,
 		Pulse: pulseNumber,
