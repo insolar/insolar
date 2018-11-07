@@ -26,6 +26,7 @@ import (
 
 var (
 	tagMethod = insmetrics.MustTagKey("method")
+	tagResult = insmetrics.MustTagKey("result")
 )
 
 var (
@@ -34,20 +35,21 @@ var (
 )
 
 func init() {
+	commontags := []tag.Key{tagMethod, tagResult}
 	err := view.Register(
 		&view.View{
 			Name:        statCalls.Name(),
 			Description: statCalls.Description(),
 			Measure:     statCalls,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{tagMethod},
+			TagKeys:     commontags,
 		},
 		&view.View{
 			Name:        "artifactmanager_latency",
 			Description: statLatency.Description(),
 			Measure:     statLatency,
 			Aggregation: view.Distribution(0, 25, 50, 75, 100, 200, 400, 600, 800, 1000, 2000, 4000, 6000),
-			TagKeys:     []tag.Key{tagMethod},
+			TagKeys:     commontags,
 		},
 	)
 	if err != nil {
