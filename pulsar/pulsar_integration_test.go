@@ -17,6 +17,7 @@
 package pulsar
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
@@ -103,8 +104,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	}()
 }
 
-func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(), *servicenetwork.ServiceNetwork, string) {
-	ctx := inslogger.TestContext(t)
+func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(), *servicenetwork.ServiceNetwork, string) {
 	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -130,7 +130,7 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 func TestPulsar_SendPulseToNode(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	// Arrange
-	bootstrapLedger, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
+	bootstrapLedger, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(ctx, t, nil)
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
@@ -190,8 +190,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
-	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
-	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
+	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(ctx, t, nil)
+	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(ctx, t, []string{bootstrapAddress})
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
@@ -299,8 +299,8 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
-	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
-	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
+	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(ctx, t, nil)
+	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(ctx, t, []string{bootstrapAddress})
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
