@@ -33,6 +33,13 @@ type PhaseManager struct {
 func NewPhaseManager() *PhaseManager {
 	return &PhaseManager{}
 }
+
+// Start starts calculate args on phases.
+func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+
+	return nil
+}
+
 func (pm *PhaseManager) getPulseDuration() time.Duration {
 	// TODO: calculate
 	return 10 * time.Second
