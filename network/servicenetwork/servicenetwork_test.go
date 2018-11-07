@@ -81,15 +81,6 @@ func TestServiceNetwork_GetAddress(t *testing.T) {
 	assert.True(t, strings.Contains(network.GetAddress(), strings.Split(cfg.Host.Transport.Address, ":")[0]))
 }
 
-func TestServiceNetwork_GetHostNetwork(t *testing.T) {
-	t.Skip()
-	cfg := configuration.NewConfiguration()
-	network, err := NewServiceNetwork(cfg)
-	assert.NoError(t, err)
-	host, _ := network.GetHostNetwork()
-	assert.NotNil(t, host)
-}
-
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := NewServiceNetwork(cfg)
@@ -355,10 +346,6 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
-
-	hostHandler, ctx := firstService.GetHostNetwork()
-	// routing table should return total of 11 hosts
-	assert.Equal(t, 11, len(hostHandler.HtFromCtx(ctx).GetMulticastHosts()))
 }
 
 func Test_processPulse(t *testing.T) {

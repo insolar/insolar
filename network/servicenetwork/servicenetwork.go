@@ -86,13 +86,6 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 	n.controller.RemoteProcedureRegister(name, method)
 }
 
-// GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
-// TODO: replace with GetNetworkHelper that returns a component with all needed data for interactive/rest API
-func (n *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hosthandler.Context) {
-	hostNetwork := n.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
-	return hostNetwork, dhtnetwork.CreateDHTContext(hostNetwork)
-}
-
 // GetPrivateKey returns a private key.
 // TODO: remove, use helper functions from certificate instead
 func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
