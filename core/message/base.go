@@ -62,6 +62,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &JetDrop{}, nil
 	case core.TypeSetRecord:
 		return &SetRecord{}, nil
+	case core.TypeGetHistory:
+		return &GetHistory{}, nil
 
 	// Bootstrap
 	case core.TypeBootstrapRequest:
@@ -175,4 +177,5 @@ func init() {
 	gob.Register(&SignedMessage{})
 	gob.Register(core.RecordRef{})
 	gob.Register(&GetChildren{})
+	gob.Register(&GetHistory{})
 }

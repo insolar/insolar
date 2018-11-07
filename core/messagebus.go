@@ -118,6 +118,8 @@ const (
 	TypeValidateRecord
 	// TypeSetBlob saves blob in storage.
 	TypeSetBlob
+	// TypeGetHistory retrieves object's history.
+	TypeGetHistory
 
 	// Bootstrap
 

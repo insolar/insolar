@@ -18,6 +18,7 @@ package reply
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/record"
 )
 
 // Code is code from storage.
@@ -76,4 +77,15 @@ type Children struct {
 // Type implementation of Reply interface.
 func (e *Children) Type() core.ReplyType {
 	return TypeChildren
+}
+
+// History is common reaction for methods returning id to lifeline states.
+type History struct {
+	Refs     []record.ObjectState
+	NextFrom *core.RecordID
+}
+
+// Type implementation of Reply interface.
+func (h *History) Type() core.ReplyType {
+	return TypeHistory
 }

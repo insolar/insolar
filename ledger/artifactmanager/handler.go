@@ -54,6 +54,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeGetObject, h.messagePersistingWrapper(h.handleGetObject))
 	bus.MustRegister(core.TypeGetDelegate, h.messagePersistingWrapper(h.handleGetDelegate))
 	bus.MustRegister(core.TypeGetChildren, h.messagePersistingWrapper(h.handleGetChildren))
+	bus.MustRegister(core.TypeGetHistory, h.messagePersistingWrapper(h.handleGetHistory))
 	bus.MustRegister(core.TypeUpdateObject, h.messagePersistingWrapper(h.handleUpdateObject))
 	bus.MustRegister(core.TypeRegisterChild, h.messagePersistingWrapper(h.handleRegisterChild))
 	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
@@ -65,6 +66,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 	h.jetDropHandlers[core.TypeGetObject] = h.handleGetObject
 	h.jetDropHandlers[core.TypeGetDelegate] = h.handleGetDelegate
 	h.jetDropHandlers[core.TypeGetChildren] = h.handleGetChildren
+	h.jetDropHandlers[core.TypeGetHistory] = h.handleGetHistory
 	h.jetDropHandlers[core.TypeUpdateObject] = h.handleUpdateObject
 	h.jetDropHandlers[core.TypeRegisterChild] = h.handleRegisterChild
 	h.jetDropHandlers[core.TypeSetRecord] = h.handleSetRecord
@@ -512,4 +514,42 @@ func validateState(old record.State, new record.State) error {
 		return errors.New("object is already activated")
 	}
 	return nil
+}
+
+func (h *MessageHandler) handleGetHistory(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetHistory)
+
+	idx, _, _, err := getObject(ctx, h.db, msg.Object.Record(), nil, true)
+	if err != nil {
+		return nil, err
+	}
+	history := []record.ObjectState{}
+	var current *core.RecordID
+
+	if msg.From != nil {
+		current = msg.From
+	} else {
+		current = idx.ChildPointer
+	}
+
+	counter := 0
+	for current != nil {
+		// We have enough results.
+		if counter >= msg.Amount {
+			return &reply.History{Refs: history, NextFrom: current}, nil
+		}
+		counter++
+
+		rec, err := h.db.GetRecord(ctx, current)
+		if err != nil {
+			return nil, errors.New("failed to retrieve object state")
+		}
+		currentState, ok := rec.(record.ObjectState)
+		if !ok {
+			return nil, errors.New("failed to retrieve object state")
+		}
+		current = currentState.PrevStateID()
+		history = append(history, currentState)
+	}
+	return &reply.History{Refs: history, NextFrom: nil}, nil
 }

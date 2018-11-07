@@ -639,3 +639,12 @@ func (m *LedgerArtifactManager) registerChild(
 
 	return &react.ID, nil
 }
+
+// GetHistory returns children iterator.
+//
+// During iteration history will be fetched from remote source.
+func (m *LedgerArtifactManager) GetHistory(
+	ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber,
+) (core.RefIterator, error) {
+	return NewHistoryIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
+}

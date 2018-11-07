@@ -173,6 +173,25 @@ func (e *GetChildren) Target() *core.RecordRef {
 	return &e.Parent
 }
 
+// GetChildren retrieves a chunk of children references.
+type GetHistory struct {
+	ledgerMessage
+	From   *core.RecordID
+	Object core.RecordRef
+	Pulse  *core.PulseNumber
+	Amount int
+}
+
+// Type implementation of Message interface.
+func (e *GetHistory) Type() core.MessageType {
+	return core.TypeGetHistory
+}
+
+// Target implementation of Message interface.
+func (e *GetHistory) Target() *core.RecordRef {
+	return &e.Object
+}
+
 // JetDrop spreads jet drop
 type JetDrop struct {
 	ledgerMessage
