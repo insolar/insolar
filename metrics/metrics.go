@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opencensus.io/zpages"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -52,6 +53,10 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhandler)
 	pprof.Handle(mux)
+	if cfg.ZpagesEnabled {
+		// https://opencensus.io/zpages/
+		zpages.Handle(mux, "/debug")
+	}
 
 	m := &Metrics{
 		server: &http.Server{
