@@ -18,3 +18,6 @@ package phases
 
 type FirstPhaseState struct {
 }
+
+type SecondPhaseState struct {
+}

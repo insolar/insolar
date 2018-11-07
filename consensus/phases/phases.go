@@ -33,6 +33,14 @@ func (fp *FirstPhase) Execute(pulse *core.Pulse) error {
 
 // SecondPhase is a second phase.
 type SecondPhase struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *SecondPhaseState
+}
+
+func (sp *SecondPhase) Execute(state *FirstPhaseState) error {
+	// TODO: do something here
+	return nil
+}
 }
 
 func (sp *SecondPhase) Calculate(proof []NodePulseProof, claims []ReferendumClaim) error {
