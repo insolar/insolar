@@ -86,6 +86,7 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 		return fmt.Errorf("[ Transfer ] Can't save as child: %s", err.Error())
 	}
 
+	// Changing balance only after allowance was successfully create
 	w.Balance -= amount
 
 	r := a.GetReference()
