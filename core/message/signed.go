@@ -31,7 +31,6 @@ import (
 
 // SignedMessage is a message signed by senders private key.
 type SignedMessage struct {
-	Sender        core.RecordRef
 	Msg           core.Message
 	Signature     []byte
 	LogTraceID    string
@@ -81,14 +80,13 @@ func NewSignedMessage(
 	if err != nil {
 		return nil, err
 	}
-	header := NewSignedMessageHeader(msg)
+	header := NewSignedMessageHeader(sender, msg)
 	if token == nil {
 		token = core.NewToken(&header.Target, &sender, pulse, key)
 	}
 	return &SignedMessage{
 		Header:        header,
 		Token:         *token,
-		Sender:        sender,
 		Msg:           msg,
 		Signature:     sign,
 		LogTraceID:    inslogger.TraceID(ctx),
@@ -145,5 +143,5 @@ func (sm *SignedMessage) GetSign() []byte {
 }
 
 func (sm *SignedMessage) GetSender() core.RecordRef {
-	return sm.Sender
+	return sm.Header.Sender
 }
