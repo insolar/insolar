@@ -50,8 +50,7 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	return &data, nil
 }
 
-// Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
+func (m *PulseManager) processDrop(ctx context.Context) error {
 	latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
 		return err
@@ -87,6 +86,17 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// Set set's new pulse and closes current jet drop.
+func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
+	// TODO: execute only on material exexutor
+	err := m.processDrop(ctx)
+	if err != nil {
+		return err
+	}
+
 	err = m.db.AddPulse(ctx, pulse)
 	if err != nil {
 		return err
