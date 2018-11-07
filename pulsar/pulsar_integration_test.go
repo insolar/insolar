@@ -46,6 +46,7 @@ func newCertificate(t *testing.T) *certificate.Certificate {
 }
 
 func TestTwoPulsars_Handshake(t *testing.T) {
+	t.Skip()
 	ctx := inslogger.TestContext(t)
 	cert1 := newCertificate(t)
 	cert2 := newCertificate(t)
@@ -128,6 +129,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 }
 
 func TestPulsar_SendPulseToNode(t *testing.T) {
+	t.Skip()
 	ctx := inslogger.TestContext(t)
 	// Arrange
 	bootstrapLedger, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(ctx, t, nil)
@@ -187,6 +189,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 }
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
+	t.Skip()
 	ctx := inslogger.TestContext(t)
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
