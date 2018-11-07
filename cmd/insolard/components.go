@@ -111,5 +111,5 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		VersionManager:     versionManager,
 	}}
 
-	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), Service: nw}, nil
+	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }
