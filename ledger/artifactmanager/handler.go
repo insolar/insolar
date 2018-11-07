@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/pkg/errors"
 
@@ -345,6 +346,9 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 }
 
 func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
 	msg := genericMsg.Message().(*message.JetDrop)
 
 	for _, rawMessage := range msg.Messages {
