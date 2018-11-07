@@ -19,7 +19,7 @@ package wallet
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/application/contract/safemath"
+	"github.com/insolar/insolar/application/contract/wallet/safemath"
 	"github.com/insolar/insolar/application/proxy/allowance"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
