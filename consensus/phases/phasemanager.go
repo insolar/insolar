@@ -57,6 +57,13 @@ func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	fmt.Println(secondPhaseState) // TODO: remove after use
 
+	// checkError(runPhase(ctx, func() error {
+	// 	return pm.ThirdPhasePulse.Execute(secondPhaseState)
+	// }))
+	// checkError(runPhase(ctx, func() error {
+	// 	return pm.ThirdPhaseReferendum.Execute(secondPhaseState)
+	// }))
+
 	return nil
 }
 
