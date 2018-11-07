@@ -24,6 +24,8 @@ import (
 	censusprom "go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // MustTagKey creates new tag.Key, panics on error
@@ -54,10 +56,14 @@ func ChangeTags(ctx context.Context, mutator ...tag.Mutator) context.Context {
 }
 
 // RegisterPrometheus creates prometheus exporter and registers it in opencensus view lib.
-func RegisterPrometheus(namespace string, registry *prometheus.Registry) (*censusprom.Exporter, error) {
+func RegisterPrometheus(ctx context.Context, namespace string, registry *prometheus.Registry) (*censusprom.Exporter, error) {
+	inslog := inslogger.FromContext(ctx)
 	exporter, err := censusprom.NewExporter(censusprom.Options{
 		Namespace: namespace,
 		Registry:  registry,
+		OnError: func(err error) {
+			inslog.Error("Failed to export to Prometheus: ", err)
+		},
 	})
 	if err != nil {
 		return nil, err

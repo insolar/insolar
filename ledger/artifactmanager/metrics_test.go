@@ -45,6 +45,6 @@ func TestLedgerArtifactManager_Metrics(t *testing.T) {
 	content, err := tmetrics.FetchContent()
 	require.NoError(t, err)
 
-	assert.Contains(t, content, `insolar_artifactmanager_latency_count{method="RegisterRequest"} 1`)
-	assert.Contains(t, content, `insolar_artifactmanager_calls{method="RegisterRequest"} 1`)
+	assert.Contains(t, content, `insolar_artifactmanager_latency_count{method="RegisterRequest",result="2xx"} 1`)
+	assert.Contains(t, content, `insolar_artifactmanager_calls{method="RegisterRequest",result="2xx"} 1`)
 }
