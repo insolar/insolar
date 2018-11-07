@@ -24,10 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/controller"
-	"github.com/insolar/insolar/network/dhtnetwork"
-	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/pkg/errors"
@@ -38,7 +35,6 @@ type ServiceNetwork struct {
 	hostNetwork  network.HostNetwork
 	controller   network.Controller
 	routingTable network.RoutingTable
-	consensus    consensus.Processor
 
 	certificate  core.Certificate
 	nodeNetwork  core.NodeNetwork
@@ -57,7 +53,6 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	serviceNetwork.routingTable = routingTable
 	serviceNetwork.hostNetwork = hostnetwork
 	serviceNetwork.controller = controller
-	serviceNetwork.consensus = NewConsensus(serviceNetwork.hostNetwork)
 	return serviceNetwork, nil
 }
 
@@ -100,9 +95,6 @@ func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) 
 	n.hostNetwork.Start()
 
 	n.controller.Inject(components)
-	if n.consensus != nil {
-		n.consensus.SetNodeKeeper(components.NodeNetwork.(network.NodeKeeper))
-	}
 
 	log.Infoln("Bootstrapping network...")
 	n.bootstrap()
@@ -171,42 +163,8 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 			}
 		}(n)
 
-		// TODO: create adequate cancelable context without dht values (after switching to new network)
-		ctx := context.WithValue(context.Background(), dhtnetwork.CtxTableIndex, dhtnetwork.DefaultHostID)
-		n.doConsensus(ctx, pulse)
+		// TODO: PLACE NEW CONSENSUS HERE
 	}
-}
-
-func (n *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) {
-	if n.consensus == nil {
-		log.Warn("consensus not implemented")
-		return
-	}
-	if !n.consensus.IsPartOfConsensus() {
-		log.Debug("Node is not active and does not participate in consensus")
-		return
-	}
-	log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
-	go n.consensus.ProcessPulse(ctx, pulse)
-}
-
-// NewNetworkComponentsLegacy create network.HostNetwork and network.Controller for old network
-func NewNetworkComponentsLegacy(conf configuration.Configuration,
-	pulseCallback network.OnPulse) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
-	hostNetwork, err := dhtnetwork.NewDhtHostNetwork(conf, pulseCallback)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to create hostnetwork")
-	}
-	controller, err := dhtnetwork.NewDhtNetworkController(hostNetwork)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to create controller")
-	}
-	return routing.NewTable(), hostNetwork, controller, nil
-}
-
-// NewConsensusLegacy create consensus for old network
-func NewConsensusLegacy(network network.HostNetwork) consensus.Processor {
-	return dhtnetwork.NewNetworkConsensus(network)
 }
 
 // NewNetworkComponents create network.HostNetwork and network.Controller for new network
@@ -221,9 +179,4 @@ func NewNetworkComponents(conf configuration.Configuration,
 	options := controller.ConfigureOptions(conf.Host)
 	networkController := controller.NewNetworkController(pulseCallback, options, internalTransport, routingTable, hostNetwork)
 	return routingTable, hostNetwork, networkController, nil
-}
-
-// NewConsensus create consensus for new network
-func NewConsensus(network network.HostNetwork) consensus.Processor {
-	return nil
 }
