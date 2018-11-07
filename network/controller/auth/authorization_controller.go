@@ -105,7 +105,6 @@ func (ac *AuthorizationController) Authorize() error {
 
 func (ac *AuthorizationController) collectActiveLists(ch <-chan []core.Node, count int) [][]core.Node {
 	receivedResults := make([][]core.Node, 0)
-
 	for {
 		select {
 		case activeNodeList := <-ch:
@@ -118,8 +117,6 @@ func (ac *AuthorizationController) collectActiveLists(ch <-chan []core.Node, cou
 			return receivedResults
 		}
 	}
-
-	return receivedResults
 }
 
 // authorizeOnHost send all authorize requests to host and get list of active nodes

@@ -109,7 +109,6 @@ func (bc *BootstrapController) waitResultsFromChannel(ch <-chan *host.Host) []*h
 			return result
 		}
 	}
-	return result
 }
 
 func (bc *BootstrapController) bootstrap(address string) (*host.Host, error) {
