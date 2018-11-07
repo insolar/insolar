@@ -14,7 +14,13 @@
  *    limitations under the License.
  */
 
-/*
-Package routing implements Kademlia hash tables with XOR distance metrics.
-*/
-package routing
+package auth
+
+import (
+	"github.com/insolar/insolar/core"
+)
+
+func MajorityRuleCheck(activeNodesLists [][]core.Node, majorityRule int) (activeNodesList []core.Node, success bool) {
+	// TODO: fair majorityRule check keeping in mind possible discovery redirects
+	return activeNodesLists[0], true
+}

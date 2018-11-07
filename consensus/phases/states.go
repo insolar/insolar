@@ -14,23 +14,16 @@
  *    limitations under the License.
  */
 
-/*
-Package store provides interfaces and default in-memory implementation of storage for DHT metadata.
+package phases
 
-Usage:
+type FirstPhaseState struct {
+}
 
-	s := newMemoryStore()
+type SecondPhaseState struct {
+}
 
-	data := []byte("some data")
-	key := NewKey(data)
+type ThirdPhasePulseState struct {
+}
 
-	replicationTime := time.Now().Add(time.Second * 1337)
-	expirationTime := time.Now().Add(time.Second * 42)
-
-	s.Store(key, data, replicationTime, expirationTime, true)
-
-	s.Retrieve(key)
-
-	s.Delete(key)
-*/
-package store
+type ThirdPhaseReferendumState struct {
+}

@@ -14,33 +14,14 @@
  *    limitations under the License.
  */
 
-package routing
+package common
 
 import (
 	"github.com/insolar/insolar/network/transport/host"
 )
 
-// RouteHost represents a host in the network locally
-// a separate struct due to the fact that we may want to add some metadata
-// here later such as RTT, or LastSeen time.
-type RouteHost struct {
-	*host.Host
-}
-
-// NewRouteHost creates new RouteHost.
-func NewRouteHost(host *host.Host) *RouteHost {
-	return &RouteHost{
-		Host: host,
-	}
-}
-
-// RouteHostsFrom creates list of RouteHosts from a list of Hosts.
-func RouteHostsFrom(hosts []*host.Host) []*RouteHost {
-	routeHosts := make([]*RouteHost, len(hosts))
-
-	for i, n := range hosts {
-		routeHosts[i] = NewRouteHost(n)
-	}
-
-	return routeHosts
+type BootstrapController interface {
+	Start()
+	Bootstrap() error
+	GetBootstrapHosts() []*host.Host
 }

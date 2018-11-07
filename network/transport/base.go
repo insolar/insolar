@@ -65,10 +65,6 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 
 // SendRequest sends request packet and returns future.
 func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
-	if !msg.IsValid() {
-		return nil, errors.New("invalid packet")
-	}
-
 	msg.RequestID = t.generateID()
 
 	future := t.createFuture(msg)
@@ -160,7 +156,7 @@ func (t *baseTransport) processResponse(msg *packet.Packet) {
 
 	future := t.getFuture(msg)
 	if future != nil {
-		if !shouldProcessPacket(future, msg) {
+		if shouldProcessPacket(future, msg) {
 			future.SetResult(msg)
 		}
 		future.Cancel()
@@ -168,10 +164,8 @@ func (t *baseTransport) processResponse(msg *packet.Packet) {
 }
 
 func (t *baseTransport) processRequest(msg *packet.Packet) {
-	if msg.IsValid() {
-		log.Debugf("Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
-		t.received <- msg
-	}
+	log.Debugf("Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
+	t.received <- msg
 }
 
 // PublicAddress returns transport public ip address
@@ -198,7 +192,11 @@ func (t *baseTransport) sendPacket(p *packet.Packet) error {
 }
 
 func shouldProcessPacket(future Future, msg *packet.Packet) bool {
-	return !future.Actor().Equal(*msg.Sender) && msg.Type != types.TypePing || msg.Type != future.Request().Type
+	typesShouldBeEqual := msg.Type == future.Request().Type
+	isPingPacket := msg.Type == types.Ping || msg.Type == types.TypePing
+	responseIsForRightSender := future.Actor().Equal(*msg.Sender)
+
+	return typesShouldBeEqual && (responseIsForRightSender || isPingPacket)
 }
 
 // AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.

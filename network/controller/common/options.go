@@ -14,17 +14,31 @@
  *    limitations under the License.
  */
 
-package resolver
+package common
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/jbenet/go-base58"
-	"golang.org/x/crypto/sha3"
+	"time"
 )
 
-// ResolveHostID returns a host found by reference.
-func ResolveHostID(ref core.RecordRef) string {
-	hash := make([]byte, 20)
-	sha3.ShakeSum128(hash, ref[:])
-	return base58.Encode(hash)
+// Options contains configuration options for the local host.
+type Options struct {
+	// The hosts being used to bootstrap the network. Without a bootstrap
+	// host there is no way to connect to the network.
+	BootstrapHosts []string
+
+	// The maximum time to wait for a response to ping request.
+	PingTimeout time.Duration
+
+	// The maximum time to wait for a response to any packet.
+	PacketTimeout time.Duration
+
+	// InfiniteBootstrap bool
+
+	// Bootstrap reconnect timeout
+	BootstrapTimeout time.Duration
+
+	// The maximum time to wait for authorization response
+	AuthorizeTimeout time.Duration
+
+	MajorityRule int
 }
