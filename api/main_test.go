@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 
 	cs := core.Components{}
 	b, _ := genesis.NewGenesis(genesisCfg.Genesis)
-	cs.Bootstrapper = b
+	cs.Genesis = b
 	api.Start(ctx, cs)
 
 	code := m.Run()
