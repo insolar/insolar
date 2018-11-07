@@ -69,11 +69,6 @@ func (w *Wallet) Receive(amount uint, from *core.RecordRef) error {
 
 // Transfer transfers money to given wallet
 func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
-	var err error
-	w.Balance, err = safemath.Sub(w.Balance, amount)
-	if err != nil {
-		return fmt.Errorf("[ Transfer ] Not enough balance for transfer: %s", err.Error())
-	}
 
 	toWallet, err := wallet.GetImplementationFrom(*to)
 	if err != nil {
@@ -82,11 +77,19 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 
 	toWalletRef := toWallet.GetReference()
 
+	newBalance, err := safemath.Sub(w.Balance, amount)
+	if err != nil {
+		return fmt.Errorf("[ Transfer ] Not enough balance for transfer: %s", err.Error())
+	}
+
 	ah := allowance.New(&toWalletRef, amount, w.GetContext().Time.Unix()+10)
 	a, err := ah.AsChild(w.GetReference())
 	if err != nil {
 		return fmt.Errorf("[ Transfer ] Can't save as child: %s", err.Error())
 	}
+
+	// Changing balance only after allowance was successfully create
+	w.Balance = newBalance
 
 	r := a.GetReference()
 	toWallet.Accept(&r)
