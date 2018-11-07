@@ -95,7 +95,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	signed, _ := message.NewSignedMessage(ctx, e, network.GetNodeID(), key, 0, core.RoutingToken{})
+	signed, _ := message.NewSignedMessage(ctx, e, network.GetNodeID(), key, 0, nil)
 
 	ref := testutils.RandomRef()
 	network.SendMessage(ref, "test", signed)
@@ -189,7 +189,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	signed, _ := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, core.RoutingToken{})
+	signed, _ := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, nil)
 
 	ref := testutils.RandomRef()
 	firstNode.SendMessage(ref, "test", signed)
@@ -247,7 +247,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	signed, err := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, core.RoutingToken{})
+	signed, err := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, nil)
 
 	firstNode.SendCascadeMessage(c, "test", signed)
 	success := waitTimeout(&wg, 100*time.Millisecond)
@@ -337,7 +337,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	signed, _ := message.NewSignedMessage(ctx, e, firstService.GetNodeID(), firstService.GetPrivateKey(), 0, core.RoutingToken{})
+	signed, _ := message.NewSignedMessage(ctx, e, firstService.GetNodeID(), firstService.GetPrivateKey(), 0, nil)
 
 	firstService.SendCascadeMessage(c, "test", signed)
 	success := waitTimeout(&wg, 100*time.Millisecond)
