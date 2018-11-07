@@ -18,6 +18,7 @@ package phases
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -48,6 +49,11 @@ func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	checkError(runPhase(contextTimeout(ctx, pulseDuration, 0.2), func() error {
 		return pm.SecondPhase.Execute(firstPhaseState)
 	}))
+
+	secondPhaseState := pm.SecondPhase.State
+	pm.SecondPhase.State = &SecondPhaseState{}
+
+	fmt.Println(secondPhaseState) // TODO: remove after use
 
 	return nil
 }
