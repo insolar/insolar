@@ -42,7 +42,6 @@ type Configuration struct {
 	KeysPath        string
 	CertificatePath string
 	Tracer          Tracer
-	BlockExp        BlockExp
 }
 
 // Holder provides methods to manage configuration
@@ -68,7 +67,6 @@ func NewConfiguration() Configuration {
 		KeysPath:        "./",
 		CertificatePath: "",
 		Tracer:          NewTracer(),
-		BlockExp:        NewBlockExp(),
 	}
 
 	return cfg

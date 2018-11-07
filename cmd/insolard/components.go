@@ -18,8 +18,6 @@ package main
 
 import (
 	"context"
-	"github.com/insolar/insolar/blockexplorer"
-
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
@@ -84,9 +82,6 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
-	blockExp, err := blockexplorer.NewBlockExp(cfg.BlockExp)
-	checkError(ctx, err, "failed to start Block Explorer")
-
 	cm := component.Manager{}
 	cm.Register(
 		cert,
@@ -99,7 +94,6 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
-		blockExp,
 		versionManager,
 	)
 
@@ -114,7 +108,6 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		APIRunner:          apiRunner,
 		NetworkCoordinator: networkCoordinator,
 		VersionManager:     versionManager,
-		// BlockExp: 			blockExp,
 	}}
 
 	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), Service: nw}, nil

@@ -76,6 +76,8 @@ func processQueryType(ctx context.Context, rh *RequestHandler, qTypeStr string) 
 		answer, hError = rh.ProcessIsAuthorized(ctx)
 	case GetSeed:
 		answer, hError = rh.ProcessGetSeed(ctx)
+	case GetHistory:
+		answer, hError = rh.ProcessGetHistory(ctx)
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
 		answer = writeError(msg, BadRequest)
