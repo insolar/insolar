@@ -64,7 +64,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	bootstrapper, err := genesis.NewGenesis(cfg.Genesis)
+	gen, err := genesis.NewGenesis(cfg.Genesis)
 	checkError(ctx, err, "failed to start Bootstrapper")
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
@@ -91,7 +91,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		ledger,
 		nw,
 		messageBus,
-		bootstrapper,
+		gen,
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
@@ -105,7 +105,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		Ledger:             ledger,
 		Network:            nw,
 		MessageBus:         messageBus,
-		Bootstrapper:       bootstrapper,
+		Genesis:            gen,
 		APIRunner:          apiRunner,
 		NetworkCoordinator: networkCoordinator,
 		VersionManager:     versionManager,
