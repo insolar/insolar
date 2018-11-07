@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
@@ -123,7 +124,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 }
 
 func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	pulsar := &Pulsar{Neighbours: map[string]*Neighbour{}}
 
 	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
@@ -146,7 +147,7 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	pulsar := &Pulsar{Neighbours: map[string]*Neighbour{}}
 
 	clientMock := NewRPCClientWrapperMock(t)
@@ -170,7 +171,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t 
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
@@ -198,7 +199,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
@@ -226,7 +227,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
@@ -258,7 +259,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{}
@@ -285,7 +286,8 @@ func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
+
 	clientMock := NewRPCClientWrapperMock(t)
 	clientMock.IsInitialisedMock.Return(false)
 	clientMock.LockMock.Return()
@@ -310,7 +312,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *tes
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{Error: errors.New("test error")}
@@ -350,7 +352,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 }
 
 func TestPulsar_StartConsensusProcess_WithWrongPulseNumber(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 
 	switcherMock := NewStateSwitcherMock(t)
 	switcherMock.GetStateMock.Return(WaitingForStart)
@@ -365,7 +367,7 @@ func TestPulsar_StartConsensusProcess_WithWrongPulseNumber(t *testing.T) {
 }
 
 func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
@@ -396,7 +398,7 @@ func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 }
 
 func TestPulsar_broadcastSignatureOfEntropy_StateFailed(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("Go", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	switcher := NewStateSwitcherMock(t)
@@ -413,7 +415,7 @@ func TestPulsar_broadcastSignatureOfEntropy_StateFailed(t *testing.T) {
 }
 
 func TestPulsar_broadcastSignatureOfEntropy_SendToNeighbours(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	done := make(chan *rpc.Call, 2)
 	done <- &rpc.Call{}
 	done <- &rpc.Call{Error: errors.New("Failed")}
@@ -449,7 +451,7 @@ func TestPulsar_broadcastSignatureOfEntropy_SendToNeighbours(t *testing.T) {
 }
 
 func TestPulsar_broadcastVector_StateFailed(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("Go", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
@@ -470,7 +472,7 @@ func TestPulsar_broadcastVector_StateFailed(t *testing.T) {
 }
 
 func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	done := make(chan *rpc.Call, 2)
 	done <- &rpc.Call{}
 	done <- &rpc.Call{Error: errors.New("Failed")}
@@ -506,7 +508,7 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 }
 
 func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("Go", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	mockSwitcher := NewStateSwitcherMock(t)
@@ -526,7 +528,7 @@ func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
 }
 
 func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	done := make(chan *rpc.Call, 2)
 	done <- &rpc.Call{}
 	done <- &rpc.Call{Error: errors.New("Failed")}
@@ -562,7 +564,7 @@ func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 }
 
 func TestPulsar_sendVector_StateFailed(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	pulsar := Pulsar{}
 	switcher := NewStateSwitcherMock(t)
 	switcher.GetStateMock.Return(Failed)
@@ -574,7 +576,7 @@ func TestPulsar_sendVector_StateFailed(t *testing.T) {
 }
 
 func TestPulsar_sendVector_OnePulsar(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 	switcher := NewStateSwitcherMock(t)
 	switcher.GetStateMock.Return(WaitingForStart)
@@ -590,7 +592,7 @@ func TestPulsar_sendVector_OnePulsar(t *testing.T) {
 
 func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 	// Arrange
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{}
 	replyChan := &rpc.Call{Done: done}
@@ -623,7 +625,7 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 }
 
 func TestPulsar_sendEntropy_OnePulsar(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 	switcher := NewStateSwitcherMock(t)
 	switcher.GetStateMock.Return(WaitingForStart)
@@ -637,7 +639,7 @@ func TestPulsar_sendEntropy_OnePulsar(t *testing.T) {
 
 func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 	// Arrange
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{}
 	replyChan := &rpc.Call{Done: done}
@@ -664,7 +666,7 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 }
 
 func TestPulsar_verify_failedState(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	switcherMock := NewStateSwitcherMock(t)
 	switcherMock.GetStateMock.Return(Failed)
 	pulsar := &Pulsar{StateSwitcher: switcherMock}
@@ -676,7 +678,7 @@ func TestPulsar_verify_failedState(t *testing.T) {
 }
 
 func TestPulsar_verify_Standalone_Success(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	mockSwitcher := NewStateSwitcherMock(t)
 	mockSwitcher.GetStateMock.Return(Verifying)
 	mockSwitcher.SwitchToStateMock.Expect(ctx, SendingPulse, nil).Return()
@@ -694,7 +696,7 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 }
 
 func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
@@ -726,7 +728,7 @@ func prepareEntropy(t *testing.T, key *ecdsa.PrivateKey) (entropy core.Entropy, 
 }
 
 func TestPulsar_verify_Success(t *testing.T) {
-	ctx := context.TODO()
+	ctx := inslogger.TestContext(t)
 	mockSwitcher := NewStateSwitcherMock(t)
 	mockSwitcher.SwitchToStateFunc = func(ctx context.Context, p State, p1 interface{}) {
 		if p != WaitingForPulseSigns && p != SendingPulseSign {

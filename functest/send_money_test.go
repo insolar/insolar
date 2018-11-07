@@ -112,7 +112,7 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 	amount := oldFirstBalance + 100
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.EqualError(t, err, "[ Transfer ] Not enough balance for transfer")
+	assert.EqualError(t, err, "[ Transfer ] Not enough balance for transfer: subtrahend must be smaller than minuend")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
