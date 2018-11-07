@@ -91,7 +91,7 @@ func processQueryType(ctx context.Context, rh *RequestHandler, qTypeStr string) 
 	return answer
 }
 
-const TraceIDQueryParam = "traceID"
+const traceIDQueryParam = "traceID"
 
 // PreprocessRequest extracts params from requests
 func PreprocessRequest(ctx context.Context, req *http.Request) (*Params, error) {
@@ -128,7 +128,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			if params == nil {
 				params = &Params{}
 			}
-			answer[TraceIDQueryParam] = traceid
+			answer[traceIDQueryParam] = traceid
 			serJSON, err := json.MarshalIndent(answer, "", "    ")
 			if err != nil {
 				serJSON = handlerMarshalErrorJSON
