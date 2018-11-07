@@ -78,6 +78,7 @@ func (ac *AuthorizationController) Authorize() error {
 		log.Info("Empty list of bootstrap hosts")
 		return nil
 	}
+
 	ch := make(chan []core.Node, len(hosts))
 	for _, h := range hosts {
 		go func(ch chan<- []core.Node, h *host.Host) {
@@ -90,30 +91,35 @@ func (ac *AuthorizationController) Authorize() error {
 		}(ch, h)
 	}
 
-	receivedResults := make([][]core.Node, 0)
-Loop:
-	for {
-		select {
-		case activeNodeList := <-ch:
-			receivedResults = append(receivedResults, activeNodeList)
-			if len(receivedResults) == len(hosts) {
-				break Loop
-			}
-		case <-time.After(ac.options.AuthorizeTimeout):
-			log.Warnf("Authorize timeout, successful auths: %d/%d", len(receivedResults), len(hosts))
-			break Loop
-		}
-	}
-
-	if len(receivedResults) == 0 {
+	activeLists := ac.collectActiveLists(ch, len(hosts))
+	if len(activeLists) == 0 {
 		return errors.New("Failed to authorize on any of discovery nodes")
 	}
-	activeNodes, success := MajorityRuleCheck(receivedResults, ac.options.MajorityRule)
+	activeNodes, success := MajorityRuleCheck(activeLists, ac.options.MajorityRule)
 	if !success {
 		return errors.New("Majority rule check failed")
 	}
 	ac.keeper.AddActiveNodes(activeNodes)
 	return nil
+}
+
+func (ac *AuthorizationController) collectActiveLists(ch <-chan []core.Node, count int) [][]core.Node {
+	receivedResults := make([][]core.Node, 0)
+
+	for {
+		select {
+		case activeNodeList := <-ch:
+			receivedResults = append(receivedResults, activeNodeList)
+			if len(receivedResults) == count {
+				return receivedResults
+			}
+		case <-time.After(ac.options.AuthorizeTimeout):
+			log.Warnf("Authorize timeout, successful auths: %d/%d", len(receivedResults), count)
+			return receivedResults
+		}
+	}
+
+	return receivedResults
 }
 
 // authorizeOnHost send all authorize requests to host and get list of active nodes
@@ -197,7 +203,7 @@ func (ac *AuthorizationController) processAuthorizeRequest(request network.Reque
 		return ac.getAuthErrorResponse(request, "Signer is not initialized"), nil
 	}
 	data := request.GetData().(*RequestAuthorize)
-	err := ac.signer.SignedNonceIsCorrect(request.GetSender(), data.SignedNonce)
+	err := ac.signer.AuthorizeNode(request.GetSender(), data.SignedNonce)
 	if err != nil {
 		return ac.getAuthErrorResponse(request, "Signed nonce check failed: "+err.Error()), nil
 	}

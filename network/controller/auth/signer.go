@@ -69,8 +69,8 @@ func (signer *Signer) addNonce(ref core.RecordRef, nonce Nonce) {
 	signer.nonces[ref] = nonce
 }
 
-// SignedNonceIsCorrect checks a nonce sign.
-func (signer *Signer) SignedNonceIsCorrect(ref core.RecordRef, signedNonce []byte) error {
+// AuthorizeNode checks a nonce sign and authorizes node.
+func (signer *Signer) AuthorizeNode(ref core.RecordRef, signedNonce []byte) error {
 	// ctx := context.TODO()
 
 	_, ok := signer.getNonce(ref)

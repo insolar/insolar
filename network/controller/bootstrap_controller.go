@@ -65,13 +65,22 @@ func (bc *BootstrapController) GetBootstrapHosts() []*host.Host {
 }
 
 func (bc *BootstrapController) Bootstrap() error {
-	bootstrapCount := len(bc.options.BootstrapHosts)
-	if bootstrapCount == 0 {
+	if len(bc.options.BootstrapHosts) == 0 {
 		bc.bootstrapHosts = make([]*host.Host, 0)
 		return nil
 	}
+	ch := bc.getBootstrapHostsChannel()
+	hosts := bc.waitResultsFromChannel(ch)
 
-	bootstrapHosts := make(chan *host.Host, bootstrapCount)
+	if len(hosts) == 0 {
+		return errors.New("Failed to bootstrap to any of discovery nodes")
+	}
+	bc.bootstrapHosts = hosts
+	return nil
+}
+
+func (bc *BootstrapController) getBootstrapHostsChannel() <-chan *host.Host {
+	bootstrapHosts := make(chan *host.Host, len(bc.options.BootstrapHosts))
 	for _, bootstrapAddress := range bc.options.BootstrapHosts {
 		go func(address string, ch chan<- *host.Host) {
 			log.Infof("Starting bootstrap to address %s", address)
@@ -83,29 +92,24 @@ func (bc *BootstrapController) Bootstrap() error {
 			bootstrapHosts <- bootstrapHost
 		}(bootstrapAddress, bootstrapHosts)
 	}
+	return bootstrapHosts
+}
 
-	counter := 0
+func (bc *BootstrapController) waitResultsFromChannel(ch <-chan *host.Host) []*host.Host {
 	result := make([]*host.Host, 0)
-Loop:
 	for {
 		select {
-		case bootstrapHost := <-bootstrapHosts:
+		case bootstrapHost := <-ch:
 			result = append(result, bootstrapHost)
-			counter++
-			if counter == bootstrapCount {
-				break Loop
+			if len(result) == len(bc.options.BootstrapHosts) {
+				return result
 			}
 		case <-time.After(bc.options.BootstrapTimeout):
-			log.Warnf("Bootstrap timeout, successful bootstraps: %d/%d", counter, bootstrapCount)
-			break Loop
+			log.Warnf("Bootstrap timeout, successful bootstraps: %d/%d", len(result), len(bc.options.BootstrapHosts))
+			return result
 		}
 	}
-
-	if counter == 0 {
-		return errors.New("Failed to bootstrap to any of discovery nodes")
-	}
-	bc.bootstrapHosts = result
-	return nil
+	return result
 }
 
 func (bc *BootstrapController) bootstrap(address string) (*host.Host, error) {
