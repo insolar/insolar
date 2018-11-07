@@ -37,8 +37,13 @@ type Signer struct {
 }
 
 // NewSignHandler creates a new sign handler.
-func NewSigner(certificate core.Certificate) *Signer {
-	return &Signer{lock: &sync.Mutex{}, certificate: certificate, nonces: make(map[core.RecordRef]Nonce)}
+func NewSigner(certificate core.Certificate, coordinator core.NetworkCoordinator) *Signer {
+	return &Signer{
+		lock:        &sync.Mutex{},
+		certificate: certificate,
+		coordinator: coordinator,
+		nonces:      make(map[core.RecordRef]Nonce),
+	}
 }
 
 // AddPendingNode adds a pending node and returns a corresponding nonce.
@@ -73,6 +78,7 @@ func (signer *Signer) SignedNonceIsCorrect(ref core.RecordRef, signedNonce []byt
 		errMsg := fmt.Sprintf("Failed to authorize node %s: could not find previously sent nonce", ref.String())
 		return errors.New(errMsg)
 	}
+	// TODO: make coordinator work on zeronet discovery node.
 	// _, _, err := signer.coordinator.Authorize(ctx, ref, nonce, signedNonce)
 	// if err != nil {
 	// 	return errors.Wrapf(err, "Failed to authorize node %s", ref.String())

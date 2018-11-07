@@ -239,7 +239,7 @@ func (ac *AuthorizationController) getAuthErrorResponse(request network.Request,
 }
 
 func (ac *AuthorizationController) Start(components core.Components) {
-	ac.signer = NewSigner(components.Certificate)
+	ac.signer = NewSigner(components.Certificate, components.NetworkCoordinator)
 	ac.keeper = components.NodeNetwork.(network.NodeKeeper)
 
 	ac.transport.RegisterPacketHandler(types.GetNonce, ac.processNonceRequest)

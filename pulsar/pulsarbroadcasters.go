@@ -317,7 +317,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 		receiverHost := host.NewHost(receiverAddress)
 
 		b := packet.NewBuilder(pulsarHost)
-		pingPacket := packet.NewPingPacket(pulsarHost, receiverHost)
+		pingPacket := b.Receiver(receiverHost).Type(types.Ping).Build()
 		pingCall, err := t.SendRequest(pingPacket)
 		if err != nil {
 			logger.Error(err)
@@ -337,7 +337,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 		logger.Debugf("ping request is done")
 
 		b = packet.NewBuilder(pulsarHost)
-		request := b.Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(types.TypeGetRandomHosts).Build()
+		request := b.Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(types.GetRandomHosts).Build()
 
 		call, err := t.SendRequest(request)
 		if err != nil {
@@ -381,13 +381,13 @@ func sendPulseToHost(ctx context.Context, sender *host.Host, t transport.Transpo
 	}()
 
 	pb := packet.NewBuilder(sender)
-	pulseRequest := pb.Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.TypePulse).Build()
+	pulseRequest := pb.Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.Pulse).Build()
 	call, err := t.SendRequest(pulseRequest)
 	if err != nil {
 		return err
 	}
 	result, err := call.GetResult(2 * time.Second)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	if result.Error != nil {
