@@ -58,3 +58,9 @@ func runPhase(ctx context.Context, phase func() error) error {
 	}
 }
 
+func contextTimeout(ctx context.Context, duration time.Duration, k float64) context.Context {
+	timeout := time.Duration(k * float64(duration))
+	timedCtx, _ := context.WithTimeout(ctx, timeout)
+	return timedCtx
+}
+
