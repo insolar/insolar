@@ -91,11 +91,8 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 		return nil, err
 	}
 
-	from := mb.Service.GetNodeID()
-	to := message.ExtractTarget(msg)
-	token := core.NewToken(&to, &from, pulse.PulseNumber, mb.Service.GetPrivateKey())
 	signedMsg, err := message.NewSignedMessage(
-		ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse.PulseNumber, *token,
+		ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse.PulseNumber, nil,
 	)
 	if err != nil {
 		return nil, err

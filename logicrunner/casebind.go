@@ -89,11 +89,8 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		msg := start.Resp.(core.Message)
-		nodeId := lr.Network.GetNodeID()
-		target := message.ExtractTarget(msg)
-		token := core.NewToken(&target, &nodeId, lr.execution[ref].callContext.Pulse.PulseNumber, lr.Network.GetPrivateKey())
 		signed, err := message.NewSignedMessage(
-			ctx, msg, ref, lr.Network.GetPrivateKey(), lr.execution[ref].callContext.Pulse.PulseNumber, *token,
+			ctx, msg, ref, lr.Network.GetPrivateKey(), lr.execution[ref].callContext.Pulse.PulseNumber, nil,
 		)
 		if err != nil {
 			return 0, errors.New("failed to create a signed message")
