@@ -29,3 +29,7 @@ func (pm *PhaseManager) OnPulse(pulse *PulseData) error {
 func NewPhaseManager() *PhaseManager {
 	return &PhaseManager{}
 }
+func (pm *PhaseManager) getPulseDuration() time.Duration {
+	// TODO: calculate
+	return 10 * time.Second
+}
