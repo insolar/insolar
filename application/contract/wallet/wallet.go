@@ -19,11 +19,11 @@ package wallet
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-
+	"github.com/insolar/insolar/application/contract/wallet/safemath"
 	"github.com/insolar/insolar/application/proxy/allowance"
 	"github.com/insolar/insolar/application/proxy/wallet"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // Wallet - basic wallet contract
@@ -69,10 +69,11 @@ func (w *Wallet) Receive(amount uint, from *core.RecordRef) error {
 
 // Transfer transfers money to given wallet
 func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
-	if amount > w.Balance {
-		return fmt.Errorf("[ Transfer ] Not enough balance for transfer")
+	var err error
+	w.Balance, err = safemath.Sub(w.Balance, amount)
+	if err != nil {
+		return fmt.Errorf("[ Transfer ] Not enough balance for transfer: %s", err.Error())
 	}
-	w.Balance -= amount
 
 	toWallet, err := wallet.GetImplementationFrom(*to)
 	if err != nil {
@@ -98,7 +99,10 @@ func (w *Wallet) Accept(aRef *core.RecordRef) error {
 	if err != nil {
 		return fmt.Errorf("[ Accept ] Can't take amount: %s", err.Error())
 	}
-	w.Balance += b
+	w.Balance, err = safemath.Add(w.Balance, b)
+	if err != nil {
+		return fmt.Errorf("[ Accept ] Couldn't add amount to balance: %s", err.Error())
+	}
 	return nil
 }
 
@@ -116,9 +120,16 @@ func (w *Wallet) GetTotalBalance() (uint, error) {
 			return 0, fmt.Errorf("[ GetTotalBalance ] Can't get balance for owner: %s", err.Error())
 		}
 
-		totalAllowanced += balance
+		totalAllowanced, err = safemath.Add(totalAllowanced, balance)
+		if err != nil {
+			return 0, fmt.Errorf("[ GetTotalBalance ] Couldn't add allowance to balance: %s", err.Error())
+		}
 	}
-	return w.Balance + totalAllowanced, nil
+	out, err := safemath.Add(w.Balance, totalAllowanced)
+	if err != nil {
+		return 0, fmt.Errorf("[ GetTotalBalance ] Couldn't calculate total balance: %s", err.Error())
+	}
+	return out, nil
 }
 
 // ReturnAndDeleteExpiredAllowances gets all allowances destroy them and update balance
@@ -133,7 +144,12 @@ func (w *Wallet) ReturnAndDeleteExpiredAllowances() error {
 		if err != nil {
 			return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't delete allowance: %s", err.Error())
 		}
-		w.Balance += balance
+
+		w.Balance, err = safemath.Add(w.Balance, balance)
+		if err != nil {
+			// TODO in error case we must not delete allowance
+			return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't add allowance to balance: %s", err.Error())
+		}
 	}
 	return nil
 }
