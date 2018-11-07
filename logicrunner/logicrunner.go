@@ -369,6 +369,8 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	}
 
 	es.callContext.Prototype = es.objectbody.ClassHeadRef
+	es.callContext.Parent = es.objectbody.Parent
+
 	vb.ModifyContext(es.callContext)
 
 	executor, err := lr.GetExecutor(es.objectbody.CodeMachineType)

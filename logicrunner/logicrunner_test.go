@@ -1556,19 +1556,15 @@ import "github.com/insolar/insolar/application/proxy/two"
 import "github.com/insolar/insolar/core"
  type One struct {
 	foundation.BaseContract
-	FriendObject *two.Two
 }
- func (r *One) AddChild() (error) {
+ func (r *One) AddChildAndReturnMyselfAsParent() (core.RecordRef, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return err
+		return core.RecordRef{}, err
 	}
- 	r.FriendObject = friend
- 	return nil
-}
- func (r *One) GetFriendParent() (core.RecordRef, error) {
-	return r.FriendObject.GetParent()
+
+ 	return friend.GetParent()
 }
 `
 	var contractTwoCode = `
@@ -1581,7 +1577,7 @@ package main
 	foundation.BaseContract
 }
  func New() (*Two, error) {
-	return &Two{}, nil;
+	return &Two{}, nil
 }
  func (r *Two) GetParent() (core.RecordRef, error) {
 	return *r.GetContext().Parent, nil
@@ -1604,12 +1600,10 @@ package main
 		goplugintestutils.CBORMarshal(t, &struct{}{}),
 	)
 	assert.NoError(t, err)
-	resp, err := executeMethod(ctx, lr, *obj, 0, "AddChild", goplugintestutils.CBORMarshal(t, []interface{}{}))
-	assert.NoError(t, err, "contract call")
+	resp, err := executeMethod(ctx, lr, *obj, 0, "AddChildAndReturnMyselfAsParent", goplugintestutils.CBORMarshal(t, []interface{}{}))
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	resp, err = executeMethod(ctx, lr, *obj, 0, "GetFriendParent", goplugintestutils.CBORMarshal(t, []interface{}{}))
-	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	r1_0 := r.([]interface{})[0].([]byte)
-	assert.Equal(t, *obj, r1_0)
+
+	refFromMethod := r.([]interface{})[0].([]byte)
+	assert.Equal(t, *obj, Ref{}.FromSlice(refFromMethod))
 	ValidateAllResults(t, lr)
 }
