@@ -87,6 +87,10 @@ func (n *node) Roles() []core.NodeRole {
 	return n.roles
 }
 
+func (n *node) Role() core.NodeRole {
+	return n.roles[0]
+}
+
 func (n *node) PublicKey() *ecdsa.PublicKey {
 	// TODO: make a copy of pk
 	return n.publicKey

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
+	"github.com/insolar/insolar/version/manager"
 )
 
 type participantWrapper struct {
@@ -57,6 +58,12 @@ type NetworkConsensus struct {
 // ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
 func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) {
 	activeNodes := ic.keeper.GetActiveNodes()
+	go func() {
+		err := manager.ProcessVersionConsensus(activeNodes)
+		if err != nil {
+			log.Warn(err)
+		}
+	}()
 	if len(activeNodes) == 0 {
 		return
 	}

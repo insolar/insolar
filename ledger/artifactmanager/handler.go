@@ -156,16 +156,6 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 		}
 	}
 
-	var parent *core.RecordRef
-	rec, err := h.db.GetRecord(ctx, msg.Head.Record())
-	if err != nil {
-		return nil, errors.New("failed to fetch activation record")
-	}
-	activation, ok := rec.(*record.ObjectActivateRecord)
-	if ok {
-		parent = &activation.Parent
-	}
-
 	var childPointer *core.RecordID
 	if idx.ChildPointer != nil {
 		childPointer = idx.ChildPointer
@@ -176,7 +166,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: childPointer,
-		Parent:       parent,
+		Parent:       idx.Parent,
 	}
 
 	if state.GetMemory() != nil {
@@ -288,6 +278,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		idx.LatestState = id
 		idx.State = state.State()
+		if state.State() == record.StateActivation {
+			idx.Parent = state.(*record.ObjectActivateRecord).Parent
+		}
 		return tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
 	})
 	if err != nil {
@@ -303,6 +296,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: idx.ChildPointer,
+		Parent:       idx.Parent,
 	}
 	return &rep, nil
 }

@@ -40,7 +40,7 @@ type Object struct {
 	IsPrototype  bool
 	ChildPointer *core.RecordID
 	Memory       []byte
-	Parent       *core.RecordRef
+	Parent       core.RecordRef
 }
 
 // Type implementation of Reply interface.

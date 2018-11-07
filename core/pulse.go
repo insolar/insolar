@@ -19,6 +19,8 @@ package core
 import (
 	"encoding/binary"
 	"time"
+
+	"github.com/insolar/insolar/core/utils"
 )
 
 const (
@@ -39,9 +41,7 @@ type PulseNumber uint32
 
 // Bytes serializes pulse number.
 func (pn PulseNumber) Bytes() []byte {
-	buff := make([]byte, PulseNumberSize)
-	binary.BigEndian.PutUint32(buff, uint32(pn))
-	return buff
+	return utils.UInt32ToBytes(uint32(pn))
 }
 
 // Bytes2PulseNumber deserialize pulse number.

@@ -20,6 +20,8 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -27,8 +29,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
-	"github.com/insolar/insolar/log"
 )
 
 const insolarNamespace = "insolar"
@@ -38,17 +42,20 @@ type Metrics struct {
 	registry    *prometheus.Registry
 	httpHandler http.Handler
 	server      *http.Server
+
+	listener net.Listener
 }
 
 // NewMetrics creates new Metrics component.
-func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
+func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error) {
 	m := Metrics{registry: prometheus.NewRegistry()}
-	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: &errorLogger{}})
+	errlogger := &errorLogger{inslogger.FromContext(ctx)}
+	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: errlogger})
 
 	m.server = &http.Server{Addr: cfg.ListenAddress}
 
 	// default system collectors
-	m.registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	m.registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), cfg.Namespace))
 	m.registry.MustRegister(prometheus.NewGoCollector())
 
 	// insolar collectors
@@ -57,27 +64,47 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 	m.registry.MustRegister(NetworkPacketSentTotal)
 	m.registry.MustRegister(NetworkPacketReceivedTotal)
 
+	_, err := insmetrics.RegisterPrometheus(cfg.Namespace, m.registry)
+	if err != nil {
+		errlogger.Println(err.Error())
+	}
+
 	return &m, nil
 }
 
+// ErrBind special case for Start method.
+// We can use it for easier check in metrics creation code.
+var ErrBind = errors.New("failed to bind")
+
 // Start is implementation of core.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
-	log.Infoln("Starting metrics server", m.server.Addr)
-
-	http.Handle("/metrics", m.httpHandler)
-	pprof.Handle(http.DefaultServeMux)
+	inslog := inslogger.FromContext(ctx)
+	inslog.Infoln("Starting metrics server", m.server.Addr)
 
 	listener, err := net.Listen("tcp", m.server.Addr)
 	if err != nil {
+		if opErr, ok := err.(*net.OpError); ok {
+			if opErr.Op == "listen" && IsAddrInUse(opErr) {
+				return ErrBind
+			}
+		}
 		return errors.Wrap(err, "Failed to listen at address")
 	}
 
+	m.listener = listener
+	http.Handle("/metrics", m.httpHandler)
+	pprof.Handle(http.DefaultServeMux)
+
 	go func() {
+		inslog.Debugln("metrics server starting on", m.server.Addr)
 		err := m.server.Serve(listener)
-		if err != nil && err.Error() != "http: Server closed" {
-			log.Errorln(err, "falied to start metrics server")
+		if err == nil {
 			return
 		}
+		if IsServerClosed(err) {
+			return
+		}
+		inslog.Errorln("falied to start metrics server", err)
 	}()
 
 	return nil
@@ -86,7 +113,7 @@ func (m *Metrics) Start(ctx context.Context) error {
 // Stop is implementation of core.Component interface.
 func (m *Metrics) Stop(ctx context.Context) error {
 	const timeOut = 3
-	log.Infoln("Shutting down metrics server")
+	inslogger.FromContext(ctx).Info("Shutting down metrics server")
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(timeOut)*time.Second)
 	defer cancel()
 	err := m.server.Shutdown(ctxWithTimeout)
@@ -97,11 +124,27 @@ func (m *Metrics) Stop(ctx context.Context) error {
 	return nil
 }
 
+// AddrString returns listener address.
+func (m *Metrics) AddrString() string {
+	return m.listener.Addr().String()
+}
+
 // errorLogger wrapper for error logs.
 type errorLogger struct {
+	core.Logger
 }
 
 // Println is wrapper method for ErrorLn.
 func (e *errorLogger) Println(v ...interface{}) {
-	log.Errorln(v)
+	e.Error(v)
+}
+
+// IsAddrInUse checks error text for well known phrase.
+func IsAddrInUse(err error) bool {
+	return strings.Contains(err.Error(), "address already in use")
+}
+
+// IsServerClosed checks error text for well known phrase.
+func IsServerClosed(err error) bool {
+	return strings.Contains(err.Error(), "http: Server closed")
 }
