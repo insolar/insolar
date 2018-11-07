@@ -159,7 +159,6 @@ func init() {
 	gob.Register(&ValidationResults{})
 
 	// Ledger
-	gob.Register(&RequestCall{})
 	gob.Register(&GetCode{})
 	gob.Register(&GetObject{})
 	gob.Register(&GetDelegate{})
