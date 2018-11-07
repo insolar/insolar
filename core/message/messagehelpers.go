@@ -70,6 +70,18 @@ func ExtractRole(msg core.Message) core.JetRole {
 		return core.RoleLightExecutor
 	case *RegisterChild:
 		return core.RoleLightExecutor
+	case *SetBlob:
+		return core.RoleLightExecutor
+	case *SetRecord:
+		return core.RoleLightExecutor
+	case *UpdateObject:
+		return core.RoleLightExecutor
+	case *ValidateCaseBind:
+		return core.RoleVirtualValidator
+	case *ValidateRecord:
+		return core.RoleLightExecutor
+	case *ValidationResults:
+		return core.RoleVirtualExecutor
 	default:
 		panic(fmt.Sprintf("unknow message type - %v", t))
 	}
