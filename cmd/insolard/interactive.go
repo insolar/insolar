@@ -123,7 +123,5 @@ findhost <key> - Find node's real network address
 info - Display information about this node
 activenodes - Shows active node list for current pulse
 pulse - Shows current pulse number
-exit - Exit programm
-
-rpc <method> <target> <args...> - Remote procedure call`)
+exit - Exit programm`)
 }
