@@ -18,25 +18,17 @@ package phases
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 // FirstPhase is a first phase.
 type FirstPhase struct {
 	NodeNetwork core.NodeNetwork `inject:""`
-	SecondPhase *SecondPhase
+	State       *FirstPhaseState
 }
 
-func (fp *FirstPhase) HandlePulse(localClaims []ReferendumClaim, data *PulseData) error {
-	result, claims, err := fp.getPulseProof(data)
-	if err != nil {
-		return errors.Wrap(err, "Failed to get a pulse proof")
-	}
-	return fp.SecondPhase.Calculate(result, claims)
-}
-
-func (fp *FirstPhase) getPulseProof(pulse *PulseData) ([]NodePulseProof, []ReferendumClaim, error) {
-	return nil, nil, nil
+func (fp *FirstPhase) Execute(pulse *core.Pulse) error {
+	// TODO: do something here
+	return nil
 }
 
 // SecondPhase is a second phase.

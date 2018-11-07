@@ -16,23 +16,5 @@
 
 package phases
 
-import (
-	"context"
-	"time"
-
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
-)
-
-type PhaseManager struct {
-	FirstPhase           *FirstPhase           `inject:""`
-}
-
-// NewPhaseManager creates and returns a new phase manager.
-func NewPhaseManager() *PhaseManager {
-	return &PhaseManager{}
-}
-func (pm *PhaseManager) getPulseDuration() time.Duration {
-	// TODO: calculate
-	return 10 * time.Second
+type FirstPhaseState struct {
 }
