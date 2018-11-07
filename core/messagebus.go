@@ -37,9 +37,9 @@ type Message interface {
 
 	// Target returns target for this message. If nil, Message will be sent for all actors for the role returned by
 	// Role method.
-	Target() *RecordRef
+	//Target() *RecordRef
 	// TargetRole returns jet role to actors of which Message should be sent.
-	TargetRole() JetRole
+	//TargetRole() JetRole
 
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
@@ -99,7 +99,7 @@ const (
 	TypeValidationResults
 
 	// Ledger
-	
+
 	// TypeGetCode retrieves code from storage.
 	TypeGetCode
 	// TypeGetObject retrieves object from storage.
