@@ -64,3 +64,8 @@ func contextTimeout(ctx context.Context, duration time.Duration, k float64) cont
 	return timedCtx
 }
 
+func checkError(err error) {
+	if err != nil {
+		log.Error(err)
+	}
+}
