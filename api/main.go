@@ -244,7 +244,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (string, erro
 	}
 	args, err := core.MarshalArgs()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Can't marshal empty args")
 	}
 	res, err := ar.messageBus.Send(
 		ctx,
@@ -255,16 +255,16 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (string, erro
 		},
 	)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Can't get public key")
 	}
 
 	var contractErr error
 	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &key, &contractErr)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Can't unmarshal public key")
 	}
 	if contractErr != nil {
-		return "", contractErr
+		return "", errors.Wrap(contractErr, "Error in get public key")
 	}
 
 	ar.cacheLock.Lock()
