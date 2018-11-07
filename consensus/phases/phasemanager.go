@@ -36,6 +36,11 @@ func NewPhaseManager() *PhaseManager {
 
 // Start starts calculate args on phases.
 func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	pulseDuration := pm.getPulseDuration()
+
+	checkError(runPhase(contextTimeout(ctx, pulseDuration, 0.2), func() error {
+		return pm.FirstPhase.Execute(pulse)
+	}))
 
 	return nil
 }
