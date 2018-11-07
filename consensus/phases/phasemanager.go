@@ -28,6 +28,7 @@ import (
 type PhaseManager struct {
 	FirstPhase           *FirstPhase           `inject:""`
 	SecondPhase          *SecondPhase          `inject:""`
+	ThirdPhasePulse      *ThirdPhasePulse      `inject:""`
 }
 
 // NewPhaseManager creates and returns a new phase manager.

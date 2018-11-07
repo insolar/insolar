@@ -21,3 +21,7 @@ type FirstPhaseState struct {
 
 type SecondPhaseState struct {
 }
+
+type ThirdPhasePulseState struct {
+}
+
