@@ -19,18 +19,13 @@ package artifactmanager
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/cryptohelpers/hash"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -78,7 +73,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	ctx context.Context, msg core.Message,
 ) (*core.RecordID, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "RegisterRequest")()
+	defer instrument(ctx, "RegisterRequest").err(&err).end()
 
 	recid, err := m.setRecord(
 		ctx,
@@ -97,7 +92,7 @@ func (m *LedgerArtifactManager) GetCode(
 	ctx context.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "GetCode")()
+	defer instrument(ctx, "GetCode").err(&err).end()
 
 	genericReact, err := m.messageBus.Send(
 		ctx,
@@ -136,7 +131,7 @@ func (m *LedgerArtifactManager) GetObject(
 		desc *ObjectDescriptor
 		err  error
 	)
-	defer instrumentWithErr(ctx, &err, "GetObject")()
+	defer instrument(ctx, "GetObject").err(&err).end()
 
 	genericReact, err := m.messageBus.Send(
 		ctx,
@@ -179,7 +174,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 	ctx context.Context, head, asType core.RecordRef,
 ) (*core.RecordRef, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "GetDelegate")()
+	defer instrument(ctx, "GetDelegate").err(&err).end()
 
 	genericReact, err := m.messageBus.Send(
 		ctx,
@@ -207,7 +202,7 @@ func (m *LedgerArtifactManager) GetChildren(
 	ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber,
 ) (core.RefIterator, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "GetChildren")()
+	defer instrument(ctx, "GetChildren").err(&err).end()
 	iter, err := NewChildIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
 	return iter, err
 }
@@ -219,7 +214,7 @@ func (m *LedgerArtifactManager) DeclareType(
 	ctx context.Context, domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordID, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "DeclareType")()
+	defer instrument(ctx, "DeclareType").err(&err).end()
 
 	recid, err := m.setRecord(
 		ctx,
@@ -246,7 +241,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	machineType core.MachineType,
 ) (*core.RecordID, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "DeployCode")()
+	defer instrument(ctx, "DeployCode").err(&err).end()
 
 	pulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
@@ -302,7 +297,7 @@ func (m *LedgerArtifactManager) ActivatePrototype(
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "ActivatePrototype")()
+	defer instrument(ctx, "ActivatePrototype").err(&err).end()
 	desc, err := m.activateObject(ctx, domain, object, code, true, parent, false, memory)
 	return desc, err
 }
@@ -318,7 +313,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "ActivateObject")()
+	defer instrument(ctx, "ActivateObject").err(&err).end()
 	desc, err := m.activateObject(ctx, domain, object, prototype, false, parent, asDelegate, memory)
 	return desc, err
 }
@@ -331,7 +326,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 	ctx context.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "DeactivateObject")()
+	defer instrument(ctx, "DeactivateObject").err(&err).end()
 
 	desc, err := m.sendUpdateObject(
 		ctx,
@@ -363,7 +358,7 @@ func (m *LedgerArtifactManager) UpdatePrototype(
 	code *core.RecordRef,
 ) (core.ObjectDescriptor, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "UpdatePrototype")()
+	defer instrument(ctx, "UpdatePrototype").err(&err).end()
 	if !object.IsPrototype() {
 		err = errors.New("object is not a prototype")
 		return nil, err
@@ -383,7 +378,7 @@ func (m *LedgerArtifactManager) UpdateObject(
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "UpdateObject")()
+	defer instrument(ctx, "UpdateObject").err(&err).end()
 	if object.IsPrototype() {
 		err = errors.New("object is not an instance")
 		return nil, err
@@ -403,7 +398,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 	validationMessages []core.Message,
 ) error {
 	var err error
-	defer instrumentWithErr(ctx, &err, "RegisterValidation")()
+	defer instrument(ctx, "RegisterValidation").err(&err).end()
 
 	msg := message.ValidateRecord{
 		Object:             object,
@@ -420,7 +415,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 	ctx context.Context, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	var err error
-	defer instrumentWithErr(ctx, &err, "RegisterResult")()
+	defer instrument(ctx, "RegisterResult").err(&err).end()
 
 	recid, err := m.setRecord(
 		ctx,
@@ -700,29 +695,4 @@ func (m *LedgerArtifactManager) registerChild(
 	}
 
 	return &react.ID, nil
-}
-
-func instrumentWithErr(ctx context.Context, err *error, name string) func() {
-	start := time.Now()
-	return func() {
-		latency := time.Since(start)
-		inslog := inslogger.FromContext(ctx)
-
-		code := "2xx"
-		if err != nil && *err != nil {
-			ctx = insmetrics.InsertTag(ctx, tagMethod, name)
-			code = "5xx"
-			inslog.Error(*err)
-		}
-
-		inslog.Debug("measured time is ", latency)
-
-		ctx = insmetrics.InsertTag(ctx, tagMethod, name)
-		ctx = insmetrics.ChangeTags(
-			ctx,
-			tag.Insert(tagMethod, name),
-			tag.Insert(tagResult, code),
-		)
-		stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
-	}
 }
