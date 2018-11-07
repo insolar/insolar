@@ -103,7 +103,6 @@ func (w *Wallet) Accept(aRef *core.RecordRef) error {
 	if err != nil {
 		return fmt.Errorf("[ Accept ] Couldn't add amount to balance: %s", err.Error())
 	}
-	w.Balance += b
 	return nil
 }
 
