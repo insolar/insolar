@@ -30,7 +30,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o ../../testutils/network -s _mock.go
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, participants []core.Node, packet Phase1Packet) (map[core.RecordRef]Phase1Packet, error)
+	ExchangeData(ctx context.Context, participants []core.Node, packet Phase1Packet) (map[core.RecordRef]*Phase1Packet, error)
 }
 
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
@@ -51,7 +51,7 @@ func (nc *NaiveCommunicator) Start(ctx context.Context) error {
 }
 
 // ExchangeData used in first consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet Phase1Packet) (map[core.RecordRef]Phase1Packet, error) {
+func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet Phase1Packet) (map[core.RecordRef]*Phase1Packet, error) {
 	futures := make([]network.Future, len(participants))
 
 	packetBuffer, err := packet.Serialize()
