@@ -19,6 +19,7 @@ package storage
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/cryptohelpers/hash"
@@ -40,6 +41,12 @@ type TransactionManager struct {
 	update    bool
 	locks     []*core.RecordID
 	txupdates map[string]keyval
+}
+
+type hexstr []byte
+
+func (h hexstr) String() string {
+	return hex.EncodeToString(h)
 }
 
 func prefixkey(prefix byte, key []byte) []byte {
@@ -105,7 +112,7 @@ func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) 
 // GetBlob returns binary value stored by record ID.
 func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 	k := prefixkey(scopeIDBlob, id[:])
-	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
+	log.Debugf("GetRecord by id %+v (key=%v)", id, hexstr(k))
 	return m.get(k)
 }
 
@@ -133,7 +140,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, id[:])
-	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
+	log.Debugf("GetRecord by id %+v (key=%v)", id, hexstr(k))
 	buf, err := m.get(k)
 	if err != nil {
 		return nil, err
