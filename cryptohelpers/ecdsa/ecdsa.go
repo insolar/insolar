@@ -142,7 +142,7 @@ func VerifyWithFullKey(data []byte, signatureRaw []byte, pubKey *ecdsa.PublicKey
 	}
 
 	h := hash.SHA3Bytes256(data)
-	return ecdsa.Verify(pubKey, h, ecdsaP.First, ecdsaP.Second), nil
+	return ecdsa.Verify(pubKey, h, ecdsaP.R, ecdsaP.S), nil
 }
 
 // ExportSignature serializes signature to string.
