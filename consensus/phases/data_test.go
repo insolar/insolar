@@ -290,7 +290,9 @@ func makeDeviantBitSet() *DeviantBitSet {
 	deviantBitSet.LowBitLength = uint8(3)
 	//-----------------
 	deviantBitSet.HighBitLength = uint8(9)
-	deviantBitSet.Payload = []byte("Hello, World!")
+
+	// TODO: uncomment it when we support reading payload
+	//deviantBitSet.Payload = []byte("Hello, World!")
 
 	return deviantBitSet
 }
@@ -397,6 +399,32 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 
 func TestPhase1Packet_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makePhase1Packet(),
+		"[ Phase1Packet.Deserialize ] Can't parseReferendumClaim: [ PacketHeader.parseReferendumClaim ] "+
+			"Can't deserialize claim.: [ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
+
+}
+
+func makePhase2Packet() *Phase2Packet {
+	phase2Packet := &Phase2Packet{}
+	phase2Packet.packetHeader = *makeDefaultPacketHeader()
+	phase2Packet.globuleHashSignature = randomArray64()
+	phase2Packet.deviantBitSet = *makeDeviantBitSet()
+	phase2Packet.signatureHeaderSection1 = randomArray64()
+	phase2Packet.signatureHeaderSection2 = randomArray64()
+
+	// TODO: uncomment when support ser\deser of ReferendumVote
+	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
+	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
+
+	return phase2Packet
+}
+
+func TestPhase2Packet_Deserialize(t *testing.T) {
+	checkSerializationDeserialization(t, makePhase2Packet())
+}
+
+func TestPhase2Packet_BadData(t *testing.T) {
+	checkBadDataSerializationDeserialization(t, makePhase2Packet(),
 		"[ Phase1Packet.Deserialize ] Can't parseReferendumClaim: [ PacketHeader.parseReferendumClaim ] "+
 			"Can't deserialize claim.: [ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 
