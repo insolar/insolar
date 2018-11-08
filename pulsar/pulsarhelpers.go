@@ -25,8 +25,8 @@ import (
 	"math/big"
 	"sort"
 
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/cryptohelpers/hash"
+	ecdsahelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
+	"github.com/insolar/insolar/cryptoproviders/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"

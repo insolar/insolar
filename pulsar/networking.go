@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/entropygenerator"

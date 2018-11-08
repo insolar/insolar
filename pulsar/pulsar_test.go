@@ -27,7 +27,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -754,11 +754,11 @@ func TestPulsar_verify_Success(t *testing.T) {
 	clientMock := pulsartestutils.MockRPCClientWrapper{}
 	clientMock.On("IsInitialised").Return(true)
 	pulsar := &Pulsar{
-		StateSwitcher:                  mockSwitcher,
-		PrivateKey:                     privateKey,
-		PublicKeyRaw:                   currentPulsarPublicKey,
-		OwnedBftRow:                    map[string]*BftCell{},
-		bftGrid:                        map[string]map[string]*BftCell{},
+		StateSwitcher: mockSwitcher,
+		PrivateKey:    privateKey,
+		PublicKeyRaw:  currentPulsarPublicKey,
+		OwnedBftRow:   map[string]*BftCell{},
+		bftGrid:       map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: &privateKeySecond.PublicKey, OutgoingClient: &clientMock},

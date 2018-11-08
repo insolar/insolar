@@ -22,7 +22,7 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/cryptoproviders/hash"
 )
 
 func selectByEntropy(entropy core.Entropy, values []core.RecordRef, count int) ([]core.RecordRef, error) { // nolint: megacheck

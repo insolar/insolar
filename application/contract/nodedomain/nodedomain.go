@@ -22,7 +22,7 @@ import (
 
 	"github.com/insolar/insolar/application/proxy/noderecord"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 

@@ -21,7 +21,7 @@ import (
 
 	"github.com/jbenet/go-base58"
 
-	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/cryptoproviders/hash"
 )
 
 const (

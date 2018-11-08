@@ -27,7 +27,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/certificate"
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 

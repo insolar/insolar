@@ -38,7 +38,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
-	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	cryptoHelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"

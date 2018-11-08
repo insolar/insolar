@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"

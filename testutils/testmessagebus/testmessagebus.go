@@ -25,7 +25,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/testutils"
 )
 

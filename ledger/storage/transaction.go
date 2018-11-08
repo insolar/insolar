@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/cryptoproviders/hash"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"

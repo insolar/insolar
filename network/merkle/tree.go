@@ -20,7 +20,7 @@ import (
 	"bytes"
 
 	"github.com/cbergoon/merkletree"
-	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/cryptoproviders/hash"
 )
 
 type tree interface {

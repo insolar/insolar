@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
-	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	cryptoHelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/networkcoordinator"
 
 	"github.com/insolar/insolar/core"

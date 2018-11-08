@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
-	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsa2 "github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"

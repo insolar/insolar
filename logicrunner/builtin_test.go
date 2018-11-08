@@ -22,7 +22,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/cryptoproviders/ecdsa"
 	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
