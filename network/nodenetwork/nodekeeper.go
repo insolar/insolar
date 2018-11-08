@@ -86,14 +86,15 @@ func resolveAddress(configuration configuration.Configuration) (string, error) {
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 	return &nodekeeper{
-		origin:      origin,
-		state:       undefined,
-		active:      make(map[core.RecordRef]core.Node),
-		sync:        make([]core.Node, 0),
-		unsync:      make([]mutableNode, 0),
-		listWaiters: make([]chan *UnsyncList, 0),
-		nodeWaiters: make(map[core.RecordRef]chan core.Node),
-		index:       make(map[core.NodeRole][]core.RecordRef),
+		origin:       origin,
+		state:        undefined,
+		active:       make(map[core.RecordRef]core.Node),
+		sync:         make([]core.Node, 0),
+		unsync:       make([]mutableNode, 0),
+		listWaiters:  make([]chan *UnsyncList, 0),
+		nodeWaiters:  make(map[core.RecordRef]chan core.Node),
+		indexNode:    make(map[core.NodeRole][]core.RecordRef),
+		indexShortID: make(map[uint32]core.Node),
 	}
 }
 
@@ -110,10 +111,11 @@ type nodekeeper struct {
 	state  nodekeeperState
 	pulse  core.PulseNumber
 
-	activeLock sync.RWMutex
-	active     map[core.RecordRef]core.Node
-	index      map[core.NodeRole][]core.RecordRef
-	sync       []core.Node
+	activeLock   sync.RWMutex
+	active       map[core.RecordRef]core.Node
+	indexNode    map[core.NodeRole][]core.RecordRef
+	indexShortID map[uint32]core.Node
+	sync         []core.Node
 
 	unsyncLock  sync.Mutex
 	unsync      []mutableNode
@@ -158,7 +160,7 @@ func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
-	list, exists := nk.index[jetRoleToNodeRole(role)]
+	list, exists := nk.indexNode[jetRoleToNodeRole(role)]
 	if !exists {
 		return nil
 	}
@@ -173,21 +175,8 @@ func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
 
 	activeNodes := make([]string, len(nodes))
 	for i, node := range nodes {
-		if node.ID().Equal(nk.origin.ID()) {
-			nk.origin = node
-			log.Infof("Added origin node %s to active list", nk.origin.ID())
-		}
-		nk.active[node.ID()] = node
+		nk.addActiveNode(node)
 		activeNodes[i] = node.ID().String()
-
-		for _, role := range node.Roles() {
-			list, ok := nk.index[role]
-			if !ok {
-				list := make([]core.RecordRef, 0)
-				nk.index[role] = list
-			}
-			nk.index[role] = append(list, node.ID())
-		}
 	}
 	log.Debugf("Added active nodes: %s", strings.Join(activeNodes, ", "))
 }
@@ -197,6 +186,13 @@ func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) core.Node {
 	defer nk.activeLock.RUnlock()
 
 	return nk.active[ref]
+}
+
+func (nk *nodekeeper) GetActiveNodeByShortID(shortID uint32) core.Node {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	return nk.indexShortID[shortID]
 }
 
 func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, network.UnsyncList) {
@@ -314,7 +310,7 @@ func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Dura
 func (nk *nodekeeper) syncUnsafe(syncCandidates []core.Node) {
 	// sync -> active
 	for _, node := range nk.sync {
-		nk.active[node.ID()] = node
+		nk.addActiveNode(node)
 	}
 	// unsync -> sync
 	nk.sync = syncCandidates
@@ -337,6 +333,23 @@ func (nk *nodekeeper) syncUnsafe(syncCandidates []core.Node) {
 	nk.nodeWaiters = make(map[core.RecordRef]chan core.Node)
 	nk.state = synced
 	log.Infof("Sync success for pulse %d", nk.pulse)
+}
+
+func (nk *nodekeeper) addActiveNode(node core.Node) {
+	if node.ID().Equal(nk.origin.ID()) {
+		nk.origin = node
+		log.Infof("Added origin node %s to active list", nk.origin.ID())
+	}
+	nk.active[node.ID()] = node
+	for _, role := range node.Roles() {
+		list, ok := nk.indexNode[role]
+		if !ok {
+			list := make([]core.RecordRef, 0)
+			nk.indexNode[role] = list
+		}
+		nk.indexNode[role] = append(list, node.ID())
+	}
+	nk.indexShortID[node.ShortID()] = node
 }
 
 func (nk *nodekeeper) collectUnsync(number core.PulseNumber) network.UnsyncList {
