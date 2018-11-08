@@ -30,7 +30,8 @@ import (
 )
 
 type TestMessageBus struct {
-	handlers map[core.MessageType]core.MessageHandler
+	handlers    map[core.MessageType]core.MessageHandler
+	PulseNumber core.PulseNumber
 }
 
 func NewTestMessageBus() *TestMessageBus {
@@ -68,7 +69,7 @@ func (mb *TestMessageBus) Stop() error {
 
 func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
 	key, _ := ecdsa.GeneratePrivateKey()
-	signedMsg, err := message.NewSignedMessage(ctx, m, testutils.RandomRef(), key, 0)
+	signedMsg, err := message.NewSignedMessage(ctx, m, testutils.RandomRef(), key, mb.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
