@@ -29,7 +29,7 @@ type RoutingHeader struct {
 
 type PacketRoutable interface {
 	// SetPacketHeader set routing information for transport level.
-	SetPacketHeader(header RoutingHeader) error
+	SetPacketHeader(header *RoutingHeader) error
 	// GetPacketHeader get routing information from transport level.
-	GetPacketHeader() (RoutingHeader, error)
+	GetPacketHeader() (*RoutingHeader, error)
 }
