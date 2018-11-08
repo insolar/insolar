@@ -43,3 +43,12 @@ func (*sha3Adapter) Hash256bits() cryptoproviders.Hasher {
 	}
 }
 
+func (*sha3Adapter) Hash512bits() cryptoproviders.Hasher {
+	return &hashWrapper{
+		hash: sha3.New512(),
+		sumFunc: func(b []byte) []byte {
+			s := sha3.Sum512(b)
+			return s[:]
+		},
+	}
+}
