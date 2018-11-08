@@ -428,7 +428,7 @@ func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Mes
 	if err != nil {
 		return err
 	}
-	err = db.SetMessage(lastPulse, genericMsg)
+	err = db.SetMessage(ctx, lastPulse, genericMsg)
 	if err != nil {
 		return err
 	}
