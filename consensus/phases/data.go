@@ -18,6 +18,8 @@ package phases
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/pkg/errors"
 )
 
 type PacketType uint8
@@ -62,6 +64,33 @@ func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
 
 func (p1p *Phase1Packet) hasSection2() bool {
 	return p1p.packetHeader.f01
+}
+
+func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
+	if header.PacketType != types.Phase1 {
+		return errors.New("Phase1Packet.SetPacketHeader: wrong packet type")
+	}
+	p1p.packetHeader.TargetNodeID = header.TargetID
+	p1p.packetHeader.OriginNodeID = header.OriginID
+	p1p.packetHeader.HasRouting = true
+	p1p.packetHeader.PacketT = NetworkConsistency
+	p1p.packetHeader.SubType = 1
+
+	return nil
+}
+
+func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
+	var header *RoutingHeader
+
+	if p1p.packetHeader.PacketT != NetworkConsistency {
+		return nil, errors.New("Phase1Packet.GetPacketHeader: wrong packet type")
+	}
+
+	header.PacketType = types.Phase1
+	header.OriginID = p1p.packetHeader.OriginNodeID
+	header.TargetID = p1p.packetHeader.TargetNodeID
+
+	return header, nil
 }
 
 type PacketHeader struct {
