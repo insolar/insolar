@@ -228,7 +228,6 @@ func (ac *AuthorizationController) processAuthorizeRequest(request network.Reque
 			data.NodeRoles,
 			nil,
 			core.PulseNumber(0),
-			core.NodeJoined,
 			data.Address,
 			data.Version),
 	})
