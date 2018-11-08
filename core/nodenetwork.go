@@ -40,6 +40,8 @@ const (
 type Node interface {
 	// ID is the unique identifier of the node
 	ID() RecordRef
+	// ShortID is the unique shortened ID of node that is used inside globule
+	ShortID() uint32
 	// State is the node state
 	State() NodeState
 	// Pulse is the pulse number after which the new state is assigned to the node

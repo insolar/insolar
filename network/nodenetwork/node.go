@@ -19,6 +19,7 @@ package nodenetwork
 import (
 	"crypto/ecdsa"
 	"encoding/gob"
+	"hash/crc32"
 
 	"github.com/insolar/insolar/core"
 )
@@ -32,6 +33,7 @@ type mutableNode interface {
 
 type node struct {
 	NID        core.RecordRef
+	NShortID   uint32
 	NRoles     []core.NodeRole
 	NPublicKey *ecdsa.PublicKey
 
@@ -52,6 +54,7 @@ func newMutableNode(
 	version string) mutableNode {
 	return &node{
 		NID:              id,
+		NShortID:         generateShortID(id),
 		NRoles:           roles,
 		NPublicKey:       publicKey,
 		NPulseNum:        pulseNum,
@@ -74,6 +77,10 @@ func NewNode(
 
 func (n *node) ID() core.RecordRef {
 	return n.NID
+}
+
+func (n *node) ShortID() uint32 {
+	return n.NShortID
 }
 
 func (n *node) Pulse() core.PulseNumber {
@@ -113,6 +120,10 @@ func (n *node) SetPulse(pulseNum core.PulseNumber) {
 	n.NPulseNum = pulseNum
 }
 
+func (n *node) SetShortID(id uint32) {
+	n.NShortID = id
+}
+
 type mutableNodes []mutableNode
 
 func (mn mutableNodes) Export() []core.Node {
@@ -121,6 +132,10 @@ func (mn mutableNodes) Export() []core.Node {
 		nodes[i] = mn[i]
 	}
 	return nodes
+}
+
+func generateShortID(ref core.RecordRef) uint32 {
+	return crc32.ChecksumIEEE(ref[:])
 }
 
 func init() {
