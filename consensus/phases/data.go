@@ -17,6 +17,8 @@
 package phases
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -81,7 +83,7 @@ type PacketHeader struct {
 type PulseDataExt struct {
 	NextPulseDelta uint16
 	PrevPulseDelta uint16
-	OriginID       uint16
+	OriginID       [16]byte
 	EpochPulseNo   uint32
 	PulseTimestamp uint32
 	Entropy        core.Entropy
@@ -94,8 +96,8 @@ type PulseData struct {
 }
 
 type NodePulseProof struct {
-	NodeStateHash uint64
-	NodeSignature uint64
+	NodeStateHash [64]byte
+	NodeSignature [64]byte
 }
 
 // --------------REFERENDUM--------------
@@ -125,7 +127,7 @@ func (nb *NodeBroadcast) Length() uint16 {
 type CapabilityPoolingAndActivation struct {
 	PollingFlags   uint16
 	CapabilityType uint16
-	CapabilityRef  uint64
+	CapabilityRef  [64]byte
 	length         uint16
 }
 
@@ -161,7 +163,8 @@ type NodeJoinClaim struct {
 	JoinsAfter              uint32
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
-	//NodePK                  ecdsa.PrivateKey // WTF: should it be Public key?
+	NodeRef                 core.RecordRef
+	NodePK                  ecdsa.PublicKey
 	//length uint16
 }
 
@@ -208,7 +211,7 @@ type ReferendumVote struct {
 
 type NodeListVote struct {
 	NodeListCount uint16
-	NodeListHash  uint32
+	NodeListHash  [32]byte
 }
 
 type DeviantBitSet struct {
@@ -218,4 +221,17 @@ type DeviantBitSet struct {
 	//------------------
 	HighBitLength uint8
 	Payload       []byte
+}
+
+type Phase2Packet struct {
+	// -------------------- Header
+	packetHeader PacketHeader
+}
+
+func (p2p *Phase2Packet) isPhase3Needed() bool {
+	return p2p.packetHeader.f00
+}
+
+func (p2p *Phase2Packet) hasSection2() bool {
+	return p2p.packetHeader.f01
 }
