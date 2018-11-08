@@ -91,6 +91,7 @@ var (
 	paramsPath         string
 	verbose            bool
 	sendUrls           string
+	rootAsCaller       bool
 )
 
 func parseInputParams() {
@@ -103,6 +104,7 @@ func parseInputParams() {
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
 	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
 	rootCmd.Flags().StringVarP(&paramsPath, "params", "p", "", "path to params file (default params.json)")
+	rootCmd.Flags().BoolVarP(&rootAsCaller, "root_as_caller", "r", false, "use root member as caller")
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 
@@ -183,6 +185,11 @@ func sendRequest(out io.Writer) {
 	requesters.SetVerbose(verbose)
 	userCfg, err := requesters.ReadUserConfigFromFile(configPath)
 	check("[ sendRequest ]", err)
+	if rootAsCaller {
+		info, err := requesters.Info(defaultURL)
+		check("[ sendRequest ]", err)
+		userCfg.Caller = info.RootMember
+	}
 
 	pPath := paramsPath
 	if len(pPath) == 0 {
