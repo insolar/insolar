@@ -56,10 +56,10 @@ func TestPhase2Packet_SetAndGetPacketHeader(t *testing.T) {
 	checkGetAndSetPacketHeader(t, &Phase2Packet{}, makeHeader(types.Phase2))
 }
 
-func TestPhase2Packet_SetPacketHeader_BadType(t *testing.T) {
+func TestPhase1Packet_SetPacketHeader_BadType(t *testing.T) {
 	checkSetPacketHeader_BadType(t, &Phase1Packet{}, makeHeader(types.Phase2))
 }
 
-func TestPhase1Packet_SetPacketHeader_BadType(t *testing.T) {
+func TestPhase2Packet_SetPacketHeader_BadType(t *testing.T) {
 	checkSetPacketHeader_BadType(t, &Phase2Packet{}, makeHeader(types.Phase1))
 }
