@@ -22,12 +22,12 @@ import (
 	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/log"
 )
 
 type keyval struct {
@@ -43,9 +43,15 @@ type TransactionManager struct {
 	txupdates map[string]keyval
 }
 
-type hexstr []byte
+type byte2hex byte
 
-func (h hexstr) String() string {
+func (b byte2hex) String() string {
+	return hex.EncodeToString([]byte{byte(b)})
+}
+
+type bytes2hex []byte
+
+func (h bytes2hex) String() string {
 	return hex.EncodeToString(h)
 }
 
@@ -112,7 +118,8 @@ func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) 
 // GetBlob returns binary value stored by record ID.
 func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 	k := prefixkey(scopeIDBlob, id[:])
-	log.Debugf("GetRecord by id %+v (key=%v)", id, hexstr(k))
+	inslogger.FromContext(ctx).Debugf(
+		"GetRecord by id %v (prefix=%v)", id, byte2hex(scopeIDBlob))
 	return m.get(ctx, k)
 }
 
@@ -140,7 +147,8 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, id[:])
-	log.Debugf("GetRecord by id %+v (key=%v)", id, hexstr(k))
+	inslogger.FromContext(ctx).Debugf(
+		"GetRecord by id %v (prefix=%v)", id, byte2hex(scopeIDRecord))
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err

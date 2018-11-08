@@ -34,7 +34,6 @@ import (
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/log"
 )
 
 const (
@@ -437,6 +436,7 @@ func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) er
 	tries := db.txretiries
 	var tx *TransactionManager
 	var err error
+	inslog := inslogger.FromContext(ctx)
 	for {
 		tx = db.BeginTransaction(true)
 		err = fn(tx)
@@ -454,7 +454,7 @@ func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) er
 			if db.txretiries > 0 {
 				err = ErrConflictRetriesOver
 			} else {
-				log.Info("local storage transaction conflict")
+				inslog.Info("local storage transaction conflict")
 				err = ErrConflict
 			}
 			break
