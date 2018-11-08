@@ -30,17 +30,17 @@ type callbackOnPulse func(pulse core.Pulse)
 
 // FakePulsar is a struct which uses at void network state.
 type FakePulsar struct {
-	onPulse callbackOnPulse
-	stop    chan bool
-	timeout int32 // ms
+	onPulse   callbackOnPulse
+	stop      chan bool
+	timeoutMs int32 // ms
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
-func NewFakePulsar(callback callbackOnPulse, timeout int32) *FakePulsar {
+func NewFakePulsar(callback callbackOnPulse, timeoutMs int32) *FakePulsar {
 	return &FakePulsar{
-		onPulse: callback,
-		timeout: timeout,
-		stop:    make(chan bool),
+		onPulse:   callback,
+		timeoutMs: timeoutMs,
+		stop:      make(chan bool),
 	}
 }
 
@@ -54,7 +54,7 @@ func (fp *FakePulsar) Start() {
 	go func(fp *FakePulsar) {
 		for {
 			select {
-			case <-time.After(time.Millisecond * time.Duration(fp.timeout)):
+			case <-time.After(time.Millisecond * time.Duration(fp.timeoutMs)):
 				{
 					fp.onPulse(*fp.GetFakePulse())
 				}

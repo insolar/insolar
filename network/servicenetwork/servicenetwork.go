@@ -136,7 +136,7 @@ func (n *ServiceNetwork) bootstrap() {
 }
 
 func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
-	if (pulse.NextPulseNumber != 0) || (pulse.PulseNumber != 0) {
+	if n.isFakePulse(&pulse) {
 		n.fakePulsar.Stop()
 	}
 	ctx := context.TODO()
@@ -171,6 +171,13 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 
 		// TODO: PLACE NEW CONSENSUS HERE
 	}
+}
+
+func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
+	if (pulse.NextPulseNumber != 0) || (pulse.PulseNumber != 0) {
+		return false
+	}
+	return true
 }
 
 // NewNetworkComponents create network.HostNetwork and network.Controller for new network
