@@ -203,7 +203,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
 	if inmsg.Pulse() != lr.pulse().PulseNumber {
-		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
+		return nil, errors.New("Abort execution: New Pulse coming")
 	}
 
 	defer func() {
