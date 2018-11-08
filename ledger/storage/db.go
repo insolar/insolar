@@ -193,7 +193,7 @@ func (db *DB) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 		err  error
 	)
 
-	err = db.View(func(tx *TransactionManager) error {
+	err = db.View(ctx, func(tx *TransactionManager) error {
 		blob, err = tx.GetBlob(ctx, id)
 		return err
 	})
@@ -226,7 +226,7 @@ func (db *DB) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, 
 		err           error
 	)
 
-	err = db.View(func(tx *TransactionManager) error {
+	err = db.View(ctx, func(tx *TransactionManager) error {
 		fetchedRecord, err = tx.GetRecord(ctx, id)
 		return err
 	})
@@ -425,7 +425,7 @@ func (db *DB) BeginTransaction(update bool) *TransactionManager {
 }
 
 // View accepts transaction function. All calls to received transaction manager will be consistent.
-func (db *DB) View(fn func(*TransactionManager) error) error {
+func (db *DB) View(ctx context.Context, fn func(*TransactionManager) error) error {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 	return fn(tx)
