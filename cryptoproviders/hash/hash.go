@@ -18,26 +18,8 @@ package hash
 
 import (
 	"hash"
-	"io"
-
-	"golang.org/x/crypto/sha3"
 )
 
-// Writer is the interface that wraps the WriteHashData method.
-//
-// WriteHashData should write all required for proper hashing data to io.Writer.
-type Writer interface {
-	WriteHashData(io.Writer)
-}
-
-// SHA3hash224 returns SHA3 hash calculated on data received from Writer.
-func SHA3hash224(hw ...Writer) []byte {
-	h := sha3.New224()
-	for _, w := range hw {
-		w.WriteHashData(h)
-	}
-	return h.Sum(nil)
-}
 var hashAdapter = NewSHA3Adapter()
 
 // NewIDHash returns hash used for records ID generation.

@@ -17,77 +17,24 @@
 package hash
 
 import (
-	"encoding/binary"
-	"fmt"
-	"io"
 	"math/rand"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
-
-const aRecTypeID = 1
 
 type aRec struct {
 	A1 int32
 	A2 string
 }
 
-func (rec *aRec) WriteHashData(w io.Writer) {
-	var data = []interface{}{
-		int16(aRecTypeID),
-		rec.A1,
-		[]byte(rec.A2),
-	}
-	for _, v := range data {
-		err := binary.Write(w, binary.BigEndian, v)
-		if err != nil {
-			panic("binary.Write failed:" + err.Error())
-		}
-	}
-}
-
-const bRecTypeID = 2
-
 type bRec struct {
 	aRec
 	B1 []byte
 }
 
-func (rec *bRec) WriteHashData(w io.Writer) {
-	rec.aRec.WriteHashData(w)
-	var data = []interface{}{
-		int16(bRecTypeID),
-		rec.B1,
-	}
-	for _, v := range data {
-		err := binary.Write(w, binary.BigEndian, v)
-		if err != nil {
-			panic("binary.Write failed:" + err.Error())
-		}
-	}
-}
-
-const cRecTypeID = 3
-
 type cRec struct {
 	bRec
 	C1 uint64
-}
-
-func (rec *cRec) WriteHashData(w io.Writer) {
-	rec.bRec.WriteHashData(w)
-	var data = []interface{}{
-		int16(cRecTypeID),
-		rec.C1,
-	}
-	for _, v := range data {
-		err := binary.Write(w, binary.BigEndian, v)
-		if err != nil {
-			panic("binary.Write failed:" + err.Error())
-		}
-	}
 }
 
 func TestMain(m *testing.M) {
@@ -98,7 +45,7 @@ func TestMain(m *testing.M) {
 
 var sha3hash224tests = []struct {
 	name       string
-	hw         Writer
+	hw         interface{}
 	expectHash string
 }{
 	{"aRecEmpty", &aRec{},
@@ -124,53 +71,5 @@ func Test_emptyHashesNotTheSame(t *testing.T) {
 			continue
 		}
 		t.Errorf("found %s hash for \"%s\" test, should not repeats in sha3hash224tests", tt.expectHash, tt.name)
-	}
-}
-
-func Test_sha3hash224(t *testing.T) {
-	for _, tt := range sha3hash224tests {
-		t.Run(tt.name+"_hashtest", func(t *testing.T) {
-			// s := fmtSprintf(tt.in, &flagprinter)
-			hashBytes := SHA3hash224(tt.hw)
-			hashHexStr := fmt.Sprintf("%x", hashBytes)
-
-			assert.Equal(t, 28, len(hashBytes))
-			assert.Equal(t, tt.expectHash, hashHexStr)
-			// if s != tt.out {
-			// t.Errorf("got %q, want %q", s, tt.out)
-			// }
-		})
-	}
-	// check is empty hashes is not the same
-}
-
-var sha3hash224testsNotTheSame = []struct {
-	name string
-	hw1  Writer
-	hw2  Writer
-}{
-	{"aRec-A1", &aRec{}, &aRec{A1: 10}},
-	{"aRec-A2", &aRec{}, &aRec{A2: "test"}},
-	{"bRec-B1", &bRec{}, &bRec{B1: []byte("test")}},
-	{"bRec-level1", &bRec{}, &bRec{aRec: aRec{A1: 100}}},
-	{"cRec-level1", &cRec{}, &cRec{bRec: bRec{B1: []byte("test")}}},
-	{"cRec-level2", &cRec{}, &cRec{bRec: bRec{aRec: aRec{A2: "hi"}}}},
-	{"cRec-level2", &cRec{}, &cRec{bRec: bRec{aRec: aRec{A1: 5}}}},
-}
-
-// check if changed embed hashes is not the same
-func Test_sha3hash224_IfChangedNotTheSame(t *testing.T) {
-	for _, tt := range sha3hash224testsNotTheSame {
-		t.Run(tt.name, func(t *testing.T) {
-			// s := fmtSprintf(tt.in, &flagprinter)
-			hashBytes1 := SHA3hash224(tt.hw1)
-			hashBytes2 := SHA3hash224(tt.hw2)
-			hashHexStr1 := fmt.Sprintf("%x", hashBytes1)
-			hashHexStr2 := fmt.Sprintf("%x", hashBytes2)
-
-			if hashHexStr1 == hashHexStr2 {
-				t.Errorf("struct should not be with the same hash:\n%s", hashHexStr1)
-			}
-		})
 	}
 }
