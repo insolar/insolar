@@ -136,7 +136,7 @@ func (n *ServiceNetwork) bootstrap() {
 }
 
 func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
-	if n.isFakePulse(&pulse) {
+	if !n.isFakePulse(&pulse) {
 		n.fakePulsar.Stop()
 	}
 	ctx := context.TODO()
