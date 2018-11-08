@@ -17,7 +17,6 @@
 package metrics_test
 
 import (
-	"fmt"
 	"math/rand"
 	"net/http"
 	"testing"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/testutils/testmetrics"
 	"github.com/stretchr/testify/assert"
@@ -87,11 +87,32 @@ func TestMetrics_ZPages(t *testing.T) {
 	testm := testmetrics.Start(ctx)
 
 	// One more thing... from https://github.com/rakyll/opencensus-grpc-demo
-	// also check rpcz
+	// also check /debug/rpcz
 	code, content, err := testm.FetchURL("/debug/tracez")
+	_ = content
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, code)
-	fmt.Println("/metrics => ", content)
+	// fmt.Println("/debug/tracez => ", content)
+
+	assert.NoError(t, testm.Stop())
+}
+
+func TestMetrics_Badger(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	_, cleaner := storagetest.TmpDB(ctx, t, "")
+	defer cleaner()
+
+	testm := testmetrics.Start(ctx)
+
+	// One more thing... from https://github.com/rakyll/opencensus-grpc-demo
+	code, content, err := testm.FetchURL("/metrics")
+	_ = content
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, code)
+	// fmt.Println("/metrics => ", content)
+	assert.Contains(t, content, "badger_blocked_puts_total")
 
 	assert.NoError(t, testm.Stop())
 }
