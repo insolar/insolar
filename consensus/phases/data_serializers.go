@@ -23,7 +23,6 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
 )
 
@@ -841,15 +840,16 @@ func (dbs *DeviantBitSet) Deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read HighBitLength")
 	}
 
-	// TODO: calc correct size
-	dbs.Payload = make([]byte, transport.GetUDPMaxPacketSize())
-	n, err := data.Read(dbs.Payload)
-	if err != nil {
-		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read Payload")
-	}
-	dbs.Payload = dbs.Payload[:n]
-
 	return nil
+	// // TODO: calc correct size
+	// dbs.Payload = make([]byte, transport.GetUDPMaxPacketSize())
+	// n, err := data.Read(dbs.Payload)
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read Payload")
+	// }
+	// dbs.Payload = dbs.Payload[:n]
+	//
+	// return nil
 }
 
 // Serialize implements interface method
@@ -868,12 +868,13 @@ func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write HighBitLength")
 	}
 
-	_, err = result.Write(dbs.Payload)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write Payload")
-	}
-
 	return result.Bytes(), nil
+	// _, err = result.Write(dbs.Payload)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write Payload")
+	// }
+	//
+	// return result.Bytes(), nil
 }
 
 func (p2p *Phase2Packet) Deserialize(data io.Reader) error {
