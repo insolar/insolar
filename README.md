@@ -75,10 +75,17 @@ Example
     ./scripts/insolard/launch.sh
 
     # In other terminal:
-    # Create user
-    curl --data '{"query_type": "create_member", "name": "Peter"}' "localhost:19191/api/v1?"
-    # Dump user info
-    curl --data '{"query_type": "dump_all_users"}' "localhost:19191/api/v1?"
+    
+    # Build insolar
+    make insolar
+   
+    # Start insolard
+    ./scripts/insolard/launch.sh
+   
+    # Send request example
+    ./bin/insolar -c=send_request --config=./scripts/insolard/configs/root_member_keys.json --root_as_caller --params=params.json
+
+   ##### See [insolar readme](cmd/insolar) or more details. 
 
 Docker container
 ------------
