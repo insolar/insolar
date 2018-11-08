@@ -63,6 +63,12 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err, "Initialize runner")
 
 	mb := testmessagebus.NewTestMessageBus()
+	mb.PulseNumber = 123123
+
+	l.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
+	)
 
 	nw := network.GetTestNetwork()
 	assert.NoError(t, lr.Start(ctx, core.Components{
@@ -72,10 +78,6 @@ func TestBareHelloworld(t *testing.T) {
 	}), "starting logicrunner")
 
 	MessageBusTrivialBehavior(mb, lr)
-	l.GetPulseManager().Set(
-		ctx,
-		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
-	)
 
 	hw := helloworld.NewHelloWorld()
 
@@ -104,7 +106,7 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
 	key, _ := ecdsa.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
+	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 123123)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
@@ -124,7 +126,7 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
 	key, _ = ecdsa.GeneratePrivateKey()
-	signed, _ = message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
+	signed, _ = message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 123123)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(
