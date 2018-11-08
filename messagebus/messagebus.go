@@ -100,7 +100,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 	mb.queue.Push(msg)
 
 	// TODO: send to all actors of the role if nil Target
-	nodes, err := jc.QueryRole(ctx, message.ExtractRole(signedMsg.Msg), message.ExtractTarget(signedMsg.Msg), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(ctx, signedMsg.Header.Role, signedMsg.Header.Target, pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -162,8 +162,13 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if mb.signmessages && !msg.IsValid(mb.ActiveNodes.GetActiveNode(msg.GetSender()).PublicKey()) {
+	senderKey := mb.ActiveNodes.GetActiveNode(msg.GetSender()).PublicKey()
+	if mb.signmessages && !msg.IsValid(senderKey) {
 		return nil, errors.New("failed to check a message sign")
+	}
+	err = message.CheckToken(senderKey, msg)
+	if err != nil{
+		return nil, errors.New("failed to check a token sign")
 	}
 
 	resp, err := mb.doDeliver(msg)
