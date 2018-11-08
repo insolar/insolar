@@ -1,7 +1,9 @@
 package message
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"encoding/gob"
 
 	"github.com/insolar/insolar/core"
 	crypto_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -11,42 +13,50 @@ import (
 
 // RoutingToken is an auth token for coordinating messages
 type RoutingToken struct {
-	to      *core.RecordRef
+	To      *core.RecordRef
 	from    *core.RecordRef
 	pulse   core.PulseNumber
 	msgHash []byte
 	sign    []byte
 }
 
-func (t *RoutingToken) To() *core.RecordRef {
-	return t.to
+func (t *RoutingToken) GetTo() *core.RecordRef {
+	return t.To
 }
 
-func (t *RoutingToken) From() *core.RecordRef {
+func (t *RoutingToken) GetFrom() *core.RecordRef {
 	return t.from
 }
 
-func (t *RoutingToken) Pulse() core.PulseNumber {
+func (t *RoutingToken) GetPulse() core.PulseNumber {
 	return t.pulse
 }
 
-func (t *RoutingToken) MsgHash() []byte {
+func (t *RoutingToken) GetMsgHash() []byte {
 	return t.msgHash
 }
 
-func (t *RoutingToken) Sign() []byte {
+func (t *RoutingToken) GetSign() []byte {
 	return t.sign
 }
 
 // NewToken creates new token with sign of its fields
 func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNumber, msgHash []byte, key *ecdsa.PrivateKey) *RoutingToken {
 	token := &RoutingToken{
-		to:      to,
+		To:      to,
 		from:    from,
 		msgHash: msgHash,
 		pulse:   pulseNumber,
 	}
-	sign, err := crypto_helper.SignData(token, key)
+
+	var tokenBuffer bytes.Buffer
+	enc := gob.NewEncoder(&tokenBuffer)
+	err := enc.Encode(token)
+	if err != nil {
+		panic(err)
+	}
+
+	sign, err := crypto_helper.Sign(tokenBuffer.Bytes(), key)
 	if err != nil {
 		panic(err)
 	}
@@ -54,20 +64,28 @@ func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNu
 	return token
 }
 
-// CheckToken checks that a routing token is valid
-func CheckToken(pubKey *ecdsa.PublicKey, msg core.SignedMessage) error {
-	serialized, err := ToBytes(msg)
+// ValidateToken checks that a routing token is valid
+func ValidateToken(pubKey *ecdsa.PublicKey, msg core.SignedMessage) error {
+	serialized, err := ToBytes(msg.Message())
 	if err != nil {
-		return errors.Wrap(err, "filed to serialize message")
+		return errors.Wrap(err, "filed GetTo serialize message")
 	}
 	msgHash := hash.SHA3Bytes256(serialized)
 	token := RoutingToken{
-		to:      msg.GetToken().To(),
-		from:    msg.GetToken().From(),
+		To:      msg.GetToken().GetTo(),
+		from:    msg.GetToken().GetFrom(),
 		msgHash: msgHash,
 		pulse:   msg.Pulse(),
 	}
-	ok, err := crypto_helper.VerifyDataWithFullKey(token, msg.GetToken().Sign(), pubKey)
+
+	var tokenBuffer bytes.Buffer
+	enc := gob.NewEncoder(&tokenBuffer)
+	err = enc.Encode(token)
+	if err != nil {
+		panic(err)
+	}
+
+	ok, err := crypto_helper.VerifyWithFullKey(tokenBuffer.Bytes(), msg.GetToken().GetSign(), pubKey)
 	if err != nil {
 		return err
 	}

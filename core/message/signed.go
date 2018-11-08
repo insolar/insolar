@@ -7,7 +7,7 @@
  *
  *        http://www.apache.org/licenses/LICENSE-2.0
  *
- *    Unless required by applicable law or agreed to in writing, software
+ *    Unless required by applicable law or agreed GetTo in writing, software
  *    distributed under the License is distributed on an "AS IS" BASIS,
  *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *    See the License for the specific language governing permissions and
@@ -47,7 +47,7 @@ func (sm *SignedMessage) GetToken() core.Token {
 
 // Pulse returns pulse when message was sent.
 func (sm *SignedMessage) Pulse() core.PulseNumber {
-	return sm.Token.Pulse()
+	return sm.Token.GetPulse()
 }
 
 func (sm *SignedMessage) Message() core.Message {
@@ -71,14 +71,14 @@ func NewSignedMessage(
 	token core.Token,
 ) (*SignedMessage, error) {
 	if key == nil {
-		return nil, errors.New("failed to sign a message: private key == nil")
+		return nil, errors.New("failed GetTo sign a message: private key == nil")
 	}
 	if msg == nil {
-		return nil, errors.New("failed to sign a nil message")
+		return nil, errors.New("failed GetTo sign a nil message")
 	}
 	serialized, err := ToBytes(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "filed to serialize message")
+		return nil, errors.Wrap(err, "filed GetTo serialize message")
 	}
 	sign, err := signMessage(serialized, key)
 	if err != nil {
@@ -99,11 +99,11 @@ func NewSignedMessage(
 	}, nil
 }
 
-// SignMessage tries to sign a core.Message.
+// SignMessage tries GetTo sign a core.Message.
 func signMessage(msg []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 	sign, err := ecdsa2.Sign(msg, key)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign a message")
+		return nil, errors.Wrap(err, "failed GetTo sign a message")
 	}
 	return sign, nil
 }
@@ -112,17 +112,17 @@ func signMessage(msg []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 func (sm *SignedMessage) IsValid(key *ecdsa.PublicKey) bool {
 	serialized, err := ToBytes(sm.Msg)
 	if err != nil {
-		log.Error(err, "filed to serialize message")
+		log.Error(err, "filed GetTo serialize message")
 		return false
 	}
 	exportedKey, err := ecdsa2.ExportPublicKey(key)
 	if err != nil {
-		log.Error("failed to export a public key")
+		log.Error("failed GetTo export a public key")
 		return false
 	}
 	verified, err := ecdsa2.Verify(serialized, sm.Signature, exportedKey)
 	if err != nil {
-		log.Error(err, "failed to verify a message")
+		log.Error(err, "failed GetTo verify a message")
 		return false
 	}
 	return verified

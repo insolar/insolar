@@ -17,7 +17,6 @@
 package ecdsa
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -30,7 +29,6 @@ import (
 
 	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 // P256Curve is a base curve for ecdsa.
@@ -163,33 +161,4 @@ func ImportSignature(data string) ([]byte, error) {
 // GeneratePrivateKey uses for generating ecdsa-key with defaul settings.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(P256Curve, rand.Reader)
-}
-
-func serializeForEcdsa(data interface{}) ([]byte, error) {
-	cbor := &codec.CborHandle{}
-	var b bytes.Buffer
-	enc := codec.NewEncoder(&b, cbor)
-	err := enc.Encode(data)
-	if err != nil {
-		return nil, err
-	}
-	return b.Bytes(), err
-}
-
-// SignData takes hash fro interface{} and sign it with provided private key
-func SignData(data interface{}, privateKey *ecdsa.PrivateKey) ([]byte, error) {
-	b, err := serializeForEcdsa(data)
-	if err != nil {
-		return nil, err
-	}
-	return privateKey.Sign(rand.Reader, b, nil)
-}
-
-// VerifyDataWithFullKey verifies that data (represented with interface{}) is correct
-func VerifyDataWithFullKey(data interface{}, signatureRaw []byte, pubKey *ecdsa.PublicKey) (bool, error) {
-	b, err := serializeForEcdsa(data)
-	if err != nil {
-		return false, err
-	}
-	return VerifyWithFullKey(b, signatureRaw, pubKey)
 }

@@ -7,7 +7,7 @@
  *
  *        http://www.apache.org/licenses/LICENSE-2.0
  *
- *    Unless required by applicable law or agreed to in writing, software
+ *    Unless required by applicable law or agreed GetTo in writing, software
  *    distributed under the License is distributed on an "AS IS" BASIS,
  *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *    See the License for the specific language governing permissions and
@@ -114,11 +114,11 @@ func Deserialize(buff io.Reader) (core.SignedMessage, error) {
 	return &SignedMessage{Msg: msg}, nil
 }
 
-// ToBytes deserialize a core.Message to bytes.
+// ToBytes deserialize a core.Message GetTo bytes.
 func ToBytes(msg core.Message) ([]byte, error) {
 	reqBuff, err := Serialize(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
+		return nil, errors.Wrap(err, "Failed GetTo serialize event")
 	}
 	return ioutil.ReadAll(reqBuff)
 }
@@ -139,11 +139,11 @@ func DeserializeSigned(buff io.Reader) (core.SignedMessage, error) {
 	return &signed, err
 }
 
-// SignedToBytes deserialize a core.SignedMessage to bytes.
+// SignedToBytes deserialize a core.SignedMessage GetTo bytes.
 func SignedToBytes(msg core.SignedMessage) ([]byte, error) {
 	reqBuff, err := SerializeSigned(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
+		return nil, errors.Wrap(err, "Failed GetTo serialize event")
 	}
 	return ioutil.ReadAll(reqBuff)
 }

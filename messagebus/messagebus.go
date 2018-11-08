@@ -166,7 +166,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if mb.signmessages && !msg.IsValid(senderKey) {
 		return nil, errors.New("failed to check a message sign")
 	}
-	err = message.CheckToken(senderKey, msg)
+	err = message.ValidateToken(senderKey, msg)
 	if err != nil{
 		return nil, errors.New("failed to check a token sign")
 	}
