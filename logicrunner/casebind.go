@@ -28,14 +28,11 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
 )
 
 func HashInterface(in interface{}) []byte {
-	s := []byte{}
-	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&s, ch).Encode(in)
+	s, err := core.CborMarshal(in)
 	if err != nil {
 		panic("Can't marshal: " + err.Error())
 	}
