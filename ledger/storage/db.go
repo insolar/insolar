@@ -209,7 +209,7 @@ func (db *DB) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []
 		id  *core.RecordID
 		err error
 	)
-	err = db.Update(func(tx *TransactionManager) error {
+	err = db.Update(ctx, func(tx *TransactionManager) error {
 		id, err = tx.SetBlob(ctx, pulseNumber, blob)
 		return err
 	})
@@ -242,7 +242,7 @@ func (db *DB) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec r
 		id  *core.RecordID
 		err error
 	)
-	err = db.Update(func(tx *TransactionManager) error {
+	err = db.Update(ctx, func(tx *TransactionManager) error {
 		id, err = tx.SetRecord(ctx, pulseNumber, rec)
 		return err
 	})
@@ -274,7 +274,7 @@ func (db *DB) SetObjectIndex(
 	id *core.RecordID,
 	idx *index.ObjectLifeline,
 ) error {
-	return db.Update(func(tx *TransactionManager) error {
+	return db.Update(ctx, func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(ctx, id, idx)
 	})
 }
@@ -361,7 +361,7 @@ func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 
 // AddPulse saves new pulse data and updates index.
 func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
-	return db.Update(func(tx *TransactionManager) error {
+	return db.Update(ctx, func(tx *TransactionManager) error {
 		var latest core.PulseNumber
 		latest, err := tx.GetLatestPulseNumber(ctx)
 		if err != nil && err != ErrNotFound {
@@ -433,7 +433,7 @@ func (db *DB) View(fn func(*TransactionManager) error) error {
 
 // Update accepts transaction function and commits changes. All calls to received transaction manager will be
 // consistent and written tp disk or an error will be returned.
-func (db *DB) Update(fn func(*TransactionManager) error) error {
+func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) error {
 	tries := db.txretiries
 	var tx *TransactionManager
 	var err error
@@ -501,7 +501,7 @@ func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
 
 // set wraps matching transaction manager method.
 func (db *DB) set(ctx context.Context, key, value []byte) error {
-	return db.Update(func(tx *TransactionManager) error {
+	return db.Update(ctx, func(tx *TransactionManager) error {
 		return tx.set(ctx, key, value)
 	})
 }

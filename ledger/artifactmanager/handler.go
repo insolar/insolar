@@ -257,7 +257,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	}
 
 	var idx *index.ObjectLifeline
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
 		idx, err = getObjectIndex(ctx, tx, msg.Object.Record(), true)
 		if err != nil {
@@ -310,7 +310,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	}
 
 	var child *core.RecordID
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, _, _, err := getObject(ctx, tx, msg.Parent.Record(), nil, false)
 		if err != nil {
 			return err
@@ -372,7 +372,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Sign
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.ValidateRecord)
 
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(ctx, msg.Object.Record(), true)
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch object index")
