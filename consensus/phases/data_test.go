@@ -88,7 +88,7 @@ func makeDefaultPulseDataExt() *PulseDataExt {
 	pulseDataExt.Entropy[1] = '3'
 	pulseDataExt.EpochPulseNo = uint32(21)
 	pulseDataExt.PulseTimestamp = uint32(33)
-	pulseDataExt.OriginID = uint16(43)
+	pulseDataExt.OriginID = [16]byte{}
 
 	return pulseDataExt
 }
@@ -179,8 +179,8 @@ func makeCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
 	capabilityPoolingAndActivation := &CapabilityPoolingAndActivation{}
 	capabilityPoolingAndActivation.PollingFlags = uint16(10)
 	capabilityPoolingAndActivation.length = uint16(7)
-	capabilityPoolingAndActivation.CapabilityType = uint16(11)
-	capabilityPoolingAndActivation.CapabilityRef = uint64(13)
+	capabilityPoolingAndActivation.CapabilityType = uint16(7)
+	capabilityPoolingAndActivation.CapabilityRef = randomArray64()
 
 	return capabilityPoolingAndActivation
 }
@@ -268,7 +268,7 @@ func TestReferendumVote_BadData(t *testing.T) {
 
 func makeNodeListVote() *NodeListVote {
 	nodeListVote := &NodeListVote{}
-	nodeListVote.NodeListHash = uint32(13)
+	nodeListVote.NodeListHash = randomArray32()
 	nodeListVote.NodeListCount = uint16(77)
 
 	return nodeListVote
@@ -380,7 +380,7 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet := &Phase1Packet{}
 	phase1Packet.packetHeader = *makeDefaultPacketHeader()
 	phase1Packet.pulseData = *makeDefaultPulseDataExt()
-	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: 2, NodeStateHash: 3}
+	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray64(), NodeStateHash: randomArray64()}
 
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeJoinClaim())
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeViolationBlame())
@@ -399,4 +399,5 @@ func TestPhase1Packet_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makePhase1Packet(),
 		"[ Phase1Packet.Deserialize ] Can't parseReferendumClaim: [ PacketHeader.parseReferendumClaim ] "+
 			"Can't deserialize claim.: [ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
+
 }
