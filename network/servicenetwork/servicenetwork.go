@@ -174,10 +174,7 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 }
 
 func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
-	if (pulse.NextPulseNumber != 0) || (pulse.PulseNumber != 0) {
-		return false
-	}
-	return true
+	return (pulse.NextPulseNumber != 0) || (pulse.PulseNumber != 0)
 }
 
 // NewNetworkComponents create network.HostNetwork and network.Controller for new network
