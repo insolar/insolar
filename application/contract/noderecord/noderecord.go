@@ -39,6 +39,15 @@ type NodeRecord struct {
 
 // NewNodeRecord creates new NodeRecord
 func NewNodeRecord(publicKey string, roles []string, ip string) (*NodeRecord, error) {
+	if len(publicKey) == 0 {
+		return nil, fmt.Errorf("[ NewNodeRecord ] public key is required")
+	}
+	if len(roles) == 0 {
+		return nil, fmt.Errorf("[ NewNodeRecord ] roles is required")
+	}
+	if len(ip) == 0 {
+		return nil, fmt.Errorf("[ NewNodeRecord ] ip is required")
+	}
 	resultRoles := []core.NodeRole{}
 	for _, roleStr := range roles {
 		role := core.GetRoleFromString(roleStr)
