@@ -73,8 +73,8 @@ type PacketHeader struct {
 	f00   bool
 	Pulse uint32
 	//-----------------
-	OriginNodeID uint32
-	TargetNodeID uint32
+	OriginNodeID core.ShortNodeID
+	TargetNodeID core.ShortNodeID
 }
 
 // PulseDataExt is a pulse data extension.
