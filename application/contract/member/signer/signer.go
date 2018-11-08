@@ -17,30 +17,10 @@
 package signer
 
 import (
-	"fmt"
-
-	"github.com/ugorji/go/codec"
+	"github.com/insolar/insolar/core"
 )
 
 // UnmarshalParams unmarshalls params
 func UnmarshalParams(data []byte, to ...interface{}) error {
-	ch := new(codec.CborHandle)
-	return codec.NewDecoderBytes(data, ch).Decode(&to)
-}
-
-// Serialize serializes request params
-func Serialize(ref []byte, delegate []byte, method string, params []byte, seed []byte) ([]byte, error) {
-	var serialized []byte
-	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&serialized, ch).Encode([]interface{}{
-		ref,
-		delegate,
-		method,
-		params,
-		seed,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("[ Serialize ]: %s", err.Error())
-	}
-	return serialized, nil
+	return core.CborUnMarshal(data, to)
 }
