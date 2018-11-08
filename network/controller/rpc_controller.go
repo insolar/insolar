@@ -171,7 +171,7 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
 	log.Debugf("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
-		name, msg.Target().String())
+		name, msg.GetHeader().GetTarget().String())
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
 		Data:   [][]byte{buff},
@@ -186,7 +186,7 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 	}
 	data := response.GetData().(*ResponseRPC)
 	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
-		msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
+		msg.Type(), msg.GetHeader().GetTarget(), msg.GetCaller(), msg.GetHeader().GetRole(), time.Since(start))
 	if !data.Success {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}

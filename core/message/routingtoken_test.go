@@ -16,7 +16,7 @@ func TestValidateToken(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	ref := testutils.RandomRef()
 
-	tmp := core.Message(&BootstrapRequest{})
+	tmp := core.Message(&GenesisRequest{})
 	msg, err := NewSignedMessage(context.TODO(), tmp, ref, key, 1234, nil)
 	assert.NoError(t, err)
 

@@ -55,7 +55,24 @@ type SignedMessage interface {
 	// Pulse returns pulse when message was sent.
 	Pulse() PulseNumber
 	// GetToken returns a routing-token of the message
-	GetToken() Token
+	GetToken() MessageToken
+	GetHeader() MessageHeader
+}
+
+// MessageToken is the base interface for the routing token
+type MessageToken interface {
+	GetTo() *RecordRef
+	GetFrom() *RecordRef
+	GetPulse() PulseNumber
+	GetMsgHash() []byte
+	GetSign() []byte
+}
+
+// MessageHeader is the base interface for header of message
+type MessageHeader interface {
+	GetSender() RecordRef
+	GetTarget() RecordRef
+	GetRole() JetRole
 }
 
 // Reply for an `Message`

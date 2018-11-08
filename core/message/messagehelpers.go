@@ -8,7 +8,7 @@ import (
 
 func ExtractTarget(msg core.Message) core.RecordRef {
 	switch t := msg.(type) {
-	case *BootstrapRequest:
+	case *GenesisRequest:
 		return core.NewRefFromBase58(t.Name)
 	case *CallConstructor:
 		if t.SaveAs == Delegate {
@@ -52,7 +52,7 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 
 func ExtractRole(msg core.Message) core.JetRole {
 	switch t := msg.(type) {
-	case *BootstrapRequest:
+	case *GenesisRequest:
 		return core.RoleLightExecutor
 	case *CallConstructor:
 		return core.RoleVirtualExecutor

@@ -11,6 +11,21 @@ type SignedMessageHeader struct {
 	Role   core.JetRole
 }
 
+// GetSender returns sender
+func (h *SignedMessageHeader) GetSender() core.RecordRef {
+	return h.Sender
+}
+
+// GetTarget returns target
+func (h *SignedMessageHeader) GetTarget() core.RecordRef {
+	return h.Target
+}
+
+// GetRole returns role
+func (h *SignedMessageHeader) GetRole() core.JetRole {
+	return h.Role
+}
+
 // NewSignedMessageHeader creates header from the message-body
 func NewSignedMessageHeader(sender core.RecordRef, msg core.Message) SignedMessageHeader {
 	return SignedMessageHeader{
