@@ -131,6 +131,21 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 	return ecdsa.Verify(savedKey, h, ecdsaP.First, ecdsaP.Second), nil
 }
 
+// VerifyWithFullKey verifies signature. PubKey is provided here
+func VerifyWithFullKey(data []byte, signatureRaw []byte, pubKey *ecdsa.PublicKey) (bool, error) {
+	var ecdsaP ecdsaPair
+	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaP)
+	if err != nil {
+		return false, errors.Wrap(err, "[ Verify ]")
+	}
+	if len(rest) != 0 {
+		return false, errors.New("[ Verify ] len of rest must be 0")
+	}
+
+	h := hash.SHA3Bytes256(data)
+	return ecdsa.Verify(pubKey, h, ecdsaP.First, ecdsaP.Second), nil
+}
+
 // ExportSignature serializes signature to string.
 func ExportSignature(signature []byte) string {
 	return base64.StdEncoding.EncodeToString(signature)
@@ -150,8 +165,7 @@ func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(P256Curve, rand.Reader)
 }
 
-// SignData takes hash fro interface{} and sign it with provided private key
-func SignData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
+func serializeForEcdsa(data interface{}) ([]byte, error) {
 	cbor := &codec.CborHandle{}
 	var b bytes.Buffer
 	enc := codec.NewEncoder(&b, cbor)
@@ -159,5 +173,23 @@ func SignData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return privateKey.Sign(rand.Reader, b.Bytes(), nil)
+	return b.Bytes(), err
+}
+
+// SignData takes hash fro interface{} and sign it with provided private key
+func SignData(data interface{}, privateKey *ecdsa.PrivateKey) ([]byte, error) {
+	b, err := serializeForEcdsa(data)
+	if err != nil {
+		return nil, err
+	}
+	return privateKey.Sign(rand.Reader, b, nil)
+}
+
+// VerifyDataWithFullKey verifies that data (represented with interface{}) is correct
+func VerifyDataWithFullKey(data interface{}, signatureRaw []byte, pubKey *ecdsa.PublicKey) (bool, error) {
+	b, err := serializeForEcdsa(data)
+	if err != nil {
+		return false, err
+	}
+	return VerifyWithFullKey(b, signatureRaw, pubKey)
 }
