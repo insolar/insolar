@@ -48,13 +48,26 @@ type ExecutionState struct {
 	deactivate  bool
 	request     *Ref
 	traceID     string
+	queueLength int
 
 	objectbody *ObjectBody
 }
 
+func (es *ExecutionState) Lock() {
+	es.queueLength++
+	es.Mutex.Lock()
+}
+
 func (es *ExecutionState) Unlock() {
+	es.queueLength--
 	es.Mutex.Unlock()
 	es.traceID = "Done"
+}
+
+func (es *ExecutionState) ReleaseQueue() {
+	for es.queueLength > 1 {
+		es.Unlock()
+	}
 }
 
 // LogicRunner is a general interface of contract executor
@@ -185,6 +198,14 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	}
 	fuse := true
 	es.Lock()
+
+	// TODO return 302
+	// unlock comes from OnPulse()
+	// pulse changed while we was locked and we don't process anything
+	if inmsg.Pulse() != lr.pulse().PulseNumber {
+		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
+	}
+
 	defer func() {
 		if fuse {
 			es.Unlock()
@@ -488,9 +509,6 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind()
 
-	// TODO INS-666
-	// TODO make refresh lr.Execution - Unlock mutexes n-1 time for each object, send some info for callers, do empty object
-
 	if len(objectsRecords) == 0 {
 		return nil
 	}
@@ -510,6 +528,9 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}
+
+		// release unprocessed request
+		lr.execution[ref].ReleaseQueue()
 	}
 
 	return nil
