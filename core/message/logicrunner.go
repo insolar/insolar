@@ -18,6 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptoproviders/hash"
 )
 
 // MethodReturnMode ENUM to set when method returns its result
@@ -107,7 +108,7 @@ type CallConstructor struct {
 }
 
 func (m *CallConstructor) GetReference() core.RecordRef {
-	return *core.GenRequest(m.PulseNum, MustSerializeBytes(m))
+	return *genRequest(m.PulseNum, MustSerializeBytes(m))
 }
 
 // Type returns TypeCallConstructor.
@@ -120,7 +121,7 @@ func (m *CallConstructor) Target() *core.RecordRef {
 	if m.SaveAs == Delegate {
 		return &m.ParentRef
 	}
-	return core.GenRequest(m.PulseNum, MustSerializeBytes(m))
+	return *genRequest(m.PulseNum, MustSerializeBytes(m))
 }
 
 type ExecutorResults struct {
@@ -212,4 +213,13 @@ func (m *ValidationResults) GetCaller() *core.RecordRef {
 
 func (m *ValidationResults) GetReference() core.RecordRef {
 	return m.RecordRef
+}
+
+// GenRequest calculates RecordRef for request message from pulse number and request's payload.
+func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
+	ref := core.NewRecordRef(
+		core.RecordID{},
+		*core.NewRecordID(pn, hash.IDHashBytes(payload)),
+	)
+	return ref
 }

@@ -20,8 +20,6 @@ import (
 	"encoding/binary"
 
 	"github.com/jbenet/go-base58"
-
-	"github.com/insolar/insolar/cryptoproviders/hash"
 )
 
 const (
@@ -119,15 +117,6 @@ func (ref RecordRef) Bytes() []byte {
 // Equal checks if reference points to the same record.
 func (ref RecordRef) Equal(other RecordRef) bool {
 	return ref == other
-}
-
-// GenRequest calculates RecordRef for request message from pulse number and request's payload.
-func GenRequest(pn PulseNumber, payload []byte) *RecordRef {
-	ref := NewRecordRef(
-		RecordID{},
-		*NewRecordID(pn, hash.IDHashBytes(payload)),
-	)
-	return ref
 }
 
 // NewRefFromBase58 deserializes reference from base58 encoded string.
