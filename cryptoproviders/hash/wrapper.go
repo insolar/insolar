@@ -33,3 +33,7 @@ func (h *hashWrapper) Sum(b []byte) []byte {
 	return h.hash.Sum(b)
 }
 
+func (h *hashWrapper) Reset() {
+	h.hash.Reset()
+}
+
