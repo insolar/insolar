@@ -229,12 +229,16 @@ func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.Pul
 
 // set stores value by key.
 func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
+	inslogger.FromContext(ctx).Debugf("set key %v", bytes2hex(key))
+
 	m.txupdates[string(key)] = keyval{k: key, v: value}
 	return nil
 }
 
 // get returns value by key.
 func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error) {
+	inslogger.FromContext(ctx).Debugf("get key %v", bytes2hex(key))
+
 	if kv, ok := m.txupdates[string(key)]; ok {
 		return kv.v, nil
 	}

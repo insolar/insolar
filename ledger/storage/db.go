@@ -436,7 +436,6 @@ func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) er
 	tries := db.txretiries
 	var tx *TransactionManager
 	var err error
-	inslog := inslogger.FromContext(ctx)
 	for {
 		tx = db.BeginTransaction(true)
 		err = fn(tx)
@@ -454,7 +453,6 @@ func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) er
 			if db.txretiries > 0 {
 				err = ErrConflictRetriesOver
 			} else {
-				inslog.Info("local storage transaction conflict")
 				err = ErrConflict
 			}
 			break
@@ -463,6 +461,10 @@ func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) er
 		tx.Discard()
 	}
 	tx.Discard()
+
+	if err != nil {
+		inslogger.FromContext(ctx).Errorln("DB Update error:", err)
+	}
 	return err
 }
 
