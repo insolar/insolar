@@ -103,6 +103,14 @@ func (ref RecordRef) String() string {
 	return base58.Encode(ref[:])
 }
 
+// FromSlice : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
+func (ref RecordRef) FromSlice(from []byte) RecordRef {
+	for i := 0; i < RecordRefSize; i++ {
+		ref[i] = from[i]
+	}
+	return ref
+}
+
 // Bytes returns byte slice of RecordRef.
 func (ref RecordRef) Bytes() []byte {
 	return ref[:]

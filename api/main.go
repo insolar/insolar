@@ -91,7 +91,7 @@ func processQueryType(ctx context.Context, rh *RequestHandler, qTypeStr string) 
 	return answer
 }
 
-const TraceIDQueryParam = "traceID"
+const traceIDQueryParam = "traceID"
 
 // PreprocessRequest extracts params from requests
 func PreprocessRequest(ctx context.Context, req *http.Request) (*Params, error) {
@@ -128,7 +128,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			if params == nil {
 				params = &Params{}
 			}
-			answer[TraceIDQueryParam] = traceid
+			answer[traceIDQueryParam] = traceid
 			serJSON, err := json.MarshalIndent(answer, "", "    ")
 			if err != nil {
 				serJSON = handlerMarshalErrorJSON
@@ -200,7 +200,7 @@ func (ar *Runner) reloadMessageBus(ctx context.Context, c core.Components) {
 func (ar *Runner) Start(ctx context.Context, c core.Components) error {
 	ar.reloadMessageBus(ctx, c)
 
-	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
+	rootDomainReference := c.Genesis.GetRootDomainRef()
 	ar.netCoordinator = c.NetworkCoordinator
 
 	ar.seedmanager = seedmanager.New()
@@ -244,7 +244,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (string, erro
 	}
 	args, err := core.MarshalArgs()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Can't marshal empty args")
 	}
 	res, err := ar.messageBus.Send(
 		ctx,
@@ -255,16 +255,16 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (string, erro
 		},
 	)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Can't get public key")
 	}
 
 	var contractErr error
 	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &key, &contractErr)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Can't unmarshal public key")
 	}
 	if contractErr != nil {
-		return "", contractErr
+		return "", errors.Wrap(contractErr, "Error in get public key")
 	}
 
 	ar.cacheLock.Lock()

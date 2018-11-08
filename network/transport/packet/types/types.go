@@ -20,6 +20,8 @@ package types
 type PacketType int
 
 const (
+	// legacy packet types, should be removed after switch to new network
+
 	// TypePing is packet type for ping method.
 	TypePing PacketType = iota + 1
 	// TypeStore is packet type for store method.
@@ -60,4 +62,25 @@ const (
 	TypeExchangeUnsyncHash
 	// TypeDisconnect is packet to disconnect from active list.
 	TypeDisconnect
+
+	// new packet types for new network
+
+	// Ping is packet type to ping remote node.
+	Ping
+	// RPC is packet type to execute RPC on a remote node.
+	RPC
+	// Cascade is packet type to send cascade message and execute RPC on each node of the cascade.
+	Cascade
+	// Pulse is packet type to receive Pulse from pulsard and resend it on remote nodes.
+	Pulse
+	// GetRandomHosts is packet type for pulsar daemon to get random hosts from insolar daemon.
+	GetRandomHosts
+	// Bootstrap is packet type for the node bootstrap process.
+	Bootstrap
+	// GetNonce is packet type to get nonce from discovery node during authorization process.
+	GetNonce
+	// Authorize is packet type to authorize bootstrapping node on discovery node.
+	Authorize
+	// Disconnect is packet type to gracefully disconnect from network.
+	Disconnect
 )

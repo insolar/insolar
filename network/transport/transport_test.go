@@ -128,15 +128,15 @@ func (t *transportSuite) _TestSendBigPacket() {
 	t.Assert().Equal(data, receivedData)
 }
 
-func (t *transportSuite) TestSendInvalidPacket() {
-	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.TypeRPC)
-	msg := builder.Build()
-	t.Assert().False(msg.IsValid())
-
-	future, err := t.node1.transport.SendRequest(msg)
-	t.Assert().Error(err)
-	t.Assert().Nil(future)
-}
+// func (t *transportSuite) TestSendInvalidPacket() {
+// 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.TypeRPC)
+// 	msg := builder.Build()
+// 	t.Assert().False(msg.IsValid())
+//
+// 	future, err := t.node1.transport.SendRequest(msg)
+// 	t.Assert().Error(err)
+// 	t.Assert().Nil(future)
+// }
 
 func TestUTPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17010", BehindNAT: false}
