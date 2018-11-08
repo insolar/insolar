@@ -249,9 +249,10 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 
 	signed, err := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, nil)
 
-	firstNode.SendCascadeMessage(c, "test", signed)
+	err = firstNode.SendCascadeMessage(c, "test", signed)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
+	assert.NoError(t, err)
 	assert.True(t, success)
 
 	err = firstNode.SendCascadeMessage(c, "test", nil)
