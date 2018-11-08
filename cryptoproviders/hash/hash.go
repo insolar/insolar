@@ -38,10 +38,11 @@ func SHA3hash224(hw ...Writer) []byte {
 	}
 	return h.Sum(nil)
 }
+var hashAdapter = NewSHA3Adapter()
 
 // NewIDHash returns hash used for records ID generation.
 func NewIDHash() hash.Hash {
-	return sha3.New224()
+	return hashAdapter.Hash224bits()
 }
 
 // IDHashBytes generates hash for record ID from byte slice.
