@@ -231,7 +231,7 @@ type Phase2Packet struct {
 	deviantBitSet           DeviantBitSet
 	signatureHeaderSection1 [64]byte
 
-	// -------------------- Section 1 (optional)
+	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
 	signatureHeaderSection2 [64]byte
 }
