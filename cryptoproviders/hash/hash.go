@@ -52,6 +52,5 @@ func IDHashBytes(b []byte) []byte {
 
 // SHA3Bytes256 generates SHA3-256 hash for byte slice.
 func SHA3Bytes256(b []byte) []byte {
-	h := sha3.Sum256(b)
-	return h[:]
+	return hashAdapter.Hash256bits().Hash(b)
 }
