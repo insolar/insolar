@@ -43,7 +43,6 @@ func NewNodeNetwork(configuration configuration.Configuration) (core.NodeNetwork
 	nodeKeeper := NewNodeKeeper(origin)
 
 	if len(configuration.Host.BootstrapHosts) == 0 {
-		origin.SetState(core.NodeActive)
 		log.Info("Bootstrap nodes are not set. Init zeronet.")
 		nodeKeeper.AddActiveNodes([]core.Node{origin})
 	}
@@ -65,7 +64,6 @@ func createOrigin(configuration configuration.Configuration) (mutableNode, error
 		[]core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
 		nil,
 		0,
-		core.NodeJoined,
 		publicAddress,
 		version.Version,
 	), nil
@@ -253,16 +251,11 @@ func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, ad
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
-	if nk.origin.State() != core.NodeActive {
-		return nil, errors.New("cannot add node to unsync list: current node is not active")
-	}
-
 	node := newMutableNode(
 		nodeID,
 		roles,
 		nil, // TODO publicKey
 		nk.pulse,
-		core.NodeJoined,
 		address,
 		version,
 	)

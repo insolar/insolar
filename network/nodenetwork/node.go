@@ -27,8 +27,8 @@ import (
 type mutableNode interface {
 	core.Node
 
-	SetState(core.NodeState)
 	SetPulse(core.PulseNumber)
+	SetShortID(shortID uint32)
 }
 
 type node struct {
@@ -38,7 +38,6 @@ type node struct {
 	NodePublicKey *ecdsa.PublicKey
 
 	NodePulseNum core.PulseNumber
-	NodeState    core.NodeState
 
 	NodePhysicalAddress string
 	NodeVersion         string
@@ -49,7 +48,6 @@ func newMutableNode(
 	roles []core.NodeRole,
 	publicKey *ecdsa.PublicKey,
 	pulseNum core.PulseNumber,
-	state core.NodeState,
 	physicalAddress,
 	version string) mutableNode {
 	return &node{
@@ -58,7 +56,6 @@ func newMutableNode(
 		NodeRoles:           roles,
 		NodePublicKey:       publicKey,
 		NodePulseNum:        pulseNum,
-		NodeState:           state,
 		NodePhysicalAddress: physicalAddress,
 		NodeVersion:         version,
 	}
@@ -69,10 +66,9 @@ func NewNode(
 	roles []core.NodeRole,
 	publicKey *ecdsa.PublicKey,
 	pulseNum core.PulseNumber,
-	state core.NodeState,
 	physicalAddress,
 	version string) core.Node {
-	return newMutableNode(id, roles, publicKey, pulseNum, state, physicalAddress, version)
+	return newMutableNode(id, roles, publicKey, pulseNum, physicalAddress, version)
 }
 
 func (n *node) ID() core.RecordRef {
@@ -85,10 +81,6 @@ func (n *node) ShortID() uint32 {
 
 func (n *node) Pulse() core.PulseNumber {
 	return n.NodePulseNum
-}
-
-func (n *node) State() core.NodeState {
-	return n.NodeState
 }
 
 func (n *node) Roles() []core.NodeRole {
@@ -110,10 +102,6 @@ func (n *node) PhysicalAddress() string {
 
 func (n *node) Version() string {
 	return n.NodeVersion
-}
-
-func (n *node) SetState(state core.NodeState) {
-	n.NodeState = state
 }
 
 func (n *node) SetPulse(pulseNum core.PulseNumber) {

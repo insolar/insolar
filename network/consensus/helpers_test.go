@@ -33,7 +33,6 @@ func newActiveNode(ref byte, pulse int) core.Node {
 		[]core.NodeRole{core.RoleUnknown},
 		nil, // TODO publicKey
 		core.PulseNumber(pulse),
-		core.NodeActive,
 		"",
 		"",
 	)

@@ -36,7 +36,6 @@ func testNode(ref core.RecordRef) *node {
 	return &node{
 		NodeID:    ref,
 		NodeRoles: []core.NodeRole{core.RoleUnknown},
-		NodeState: core.NodeActive,
 	}
 }
 
@@ -60,14 +59,7 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 	n := testNode(id)
 	keeper := NewNodeKeeper(n)
 
-	// AddUnsync should return error if we are not an active node
-	n.SetState(core.NodeJoined)
 	_, err := keeper.AddUnsync(newActiveNode(0))
-
-	assert.Error(t, err)
-	// Add active node with NodeKeeper id, so we are now active and can add unsyncs
-	keeper.AddActiveNodes([]core.Node{testNode(id)})
-	_, err = keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	success, list := keeper.SetPulse(core.PulseNumber(0))
 	assert.True(t, success)

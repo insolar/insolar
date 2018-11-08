@@ -20,30 +20,11 @@ import (
 	"crypto/ecdsa"
 )
 
-// NodeState is the state of the node
-type NodeState uint8
-
-// TODO: document all node states
-const (
-	// Joined
-	NodeJoined = NodeState(iota + 1)
-	// Prepared
-	NodePrepared
-	// Active
-	NodeActive
-	// Leaved
-	NodeLeaved
-	// Suspended
-	NodeSuspended
-)
-
 type Node interface {
 	// ID is the unique identifier of the node
 	ID() RecordRef
 	// ShortID is the unique shortened ID of node that is used inside globule
 	ShortID() uint32
-	// State is the node state
-	State() NodeState
 	// Pulse is the pulse number after which the new state is assigned to the node
 	Pulse() PulseNumber
 	// Roles is the set of candidate Roles for the node
