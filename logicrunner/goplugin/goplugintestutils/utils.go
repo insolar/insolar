@@ -26,14 +26,12 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
-	"github.com/ugorji/go/codec"
 )
 
 // PrependGoPath prepends `path` to GOPATH environment variable
@@ -351,18 +349,15 @@ func (t *TestArtifactManager) RegisterValidation(
 
 // CBORMarshal - testing serialize helper
 func CBORMarshal(t testing.TB, o interface{}) []byte {
-	ch := new(codec.CborHandle)
-	var data []byte
-	err := codec.NewEncoderBytes(&data, ch).Encode(o)
+	data, err := core.CborMarshal(o)
 	assert.NoError(t, err, "Marshal")
 	return data
 }
 
 // CBORUnMarshal - testing deserialize helper
 func CBORUnMarshal(t testing.TB, data []byte) interface{} {
-	ch := new(codec.CborHandle)
 	var ret interface{}
-	err := codec.NewDecoderBytes(data, ch).Decode(&ret)
+	err := core.CborUnMarshal(data, &ret)
 	assert.NoError(t, err, "serialise")
 	return ret
 }
