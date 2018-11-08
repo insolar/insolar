@@ -15,4 +15,20 @@
  */
 
 package hash
+
+import (
+	"github.com/insolar/insolar/cryptoproviders"
+	"golang.org/x/crypto/sha3"
+)
+
 type sha3Adapter struct{}
+
+func (*sha3Adapter) Hash224bits() cryptoproviders.Hasher {
+	return &hashWrapper{
+		hash: sha3.New224(),
+		sumFunc: func(b []byte) []byte {
+			s := sha3.Sum224(b)
+			return s[:]
+		},
+	}
+}
