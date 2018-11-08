@@ -32,16 +32,16 @@ type mutableNode interface {
 }
 
 type node struct {
-	NID        core.RecordRef
-	NShortID   uint32
-	NRoles     []core.NodeRole
-	NPublicKey *ecdsa.PublicKey
+	NodeID        core.RecordRef
+	NodeShortID   uint32
+	NodeRoles     []core.NodeRole
+	NodePublicKey *ecdsa.PublicKey
 
-	NPulseNum core.PulseNumber
-	NState    core.NodeState
+	NodePulseNum core.PulseNumber
+	NodeState    core.NodeState
 
-	NPhysicalAddress string
-	NVersion         string
+	NodePhysicalAddress string
+	NodeVersion         string
 }
 
 func newMutableNode(
@@ -53,14 +53,14 @@ func newMutableNode(
 	physicalAddress,
 	version string) mutableNode {
 	return &node{
-		NID:              id,
-		NShortID:         generateShortID(id),
-		NRoles:           roles,
-		NPublicKey:       publicKey,
-		NPulseNum:        pulseNum,
-		NState:           state,
-		NPhysicalAddress: physicalAddress,
-		NVersion:         version,
+		NodeID:              id,
+		NodeShortID:         generateShortID(id),
+		NodeRoles:           roles,
+		NodePublicKey:       publicKey,
+		NodePulseNum:        pulseNum,
+		NodeState:           state,
+		NodePhysicalAddress: physicalAddress,
+		NodeVersion:         version,
 	}
 }
 
@@ -76,52 +76,52 @@ func NewNode(
 }
 
 func (n *node) ID() core.RecordRef {
-	return n.NID
+	return n.NodeID
 }
 
 func (n *node) ShortID() uint32 {
-	return n.NShortID
+	return n.NodeShortID
 }
 
 func (n *node) Pulse() core.PulseNumber {
-	return n.NPulseNum
+	return n.NodePulseNum
 }
 
 func (n *node) State() core.NodeState {
-	return n.NState
+	return n.NodeState
 }
 
 func (n *node) Roles() []core.NodeRole {
-	return n.NRoles
+	return n.NodeRoles
 }
 
 func (n *node) Role() core.NodeRole {
-	return n.NRoles[0]
+	return n.NodeRoles[0]
 }
 
 func (n *node) PublicKey() *ecdsa.PublicKey {
 	// TODO: make a copy of pk
-	return n.NPublicKey
+	return n.NodePublicKey
 }
 
 func (n *node) PhysicalAddress() string {
-	return n.NPhysicalAddress
+	return n.NodePhysicalAddress
 }
 
 func (n *node) Version() string {
-	return n.NVersion
+	return n.NodeVersion
 }
 
 func (n *node) SetState(state core.NodeState) {
-	n.NState = state
+	n.NodeState = state
 }
 
 func (n *node) SetPulse(pulseNum core.PulseNumber) {
-	n.NPulseNum = pulseNum
+	n.NodePulseNum = pulseNum
 }
 
 func (n *node) SetShortID(id uint32) {
-	n.NShortID = id
+	n.NodeShortID = id
 }
 
 type mutableNodes []mutableNode
