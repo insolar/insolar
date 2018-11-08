@@ -78,10 +78,7 @@ Example
     
     # Build insolar
     make insolar
-   
-    # Start insolard
-    ./scripts/insolard/launch.sh
-   
+  
     # Send request example
     ./bin/insolar -c=send_request --config=./scripts/insolard/configs/root_member_keys.json --root_as_caller --params=params.json
 
