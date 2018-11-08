@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package bootstrap
+package genesis
 
 import (
 	"context"
@@ -43,8 +43,8 @@ const (
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
 
-// Bootstrapper is a component for precreation core contracts types and RootDomain instance
-type Bootstrapper struct {
+// Genesis is a component for precreation core contracts types and RootDomain instance
+type Genesis struct {
 	rootDomainRef *core.RecordRef
 	nodeDomainRef *core.RecordRef
 	rootMemberRef *core.RecordRef
@@ -55,30 +55,30 @@ type Bootstrapper struct {
 }
 
 // Info returns json with references for info api endpoint
-func (b *Bootstrapper) Info() ([]byte, error) {
+func (g *Genesis) Info() ([]byte, error) {
 	prototypes := map[string]string{}
-	for prototype, ref := range b.prototypeRefs {
+	for prototype, ref := range g.prototypeRefs {
 		prototypes[prototype] = ref.String()
 	}
 	return json.MarshalIndent(map[string]interface{}{
-		"root_domain": b.rootDomainRef.String(),
-		"root_member": b.rootMemberRef.String(),
+		"root_domain": g.rootDomainRef.String(),
+		"root_member": g.rootMemberRef.String(),
 		"prototypes":  prototypes,
 	}, "", "   ")
 }
 
 // GetRootDomainRef returns reference to RootDomain instance
-func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
-	return b.rootDomainRef
+func (g *Genesis) GetRootDomainRef() *core.RecordRef {
+	return g.rootDomainRef
 }
 
-// NewBootstrapper creates new Bootstrapper
-func NewBootstrapper(cfg configuration.Bootstrap) (*Bootstrapper, error) {
-	bootstrapper := &Bootstrapper{}
-	bootstrapper.rootKeysFile = cfg.RootKeys
-	bootstrapper.rootBalance = cfg.RootBalance
-	bootstrapper.rootDomainRef = &core.RecordRef{}
-	return bootstrapper, nil
+// NewGenesis creates new Genesis
+func NewGenesis(cfg configuration.Genesis) (*Genesis, error) {
+	genesis := &Genesis{}
+	genesis.rootKeysFile = cfg.RootKeys
+	genesis.rootBalance = cfg.RootBalance
+	genesis.rootDomainRef = &core.RecordRef{}
+	return genesis, nil
 }
 
 func buildSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
@@ -99,7 +99,7 @@ func buildSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBui
 	return nil
 }
 
-func (b *Bootstrapper) activateRootDomain(
+func (g *Genesis) activateRootDomain(
 	ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
 ) (*core.RecordID, core.ObjectDescriptor, error) {
 	rd, err := rootdomain.NewRootDomain()
@@ -112,7 +112,7 @@ func (b *Bootstrapper) activateRootDomain(
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootDomain"})
+	contractID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "RootDomain"})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
@@ -129,12 +129,12 @@ func (b *Bootstrapper) activateRootDomain(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
-	b.rootDomainRef = contract
+	g.rootDomainRef = contract
 
 	return contractID, desc, nil
 }
 
-func (b *Bootstrapper) activateNodeDomain(
+func (g *Genesis) activateNodeDomain(
 	ctx context.Context, domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
 ) error {
 	nd, err := nodedomain.NewNodeDomain()
@@ -147,7 +147,7 @@ func (b *Bootstrapper) activateNodeDomain(
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "NodeDomain"})
+	contractID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "NodeDomain"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
@@ -156,7 +156,7 @@ func (b *Bootstrapper) activateNodeDomain(
 		ctx,
 		core.RecordRef{},
 		*contract,
-		*b.rootDomainRef,
+		*g.rootDomainRef,
 		*cb.Prototypes[nodeDomain],
 		false,
 		instanceData,
@@ -165,15 +165,15 @@ func (b *Bootstrapper) activateNodeDomain(
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 
-	b.nodeDomainRef = contract
+	g.nodeDomainRef = contract
 
 	return nil
 }
 
-func (b *Bootstrapper) activateRootMember(
+func (g *Genesis) activateRootMember(
 	ctx context.Context, domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
 ) error {
-	m, err := member.New("RootMember", b.rootPubKey)
+	m, err := member.New("RootMember", g.rootPubKey)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
@@ -183,7 +183,7 @@ func (b *Bootstrapper) activateRootMember(
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
+	contractID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "RootMember"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
@@ -192,7 +192,7 @@ func (b *Bootstrapper) activateRootMember(
 		ctx,
 		core.RecordRef{},
 		*contract,
-		*b.rootDomainRef,
+		*g.rootDomainRef,
 		*cb.Prototypes[memberContract],
 		false,
 		instanceData,
@@ -201,15 +201,15 @@ func (b *Bootstrapper) activateRootMember(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
-	b.rootMemberRef = contract
+	g.rootMemberRef = contract
 	return nil
 }
 
 // TODO: this is not required since we refer by request id.
-func (b *Bootstrapper) updateRootDomain(
+func (g *Genesis) updateRootDomain(
 	ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, domainDesc core.ObjectDescriptor,
 ) error {
-	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef, NodeDomainRef: *b.nodeDomainRef})
+	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *g.rootMemberRef, NodeDomainRef: *g.nodeDomainRef})
 	if err != nil {
 		return errors.Wrap(err, "[ updateRootDomain ]")
 	}
@@ -227,10 +227,10 @@ func (b *Bootstrapper) updateRootDomain(
 	return nil
 }
 
-func (b *Bootstrapper) activateRootMemberWallet(
+func (g *Genesis) activateRootMemberWallet(
 	ctx context.Context, domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
 ) error {
-	w, err := wallet.New(b.rootBalance)
+	w, err := wallet.New(g.rootBalance)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
@@ -240,7 +240,7 @@ func (b *Bootstrapper) activateRootMemberWallet(
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootWallet"})
+	contractID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "RootWallet"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
@@ -249,7 +249,7 @@ func (b *Bootstrapper) activateRootMemberWallet(
 		ctx,
 		core.RecordRef{},
 		*contract,
-		*b.rootMemberRef,
+		*g.rootMemberRef,
 		*cb.Prototypes[walletContract],
 		true,
 		instanceData,
@@ -261,26 +261,26 @@ func (b *Bootstrapper) activateRootMemberWallet(
 	return nil
 }
 
-func (b *Bootstrapper) activateSmartContracts(ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
-	domain, domainDesc, err := b.activateRootDomain(ctx, am, cb)
+func (g *Genesis) activateSmartContracts(ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+	domain, domainDesc, err := g.activateRootDomain(ctx, am, cb)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.activateNodeDomain(ctx, domain, am, cb)
+	err = g.activateNodeDomain(ctx, domain, am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.activateRootMember(ctx, domain, am, cb)
+	err = g.activateRootMember(ctx, domain, am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
 	// TODO: this is not required since we refer by request id.
-	err = b.updateRootDomain(ctx, am, cb, domainDesc)
+	err = g.updateRootDomain(ctx, am, cb, domainDesc)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.activateRootMemberWallet(ctx, domain, am, cb)
+	err = g.activateRootMemberWallet(ctx, domain, am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
@@ -289,7 +289,7 @@ func (b *Bootstrapper) activateSmartContracts(ctx context.Context, am core.Artif
 }
 
 // Start creates types and RootDomain instance
-func (b *Bootstrapper) Start(ctx context.Context, c core.Components) error {
+func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Bootstrapper ] Starting Bootstrap ...")
 
@@ -298,12 +298,12 @@ func (b *Bootstrapper) Start(ctx context.Context, c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't get ref of rootDomain")
 	}
 	if rootDomainRef != nil {
-		b.rootDomainRef = rootDomainRef
+		g.rootDomainRef = rootDomainRef
 		inslog.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
 		return nil
 	}
 
-	b.rootPubKey, err = getRootMemberPubKey(ctx, b.rootKeysFile)
+	g.rootPubKey, err = getRootMemberPubKey(ctx, g.rootKeysFile)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root member keys")
 	}
@@ -324,7 +324,7 @@ func (b *Bootstrapper) Start(ctx context.Context, c core.Components) error {
 
 	am := c.Ledger.GetArtifactManager()
 	cb := goplugintestutils.NewContractBuilder(am, insgocc)
-	b.prototypeRefs = cb.Prototypes
+	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 
 	err = buildSmartContracts(ctx, cb)
@@ -332,7 +332,7 @@ func (b *Bootstrapper) Start(ctx context.Context, c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build contracts")
 	}
 
-	err = b.activateSmartContracts(ctx, am, cb)
+	err = g.activateSmartContracts(ctx, am, cb)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ]")
 	}
@@ -341,6 +341,6 @@ func (b *Bootstrapper) Start(ctx context.Context, c core.Components) error {
 }
 
 // Stop implements core.Component method
-func (b *Bootstrapper) Stop(ctx context.Context) error {
+func (g *Genesis) Stop(ctx context.Context) error {
 	return nil
 }

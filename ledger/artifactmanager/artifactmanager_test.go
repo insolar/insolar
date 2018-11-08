@@ -82,7 +82,7 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
-	msg := message.BootstrapRequest{Name: "my little message"}
+	msg := message.GenesisRequest{Name: "my little message"}
 	id, err := am.RegisterRequest(ctx, &msg)
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, id)
@@ -525,7 +525,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	ctx, _, am, cleaner := getTestData(t)
 	defer cleaner()
 
-	objID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "object"})
+	objID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "object"})
 	objRef := genRefWithID(objID)
 	assert.NoError(t, err)
 

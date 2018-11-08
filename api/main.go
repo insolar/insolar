@@ -200,7 +200,7 @@ func (ar *Runner) reloadMessageBus(ctx context.Context, c core.Components) {
 func (ar *Runner) Start(ctx context.Context, c core.Components) error {
 	ar.reloadMessageBus(ctx, c)
 
-	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
+	rootDomainReference := c.Genesis.GetRootDomainRef()
 	ar.netCoordinator = c.NetworkCoordinator
 
 	ar.seedmanager = seedmanager.New()

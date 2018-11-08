@@ -1050,7 +1050,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c1"})
+	rootDomainID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c1"})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1071,7 +1071,7 @@ func TestRootDomainContract(t *testing.T) {
 	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c2"})
+	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
@@ -1458,7 +1458,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c1"})
+	rootDomainID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c1"})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1479,7 +1479,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c2"})
+	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 

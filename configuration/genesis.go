@@ -16,11 +16,11 @@
 
 package configuration
 
-type Bootstrap struct {
+type Genesis struct {
 	RootKeys    string
 	RootBalance uint
 }
 
-func NewBootstrap() Bootstrap {
-	return Bootstrap{}
+func NewGenesis() Genesis {
+	return Genesis{}
 }

@@ -44,7 +44,7 @@ func New() (*NetworkCoordinator, error) {
 func (nc *NetworkCoordinator) Start(ctx context.Context, c core.Components) error {
 	nc.logicRunner = c.LogicRunner
 	nc.messageBus = c.MessageBus
-	nc.rootDomainRef = c.Bootstrapper.GetRootDomainRef()
+	nc.rootDomainRef = c.Genesis.GetRootDomainRef()
 
 	return nil
 }
