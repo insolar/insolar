@@ -23,6 +23,10 @@ import (
 
 type sha3Adapter struct{}
 
+func NewSHA3Adapter() cryptoproviders.HashAlgorithmAdapter {
+	return &sha3Adapter{}
+}
+
 func (*sha3Adapter) Hash224bits() cryptoproviders.Hasher {
 	return &hashWrapper{
 		hash: sha3.New224(),
