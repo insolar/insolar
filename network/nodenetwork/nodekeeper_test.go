@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,16 +32,12 @@ func newActiveNode(ref byte) (core.RecordRef, []core.NodeRole, string, string) {
 	return core.RecordRef{ref}, []core.NodeRole{core.RoleUnknown}, "127.0.0.1:12345", "1.1"
 }
 
-func testNode(ref core.RecordRef) core.Node {
-	return NewNode(
-		ref,
-		[]core.NodeRole{core.RoleUnknown},
-		nil,
-		core.PulseNumber(0),
-		core.NodeActive,
-		"",
-		"",
-	)
+func testNode(ref core.RecordRef) *node {
+	return &node{
+		NodeID:    ref,
+		NodeRoles: []core.NodeRole{core.RoleUnknown},
+		NodeState: core.NodeActive,
+	}
 }
 
 func newNodeKeeper() network.NodeKeeper {
@@ -60,7 +57,7 @@ func TestNodekeeper_GetOrigin(t *testing.T) {
 
 func TestNodekeeper_AddUnsync(t *testing.T) {
 	id := core.RecordRef{}
-	n := testNode(id).(mutableNode)
+	n := testNode(id)
 	keeper := NewNodeKeeper(n)
 
 	// AddUnsync should return error if we are not an active node
@@ -383,4 +380,27 @@ func TestUnsyncList_AddUnsyncHash(t *testing.T) {
 	unsyncList.AddUnsyncHash(core.RecordRef{1}, []*network.NodeUnsyncHash{})
 	_, exists := unsyncList.GetUnsyncHash(core.RecordRef{1})
 	assert.True(t, exists)
+}
+
+func TestNodekeeper_GetActiveNodesByRole(t *testing.T) {
+	keeper := newNodeKeeper()
+	node1 := testNode(testutils.RandomRef())
+	node1.NodeRoles = []core.NodeRole{core.RoleVirtual}
+	node2 := testNode(testutils.RandomRef())
+	node2.NodeRoles = []core.NodeRole{core.RoleLightMaterial}
+	keeper.AddActiveNodes([]core.Node{node1, node2})
+
+	assert.Equal(t, node1.NodeID, keeper.GetActiveNodesByRole(core.RoleVirtualExecutor)[0])
+	assert.Equal(t, node1.NodeID, keeper.GetActiveNodesByRole(core.RoleVirtualValidator)[0])
+	assert.Equal(t, node2.NodeID, keeper.GetActiveNodesByRole(core.RoleLightValidator)[0])
+	assert.Equal(t, node2.NodeID, keeper.GetActiveNodesByRole(core.RoleLightExecutor)[0])
+	assert.Empty(t, keeper.GetActiveNodesByRole(core.RoleHeavyExecutor))
+}
+
+func TestNodekeeper_GetActiveNodeByShortID(t *testing.T) {
+	keeper := newNodeKeeper()
+	node1 := testNode(testutils.RandomRef())
+	keeper.AddActiveNodes([]core.Node{node1})
+	assert.NotNil(t, keeper.GetActiveNodeByShortID(node1.ShortID()))
+	assert.Nil(t, keeper.GetActiveNodeByShortID(node1.ShortID()+1))
 }
