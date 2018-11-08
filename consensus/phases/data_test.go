@@ -21,6 +21,8 @@ import (
 	"reflect"
 	"testing"
 
+	"crypto/rand"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -116,18 +118,43 @@ func TestPulseDataReadWrite_BadData(t *testing.T) {
 		"[ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
 }
 
-func TestNodePulseProofReadWrite(t *testing.T) {
+func genRandomSlice(n int) []byte {
+	var buf = make([]byte, n)
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(buf)
+	}
+
+	return buf[:]
+}
+
+func randomArray64() [64]byte {
+	var buf [64]byte
+	copy(buf[:], genRandomSlice(64))
+	return buf
+}
+
+func randomArray32() [32]byte {
+	const n = 32
+	var buf [n]byte
+	copy(buf[:], genRandomSlice(n))
+	return buf
+}
+
+func makeNodePulseProof() *NodePulseProof {
 	nodePulseProof := &NodePulseProof{}
-	nodePulseProof.NodeSignature = uint64(63)
-	nodePulseProof.NodeStateHash = uint64(64)
-	checkSerializationDeserialization(t, nodePulseProof)
+	nodePulseProof.NodeSignature = randomArray64()
+	nodePulseProof.NodeStateHash = randomArray64()
+
+	return nodePulseProof
+}
+
+func TestNodePulseProofReadWrite(t *testing.T) {
+	checkSerializationDeserialization(t, makeNodePulseProof())
 }
 
 func TestNodePulseProofReadWrite_BadData(t *testing.T) {
-	nodePulseProof := &NodePulseProof{}
-	nodePulseProof.NodeSignature = uint64(63)
-	nodePulseProof.NodeStateHash = uint64(64)
-	checkBadDataSerializationDeserialization(t, nodePulseProof,
+	checkBadDataSerializationDeserialization(t, makeNodePulseProof(),
 		"[ NodePulseProof.Deserialize ] Can't read NodeSignature: unexpected EOF")
 }
 
