@@ -161,7 +161,7 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(msg.RecordRef)
+	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
 	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.SignedMes
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(msg.RecordRef)
+	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
 	c.AddExecutor(ctx, inmsg, msg)
 	return nil, nil
 }

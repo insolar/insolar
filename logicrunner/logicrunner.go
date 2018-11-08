@@ -202,7 +202,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	// TODO return 302
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
-	if inmsg.Pulse() != lr.pulse().PulseNumber {
+	if inmsg.Pulse() != lr.pulse(ctx).PulseNumber {
 		return nil, errors.New("Abort execution: New Pulse coming")
 	}
 
@@ -230,7 +230,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 		ctx,
 		vb.GetRole(),
 		*msg.Target(),
-		lr.pulse().PulseNumber,
+		lr.pulse(ctx).PulseNumber,
 		lr.Network.GetNodeID(),
 	)
 
@@ -262,7 +262,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 		Callee:          &ref,
 		Request:         es.request,
 		Time:            time.Now(), // TODO: probably we should take it from e
-		Pulse:           *lr.pulse(),
+		Pulse:           *lr.pulse(ctx),
 		TraceID:         inslogger.TraceID(ctx),
 		CallerPrototype: msg.GetCallerPrototype(),
 	}
