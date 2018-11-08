@@ -20,14 +20,10 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
 
 // Fakepulsar needed when the network starts and can't receive a real pulse.
-
-const delta uint32 = 0
-const prevPulseNumber = 0
 
 // onPulse is a callbaback for pulse recv.
 type callbackOnPulse func(pulse core.Pulse)
@@ -44,35 +40,42 @@ func NewFakePulsar(callback callbackOnPulse, timeout int32) *FakePulsar {
 	return &FakePulsar{
 		onPulse: callback,
 		timeout: timeout,
+		stop:    make(chan bool),
 	}
 }
 
 // GetFakePulse creates and returns a fake pulse.
 func (fp *FakePulsar) GetFakePulse() *core.Pulse {
-	pulse := pulsar.NewPulse(delta, prevPulseNumber, &entropygenerator.StandardEntropyGenerator{})
-	pulse.PulseNumber = 0
-	pulse.NextPulseNumber = 0
-	return pulse
+	return fp.newPulse()
 }
 
 // Start starts sending a fake pulse.
 func (fp *FakePulsar) Start() {
-	go func(stop chan bool) {
+	go func(fp *FakePulsar) {
 		for {
 			select {
 			case <-time.After(time.Millisecond * time.Duration(fp.timeout)):
 				{
 					fp.onPulse(*fp.GetFakePulse())
 				}
-			case <-stop:
+			case <-fp.stop:
 				return
 			}
 		}
 
-	}(fp.stop)
+	}(fp)
 }
 
 // Stop sending a fake pulse.
 func (fp *FakePulsar) Stop() {
 	fp.stop <- true
+}
+
+func (fp *FakePulsar) newPulse() *core.Pulse {
+	generator := entropygenerator.StandardEntropyGenerator{}
+	return &core.Pulse{
+		PulseNumber:     0,
+		NextPulseNumber: 0,
+		Entropy:         generator.GenerateEntropy(),
+	}
 }
