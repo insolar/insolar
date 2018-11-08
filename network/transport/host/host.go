@@ -42,7 +42,13 @@ func NewHost(address *Address) *Host {
 
 // String representation of Host.
 func (host Host) String() string {
-	return fmt.Sprintf("%s (%s)", host.ID.String(), host.Address.String())
+	var id string
+	if host.NodeID.Equal(core.RecordRef{}) {
+		id = host.ID.String()
+	} else {
+		id = host.NodeID.String()
+	}
+	return fmt.Sprintf("%s (%s)", id, host.Address.String())
 }
 
 // Equal checks if host equals to other host (e.g. hosts' IDs and network addresses match).

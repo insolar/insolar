@@ -19,6 +19,7 @@ package functest
 import (
 	"testing"
 
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,14 +40,50 @@ func TestTransferMoney(t *testing.T) {
 	assert.Equal(t, oldSecondBalance+amount, newSecondBalance)
 }
 
+func TestTransferMoneyFromNotExist(t *testing.T) {
+	firstMember := createMember(t, "Member1")
+	firstMember.ref = testutils.RandomRef().String()
+
+	secondMember := createMember(t, "Member2")
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+
+	amount := 111
+
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.EqualError(t, err, "Can't get public key: couldn't get object message: couldn't get object: failed to fetch object index: storage object not found")
+
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, oldSecondBalance, newSecondBalance)
+}
+
+func TestTransferMoneyToNotExist(t *testing.T) {
+	firstMember := createMember(t, "Member1")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+
+	amount := 111
+
+	_, err := signedRequest(firstMember, "Transfer", amount, testutils.RandomRef())
+	assert.EqualError(t, err, "[ Transfer ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
+
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	assert.Equal(t, oldFirstBalance, newFirstBalance)
+}
+
 func TestTransferNegativeAmount(t *testing.T) {
 	firstMember := createMember(t, "Member1")
 	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
 	amount := -111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
 	assert.EqualError(t, err, "[ transferCall ] Amount must be positive")
+
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, oldFirstBalance, newFirstBalance)
+	assert.Equal(t, oldSecondBalance, newSecondBalance)
 }
 
 func TestTransferAllAmount(t *testing.T) {
@@ -70,20 +107,30 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 	firstMember := createMember(t, "Member1")
 	secondMember := createMember(t, "Member2")
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
 	amount := oldFirstBalance + 100
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.EqualError(t, err, "[ Transfer ] Not enough balance for transfer")
+	assert.EqualError(t, err, "[ Transfer ] Not enough balance for transfer: subtrahend must be smaller than minuend")
+
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, oldFirstBalance, newFirstBalance)
+	assert.Equal(t, oldSecondBalance, newSecondBalance)
 }
 
 func TestTransferToMyself(t *testing.T) {
 	member := createMember(t, "Member1")
+	oldMemberBalance := getBalanceNoErr(t, member, member.ref)
 
 	amount := 100
 
 	_, err := signedRequest(member, "Transfer", amount, member.ref)
 	assert.EqualError(t, err, "[ transferCall ] Recipient must be different from the sender")
+
+	newMemberBalance := getBalanceNoErr(t, member, member.ref)
+	assert.Equal(t, oldMemberBalance, newMemberBalance)
 }
 
 // TODO: test to check overflow of balance

@@ -20,6 +20,7 @@ package configuration
 type Metrics struct {
 	ListenAddress string
 	Namespace     string
+	ZpagesEnabled bool
 }
 
 // NewMetrics creates new default configuration for metrics publishing.
@@ -27,5 +28,6 @@ func NewMetrics() Metrics {
 	return Metrics{
 		ListenAddress: "0.0.0.0:9090",
 		Namespace:     "insolar",
+		ZpagesEnabled: true,
 	}
 }

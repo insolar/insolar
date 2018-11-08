@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opencensus.io/zpages"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -39,37 +40,47 @@ const insolarNamespace = "insolar"
 
 // Metrics is a component which serve metrics data to Prometheus.
 type Metrics struct {
-	registry    *prometheus.Registry
-	httpHandler http.Handler
-	server      *http.Server
-
+	server   *http.Server
 	listener net.Listener
 }
 
 // NewMetrics creates new Metrics component.
 func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error) {
-	m := Metrics{registry: prometheus.NewRegistry()}
+	registry := prometheus.NewRegistry()
 	errlogger := &errorLogger{inslogger.FromContext(ctx)}
-	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: errlogger})
+	promhandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorLog: errlogger})
 
-	m.server = &http.Server{Addr: cfg.ListenAddress}
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhandler)
+	pprof.Handle(mux)
+	if cfg.ZpagesEnabled {
+		// https://opencensus.io/zpages/
+		zpages.Handle(mux, "/debug")
+	}
+
+	m := &Metrics{
+		server: &http.Server{
+			Addr:    cfg.ListenAddress,
+			Handler: mux,
+		},
+	}
 
 	// default system collectors
-	m.registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), cfg.Namespace))
-	m.registry.MustRegister(prometheus.NewGoCollector())
+	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), cfg.Namespace))
+	registry.MustRegister(prometheus.NewGoCollector())
 
 	// insolar collectors
-	m.registry.MustRegister(NetworkMessageSentTotal)
-	m.registry.MustRegister(NetworkFutures)
-	m.registry.MustRegister(NetworkPacketSentTotal)
-	m.registry.MustRegister(NetworkPacketReceivedTotal)
+	registry.MustRegister(NetworkMessageSentTotal)
+	registry.MustRegister(NetworkFutures)
+	registry.MustRegister(NetworkPacketSentTotal)
+	registry.MustRegister(NetworkPacketReceivedTotal)
 
-	_, err := insmetrics.RegisterPrometheus(ctx, cfg.Namespace, m.registry)
+	_, err := insmetrics.RegisterPrometheus(ctx, cfg.Namespace, registry)
 	if err != nil {
 		errlogger.Println(err.Error())
 	}
 
-	return &m, nil
+	return m, nil
 }
 
 // ErrBind special case for Start method.
@@ -79,7 +90,6 @@ var ErrBind = errors.New("failed to bind")
 // Start is implementation of core.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
-	inslog.Infoln("Starting metrics server", m.server.Addr)
 
 	listener, err := net.Listen("tcp", m.server.Addr)
 	if err != nil {
@@ -90,10 +100,8 @@ func (m *Metrics) Start(ctx context.Context) error {
 		}
 		return errors.Wrap(err, "Failed to listen at address")
 	}
-
 	m.listener = listener
-	http.Handle("/metrics", m.httpHandler)
-	pprof.Handle(http.DefaultServeMux)
+	inslog.Infoln("Started metrics server", m.AddrString())
 
 	go func() {
 		inslog.Debugln("metrics server starting on", m.server.Addr)

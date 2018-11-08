@@ -18,6 +18,7 @@ package nodenetwork
 
 import (
 	"crypto/ecdsa"
+	"encoding/gob"
 
 	"github.com/insolar/insolar/core"
 )
@@ -30,15 +31,15 @@ type mutableNode interface {
 }
 
 type node struct {
-	id        core.RecordRef
-	roles     []core.NodeRole
-	publicKey *ecdsa.PublicKey
+	NID        core.RecordRef
+	NRoles     []core.NodeRole
+	NPublicKey *ecdsa.PublicKey
 
-	pulseNum core.PulseNumber
-	state    core.NodeState
+	NPulseNum core.PulseNumber
+	NState    core.NodeState
 
-	physicalAddress string
-	version         string
+	NPhysicalAddress string
+	NVersion         string
 }
 
 func newMutableNode(
@@ -50,13 +51,13 @@ func newMutableNode(
 	physicalAddress,
 	version string) mutableNode {
 	return &node{
-		id:              id,
-		roles:           roles,
-		publicKey:       publicKey,
-		pulseNum:        pulseNum,
-		state:           state,
-		physicalAddress: physicalAddress,
-		version:         version,
+		NID:              id,
+		NRoles:           roles,
+		NPublicKey:       publicKey,
+		NPulseNum:        pulseNum,
+		NState:           state,
+		NPhysicalAddress: physicalAddress,
+		NVersion:         version,
 	}
 }
 
@@ -72,44 +73,44 @@ func NewNode(
 }
 
 func (n *node) ID() core.RecordRef {
-	return n.id
+	return n.NID
 }
 
 func (n *node) Pulse() core.PulseNumber {
-	return n.pulseNum
+	return n.NPulseNum
 }
 
 func (n *node) State() core.NodeState {
-	return n.state
+	return n.NState
 }
 
 func (n *node) Roles() []core.NodeRole {
-	return n.roles
+	return n.NRoles
 }
 
 func (n *node) Role() core.NodeRole {
-	return n.roles[0]
+	return n.NRoles[0]
 }
 
 func (n *node) PublicKey() *ecdsa.PublicKey {
 	// TODO: make a copy of pk
-	return n.publicKey
+	return n.NPublicKey
 }
 
 func (n *node) PhysicalAddress() string {
-	return n.physicalAddress
+	return n.NPhysicalAddress
 }
 
 func (n *node) Version() string {
-	return n.version
+	return n.NVersion
 }
 
 func (n *node) SetState(state core.NodeState) {
-	n.state = state
+	n.NState = state
 }
 
 func (n *node) SetPulse(pulseNum core.PulseNumber) {
-	n.pulseNum = pulseNum
+	n.NPulseNum = pulseNum
 }
 
 type mutableNodes []mutableNode
@@ -120,4 +121,8 @@ func (mn mutableNodes) Export() []core.Node {
 		nodes[i] = mn[i]
 	}
 	return nodes
+}
+
+func init() {
+	gob.Register(&node{})
 }

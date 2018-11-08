@@ -18,6 +18,7 @@ package testmetrics
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -77,18 +78,26 @@ func parseAddr(address string) (string, int32) {
 	return pair[0], int32(currentPort)
 }
 
-// FetchContent fetches content from metrics server, returns stringifyed content.
+// FetchContent fetches content from /metrics.
 func (tm TestMetrics) FetchContent() (string, error) {
-	fetchurl := "http://" + tm.Metrics.AddrString() + "/metrics"
-	// fmt.Println("Fetch:", fetchurl)
+	code, content, err := tm.FetchURL("/metrics")
+	if err != nil && code != http.StatusOK {
+		return "", errors.New("got non 200 code")
+	}
+	return content, err
+}
+
+// FetchURL fetches content from provided relative url.
+func (tm TestMetrics) FetchURL(relurl string) (int, string, error) {
+	fetchurl := "http://" + tm.Metrics.AddrString() + relurl
 	response, err := http.Get(fetchurl)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 	defer response.Body.Close()
 
 	content, err := ioutil.ReadAll(response.Body)
-	return string(content), err
+	return response.StatusCode, string(content), err
 }
 
 // Stop wraps metrics Stop method.

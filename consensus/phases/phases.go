@@ -18,31 +18,48 @@ package phases
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 // FirstPhase is a first phase.
 type FirstPhase struct {
 	NodeNetwork core.NodeNetwork `inject:""`
-	SecondPhase *SecondPhase
+	State       *FirstPhaseState
 }
 
-func (fp *FirstPhase) HandlePulse(localClaims []ReferendumClaim, data *PulseData) error {
-	result, claims, err := fp.getPulseProof(data)
-	if err != nil {
-		return errors.Wrap(err, "Failed to get a pulse proof")
-	}
-	return fp.SecondPhase.Calculate(result, claims)
-}
-
-func (fp *FirstPhase) getPulseProof(pulse *PulseData) ([]NodePulseProof, []ReferendumClaim, error) {
-	return nil, nil, nil
+func (fp *FirstPhase) Execute(pulse *core.Pulse) error {
+	// TODO: do something here
+	return nil
 }
 
 // SecondPhase is a second phase.
 type SecondPhase struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *SecondPhaseState
 }
 
-func (sp *SecondPhase) Calculate(proof []NodePulseProof, claims []ReferendumClaim) error {
+func (sp *SecondPhase) Execute(state *FirstPhaseState) error {
+	// TODO: do something here
+	return nil
+}
+
+// ThirdPhasePulse.
+type ThirdPhasePulse struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *ThirdPhasePulseState
+}
+
+func (tpp *ThirdPhasePulse) Execute(state *SecondPhaseState) error {
+	// TODO: do something here
+	return nil
+}
+
+// ThirdPhaseReferendum.
+type ThirdPhaseReferendum struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *ThirdPhaseReferendumState
+}
+
+func (tpr *ThirdPhaseReferendum) Execute(state *SecondPhaseState) error {
+	// TODO: do something here
 	return nil
 }

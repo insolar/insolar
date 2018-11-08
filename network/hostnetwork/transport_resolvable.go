@@ -51,6 +51,11 @@ func (tr *TransportResolvable) PublicAddress() string {
 	return tr.internalTransport.PublicAddress()
 }
 
+// GetNodeID get current node ID.
+func (tr *TransportResolvable) GetNodeID() core.RecordRef {
+	return tr.internalTransport.GetNodeID()
+}
+
 // SendRequest send request to a remote node.
 func (tr *TransportResolvable) SendRequest(request network.Request, receiver core.RecordRef) (network.Future, error) {
 	addressStr, err := tr.resolver.Resolve(receiver)
