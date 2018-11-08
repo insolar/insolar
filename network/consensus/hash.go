@@ -54,8 +54,6 @@ func calculateNodeHash(node core.Node) []byte {
 	hashWriteChecked(hash, b[:])
 	binary.LittleEndian.PutUint32(b, uint32(node.Pulse()))
 	hashWriteChecked(hash, b[:4])
-	b[0] = byte(node.State())
-	hashWriteChecked(hash, b[:1])
 	// TODO: pass correctly public key to active node
 	// publicKey, err := ecdsa.ExportPublicKey(node.PublicKey)
 	// if err != nil {
