@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
+	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/pkg/errors"
@@ -40,6 +41,7 @@ type ServiceNetwork struct {
 	nodeNetwork  core.NodeNetwork
 	pulseManager core.PulseManager
 	coordinator  core.NetworkCoordinator
+	fakePulsar   *fakepulsar.FakePulsar
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -50,6 +52,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	if err != nil {
 		log.Error("failed to create network components: %s", err.Error())
 	}
+	serviceNetwork.fakePulsar = fakepulsar.NewFakePulsar(serviceNetwork.onPulse, conf.Pulsar.PulseTime)
 	serviceNetwork.routingTable = routingTable
 	serviceNetwork.hostNetwork = hostnetwork
 	serviceNetwork.controller = controller
@@ -133,6 +136,9 @@ func (n *ServiceNetwork) bootstrap() {
 }
 
 func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
+	if (pulse.NextPulseNumber != 0) || (pulse.PulseNumber != 0) {
+		n.fakePulsar.Stop()
+	}
 	ctx := context.TODO()
 	log.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.pulseManager == nil {
