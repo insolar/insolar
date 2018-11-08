@@ -20,7 +20,6 @@ import (
 	"math/rand"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
@@ -62,10 +61,7 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	newctx := insmetrics.ChangeTags(ctx, tag.Insert(osxtag, "11.12.13"))
-
 	stats.Record(newctx, videoCount.M(1), videoSize.M(rand.Int63()))
-	time.Sleep(time.Millisecond * 1100)
-
 	metrics.NetworkMessageSentTotal.Inc()
 	metrics.NetworkPacketSentTotal.WithLabelValues("ping").Add(55)
 

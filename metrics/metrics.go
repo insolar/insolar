@@ -78,7 +78,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error
 	registry.MustRegister(NetworkPacketSentTotal)
 	registry.MustRegister(NetworkPacketReceivedTotal)
 
-	_, err := insmetrics.RegisterPrometheus(ctx, cfg.Namespace, registry)
+	_, err := insmetrics.RegisterPrometheus(ctx, cfg.Namespace, registry, cfg.ReportingPeriod)
 	if err != nil {
 		errlogger.Println(err.Error())
 	}

@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -52,6 +53,8 @@ func Start(ctx context.Context) TestMetrics {
 
 	// just use any available port
 	cfg.ListenAddress = host + ":0"
+	// don't wait too long in tests
+	cfg.ReportingPeriod = time.Millisecond
 
 	m, err := metrics.NewMetrics(ctx, cfg)
 	if err != nil {
@@ -89,6 +92,9 @@ func (tm TestMetrics) FetchContent() (string, error) {
 
 // FetchURL fetches content from provided relative url.
 func (tm TestMetrics) FetchURL(relurl string) (int, string, error) {
+	// to be sure metrics are available
+	time.Sleep(time.Millisecond * 5)
+
 	fetchurl := "http://" + tm.Metrics.AddrString() + relurl
 	response, err := http.Get(fetchurl)
 	if err != nil {
