@@ -24,3 +24,8 @@ type hashWrapper struct {
 	hash    hash.Hash
 	sumFunc func([]byte) []byte
 }
+
+func (h *hashWrapper) Write(p []byte) (n int, err error) {
+	return h.hash.Write(p)
+}
+
