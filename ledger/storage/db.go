@@ -154,7 +154,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		}
 
 		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
-		return genesisRef, db.set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
+		return genesisRef, db.set(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
 	}
 
 	var err error
@@ -356,7 +356,7 @@ func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 	if err != nil {
 		return err
 	}
-	return db.set(k, encoded)
+	return db.set(ctx, k, encoded)
 }
 
 // AddPulse saves new pulse data and updates index.
@@ -378,11 +378,11 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 		if err != nil {
 			return err
 		}
-		err = tx.set(prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), buf.Bytes())
+		err = tx.set(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), buf.Bytes())
 		if err != nil {
 			return err
 		}
-		return tx.set(prefixkey(scopeIDSystem, []byte{sysLatestPulse}), pulse.PulseNumber.Bytes())
+		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}), pulse.PulseNumber.Bytes())
 	})
 }
 
@@ -486,6 +486,7 @@ func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, gene
 	hw.Sum(nil)
 
 	return db.set(
+		ctx,
 		prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
 		messageBytes,
 	)
@@ -499,8 +500,8 @@ func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
 }
 
 // set wraps matching transaction manager method.
-func (db *DB) set(key, value []byte) error {
+func (db *DB) set(ctx context.Context, key, value []byte) error {
 	return db.Update(func(tx *TransactionManager) error {
-		return tx.set(key, value)
+		return tx.set(ctx, key, value)
 	})
 }

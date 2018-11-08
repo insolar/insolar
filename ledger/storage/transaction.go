@@ -131,7 +131,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 		return nil, ErrNotFound
 	}
 
-	m.set(k, blob)
+	m.set(ctx, k, blob)
 	return id, nil
 }
 
@@ -171,7 +171,7 @@ func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.Pul
 		return nil, ErrNotFound
 	}
 
-	m.set(k, record.SerializeRecord(rec))
+	m.set(ctx, k, record.SerializeRecord(rec))
 	return id, nil
 }
 
@@ -206,7 +206,7 @@ func (m *TransactionManager) SetObjectIndex(
 	if err != nil {
 		return err
 	}
-	m.set(k, encoded)
+	m.set(ctx, k, encoded)
 	return nil
 }
 
@@ -220,7 +220,7 @@ func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.Pul
 }
 
 // set stores value by key.
-func (m *TransactionManager) set(key, value []byte) error {
+func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
 	m.txupdates[string(key)] = keyval{k: key, v: value}
 	return nil
 }
