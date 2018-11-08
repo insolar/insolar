@@ -20,7 +20,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func badgerCollector() prometheus.Collector {
+func badgerCollector(namespace string) prometheus.Collector {
 	exports := map[string]*prometheus.Desc{}
 	metricnames := []string{
 		"badger_disk_reads_total",
@@ -38,9 +38,13 @@ func badgerCollector() prometheus.Collector {
 		"badger_pending_writes_total",
 	}
 	for _, name := range metricnames {
+		exportname := name
+		if exportname != "" {
+			exportname = namespace + "_" + exportname
+		}
 		exports[name] = prometheus.NewDesc(
-			name,
-			name,
+			exportname,
+			"badger db metric "+name,
 			nil, nil,
 		)
 	}

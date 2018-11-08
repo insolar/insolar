@@ -106,13 +106,12 @@ func TestMetrics_Badger(t *testing.T) {
 
 	testm := testmetrics.Start(ctx)
 
-	// One more thing... from https://github.com/rakyll/opencensus-grpc-demo
 	code, content, err := testm.FetchURL("/metrics")
 	_ = content
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, code)
 	// fmt.Println("/metrics => ", content)
-	assert.Contains(t, content, "badger_blocked_puts_total")
+	assert.Contains(t, content, "insolar_badger_blocked_puts_total")
 
 	assert.NoError(t, testm.Stop())
 }

@@ -66,7 +66,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error
 	}
 
 	// badger metrics
-	registry.MustRegister(badgerCollector())
+	registry.MustRegister(badgerCollector(cfg.Namespace))
 
 	// default system collectors
 	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), cfg.Namespace))
