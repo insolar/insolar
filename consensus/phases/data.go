@@ -225,6 +225,15 @@ type DeviantBitSet struct {
 type Phase2Packet struct {
 	// -------------------- Header
 	packetHeader PacketHeader
+
+	// -------------------- Section 1
+	globuleHashSignature    [64]byte
+	deviantBitSet           DeviantBitSet
+	signatureHeaderSection1 [64]byte
+
+	// -------------------- Section 1 (optional)
+	votesAndAnswers         []ReferendumVote
+	signatureHeaderSection2 [64]byte
 }
 
 func (p2p *Phase2Packet) isPhase3Needed() bool {
