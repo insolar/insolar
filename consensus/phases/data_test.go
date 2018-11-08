@@ -21,6 +21,8 @@ import (
 	"reflect"
 	"testing"
 
+	"crypto/rand"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -86,7 +88,7 @@ func makeDefaultPulseDataExt() *PulseDataExt {
 	pulseDataExt.Entropy[1] = '3'
 	pulseDataExt.EpochPulseNo = uint32(21)
 	pulseDataExt.PulseTimestamp = uint32(33)
-	pulseDataExt.OriginID = uint16(43)
+	pulseDataExt.OriginID = [16]byte{}
 
 	return pulseDataExt
 }
@@ -116,18 +118,43 @@ func TestPulseDataReadWrite_BadData(t *testing.T) {
 		"[ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
 }
 
-func TestNodePulseProofReadWrite(t *testing.T) {
+func genRandomSlice(n int) []byte {
+	var buf = make([]byte, n)
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(buf)
+	}
+
+	return buf[:]
+}
+
+func randomArray64() [64]byte {
+	var buf [64]byte
+	copy(buf[:], genRandomSlice(64))
+	return buf
+}
+
+func randomArray32() [32]byte {
+	const n = 32
+	var buf [n]byte
+	copy(buf[:], genRandomSlice(n))
+	return buf
+}
+
+func makeNodePulseProof() *NodePulseProof {
 	nodePulseProof := &NodePulseProof{}
-	nodePulseProof.NodeSignature = uint64(63)
-	nodePulseProof.NodeStateHash = uint64(64)
-	checkSerializationDeserialization(t, nodePulseProof)
+	nodePulseProof.NodeSignature = randomArray64()
+	nodePulseProof.NodeStateHash = randomArray64()
+
+	return nodePulseProof
+}
+
+func TestNodePulseProofReadWrite(t *testing.T) {
+	checkSerializationDeserialization(t, makeNodePulseProof())
 }
 
 func TestNodePulseProofReadWrite_BadData(t *testing.T) {
-	nodePulseProof := &NodePulseProof{}
-	nodePulseProof.NodeSignature = uint64(63)
-	nodePulseProof.NodeStateHash = uint64(64)
-	checkBadDataSerializationDeserialization(t, nodePulseProof,
+	checkBadDataSerializationDeserialization(t, makeNodePulseProof(),
 		"[ NodePulseProof.Deserialize ] Can't read NodeSignature: unexpected EOF")
 }
 
@@ -152,8 +179,8 @@ func makeCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
 	capabilityPoolingAndActivation := &CapabilityPoolingAndActivation{}
 	capabilityPoolingAndActivation.PollingFlags = uint16(10)
 	capabilityPoolingAndActivation.length = uint16(7)
-	capabilityPoolingAndActivation.CapabilityType = uint16(11)
-	capabilityPoolingAndActivation.CapabilityRef = uint64(13)
+	capabilityPoolingAndActivation.CapabilityType = uint16(7)
+	capabilityPoolingAndActivation.CapabilityRef = randomArray64()
 
 	return capabilityPoolingAndActivation
 }
@@ -241,7 +268,7 @@ func TestReferendumVote_BadData(t *testing.T) {
 
 func makeNodeListVote() *NodeListVote {
 	nodeListVote := &NodeListVote{}
-	nodeListVote.NodeListHash = uint32(13)
+	nodeListVote.NodeListHash = randomArray32()
 	nodeListVote.NodeListCount = uint16(77)
 
 	return nodeListVote
@@ -263,7 +290,9 @@ func makeDeviantBitSet() *DeviantBitSet {
 	deviantBitSet.LowBitLength = uint8(3)
 	//-----------------
 	deviantBitSet.HighBitLength = uint8(9)
-	deviantBitSet.Payload = []byte("Hello, World!")
+
+	// TODO: uncomment it when we support reading payload
+	//deviantBitSet.Payload = []byte("Hello, World!")
 
 	return deviantBitSet
 }
@@ -272,7 +301,7 @@ func TestDeviantBitSet(t *testing.T) {
 	checkSerializationDeserialization(t, makeDeviantBitSet())
 }
 
-func TestDeviantBitSet_BadData(t *testing.T) {
+func _TestDeviantBitSet_BadData(t *testing.T) {
 	deviantBitSet := makeDeviantBitSet()
 	newDeviantBitSet := &DeviantBitSet{}
 
@@ -353,7 +382,7 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet := &Phase1Packet{}
 	phase1Packet.packetHeader = *makeDefaultPacketHeader()
 	phase1Packet.pulseData = *makeDefaultPulseDataExt()
-	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: 2, NodeStateHash: 3}
+	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray64(), NodeStateHash: randomArray64()}
 
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeJoinClaim())
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeViolationBlame())
@@ -372,4 +401,30 @@ func TestPhase1Packet_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makePhase1Packet(),
 		"[ Phase1Packet.Deserialize ] Can't parseReferendumClaim: [ PacketHeader.parseReferendumClaim ] "+
 			"Can't deserialize claim.: [ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
+
+}
+
+func makePhase2Packet() *Phase2Packet {
+	phase2Packet := &Phase2Packet{}
+	phase2Packet.packetHeader = *makeDefaultPacketHeader()
+	phase2Packet.globuleHashSignature = randomArray64()
+	phase2Packet.deviantBitSet = *makeDeviantBitSet()
+	phase2Packet.signatureHeaderSection1 = randomArray64()
+	phase2Packet.signatureHeaderSection2 = randomArray64()
+
+	// TODO: uncomment when support ser\deser of ReferendumVote
+	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
+	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
+
+	return phase2Packet
+}
+
+func TestPhase2Packet_Deserialize(t *testing.T) {
+	checkSerializationDeserialization(t, makePhase2Packet())
+}
+
+func TestPhase2Packet_BadData(t *testing.T) {
+	checkBadDataSerializationDeserialization(t, makePhase2Packet(),
+		"[ Phase2Packet.Deserialize ] Can't read signatureHeaderSection2: unexpected EOF")
+
 }
