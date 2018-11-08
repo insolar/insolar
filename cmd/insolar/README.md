@@ -11,7 +11,21 @@ Usage
 
     ./scripts/insolard/launch.sh
    
-#### Send request example
+#### Send request example (RegisterNode)
+
+You should have ```params.json``` with something like this:
+
+    {
+      "params": [
+       "<public_key from node config>",
+        <numberOfBootstrapNodes>,
+        <majorityRule>,
+        [<roles>],
+        "<ip>"
+      ],
+      "method": "RegisterNode"
+    }
+Than use send_request command with this file:
 
     ./bin/insolar -c=send_request --config=./scripts/insolard/configs/root_member_keys.json --root_as_caller --params=params.json
 
