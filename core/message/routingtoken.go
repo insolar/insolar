@@ -68,7 +68,7 @@ func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNu
 func ValidateToken(pubKey *ecdsa.PublicKey, msg core.SignedMessage) error {
 	serialized, err := ToBytes(msg.Message())
 	if err != nil {
-		return errors.Wrap(err, "filed GetTo serialize message")
+		return errors.Wrap(err, "filed to serialize message")
 	}
 	msgHash := hash.SHA3Bytes256(serialized)
 	token := RoutingToken{

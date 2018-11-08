@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// MethodReturnMode ENUM GetTo set when method returns its result
+// MethodReturnMode ENUM to set when method returns its result
 type MethodReturnMode int
 
 const (
