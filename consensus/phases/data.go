@@ -82,7 +82,7 @@ func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 }
 
 func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
-	var header *RoutingHeader
+	header := &RoutingHeader{}
 
 	if p1p.packetHeader.PacketT != NetworkConsistency {
 		return nil, errors.New("Phase1Packet.GetPacketHeader: wrong packet type")
@@ -271,4 +271,31 @@ func (p2p *Phase2Packet) isPhase3Needed() bool {
 
 func (p2p *Phase2Packet) hasSection2() bool {
 	return p2p.packetHeader.f01
+}
+
+func (p2p *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
+	if header.PacketType != types.Phase2 {
+		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
+	}
+	p2p.packetHeader.TargetNodeID = header.TargetID
+	p2p.packetHeader.OriginNodeID = header.OriginID
+	p2p.packetHeader.HasRouting = true
+	p2p.packetHeader.PacketT = NetworkConsistency
+	p2p.packetHeader.SubType = 2
+
+	return nil
+}
+
+func (p2p *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
+	header := &RoutingHeader{}
+
+	if p2p.packetHeader.PacketT != NetworkConsistency {
+		return nil, errors.New("Phase2Packet.GetPacketHeader: wrong packet type")
+	}
+
+	header.PacketType = types.Phase2
+	header.OriginID = p2p.packetHeader.OriginNodeID
+	header.TargetID = p2p.packetHeader.TargetNodeID
+
+	return header, nil
 }
