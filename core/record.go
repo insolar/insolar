@@ -18,6 +18,7 @@ package core
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 
 	"github.com/jbenet/go-base58"
 
@@ -35,6 +36,11 @@ const (
 
 // RecordID is a unified record ID.
 type RecordID [RecordIDSize]byte
+
+// String implements stringer on RecordID and returns hex value
+func (id *RecordID) String() string {
+	return hex.EncodeToString(id[:])
+}
 
 // NewRecordID generates RecordID byte representation.
 func NewRecordID(pulse PulseNumber, hash []byte) *RecordID {
