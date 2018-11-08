@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -36,11 +35,11 @@ func TestBuilder_Build_EmptyPacket(t *testing.T) {
 func TestBuilder_Build_RequestPacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.NodeID = testutils.RandomRef()
 	builder := NewBuilder(sender)
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.NodeID = testutils.RandomRef()
 	ref := testutils.RandomRef()
 
 	m := builder.Receiver(receiver).Type(types.TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
@@ -59,11 +58,11 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 func TestBuilder_Build_ResponsePacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.NodeID = testutils.RandomRef()
 	builder := NewBuilder(sender)
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.NodeID = testutils.RandomRef()
 
 	m := builder.Receiver(receiver).Type(types.TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
 
@@ -81,11 +80,11 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 func TestBuilder_Build_ErrorPacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.NodeID = testutils.RandomRef()
 	builder := NewBuilder(sender)
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.NodeID = testutils.RandomRef()
 
 	m := builder.Receiver(receiver).Type(types.TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()
 

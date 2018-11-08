@@ -20,15 +20,12 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/transport/id"
 )
 
 // Host is the over-the-wire representation of a host.
 type Host struct {
 	// NodeID is unique identifier of the node
 	NodeID core.RecordRef
-	// ID is a 20 byte unique identifier (for old DHT network, deprecated)
-	ID id.ID
 	// Address is IP and port.
 	Address *Address
 }
@@ -42,16 +39,10 @@ func NewHost(address *Address) *Host {
 
 // String representation of Host.
 func (host Host) String() string {
-	var id string
-	if host.NodeID.Equal(core.RecordRef{}) {
-		id = host.ID.String()
-	} else {
-		id = host.NodeID.String()
-	}
-	return fmt.Sprintf("%s (%s)", id, host.Address.String())
+	return fmt.Sprintf("%s (%s)", host.NodeID.String(), host.Address.String())
 }
 
 // Equal checks if host equals to other host (e.g. hosts' IDs and network addresses match).
 func (host Host) Equal(other Host) bool {
-	return host.ID.Equal(other.ID.Bytes()) && (other.Address != nil) && host.Address.Equal(*other.Address)
+	return host.NodeID.Equal(other.NodeID) && (other.Address != nil) && host.Address.Equal(*other.Address)
 }

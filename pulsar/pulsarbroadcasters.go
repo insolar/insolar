@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 
@@ -288,12 +287,11 @@ func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsar
 	if err != nil {
 		return
 	}
-	pulsarHostID, err := id.NewID()
 	if err != nil {
 		return
 	}
 	pulsarHost = host.NewHost(pulsarHostAddress)
-	pulsarHost.ID = pulsarHostID
+	pulsarHost.NodeID = core.RecordRef{}
 	logger.Debug("Network is ready")
 
 	return
@@ -333,7 +331,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 			logger.Error(pingResult.Error)
 			continue
 		}
-		receiverHost.ID = pingResult.Sender.ID
+		receiverHost.NodeID = pingResult.Sender.NodeID
 		logger.Debugf("ping request is done")
 
 		b = packet.NewBuilder(pulsarHost)

@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
@@ -199,6 +198,4 @@ func init() {
 	gob.Register(&ResponseExchangeUnsyncHash{})
 	gob.Register(&ResponseDisconnect{})
 	gob.Register(&ResponseCheckSignedNonce{})
-
-	gob.Register(&id.ID{})
 }

@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -32,10 +31,10 @@ import (
 func TestNewPingPacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.NodeID = testutils.RandomRef()
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.NodeID = testutils.RandomRef()
 
 	m := NewPingPacket(sender, receiver)
 
@@ -114,12 +113,12 @@ func TestPacket_IsValid_Fail(t *testing.T) {
 func TestSerializePacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.NodeID = testutils.RandomRef()
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.NodeID = testutils.RandomRef()
 	builder := NewBuilder(sender)
-	msg := builder.Receiver(receiver).Type(types.TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
+	msg := builder.Receiver(receiver).Type(types.TypeFindHost).Request(&RequestDataFindHost{receiver.NodeID.Bytes()}).Build()
 
 	_, err := SerializePacket(msg)
 
@@ -129,12 +128,12 @@ func TestSerializePacket(t *testing.T) {
 func TestDeserializePacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.NodeID = testutils.RandomRef()
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.NodeID = testutils.RandomRef()
 	builder := NewBuilder(sender)
-	msg := builder.Receiver(receiver).Type(types.TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
+	msg := builder.Receiver(receiver).Type(types.TypeFindHost).Request(&RequestDataFindHost{receiver.NodeID.Bytes()}).Build()
 
 	serialized, _ := SerializePacket(msg)
 

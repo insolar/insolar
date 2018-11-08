@@ -19,7 +19,8 @@ package host
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network/transport/id"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,24 +37,23 @@ func TestNewHost(t *testing.T) {
 func TestHost_String(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
 	nd := NewHost(addr)
-	id1, _ := id.NewID()
-	nd.ID = id1
-	string := nd.ID.String() + " (" + nd.Address.String() + ")"
+	nd.NodeID = testutils.RandomRef()
+	string := nd.NodeID.String() + " (" + nd.Address.String() + ")"
 
 	assert.Equal(t, string, nd.String())
 }
 
 func TestHost_Equal(t *testing.T) {
-	id1, _ := id.NewID()
-	id2, _ := id.NewID()
-	idNil, _ := id.NewID()
+	id1 := testutils.RandomRef()
+	id2 := testutils.RandomRef()
+	idNil := core.RecordRef{}
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 
 	tests := []struct {
-		id1   id.ID
+		id1   core.RecordRef
 		addr1 *Address
-		id2   id.ID
+		id2   core.RecordRef
 		addr2 *Address
 		equal bool
 		name  string
@@ -68,7 +68,7 @@ func TestHost_Equal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.equal, Host{ID: test.id1, Address: test.addr1}.Equal(Host{ID: test.id2, Address: test.addr2}))
+			assert.Equal(t, test.equal, Host{NodeID: test.id1, Address: test.addr1}.Equal(Host{NodeID: test.id2, Address: test.addr2}))
 		})
 	}
 }
