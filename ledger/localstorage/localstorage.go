@@ -37,7 +37,7 @@ func NewLocalStorage(db *storage.DB) (*LocalStorage, error) {
 
 // SetMessage saves message in storage.
 func (s *LocalStorage) SetMessage(ctx context.Context, msg core.SignedMessage) (*core.RecordID, error) {
-	buff, err := message.ToBytes(msg)
+	buff, err := message.SignedToBytes(msg)
 	if err != nil {
 		return nil, err
 	}
