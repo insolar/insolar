@@ -113,7 +113,7 @@ func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) 
 func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 	k := prefixkey(scopeIDBlob, id[:])
 	log.Debugf("GetRecord by id %+v (key=%v)", id, hexstr(k))
-	return m.get(k)
+	return m.get(ctx, k)
 }
 
 // SetBlob saves binary value for provided pulse.
@@ -141,7 +141,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, id[:])
 	log.Debugf("GetRecord by id %+v (key=%v)", id, hexstr(k))
-	buf, err := m.get(k)
+	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (m *TransactionManager) GetObjectIndex(
 		m.lockOnID(id)
 	}
 	k := prefixkey(scopeIDLifeline, id[:])
-	buf, err := m.get(k)
+	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (m *TransactionManager) SetObjectIndex(
 
 // GetLatestPulseNumber returns current pulse number.
 func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
-	buf, err := m.get(prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
+	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
 	if err != nil {
 		return 0, err
 	}
@@ -226,7 +226,7 @@ func (m *TransactionManager) set(key, value []byte) error {
 }
 
 // get returns value by key.
-func (m *TransactionManager) get(key []byte) ([]byte, error) {
+func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error) {
 	if kv, ok := m.txupdates[string(key)]; ok {
 		return kv.v, nil
 	}

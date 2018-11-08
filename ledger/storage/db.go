@@ -111,7 +111,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
 	getGenesisRef := func() (*core.RecordRef, error) {
-		buff, err := db.get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
+		buff, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
 			return nil, err
 		}
@@ -282,7 +282,7 @@ func (db *DB) SetObjectIndex(
 // GetDrop returns jet drop for a given pulse number.
 func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
-	buf, err := db.get(k)
+	buf, err := db.get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +347,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 // SetDrop saves provided JetDrop in db.
 func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
-	_, err := db.get(k)
+	_, err := db.get(ctx, k)
 	if err == nil {
 		return ErrOverride
 	}
@@ -388,7 +388,7 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 
 // GetPulse returns pulse for provided pulse number.
 func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*record.PulseRecord, error) {
-	buf, err := db.get(prefixkey(scopeIDPulse, num.Bytes()))
+	buf, err := db.get(ctx, prefixkey(scopeIDPulse, num.Bytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -492,10 +492,10 @@ func (db *DB) SetMessage(pulseNumber core.PulseNumber, genericMessage core.Messa
 }
 
 // get wraps matching transaction manager method.
-func (db *DB) get(key []byte) ([]byte, error) {
+func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
-	return tx.get(key)
+	return tx.get(ctx, key)
 }
 
 // set wraps matching transaction manager method.
