@@ -333,7 +333,7 @@ func (r *Two) Hello(s string) (string, error) {
 		f := r.([]interface{})[0]
 		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), f)
 	}
-	//ValidateAllResults(t, lr)
+	ValidateAllResults(t, lr)
 
 }
 
