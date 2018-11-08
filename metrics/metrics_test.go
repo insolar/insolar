@@ -17,7 +17,9 @@
 package metrics_test
 
 import (
+	"fmt"
 	"math/rand"
+	"net/http"
 	"testing"
 	"time"
 
@@ -75,6 +77,21 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	assert.Contains(t, content, `insolar_network_packet_sent_total{packetType="ping"} 55`)
 	assert.Contains(t, content, `insolar_video_size_count{osx="11.12.13"} 1`)
 	assert.Contains(t, content, `insolar_example_com_measures_video_count{osx="11.12.13"} 1`)
+
+	assert.NoError(t, testm.Stop())
+}
+
+func TestMetrics_ZPages(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	testm := testmetrics.Start(ctx)
+
+	// One more thing... from https://github.com/rakyll/opencensus-grpc-demo
+	// also check rpcz
+	code, content, err := testm.FetchURL("/debug/tracez")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, code)
+	fmt.Println("/metrics => ", content)
 
 	assert.NoError(t, testm.Stop())
 }
