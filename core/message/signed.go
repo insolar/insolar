@@ -68,7 +68,7 @@ func NewSignedMessage(
 	sender core.RecordRef,
 	key *ecdsa.PrivateKey,
 	pulse core.PulseNumber,
-	token *core.Token,
+	token core.Token,
 ) (*SignedMessage, error) {
 	if key == nil {
 		return nil, errors.New("failed to sign a message: private key == nil")
@@ -91,7 +91,7 @@ func NewSignedMessage(
 	}
 	return &SignedMessage{
 		Header:        header,
-		Token:         *token,
+		Token:         token,
 		Msg:           msg,
 		Signature:     sign,
 		LogTraceID:    inslogger.TraceID(ctx),
