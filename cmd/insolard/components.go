@@ -20,11 +20,11 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/version/manager"
 )
 
 // InitComponents creates and links all insolard components
@@ -63,17 +64,20 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	bootstrapper, err := bootstrap.NewBootstrapper(cfg.Bootstrap)
+	gen, err := genesis.NewGenesis(cfg.Genesis)
 	checkError(ctx, err, "failed to start Bootstrapper")
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
-	metricsHandler, err := metrics.NewMetrics(cfg.Metrics)
+	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics)
 	checkError(ctx, err, "failed to start Metrics")
 
 	networkCoordinator, err := networkcoordinator.New()
 	checkError(ctx, err, "failed to start NetworkCoordinator")
+
+	versionManager, err := manager.NewVersionManager(cfg.VersionManager)
+	checkError(ctx, err, "failed to load VersionManager: ")
 
 	// move to logic runner ??
 	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
@@ -87,10 +91,11 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		ledger,
 		nw,
 		messageBus,
-		bootstrapper,
+		gen,
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
+		versionManager,
 	)
 
 	cmOld := ComponentManager{components: core.Components{
@@ -100,10 +105,11 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		Ledger:             ledger,
 		Network:            nw,
 		MessageBus:         messageBus,
-		Bootstrapper:       bootstrapper,
+		Genesis:            gen,
 		APIRunner:          apiRunner,
 		NetworkCoordinator: networkCoordinator,
+		VersionManager:     versionManager,
 	}}
 
-	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), Service: nw}, nil
+	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }

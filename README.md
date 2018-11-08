@@ -1,6 +1,6 @@
 Insolar
 ===============
-Blockchain platform
+Enterprise-ready blockchain platform
 
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2150/badge)](https://bestpractices.coreinfrastructure.org/projects/2150)
 
@@ -9,30 +9,14 @@ Blockchain platform
 [![GoDoc](https://godoc.org/github.com/insolar/insolar?status.svg)](https://godoc.org/github.com/insolar/insolar)
 [![codecov](https://codecov.io/gh/insolar/insolar/branch/master/graph/badge.svg)](https://codecov.io/gh/insolar/insolar)
 
-_This project is still in early development state.
-It is not recommended to use it in production environment._
 
 Overview
 --------
-**Insolar** is the next generation high-performance scalable blockchain platform
-designed with the express purpose to meet an immense business scope.
-The enterprise-grade distributed ledger cloud platform will help to increase
-business velocity, create new revenue streams, and reduce cost and risk
-by securely extending enterprise SaaS and on-premises applications
-to drive tamper-resistant transactions on a trusted business network.
+**Insolar** is building a 4th generation blockchain platform for business aimed to enable seamless interactions between companies and unlock new growth opportunities. In addition to the blockchain platform, Insolar will provide blockchain services and ecosystem support for companies that are looking to develop and deploy blockchain solutions. Insolar will feature most complete and secure set of production-ready business blockchain tools and services to quickly build or launch blockchain enterprise applications, accelerating the progression path from initial proof-of-concept to full-scale production.
 
-Insolar supports public and private blockchains and is able to customize
-different blockchains for different applications. Insolar team will
-constantly provide common modules on the underlying infrastructure
-for different kinds of distributed scenarios.
+The world’s most innovative companies in finance, logistics, consumer goods, energy, healthcare, transportation, manufacturing and others will be turning to Insolar to create applications and networks that deliver tangible business success. They recognise that even in today’s digital economy, vast amounts of value continue to be trapped inside processes and organisations that don’t connect. Insolar is their remedy, helping them discover and design business value in blockchain networks — starting, accelerating and innovating strategies that replace longstanding business friction with trust and transparency. Delegating trust to a blockchain means that businesses can pursue broader networks, onboard new partners, and enter new ecosystems with ease. Blockchain-based networks that support multiparty collaboration around shared, trusted data and process automation across organisational boundaries bring benefits at many levels, starting with efficiency gains and culminating in reinventing how entire industry ecosystems operate.
 
-We value the expansion of the ecosystem which operates across chains,
-systems, industries and applications. With a range of protocols and modules,
-data and information will be connected to support various business scenarios.
-Our goal is to build the underlying blockchain infrastructure to bridge
-the real world and the distributed digital world. With this, companies
-from different industries will be able to develop applications
-for a range of scenarios and collaborate with other entities on the platform.
+Insolar is a global team of 60+ people in North America and Europe, including a 35-strong engineering team with practical blockchain engineering know-how, and 10 leading blockchain academics from major institutions (York University, ETH Zurich, Princeton).
 
 
 Components
@@ -91,10 +75,14 @@ Example
     ./scripts/insolard/launch.sh
 
     # In other terminal:
-    # Create user
-    curl --data '{"query_type": "create_member", "name": "Peter"}' "localhost:19191/api/v1?"
-    # Dump user info
-    curl --data '{"query_type": "dump_all_users"}' "localhost:19191/api/v1?"
+    
+    # Build insolar
+    make insolar
+  
+    # Send request example
+    ./bin/insolar -c=send_request --config=./scripts/insolard/configs/root_member_keys.json --root_as_caller --params=params.json
+
+   ##### See [insolar readme](cmd/insolar) for more details. 
 
 Docker container
 ------------

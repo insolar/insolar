@@ -37,6 +37,8 @@ import (
 
 const TESTREFERENCE = "222222"
 const TESTSEED = "VGVzdA=="
+const TESTROOTMEMBER = "root_member_ref"
+const TESTROOTDOMAIN = "root_domain_ref"
 
 func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 	serJSON, err := json.MarshalIndent(answer, "", "    ")
@@ -70,6 +72,16 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 		answer["random_data"] = TESTSEED
 	}
 
+	writeReponse(response, answer)
+}
+
+func FakeInfoHandler(response http.ResponseWriter, req *http.Request) {
+	response.Header().Add("Content-Type", "application/json")
+	answer := map[string]interface{}{
+		"root_domain": TESTROOTDOMAIN,
+		"root_member": TESTROOTMEMBER,
+		"prototypes":  map[string]string{},
+	}
 	writeReponse(response, answer)
 }
 
@@ -110,8 +122,10 @@ func startServer() error {
 
 func setup() error {
 	fh := FakeHandler
+	fih := FakeInfoHandler
 	http.HandleFunc(LOCATION, fh)
 	http.HandleFunc(LOCATION+"/call", fh)
+	http.HandleFunc(LOCATION+"/info", fih)
 	log.Info("Starting Test api server ...")
 
 	err := startServer()
@@ -229,4 +243,15 @@ func TestSend_BadSeedUrl(t *testing.T) {
 	userConf, reqConf := readConfigs(t)
 	_, err := Send(ctx, URL+"TTT", userConf, reqConf)
 	assert.EqualError(t, err, "[ Send ] Problem with getting seed: [ getSeed ]: [ getResponseBody ] Bad http response code: 404")
+}
+
+func TestInfo(t *testing.T) {
+	resp, err := Info(URL)
+	assert.NoError(t, err)
+	fmt.Println(resp.RootDomain)
+	assert.Equal(t, resp, &InfoResponse{
+		RootMember: "root_member_ref",
+		RootDomain: "root_domain_ref",
+		Prototypes: map[string]string{},
+	})
 }

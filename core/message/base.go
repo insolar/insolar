@@ -63,7 +63,7 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 
 	// Bootstrap
 	case core.TypeBootstrapRequest:
-		return &BootstrapRequest{}, nil
+		return &GenesisRequest{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented message type %d", mt)
 	}
@@ -150,7 +150,7 @@ func SignedToBytes(msg core.SignedMessage) ([]byte, error) {
 
 func init() {
 	// Bootstrap
-	gob.Register(&BootstrapRequest{})
+	gob.Register(&GenesisRequest{})
 	// Logicrunner
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
@@ -168,7 +168,7 @@ func init() {
 	gob.Register(&SetRecord{})
 
 	// Bootstrap
-	gob.Register(&BootstrapRequest{})
+	gob.Register(&GenesisRequest{})
 	gob.Register(&SignedMessage{})
 	gob.Register(core.RecordRef{})
 	gob.Register(&GetChildren{})

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/pkg/errors"
 
@@ -154,16 +155,6 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 		}
 	}
 
-	var parent *core.RecordRef
-	rec, err := h.db.GetRecord(ctx, msg.Head.Record())
-	if err != nil {
-		return nil, errors.New("failed to fetch activation record")
-	}
-	activation, ok := rec.(*record.ObjectActivateRecord)
-	if ok {
-		parent = &activation.Parent
-	}
-
 	var childPointer *core.RecordID
 	if idx.ChildPointer != nil {
 		childPointer = idx.ChildPointer
@@ -174,7 +165,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: childPointer,
-		Parent:       parent,
+		Parent:       idx.Parent,
 	}
 
 	if state.GetMemory() != nil {
@@ -266,7 +257,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	}
 
 	var idx *index.ObjectLifeline
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
 		idx, err = getObjectIndex(ctx, tx, msg.Object.Record(), true)
 		if err != nil {
@@ -286,6 +277,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		idx.LatestState = id
 		idx.State = state.State()
+		if state.State() == record.StateActivation {
+			idx.Parent = state.(*record.ObjectActivateRecord).Parent
+		}
 		return tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
 	})
 	if err != nil {
@@ -301,6 +295,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: idx.ChildPointer,
+		Parent:       idx.Parent,
 	}
 	return &rep, nil
 }
@@ -315,7 +310,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	}
 
 	var child *core.RecordID
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, _, _, err := getObject(ctx, tx, msg.Parent.Record(), nil, false)
 		if err != nil {
 			return err
@@ -349,6 +344,9 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 }
 
 func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
 	msg := genericMsg.Message().(*message.JetDrop)
 
 	for _, rawMessage := range msg.Messages {
@@ -374,7 +372,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Sign
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.ValidateRecord)
 
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(ctx, msg.Object.Record(), true)
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch object index")
@@ -430,7 +428,7 @@ func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Mes
 	if err != nil {
 		return err
 	}
-	err = db.SetMessage(lastPulse, genericMsg)
+	err = db.SetMessage(ctx, lastPulse, genericMsg)
 	if err != nil {
 		return err
 	}

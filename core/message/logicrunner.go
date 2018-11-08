@@ -36,17 +36,23 @@ type IBaseLogicMessage interface {
 	core.Message
 	GetReference() core.RecordRef
 	GetRequest() core.RecordRef
+	GetCallerPrototype() *core.RecordRef
 }
 
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
-	Caller  core.RecordRef
-	Request core.RecordRef
-	Nonce   uint64
+	Caller          core.RecordRef
+	Request         core.RecordRef
+	CallerPrototype core.RecordRef
+	Nonce           uint64
 }
 
 func (m *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &m.Caller
+}
+
+func (m *BaseLogicMessage) GetCallerPrototype() *core.RecordRef {
+	return &m.CallerPrototype
 }
 
 // GetRequest returns RoleVirtualExecutor as routing target role.

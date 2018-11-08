@@ -32,7 +32,7 @@ func (ar *Runner) infoHandler(c core.Components) func(http.ResponseWriter, *http
 
 		_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
-		data, err := c.Bootstrapper.Info()
+		data, err := c.Genesis.Info()
 		if err != nil {
 			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get bootstraper info"))
 		}

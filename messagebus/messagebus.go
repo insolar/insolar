@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/pkg/errors"
 )
 
@@ -143,6 +144,7 @@ func (mb *MessageBus) doDeliver(msg core.SignedMessage) (core.Reply, error) {
 	}
 
 	ctx := msg.Context(context.Background())
+	ctx = hack.SetSkipValidation(ctx, true)
 	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{

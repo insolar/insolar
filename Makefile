@@ -42,10 +42,12 @@ clean:
 install-deps:
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u golang.org/x/tools/cmd/stringer
+	go get -u github.com/gojuno/minimock/cmd/minimock
 
 pre-build:
 	dep ensure
-	go generate -x $(ALL_PACKAGES)
+	# workaround for minimock
+	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
 
 build: 
 	mkdir -p $(BIN_DIR)

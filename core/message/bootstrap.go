@@ -7,7 +7,7 @@
  *
  *        http://www.apache.org/licenses/LICENSE-2.0
  *
- *    Unless required by applicable law or agreed GetTo in writing, software
+ *    Unless required by applicable law or agreed to in writing, software
  *    distributed under the License is distributed on an "AS IS" BASIS,
  *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *    See the License for the specific language governing permissions and
@@ -20,18 +20,18 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// BootstrapRequest is used for bootstrap records generation.
-type BootstrapRequest struct {
-	// Name should be unique for each bootstrap record.
+// GenesisRequest is used for genesis records generation.
+type GenesisRequest struct {
+	// Name should be unique for each genesis record.
 	Name string
 }
 
-// Type implementation for bootstrap request.
-func (*BootstrapRequest) Type() core.MessageType {
+// Type implementation for genesis request.
+func (*GenesisRequest) Type() core.MessageType {
 	return core.TypeBootstrapRequest
 }
 
-// GetCaller implementation for bootstrap request.
-func (*BootstrapRequest) GetCaller() *core.RecordRef {
+// GetCaller implementation for genesis request.
+func (*GenesisRequest) GetCaller() *core.RecordRef {
 	return nil
 }

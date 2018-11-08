@@ -17,8 +17,6 @@
 package phases
 
 import (
-	"crypto/ecdsa"
-
 	"github.com/insolar/insolar/core"
 )
 
@@ -26,29 +24,57 @@ type PacketType uint8
 type ClaimType uint8
 type ReferendumType uint8
 
+// !!! Amount of constants here must be less then 8 !!!
 const (
 	NetworkConsistency = PacketType(iota + 1)
 	Referendum
 )
 
 const (
-	TypeNodeClaim = ClaimType(iota + 1)
-	TypeNodeViolationBlame
+	TypeNodeJoinClaim = ClaimType(iota + 1)
 	TypeCapabilityPollingAndActivation
+	TypeNodeViolationBlame
 	TypeNodeBroadcast
+	TypeNodeLeaveClaim
 )
 
 // ----------------------------------PHASE 1--------------------------------
 
+type Phase1Packet struct {
+	// -------------------- Header
+	packetHeader PacketHeader
+
+	// -------------------- Section 1 ( Pulse )
+	pulseData      PulseDataExt // optional
+	proofNodePulse NodePulseProof
+
+	// -------------------- Section 2 ( Claims ) ( optional )
+	claims []ReferendumClaim
+
+	// --------------------
+	// signature contains signature of Header + Section 1 + Section 2
+	signature uint64
+}
+
+func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
+	return p1p.packetHeader.f00
+}
+
+func (p1p *Phase1Packet) hasSection2() bool {
+	return p1p.packetHeader.f01
+}
+
 type PacketHeader struct {
-	HasRouting   bool
-	F01          bool
-	F00          bool
-	SubType      uint8
-	Pulse        uint32
+	PacketT    PacketType
+	SubType    uint8
+	HasRouting bool
+	//-----------------
+	f01   bool
+	f00   bool
+	Pulse uint32
+	//-----------------
 	OriginNodeID uint32
 	TargetNodeID uint32
-	PacketT      PacketType
 }
 
 // PulseDataExt is a pulse data extension.
@@ -63,8 +89,8 @@ type PulseDataExt struct {
 
 // PulseData is a pulse data.
 type PulseData struct {
-	PulseNumer uint32
-	Data       *PulseDataExt
+	PulseNumber uint32
+	Data        *PulseDataExt
 }
 
 type NodePulseProof struct {
@@ -75,6 +101,7 @@ type NodePulseProof struct {
 // --------------REFERENDUM--------------
 
 type ReferendumClaim interface {
+	Serializer
 	Type() ClaimType
 	Length() uint16
 }
@@ -134,16 +161,16 @@ type NodeJoinClaim struct {
 	JoinsAfter              uint32
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
-	NodePK                  ecdsa.PrivateKey
-	length                  uint16
+	//NodePK                  ecdsa.PrivateKey // WTF: should it be Public key?
+	//length uint16
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
-	return TypeNodeClaim
+	return TypeNodeJoinClaim
 }
 
 func (njc *NodeJoinClaim) Length() uint16 {
-	return njc.length
+	return 0
 }
 
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
@@ -153,7 +180,7 @@ type NodeLeaveClaim struct {
 }
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {
-	return TypeNodeClaim
+	return TypeNodeLeaveClaim
 }
 
 func (nlc *NodeLeaveClaim) Length() uint16 {
@@ -162,7 +189,7 @@ func (nlc *NodeLeaveClaim) Length() uint16 {
 
 func NewNodeJoinClaim() *NodeJoinClaim {
 	return &NodeJoinClaim{
-		length: 272,
+		//length: 272,
 	}
 }
 
@@ -185,9 +212,10 @@ type NodeListVote struct {
 }
 
 type DeviantBitSet struct {
-	CompressedSet   uint8
-	HiBitLengthFlag uint8
-	LowBitLength    uint8
-	HiBitLength     uint8
-	Payload         []byte
+	CompressedSet     bool
+	HighBitLengthFlag bool
+	LowBitLength      uint8
+	//------------------
+	HighBitLength uint8
+	Payload       []byte
 }

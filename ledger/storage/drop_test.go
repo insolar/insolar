@@ -52,7 +52,7 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	txstarted := make(chan bool)
 	dropwaits := make(chan bool)
 	go func() {
-		db.Update(func(tx *storage.TransactionManager) error {
+		db.Update(ctx, func(tx *storage.TransactionManager) error {
 			log.Debugln("start tx")
 			close(txstarted)
 			<-dropwaits

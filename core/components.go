@@ -34,7 +34,8 @@ type Components struct {
 	Network            Network
 	MessageBus         MessageBus
 	Metrics            Component
-	Bootstrapper       Bootstrapper
+	Genesis            Genesis
 	APIRunner          Component
+	VersionManager     Component
 	NetworkCoordinator NetworkCoordinator
 }

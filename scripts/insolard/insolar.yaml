@@ -1,3 +1,5 @@
+versionmanager:
+  minalowedversion: v0.3.0
 host:
   transport:
     protocol: UTP
@@ -38,7 +40,7 @@ pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
   nodesaddresses: []
-bootstrap:
+genesis:
   rootkeys: "scripts/insolard/configs/root_member_keys.json"
   rootbalance: 10000
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"

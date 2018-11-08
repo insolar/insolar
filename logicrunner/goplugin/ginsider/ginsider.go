@@ -233,8 +233,9 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 	}
 
 	return rpctypes.UpBaseReq{
-		Callee:  *callCtx.Callee,
-		Request: *callCtx.Request,
+		Callee:    *callCtx.Callee,
+		Prototype: *callCtx.Prototype,
+		Request:   *callCtx.Request,
 	}
 }
 

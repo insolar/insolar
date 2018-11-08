@@ -157,3 +157,27 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 
 	return response, nil
 }
+
+// InfoResponse represents response from /info
+type InfoResponse struct {
+	Prototypes map[string]string `json:"prototypes"`
+	RootDomain string            `json:"root_domain"`
+	RootMember string            `json:"root_member"`
+}
+
+// Info sends request to /info and return result
+func Info(url string) (*InfoResponse, error) {
+	body, err := GetResponseBody(url+"/info", PostParams{})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ] problem with sending request:")
+	}
+
+	infoResp := InfoResponse{}
+
+	err = json.Unmarshal(body, &infoResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ] problem with unmarshal response:")
+	}
+
+	return &infoResp, nil
+}

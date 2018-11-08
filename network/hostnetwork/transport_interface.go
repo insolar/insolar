@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -30,6 +31,8 @@ type InternalTransport interface {
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
+	// GetNodeID get current node ID.
+	GetNodeID() core.RecordRef
 
 	// SendRequestPacket send request packet to a remote node.
 	SendRequestPacket(request network.Request, receiver *host.Host) (network.Future, error)

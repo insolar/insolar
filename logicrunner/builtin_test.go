@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -52,7 +53,8 @@ func TestBareHelloworld(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 
-	nk := nodekeeper.GetTestNodekeeper()
+	ce := certificate.GetTestCertificate()
+	nk := nodekeeper.GetTestNodekeeper(ce)
 	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)

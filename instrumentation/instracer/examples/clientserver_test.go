@@ -47,10 +47,10 @@ func TestClientServerExample(t *testing.T) {
 	if os.Getenv("INSOLAR_TRACER_JAEGER_AGENTENDPOINT") == "" {
 		t.Skip()
 	}
-	ExampleClientServer()
+	Example_ClientServer()
 }
 
-func ExampleClientServer() {
+func Example_ClientServer() {
 	cfgHolder := configuration.NewHolder().MustInit(false)
 	jconf := cfgHolder.Configuration.Tracer.Jaeger
 	ctx := context.Background()

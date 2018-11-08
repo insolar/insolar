@@ -20,32 +20,20 @@ import (
 	"crypto/ecdsa"
 )
 
-// NodeState is the state of the node
-type NodeState uint8
-
-// TODO: document all node states
-const (
-	// Joined
-	NodeJoined = NodeState(iota + 1)
-	// Prepared
-	NodePrepared
-	// Active
-	NodeActive
-	// Leaved
-	NodeLeaved
-	// Suspended
-	NodeSuspended
-)
+// ShortNodeID is the shortened ID of node that is unique inside the globe
+type ShortNodeID uint32
 
 type Node interface {
 	// ID is the unique identifier of the node
 	ID() RecordRef
-	// State is the node state
-	State() NodeState
+	// ShortID get short ID of node
+	ShortID() ShortNodeID
 	// Pulse is the pulse number after which the new state is assigned to the node
 	Pulse() PulseNumber
 	// Roles is the set of candidate Roles for the node
 	Roles() []NodeRole
+	// Role is the candidate Role for the node
+	Role() NodeRole
 	// PublicKey is the public key of the node
 	PublicKey() *ecdsa.PublicKey
 	// PhysicalAddress is the network address of the node
@@ -54,6 +42,7 @@ type Node interface {
 	Version() string
 }
 
+// TODO: fix issue with go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o github.com/insolar/insolar/testutils/network/node_network_mock.go
 type NodeNetwork interface {
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
 	GetOrigin() Node

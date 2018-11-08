@@ -82,7 +82,7 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
-	msg := message.BootstrapRequest{Name: "my little message"}
+	msg := message.GenesisRequest{Name: "my little message"}
 	id, err := am.RegisterRequest(ctx, &msg)
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, id)
@@ -190,6 +190,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 	idx, err = db.GetObjectIndex(ctx, objRef.Record(), false)
 	assert.NoError(t, err)
 	assert.Equal(t, *objDesc.StateID(), *idx.LatestState)
+	assert.Equal(t, *objDesc.Parent(), idx.Parent)
 }
 
 func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.T) {
@@ -307,7 +308,8 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
-	objectID, _ := db.SetRecord(
+	objRef := genRandomRef(0)
+	db.SetRecord(
 		ctx,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{
@@ -334,27 +336,26 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	objectIndex := index.ObjectLifeline{
 		LatestState:  objectAmendID,
 		ChildPointer: genRandomID(0),
+		Parent:       *parentRef,
 	}
-	db.SetObjectIndex(ctx, objectID, &objectIndex)
+	db.SetObjectIndex(ctx, objRef.Record(), &objectIndex)
 
-	objDesc, err := am.GetObject(ctx, *genRefWithID(objectID), nil, false)
+	objDesc, err := am.GetObject(ctx, *objRef, nil, false)
 	assert.NoError(t, err)
 	expectedObjDesc := &ObjectDescriptor{
 		ctx: ctx,
 		am:  am,
 
-		head:         *genRefWithID(objectID),
+		head:         *objRef,
 		state:        *objectAmendID,
 		prototype:    prototypeRef,
 		isPrototype:  false,
 		childPointer: objectIndex.ChildPointer,
 		memory:       []byte{4},
-		parent:       parentRef,
+		parent:       *parentRef,
 	}
 
 	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
-
-	_ = prototypeRef
 }
 
 func TestLedgerArtifactManager_GetChildren(t *testing.T) {
@@ -524,7 +525,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	ctx, _, am, cleaner := getTestData(t)
 	defer cleaner()
 
-	objID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "object"})
+	objID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "object"})
 	objRef := genRefWithID(objID)
 	assert.NoError(t, err)
 

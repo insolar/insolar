@@ -139,25 +139,27 @@ func main() {
 		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
+	cfg := &cfgHolder.Configuration
 	traceid := utils.RandTraceID()
 	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
-	ctx, inslog := initLogger(ctx, cfgHolder.Configuration.Log)
+	ctx, inslog := initLogger(ctx, cfg.Log)
 
 	if !params.isBootstrap {
-		mergeConfigAndCertificate(ctx, &cfgHolder.Configuration)
+		mergeConfigAndCertificate(ctx, cfg)
 	}
+	cfg.Metrics.Namespace = "insolard"
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	jaegerflush := func() {}
 	if params.traceEnabled {
-		jconf := cfgHolder.Configuration.Tracer.Jaeger
+		jconf := cfg.Tracer.Jaeger
 		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint)
 		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceid})
 	}
 	defer jaegerflush()
 
-	cm, cmOld, repl, err := InitComponents(ctx, cfgHolder.Configuration, params.isBootstrap)
+	cm, cmOld, repl, err := InitComponents(ctx, *cfg, params.isBootstrap)
 	checkError(ctx, err, "failed to init components")
 
 	cmOld.linkAll(ctx)
@@ -190,7 +192,7 @@ func main() {
 	if params.isBootstrap {
 		registerCurrentNode(
 			ctx,
-			cfgHolder.Configuration.Host.Transport.Address,
+			cfg.Host.Transport.Address,
 			params.bootstrapCertificatePath,
 			cmOld.components.Certificate,
 			cmOld.components.NetworkCoordinator,

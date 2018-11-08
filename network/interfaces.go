@@ -59,6 +59,8 @@ type HostNetwork interface {
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
+	// GetNodeID get current node ID.
+	GetNodeID() core.RecordRef
 
 	// SendRequest send request to a remote node.
 	SendRequest(request Request, receiver core.RecordRef) (Future, error)
@@ -66,7 +68,7 @@ type HostNetwork interface {
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() RequestBuilder
-	// BuildResponse create response to an incoming request with Data set to responseData
+	// BuildResponse create response to an incoming request with Data set to responseData.
 	BuildResponse(request Request, responseData interface{}) Response
 }
 
@@ -106,6 +108,8 @@ type NodeKeeper interface {
 	core.NodeNetwork
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]core.Node)
+	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
+	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
 	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list.
 	SetPulse(number core.PulseNumber) (bool, UnsyncList)
@@ -149,4 +153,25 @@ type NodeUnsyncHash struct {
 	NodeID core.RecordRef
 	Hash   []byte
 	// TODO: add signature
+}
+
+// PartitionPolicy contains all rules how to initiate globule resharding.
+type PartitionPolicy interface {
+	ShardsCount() int
+}
+
+// RoutingTable contains all routing information of the network.
+type RoutingTable interface {
+	// Start inject dependencies from components
+	Start(components core.Components)
+	// Resolve NodeID -> Address. Can initiate network requests.
+	Resolve(core.RecordRef) (string, error)
+	// AddToKnownHosts add host to routing table.
+	AddToKnownHosts(*host.Host)
+	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
+	Rebalance(PartitionPolicy)
+	// GetLocalNodes get all nodes from the local globe.
+	GetLocalNodes() []core.RecordRef
+	// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
+	GetRandomNodes(count int) []host.Host
 }

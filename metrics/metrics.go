@@ -20,64 +20,102 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opencensus.io/zpages"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
-	"github.com/insolar/insolar/log"
 )
 
 const insolarNamespace = "insolar"
 
 // Metrics is a component which serve metrics data to Prometheus.
 type Metrics struct {
-	registry    *prometheus.Registry
-	httpHandler http.Handler
-	server      *http.Server
+	server   *http.Server
+	listener net.Listener
 }
 
 // NewMetrics creates new Metrics component.
-func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
-	m := Metrics{registry: prometheus.NewRegistry()}
-	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: &errorLogger{}})
+func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error) {
+	registry := prometheus.NewRegistry()
+	errlogger := &errorLogger{inslogger.FromContext(ctx)}
+	promhandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorLog: errlogger})
 
-	m.server = &http.Server{Addr: cfg.ListenAddress}
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhandler)
+	pprof.Handle(mux)
+	if cfg.ZpagesEnabled {
+		// https://opencensus.io/zpages/
+		zpages.Handle(mux, "/debug")
+	}
+
+	m := &Metrics{
+		server: &http.Server{
+			Addr:    cfg.ListenAddress,
+			Handler: mux,
+		},
+	}
+
+	// badger metrics
+	registry.MustRegister(badgerCollector(cfg.Namespace))
 
 	// default system collectors
-	m.registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
-	m.registry.MustRegister(prometheus.NewGoCollector())
+	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), cfg.Namespace))
+	registry.MustRegister(prometheus.NewGoCollector())
 
 	// insolar collectors
-	m.registry.MustRegister(NetworkMessageSentTotal)
-	m.registry.MustRegister(NetworkFutures)
-	m.registry.MustRegister(NetworkPacketSentTotal)
-	m.registry.MustRegister(NetworkPacketReceivedTotal)
+	registry.MustRegister(NetworkMessageSentTotal)
+	registry.MustRegister(NetworkFutures)
+	registry.MustRegister(NetworkPacketSentTotal)
+	registry.MustRegister(NetworkPacketReceivedTotal)
 
-	return &m, nil
+	_, err := insmetrics.RegisterPrometheus(ctx, cfg.Namespace, registry, cfg.ReportingPeriod)
+	if err != nil {
+		errlogger.Println(err.Error())
+	}
+
+	return m, nil
 }
+
+// ErrBind special case for Start method.
+// We can use it for easier check in metrics creation code.
+var ErrBind = errors.New("failed to bind")
 
 // Start is implementation of core.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
-	log.Infoln("Starting metrics server", m.server.Addr)
-
-	http.Handle("/metrics", m.httpHandler)
-	pprof.Handle(http.DefaultServeMux)
+	inslog := inslogger.FromContext(ctx)
 
 	listener, err := net.Listen("tcp", m.server.Addr)
 	if err != nil {
+		if opErr, ok := err.(*net.OpError); ok {
+			if opErr.Op == "listen" && IsAddrInUse(opErr) {
+				return ErrBind
+			}
+		}
 		return errors.Wrap(err, "Failed to listen at address")
 	}
+	m.listener = listener
+	inslog.Infoln("Started metrics server", m.AddrString())
 
 	go func() {
+		inslog.Debugln("metrics server starting on", m.server.Addr)
 		err := m.server.Serve(listener)
-		if err != nil && err.Error() != "http: Server closed" {
-			log.Errorln(err, "falied to start metrics server")
+		if err == nil {
 			return
 		}
+		if IsServerClosed(err) {
+			return
+		}
+		inslog.Errorln("falied to start metrics server", err)
 	}()
 
 	return nil
@@ -86,7 +124,7 @@ func (m *Metrics) Start(ctx context.Context) error {
 // Stop is implementation of core.Component interface.
 func (m *Metrics) Stop(ctx context.Context) error {
 	const timeOut = 3
-	log.Infoln("Shutting down metrics server")
+	inslogger.FromContext(ctx).Info("Shutting down metrics server")
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(timeOut)*time.Second)
 	defer cancel()
 	err := m.server.Shutdown(ctxWithTimeout)
@@ -97,11 +135,27 @@ func (m *Metrics) Stop(ctx context.Context) error {
 	return nil
 }
 
+// AddrString returns listener address.
+func (m *Metrics) AddrString() string {
+	return m.listener.Addr().String()
+}
+
 // errorLogger wrapper for error logs.
 type errorLogger struct {
+	core.Logger
 }
 
 // Println is wrapper method for ErrorLn.
 func (e *errorLogger) Println(v ...interface{}) {
-	log.Errorln(v)
+	e.Error(v)
+}
+
+// IsAddrInUse checks error text for well known phrase.
+func IsAddrInUse(err error) bool {
+	return strings.Contains(err.Error(), "address already in use")
+}
+
+// IsServerClosed checks error text for well known phrase.
+func IsServerClosed(err error) bool {
+	return strings.Contains(err.Error(), "http: Server closed")
 }

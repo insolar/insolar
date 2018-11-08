@@ -18,6 +18,7 @@ package core
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 
 	"github.com/jbenet/go-base58"
 
@@ -35,6 +36,11 @@ const (
 
 // RecordID is a unified record ID.
 type RecordID [RecordIDSize]byte
+
+// String implements stringer on RecordID and returns hex value
+func (id *RecordID) String() string {
+	return hex.EncodeToString(id[:])
+}
 
 // NewRecordID generates RecordID byte representation.
 func NewRecordID(pulse PulseNumber, hash []byte) *RecordID {
@@ -101,6 +107,14 @@ func (ref *RecordRef) Record() *RecordID {
 // String outputs base58 RecordRef representation.
 func (ref RecordRef) String() string {
 	return base58.Encode(ref[:])
+}
+
+// FromSlice : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
+func (ref RecordRef) FromSlice(from []byte) RecordRef {
+	for i := 0; i < RecordRefSize; i++ {
+		ref[i] = from[i]
+	}
+	return ref
 }
 
 // Bytes returns byte slice of RecordRef.

@@ -25,10 +25,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/core/utils"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
-
+	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -39,6 +37,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/log"
@@ -93,7 +92,8 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	nk := nodekeeper.GetTestNodekeeper()
+	ce := certificate.GetTestCertificate()
+	nk := nodekeeper.GetTestNodekeeper(ce)
 	messageBus := testmessagebus.NewTestMessageBus()
 	nw := network.GetTestNetwork()
 	c := core.Components{
@@ -1050,7 +1050,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c1"})
+	rootDomainID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c1"})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1071,7 +1071,7 @@ func TestRootDomainContract(t *testing.T) {
 	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c2"})
+	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
@@ -1401,4 +1401,209 @@ func (r *One) Recursive() (error) {
 	assert.NoError(t, err, "contract call")
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{map[interface{}]interface{}{"S": "on calling main API: couldn't dispatch event: loop detected"}}, r)
+}
+
+func TestNewAllowanceNotFromWallet(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+
+import (
+	"fmt"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/application/proxy/allowance"
+	"github.com/insolar/insolar/application/proxy/wallet"
+	"github.com/insolar/insolar/core"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) CreateAllowance(member string) (error) {
+	w, _ := wallet.GetImplementationFrom(core.NewRefFromBase58(member))
+	walletRef := w.GetReference()
+	ah := allowance.New(&walletRef, 111, r.GetContext().Time.Unix()+10)
+	_, err := ah.AsChild(walletRef)
+	if err != nil {
+		return fmt.Errorf("Error:", err.Error())
+	}
+	return nil
+}
+`
+	rootDomainCode, err := ioutil.ReadFile("../application/contract/rootdomain/rootdomain.go" +
+		"")
+	if err != nil {
+		fmt.Print(err)
+	}
+	memberCode, err := ioutil.ReadFile("../application/contract/member/member.go")
+	if err != nil {
+		fmt.Print(err)
+	}
+	allowanceCode, err := ioutil.ReadFile("../application/contract/allowance/allowance.go")
+	if err != nil {
+		fmt.Print(err)
+	}
+	walletCode, err := ioutil.ReadFile("../application/contract/wallet/wallet.go")
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	ctx := context.TODO()
+	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+	err = cb.Build(map[string]string{"one": contractOneCode, "member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
+	assert.NoError(t, err)
+
+	// Initializing Root Domain
+	rootDomainID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c1"})
+	assert.NoError(t, err)
+	rootDomainRef := getRefFromID(rootDomainID)
+	rootDomainDesc, err := am.ActivateObject(
+		ctx,
+		core.RecordRef{},
+		*rootDomainRef,
+		*am.GenesisRef(),
+		*cb.Prototypes["rootdomain"],
+		false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, rootDomainRef, nil, "contract created")
+
+	// Creating Root member
+	rootKey, err := cryptoHelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
+	assert.NoError(t, err)
+
+	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
+	assert.NoError(t, err)
+	rootMemberRef := getRefFromID(rootMemberID)
+
+	m, err := member.New("root", rootPubKey)
+	assert.NoError(t, err)
+
+	_, err = am.ActivateObject(
+		ctx,
+		core.RecordRef{},
+		*rootMemberRef,
+		*rootDomainRef,
+		*cb.Prototypes["member"],
+		false,
+		goplugintestutils.CBORMarshal(t, m),
+	)
+	assert.NoError(t, err)
+
+	// Updating root domain with root member
+	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	assert.NoError(t, err)
+
+	root := Caller{rootMemberRef.String(), rootKey, lr, t}
+
+	// Creating Member
+	memberKey, err := cryptoHelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	memberPubKey, err := cryptoHelper.ExportPublicKey(&memberKey.PublicKey)
+	assert.NoError(t, err)
+
+	res1 := root.SignedCall(*rootDomainRef, "CreateMember", []interface{}{"Member", memberPubKey})
+	memberRef := res1.(string)
+	assert.NotEqual(t, "", memberRef)
+
+	// Call CreateAllowance method in custom contract
+	domain := core.NewRefFromBase58("c1")
+	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	assert.NoError(t, err)
+	contract := getRefFromID(contractID)
+	_, err = am.ActivateObject(
+		ctx,
+		domain,
+		*contract,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	resp, err := executeMethod(ctx, lr, *contract, 0, "CreateAllowance", goplugintestutils.CBORMarshal(t, []interface{}{memberRef}))
+	assert.NoError(t, err, "contract call")
+
+	var contractErr *foundation.Error
+
+	err = signer.UnmarshalParams(resp.(*reply.CallMethod).Result, &contractErr)
+	assert.NoError(t, err, "unmarshal answer")
+	assert.NotNil(t, contractErr)
+	assert.Contains(t, contractErr.Error(), "[ New Allowance ] : Can't create allowance from not wallet contract")
+
+	// Verify Member balance
+	res3 := root.SignedCall(*rootDomainRef, "GetBalance", []interface{}{memberRef})
+	assert.Equal(t, 1000, int(res3.(uint64)))
+}
+
+func TestGetParent(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+ import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/application/proxy/two"
+import "github.com/insolar/insolar/core"
+ type One struct {
+	foundation.BaseContract
+}
+ func (r *One) AddChildAndReturnMyselfAsParent() (core.RecordRef, error) {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return core.RecordRef{}, err
+	}
+
+ 	return friend.GetParent()
+}
+`
+	var contractTwoCode = `
+package main
+ import (
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+ type Two struct {
+	foundation.BaseContract
+}
+ func New() (*Two, error) {
+	return &Two{}, nil
+}
+ func (r *Two) GetParent() (core.RecordRef, error) {
+	return *r.GetContext().Parent, nil
+}
+ `
+	ctx := context.Background()
+	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
+	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	assert.NoError(t, err)
+	obj := getRefFromID(objID)
+	_, err = am.ActivateObject(
+		ctx,
+		core.RecordRef{}, *obj,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
+		goplugintestutils.CBORMarshal(t, &struct{}{}),
+	)
+	assert.NoError(t, err)
+	resp, err := executeMethod(ctx, lr, *obj, 0, "AddChildAndReturnMyselfAsParent", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+
+	refFromMethod := r.([]interface{})[0].([]byte)
+	assert.Equal(t, *obj, Ref{}.FromSlice(refFromMethod))
+	ValidateAllResults(t, lr)
 }

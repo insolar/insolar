@@ -38,6 +38,7 @@ var (
 
 // GetFullVersion returns multi line full version information
 func GetFullVersion() string {
+
 	result := fmt.Sprintf(`
  Version      : %s
  Build number : %s

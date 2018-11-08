@@ -122,7 +122,7 @@ func TestDB_CreateDrop(t *testing.T) {
 				Code: record.CalculateIDForBlob(pulse, []byte{byte(i)}),
 			}),
 		}
-		db.SetMessage(pulse, &setRecordMessage)
+		db.SetMessage(ctx, pulse, &setRecordMessage)
 		db.SetBlob(ctx, pulse, []byte{byte(i)})
 	}
 

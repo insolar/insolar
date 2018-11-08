@@ -26,6 +26,7 @@ type ObjectLifeline struct {
 	LatestState         *core.RecordID // Amend or activate record.
 	LatestStateApproved *core.RecordID // State approved by VM.
 	ChildPointer        *core.RecordID // Meta record about child activation.
+	Parent              core.RecordRef
 	Delegates           map[core.RecordRef]core.RecordRef
 	State               record.State
 }

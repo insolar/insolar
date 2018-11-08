@@ -142,7 +142,7 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			return
 		}
 
-		args, err := core.MarshalArgs(*c.Bootstrapper.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
+		args, err := core.MarshalArgs(*c.Genesis.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
 		if err != nil {
 			resp.Error = err.Error()
 			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't marshal args"))
