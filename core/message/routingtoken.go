@@ -15,29 +15,34 @@ import (
 type RoutingToken struct {
 	To      *core.RecordRef
 	from    *core.RecordRef
-	pulse   core.PulseNumber
-	msgHash []byte
-	sign    []byte
+	Pulse   core.PulseNumber
+	MsgHash []byte
+	Sign    []byte
 }
 
+// GetTo returns destination of token
 func (t *RoutingToken) GetTo() *core.RecordRef {
 	return t.To
 }
 
+// GetFrom returns source of token
 func (t *RoutingToken) GetFrom() *core.RecordRef {
 	return t.from
 }
 
+// GetPulse returns token's pulse
 func (t *RoutingToken) GetPulse() core.PulseNumber {
-	return t.pulse
+	return t.Pulse
 }
 
+// GetMsgHash returns token's message hash
 func (t *RoutingToken) GetMsgHash() []byte {
-	return t.msgHash
+	return t.MsgHash
 }
 
+// GetMsgHash returns token's sign
 func (t *RoutingToken) GetSign() []byte {
-	return t.sign
+	return t.Sign
 }
 
 // NewToken creates new token with sign of its fields
@@ -45,8 +50,8 @@ func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNu
 	token := &RoutingToken{
 		To:      to,
 		from:    from,
-		msgHash: msgHash,
-		pulse:   pulseNumber,
+		MsgHash: msgHash,
+		Pulse:   pulseNumber,
 	}
 
 	var tokenBuffer bytes.Buffer
@@ -60,7 +65,7 @@ func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNu
 	if err != nil {
 		panic(err)
 	}
-	token.sign = sign
+	token.Sign = sign
 	return token
 }
 
@@ -74,8 +79,8 @@ func ValidateToken(pubKey *ecdsa.PublicKey, msg core.SignedMessage) error {
 	token := RoutingToken{
 		To:      msg.GetToken().GetTo(),
 		from:    msg.GetToken().GetFrom(),
-		msgHash: msgHash,
-		pulse:   msg.Pulse(),
+		MsgHash: msgHash,
+		Pulse:   msg.Pulse(),
 	}
 
 	var tokenBuffer bytes.Buffer
