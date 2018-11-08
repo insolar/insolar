@@ -28,12 +28,12 @@ type mutableNode interface {
 	core.Node
 
 	SetPulse(core.PulseNumber)
-	SetShortID(shortID uint32)
+	SetShortID(shortID core.ShortNodeID)
 }
 
 type node struct {
 	NodeID        core.RecordRef
-	NodeShortID   uint32
+	NodeShortID   core.ShortNodeID
 	NodeRoles     []core.NodeRole
 	NodePublicKey *ecdsa.PublicKey
 
@@ -75,7 +75,7 @@ func (n *node) ID() core.RecordRef {
 	return n.NodeID
 }
 
-func (n *node) ShortID() uint32 {
+func (n *node) ShortID() core.ShortNodeID {
 	return n.NodeShortID
 }
 
@@ -108,7 +108,7 @@ func (n *node) SetPulse(pulseNum core.PulseNumber) {
 	n.NodePulseNum = pulseNum
 }
 
-func (n *node) SetShortID(id uint32) {
+func (n *node) SetShortID(id core.ShortNodeID) {
 	n.NodeShortID = id
 }
 
@@ -122,8 +122,9 @@ func (mn mutableNodes) Export() []core.Node {
 	return nodes
 }
 
-func generateShortID(ref core.RecordRef) uint32 {
-	return crc32.ChecksumIEEE(ref[:])
+func generateShortID(ref core.RecordRef) core.ShortNodeID {
+	result := crc32.ChecksumIEEE(ref[:])
+	return core.ShortNodeID(result)
 }
 
 func init() {

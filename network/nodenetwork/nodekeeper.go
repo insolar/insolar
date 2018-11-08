@@ -92,7 +92,7 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		listWaiters:  make([]chan *UnsyncList, 0),
 		nodeWaiters:  make(map[core.RecordRef]chan core.Node),
 		indexNode:    make(map[core.NodeRole][]core.RecordRef),
-		indexShortID: make(map[uint32]core.Node),
+		indexShortID: make(map[core.ShortNodeID]core.Node),
 	}
 }
 
@@ -112,7 +112,7 @@ type nodekeeper struct {
 	activeLock   sync.RWMutex
 	active       map[core.RecordRef]core.Node
 	indexNode    map[core.NodeRole][]core.RecordRef
-	indexShortID map[uint32]core.Node
+	indexShortID map[core.ShortNodeID]core.Node
 	sync         []core.Node
 
 	unsyncLock  sync.Mutex
@@ -186,7 +186,7 @@ func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) core.Node {
 	return nk.active[ref]
 }
 
-func (nk *nodekeeper) GetActiveNodeByShortID(shortID uint32) core.Node {
+func (nk *nodekeeper) GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 

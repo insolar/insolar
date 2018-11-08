@@ -109,7 +109,7 @@ type NodeKeeper interface {
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
-	GetActiveNodeByShortID(shortID uint32) core.Node
+	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
 	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list.
 	SetPulse(number core.PulseNumber) (bool, UnsyncList)

@@ -20,11 +20,14 @@ import (
 	"crypto/ecdsa"
 )
 
+// ShortNodeID is the shortened ID of node that is unique inside the globe
+type ShortNodeID uint32
+
 type Node interface {
 	// ID is the unique identifier of the node
 	ID() RecordRef
-	// ShortID is the unique shortened ID of node that is used inside globule
-	ShortID() uint32
+	// ShortID get short ID of node
+	ShortID() ShortNodeID
 	// Pulse is the pulse number after which the new state is assigned to the node
 	Pulse() PulseNumber
 	// Roles is the set of candidate Roles for the node
