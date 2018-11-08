@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -36,17 +37,17 @@ type SignedMessage struct {
 	LogTraceID    string
 	TraceSpanData []byte
 	Header        SignedMessageHeader
-	Token         core.RoutingToken
+	Token         core.Token
 }
 
 // GetToken return current message token
-func (sm *SignedMessage) GetToken() core.RoutingToken {
+func (sm *SignedMessage) GetToken() core.Token {
 	return sm.Token
 }
 
 // Pulse returns pulse when message was sent.
 func (sm *SignedMessage) Pulse() core.PulseNumber {
-	return sm.Token.Pulse
+	return sm.Token.Pulse()
 }
 
 func (sm *SignedMessage) Message() core.Message {
@@ -67,7 +68,7 @@ func NewSignedMessage(
 	sender core.RecordRef,
 	key *ecdsa.PrivateKey,
 	pulse core.PulseNumber,
-	token *core.RoutingToken,
+	token *core.Token,
 ) (*SignedMessage, error) {
 	if key == nil {
 		return nil, errors.New("failed to sign a message: private key == nil")
@@ -75,13 +76,18 @@ func NewSignedMessage(
 	if msg == nil {
 		return nil, errors.New("failed to sign a nil message")
 	}
-	sign, err := signMessage(msg, key)
+	serialized, err := ToBytes(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "filed to serialize message")
+	}
+	sign, err := signMessage(serialized, key)
 	if err != nil {
 		return nil, err
 	}
+	msgHash := hash.SHA3Bytes256(serialized)
 	header := NewSignedMessageHeader(sender, msg)
 	if token == nil {
-		token = core.NewToken(&header.Target, &sender, pulse, key)
+		token = NewToken(&header.Target, &sender, pulse, msgHash, key)
 	}
 	return &SignedMessage{
 		Header:        header,
@@ -94,12 +100,8 @@ func NewSignedMessage(
 }
 
 // SignMessage tries to sign a core.Message.
-func signMessage(msg core.Message, key *ecdsa.PrivateKey) ([]byte, error) {
-	serialized, err := ToBytes(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "filed to serialize message")
-	}
-	sign, err := ecdsa2.Sign(serialized, key)
+func signMessage(msg []byte, key *ecdsa.PrivateKey) ([]byte, error) {
+	sign, err := ecdsa2.Sign(msg, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
 	}
