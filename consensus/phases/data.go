@@ -163,7 +163,6 @@ type NodeJoinClaim struct {
 	JoinsAfter              uint32
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
-	NodeRef                 core.RecordRef
 	NodePK                  ecdsa.PublicKey
 	//length uint16
 }
