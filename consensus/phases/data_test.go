@@ -39,8 +39,8 @@ func makeDefaultPacketHeader() *PacketHeader {
 	packetHeader.f01 = true
 	// -------------------
 	packetHeader.Pulse = uint32(22)
-	packetHeader.OriginNodeID = uint32(42)
-	packetHeader.TargetNodeID = uint32(62)
+	packetHeader.OriginNodeID = core.ShortNodeID(42)
+	packetHeader.TargetNodeID = core.ShortNodeID(62)
 
 	return packetHeader
 }
