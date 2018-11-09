@@ -31,7 +31,8 @@ import (
 )
 
 type TestMessageBus struct {
-	handlers map[core.MessageType]core.MessageHandler
+	handlers    map[core.MessageType]core.MessageHandler
+	PulseNumber core.PulseNumber
 }
 
 func (mb *TestMessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
@@ -81,7 +82,7 @@ func (mb *TestMessageBus) Stop() error {
 
 func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
 	key, _ := ecdsa.GeneratePrivateKey()
-	parcel, err := message.NewParcel(ctx, m, testutils.RandomRef(), key, 0, nil)
+	parcel, err := message.NewParcel(ctx, m, testutils.RandomRef(), key, mb.PulseNumber, nil)
 	if err != nil {
 		return nil, err
 	}
