@@ -145,7 +145,7 @@ func (mb *MessageBus) SendMessage(ctx context.Context, pulse *core.Pulse, msg co
 
 	jc := mb.Ledger.GetJetCoordinator()
 	// TODO: send to all actors of the role if nil Target
-	nodes, err := jc.QueryRole(ctx, msg.TargetRole(), *msg.Target(), msg.Pulse())
+	nodes, err := jc.QueryRole(ctx, msg.TargetRole(), msg.Target(), msg.Pulse())
 	if err != nil {
 		return nil, err
 	}

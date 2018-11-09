@@ -67,7 +67,7 @@ func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
 func (jc *JetCoordinator) IsAuthorized(
 	ctx context.Context,
 	role core.JetRole,
-	obj core.RecordRef,
+	obj *core.RecordRef,
 	pulse core.PulseNumber,
 	node core.RecordRef,
 ) (bool, error) {
@@ -87,7 +87,7 @@ func (jc *JetCoordinator) IsAuthorized(
 func (jc *JetCoordinator) QueryRole(
 	ctx context.Context,
 	role core.JetRole,
-	obj core.RecordRef,
+	obj *core.RecordRef,
 	pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
 	pulseData, err := jc.db.GetPulse(ctx, pulse)
