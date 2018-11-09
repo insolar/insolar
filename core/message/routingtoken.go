@@ -7,7 +7,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	crypto_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
 )
 
@@ -49,7 +48,15 @@ func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNu
 
 	var tokenBuffer bytes.Buffer
 	enc := gob.NewEncoder(&tokenBuffer)
-	err := enc.Encode(token)
+	err := enc.Encode(to)
+	if err != nil {
+		panic(err)
+	}
+	err = enc.Encode(from)
+	if err != nil {
+		panic(err)
+	}
+	err = enc.Encode(pulseNumber)
 	if err != nil {
 		panic(err)
 	}
@@ -64,27 +71,24 @@ func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNu
 }
 
 // ValidateToken checks that a routing token is valid
-func ValidateToken(pubKey *ecdsa.PublicKey, msg core.Parcel) error {
-	serialized, err := ToBytes(msg.Message())
-	if err != nil {
-		return errors.Wrap(err, "filed to serialize message")
-	}
-	msgHash := hash.SHA3Bytes256(serialized)
-	token := RoutingToken{
-		To:    msg.GetToken().GetTo(),
-		From:  msg.GetToken().GetFrom(),
-		Pulse: msg.Pulse(),
-	}
-
+func ValidateToken(pubKey *ecdsa.PublicKey, token core.RoutingToken, msgHash []byte) error {
 	var tokenBuffer bytes.Buffer
 	enc := gob.NewEncoder(&tokenBuffer)
-	err = enc.Encode(token)
+	err := enc.Encode(token.GetTo())
+	if err != nil {
+		panic(err)
+	}
+	err = enc.Encode(token.GetFrom())
+	if err != nil {
+		panic(err)
+	}
+	err = enc.Encode(token.GetPulse())
 	if err != nil {
 		panic(err)
 	}
 	tokenBuffer.Write(msgHash)
 
-	ok, err := crypto_helper.VerifyWithFullKey(tokenBuffer.Bytes(), msg.GetToken().GetSign(), pubKey)
+	ok, err := crypto_helper.VerifyWithFullKey(tokenBuffer.Bytes(), token.GetSign(), pubKey)
 	if err != nil {
 		return err
 	}

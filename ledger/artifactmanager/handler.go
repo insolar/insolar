@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error)
+type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error)
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {

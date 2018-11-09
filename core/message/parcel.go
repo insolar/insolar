@@ -37,11 +37,11 @@ type Parcel struct {
 	Signature     []byte
 	LogTraceID    string
 	TraceSpanData []byte
-	Token         core.MessageToken
+	Token         core.RoutingToken
 }
 
 // GetToken return current message token
-func (sm *Parcel) GetToken() core.MessageToken {
+func (sm *Parcel) GetToken() core.RoutingToken {
 	return sm.Token
 }
 
@@ -50,6 +50,7 @@ func (sm *Parcel) Pulse() core.PulseNumber {
 	return sm.Token.GetPulse()
 }
 
+// Message returns current instance's message
 func (sm *Parcel) Message() core.Message {
 	return sm.Msg
 }
@@ -68,7 +69,7 @@ func NewParcel(
 	sender core.RecordRef,
 	key *ecdsa.PrivateKey,
 	pulse core.PulseNumber,
-	token core.MessageToken,
+	token core.RoutingToken,
 ) (*Parcel, error) {
 	if key == nil {
 		return nil, errors.New("failed to sign a message: private key == nil")

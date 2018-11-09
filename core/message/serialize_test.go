@@ -36,10 +36,10 @@ func TestSerializeSigned(t *testing.T) {
 		Signature: nil,
 	}
 
-	buff, err := SignedToBytes(signMsgIn)
+	buff, err := ParcelToBytes(signMsgIn)
 	assert.NoError(t, err)
 
-	signMsgOut, err := DeserializeSigned(bytes.NewBuffer(buff))
+	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(buff))
 	assert.NoError(t, err)
 
 	assert.Equal(t, signMsgIn, signMsgOut)
@@ -78,10 +78,10 @@ func TestSerializeSignedWithContext(t *testing.T) {
 		TraceSpanData: instracer.MustSerialize(ctxIn),
 		LogTraceID:    inslogger.TraceID(ctxIn),
 	}
-	buff, err := SignedToBytes(signMsgIn)
+	buff, err := ParcelToBytes(signMsgIn)
 	assert.NoError(t, err)
 
-	signMsgOut, err := DeserializeSigned(bytes.NewBuffer(buff))
+	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(buff))
 	assert.NoError(t, err)
 
 	ctxOut := signMsgOut.Context(context.Background())

@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/pkg/errors"
 )
@@ -161,7 +162,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when mb.deliver()")
 	}
-	msg, err := message.DeserializeSigned(bytes.NewBuffer(args[0]))
+	msg, err := message.DeserializeParcel(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +170,13 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if mb.signmessages && !msg.IsValid(senderKey) {
 		return nil, errors.New("failed to check a message sign")
 	}
-	err = message.ValidateToken(senderKey, msg)
+	serialized, err := message.ToBytes(msg.Message())
+	if err != nil {
+		return nil, errors.Wrap(err, "filed to serialize message")
+	}
+	msgHash := hash.SHA3Bytes256(serialized)
+
+	err = message.ValidateToken(senderKey, msg.GetToken(), msgHash)
 	if err != nil {
 		return nil, errors.New("failed to check a token sign")
 	}

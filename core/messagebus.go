@@ -55,11 +55,11 @@ type Parcel interface {
 	// Pulse returns pulse when message was sent.
 	Pulse() PulseNumber
 	// GetToken returns a routing-token of the message
-	GetToken() MessageToken
+	GetToken() RoutingToken
 }
 
-// MessageToken is the base interface for the routing token
-type MessageToken interface {
+// RoutingToken is the base interface for the routing token
+type RoutingToken interface {
 	GetTo() *RecordRef
 	GetFrom() *RecordRef
 	GetPulse() PulseNumber

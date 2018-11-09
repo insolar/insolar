@@ -37,7 +37,7 @@ func NewLocalStorage(db *storage.DB) (*LocalStorage, error) {
 
 // SetMessage saves message in storage.
 func (s *LocalStorage) SetMessage(ctx context.Context, msg core.Parcel) (*core.RecordID, error) {
-	buff, err := message.SignedToBytes(msg)
+	buff, err := message.ParcelToBytes(msg)
 	if err != nil {
 		return nil, err
 	}
@@ -52,5 +52,5 @@ func (s *LocalStorage) GetMessage(ctx context.Context, id core.RecordID) (core.P
 		return nil, err
 	}
 
-	return message.DeserializeSigned(bytes.NewBuffer(buff))
+	return message.DeserializeParcel(bytes.NewBuffer(buff))
 }

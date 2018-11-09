@@ -82,7 +82,7 @@ func (rpc *RPCController) SendCascadeMessage(data core.Cascade, method string, m
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	buff, err := message.SignedToBytes(msg)
+	buff, err := message.ParcelToBytes(msg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize event")
 	}
@@ -166,7 +166,7 @@ func (rpc *RPCController) requestCascadeSendMessage(data core.Cascade, nodeID co
 
 func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
 	start := time.Now()
-	buff, err := message.SignedToBytes(msg)
+	buff, err := message.ParcelToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
