@@ -28,14 +28,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newActiveNode(ref byte) (core.RecordRef, []core.NodeRole, string, string) {
-	return core.RecordRef{ref}, []core.NodeRole{core.RoleUnknown}, "127.0.0.1:12345", "1.1"
+func newActiveNode(ref byte) (core.RecordRef, core.NodeRole, string, string) {
+	return core.RecordRef{ref}, core.RoleUnknown, "127.0.0.1:12345", "1.1"
 }
 
 func testNode(ref core.RecordRef) *node {
 	return &node{
-		NodeID:    ref,
-		NodeRoles: []core.NodeRole{core.RoleUnknown},
+		NodeID:   ref,
+		NodeRole: core.RoleUnknown,
 	}
 }
 
@@ -377,9 +377,9 @@ func TestUnsyncList_AddUnsyncHash(t *testing.T) {
 func TestNodekeeper_GetActiveNodesByRole(t *testing.T) {
 	keeper := newNodeKeeper()
 	node1 := testNode(testutils.RandomRef())
-	node1.NodeRoles = []core.NodeRole{core.RoleVirtual}
+	node1.NodeRole = core.RoleVirtual
 	node2 := testNode(testutils.RandomRef())
-	node2.NodeRoles = []core.NodeRole{core.RoleLightMaterial}
+	node2.NodeRole = core.RoleLightMaterial
 	keeper.AddActiveNodes([]core.Node{node1, node2})
 
 	assert.Equal(t, node1.NodeID, keeper.GetActiveNodesByRole(core.RoleVirtualExecutor)[0])
