@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/networkcoordinator"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/version/manager"
@@ -79,6 +80,8 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	versionManager, err := manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
+	platformPolicy := platformpolicy.NewPlatformPolicy()
+
 	// move to logic runner ??
 	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
@@ -96,6 +99,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		metricsHandler,
 		networkCoordinator,
 		versionManager,
+		platformPolicy,
 	)
 
 	cmOld := ComponentManager{components: core.Components{
