@@ -18,9 +18,11 @@ package hash
 
 import (
 	"hash"
+
+	"github.com/insolar/insolar/platformpolicy"
 )
 
-var hashAdapter = NewSHA3Adapter()
+var policy = platformpolicy.NewPlatformPolicy()
 
 // NewIDHash returns hash used for records ID generation.
 func NewIDHash() hash.Hash {
