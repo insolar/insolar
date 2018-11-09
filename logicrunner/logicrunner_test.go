@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils/certificate"
@@ -1609,7 +1610,8 @@ package main
 	obj := getRefFromID(objID)
 	_, err = am.ActivateObject(
 		ctx,
-		core.RecordRef{}, *obj,
+		core.RecordRef{},
+		*obj,
 		*am.GenesisRef(),
 		*cb.Prototypes["one"],
 		false,
@@ -1622,4 +1624,107 @@ package main
 	refFromMethod := r.([]interface{})[0].([]byte)
 	assert.Equal(t, *obj, Ref{}.FromSlice(refFromMethod))
 	ValidateAllResults(t, lr)
+}
+
+func TestReleaseRequestsAfterPulse(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+
+	var sleepContract = `
+package main
+
+import (
+   "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+   "time"
+)
+type One struct {
+   foundation.BaseContract
+   N int
+}
+
+func New() (*One, error){
+   return nil, nil
+}
+
+func (r *One) LongSleep() (error) {
+   time.Sleep(7 * time.Second)
+   r.N++
+   return nil
+}
+
+func (r *One) ShortSleep() (error) {
+   time.Sleep(1 * time.Microsecond)
+   r.N++
+   return nil
+}
+
+`
+	ctx := inslogger.ContextWithTrace(context.Background(), utils.RandTraceID())
+	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{
+		"one": sleepContract,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("one")})
+	assert.NoError(t, err)
+	contract := getRefFromID(contractID)
+	_, err = am.ActivateObject(
+		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	lr = getLogicRunnerWithoutValidation(lr)
+
+	// hold executor
+	go func() {
+		log.Debugf("!!!!! Long start")
+		executeMethod(ctx, lr, pm, *contract, 0, "LongSleep", goplugintestutils.CBORMarshal(t, []interface{}{}))
+		log.Debugf("!!!!! Long end")
+	}()
+
+	// wait both method calls, send new pulse
+	go func() {
+		log.Debugf("!!!!! Pulse sleep")
+		time.Sleep(3 * time.Second)
+		log.Debugf("!!!!! Pulse start")
+		err = pm.Set(
+			ctx,
+			core.Pulse{PulseNumber: 1, Entropy: core.Entropy{}},
+		)
+		log.Debugf("!!!!! Pulse end")
+	}()
+
+	// wait for holding and add to queue
+	log.Debugf("!!!!! Short sleep")
+	time.Sleep(time.Second)
+	log.Debugf("!!!!! Short start")
+	_, err = executeMethod(ctx, lr, pm, *contract, 0, "ShortSleep", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	log.Debugf("!!!!! Short end")
+
+	// TODO check for 302
+	assert.Error(t, err, "contract call")
+	assert.Equal(t, "Abort execution: New Pulse coming", err.Error())
+}
+
+func getLogicRunnerWithoutValidation(lr core.LogicRunner) *LogicRunner {
+	rlr := lr.(*LogicRunner)
+	newmb := rlr.MessageBus.(*testmessagebus.TestMessageBus)
+
+	emptyFunc := func(context.Context, core.SignedMessage) (res core.Reply, err error) {
+		return nil, nil
+	}
+
+	newmb.ReRegister(core.TypeValidationResults, emptyFunc)
+	newmb.ReRegister(core.TypeExecutorResults, emptyFunc)
+
+	rlr.MessageBus = newmb
+
+	return rlr
 }
