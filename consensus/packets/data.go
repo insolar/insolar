@@ -26,10 +26,9 @@ type PacketType uint8
 type ClaimType uint8
 type ReferendumType uint8
 
-// !!! Amount of constants here must be less then 8 !!!
 const (
-	NetworkConsistency = PacketType(iota + 1)
-	Referendum
+	Phase1 = PacketType(iota + 1)
+	Phase2
 )
 
 const (
@@ -70,7 +69,7 @@ func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 	if header.PacketType != types.Phase1 {
 		return errors.New("Phase1Packet.SetPacketHeader: wrong packet type")
 	}
-	p1p.packetHeader.setRoutingFields(header, NetworkConsistency, 1)
+	p1p.packetHeader.setRoutingFields(header, Phase1)
 
 	return nil
 }
@@ -78,7 +77,7 @@ func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
-	if p1p.packetHeader.PacketT != NetworkConsistency {
+	if p1p.packetHeader.PacketT != Phase1 {
 		return nil, errors.New("Phase1Packet.GetPacketHeader: wrong packet type")
 	}
 
@@ -91,7 +90,6 @@ func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 
 type PacketHeader struct {
 	PacketT    PacketType
-	SubType    uint8
 	HasRouting bool
 	//-----------------
 	f01   bool
@@ -102,12 +100,11 @@ type PacketHeader struct {
 	TargetNodeID core.ShortNodeID
 }
 
-func (ph *PacketHeader) setRoutingFields(header *RoutingHeader, packetType PacketType, subType uint8) {
+func (ph *PacketHeader) setRoutingFields(header *RoutingHeader, packetType PacketType) {
 	ph.TargetNodeID = header.TargetID
 	ph.OriginNodeID = header.OriginID
 	ph.HasRouting = true
 	ph.PacketT = packetType
-	ph.SubType = subType
 }
 
 // PulseDataExt is a pulse data extension.
@@ -280,7 +277,7 @@ func (phase2Packet *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
 		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
 	}
 
-	phase2Packet.packetHeader.setRoutingFields(header, NetworkConsistency, 2)
+	phase2Packet.packetHeader.setRoutingFields(header, Phase2)
 
 	return nil
 }
@@ -288,7 +285,7 @@ func (phase2Packet *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
 func (phase2Packet *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
-	if phase2Packet.packetHeader.PacketT != NetworkConsistency {
+	if phase2Packet.packetHeader.PacketT != Phase2 {
 		return nil, errors.New("Phase2Packet.GetPacketHeader: wrong packet type")
 	}
 
