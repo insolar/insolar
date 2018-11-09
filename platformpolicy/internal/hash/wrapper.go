@@ -29,3 +29,7 @@ func (h *hashWrapper) Write(p []byte) (n int, err error) {
 	return h.hash.Write(p)
 }
 
+func (h *hashWrapper) Sum(b []byte) []byte {
+	return h.hash.Sum(b)
+}
+
