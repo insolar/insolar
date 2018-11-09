@@ -24,8 +24,8 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
+	hash2 "github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/network"
-	"golang.org/x/crypto/sha3"
 )
 
 func hashWriteChecked(hash hash.Hash, data []byte) {
@@ -39,8 +39,8 @@ func hashWriteChecked(hash hash.Hash, data []byte) {
 }
 
 func calculateNodeHash(node core.Node) []byte {
-	hash := sha3.New224()
-	hashWriteChecked(hash, node.ID().Bytes())
+	h := hash2.IntegrityHasher()
+	hashWriteChecked(h, node.ID().Bytes())
 	b := make([]byte, 8)
 	nodeRoles := make([]core.NodeRole, len(node.Roles()))
 	copy(nodeRoles, node.Roles())
@@ -49,20 +49,20 @@ func calculateNodeHash(node core.Node) []byte {
 	})
 	for _, nodeRole := range nodeRoles {
 		binary.LittleEndian.PutUint32(b, uint32(nodeRole))
-		hashWriteChecked(hash, b[:4])
+		hashWriteChecked(h, b[:4])
 	}
-	hashWriteChecked(hash, b[:])
+	hashWriteChecked(h, b[:])
 	binary.LittleEndian.PutUint32(b, uint32(node.Pulse()))
-	hashWriteChecked(hash, b[:4])
+	hashWriteChecked(h, b[:4])
 	// TODO: pass correctly public key to active node
 	// publicKey, err := ecdsa.ExportPublicKey(node.PublicKey)
 	// if err != nil {
 	// 	panic(err.Error())
 	// }
-	// hashWriteChecked(hash, []byte(publicKey))
-	hashWriteChecked(hash, []byte(node.PhysicalAddress()))
-	hashWriteChecked(hash, []byte(node.Version()))
-	return hash.Sum(nil)
+	// hashWriteChecked(h, []byte(publicKey))
+	hashWriteChecked(h, []byte(node.PhysicalAddress()))
+	hashWriteChecked(h, []byte(node.Version()))
+	return h.Sum(nil)
 }
 
 // CalculateHash calculates hash of active node list
@@ -74,23 +74,23 @@ func CalculateHash(list []core.Node) (result []byte, err error) {
 	// catch possible panic from hashWriteChecked in this function and in all calculateNodeHash funcs
 	defer func() {
 		if r := recover(); r != nil {
-			result, err = nil, fmt.Errorf("error calculating hash: %s", r)
+			result, err = nil, fmt.Errorf("error calculating h: %s", r)
 		}
 	}()
 
-	hash := sha3.New224()
+	h := hash2.IntegrityHasher()
 	for _, node := range list {
 		nodeHash := calculateNodeHash(node)
-		hashWriteChecked(hash, nodeHash)
+		hashWriteChecked(h, nodeHash)
 	}
-	return hash.Sum(nil), nil
+	return h.Sum(nil), nil
 }
 
 // CalculateNodeUnsyncHash calculates hash for a NodeUnsyncHash
 func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []core.Node) (*network.NodeUnsyncHash, error) {
-	hash, err := CalculateHash(list)
+	h, err := CalculateHash(list)
 	if err != nil {
 		return nil, err
 	}
-	return &network.NodeUnsyncHash{NodeID: nodeID, Hash: hash}, nil
+	return &network.NodeUnsyncHash{NodeID: nodeID, Hash: h}, nil
 }
