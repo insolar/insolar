@@ -30,8 +30,8 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-// SignedMessage is a message signed by senders private key.
-type SignedMessage struct {
+// Parcel is a message signed by senders private key.
+type Parcel struct {
 	Msg           core.Message
 	Signature     []byte
 	LogTraceID    string
@@ -45,21 +45,21 @@ func (sm *SignedMessage) GetHeader() core.MessageHeader {
 }
 
 // GetToken return current message token
-func (sm *SignedMessage) GetToken() core.MessageToken {
+func (sm *Parcel) GetToken() core.MessageToken {
 	return sm.Token
 }
 
 // Pulse returns pulse when message was sent.
-func (sm *SignedMessage) Pulse() core.PulseNumber {
+func (sm *Parcel) Pulse() core.PulseNumber {
 	return sm.Token.GetPulse()
 }
 
-func (sm *SignedMessage) Message() core.Message {
+func (sm *Parcel) Message() core.Message {
 	return sm.Msg
 }
 
 // Context returns initialized context with propagated data with ctx as parent.
-func (sm *SignedMessage) Context(ctx context.Context) context.Context {
+func (sm *Parcel) Context(ctx context.Context) context.Context {
 	ctx = inslogger.ContextWithTrace(ctx, sm.LogTraceID)
 	parentspan := instracer.MustDeserialize(sm.TraceSpanData)
 	return instracer.WithParentSpan(ctx, parentspan)
@@ -73,7 +73,7 @@ func NewSignedMessage(
 	key *ecdsa.PrivateKey,
 	pulse core.PulseNumber,
 	token core.MessageToken,
-) (*SignedMessage, error) {
+) (*Parcel, error) {
 	if key == nil {
 		return nil, errors.New("failed to sign a message: private key == nil")
 	}
@@ -93,8 +93,7 @@ func NewSignedMessage(
 	if token == nil {
 		token = NewToken(&header.Target, &sender, pulse, msgHash, key)
 	}
-	return &SignedMessage{
-		Header:        header,
+	return &Parcel{
 		Token:         token,
 		Msg:           msg,
 		Signature:     sign,
@@ -113,7 +112,7 @@ func signMessage(msg []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 }
 
 // IsValid checks if a sign is correct.
-func (sm *SignedMessage) IsValid(key *ecdsa.PublicKey) bool {
+func (sm *Parcel) IsValid(key *ecdsa.PublicKey) bool {
 	serialized, err := ToBytes(sm.Msg)
 	if err != nil {
 		log.Error(err, "filed to serialize message")
@@ -133,19 +132,19 @@ func (sm *SignedMessage) IsValid(key *ecdsa.PublicKey) bool {
 }
 
 // Type returns message type.
-func (sm *SignedMessage) Type() core.MessageType {
+func (sm *Parcel) Type() core.MessageType {
 	return sm.Msg.Type()
 }
 
 // GetCaller returns initiator of this event.
-func (sm *SignedMessage) GetCaller() *core.RecordRef {
+func (sm *Parcel) GetCaller() *core.RecordRef {
 	return sm.Msg.GetCaller()
 }
 
-func (sm *SignedMessage) GetSign() []byte {
+func (sm *Parcel) GetSign() []byte {
 	return sm.Signature
 }
 
-func (sm *SignedMessage) GetSender() core.RecordRef {
-	return sm.Header.Sender
+func (sm *Parcel) GetSender() core.RecordRef {
+	return sm.Sender
 }
