@@ -31,6 +31,7 @@ import (
 // GetEmptyMessage constructs specified message
 func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	switch mt {
+
 	// Logicrunner
 	case core.TypeCallMethod:
 		return &CallMethod{}, nil
