@@ -111,6 +111,11 @@ type ArtifactManager interface {
 	// During iteration children refs will be fetched from remote source (parent object).
 	GetChildren(ctx context.Context, parent RecordRef, pulse *PulseNumber) (RefIterator, error)
 
+	// GetHistory returns history iterator.
+	//
+	// During iteration history refs will be fetched from remote source.
+	GetHistory(ctx context.Context, object RecordRef, pulse *PulseNumber) (RefIterator, error)
+
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
@@ -209,6 +214,9 @@ type ObjectDescriptor interface {
 
 	// Children returns object's children references.
 	Children(pulse *PulseNumber) (RefIterator, error)
+
+	// History returns object's history references.
+	History(pulse *PulseNumber) (RefIterator, error)
 
 	// ChildPointer returns the latest child for this object.
 	ChildPointer() *RecordID

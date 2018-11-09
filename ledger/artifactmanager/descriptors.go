@@ -130,6 +130,11 @@ func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, 
 	return d.am.GetChildren(d.ctx, d.head, pulse)
 }
 
+// History returns object's history references.
+func (d *ObjectDescriptor) History(pulse *core.PulseNumber) (core.RefIterator, error) {
+	return d.am.GetHistory(d.ctx, d.head, pulse)
+}
+
 // Parent returns object's parent.
 func (d *ObjectDescriptor) Parent() *core.RecordRef {
 	return &d.parent

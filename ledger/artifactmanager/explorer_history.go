@@ -40,11 +40,6 @@ type HistoryIterator struct {
 	canFetch   bool
 }
 
-// History returns object's history references.
-func (d *ObjectDescriptor) History(pulse *core.PulseNumber) (core.RefIterator, error) {
-	return d.am.GetHistory(d.ctx, d.head, pulse)
-}
-
 // NewHistoryIterator creates new history iterator.
 func NewHistoryIterator(ctx context.Context, mb core.MessageBus, object core.RecordRef, fromPulse *core.PulseNumber, chunkSize int) (*HistoryIterator, error) {
 	iter := HistoryIterator{

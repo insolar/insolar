@@ -702,9 +702,9 @@ func (m *LedgerArtifactManager) registerChild(
 //
 // During iteration history will be fetched from remote source.
 func (m *LedgerArtifactManager) GetHistory(
-	ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber,
+	ctx context.Context, object core.RecordRef, pulse *core.PulseNumber,
 ) (core.RefIterator, error) {
 	var err error
 	defer instrument(ctx, "GetHistory").err(&err).end()
-	return NewHistoryIterator(ctx, m.messageBus, parent, pulse, m.getHistoryChunkSize)
+	return NewHistoryIterator(ctx, m.messageBus, object, pulse, m.getHistoryChunkSize)
 }
