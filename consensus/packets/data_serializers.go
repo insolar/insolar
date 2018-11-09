@@ -35,23 +35,18 @@ const (
 	// take low bit
 	hasRoutingMask = 0x1
 
-	packetTypeMask   = 0xf0
-	packetTypeOffset = 4
-
-	subtypeMask   = 0xe
-	subtypeOffset = 1
+	packetTypeMask   = 0x7f
+	packetTypeOffset = 1
 )
 
 func (ph *PacketHeader) parseRouteInfo(routInfo uint8) {
-	ph.PacketT = PacketType((routInfo & packetTypeMask) >> packetTypeOffset)
-	ph.SubType = (routInfo & subtypeMask) >> subtypeOffset
+	ph.PacketT = PacketType(routInfo&packetTypeMask) >> packetTypeOffset
 	ph.HasRouting = (routInfo & hasRoutingMask) == 1
 }
 
 func (ph *PacketHeader) compactRouteInfo() uint8 {
 	var result uint8
 	result |= uint8(ph.PacketT) << packetTypeOffset
-	result |= ph.SubType << subtypeOffset
 
 	if ph.HasRouting {
 		result |= hasRoutingMask
@@ -145,7 +140,7 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 		}
 		err = refClaim.Deserialize(claimsBufReader)
 		if err != nil {
-			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't deserialize claim.")
+			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't deserialize claim")
 		}
 		p1p.claims = append(p1p.claims, refClaim)
 
