@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/stretchr/testify/assert"
@@ -86,10 +87,17 @@ func TestCalculator(t *testing.T) {
 	calculator := &calculator{}
 
 	cm := component.Manager{}
-	cm.Inject(nk, l, c, calculator)
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+
+	cm.Inject(nk, l, c, calculator, mock)
 
 	assert.NotNil(t, calculator.Ledger)
 	assert.NotNil(t, calculator.NodeNetwork)
+	assert.NotNil(t, calculator.NodeCryptographyService)
 
 	s := &calculatorSuite{
 		Suite:        suite.Suite{},

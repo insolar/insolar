@@ -53,7 +53,19 @@ func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBoots
 	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
 	assert.NoError(t, err)
 	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
-	return core.Components{Certificate: cert, NodeNetwork: keeper, Ledger: &network.MockLedger{}}
+
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+
+	return core.Components{
+		Certificate:         cert,
+		NodeNetwork:         keeper,
+		Ledger:              &network.MockLedger{},
+		CryptographyService: mock,
+	}
 }
 
 /*

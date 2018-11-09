@@ -46,12 +46,10 @@ func (m *Manager) Inject(components ...interface{}) {
 
 		for i := 0; i < componentType.NumField(); i++ {
 			fieldMeta := componentType.Field(i)
-			if _, ok := fieldMeta.Tag.Lookup("mustInject"); ok {
+			if _, ok := fieldMeta.Tag.Lookup("inject"); ok {
 				log.Debugf("ComponentManager: Component %s need inject: ", componentType.String(), fieldMeta.Name)
-
+				m.mustInject(component, fieldMeta)
 			}
-
-			m.mustInject(component, fieldMeta)
 		}
 	}
 }

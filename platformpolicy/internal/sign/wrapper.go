@@ -35,7 +35,7 @@ func fromRS(r, s *big.Int) *ecdsaSignature {
 	return &ecdsaSignature{R: r, S: s}
 }
 
-func (p *ecdsaSignature) Marshal() ([]byte, error) {
+func (p ecdsaSignature) Marshal() ([]byte, error) {
 	signature, err := asn1.Marshal(p)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Marshall ] Could't marshal ecdsaSignature")
