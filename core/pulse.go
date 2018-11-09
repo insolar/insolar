@@ -28,6 +28,8 @@ const (
 	PulseNumberSize = 4
 	// EntropySize declares the number of bytes in the pulse entropy
 	EntropySize = 64
+	// OriginIDSize declares the number of bytes in the origin id
+	OriginIDSize = 16
 )
 
 // Entropy is 64 random bytes used in every pseudo-random calculations.
@@ -52,9 +54,15 @@ func Bytes2PulseNumber(buf []byte) PulseNumber {
 // Pulse is base data structure for a pulse.
 type Pulse struct {
 	PulseNumber     PulseNumber
+	PrevPulseNumber PulseNumber
 	NextPulseNumber PulseNumber
-	Entropy         Entropy
-	Signs           map[string]PulseSenderConfirmation
+
+	PulseTimestamp   int64
+	EpochPulseNumber int
+	OriginID         [OriginIDSize]byte
+
+	Entropy Entropy
+	Signs   map[string]PulseSenderConfirmation
 }
 
 func (p *Pulse) PulseDuration() time.Duration {
@@ -80,7 +88,12 @@ const FirstPulseNumber = 65537
 // GenesisPulse is a first pulse for the system
 // because first 2 bits of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
 // for calculation pulse numbers we use the formula = unix.Now() - firstPulseDate + 65536
-var GenesisPulse = &Pulse{PulseNumber: FirstPulseNumber, Entropy: [EntropySize]byte{}}
+var GenesisPulse = &Pulse{
+	PulseNumber:      FirstPulseNumber,
+	Entropy:          [EntropySize]byte{},
+	EpochPulseNumber: 1,
+	PulseTimestamp:   firstPulseDate,
+}
 
 // CalculatePulseNumber is helper for calculating next pulse number, when a network is being started
 func CalculatePulseNumber(now time.Time) PulseNumber {
