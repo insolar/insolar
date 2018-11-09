@@ -130,10 +130,6 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 	return ecdsa.Verify(savedKey, h, ecdsaP.R, ecdsaP.S), nil
 }
 
-// ExportSignature serializes signature to string.
-func ExportSignature(signature []byte) string {
-	return base64.StdEncoding.EncodeToString(signature)
-}
 
 // ImportSignature deserialize signature from string.
 func ImportSignature(data string) ([]byte, error) {
