@@ -695,10 +695,10 @@ func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodeRef")
 	}
 
-	// err = binary.Write(result, defaultByteOrder, njc.NodePK)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodePK")
-	// }
+	err = binary.Write(result, defaultByteOrder, njc.NodePK)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodePK")
+	}
 
 	// err = binary.Write(result, defaultByteOrder, njc.length)
 	// if err != nil {
