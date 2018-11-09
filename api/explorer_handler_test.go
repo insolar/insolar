@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -47,7 +49,27 @@ type memberInfo struct {
 	pubKey     string
 }
 
-func Test(t *testing.T) {
+func Test_ExplorerHandlerExtractHistory(t *testing.T) {
+	head := core.NewRecordRef(core.RecordID{0}, core.RecordID{0})
+	objList := []reply.Object{}
+	objList = append(objList, reply.Object{
+		Head:   *head,
+		Memory: []byte{},
+	})
+	objList = append(objList, reply.Object{
+		Head:   *head,
+		Memory: []byte{},
+	})
+	repl := &reply.ExplorerList{
+		Refs: objList,
+	}
+	response, err := extractHistoryResponse(repl)
+	assert.NoError(t, err)
+	assert.NotNil(t, response)
+
+}
+
+func Test_ExplorerHandlerApi(t *testing.T) {
 	ctx, _ = inslogger.WithTraceField(context.Background(), "APItests")
 	member1, err := createMember("Test1")
 	assert.NoError(t, err)

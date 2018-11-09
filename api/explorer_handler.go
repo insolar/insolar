@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -46,19 +45,11 @@ func (rh *RequestHandler) ProcessGetHistory(ctx context.Context) (map[string]int
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetHistory ]")
 	}
-	log.Info("Send HISTORY request, ref: " + rh.params.Reference)
-	log.Info("RouteResult: ", routResult)
-	log.Info("RouteResult type: ", routResult.Type())
-
-	refs := routResult.(*reply.ExplorerList).Refs
-	log.Info("refs: ", refs)
-
-	response, err := extractHistoryResponse(refs)
+	response, err := extractHistoryResponse(routResult)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetHistory ]")
 	}
 	result["history"] = response
-
 	return result, nil
 }
 
@@ -87,7 +78,8 @@ func (rh *RequestHandler) sendRequestHistory(ctx context.Context, object core.Re
 	return routResult, nil
 }
 
-func extractHistoryResponse(refs []reply.Object) (string, error) {
+func extractHistoryResponse(routResult core.Reply) (string, error) {
+	refs := routResult.(*reply.ExplorerList).Refs
 	firstSt := true
 	list := explorerObject{}
 	for _, ref := range refs {
