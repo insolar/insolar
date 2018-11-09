@@ -23,3 +23,7 @@ import (
 type platformPolicy struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 }
+
+func (pp *platformPolicy) CryptographyScheme() core.PlatformCryptographyScheme {
+	return pp.PlatformCryptographyScheme
+}
