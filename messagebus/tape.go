@@ -12,6 +12,9 @@ import (
 	"github.com/insolar/insolar/core/reply"
 )
 
+// tape is an abstraction for saving replies for messages and restoring them.
+//
+// There can be many active tapes simultaneously and they do not share saved replies.
 type tape interface {
 	Write(ctx context.Context, writer io.Writer) error
 	GetReply(ctx context.Context, msgHash []byte) (core.Reply, error)
@@ -75,6 +78,7 @@ func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (
 	return &tape, nil
 }
 
+// Write writes all saved in tape replies to provided writer.
 func (t *storagetape) Write(ctx context.Context, w io.Writer) error {
 	var err error
 
@@ -98,6 +102,7 @@ func (t *storagetape) Write(ctx context.Context, w io.Writer) error {
 	return err
 }
 
+// GetReply returns reply if it was previously saved on that tape.
 func (t *storagetape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
 	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
 	buff, err := t.ls.Get(ctx, t.pulse, key)
@@ -108,6 +113,7 @@ func (t *storagetape) GetReply(ctx context.Context, msgHash []byte) (core.Reply,
 	return reply.Deserialize(bytes.NewBuffer(buff))
 }
 
+// SetReply stores provided reply for this tape.
 func (t *storagetape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
 	reader, err := reply.Serialize(rep)
 	if err != nil {
