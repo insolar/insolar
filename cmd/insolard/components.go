@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/genesis"
+	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
@@ -80,6 +81,9 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	versionManager, err := manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
+	keyStore, err := keystore.NewKeyStore(cfg)
+	checkError(ctx, err, "failed to load KeyStore: ")
+
 	platformPolicy := platformpolicy.NewPlatformPolicy()
 
 	// move to logic runner ??
@@ -100,6 +104,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		networkCoordinator,
 		versionManager,
 		platformPolicy,
+		keyStore,
 	)
 
 	cmOld := ComponentManager{components: core.Components{
