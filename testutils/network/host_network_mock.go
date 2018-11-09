@@ -13,6 +13,7 @@ import (
 	core "github.com/insolar/insolar/core"
 	network "github.com/insolar/insolar/network"
 	types "github.com/insolar/insolar/network/transport/packet/types"
+
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -24,6 +25,11 @@ type HostNetworkMock struct {
 	BuildResponseCounter    uint64
 	BuildResponsePreCounter uint64
 	BuildResponseMock       mHostNetworkMockBuildResponse
+
+	GetNodeIDFunc       func() (r core.RecordRef)
+	GetNodeIDCounter    uint64
+	GetNodeIDPreCounter uint64
+	GetNodeIDMock       mHostNetworkMockGetNodeID
 
 	NewRequestBuilderFunc       func() (r network.RequestBuilder)
 	NewRequestBuilderCounter    uint64
@@ -65,6 +71,7 @@ func NewHostNetworkMock(t minimock.Tester) *HostNetworkMock {
 	}
 
 	m.BuildResponseMock = mHostNetworkMockBuildResponse{mock: m}
+	m.GetNodeIDMock = mHostNetworkMockGetNodeID{mock: m}
 	m.NewRequestBuilderMock = mHostNetworkMockNewRequestBuilder{mock: m}
 	m.PublicAddressMock = mHostNetworkMockPublicAddress{mock: m}
 	m.RegisterRequestHandlerMock = mHostNetworkMockRegisterRequestHandler{mock: m}
@@ -140,6 +147,48 @@ func (m *HostNetworkMock) BuildResponseMinimockCounter() uint64 {
 //BuildResponseMinimockPreCounter returns the value of HostNetworkMock.BuildResponse invocations
 func (m *HostNetworkMock) BuildResponseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.BuildResponsePreCounter)
+}
+
+type mHostNetworkMockGetNodeID struct {
+	mock *HostNetworkMock
+}
+
+//Return sets up a mock for HostNetwork.GetNodeID to return Return's arguments
+func (m *mHostNetworkMockGetNodeID) Return(r core.RecordRef) *HostNetworkMock {
+	m.mock.GetNodeIDFunc = func() core.RecordRef {
+		return r
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of HostNetwork.GetNodeID method
+func (m *mHostNetworkMockGetNodeID) Set(f func() (r core.RecordRef)) *HostNetworkMock {
+	m.mock.GetNodeIDFunc = f
+
+	return m.mock
+}
+
+//GetNodeID implements github.com/insolar/insolar/network.HostNetwork interface
+func (m *HostNetworkMock) GetNodeID() (r core.RecordRef) {
+	atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
+	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
+
+	if m.GetNodeIDFunc == nil {
+		m.t.Fatal("Unexpected call to HostNetworkMock.GetNodeID")
+		return
+	}
+
+	return m.GetNodeIDFunc()
+}
+
+//GetNodeIDMinimockCounter returns a count of HostNetworkMock.GetNodeIDFunc invocations
+func (m *HostNetworkMock) GetNodeIDMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNodeIDCounter)
+}
+
+//GetNodeIDMinimockPreCounter returns the value of HostNetworkMock.GetNodeID invocations
+func (m *HostNetworkMock) GetNodeIDMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNodeIDPreCounter)
 }
 
 type mHostNetworkMockNewRequestBuilder struct {
@@ -452,6 +501,10 @@ func (m *HostNetworkMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to HostNetworkMock.BuildResponse")
 	}
 
+	if m.GetNodeIDFunc != nil && atomic.LoadUint64(&m.GetNodeIDCounter) == 0 {
+		m.t.Fatal("Expected call to HostNetworkMock.GetNodeID")
+	}
+
 	if m.NewRequestBuilderFunc != nil && atomic.LoadUint64(&m.NewRequestBuilderCounter) == 0 {
 		m.t.Fatal("Expected call to HostNetworkMock.NewRequestBuilder")
 	}
@@ -497,6 +550,10 @@ func (m *HostNetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to HostNetworkMock.BuildResponse")
 	}
 
+	if m.GetNodeIDFunc != nil && atomic.LoadUint64(&m.GetNodeIDCounter) == 0 {
+		m.t.Fatal("Expected call to HostNetworkMock.GetNodeID")
+	}
+
 	if m.NewRequestBuilderFunc != nil && atomic.LoadUint64(&m.NewRequestBuilderCounter) == 0 {
 		m.t.Fatal("Expected call to HostNetworkMock.NewRequestBuilder")
 	}
@@ -536,6 +593,7 @@ func (m *HostNetworkMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && (m.BuildResponseFunc == nil || atomic.LoadUint64(&m.BuildResponseCounter) > 0)
+		ok = ok && (m.GetNodeIDFunc == nil || atomic.LoadUint64(&m.GetNodeIDCounter) > 0)
 		ok = ok && (m.NewRequestBuilderFunc == nil || atomic.LoadUint64(&m.NewRequestBuilderCounter) > 0)
 		ok = ok && (m.PublicAddressFunc == nil || atomic.LoadUint64(&m.PublicAddressCounter) > 0)
 		ok = ok && (m.RegisterRequestHandlerFunc == nil || atomic.LoadUint64(&m.RegisterRequestHandlerCounter) > 0)
@@ -552,6 +610,10 @@ func (m *HostNetworkMock) MinimockWait(timeout time.Duration) {
 
 			if m.BuildResponseFunc != nil && atomic.LoadUint64(&m.BuildResponseCounter) == 0 {
 				m.t.Error("Expected call to HostNetworkMock.BuildResponse")
+			}
+
+			if m.GetNodeIDFunc != nil && atomic.LoadUint64(&m.GetNodeIDCounter) == 0 {
+				m.t.Error("Expected call to HostNetworkMock.GetNodeID")
 			}
 
 			if m.NewRequestBuilderFunc != nil && atomic.LoadUint64(&m.NewRequestBuilderCounter) == 0 {
@@ -591,6 +653,10 @@ func (m *HostNetworkMock) MinimockWait(timeout time.Duration) {
 func (m *HostNetworkMock) AllMocksCalled() bool {
 
 	if m.BuildResponseFunc != nil && atomic.LoadUint64(&m.BuildResponseCounter) == 0 {
+		return false
+	}
+
+	if m.GetNodeIDFunc != nil && atomic.LoadUint64(&m.GetNodeIDCounter) == 0 {
 		return false
 	}
 
