@@ -68,8 +68,8 @@ func (mb *MessageBus) Stop(ctx context.Context) error { return nil }
 // NewPlayer creates a new player from stream.
 //
 // This is a very long operation, as it saves replies in storage until the stream is exhausted.
-func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
-	tape, err := NewTapeFromReader(ctx, mb.Ledger.GetLocalStorage(), reader)
+func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageBus, error) {
+	tape, err := NewTapeFromReader(ctx, mb.Ledger.GetLocalStorage(), r)
 	if err != nil {
 		return nil, err
 	}

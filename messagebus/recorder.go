@@ -18,8 +18,8 @@ func NewRecorder(s sender, tape tape, pm core.PulseManager) (*recorder, error) {
 	return &recorder{sender: s, tape: tape, pm: pm}, nil
 }
 
-func (r *recorder) WriteTape(ctx context.Context, writer io.Writer) error {
-	return r.tape.Write(ctx, writer)
+func (r *recorder) WriteTape(ctx context.Context, w io.Writer) error {
+	return r.tape.Write(ctx, w)
 }
 
 func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, error) {

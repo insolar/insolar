@@ -44,11 +44,11 @@ func NewTape(ls core.LocalStorage, pulse core.PulseNumber) (*storagetape, error)
 // NewTapeFromReader creates and fills a new storagetape from a stream.
 //
 // This is a very long operation, as it saves replies in storage until the stream is exhausted.
-func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, reader io.Reader) (*storagetape, error) {
+func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storagetape, error) {
 	var err error
 	tape := storagetape{ls: ls}
 
-	decoder := gob.NewDecoder(reader)
+	decoder := gob.NewDecoder(r)
 	err = decoder.Decode(&tape.pulse)
 	if err != nil {
 		return nil, err
@@ -75,10 +75,10 @@ func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, reader io.Read
 	return &tape, nil
 }
 
-func (t *storagetape) Write(ctx context.Context, writer io.Writer) error {
+func (t *storagetape) Write(ctx context.Context, w io.Writer) error {
 	var err error
 
-	encoder := gob.NewEncoder(writer)
+	encoder := gob.NewEncoder(w)
 	err = encoder.Encode(t.pulse)
 	if err != nil {
 		return err
@@ -89,20 +89,13 @@ func (t *storagetape) Write(ctx context.Context, writer io.Writer) error {
 	}
 
 	err = t.ls.Iterate(ctx, t.pulse, t.id[:], func(k, v []byte) error {
-		err = encoder.Encode(&couple{
+		return encoder.Encode(&couple{
 			Key:   k[len(t.id):],
 			Value: v,
 		})
-		if err != nil {
-			return err
-		}
-		return nil
 	})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (t *storagetape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {

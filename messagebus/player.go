@@ -18,8 +18,8 @@ func NewPlayer(s sender, tape tape, pm core.PulseManager) (*player, error) {
 	return &player{sender: s, tape: tape, pm: pm}, nil
 }
 
-func (r *player) WriteTape(ctx context.Context, writer io.Writer) error {
-	panic("can't write the storagetape from player")
+func (r *player) WriteTape(ctx context.Context, w io.Writer) error {
+	panic("can't write the tape from player")
 }
 
 func (r *player) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
