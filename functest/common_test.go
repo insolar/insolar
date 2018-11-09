@@ -96,7 +96,7 @@ func TestTooMuchParams(t *testing.T) {
 	isAuthResponse := &isAuthorized{}
 	unmarshalResponse(t, body, isAuthResponse)
 
-	assert.Equal(t, []int{1}, isAuthResponse.Roles)
+	assert.Equal(t, 1, isAuthResponse.Role)
 	assert.NotEmpty(t, isAuthResponse.PublicKey)
 	assert.Equal(t, true, isAuthResponse.NetCoordCheck)
 }
