@@ -46,3 +46,11 @@ func TestNewKeyStore_Fails(t *testing.T) {
 	assert.Nil(t, ks)
 }
 
+func TestKeyStore_GetPrivateKey(t *testing.T) {
+	ks, err := NewKeyStore(getConfiguration(testKeys))
+	assert.NoError(t, err)
+
+	pk, err := ks.GetPrivateKey("")
+	assert.NotNil(t, pk)
+	assert.NoError(t, err)
+}
