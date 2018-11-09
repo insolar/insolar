@@ -31,6 +31,7 @@ import (
 
 const (
 	getChildrenChunkSize = 10 * 1000
+	getHistoryChunkSize  = 10 * 1000
 )
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
@@ -39,6 +40,7 @@ type LedgerArtifactManager struct {
 	messageBus core.MessageBus
 
 	getChildrenChunkSize int
+	getHistoryChunkSize  int
 }
 
 // State returns hash state for artifact manager.
@@ -49,7 +51,7 @@ func (m *LedgerArtifactManager) State() ([]byte, error) {
 
 // NewArtifactManger creates new manager instance.
 func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
-	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}, nil
+	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize, getHistoryChunkSize: getHistoryChunkSize}, nil
 }
 
 // Link links external components.
@@ -704,5 +706,5 @@ func (m *LedgerArtifactManager) GetHistory(
 ) (core.RefIterator, error) {
 	var err error
 	defer instrument(ctx, "GetHistory").err(&err).end()
-	return NewHistoryIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
+	return NewHistoryIterator(ctx, m.messageBus, parent, pulse, m.getHistoryChunkSize)
 }

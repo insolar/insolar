@@ -173,11 +173,11 @@ func (e *GetChildren) Target() *core.RecordRef {
 	return &e.Parent
 }
 
-// GetChildren retrieves a chunk of children references.
+// GetHistory retrieves a chunk of children references.
 type GetHistory struct {
 	ledgerMessage
-	From   *core.RecordID
 	Object core.RecordRef
+	From   *core.RecordID
 	Pulse  *core.PulseNumber
 	Amount int
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/ledger/record"
 )
 
 // HistoryIterator is used to iterate object history.
@@ -18,8 +17,8 @@ type HistoryIterator struct {
 	object     core.RecordRef
 	chunkSize  int
 	fromPulse  *core.PulseNumber
-	fromChild  *core.RecordID
-	buff       []record.ObjectState
+	fromPrev   *core.RecordID
+	buff       []reply.Object
 	buffIndex  int
 	canFetch   bool
 }
@@ -72,7 +71,10 @@ func (i *HistoryIterator) nextFromBuffer() *core.RecordRef {
 	if !i.hasInBuffer() {
 		return nil
 	}
-	ref := i.buff[i.buffIndex].GetImage()
+	ref := core.NewRecordRef(
+		*i.object.Domain(),
+		*i.buff[i.buffIndex].ChildPointer,
+	)
 	i.buffIndex++
 	return ref
 }
@@ -86,22 +88,27 @@ func (i *HistoryIterator) fetch() error {
 		&message.GetHistory{
 			Object: i.object,
 			Pulse:  i.fromPulse,
+			From:   i.fromPrev,
+			Amount: i.chunkSize,
 		},
 	)
-	if err != nil {
-		return err
+
+	switch rep := genericReply.(type) {
+	case *reply.ExplorerList:
+		{
+			if rep.NextFrom == nil {
+				i.canFetch = false
+			}
+			i.buff = rep.Refs
+			i.buffIndex = 0
+			i.fromPrev = rep.NextFrom
+		}
+	case *reply.Error:
+		err = rep.Error()
+	default:
+		err = ErrUnexpectedReply
 	}
-	rep, ok := genericReply.(*reply.History)
-	if !ok {
-		return errors.New("failed to fetch record")
-	}
-	if rep.NextFrom == nil {
-		i.canFetch = false
-	}
-	i.buff = rep.Refs
-	i.buffIndex = 0
-	i.fromChild = rep.NextFrom
-	return nil
+	return err
 }
 
 func (i *HistoryIterator) hasInBuffer() bool {

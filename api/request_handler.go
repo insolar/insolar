@@ -19,14 +19,12 @@ package api
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/pkg/errors"
@@ -199,66 +197,4 @@ func (rh *RequestHandler) ProcessGetSeed(ctx context.Context) (map[string]interf
 	result[SEED] = seed[:]
 
 	return result, nil
-}
-
-// ProcessGetHistory processes get history request
-func (rh *RequestHandler) ProcessGetHistory(ctx context.Context) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-
-	routResult, err := rh.sendRequestHistory(ctx, core.NewRefFromBase58(rh.params.Reference))
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessGetHistory ]")
-	}
-
-	response, err := extractHistoryResponse(routResult.(*reply.History).Refs)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessGetHistory ]")
-	}
-	result["history"] = response
-
-	return result, nil
-}
-
-func (rh *RequestHandler) routeCallHistory(ctx context.Context, rootRef core.RecordRef, ref core.RecordRef) (core.Reply, error) {
-	if rh.messageBus == nil {
-		return nil, errors.New("[ RouteCallHistory ] message bus was not set during initialization")
-	}
-
-	e := &message.GetHistory{
-		Object: ref,
-	}
-
-	res, err := rh.messageBus.Send(ctx, e)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ RouteCallHistory ] couldn't send message")
-	}
-
-	return res, nil
-}
-
-func (rh *RequestHandler) sendRequestHistory(ctx context.Context, ref core.RecordRef) (core.Reply, error) {
-
-	routResult, err := rh.routeCallHistory(ctx, rh.rootDomainReference, ref)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SendRequest ]")
-	}
-
-	return routResult, nil
-}
-
-func extractHistoryResponse(refs []record.ObjectState) (string, error) {
-	elem := make(map[string]interface{})
-
-	for _, ref := range refs {
-		obj := ref.(record.ObjectState)
-
-		pulse := obj.GetMemory().Pulse()
-		record := obj.GetImage()
-		elem[string(pulse.Bytes())] = record
-	}
-	result, err := json.Marshal(elem)
-	if err != nil {
-		return "", err
-	}
-	return string(result), nil
 }

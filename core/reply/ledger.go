@@ -18,7 +18,6 @@ package reply
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
 )
 
 // Code is code from storage.
@@ -79,13 +78,15 @@ func (e *Children) Type() core.ReplyType {
 	return TypeChildren
 }
 
-// History is common reaction for methods returning id to lifeline states.
-type History struct {
-	Refs     []record.ObjectState
+// ExplorerList is common reaction for methods returning
+// - list of block explorer history
+// - or list of last transactions
+type ExplorerList struct {
+	Refs     []Object
 	NextFrom *core.RecordID
 }
 
 // Type implementation of Reply interface.
-func (h *History) Type() core.ReplyType {
-	return TypeHistory
+func (h *ExplorerList) Type() core.ReplyType {
+	return TypeExplorerList
 }

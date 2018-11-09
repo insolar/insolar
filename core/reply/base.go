@@ -53,8 +53,8 @@ const (
 	TypeID
 	// TypeChildren is a reply for fetching objects children in chunks.
 	TypeChildren
-	// TypeHistory is reply for fetching object history.
-	TypeHistory
+	// TypeExplorerList is reply for fetching object history or last transactions.
+	TypeExplorerList
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -82,8 +82,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &ID{}, nil
 	case TypeChildren:
 		return &Children{}, nil
-	case TypeHistory:
-		return &History{}, nil
+	case TypeExplorerList:
+		return &ExplorerList{}, nil
 	case TypeError:
 		return &Error{}, nil
 	case TypeOK:
@@ -131,7 +131,7 @@ func init() {
 	gob.Register(&Delegate{})
 	gob.Register(&ID{})
 	gob.Register(&Children{})
-	gob.Register(&History{})
+	gob.Register(&ExplorerList{})
 	gob.Register(&Error{})
 	gob.Register(&OK{})
 }

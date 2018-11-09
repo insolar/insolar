@@ -72,6 +72,7 @@ func getTestData(t *testing.T) (
 		db:                   db,
 		messageBus:           mb,
 		getChildrenChunkSize: 100,
+		getHistoryChunkSize:  100,
 	}
 
 	return ctx, db, &am, cleaner
