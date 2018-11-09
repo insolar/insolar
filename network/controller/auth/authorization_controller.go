@@ -132,7 +132,7 @@ func (ac *AuthorizationController) authorizeOnHost(h *host.Host) ([]core.Node, e
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error signing received nonce from node %s", h)
 	}
-	nodes, err := ac.sendAuthorizeRequest(signedNonce, h)
+	nodes, err := ac.sendAuthorizeRequest(*signedNonce, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error authorizing on discovery node %s", h)
 	}
@@ -156,9 +156,9 @@ func (ac *AuthorizationController) sendNonceRequest(h *host.Host) (Nonce, error)
 	return data.Nonce, nil
 }
 
-func (ac *AuthorizationController) sendAuthorizeRequest(signedNonce []byte, h *host.Host) ([]core.Node, error) {
+func (ac *AuthorizationController) sendAuthorizeRequest(signature core.Signature, h *host.Host) ([]core.Node, error) {
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&RequestAuthorize{
-		SignedNonce: signedNonce,
+		SignedNonce: signature.Bytes(),
 		NodeRoles:   []core.NodeRole{core.RoleUnknown},
 		Address:     ac.transport.PublicAddress(),
 		Version:     version.Version,
@@ -241,7 +241,7 @@ func (ac *AuthorizationController) getAuthErrorResponse(request network.Request,
 }
 
 func (ac *AuthorizationController) Start(components core.Components) {
-	ac.signer = NewSigner(components.Certificate, components.NetworkCoordinator)
+	ac.signer = NewSigner(components.CryptographyService, components.NetworkCoordinator)
 	ac.keeper = components.NodeNetwork.(network.NodeKeeper)
 
 	ac.transport.RegisterPacketHandler(types.GetNonce, ac.processNonceRequest)
