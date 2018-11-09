@@ -117,11 +117,6 @@ func (cert *Certificate) GetPublicKey() (string, error) {
 	return ecdsahelper.ExportPublicKey(&cert.privateKey.PublicKey)
 }
 
-// GetPrivateKey returns private key as string
-func (cert *Certificate) GetPrivateKey() (string, error) {
-	return ecdsahelper.ExportPrivateKey(cert.privateKey)
-}
-
 // GetEcdsaPrivateKey returns private key in ecdsa format
 func (cert *Certificate) GetEcdsaPrivateKey() *ecdsa.PrivateKey {
 	return cert.privateKey
