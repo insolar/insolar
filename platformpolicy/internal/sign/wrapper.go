@@ -18,6 +18,8 @@ package sign
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/asn1"
 	"math/big"
 
@@ -57,6 +59,22 @@ type ecdsaSignerWrapper struct {
 	hasher     core.Hasher
 }
 
+func (sw *ecdsaSignerWrapper) Sign(data []byte) ([]byte, error) {
+	hash := sw.hasher.Hash(data)
+	privateKey := sw.privateKey.(*ecdsa.PrivateKey)
+
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
+	}
+
+	signature, err := fromRS(r, s).Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
+	}
+
+	return signature, nil
+}
 
 type ecdsaVerifyWrapper struct {
 	publicKey crypto.PublicKey
