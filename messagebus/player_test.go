@@ -36,13 +36,13 @@ func TestPlayer_Send(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 	msg := message.GenesisRequest{Name: "test"}
-	signedMessage := message.SignedMessage{Msg: &msg}
-	msgHash := GetMessageHash(&signedMessage)
+	parcel := message.Parcel{Msg: &msg}
+	msgHash := GetMessageHash(&parcel)
 	pm := testutils.NewPulseManagerMock(mc)
 	pm.CurrentMock.Return(&core.Pulse{PulseNumber: 42}, nil)
 	s := NewsenderMock(mc)
-	s.CreateSignedMessageFunc = func(c context.Context, p core.PulseNumber, m core.Message) (core.SignedMessage, error) {
-		return &signedMessage, nil
+	s.CreateParcelFunc = func(p context.Context, p1 core.PulseNumber, p2 core.Message, p3 core.RoutingToken) (r core.Parcel, r1 error) {
+		return &parcel, nil
 	}
 	tape := NewtapeMock(mc)
 	player := NewPlayer(s, tape, pm)

@@ -25,6 +25,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
@@ -94,26 +95,29 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 
 	ce := certificate.GetTestCertificate()
 	nk := nodekeeper.GetTestNodekeeper(ce)
-	messageBus := testmessagebus.NewTestMessageBus()
+	mb := testmessagebus.NewTestMessageBus()
 	nw := network.GetTestNetwork()
-	c := core.Components{
-		LogicRunner: lr,
-		NodeNetwork: nk,
-		MessageBus:  messageBus,
-		Network:     nw,
-	}
-	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
-	c.Ledger = l
+	l, cleaner := ledgertestutils.TmpLedger(
+		t, "",
+		core.Components{
+			LogicRunner: lr,
+			NodeNetwork: nk,
+			MessageBus:  mb,
+			Network:     nw,
+		},
+	)
 
-	assert.NoError(t, lr.Start(ctx, c), "starting logicrunner")
+	cm := &component.Manager{}
+	cm.Register(nk, l, lr, nw, mb)
+	err = cm.Start(ctx)
+	assert.NoError(t, err)
 
-	MessageBusTrivialBehavior(messageBus, lr)
+	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
-	err = lr.Ledger.GetPulseManager().Set(
+	err = pm.Set(
 		ctx,
 		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
 	)
-	//err = pm.Set(*pulsar.NewPulse(0, 10, &entropygenerator.StandardEntropyGenerator{}))
 	assert.NoError(t, err)
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
@@ -164,11 +168,11 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, objRef core.RecordR
 	}
 
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
+	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,
-		signed,
+		parcel,
 	)
 
 	return resp, err
@@ -1230,18 +1234,18 @@ func New(n int) (*Child, error) {
 	assert.Equal(t, []interface{}{uint64(0), nil}, r)
 
 	mb := lr.(*LogicRunner).MessageBus.(*testmessagebus.TestMessageBus)
-	toValidate := make([]core.SignedMessage, 0)
-	mb.ReRegister(core.TypeValidateCaseBind, func(ctx context.Context, m core.SignedMessage) (core.Reply, error) {
+	toValidate := make([]core.Parcel, 0)
+	mb.ReRegister(core.TypeValidateCaseBind, func(ctx context.Context, m core.Parcel) (core.Reply, error) {
 		toValidate = append(toValidate, m)
 		return nil, nil
 	})
-	toExecute := make([]core.SignedMessage, 0)
-	mb.ReRegister(core.TypeExecutorResults, func(ctx context.Context, m core.SignedMessage) (core.Reply, error) {
+	toExecute := make([]core.Parcel, 0)
+	mb.ReRegister(core.TypeExecutorResults, func(ctx context.Context, m core.Parcel) (core.Reply, error) {
 		toExecute = append(toExecute, m)
 		return nil, nil
 	})
-	toCheckValidate := make([]core.SignedMessage, 0)
-	mb.ReRegister(core.TypeValidationResults, func(ctx context.Context, m core.SignedMessage) (core.Reply, error) {
+	toCheckValidate := make([]core.Parcel, 0)
+	mb.ReRegister(core.TypeValidationResults, func(ctx context.Context, m core.Parcel) (core.Reply, error) {
 		toCheckValidate = append(toCheckValidate, m)
 		return nil, nil
 	})

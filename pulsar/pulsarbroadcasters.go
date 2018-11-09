@@ -224,10 +224,14 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 
 	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
 	pulseForSending := core.Pulse{
-		PulseNumber:     currentPulsar.ProcessingPulseNumber,
-		Entropy:         currentPulsar.CurrentSlotEntropy,
-		Signs:           currentPulsar.CurrentSlotSenderConfirmations,
-		NextPulseNumber: currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
+		PulseNumber:      currentPulsar.ProcessingPulseNumber,
+		Entropy:          currentPulsar.CurrentSlotEntropy,
+		Signs:            currentPulsar.CurrentSlotSenderConfirmations,
+		NextPulseNumber:  currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
+		PrevPulseNumber:  currentPulsar.lastPulse.PulseNumber,
+		EpochPulseNumber: 1,
+		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
+		PulseTimestamp:   time.Now().Unix(),
 	}
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 

@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -55,21 +56,21 @@ func TestBareHelloworld(t *testing.T) {
 
 	ce := certificate.GetTestCertificate()
 	nk := nodekeeper.GetTestNodekeeper(ce)
+
 	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
-	am := l.GetArtifactManager()
-	assert.NoError(t, err, "Initialize runner")
 
 	mb := testmessagebus.NewTestMessageBus()
-
 	nw := network.GetTestNetwork()
-	assert.NoError(t, lr.Start(ctx, core.Components{
-		Ledger:     l,
-		MessageBus: mb,
-		Network:    nw,
-	}), "starting logicrunner")
+
+	cm := &component.Manager{}
+	cm.Register(nk, l, lr, nw, mb)
+	err = cm.Start(ctx)
+	assert.NoError(t, err)
+
+	am := l.GetArtifactManager()
 
 	MessageBusTrivialBehavior(mb, lr)
 	l.GetPulseManager().Set(
@@ -104,12 +105,12 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
 	key, _ := ecdsa.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
+	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
 		ctx,
-		signed,
+		parcel,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -124,12 +125,12 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
 	key, _ = ecdsa.GeneratePrivateKey()
-	signed, _ = message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
+	parcel, _ = message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(
 		ctx,
-		signed,
+		parcel,
 	)
 	assert.NoError(t, err, "contract call")
 

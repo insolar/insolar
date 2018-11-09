@@ -78,11 +78,11 @@ func (rpc *RPCController) invoke(name string, data [][]byte) ([]byte, error) {
 	return method(data)
 }
 
-func (rpc *RPCController) SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error {
+func (rpc *RPCController) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	return rpc.initCascadeSendMessage(data, false, method, [][]byte{message.SignedToBytes(msg)})
+	return rpc.initCascadeSendMessage(data, false, method, [][]byte{message.ParcelToBytes(msg)})
 }
 
 func (rpc *RPCController) initCascadeSendMessage(data core.Cascade, findCurrentNode bool, method string, args [][]byte) error {
@@ -159,13 +159,13 @@ func (rpc *RPCController) requestCascadeSendMessage(data core.Cascade, nodeID co
 	return nil
 }
 
-func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg core.SignedMessage) ([]byte, error) {
+func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
 	start := time.Now()
-	log.Debugf("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
-		name, msg.Target().String())
+	log.Debugf("SendParcel with nodeID = %s method = %s, message reference = %s", nodeID.String(),
+		name, message.ExtractTarget(msg).String())
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
-		Data:   [][]byte{message.SignedToBytes(msg)},
+		Data:   [][]byte{message.ParcelToBytes(msg)},
 	}).Build()
 	future, err := rpc.hostNetwork.SendRequest(request, nodeID)
 	if err != nil {
@@ -176,8 +176,8 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}
 	data := response.GetData().(*ResponseRPC)
-	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
-		msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
+	log.Debugf("Inside SendParcel: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
+		msg.Type(), message.ExtractTarget(msg), msg.GetCaller(), message.ExtractRole(msg), time.Since(start))
 	if !data.Success {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
