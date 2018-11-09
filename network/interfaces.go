@@ -195,3 +195,24 @@ type RoutingTable interface {
 	// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
 	GetRandomNodes(count int) []host.Host
 }
+
+// InternalTransport simple interface to send network requests and process network responses.
+type InternalTransport interface {
+	// Start listening to network requests, should be started in goroutine.
+	Start()
+	// Stop listening to network requests.
+	Stop()
+	// PublicAddress returns public address that can be published for all nodes.
+	PublicAddress() string
+	// GetNodeID get current node ID.
+	GetNodeID() core.RecordRef
+
+	// SendRequestPacket send request packet to a remote node.
+	SendRequestPacket(request Request, receiver *host.Host) (Future, error)
+	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
+	RegisterPacketHandler(t types.PacketType, handler RequestHandler)
+	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
+	NewRequestBuilder() RequestBuilder
+	// BuildResponse create response to an incoming request with Data set to responseData.
+	BuildResponse(request Request, responseData interface{}) Response
+}

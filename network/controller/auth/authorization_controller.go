@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -38,7 +37,7 @@ type AuthorizationController struct {
 	options             *common.Options
 	bootstrapController common.BootstrapController
 	signer              *Signer
-	transport           hostnetwork.InternalTransport
+	transport           network.InternalTransport
 	keeper              network.NodeKeeper
 }
 
@@ -249,6 +248,6 @@ func (ac *AuthorizationController) Start(components core.Components) {
 }
 
 func NewAuthorizationController(options *common.Options, bootstrapController common.BootstrapController,
-	transport hostnetwork.InternalTransport) *AuthorizationController {
+	transport network.InternalTransport) *AuthorizationController {
 	return &AuthorizationController{options: options, bootstrapController: bootstrapController, transport: transport}
 }

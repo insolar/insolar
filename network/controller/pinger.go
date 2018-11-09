@@ -19,7 +19,7 @@ package controller
 import (
 	"time"
 
-	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ import (
 
 // Pinger is a light and stateless component that can ping remote host to receive its NodeID
 type Pinger struct {
-	transport hostnetwork.InternalTransport
+	transport network.InternalTransport
 }
 
 // PingWithTimeout ping remote host with timeout
@@ -49,6 +49,6 @@ func (p *Pinger) Ping(address string, timeout time.Duration) (*host.Host, error)
 	return result.GetSenderHost(), nil
 }
 
-func NewPinger(transport hostnetwork.InternalTransport) *Pinger {
+func NewPinger(transport network.InternalTransport) *Pinger {
 	return &Pinger{transport: transport}
 }

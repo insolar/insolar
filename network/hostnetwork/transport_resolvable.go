@@ -32,7 +32,7 @@ type Resolver interface {
 
 // TransportResolvable is implementation of HostNetwork interface that is capable of address resolving.
 type TransportResolvable struct {
-	internalTransport InternalTransport
+	internalTransport network.InternalTransport
 	resolver          Resolver
 }
 
@@ -89,6 +89,6 @@ func (tr *TransportResolvable) BuildResponse(request network.Request, responseDa
 	return tr.internalTransport.BuildResponse(request, responseData)
 }
 
-func NewHostTransport(transport InternalTransport, resolver Resolver) network.HostNetwork {
+func NewHostTransport(transport network.InternalTransport, resolver Resolver) network.HostNetwork {
 	return &TransportResolvable{internalTransport: transport, resolver: resolver}
 }

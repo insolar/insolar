@@ -139,7 +139,7 @@ func (h *hostTransport) BuildResponse(request network.Request, responseData inte
 	return (*packetWrapper)(p)
 }
 
-func NewInternalTransport(conf configuration.Configuration) (InternalTransport, error) {
+func NewInternalTransport(conf configuration.Configuration) (network.InternalTransport, error) {
 	tp, err := transport.NewTransport(conf.Host.Transport, relay.NewProxy())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
