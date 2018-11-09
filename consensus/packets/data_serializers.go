@@ -289,6 +289,12 @@ func (p1p *Phase1Packet) Serialize() ([]byte, error) {
 
 }
 
+func allocateBuffer(n int) *bytes.Buffer {
+	buf := make([]byte, 0, n)
+	result := bytes.NewBuffer(buf)
+	return result
+}
+
 // Deserialize implements interface method
 func (ph *PacketHeader) Deserialize(data io.Reader) error {
 	var routInfo uint8
@@ -316,12 +322,6 @@ func (ph *PacketHeader) Deserialize(data io.Reader) error {
 	}
 
 	return nil
-}
-
-func allocateBuffer(n int) *bytes.Buffer {
-	buf := make([]byte, 0, n)
-	result := bytes.NewBuffer(buf)
-	return result
 }
 
 // Serialize implements interface method
@@ -885,13 +885,17 @@ func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
 	// return result.Bytes(), nil
 }
 
-func (phase2Packet *Phase2Packet) Deserialize(data io.Reader) error {
-	err := phase2Packet.packetHeader.Deserialize(data)
-	if err != nil {
-		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize packetHeader")
+func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+	if header == nil {
+		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
+	}
+	if header.PacketT != Phase2 {
+		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Wrong packet type")
 	}
 
-	err = binary.Read(data, defaultByteOrder, &phase2Packet.globuleHashSignature)
+	phase2Packet.packetHeader = *header
+
+	err := binary.Read(data, defaultByteOrder, &phase2Packet.globuleHashSignature)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read globuleHashSignature")
 	}
@@ -914,6 +918,21 @@ func (phase2Packet *Phase2Packet) Deserialize(data io.Reader) error {
 	}
 
 	return nil
+}
+
+func (phase2Packet *Phase2Packet) Deserialize(data io.Reader) error {
+	err := phase2Packet.packetHeader.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize packetHeader")
+	}
+
+	err = phase2Packet.DeserializeWithoutHeader(data, &phase2Packet.packetHeader)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize body")
+	}
+
+	return nil
+
 }
 
 func (phase2Packet *Phase2Packet) Serialize() ([]byte, error) {
