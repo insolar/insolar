@@ -21,14 +21,12 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRecorder_Send(t *testing.T) {
@@ -48,8 +46,7 @@ func TestRecorder_Send(t *testing.T) {
 		return &message.SignedMessage{Msg: m}, nil
 	}
 	tape := NewtapeMock(mc)
-	recorder, err := NewRecorder(s, tape, pm)
-	require.NoError(t, err)
+	recorder := NewRecorder(s, tape, pm)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
