@@ -18,10 +18,10 @@ package packets
 
 import (
 	"bytes"
-	"reflect"
-	"testing"
-
 	"crypto/rand"
+	"reflect"
+	"strings"
+	"testing"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
@@ -29,11 +29,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func makeDefaultPacketHeader() *PacketHeader {
+func makeDefaultPacketHeader(packetType PacketType) *PacketHeader {
 	packetHeader := &PacketHeader{}
 	packetHeader.HasRouting = true
-	packetHeader.SubType = 3
-	packetHeader.PacketT = Referendum
+	packetHeader.PacketT = packetType
 	// -------------------
 	packetHeader.f00 = true
 	packetHeader.f01 = true
@@ -72,11 +71,11 @@ func checkBadDataSerializationDeserialization(t *testing.T, orig Serializer, msg
 }
 
 func TestPacketHeaderReadWrite(t *testing.T) {
-	checkSerializationDeserialization(t, makeDefaultPacketHeader())
+	checkSerializationDeserialization(t, makeDefaultPacketHeader(Phase1))
 }
 
 func TestPacketHeaderReadWrite_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(),
+	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(Phase1),
 		"[ PacketHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
 }
 
