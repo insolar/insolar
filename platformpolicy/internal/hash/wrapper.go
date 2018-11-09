@@ -37,3 +37,7 @@ func (h *hashWrapper) Reset() {
 	h.hash.Reset()
 }
 
+func (h *hashWrapper) Size() int {
+	return h.hash.Size()
+}
+
