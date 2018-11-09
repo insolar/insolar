@@ -27,6 +27,14 @@ type Hasher interface {
 	Hash([]byte) []byte
 }
 
+type Signer interface {
+	Sign([]byte) ([]byte, error)
+}
+
+type Verifier interface {
+	Verify([]byte, []byte) bool
+}
+
 type PlatformCryptographyScheme interface {
 	ReferenceHasher() Hasher
 	IntegrityHasher() Hasher
