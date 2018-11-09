@@ -45,7 +45,7 @@ type LedgerArtifactManager struct {
 // State returns hash state for artifact manager.
 func (m *LedgerArtifactManager) State() ([]byte, error) {
 	// This is a temporary stab to simulate real hash.
-	return hash.SHA3Bytes256([]byte{1, 2, 3}), nil
+	return hash.IntegrityHasher([]byte{1, 2, 3}), nil
 }
 
 // NewArtifactManger creates new manager instance.

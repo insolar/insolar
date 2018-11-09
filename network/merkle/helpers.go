@@ -27,13 +27,13 @@ const reserved = 0xDEADBEEF
 func pulseHash(pulse *core.Pulse) []byte {
 	var result []byte
 
-	pulseNumberHash := hash.SHA3Bytes256(pulse.PulseNumber.Bytes())
+	pulseNumberHash := hash.IntegrityHasher(pulse.PulseNumber.Bytes())
 	result = append(result, pulseNumberHash...)
 
-	entropyHash := hash.SHA3Bytes256(pulse.Entropy[:])
+	entropyHash := hash.IntegrityHasher(pulse.Entropy[:])
 	result = append(result, entropyHash...)
 
-	return hash.SHA3Bytes256(result)
+	return hash.IntegrityHasher(result)
 }
 
 func nodeInfoHash(pulseHash, stateHash []byte) []byte {
@@ -42,41 +42,41 @@ func nodeInfoHash(pulseHash, stateHash []byte) []byte {
 	result = append(result, pulseHash...)
 	result = append(result, stateHash...)
 
-	return hash.SHA3Bytes256(result)
+	return hash.IntegrityHasher(result)
 }
 
 func nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
 	var result []byte
 
-	nodeSignatureHash := hash.SHA3Bytes256(nodeSignature)
+	nodeSignatureHash := hash.IntegrityHasher(nodeSignature)
 	result = append(result, nodeSignatureHash...)
 
 	result = append(result, nodeInfoHash...)
 
-	return hash.SHA3Bytes256(result)
+	return hash.IntegrityHasher(result)
 }
 
 func bucketEntryHash(entryIndex uint32, nodeHash []byte) []byte {
 	var result []byte
 
-	entryIndexHash := hash.SHA3Bytes256(utils.UInt32ToBytes(entryIndex))
+	entryIndexHash := hash.IntegrityHasher(utils.UInt32ToBytes(entryIndex))
 	result = append(result, entryIndexHash...)
 
 	result = append(result, nodeHash...)
 
-	return hash.SHA3Bytes256(result)
+	return hash.IntegrityHasher(result)
 }
 
 func bucketInfoHash(role core.NodeRole, nodeCount uint32) []byte {
 	var result []byte
 
-	roleHash := hash.SHA3Bytes256(utils.UInt32ToBytes(uint32(role)))
+	roleHash := hash.IntegrityHasher(utils.UInt32ToBytes(uint32(role)))
 	result = append(result, roleHash...)
 
-	nodeCountHash := hash.SHA3Bytes256(utils.UInt32ToBytes(nodeCount))
+	nodeCountHash := hash.IntegrityHasher(utils.UInt32ToBytes(nodeCount))
 	result = append(result, nodeCountHash...)
 
-	return hash.SHA3Bytes256(result)
+	return hash.IntegrityHasher(result)
 }
 
 func bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
@@ -85,11 +85,11 @@ func bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
 	result = append(result, bucketInfoHash...)
 	result = append(result, bucketEntryHash...)
 
-	return hash.SHA3Bytes256(result)
+	return hash.IntegrityHasher(result)
 }
 
 func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte {
-	reservedHash := hash.SHA3Bytes256(utils.UInt32ToBytes(reserved))
+	reservedHash := hash.IntegrityHasher(utils.UInt32ToBytes(reserved))
 
 	var tmpResult1 []byte
 
@@ -98,21 +98,21 @@ func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte
 
 	var tmpResult2 []byte
 
-	globuleIndexHash := hash.SHA3Bytes256(utils.UInt32ToBytes(gobuleIndex))
+	globuleIndexHash := hash.IntegrityHasher(utils.UInt32ToBytes(gobuleIndex))
 	tmpResult2 = append(tmpResult2, globuleIndexHash...)
 
-	nodeCountHash := hash.SHA3Bytes256(utils.UInt32ToBytes(nodeCount))
+	nodeCountHash := hash.IntegrityHasher(utils.UInt32ToBytes(nodeCount))
 	tmpResult2 = append(tmpResult2, nodeCountHash...)
 
 	var tmpResult3 []byte
 
-	tmpResult1Hash := hash.SHA3Bytes256(tmpResult1)
+	tmpResult1Hash := hash.IntegrityHasher(tmpResult1)
 	tmpResult3 = append(tmpResult3, tmpResult1Hash...)
 
-	tmpResult2Hash := hash.SHA3Bytes256(tmpResult2)
+	tmpResult2Hash := hash.IntegrityHasher(tmpResult2)
 	tmpResult3 = append(tmpResult3, tmpResult2Hash...)
 
-	return hash.SHA3Bytes256(tmpResult3)
+	return hash.IntegrityHasher(tmpResult3)
 }
 
 func globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
@@ -121,5 +121,5 @@ func globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
 	result = append(result, globuleInfoHash...)
 	result = append(result, globuleNodeRoot...)
 
-	return hash.SHA3Bytes256(result)
+	return hash.IntegrityHasher(result)
 }
