@@ -22,6 +22,7 @@ import (
 	"io"
 	"net"
 
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
@@ -43,10 +44,32 @@ type udpTransport struct {
 type udpSerializer struct{}
 
 func (b *udpSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
-	return nil, errors.New("not implemented")
+	data, ok := q.Data.(consensus.ConsensusPacket)
+	if !ok {
+		return nil, errors.New("could not convert packet to ConsensusPacket type")
+	}
+	header := &consensus.RoutingHeader{
+		OriginID:   q.Sender.ShortID,
+		TargetID:   q.Receiver.ShortID,
+		PacketType: q.Type,
+	}
+	err := data.SetPacketHeader(header)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not set routing information for ConsensusPacket")
+	}
+	return data.Serialize()
 }
 
 func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error) {
+	data, err := consensus.ExtractPacket(conn)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert network datagram to ConsensusPacket")
+	}
+	header, err := data.GetPacketHeader()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get routing information from ConsensusPacket")
+	}
+	log.Debug(header.OriginID, header.TargetID, header.PacketType)
 	return nil, errors.New("not implemented")
 }
 
