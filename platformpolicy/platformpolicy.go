@@ -17,11 +17,28 @@
 package platformpolicy
 
 import (
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy/internal/hash"
+	"github.com/insolar/insolar/platformpolicy/internal/sign"
 )
 
 type platformPolicy struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+}
+
+func NewPlatformPolicy() core.PlatformPolicy {
+	policy := &platformPolicy{}
+
+	manager := component.Manager{}
+	manager.Register(
+		policy,
+
+		&platformCryptographyScheme{},
+		hash.NewSHA3Provider(),
+		sign.NewECDSAProvider(),
+	)
+	return policy
 }
 
 func (pp *platformPolicy) CryptographyScheme() core.PlatformCryptographyScheme {
