@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	nullHash = "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7"
+	nullHash = "a69f73cca23a9ac5c8b567dc185a756e97c982164fe25859e0d1dcc1475c80a615b2123af1f5f94c11e3e9402c3ac558f500199d95b6d3e301758586281dcd26"
 )
 
 func TestNodeConsensus_calculateNodeHash(t *testing.T) {
