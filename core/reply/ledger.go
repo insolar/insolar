@@ -82,8 +82,8 @@ func (e *Children) Type() core.ReplyType {
 // - list of block explorer history
 // - or list of last transactions
 type ExplorerList struct {
-	Refs     []Object
-	NextFrom *core.RecordID
+	Refs      []Object
+	NextState *core.RecordID
 }
 
 // Type implementation of Reply interface.

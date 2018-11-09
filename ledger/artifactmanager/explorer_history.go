@@ -19,6 +19,7 @@ package artifactmanager
 import (
 	"context"
 	"errors"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -33,7 +34,7 @@ type HistoryIterator struct {
 	object     core.RecordRef
 	chunkSize  int
 	fromPulse  *core.PulseNumber
-	fromPrev   *core.RecordID
+	fromState  *core.RecordID
 	buff       []reply.Object
 	buffIndex  int
 	canFetch   bool
@@ -104,7 +105,7 @@ func (i *HistoryIterator) fetch() error {
 		&message.GetHistory{
 			Object: i.object,
 			Pulse:  i.fromPulse,
-			From:   i.fromPrev,
+			From:   i.fromState,
 			Amount: i.chunkSize,
 		},
 	)
@@ -112,12 +113,12 @@ func (i *HistoryIterator) fetch() error {
 	switch rep := genericReply.(type) {
 	case *reply.ExplorerList:
 		{
-			if rep.NextFrom == nil {
+			if rep.NextState == nil {
 				i.canFetch = false
 			}
 			i.buff = rep.Refs
 			i.buffIndex = 0
-			i.fromPrev = rep.NextFrom
+			i.fromState = rep.NextState
 		}
 	case *reply.Error:
 		err = rep.Error()

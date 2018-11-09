@@ -17,11 +17,12 @@
 package artifactmanager
 
 import (
+	"testing"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestLedgerArtifactManager_GetHistory(t *testing.T) {
