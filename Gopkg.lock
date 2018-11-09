@@ -7,7 +7,7 @@
   name = "git.apache.org/thrift.git"
   packages = ["lib/go/thrift"]
   pruneopts = "UT"
-  revision = "cd829a0b9a5c66203b63350fa029589669ec43f6"
+  revision = "fed4977027f2a305d9de5c19b0dc606550eea41b"
   source = "github.com/apache/thrift"
 
 [[projects]]
@@ -135,9 +135,15 @@
   revision = "a5502dd2746ee6fc3fd58ad83d701d25e14d68d1"
 
 [[projects]]
-  digest = "1:97df918963298c287643883209a2c3f642e6593379f97ab400c2a2e219ab647d"
+  digest = "1:4c0989ca0bcd10799064318923b9bc2db6b4d6338dd75f3f2d86c3511aaaf5cf"
   name = "github.com/golang/protobuf"
-  packages = ["proto"]
+  packages = [
+    "proto",
+    "ptypes",
+    "ptypes/any",
+    "ptypes/duration",
+    "ptypes/timestamp",
+  ]
   pruneopts = "UT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
   version = "v1.2.0"
@@ -303,19 +309,19 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:dd6ba1917df517806c9dcee5c87f15643c9b1ca6260d5b3f25eb863c6fe092ce"
+  digest = "1:a3b8912deeef29007fab9a13a9f21b9e9b59c621a2ed61e2fe7b37320a71fbd5"
   name = "github.com/satori/go.uuid"
   packages = ["."]
   pruneopts = "UT"
-  revision = "8ccf5352a842c034b1a69f28c863aff9b1cdb116"
+  revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
 
 [[projects]]
-  digest = "1:3f53e9e4dfbb664cd62940c9c4b65a2171c66acd0b7621a1a6b8e78513525a52"
+  digest = "1:69b1cc331fca23d702bd72f860c6a647afd0aa9fcbc1d0659b1365e26546dd70"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "UT"
-  revision = "ad15b42461921f1fb3529b058c6786c6a45d5162"
-  version = "v1.1.1"
+  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
+  version = "v1.2.0"
 
 [[projects]]
   digest = "1:6a4a11ba764a56d2758899ec6f3848d24698d48442ebce85ee7a3f63284526cd"
@@ -329,12 +335,12 @@
   version = "v1.1.2"
 
 [[projects]]
-  digest = "1:516e71bed754268937f57d4ecb190e01958452336fa73dbac880894164e91c1f"
+  digest = "1:08d65904057412fc0270fc4812a1c90c594186819243160dc779a402d4b6d0bc"
   name = "github.com/spf13/cast"
   packages = ["."]
   pruneopts = "UT"
-  revision = "8965335b8c7107321228e3e3702cab9832751bac"
-  version = "v1.2.0"
+  revision = "8c9545af88b134710ab1cd196795e7f2388358d7"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:645cabccbb4fa8aab25a956cbcbdf6a6845ca736b2c64e197ca7cbb9d210b939"
@@ -437,7 +443,7 @@
   version = "v4.3.1"
 
 [[projects]]
-  digest = "1:83676b69253565e11fc408b83b4dc803f2e792cc2d855b7efbfd8041c11937ea"
+  digest = "1:cd0a556f7c6e6946fbe39b1bbc61db209967c64cbbf0aed5e4108081cd43aea0"
   name = "go.opencensus.io"
   packages = [
     ".",
@@ -447,13 +453,17 @@
     "exporter/prometheus",
     "internal",
     "internal/tagencoding",
+    "plugin/ocgrpc",
     "stats",
     "stats/internal",
     "stats/view",
     "tag",
     "trace",
     "trace/internal",
+    "trace/propagation",
     "trace/tracestate",
+    "zpages",
+    "zpages/internal",
   ]
   pruneopts = "UT"
   revision = "b7bf3cdb64150a8c8c53b769fdeb2ba581bd4d4b"
@@ -461,7 +471,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:886c37423371473271b6b490f5b270fe778bd9ae2fdff9324f2060b096c81b9e"
+  digest = "1:d21a77140588855a9d5a36ef5b8b5c5b1b0fa5eaa74bf5743b0a73b1446fb3a0"
   name = "golang.org/x/crypto"
   packages = [
     "blowfish",
@@ -477,11 +487,11 @@
     "xtea",
   ]
   pruneopts = "UT"
-  revision = "85e1b3f9139abd58575d728a509643924e3b2ebf"
+  revision = "4d3f4d9ffa16a13f451c3b2999e9c49e9750bf06"
 
 [[projects]]
   branch = "master"
-  digest = "1:4e8b2b8c4c19ccacb026ee9496a2f51e0ce7251f0c941ab37544f2bc4b2af493"
+  digest = "1:99d8ad8bfd6bd2f718348f99cda9b0f2d4d22398e5b3e313ebe223dc1c6155b0"
   name = "golang.org/x/net"
   packages = [
     "bpf",
@@ -493,7 +503,7 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "9b4f9f5ad5197c79fd623a3638e70d8b26cef344"
+  revision = "10aee181995363b41f712a55844a0dd52ea04646"
 
 [[projects]]
   branch = "master"
@@ -505,14 +515,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6c93c46c00889c28f5a105e7cb5ba56672fd4a2351375fa819acb44e66d427df"
+  digest = "1:f97031542387802b6fd8867c3f29488c2852aac19954ed51df6231a4fadf1707"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "d989b31c87461dc8ab2f1cac6792814e27fadea9"
+  revision = "3a76605856fddce5718553cbb8bd50ca492a7274"
 
 [[projects]]
   digest = "1:8029e9743749d4be5bc9f7d42ea1659471767860f0cdc34d37c3111bd308a295"
@@ -535,7 +545,29 @@
   name = "google.golang.org/api"
   packages = ["support/bundler"]
   pruneopts = "UT"
-  revision = "511bab8e55decfbe784cd2d1868fa5cda62dc6c1"
+  revision = "04bb50b6b83d0e72253821af8cf3252d8e866517"
+
+[[projects]]
+  branch = "master"
+  digest = "1:56b0bca90b7e5d1facf5fbdacba23e4e0ce069d25381b8e2f70ef1e7ebfb9c1a"
+  name = "google.golang.org/genproto"
+  packages = ["googleapis/rpc/status"]
+  pruneopts = "UT"
+  revision = "c830210a61dfaa790e1920f8d0470fc27bc2efbe"
+
+[[projects]]
+  digest = "1:736bea44d8f508c2a27f05225a11bfed723125676c26a2fd75977eedb5ef602b"
+  name = "google.golang.org/grpc"
+  packages = [
+    "codes",
+    "grpclog",
+    "metadata",
+    "stats",
+    "status",
+  ]
+  pruneopts = "UT"
+  revision = "2e463a05d100327ca47ac218281906921038fd95"
+  version = "v1.16.0"
 
 [[projects]]
   digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
@@ -556,7 +588,6 @@
     "github.com/chzyer/readline",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
-    "github.com/huandu/xstrings",
     "github.com/jbenet/go-base58",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
@@ -580,6 +611,7 @@
     "go.opencensus.io/stats/view",
     "go.opencensus.io/tag",
     "go.opencensus.io/trace",
+    "go.opencensus.io/zpages",
     "golang.org/x/crypto/sha3",
     "gopkg.in/yaml.v2",
   ]

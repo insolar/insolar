@@ -19,11 +19,11 @@ package main
 import (
 	"context"
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
@@ -63,7 +63,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	bootstrapper, err := bootstrap.NewBootstrapper(cfg.Bootstrap)
+	gen, err := genesis.NewGenesis(cfg.Genesis)
 	checkError(ctx, err, "failed to start Bootstrapper")
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
@@ -90,7 +90,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		ledger,
 		nw,
 		messageBus,
-		bootstrapper,
+		gen,
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
@@ -104,11 +104,11 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		Ledger:             ledger,
 		Network:            nw,
 		MessageBus:         messageBus,
-		Bootstrapper:       bootstrapper,
+		Genesis:            gen,
 		APIRunner:          apiRunner,
 		NetworkCoordinator: networkCoordinator,
 		VersionManager:     versionManager,
 	}}
 
-	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), Service: nw}, nil
+	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }

@@ -26,7 +26,6 @@ func GetTestNodekeeper(c core.Certificate) network.NodeKeeper {
 			[]core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
 			pk,
 			core.PulseNumber(0),
-			core.NodeJoined,
 			// TODO implement later
 			"",
 			"",
@@ -39,7 +38,6 @@ func GetTestNodekeeper(c core.Certificate) network.NodeKeeper {
 			[]core.NodeRole{core.RoleVirtual, core.RoleLightMaterial},
 			pk,
 			core.PulseNumber(0),
-			core.NodeActive,
 			// TODO implement later
 			"",
 			"",

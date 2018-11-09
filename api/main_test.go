@@ -28,9 +28,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -40,12 +40,12 @@ const TestUrl = HOST + "/api/v1?query_type=LOL"
 func TestMain(m *testing.M) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
-	bootstrapCfg := configuration.NewConfiguration()
+	genesisCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)
 
 	cs := core.Components{}
-	b, _ := bootstrap.NewBootstrapper(bootstrapCfg.Bootstrap)
-	cs.Bootstrapper = b
+	b, _ := genesis.NewGenesis(genesisCfg.Genesis)
+	cs.Genesis = b
 	api.Start(ctx, cs)
 
 	code := m.Run()

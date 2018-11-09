@@ -20,22 +20,21 @@ import (
 	"context"
 	"crypto/ecdsa"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/dhtnetwork"
-	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
+	"github.com/insolar/insolar/network/controller"
+	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/routing"
 	"github.com/pkg/errors"
 )
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	hostNetwork network.HostNetwork
-	controller  network.Controller
-	consensus   consensus.Processor
+	hostNetwork  network.HostNetwork
+	controller   network.Controller
+	routingTable network.RoutingTable
 
 	certificate  core.Certificate
 	nodeNetwork  core.NodeNetwork
@@ -47,23 +46,13 @@ type ServiceNetwork struct {
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{}
 
-	// workaround before DI
-	cert, err := certificate.NewCertificate(conf.KeysPath, conf.CertificatePath)
+	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork.onPulse)
 	if err != nil {
-		log.Warnf("failed to read certificate: %s", err.Error())
+		log.Error("failed to create network components: %s", err.Error())
 	}
-	hostnetwork, err := NewHostNetwork(conf, cert, serviceNetwork.onPulse)
-	if err != nil {
-		log.Error("failed to create hostnetwork: %s", err.Error())
-	}
-	controller, err := NewNetworkController(conf, hostnetwork)
-	if err != nil {
-		log.Error("failed to create serviceNetwork controller: %s", err.Error())
-	}
+	serviceNetwork.routingTable = routingTable
 	serviceNetwork.hostNetwork = hostnetwork
 	serviceNetwork.controller = controller
-	serviceNetwork.certificate = cert
-	serviceNetwork.consensus = NewConsensus(serviceNetwork.hostNetwork)
 	return serviceNetwork, nil
 }
 
@@ -92,13 +81,6 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 	n.controller.RemoteProcedureRegister(name, method)
 }
 
-// GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
-// TODO: replace with GetNetworkHelper that returns a component with all needed data for interactive/rest API
-func (n *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hosthandler.Context) {
-	hostNetwork := n.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
-	return hostNetwork, dhtnetwork.CreateDHTContext(hostNetwork)
-}
-
 // GetPrivateKey returns a private key.
 // TODO: remove, use helper functions from certificate instead
 func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
@@ -108,11 +90,11 @@ func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
 // Start implements core.Component
 func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) error {
 	n.inject(components)
+	n.routingTable.Start(components)
 	log.Infoln("Network starts listening")
 	n.hostNetwork.Start()
 
 	n.controller.Inject(components)
-	n.consensus.SetNodeKeeper(components.NodeNetwork.(network.NodeKeeper))
 
 	log.Infoln("Bootstrapping network...")
 	n.bootstrap()
@@ -152,6 +134,7 @@ func (n *ServiceNetwork) bootstrap() {
 
 func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 	ctx := context.TODO()
+	log.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.pulseManager == nil {
 		log.Error("PulseManager is not initialized")
 		return
@@ -180,31 +163,20 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 			}
 		}(n)
 
-		// TODO: create adequate cancelable context without dht values (after switching to new network)
-		ctx := context.WithValue(context.Background(), dhtnetwork.CtxTableIndex, dhtnetwork.DefaultHostID)
-		n.doConsensus(ctx, pulse)
+		// TODO: PLACE NEW CONSENSUS HERE
 	}
 }
 
-func (n *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) {
-	if !n.consensus.IsPartOfConsensus() {
-		log.Debug("Node is not active and does not participate in consensus")
-		return
+// NewNetworkComponents create network.HostNetwork and network.Controller for new network
+func NewNetworkComponents(conf configuration.Configuration,
+	pulseCallback network.OnPulse) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
+	routingTable := routing.NewTable()
+	internalTransport, err := hostnetwork.NewInternalTransport(conf)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "error creating internal transport")
 	}
-	log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
-	go n.consensus.ProcessPulse(ctx, pulse)
-}
-
-// NewHostNetwork create new HostNetwork. Certificate in new network should be removed and pulseCallback should be passed to NewNetworkController.
-func NewHostNetwork(conf configuration.Configuration, certificate core.Certificate, pulseCallback network.OnPulse) (network.HostNetwork, error) {
-	return dhtnetwork.NewDhtHostNetwork(conf, certificate, pulseCallback)
-}
-
-// NewNetworkController create new network.Controller. In new network it should read conf.
-func NewNetworkController(conf configuration.Configuration, network network.HostNetwork) (network.Controller, error) {
-	return dhtnetwork.NewDhtNetworkController(network)
-}
-
-func NewConsensus(network network.HostNetwork) consensus.Processor {
-	return dhtnetwork.NewNetworkConsensus(network)
+	hostNetwork := hostnetwork.NewHostTransport(internalTransport, routingTable)
+	options := controller.ConfigureOptions(conf.Host)
+	networkController := controller.NewNetworkController(pulseCallback, options, internalTransport, routingTable, hostNetwork)
+	return routingTable, hostNetwork, networkController, nil
 }

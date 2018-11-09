@@ -33,6 +33,6 @@ Hints:
 
 	Use environment variables for log level setup:
 
-	export INSOLAR_LOG_LEVEL=debug go test ./yourpackage/...
+	INSOLAR_LOG_LEVEL=debug go test ./yourpackage/...
 */
 package inslogger

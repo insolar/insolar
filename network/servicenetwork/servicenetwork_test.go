@@ -31,21 +31,29 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/network/dhtnetwork"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 var keysPath = path.Join("..", "..", "testdata", "functional", "bootstrap_keys.json")
 
-func initComponents(t *testing.T, nodeId core.RecordRef) core.Components {
+func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
+	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
+	keeper := nodenetwork.NewNodeKeeper(origin)
+	if isBootstrap {
+		keeper.AddActiveNodes([]core.Node{origin})
+	}
+	return keeper
+}
+
+func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) core.Components {
 	pwd, _ := os.Getwd()
 	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
 	assert.NoError(t, err)
-	return core.Components{Certificate: cert, NodeNetwork: nodenetwork.NewNodeKeeper(nodenetwork.NewNode(nodeId, nil, nil, 0, 0, "", "")), Ledger: &dhtnetwork.MockLedger{}}
+	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
+	return core.Components{Certificate: cert, NodeNetwork: keeper, Ledger: &network.MockLedger{}}
 }
 
 /*
@@ -70,14 +78,6 @@ func TestServiceNetwork_GetAddress(t *testing.T) {
 	assert.True(t, strings.Contains(network.GetAddress(), strings.Split(cfg.Host.Transport.Address, ":")[0]))
 }
 
-func TestServiceNetwork_GetHostNetwork(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	network, err := NewServiceNetwork(cfg)
-	assert.NoError(t, err)
-	host, _ := network.GetHostNetwork()
-	assert.NotNil(t, host)
-}
-
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := NewServiceNetwork(cfg)
@@ -86,7 +86,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := context.TODO()
-	err = network.Start(ctx, initComponents(t, testutils.RandomRef()))
+	err = network.Start(ctx, initComponents(t, testutils.RandomRef(), "", true))
 	assert.NoError(t, err)
 
 	e := &message.CallMethod{
@@ -154,21 +154,24 @@ func (l *mockLedger) GetPulseManager() core.PulseManager {
 
 func TestServiceNetwork_SendMessage2(t *testing.T) {
 	ctx := context.TODO()
-	t.Skip("awaiting for big service network mock")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
 
-	firstNode, _ := NewServiceNetwork(mockServiceConfiguration(
+	firstNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10000",
 		[]string{"127.0.0.1:10001"},
 		firstNodeId))
-	secondNode, _ := NewServiceNetwork(mockServiceConfiguration(
+	assert.NoError(t, err)
+	secondNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10001",
 		nil,
 		secondNodeId))
+	assert.NoError(t, err)
 
-	secondNode.Start(ctx, core.Components{})
-	firstNode.Start(ctx, core.Components{})
+	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true))
+	assert.NoError(t, err)
+	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false))
+	assert.NoError(t, err)
 
 	defer func() {
 		firstNode.Stop(ctx)
@@ -191,16 +194,14 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 
 	signed, _ := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0)
 
-	ref := testutils.RandomRef()
-	firstNode.SendMessage(ref, "test", signed)
-	success := waitTimeout(&wg, 20*time.Millisecond)
+	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", signed)
+	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
 }
 
 func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	ctx := context.TODO()
-	t.Skip("wait for DI and network refactoring")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
 
@@ -215,11 +216,10 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		secondNodeId))
 	assert.NoError(t, err)
 
-	// TODO: initComponents
-	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId)))
+	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true))
 	assert.NoError(t, err)
 
-	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId)))
+	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false))
 	assert.NoError(t, err)
 
 	defer func() {
@@ -343,157 +343,153 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
-
-	hostHandler, ctx := firstService.GetHostNetwork()
-	// routing table should return total of 11 hosts
-	assert.Equal(t, 11, len(hostHandler.HtFromCtx(ctx).GetMulticastHosts()))
 }
 
-func Test_processPulse(t *testing.T) {
-	ctx := context.TODO()
-	t.Skip("rewrite test with multiple pulses and respecting logic of adding active nodes")
-	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
-	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
-
-	firstNode, _ := NewServiceNetwork(mockServiceConfiguration(
-		"127.0.0.1:10000",
-		[]string{"127.0.0.1:10001"},
-		firstNodeId))
-	secondNode, _ := NewServiceNetwork(mockServiceConfiguration(
-		"127.0.0.1:10001",
-		nil,
-		secondNodeId))
-	firstLedger := &mockLedger{PM: &dhtnetwork.MockPulseManager{}}
-	mpm := dhtnetwork.MockPulseManager{}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	mpm.SetCallback(func(pulse core.Pulse) {
-		if pulse.PulseNumber == core.PulseNumber(1) {
-			wg.Done()
-		}
-	})
-	secondLedger := &mockLedger{PM: &mpm}
-
-	secondNode.Start(ctx, core.Components{Ledger: secondLedger})
-	firstNode.Start(ctx, core.Components{Ledger: firstLedger})
-
-	defer func() {
-		firstNode.Stop(ctx)
-		secondNode.Stop(ctx)
-	}()
-
-	// pulse number is zero in MockPulseManager before receiving any pulses (default)
-	firstStoredPulse, _ := firstLedger.GetPulseManager().Current(ctx)
-	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
-
-	hh := firstNode.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
-	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
-		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
-		Build()
-	// imitate receiving pulse from the pulsar
-	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
-	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
-
-	// pulse is stored on the first node
-	firstStoredPulse, _ = firstLedger.GetPulseManager().Current(ctx)
-	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
-
-	// pulse is passed to the second node and stored there, too
-	success := waitTimeout(&wg, time.Millisecond*100)
-	assert.True(t, success)
-	secondStoredPulse, _ := secondLedger.GetPulseManager().Current(ctx)
-	assert.Equal(t, core.PulseNumber(1), secondStoredPulse.PulseNumber)
-}
-
-func Test_processPulse2(t *testing.T) {
-	ctx := context.TODO()
-	t.Skip("fix data race INS-534")
-	nodeIds := []core.RecordRef{
-		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
-		core.NewRefFromBase58("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"),
-		core.NewRefFromBase58("9uE5MEWQB2yfKY8kTgTNovWii88D4anmf7GAiovgcxx6Uc6EBmZ212mpyMa1L22u9TcUUd94i8LvULdsdBoG8ed"),
-		core.NewRefFromBase58("4qXdYkfL9U4tL3qRPthdbdajtafR4KArcXjpyQSEgEMtpuin3t8aZYmMzKGRnXHBauytaPQ6bfwZyKZzRPpR6gyX"),
-		core.NewRefFromBase58("5q5rnvayXyKszoWofxp4YyK7FnLDwhsqAXKxj6H7B5sdEsNn4HKNFoByph4Aj8rGptdWL54ucwMQrySMJgKavxX1"),
-		core.NewRefFromBase58("5tsFDwNLMW4GRHxSbBjjxvKpR99G4CSBLRqZAcpqdSk5SaeVcDL3hCiyjjidCRJ7Lu4VZoANWQJN2AgPvSRgCghn"),
-		core.NewRefFromBase58("48UWM6w7YKYCHoP7GHhogLvbravvJ6bs4FGETqXfgdhF9aPxiuwDWwHipeiuNBQvx7zyCN9wFxbuRrDYRoAiw5Fj"),
-		core.NewRefFromBase58("5owQeqWyHcobFaJqS2BZU2o2ZRQ33GojXkQK6f8vNLgvNx6xeWRwenJMc53eEsS7MCxrpXvAhtpTaNMPr3rjMHA"),
-		core.NewRefFromBase58("xF12WfbkcWrjrPXvauSYpEGhkZT2Zha53xpYh5KQdmGHMywJNNgnemfDN2JfPV45aNQobkdma4dsx1N7Xf5wCJ9"),
-		core.NewRefFromBase58("4VgDz9o23wmYXN9mEiLnnsGqCEEARGByx1oys2MXtC6M94K85ZpB9sEJwiGDER61gHkBxkwfJqtg9mAFR7PQcssq"),
-		core.NewRefFromBase58("48g7C8QnH2CGMa62sNaL1gVVyygkto8EbMRHv168psCBuFR2FXkpTfwk4ZwpY8awFFXKSnWspYWWQ7sMMk5W7s3T"),
-		core.NewRefFromBase58("Lvssptdwq7tatd567LUfx2AgsrWZfo4u9q6FJgJ9BgZK8cVooZv2A7F7rrs1FS5VpnTmXhr6XihXuKWVZ8i5YX9"),
-	}
-
-	prefix := "127.0.0.1:"
-	port := 10000
-	bootstrapNodes := nodeIds[len(nodeIds)-2:]
-	bootstrapHosts := make([]string, 0)
-	services := make([]*ServiceNetwork, 0)
-	ledgers := make([]core.Ledger, 0)
-
-	var wg sync.WaitGroup
-	wg.Add(len(nodeIds))
-
-	defer func() {
-		for _, service := range services {
-			service.Stop(ctx)
-		}
-	}()
-
-	// init node and register test function
-	initService := func(node string, bHosts []string) (host string) {
-		mpm := dhtnetwork.MockPulseManager{}
-		mpm.SetCallback(func(pulse core.Pulse) {
-			if pulse.PulseNumber == core.PulseNumber(1) {
-				wg.Done()
-			}
-		})
-		ledger := &mockLedger{PM: &mpm}
-		ledgers = append(ledgers, ledger)
-
-		host = prefix + strconv.Itoa(port)
-		service, _ := NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
-		service.Start(ctx, core.Components{Ledger: ledger})
-		port++
-		services = append(services, service)
-		return
-	}
-
-	for _, node := range bootstrapNodes {
-		host := initService(node.String(), nil)
-		bootstrapHosts = append(bootstrapHosts, host)
-	}
-	nodes := nodeIds[:len(nodeIds)-2]
-	for _, node := range nodes {
-		initService(node.String(), bootstrapHosts)
-	}
-
-	lastIndex := len(services) - 1
-
-	// pulse number is zero in MockPulseManager before receiving any pulses (default)
-	ll := ledgers[lastIndex]
-	firstStoredPulse, _ := ll.GetPulseManager().Current(ctx)
-	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
-
-	// time.Sleep(time.Millisecond * 100)
-
-	hh := services[lastIndex].hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
-	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
-		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
-		Build()
-	// imitate receiving pulse from the pulsar on the last started service
-	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
-	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
-
-	// pulse is stored on the first node
-	firstStoredPulse, _ = ll.GetPulseManager().Current(ctx)
-	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
-
-	// pulse is passed to the other 4 nodes and stored there, too
-	success := waitTimeout(&wg, time.Second)
-	assert.True(t, success)
-
-	for _, ldgr := range ledgers {
-		pulse, _ := ldgr.GetPulseManager().Current(ctx)
-		assert.Equal(t, core.PulseNumber(1), pulse.PulseNumber)
-	}
-}
+// func Test_processPulse(t *testing.T) {
+// 	ctx := context.TODO()
+// 	t.Skip("rewrite test with multiple pulses and respecting logic of adding active nodes")
+// 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
+// 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
+//
+// 	firstNode, _ := NewServiceNetwork(mockServiceConfiguration(
+// 		"127.0.0.1:10000",
+// 		[]string{"127.0.0.1:10001"},
+// 		firstNodeId))
+// 	secondNode, _ := NewServiceNetwork(mockServiceConfiguration(
+// 		"127.0.0.1:10001",
+// 		nil,
+// 		secondNodeId))
+// 	firstLedger := &mockLedger{PM: &dhtnetwork.MockPulseManager{}}
+// 	mpm := dhtnetwork.MockPulseManager{}
+// 	var wg sync.WaitGroup
+// 	wg.Add(1)
+// 	mpm.SetCallback(func(pulse core.Pulse) {
+// 		if pulse.PulseNumber == core.PulseNumber(1) {
+// 			wg.Done()
+// 		}
+// 	})
+// 	secondLedger := &mockLedger{PM: &mpm}
+//
+// 	secondNode.Start(ctx, core.Components{Ledger: secondLedger})
+// 	firstNode.Start(ctx, core.Components{Ledger: firstLedger})
+//
+// 	defer func() {
+// 		firstNode.Stop(ctx)
+// 		secondNode.Stop(ctx)
+// 	}()
+//
+// 	// pulse number is zero in MockPulseManager before receiving any pulses (default)
+// 	firstStoredPulse, _ := firstLedger.GetPulseManager().Current(ctx)
+// 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
+//
+// 	hh := firstNode.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
+// 	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
+// 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
+// 		Build()
+// 	// imitate receiving pulse from the pulsar
+// 	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
+// 	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
+//
+// 	// pulse is stored on the first node
+// 	firstStoredPulse, _ = firstLedger.GetPulseManager().Current(ctx)
+// 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
+//
+// 	// pulse is passed to the second node and stored there, too
+// 	success := waitTimeout(&wg, time.Millisecond*100)
+// 	assert.True(t, success)
+// 	secondStoredPulse, _ := secondLedger.GetPulseManager().Current(ctx)
+// 	assert.Equal(t, core.PulseNumber(1), secondStoredPulse.PulseNumber)
+// }
+//
+// func Test_processPulse2(t *testing.T) {
+// 	ctx := context.TODO()
+// 	t.Skip("fix data race INS-534")
+// 	nodeIds := []core.RecordRef{
+// 		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
+// 		core.NewRefFromBase58("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"),
+// 		core.NewRefFromBase58("9uE5MEWQB2yfKY8kTgTNovWii88D4anmf7GAiovgcxx6Uc6EBmZ212mpyMa1L22u9TcUUd94i8LvULdsdBoG8ed"),
+// 		core.NewRefFromBase58("4qXdYkfL9U4tL3qRPthdbdajtafR4KArcXjpyQSEgEMtpuin3t8aZYmMzKGRnXHBauytaPQ6bfwZyKZzRPpR6gyX"),
+// 		core.NewRefFromBase58("5q5rnvayXyKszoWofxp4YyK7FnLDwhsqAXKxj6H7B5sdEsNn4HKNFoByph4Aj8rGptdWL54ucwMQrySMJgKavxX1"),
+// 		core.NewRefFromBase58("5tsFDwNLMW4GRHxSbBjjxvKpR99G4CSBLRqZAcpqdSk5SaeVcDL3hCiyjjidCRJ7Lu4VZoANWQJN2AgPvSRgCghn"),
+// 		core.NewRefFromBase58("48UWM6w7YKYCHoP7GHhogLvbravvJ6bs4FGETqXfgdhF9aPxiuwDWwHipeiuNBQvx7zyCN9wFxbuRrDYRoAiw5Fj"),
+// 		core.NewRefFromBase58("5owQeqWyHcobFaJqS2BZU2o2ZRQ33GojXkQK6f8vNLgvNx6xeWRwenJMc53eEsS7MCxrpXvAhtpTaNMPr3rjMHA"),
+// 		core.NewRefFromBase58("xF12WfbkcWrjrPXvauSYpEGhkZT2Zha53xpYh5KQdmGHMywJNNgnemfDN2JfPV45aNQobkdma4dsx1N7Xf5wCJ9"),
+// 		core.NewRefFromBase58("4VgDz9o23wmYXN9mEiLnnsGqCEEARGByx1oys2MXtC6M94K85ZpB9sEJwiGDER61gHkBxkwfJqtg9mAFR7PQcssq"),
+// 		core.NewRefFromBase58("48g7C8QnH2CGMa62sNaL1gVVyygkto8EbMRHv168psCBuFR2FXkpTfwk4ZwpY8awFFXKSnWspYWWQ7sMMk5W7s3T"),
+// 		core.NewRefFromBase58("Lvssptdwq7tatd567LUfx2AgsrWZfo4u9q6FJgJ9BgZK8cVooZv2A7F7rrs1FS5VpnTmXhr6XihXuKWVZ8i5YX9"),
+// 	}
+//
+// 	prefix := "127.0.0.1:"
+// 	port := 10000
+// 	bootstrapNodes := nodeIds[len(nodeIds)-2:]
+// 	bootstrapHosts := make([]string, 0)
+// 	services := make([]*ServiceNetwork, 0)
+// 	ledgers := make([]core.Ledger, 0)
+//
+// 	var wg sync.WaitGroup
+// 	wg.Add(len(nodeIds))
+//
+// 	defer func() {
+// 		for _, service := range services {
+// 			service.Stop(ctx)
+// 		}
+// 	}()
+//
+// 	// init node and register test function
+// 	initService := func(node string, bHosts []string) (host string) {
+// 		mpm := dhtnetwork.MockPulseManager{}
+// 		mpm.SetCallback(func(pulse core.Pulse) {
+// 			if pulse.PulseNumber == core.PulseNumber(1) {
+// 				wg.Done()
+// 			}
+// 		})
+// 		ledger := &mockLedger{PM: &mpm}
+// 		ledgers = append(ledgers, ledger)
+//
+// 		host = prefix + strconv.Itoa(port)
+// 		service, _ := NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
+// 		service.Start(ctx, core.Components{Ledger: ledger})
+// 		port++
+// 		services = append(services, service)
+// 		return
+// 	}
+//
+// 	for _, node := range bootstrapNodes {
+// 		host := initService(node.String(), nil)
+// 		bootstrapHosts = append(bootstrapHosts, host)
+// 	}
+// 	nodes := nodeIds[:len(nodeIds)-2]
+// 	for _, node := range nodes {
+// 		initService(node.String(), bootstrapHosts)
+// 	}
+//
+// 	lastIndex := len(services) - 1
+//
+// 	// pulse number is zero in MockPulseManager before receiving any pulses (default)
+// 	ll := ledgers[lastIndex]
+// 	firstStoredPulse, _ := ll.GetPulseManager().Current(ctx)
+// 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
+//
+// 	// time.Sleep(time.Millisecond * 100)
+//
+// 	hh := services[lastIndex].hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
+// 	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
+// 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
+// 		Build()
+// 	// imitate receiving pulse from the pulsar on the last started service
+// 	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
+// 	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
+//
+// 	// pulse is stored on the first node
+// 	firstStoredPulse, _ = ll.GetPulseManager().Current(ctx)
+// 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
+//
+// 	// pulse is passed to the other 4 nodes and stored there, too
+// 	success := waitTimeout(&wg, time.Second)
+// 	assert.True(t, success)
+//
+// 	for _, ldgr := range ledgers {
+// 		pulse, _ := ldgr.GetPulseManager().Current(ctx)
+// 		assert.Equal(t, core.PulseNumber(1), pulse.PulseNumber)
+// 	}
+// }
