@@ -74,3 +74,31 @@ func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, reader io.Read
 
 	return &tape, nil
 }
+
+func (t *storagetape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
+	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
+	buff, err := t.ls.Get(ctx, t.pulse, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply.Deserialize(bytes.NewBuffer(buff))
+}
+
+func (t *storagetape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
+	reader, err := reply.Serialize(rep)
+	if err != nil {
+		return err
+	}
+	buff := new(bytes.Buffer)
+	_, err = buff.ReadFrom(reader)
+	if err != nil {
+		return err
+	}
+	return t.setReplyBinary(ctx, msgHash, buff.Bytes())
+}
+
+func (t *storagetape) setReplyBinary(ctx context.Context, msgHash []byte, rep []byte) error {
+	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
+	return t.ls.Set(ctx, t.pulse, key, rep)
+}
