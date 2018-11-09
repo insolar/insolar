@@ -22,7 +22,6 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/asn1"
-	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"math/big"
@@ -128,16 +127,6 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 
 	h := hash.SHA3Bytes256(data)
 	return ecdsa.Verify(savedKey, h, ecdsaP.R, ecdsaP.S), nil
-}
-
-
-// ImportSignature deserialize signature from string.
-func ImportSignature(data string) ([]byte, error) {
-	result, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ImportSignature ]")
-	}
-	return result, nil
 }
 
 // GeneratePrivateKey uses for generating ecdsa-key with defaul settings.
