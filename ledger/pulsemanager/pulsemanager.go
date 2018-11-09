@@ -105,7 +105,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 		return err
 	}
 
-	return m.lr.OnPulse(pulse)
+	return m.lr.OnPulse(ctx, pulse)
 }
 
 // NewPulseManager creates PulseManager instance.

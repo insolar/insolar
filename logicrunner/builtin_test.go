@@ -63,6 +63,14 @@ func TestBareHelloworld(t *testing.T) {
 	defer cleaner()
 
 	mb := testmessagebus.NewTestMessageBus()
+
+	mb.PulseNumber = 0
+
+	l.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: mb.PulseNumber, Entropy: core.Entropy{}},
+	)
+
 	nw := network.GetTestNetwork()
 
 	cm := &component.Manager{}
@@ -73,10 +81,6 @@ func TestBareHelloworld(t *testing.T) {
 	am := l.GetArtifactManager()
 
 	MessageBusTrivialBehavior(mb, lr)
-	l.GetPulseManager().Set(
-		ctx,
-		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
-	)
 
 	hw := helloworld.NewHelloWorld()
 
@@ -105,7 +109,8 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
 	key, _ := ecdsa.GeneratePrivateKey()
-	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
+
+	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, mb.PulseNumber, nil)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
@@ -125,7 +130,7 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
 	key, _ = ecdsa.GeneratePrivateKey()
-	parcel, _ = message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
+	parcel, _ = message.NewParcel(ctx, msg, testutils.RandomRef(), key, mb.PulseNumber, nil)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(
