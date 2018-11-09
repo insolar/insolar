@@ -56,7 +56,6 @@ type Parcel interface {
 	Pulse() PulseNumber
 	// GetToken returns a routing-token of the message
 	GetToken() MessageToken
-	GetHeader() MessageHeader
 }
 
 // MessageToken is the base interface for the routing token
@@ -64,7 +63,6 @@ type MessageToken interface {
 	GetTo() *RecordRef
 	GetFrom() *RecordRef
 	GetPulse() PulseNumber
-	GetMsgHash() []byte
 	GetSign() []byte
 }
 
