@@ -14,9 +14,12 @@
  *    limitations under the License.
  */
 
-package phases
+package packets
 
 import (
+	"errors"
+	"io"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -32,4 +35,18 @@ type PacketRoutable interface {
 	SetPacketHeader(header *RoutingHeader) error
 	// GetPacketHeader get routing information from transport level.
 	GetPacketHeader() (*RoutingHeader, error)
+}
+
+type Serializer interface {
+	Serialize() ([]byte, error)
+	Deserialize(data io.Reader) error
+}
+
+type ConsensusPacket interface {
+	Serializer
+	PacketRoutable
+}
+
+func ExtractPacket(reader io.Reader) (ConsensusPacket, error) {
+	return nil, errors.New("not implemented")
 }

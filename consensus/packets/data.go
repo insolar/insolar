@@ -14,10 +14,12 @@
  *    limitations under the License.
  */
 
-package phases
+package packets
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/pkg/errors"
 )
 
 type PacketType uint8
@@ -64,6 +66,29 @@ func (p1p *Phase1Packet) hasSection2() bool {
 	return p1p.packetHeader.f01
 }
 
+func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
+	if header.PacketType != types.Phase1 {
+		return errors.New("Phase1Packet.SetPacketHeader: wrong packet type")
+	}
+	p1p.packetHeader.setRoutingFields(header, NetworkConsistency, 1)
+
+	return nil
+}
+
+func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
+	header := &RoutingHeader{}
+
+	if p1p.packetHeader.PacketT != NetworkConsistency {
+		return nil, errors.New("Phase1Packet.GetPacketHeader: wrong packet type")
+	}
+
+	header.PacketType = types.Phase1
+	header.OriginID = p1p.packetHeader.OriginNodeID
+	header.TargetID = p1p.packetHeader.TargetNodeID
+
+	return header, nil
+}
+
 type PacketHeader struct {
 	PacketT    PacketType
 	SubType    uint8
@@ -77,11 +102,19 @@ type PacketHeader struct {
 	TargetNodeID core.ShortNodeID
 }
 
+func (ph *PacketHeader) setRoutingFields(header *RoutingHeader, packetType PacketType, subType uint8) {
+	ph.TargetNodeID = header.TargetID
+	ph.OriginNodeID = header.OriginID
+	ph.HasRouting = true
+	ph.PacketT = packetType
+	ph.SubType = subType
+}
+
 // PulseDataExt is a pulse data extension.
 type PulseDataExt struct {
 	NextPulseDelta uint16
 	PrevPulseDelta uint16
-	OriginID       uint16
+	OriginID       [16]byte
 	EpochPulseNo   uint32
 	PulseTimestamp uint32
 	Entropy        core.Entropy
@@ -94,8 +127,8 @@ type PulseData struct {
 }
 
 type NodePulseProof struct {
-	NodeStateHash uint64
-	NodeSignature uint64
+	NodeStateHash [64]byte
+	NodeSignature [64]byte
 }
 
 // --------------REFERENDUM--------------
@@ -125,7 +158,7 @@ func (nb *NodeBroadcast) Length() uint16 {
 type CapabilityPoolingAndActivation struct {
 	PollingFlags   uint16
 	CapabilityType uint16
-	CapabilityRef  uint64
+	CapabilityRef  [64]byte
 	length         uint16
 }
 
@@ -161,7 +194,7 @@ type NodeJoinClaim struct {
 	JoinsAfter              uint32
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
-	//NodePK                  ecdsa.PrivateKey // WTF: should it be Public key?
+	NodePK                  [64]byte
 	//length uint16
 }
 
@@ -208,7 +241,7 @@ type ReferendumVote struct {
 
 type NodeListVote struct {
 	NodeListCount uint16
-	NodeListHash  uint32
+	NodeListHash  [32]byte
 }
 
 type DeviantBitSet struct {
@@ -218,4 +251,50 @@ type DeviantBitSet struct {
 	//------------------
 	HighBitLength uint8
 	Payload       []byte
+}
+
+type Phase2Packet struct {
+	// -------------------- Header
+	packetHeader PacketHeader
+
+	// -------------------- Section 1
+	globuleHashSignature    [64]byte
+	deviantBitSet           DeviantBitSet
+	signatureHeaderSection1 [64]byte
+
+	// -------------------- Section 2 (optional)
+	votesAndAnswers         []ReferendumVote
+	signatureHeaderSection2 [64]byte
+}
+
+func (phase2Packet *Phase2Packet) isPhase3Needed() bool {
+	return phase2Packet.packetHeader.f00
+}
+
+func (phase2Packet *Phase2Packet) hasSection2() bool {
+	return phase2Packet.packetHeader.f01
+}
+
+func (phase2Packet *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
+	if header.PacketType != types.Phase2 {
+		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
+	}
+
+	phase2Packet.packetHeader.setRoutingFields(header, NetworkConsistency, 2)
+
+	return nil
+}
+
+func (phase2Packet *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
+	header := &RoutingHeader{}
+
+	if phase2Packet.packetHeader.PacketT != NetworkConsistency {
+		return nil, errors.New("Phase2Packet.GetPacketHeader: wrong packet type")
+	}
+
+	header.PacketType = types.Phase2
+	header.OriginID = phase2Packet.packetHeader.OriginNodeID
+	header.TargetID = phase2Packet.packetHeader.TargetNodeID
+
+	return header, nil
 }
