@@ -96,6 +96,27 @@ type MessageBus interface {
 	WriteTape(ctx context.Context, writer io.Writer) error
 }
 
+type messageBusKey struct{}
+
+// MessageBusFromContext returns MessageBus from context. If provided context does not have MessageBus, fallback will
+// be returned.
+func MessageBusFromContext(ctx context.Context, fallback MessageBus) MessageBus {
+	mb := fallback
+	ctxValue := ctx.Value(messageBusKey{})
+	if ctxValue != nil {
+		ctxBus, ok := ctxValue.(MessageBus)
+		if ok {
+			mb = ctxBus
+		}
+	}
+	return mb
+}
+
+// ContextWithMessageBus returns new context with provided message bus.
+func ContextWithMessageBus(ctx context.Context, bus MessageBus) context.Context {
+	return context.WithValue(ctx, messageBusKey{}, bus)
+}
+
 // MessageHandler is a function for message handling. It should be registered via Register method.
 type MessageHandler func(context.Context, Parcel) (Reply, error)
 
