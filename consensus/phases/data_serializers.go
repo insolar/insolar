@@ -644,14 +644,14 @@ func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRoleRecID")
 	}
 
-	// err = binary.Read(data, defaultByteOrder, &njc.NodePK)
-	// if err != nil {
-	// 	return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodePK")
-	// }
-
 	err = binary.Read(data, defaultByteOrder, &njc.NodeRef)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRef")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &njc.NodePK)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodePK")
 	}
 
 	// err = binary.Read(data, defaultByteOrder, &njc.length)
