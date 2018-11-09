@@ -6,7 +6,9 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// sender is an internal interface used by recorder and player. It should not be publicated.
+// Sender is an internal interface used by recorder and player. It should not be publicated.
+//
+// Sender provides access to private MessageBus methods.
 type sender interface {
 	core.MessageBus
 	CreateSignedMessage(ctx context.Context, pulse core.PulseNumber, msg core.Message) (core.SignedMessage, error)
