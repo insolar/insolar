@@ -17,8 +17,10 @@
 package packets
 
 import (
-	"errors"
 	"io"
+	"strconv"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -48,5 +50,31 @@ type ConsensusPacket interface {
 }
 
 func ExtractPacket(reader io.Reader) (ConsensusPacket, error) {
-	return nil, errors.New("not implemented")
+	header := PacketHeader{}
+	err := header.Deserialize(reader)
+	if err != nil {
+		return nil, errors.New("[ ExtractPacket ] Can't read packet header")
+	}
+
+	var packet ConsensusPacket
+	switch header.PacketT {
+	case Phase1:
+		packet1 := &Phase1Packet{}
+		err := packet1.DeserializeWithoutHeader(reader, &header)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ ExtractPacket ] Can't DeserializeWithoutHeader packet1")
+		}
+		packet = packet1
+	case Phase2:
+		packet2 := &Phase2Packet{}
+		err := packet2.DeserializeWithoutHeader(reader, &header)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ ExtractPacket ] Can't DeserializeWithoutHeader packet2")
+		}
+		packet = packet2
+	default:
+		return nil, errors.New("[ ExtractPacket ] Unknown extract packet type. " + strconv.Itoa(int(header.PacketT)))
+	}
+
+	return packet, nil
 }
