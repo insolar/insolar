@@ -90,6 +90,20 @@ type MessageBus interface {
 	WriteTape(ctx context.Context, writer io.Writer) error
 }
 
+type messageBusKey struct{}
+
+func NewMessageBusFromContext(ctx context.Context, fallback MessageBus) MessageBus {
+	mb := fallback
+	ctxValue := ctx.Value(messageBusKey{})
+	if ctxValue != nil {
+		ctxBus, ok := ctxValue.(MessageBus)
+		if ok {
+			mb = ctxBus
+		}
+	}
+	return mb
+}
+
 // MessageHandler is a function for message handling. It should be registered via Register method.
 type MessageHandler func(context.Context, SignedMessage) (Reply, error)
 
