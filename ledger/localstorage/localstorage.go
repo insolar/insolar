@@ -36,7 +36,7 @@ func NewLocalStorage(db *storage.DB) (*LocalStorage, error) {
 }
 
 // SetMessage saves message in storage.
-func (s *LocalStorage) SetMessage(ctx context.Context, msg core.SignedMessage) (*core.RecordID, error) {
+func (s *LocalStorage) SetMessage(ctx context.Context, msg core.Parcel) (*core.RecordID, error) {
 	buff, err := message.SignedToBytes(msg)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (s *LocalStorage) SetMessage(ctx context.Context, msg core.SignedMessage) (
 }
 
 // GetMessage retrieves message from storage.
-func (s *LocalStorage) GetMessage(ctx context.Context, id core.RecordID) (core.SignedMessage, error) {
+func (s *LocalStorage) GetMessage(ctx context.Context, id core.RecordID) (core.Parcel, error) {
 	buff, err := s.db.GetBlob(ctx, &id)
 	if err != nil {
 		return nil, err
