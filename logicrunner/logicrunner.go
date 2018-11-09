@@ -208,7 +208,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(
 		ctx,
 		vb.GetRole(),
-		*msg.Target(),
+		msg.Target(),
 		lr.pulse().PulseNumber,
 		lr.Network.GetNodeID(),
 	)

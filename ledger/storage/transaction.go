@@ -138,7 +138,10 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 		return nil, ErrNotFound
 	}
 
-	m.set(ctx, k, blob)
+	err := m.set(ctx, k, blob)
+	if err != nil {
+		return nil, err
+	}
 	return id, nil
 }
 
@@ -179,7 +182,10 @@ func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.Pul
 		return nil, ErrNotFound
 	}
 
-	m.set(ctx, k, record.SerializeRecord(rec))
+	err = m.set(ctx, k, record.SerializeRecord(rec))
+	if err != nil {
+		return nil, err
+	}
 	return id, nil
 }
 
@@ -214,8 +220,7 @@ func (m *TransactionManager) SetObjectIndex(
 	if err != nil {
 		return err
 	}
-	m.set(ctx, k, encoded)
-	return nil
+	return m.set(ctx, k, encoded)
 }
 
 // GetLatestPulseNumber returns current pulse number.
