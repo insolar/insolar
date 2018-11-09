@@ -44,7 +44,7 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	case core.TypeValidationResults:
 		return &ValidationResults{}, nil
 
-		// Ledger
+	// Ledger
 	case core.TypeGetCode:
 		return &GetCode{}, nil
 	case core.TypeGetObject:
@@ -62,7 +62,7 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	case core.TypeSetRecord:
 		return &SetRecord{}, nil
 
-		// Bootstrap
+	// Bootstrap
 	case core.TypeBootstrapRequest:
 		return &GenesisRequest{}, nil
 	default:
