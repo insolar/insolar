@@ -95,10 +95,10 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	signed, _ := message.NewParcel(ctx, e, network.GetNodeID(), key, 0, nil)
+	parcel, _ := message.NewParcel(ctx, e, network.GetNodeID(), key, 0, nil)
 
 	ref := testutils.RandomRef()
-	network.SendMessage(ref, "test", signed)
+	network.SendMessage(ref, "test", parcel)
 }
 
 func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID string) configuration.Configuration {
@@ -192,9 +192,9 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	signed, _ := message.NewParcel(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, nil)
+	parcel, _ := message.NewParcel(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, nil)
 
-	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", signed)
+	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", parcel)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
@@ -247,9 +247,9 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	signed, err := message.NewParcel(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, nil)
+	parcel, err := message.NewParcel(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, nil)
 
-	err = firstNode.SendCascadeMessage(c, "test", signed)
+	err = firstNode.SendCascadeMessage(c, "test", parcel)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.NoError(t, err)
@@ -258,11 +258,11 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	err = firstNode.SendCascadeMessage(c, "test", nil)
 	assert.Error(t, err)
 	c.ReplicationFactor = 0
-	err = firstNode.SendCascadeMessage(c, "test", signed)
+	err = firstNode.SendCascadeMessage(c, "test", parcel)
 	assert.Error(t, err)
 	c.ReplicationFactor = 2
 	c.NodeIds = nil
-	err = firstNode.SendCascadeMessage(c, "test", signed)
+	err = firstNode.SendCascadeMessage(c, "test", parcel)
 	assert.Error(t, err)
 }
 
@@ -338,9 +338,9 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	signed, _ := message.NewParcel(ctx, e, firstService.GetNodeID(), firstService.GetPrivateKey(), 0, nil)
+	parcel, _ := message.NewParcel(ctx, e, firstService.GetNodeID(), firstService.GetPrivateKey(), 0, nil)
 
-	firstService.SendCascadeMessage(c, "test", signed)
+	firstService.SendCascadeMessage(c, "test", parcel)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
