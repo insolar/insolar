@@ -138,7 +138,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 	}
 }
-func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
@@ -156,7 +156,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMe
 	return nil, err
 }
 
-func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidationResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
@@ -168,7 +168,7 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	return nil, nil
 }
 
-func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ExecutorResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
