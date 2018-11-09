@@ -34,3 +34,9 @@ func (p *ecdsaProvider) Sign(privateKey crypto.PrivateKey) core.Signer {
 	}
 }
 
+func (p *ecdsaProvider) Verify(publicKey crypto.PublicKey) core.Verifier {
+	return &ecdsaVerifyWrapper{
+		publicKey: publicKey,
+		hasher:    p.HashProvider.Hash512bits(),
+	}
+}
