@@ -29,7 +29,7 @@ import (
 type ConsensusRecord struct {
 	Steps   int
 	Error   string
-	Message core.SignedMessage
+	Message core.Parcel
 }
 
 // Consensus is an object for one validation process where all validated results will be compared.
@@ -41,7 +41,7 @@ type Consensus struct {
 	Total       int
 	Results     map[Ref]ConsensusRecord
 	CaseRecords []core.CaseRecord
-	Message     core.SignedMessage
+	Message     core.Parcel
 }
 
 func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
@@ -58,7 +58,7 @@ func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
 }
 
 // AddValidated adds results from validators
-func (c *Consensus) AddValidated(ctx context.Context, sm core.SignedMessage, msg *message.ValidationResults) error {
+func (c *Consensus) AddValidated(ctx context.Context, sm core.Parcel, msg *message.ValidationResults) error {
 	source := sm.GetSender()
 	if _, ok := c.Results[source]; !ok {
 		return errors.Errorf("Validation packet from non validation node for %#v", sm)
@@ -73,7 +73,7 @@ func (c *Consensus) AddValidated(ctx context.Context, sm core.SignedMessage, msg
 	return nil
 }
 
-func (c *Consensus) AddExecutor(ctx context.Context, sm core.SignedMessage, msg *message.ExecutorResults) {
+func (c *Consensus) AddExecutor(ctx context.Context, sm core.Parcel, msg *message.ExecutorResults) {
 	c.CaseRecords = msg.CaseRecords
 	c.Message = sm
 	c.CheckReady(ctx)

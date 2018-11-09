@@ -183,7 +183,8 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManage
 	pulse, _ := pm.Current(ctx)
 
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, pulse.PulseNumber)
+
+	signed, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, pulse.PulseNumber, nil)
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,
@@ -1249,18 +1250,18 @@ func New(n int) (*Child, error) {
 	assert.Equal(t, []interface{}{uint64(0), nil}, r)
 
 	mb := lr.(*LogicRunner).MessageBus.(*testmessagebus.TestMessageBus)
-	toValidate := make([]core.SignedMessage, 0)
-	mb.ReRegister(core.TypeValidateCaseBind, func(ctx context.Context, m core.SignedMessage) (core.Reply, error) {
+	toValidate := make([]core.Parcel, 0)
+	mb.ReRegister(core.TypeValidateCaseBind, func(ctx context.Context, m core.Parcel) (core.Reply, error) {
 		toValidate = append(toValidate, m)
 		return nil, nil
 	})
-	toExecute := make([]core.SignedMessage, 0)
-	mb.ReRegister(core.TypeExecutorResults, func(ctx context.Context, m core.SignedMessage) (core.Reply, error) {
+	toExecute := make([]core.Parcel, 0)
+	mb.ReRegister(core.TypeExecutorResults, func(ctx context.Context, m core.Parcel) (core.Reply, error) {
 		toExecute = append(toExecute, m)
 		return nil, nil
 	})
-	toCheckValidate := make([]core.SignedMessage, 0)
-	mb.ReRegister(core.TypeValidationResults, func(ctx context.Context, m core.SignedMessage) (core.Reply, error) {
+	toCheckValidate := make([]core.Parcel, 0)
+	mb.ReRegister(core.TypeValidationResults, func(ctx context.Context, m core.Parcel) (core.Reply, error) {
 		toCheckValidate = append(toCheckValidate, m)
 		return nil, nil
 	})
@@ -1716,7 +1717,7 @@ func getLogicRunnerWithoutValidation(lr core.LogicRunner) *LogicRunner {
 	rlr := lr.(*LogicRunner)
 	newmb := rlr.MessageBus.(*testmessagebus.TestMessageBus)
 
-	emptyFunc := func(context.Context, core.SignedMessage) (res core.Reply, err error) {
+	emptyFunc := func(context.Context, core.Parcel) (res core.Reply, err error) {
 		return nil, nil
 	}
 

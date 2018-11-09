@@ -6,5 +6,6 @@
 application/**                          @LinnikD
 ledger/**                               @nordicdyno
 network/**                              @dmitry-panchenko
+pulsar/**                               @egorikas
 vm/**                                   @Vany
 

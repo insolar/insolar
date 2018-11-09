@@ -30,10 +30,10 @@ func (n *testNetwork) GetNodeID() core.RecordRef {
 	return core.NewRefFromBase58("v1")
 }
 
-func (n *testNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.SignedMessage) ([]byte, error) {
+func (n *testNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
 	return make([]byte, 0), nil
 }
-func (n *testNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error {
+func (n *testNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
 	return nil
 }
 func (n *testNetwork) GetAddress() string {

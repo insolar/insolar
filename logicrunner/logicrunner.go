@@ -184,7 +184,7 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
 	if !ok {
@@ -226,10 +226,11 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	}
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
+	target := message.ExtractTarget(msg)
 	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(
 		ctx,
 		vb.GetRole(),
-		msg.Target(),
+		&target,
 		lr.pulse(ctx).PulseNumber,
 		lr.Network.GetNodeID(),
 	)

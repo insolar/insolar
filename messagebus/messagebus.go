@@ -23,6 +23,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -126,28 +127,30 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 	if err != nil {
 		return nil, err
 	}
-	signedMessage, err := mb.CreateSignedMessage(ctx, pulse.PulseNumber, msg)
+
+	parcel, err := mb.CreateParcel(ctx, pulse.PulseNumber, msg, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendMessage(ctx, pulse, signedMessage)
+	return mb.SendParcel(ctx, pulse, parcel)
 }
 
-// CreateSignedMessage creates signed message from provided message.
-func (mb *MessageBus) CreateSignedMessage(
-	ctx context.Context, pulse core.PulseNumber, msg core.Message,
-) (core.SignedMessage, error) {
-	return message.NewSignedMessage(ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse)
+// CreateParcel creates signed message from provided message.
+func (mb *MessageBus) CreateParcel(
+	ctx context.Context, pulse core.PulseNumber, msg core.Message, token core.RoutingToken,
+) (core.Parcel, error) {
+	return message.NewParcel(ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse, token)
 }
 
-// SendMessage sends provided message via network.
-func (mb *MessageBus) SendMessage(ctx context.Context, pulse *core.Pulse, msg core.SignedMessage) (core.Reply, error) {
+// SendParcel sends provided message via network.
+func (mb *MessageBus) SendParcel(ctx context.Context, pulse *core.Pulse, msg core.Parcel) (core.Reply, error) {
 	mb.queue.Push(msg)
 
 	jc := mb.Ledger.GetJetCoordinator()
 	// TODO: send to all actors of the role if nil Target
-	nodes, err := jc.QueryRole(ctx, msg.TargetRole(), msg.Target(), msg.Pulse())
+	target := message.ExtractTarget(msg)
+	nodes, err := jc.QueryRole(ctx, message.ExtractRole(msg), &target, msg.Pulse())
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +186,7 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
-func (mb *MessageBus) doDeliver(msg core.SignedMessage) (core.Reply, error) {
+func (mb *MessageBus) doDeliver(msg core.Parcel) (core.Reply, error) {
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
 		return nil, errors.New("no handler for received message type")
@@ -206,12 +209,22 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when mb.deliver()")
 	}
-	msg, err := message.DeserializeSigned(bytes.NewBuffer(args[0]))
+	msg, err := message.DeserializeParcel(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}
-	if mb.signmessages && !msg.IsValid(mb.ActiveNodes.GetActiveNode(msg.GetSender()).PublicKey()) {
+
+	senderKey := mb.ActiveNodes.GetActiveNode(msg.GetSender()).PublicKey()
+	if mb.signmessages && !msg.IsValid(senderKey) {
 		return nil, errors.New("failed to check a message sign")
+	}
+
+	serialized := message.ToBytes(msg)
+	msgHash := hash.SHA3Bytes256(serialized)
+
+	err = message.ValidateRoutingToken(senderKey, msg.GetToken(), msgHash)
+	if err != nil {
+		return nil, errors.New("failed to check a token sign")
 	}
 
 	resp, err := mb.doDeliver(msg)
