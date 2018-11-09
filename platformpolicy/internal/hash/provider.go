@@ -23,6 +23,10 @@ import (
 
 type sha3Provider struct{}
 
+func NewSHA3Provider() AlgorithmProvider {
+	return &sha3Provider{}
+}
+
 func (*sha3Provider) Hash224bits() core.Hasher {
 	return &hashWrapper{
 		hash: sha3.New224(),
