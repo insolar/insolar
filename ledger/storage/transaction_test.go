@@ -66,7 +66,7 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 		var tx2err error
 		wg.Add(1)
 		go func() {
-			tx1err = db.Update(func(tx *storage.TransactionManager) error {
+			tx1err = db.Update(ctx, func(tx *storage.TransactionManager) error {
 				// log.Debugf("tx1: start")
 				<-started2
 				// log.Debug("tx1: GetObjectIndex before")
@@ -90,7 +90,7 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 		}()
 		wg.Add(1)
 		go func() {
-			tx2err = db.Update(func(tx *storage.TransactionManager) error {
+			tx2err = db.Update(ctx, func(tx *storage.TransactionManager) error {
 				close(started2)
 				// log.Debug("tx2: start")
 				<-proceed2

@@ -17,14 +17,13 @@
 package metrics_test
 
 import (
-	"fmt"
 	"math/rand"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/testutils/testmetrics"
 	"github.com/stretchr/testify/assert"
@@ -62,10 +61,7 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	newctx := insmetrics.ChangeTags(ctx, tag.Insert(osxtag, "11.12.13"))
-
 	stats.Record(newctx, videoCount.M(1), videoSize.M(rand.Int63()))
-	time.Sleep(time.Millisecond * 1100)
-
 	metrics.NetworkMessageSentTotal.Inc()
 	metrics.NetworkPacketSentTotal.WithLabelValues("ping").Add(55)
 
@@ -87,11 +83,31 @@ func TestMetrics_ZPages(t *testing.T) {
 	testm := testmetrics.Start(ctx)
 
 	// One more thing... from https://github.com/rakyll/opencensus-grpc-demo
-	// also check rpcz
+	// also check /debug/rpcz
 	code, content, err := testm.FetchURL("/debug/tracez")
+	_ = content
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, code)
-	fmt.Println("/metrics => ", content)
+	// fmt.Println("/debug/tracez => ", content)
+
+	assert.NoError(t, testm.Stop())
+}
+
+func TestMetrics_Badger(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	_, cleaner := storagetest.TmpDB(ctx, t, "")
+	defer cleaner()
+
+	testm := testmetrics.Start(ctx)
+
+	code, content, err := testm.FetchURL("/metrics")
+	_ = content
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, code)
+	// fmt.Println("/metrics => ", content)
+	assert.Contains(t, content, "insolar_badger_blocked_puts_total")
 
 	assert.NoError(t, testm.Stop())
 }

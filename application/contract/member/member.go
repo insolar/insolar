@@ -162,8 +162,8 @@ func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
 
 func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
 	var publicKey string
-	var numberOfBootstrapNodes int
-	var majorityRule int
+	var numberOfBootstrapNodes float64
+	var majorityRule float64
 	var roles []string
 	var ip string
 	if err := signer.UnmarshalParams(params, &publicKey, &numberOfBootstrapNodes, &majorityRule, &roles, &ip); err != nil {
@@ -177,7 +177,7 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	cert, err := nd.RegisterNode(publicKey, numberOfBootstrapNodes, majorityRule, roles, ip)
+	cert, err := nd.RegisterNode(publicKey, int(numberOfBootstrapNodes), int(majorityRule), roles, ip)
 	if err != nil {
 		return nil, fmt.Errorf("[ registerNodeCall ] Problems with RegisterNode: %s", err.Error())
 	}

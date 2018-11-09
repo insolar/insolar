@@ -40,7 +40,7 @@ import (
 var keysPath = path.Join("..", "..", "testdata", "functional", "bootstrap_keys.json")
 
 func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
-	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, 0, address, "")
+	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
 	keeper := nodenetwork.NewNodeKeeper(origin)
 	if isBootstrap {
 		keeper.AddActiveNodes([]core.Node{origin})
