@@ -19,6 +19,7 @@ package transport
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net"
 
 	"github.com/insolar/insolar/log"
@@ -37,6 +38,16 @@ func GetUDPMaxPacketSize() int {
 type udpTransport struct {
 	baseTransport
 	serverConn net.PacketConn
+}
+
+type udpSerializer struct{}
+
+func (b *udpSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error) {
+	return nil, errors.New("not implemented")
 }
 
 func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
@@ -104,7 +115,7 @@ func (udpT *udpTransport) Stop() {
 
 func (udpT *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
 	r := bytes.NewReader(data)
-	msg, err := packet.DeserializePacket(r)
+	msg, err := udpT.serializer.DeserializePacket(r)
 	if err != nil {
 		log.Error("[ handleAcceptedConnection ] ", err)
 		return

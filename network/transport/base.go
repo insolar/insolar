@@ -17,6 +17,7 @@
 package transport
 
 import (
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -30,6 +31,21 @@ import (
 	"github.com/pkg/errors"
 )
 
+type transportSerializer interface {
+	SerializePacket(q *packet.Packet) ([]byte, error)
+	DeserializePacket(conn io.Reader) (*packet.Packet, error)
+}
+
+type baseSerializer struct{}
+
+func (b *baseSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
+	return packet.SerializePacket(q)
+}
+
+func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error) {
+	return packet.DeserializePacket(conn)
+}
+
 type baseTransport struct {
 	received chan *packet.Packet
 	sequence *uint64
@@ -40,10 +56,10 @@ type baseTransport struct {
 	mutex   *sync.RWMutex
 	futures map[packet.RequestID]Future
 
-	proxy          relay.Proxy
-	publicAddress  string
-	sendFunc       func(recvAddress string, data []byte) error
-	serializerFunc func(q *packet.Packet) ([]byte, error)
+	proxy         relay.Proxy
+	publicAddress string
+	sendFunc      func(recvAddress string, data []byte) error
+	serializer    transportSerializer
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
@@ -57,9 +73,9 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 		mutex:   &sync.RWMutex{},
 		futures: make(map[packet.RequestID]Future),
 
-		proxy:          proxy,
-		publicAddress:  publicAddress,
-		serializerFunc: packet.SerializePacket,
+		proxy:         proxy,
+		publicAddress: publicAddress,
+		serializer:    &baseSerializer{},
 	}
 }
 
@@ -182,7 +198,7 @@ func (t *baseTransport) sendPacket(p *packet.Packet) error {
 		recvAddress = p.Receiver.Address.String()
 	}
 
-	data, err := t.serializerFunc(p)
+	data, err := t.serializer.SerializePacket(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}

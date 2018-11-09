@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
 
@@ -99,7 +98,7 @@ func (t *utpTransport) socketDialTimeout(addr string, timeout time.Duration) (ne
 func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 	for {
 		// Wait for Packets
-		msg, err := packet.DeserializePacket(conn)
+		msg, err := t.serializer.DeserializePacket(conn)
 		if err != nil {
 			// TODO should we penalize this Host somehow ? Ban it ?
 			// if err.Error() != "EOF" {

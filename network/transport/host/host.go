@@ -26,6 +26,8 @@ import (
 type Host struct {
 	// NodeID is unique identifier of the node
 	NodeID core.RecordRef
+	// ShortID is shortened unique identifier of the node inside the globe
+	ShortID core.ShortNodeID
 	// Address is IP and port.
 	Address *Address
 }
