@@ -45,7 +45,8 @@ type MessageBus struct {
 	signmessages bool
 }
 
-// NewMessageBus is a `MessageBus` constructor
+// NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
+// wrap it, providing additional functionality.
 func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	return &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
@@ -55,19 +56,10 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	}, nil
 }
 
-// Start initializes message bus
-func (mb *MessageBus) Start(ctx context.Context) error {
-	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
-
-	return nil
-}
-
-// Stop releases resources and stops the bus
-func (mb *MessageBus) Stop(ctx context.Context) error { return nil }
-
-// NewPlayer creates a new player from stream.
+// NewPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
+// stream is exhausted.
 //
-// This is a very long operation, as it saves replies in storage until the stream is exhausted.
+// Player can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageBus, error) {
 	tape, err := NewTapeFromReader(ctx, mb.Ledger.GetLocalStorage(), r)
 	if err != nil {
@@ -80,6 +72,9 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageB
 	return rec, nil
 }
 
+// NewRecorder creates a new recorder with unique tape that can be used to store message replies.
+//
+// Recorder can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
 	pulse, err := mb.Ledger.GetPulseManager().Current(ctx)
 	if err != nil {
@@ -96,6 +91,17 @@ func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) 
 	return rec, nil
 }
 
+// Start initializes message bus
+func (mb *MessageBus) Start(ctx context.Context) error {
+	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
+
+	return nil
+}
+
+// Stop releases resources and stops the bus
+func (mb *MessageBus) Stop(ctx context.Context) error { return nil }
+
+// WriteTape for MessageBus is not available.
 func (mb *MessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
 	panic("this is not a recorder")
 }
@@ -134,12 +140,14 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 	return mb.SendMessage(ctx, pulse, signedMessage)
 }
 
+// CreateSignedMessage creates signed message from provided message.
 func (mb *MessageBus) CreateSignedMessage(
 	ctx context.Context, pulse core.PulseNumber, msg core.Message,
 ) (core.SignedMessage, error) {
 	return message.NewSignedMessage(ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse)
 }
 
+// SendMessage sends provided message via network.
 func (mb *MessageBus) SendMessage(ctx context.Context, pulse *core.Pulse, msg core.SignedMessage) (core.Reply, error) {
 	mb.queue.Push(msg)
 
