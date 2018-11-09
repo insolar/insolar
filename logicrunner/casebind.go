@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/core"
@@ -29,7 +30,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
-	"golang.org/x/crypto/sha3"
 )
 
 func HashInterface(in interface{}) []byte {
@@ -39,7 +39,7 @@ func HashInterface(in interface{}) []byte {
 	if err != nil {
 		panic("Can't marshal: " + err.Error())
 	}
-	sh := sha3.New224()
+	sh := hash.IntegrityHasher()
 	return sh.Sum(s)
 }
 
