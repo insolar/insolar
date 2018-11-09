@@ -17,6 +17,7 @@
 package core
 
 import (
+	"crypto"
 	"hash"
 )
 
@@ -25,3 +26,12 @@ type Hasher interface {
 
 	Hash([]byte) []byte
 }
+
+type PlatformCryptographyScheme interface {
+	ReferenceHasher() Hasher
+	IntegrityHasher() Hasher
+
+	Signer(crypto.PrivateKey) Signer
+	Verifier(crypto.PublicKey) Verifier
+}
+
