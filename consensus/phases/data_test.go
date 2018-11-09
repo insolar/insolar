@@ -220,7 +220,7 @@ func makeNodeJoinClaim() *NodeJoinClaim {
 	nodeJoinClaim.JoinsAfter = uint32(67)
 	nodeJoinClaim.NodeRoleRecID = uint32(32)
 	nodeJoinClaim.NodeRef = testutils.RandomRef()
-	// nodeJoinClaim.NodePK = // TODO:
+	nodeJoinClaim.NodePK = randomArray64()
 
 	return nodeJoinClaim
 }
@@ -231,7 +231,7 @@ func TestNodeJoinClaim(t *testing.T) {
 
 func TestNodeJoinClaim_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makeNodeJoinClaim(),
-		"[ NodeJoinClaim.Deserialize ] Can't read NodeRef: unexpected EOF")
+		"[ NodeJoinClaim.Deserialize ] Can't read NodePK: unexpected EOF")
 }
 
 func TestNodeLeaveClaim(t *testing.T) {
