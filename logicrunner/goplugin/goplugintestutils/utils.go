@@ -91,6 +91,10 @@ type TestObjectDescriptor struct {
 	ChildrenContainer []core.RecordRef
 }
 
+func (t *TestObjectDescriptor) History(pulse *core.PulseNumber) (core.RefIterator, error) {
+	panic("implement me")
+}
+
 // Parent implementation for tests
 func (t *TestObjectDescriptor) Parent() *core.RecordRef {
 	panic("implement me")
