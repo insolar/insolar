@@ -1039,113 +1039,113 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 	return result
 }
 
-//func TestRootDomainContract(t *testing.T) {
-//	if parallel {
-//		t.Parallel()
-//	}
-//	rootDomainCode, err := ioutil.ReadFile("../application/contract/rootdomain/rootdomain.go" +
-//		"")
-//	if err != nil {
-//		fmt.Print(err)
-//	}
-//	memberCode, err := ioutil.ReadFile("../application/contract/member/member.go")
-//	if err != nil {
-//		fmt.Print(err)
-//	}
-//	allowanceCode, err := ioutil.ReadFile("../application/contract/allowance/allowance.go")
-//	if err != nil {
-//		fmt.Print(err)
-//	}
-//	walletCode, err := ioutil.ReadFile("../application/contract/wallet/wallet.go")
-//	if err != nil {
-//		fmt.Print(err)
-//	}
-//
-//	ctx := context.TODO()
-//	// TODO need use pulseManager to sync all refs
-//	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
-//	defer cleaner()
-//	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
-//	assert.NoError(t, err)
-//
-//	// Initializing Root Domain
-//	rootDomainID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c1"})
-//	assert.NoError(t, err)
-//	rootDomainRef := getRefFromID(rootDomainID)
-//	rootDomainDesc, err := am.ActivateObject(
-//		ctx,
-//		core.RecordRef{},
-//		*rootDomainRef,
-//		*am.GenesisRef(),
-//		*cb.Prototypes["rootdomain"],
-//		false,
-//		goplugintestutils.CBORMarshal(t, nil),
-//	)
-//	assert.NoError(t, err, "create contract")
-//	assert.NotEqual(t, rootDomainRef, nil, "contract created")
-//
-//	// Creating Root member
-//	rootKey, err := cryptoHelper.GeneratePrivateKey()
-//	assert.NoError(t, err)
-//	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
-//	assert.NoError(t, err)
-//
-//	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
-//	assert.NoError(t, err)
-//	rootMemberRef := getRefFromID(rootMemberID)
-//
-//	m, err := member.New("root", rootPubKey)
-//	assert.NoError(t, err)
-//
-//	_, err = am.ActivateObject(
-//		ctx,
-//		core.RecordRef{},
-//		*rootMemberRef,
-//		*rootDomainRef,
-//		*cb.Prototypes["member"],
-//		false,
-//		goplugintestutils.CBORMarshal(t, m),
-//	)
-//	assert.NoError(t, err)
-//
-//	// Updating root domain with root member
-//	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
-//	assert.NoError(t, err)
-//
-//	root := Caller{rootMemberRef.String(), rootKey, lr, t}
-//
-//	// Creating Member1
-//	member1Key, err := cryptoHelper.GeneratePrivateKey()
-//	assert.NoError(t, err)
-//	member1PubKey, err := cryptoHelper.ExportPublicKey(&member1Key.PublicKey)
-//	assert.NoError(t, err)
-//
-//	res1 := root.SignedCall(*rootDomainRef, "CreateMember", []interface{}{"Member1", member1PubKey})
-//	member1Ref := res1.(string)
-//	assert.NotEqual(t, "", member1Ref)
-//
-//	// Creating Member2
-//	member2Key, err := cryptoHelper.GeneratePrivateKey()
-//	assert.NoError(t, err)
-//	member2PubKey, err := cryptoHelper.ExportPublicKey(&member2Key.PublicKey)
-//	assert.NoError(t, err)
-//
-//	res2 := root.SignedCall(*rootDomainRef, "CreateMember", []interface{}{"Member2", member2PubKey})
-//	member2Ref := res2.(string)
-//	assert.NotEqual(t, "", member2Ref)
-//
-//	// Transfer 1 coin from Member1 to Member2
-//	member1 := Caller{member1Ref, member1Key, lr, t}
-//	member1.SignedCall(*rootDomainRef, "Transfer", []interface{}{1, member2Ref})
-//
-//	// Verify Member1 balance
-//	res3 := root.SignedCall(*rootDomainRef, "GetBalance", []interface{}{member1Ref})
-//	assert.Equal(t, 999, int(res3.(uint64)))
-//
-//	// Verify Member2 balance
-//	res4 := root.SignedCall(*rootDomainRef, "GetBalance", []interface{}{member2Ref})
-//	assert.Equal(t, 1001, int(res4.(uint64)))
-//}
+func TestRootDomainContract(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	rootDomainCode, err := ioutil.ReadFile("../application/contract/rootdomain/rootdomain.go" +
+		"")
+	if err != nil {
+		fmt.Print(err)
+	}
+	memberCode, err := ioutil.ReadFile("../application/contract/member/member.go")
+	if err != nil {
+		fmt.Print(err)
+	}
+	allowanceCode, err := ioutil.ReadFile("../application/contract/allowance/allowance.go")
+	if err != nil {
+		fmt.Print(err)
+	}
+	walletCode, err := ioutil.ReadFile("../application/contract/wallet/wallet.go")
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	ctx := context.TODO()
+	// TODO need use pulseManager to sync all refs
+	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
+	assert.NoError(t, err)
+
+	// Initializing Root Domain
+	rootDomainID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c1"})
+	assert.NoError(t, err)
+	rootDomainRef := getRefFromID(rootDomainID)
+	rootDomainDesc, err := am.ActivateObject(
+		ctx,
+		core.RecordRef{},
+		*rootDomainRef,
+		*am.GenesisRef(),
+		*cb.Prototypes["rootdomain"],
+		false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, rootDomainRef, nil, "contract created")
+
+	// Creating Root member
+	rootKey, err := cryptoHelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
+	assert.NoError(t, err)
+
+	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
+	assert.NoError(t, err)
+	rootMemberRef := getRefFromID(rootMemberID)
+
+	m, err := member.New("root", rootPubKey)
+	assert.NoError(t, err)
+
+	_, err = am.ActivateObject(
+		ctx,
+		core.RecordRef{},
+		*rootMemberRef,
+		*rootDomainRef,
+		*cb.Prototypes["member"],
+		false,
+		goplugintestutils.CBORMarshal(t, m),
+	)
+	assert.NoError(t, err)
+
+	// Updating root domain with root member
+	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	assert.NoError(t, err)
+
+	root := Caller{rootMemberRef.String(), rootKey, lr, t}
+
+	// Creating Member1
+	member1Key, err := cryptoHelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	member1PubKey, err := cryptoHelper.ExportPublicKey(&member1Key.PublicKey)
+	assert.NoError(t, err)
+
+	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member1", member1PubKey})
+	member1Ref := res1.(string)
+	assert.NotEqual(t, "", member1Ref)
+
+	// Creating Member2
+	member2Key, err := cryptoHelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	member2PubKey, err := cryptoHelper.ExportPublicKey(&member2Key.PublicKey)
+	assert.NoError(t, err)
+
+	res2 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member2", member2PubKey})
+	member2Ref := res2.(string)
+	assert.NotEqual(t, "", member2Ref)
+
+	// Transfer 1 coin from Member1 to Member2
+	member1 := Caller{member1Ref, member1Key, lr, t}
+	member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", []interface{}{1, member2Ref})
+
+	// Verify Member1 balance
+	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", []interface{}{member1Ref})
+	assert.Equal(t, 999, int(res3.(uint64)))
+
+	// Verify Member2 balance
+	res4 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", []interface{}{member2Ref})
+	assert.Equal(t, 1001, int(res4.(uint64)))
+}
 
 func TestFullValidationCycle(t *testing.T) {
 	t.Skip("test is terribly wrong")
