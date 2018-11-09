@@ -14,25 +14,19 @@
  *    limitations under the License.
  */
 
-package utils
+package messagebus
 
 import (
-	"encoding/binary"
+	"context"
 
-	"github.com/satori/go.uuid"
+	"github.com/insolar/insolar/core"
 )
 
-// RandTraceID returns random traceID in uuid format
-func RandTraceID() string {
-	qid, err := uuid.NewV4()
-	if err != nil {
-		return "createRandomTraceIDFailed:" + err.Error()
-	}
-	return qid.String()
-}
-
-func UInt32ToBytes(n uint32) []byte {
-	buff := make([]byte, 4)
-	binary.BigEndian.PutUint32(buff, n)
-	return buff
+// Sender is an internal interface used by recorder and player. It should not be publicated.
+//
+// Sender provides access to private MessageBus methods.
+type sender interface {
+	core.MessageBus
+	CreateSignedMessage(ctx context.Context, pulse core.PulseNumber, msg core.Message) (core.SignedMessage, error)
+	SendMessage(ctx context.Context, pulse *core.Pulse, msg core.SignedMessage) (core.Reply, error)
 }

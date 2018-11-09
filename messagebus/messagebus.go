@@ -20,14 +20,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"io"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
-	"github.com/pkg/errors"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -43,7 +45,8 @@ type MessageBus struct {
 	signmessages bool
 }
 
-// NewMessageBus is a `MessageBus` constructor
+// NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
+// wrap it, providing additional functionality.
 func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	return &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
@@ -51,6 +54,35 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 		// TODO: pass value from config
 		queue: NewExpiryQueue(10 * time.Second),
 	}, nil
+}
+
+// NewPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
+// stream is exhausted.
+//
+// Player can be created from MessageBus and passed as MessageBus instance.
+func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageBus, error) {
+	tape, err := NewTapeFromReader(ctx, mb.Ledger.GetLocalStorage(), r)
+	if err != nil {
+		return nil, err
+	}
+	pl := NewPlayer(mb, tape, mb.Ledger.GetPulseManager())
+	return pl, nil
+}
+
+// NewRecorder creates a new recorder with unique tape that can be used to store message replies.
+//
+// Recorder can be created from MessageBus and passed as MessageBus instance.
+func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
+	pulse, err := mb.Ledger.GetPulseManager().Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tape, err := NewTape(mb.Ledger.GetLocalStorage(), pulse.PulseNumber)
+	if err != nil {
+		return nil, err
+	}
+	rec := NewRecorder(mb, tape, mb.Ledger.GetPulseManager())
+	return rec, nil
 }
 
 // Start initializes message bus
@@ -63,7 +95,12 @@ func (mb *MessageBus) Start(ctx context.Context) error {
 // Stop releases resources and stops the bus
 func (mb *MessageBus) Stop(ctx context.Context) error { return nil }
 
-// Register sets a function as a hadler for particular message type,
+// WriteTape for MessageBus is not available.
+func (mb *MessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
+	panic("this is not a recorder")
+}
+
+// Register sets a function as a handler for particular message type,
 // only one handler per type is allowed
 func (mb *MessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
 	_, ok := mb.handlers[p]
@@ -83,25 +120,34 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 	}
 }
 
-// Send an `Message` and get a `Reply` or error from remote host.
+// Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
-	jc := mb.Ledger.GetJetCoordinator()
-	pm := mb.Ledger.GetPulseManager()
-	pulse, err := pm.Current(ctx)
+	pulse, err := mb.Ledger.GetPulseManager().Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+	signedMessage, err := mb.CreateSignedMessage(ctx, pulse.PulseNumber, msg)
 	if err != nil {
 		return nil, err
 	}
 
-	signedMsg, err := message.NewSignedMessage(
-		ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse.PulseNumber,
-	)
-	if err != nil {
-		return nil, err
-	}
+	return mb.SendMessage(ctx, pulse, signedMessage)
+}
+
+// CreateSignedMessage creates signed message from provided message.
+func (mb *MessageBus) CreateSignedMessage(
+	ctx context.Context, pulse core.PulseNumber, msg core.Message,
+) (core.SignedMessage, error) {
+	return message.NewSignedMessage(ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse)
+}
+
+// SendMessage sends provided message via network.
+func (mb *MessageBus) SendMessage(ctx context.Context, pulse *core.Pulse, msg core.SignedMessage) (core.Reply, error) {
 	mb.queue.Push(msg)
 
+	jc := mb.Ledger.GetJetCoordinator()
 	// TODO: send to all actors of the role if nil Target
-	nodes, err := jc.QueryRole(ctx, signedMsg.TargetRole(), signedMsg.Target(), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(ctx, msg.TargetRole(), msg.Target(), msg.Pulse())
 	if err != nil {
 		return nil, err
 	}
@@ -112,16 +158,16 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, signedMsg)
+		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
 		return nil, err
 	}
 
 	// Short path when sending to self node. Skip serialization
 	if nodes[0].Equal(mb.Service.GetNodeID()) {
-		return mb.doDeliver(signedMsg)
+		return mb.doDeliver(msg)
 	}
 
-	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, signedMsg)
+	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, msg)
 	if err != nil {
 		return nil, err
 	}
