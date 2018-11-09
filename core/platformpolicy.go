@@ -15,3 +15,13 @@
  */
 
 package core
+
+import (
+	"hash"
+)
+
+type Hasher interface {
+	hash.Hash
+
+	Hash([]byte) []byte
+}
