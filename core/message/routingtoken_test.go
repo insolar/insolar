@@ -18,13 +18,13 @@ func TestValidateToken(t *testing.T) {
 	ref := testutils.RandomRef()
 
 	tmp := core.Message(&GenesisRequest{})
-	msg, err := NewParcel(context.TODO(), tmp, ref, key, 1234, nil)
+	parcel, err := NewParcel(context.TODO(), tmp, ref, key, 1234, nil)
 	assert.NoError(t, err)
 
-	serialized, err := ToBytes(msg.Message())
+	serialized, err := ToBytes(parcel.Message())
 	assert.NoError(t, err)
 	msgHash := hash.SHA3Bytes256(serialized)
 
-	err = ValidateToken(&key.PublicKey, msg.GetToken(), msgHash)
+	err = ValidateToken(&key.PublicKey, parcel.GetToken(), msgHash)
 	assert.NoError(t, err)
 }

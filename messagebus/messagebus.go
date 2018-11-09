@@ -139,15 +139,15 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
-func (mb *MessageBus) doDeliver(msg core.Parcel) (core.Reply, error) {
-	handler, ok := mb.handlers[msg.Type()]
+func (mb *MessageBus) doDeliver(parcel core.Parcel) (core.Reply, error) {
+	handler, ok := mb.handlers[parcel.Type()]
 	if !ok {
 		return nil, errors.New("no handler for received message type")
 	}
 
-	ctx := msg.Context(context.Background())
+	ctx := parcel.Context(context.Background())
 	ctx = hack.SetSkipValidation(ctx, true)
-	resp, err := handler(ctx, msg)
+	resp, err := handler(ctx, parcel)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
@@ -162,26 +162,26 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when mb.deliver()")
 	}
-	msg, err := message.DeserializeParcel(bytes.NewBuffer(args[0]))
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}
-	senderKey := mb.ActiveNodes.GetActiveNode(msg.GetSender()).PublicKey()
-	if mb.signmessages && !msg.IsValid(senderKey) {
+	senderKey := mb.ActiveNodes.GetActiveNode(parcel.GetSender()).PublicKey()
+	if mb.signmessages && !parcel.IsValid(senderKey) {
 		return nil, errors.New("failed to check a message sign")
 	}
-	serialized, err := message.ToBytes(msg.Message())
+	serialized, err := message.ToBytes(parcel.Message())
 	if err != nil {
 		return nil, errors.Wrap(err, "filed to serialize message")
 	}
 	msgHash := hash.SHA3Bytes256(serialized)
 
-	err = message.ValidateToken(senderKey, msg.GetToken(), msgHash)
+	err = message.ValidateToken(senderKey, parcel.GetToken(), msgHash)
 	if err != nil {
 		return nil, errors.New("failed to check a token sign")
 	}
 
-	resp, err := mb.doDeliver(msg)
+	resp, err := mb.doDeliver(parcel)
 	if err != nil {
 		return nil, err
 	}
