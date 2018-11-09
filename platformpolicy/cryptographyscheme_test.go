@@ -23,7 +23,7 @@ import (
 )
 
 func TestNewPlatformPolicy(t *testing.T) {
-	pp := NewPlatformPolicy()
+	pcs := NewPlatformCryptographyScheme()
 
-	assert.NotNil(t, pp)
+	assert.NotNil(t, pcs)
 }

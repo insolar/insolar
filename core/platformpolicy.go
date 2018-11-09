@@ -42,7 +42,3 @@ type PlatformCryptographyScheme interface {
 	Signer(crypto.PrivateKey) Signer
 	Verifier(crypto.PublicKey) Verifier
 }
-
-type PlatformPolicy interface {
-	CryptographyScheme() PlatformCryptographyScheme
-}

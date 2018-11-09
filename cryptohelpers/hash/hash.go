@@ -22,19 +22,19 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 )
 
-var policy = platformpolicy.NewPlatformPolicy()
+var platformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 // NewIDHash returns hash used for records ID generation.
 func NewIDHash() hash.Hash {
-	return policy.CryptographyScheme().ReferenceHasher()
+	return platformCryptographyScheme.ReferenceHasher()
 }
 
 // IDHashBytes generates hash for record ID from byte slice.
 func IDHashBytes(b []byte) []byte {
-	return policy.CryptographyScheme().ReferenceHasher().Hash(b)
+	return platformCryptographyScheme.ReferenceHasher().Hash(b)
 }
 
 // SHA3Bytes256 generates SHA3-256 hash for byte slice.
 func SHA3Bytes256(b []byte) []byte {
-	return policy.CryptographyScheme().IntegrityHasher().Hash(b)
+	return platformCryptographyScheme.IntegrityHasher().Hash(b)
 }

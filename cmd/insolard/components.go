@@ -84,7 +84,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	keyStore, err := keystore.NewKeyStore(cfg)
 	checkError(ctx, err, "failed to load KeyStore: ")
 
-	platformPolicy := platformpolicy.NewPlatformPolicy()
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	// move to logic runner ??
 	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
@@ -103,7 +103,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		metricsHandler,
 		networkCoordinator,
 		versionManager,
-		platformPolicy,
+		platformCryptographyScheme,
 		keyStore,
 	)
 

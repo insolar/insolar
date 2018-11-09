@@ -19,6 +19,7 @@ package platformpolicy
 import (
 	"crypto"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy/internal/hash"
 	"github.com/insolar/insolar/platformpolicy/internal/sign"
@@ -43,4 +44,17 @@ func (pcs *platformCryptographyScheme) Signer(privateKey crypto.PrivateKey) core
 
 func (pcs *platformCryptographyScheme) Verifier(publicKey crypto.PublicKey) core.Verifier {
 	return pcs.SignProvider.Verify(publicKey)
+}
+
+func NewPlatformCryptographyScheme() core.PlatformCryptographyScheme {
+	platformCryptographyScheme := &platformCryptographyScheme{}
+
+	manager := component.Manager{}
+	manager.Register(
+		platformCryptographyScheme,
+
+		hash.NewSHA3Provider(),
+		sign.NewECDSAProvider(),
+	)
+	return platformCryptographyScheme
 }
