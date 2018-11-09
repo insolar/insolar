@@ -28,3 +28,11 @@ func fromRS(r, s *big.Int) *signature {
 	return &signature{R: r, S: s}
 }
 
+func (p *signature) Marshal() ([]byte, error) {
+	signature, err := asn1.Marshal(p)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Marshall ] Could't marshal signature")
+	}
+	return signature, nil
+}
+
