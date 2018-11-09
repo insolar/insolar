@@ -17,15 +17,14 @@
 package hash
 
 import (
-	"hash"
-
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
 var platformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 // ReferenceHasher returns hash used for records ID generation.
-func ReferenceHasher() hash.Hash {
+func ReferenceHasher() core.Hasher {
 	return platformCryptographyScheme.ReferenceHasher()
 }
 
