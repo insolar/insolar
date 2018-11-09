@@ -28,11 +28,6 @@ func ReferenceHasher() core.Hasher {
 	return platformCryptographyScheme.ReferenceHasher()
 }
 
-// IDHashBytes generates hash for record ID from byte slice.
-func IDHashBytes(b []byte) []byte {
-	return platformCryptographyScheme.ReferenceHasher().Hash(b)
-}
-
 // SHA3Bytes256 generates SHA3-256 hash for byte slice.
 func SHA3Bytes256(b []byte) []byte {
 	return platformCryptographyScheme.IntegrityHasher().Hash(b)

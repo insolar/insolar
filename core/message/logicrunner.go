@@ -219,7 +219,7 @@ func (m *ValidationResults) GetReference() core.RecordRef {
 func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
 	ref := core.NewRecordRef(
 		core.RecordID{},
-		*core.NewRecordID(pn, hash.IDHashBytes(payload)),
+		*core.NewRecordID(pn, hash.ReferenceHasher().Hash(payload)),
 	)
 	return ref
 }
