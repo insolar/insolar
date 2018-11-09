@@ -90,8 +90,8 @@ func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 	return header, nil
 }
 
+// SetPulseProof sets PulseProof and check struct fields len, returns error if invalid len
 func (p1p *Phase1Packet) SetPulseProof(proof merkle.PulseProof) error {
-
 	if len(proof.StateHash) == 64 || len(proof.Signature) == 64 {
 		copy(p1p.proofNodePulse.NodeStateHash[:], proof.StateHash[:64])
 		copy(p1p.proofNodePulse.NodeSignature[:], proof.Signature[:64])
