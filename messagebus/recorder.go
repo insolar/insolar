@@ -8,20 +8,26 @@ import (
 	"github.com/insolar/insolar/ledger/localstorage"
 )
 
+// Recorder is a MessageBus wrapper that stores received replies to the tape. The tape then can be transferred and
+// used by Player to replay those replies.
 type recorder struct {
 	sender
 	tape tape
 	pm   core.PulseManager
 }
 
+// NewRecorder create new recorder instance.
 func NewRecorder(s sender, tape tape, pm core.PulseManager) (*recorder, error) {
 	return &recorder{sender: s, tape: tape, pm: pm}, nil
 }
 
+// WriteTape writes recorder's tape to the provided writer.
 func (r *recorder) WriteTape(ctx context.Context, w io.Writer) error {
 	return r.tape.Write(ctx, w)
 }
 
+// Send wraps MessageBus Send to save received replies to the tape. This reply is also used to return directly from the
+// tape is the message is sent again, thus providing a cash for message replies.
 func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
 	var (
 		rep core.Reply
