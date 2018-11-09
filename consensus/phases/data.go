@@ -72,11 +72,7 @@ func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 	if header.PacketType != types.Phase1 {
 		return errors.New("Phase1Packet.SetPacketHeader: wrong packet type")
 	}
-	p1p.packetHeader.TargetNodeID = header.TargetID
-	p1p.packetHeader.OriginNodeID = header.OriginID
-	p1p.packetHeader.HasRouting = true
-	p1p.packetHeader.PacketT = NetworkConsistency
-	p1p.packetHeader.SubType = 1
+	p1p.packetHeader.setRoutingFields(header, NetworkConsistency, 1)
 
 	return nil
 }
@@ -106,6 +102,14 @@ type PacketHeader struct {
 	//-----------------
 	OriginNodeID core.ShortNodeID
 	TargetNodeID core.ShortNodeID
+}
+
+func (ph *PacketHeader) setRoutingFields(header *RoutingHeader, packetType PacketType, subType uint8) {
+	ph.TargetNodeID = header.TargetID
+	ph.OriginNodeID = header.OriginID
+	ph.HasRouting = true
+	ph.PacketT = packetType
+	ph.SubType = subType
 }
 
 // PulseDataExt is a pulse data extension.
@@ -277,11 +281,8 @@ func (p2p *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
 	if header.PacketType != types.Phase2 {
 		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
 	}
-	p2p.packetHeader.TargetNodeID = header.TargetID
-	p2p.packetHeader.OriginNodeID = header.OriginID
-	p2p.packetHeader.HasRouting = true
-	p2p.packetHeader.PacketT = NetworkConsistency
-	p2p.packetHeader.SubType = 2
+
+	p2p.packetHeader.setRoutingFields(header, NetworkConsistency, 2)
 
 	return nil
 }
