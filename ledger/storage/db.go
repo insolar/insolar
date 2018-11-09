@@ -508,6 +508,9 @@ func (db *DB) GetLocalData(ctx context.Context, pulse core.PulseNumber, key []by
 	)
 }
 
+// IterateLocalData iterates over all record with specified prefix and calls handler with key and value of that record.
+//
+// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
 func (db *DB) IterateLocalData(ctx context.Context, pulse core.PulseNumber, prefix []byte, handler func(k, v []byte) error) error {
 	fullPrefix := bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), prefix}, nil)
 
