@@ -82,15 +82,15 @@ func (mb *TestMessageBus) Stop() error {
 
 func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
 	key, _ := ecdsa.GeneratePrivateKey()
-	signedMsg, err := message.NewParcel(ctx, m, testutils.RandomRef(), key, mb.PulseNumber, nil)
+	parcel, err := message.NewParcel(ctx, m, testutils.RandomRef(), key, mb.PulseNumber, nil)
 	if err != nil {
 		return nil, err
 	}
-	t := signedMsg.Message().Type()
+	t := parcel.Message().Type()
 	handler, ok := mb.handlers[t]
 	if !ok {
 		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
-	return handler(ctx, signedMsg)
+	return handler(ctx, parcel)
 }

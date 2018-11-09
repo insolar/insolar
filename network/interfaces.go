@@ -72,6 +72,26 @@ type HostNetwork interface {
 	BuildResponse(request Request, responseData interface{}) Response
 }
 
+type ConsensusRequestHandler func(Request)
+
+type ConsensusNetwork interface {
+	// Start listening to network requests.
+	Start()
+	// Stop listening to network requests.
+	Stop()
+	// PublicAddress returns public address that can be published for all nodes.
+	PublicAddress() string
+	// GetNodeID get current node ID.
+	GetNodeID() core.RecordRef
+
+	// SendRequest send request to a remote node.
+	SendRequest(request Request, receiver core.RecordRef) error
+	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
+	RegisterRequestHandler(t types.PacketType, handler ConsensusRequestHandler)
+	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
+	NewRequestBuilder() RequestBuilder
+}
+
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() core.RecordRef

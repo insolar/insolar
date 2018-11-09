@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
@@ -103,16 +104,20 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	mb.PulseNumber = pulseNumber
 
 	nw := network.GetTestNetwork()
-	c := core.Components{
-		LogicRunner: lr,
-		NodeNetwork: nk,
-		MessageBus:  mb,
-		Network:     nw,
-	}
-	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
-	c.Ledger = l
+	l, cleaner := ledgertestutils.TmpLedger(
+		t, "",
+		core.Components{
+			LogicRunner: lr,
+			NodeNetwork: nk,
+			MessageBus:  mb,
+			Network:     nw,
+		},
+	)
 
-	assert.NoError(t, lr.Start(ctx, c), "starting logicrunner")
+	cm := &component.Manager{}
+	cm.Register(nk, l, lr, nw, mb)
+	err = cm.Start(ctx)
+	assert.NoError(t, err)
 
 	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
@@ -183,11 +188,11 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManage
 
 	key, _ := cryptoHelper.GeneratePrivateKey()
 
-	signed, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, pulse.PulseNumber, nil)
+	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, pulse.PulseNumber, nil)
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,
-		signed,
+		parcel,
 	)
 
 	return resp, err

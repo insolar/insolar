@@ -33,7 +33,7 @@ import (
 )
 
 func HashInterface(in interface{}) []byte {
-	s := []byte{}
+	var s []byte
 	ch := new(codec.CborHandle)
 	err := codec.NewEncoderBytes(&s, ch).Encode(in)
 	if err != nil {
@@ -89,11 +89,11 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		msg := start.Resp.(core.Message)
-		signed, err := message.NewParcel(
+		parcel, err := message.NewParcel(
 			ctx, msg, ref, lr.Network.GetPrivateKey(), lr.execution[ref].callContext.Pulse.PulseNumber, nil,
 		)
 		if err != nil {
-			return 0, errors.New("failed to create a signed message")
+			return 0, errors.New("failed to create a parcel message")
 		}
 
 		traceStep, step := lr.nextValidationStep(ref)
@@ -107,7 +107,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		es.insContext = inslogger.ContextWithTrace(es.insContext, traceID)
-		ret, err := lr.Execute(es.insContext, signed)
+		ret, err := lr.Execute(es.insContext, parcel)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}

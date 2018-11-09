@@ -54,8 +54,8 @@ func (r *player) Send(ctx context.Context, msg core.Message) (core.Reply, error)
 		return nil, err
 	}
 
-	signedMessage, err := r.CreateParcel(ctx, pulse.PulseNumber, msg, nil)
-	id := GetMessageHash(signedMessage)
+	parcel, err := r.CreateParcel(ctx, pulse.PulseNumber, msg, nil)
+	id := GetMessageHash(parcel)
 
 	// Value from storageTape.
 	rep, err = r.tape.GetReply(ctx, id)
