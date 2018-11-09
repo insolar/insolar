@@ -506,9 +506,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	}
 }
 
-func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	insctx := context.TODO()
-
+func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	lr.RefreshConsensus()
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind()
@@ -520,7 +518,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// send copy for validation
 	for ref, records := range objectsRecords {
 		_, err := lr.MessageBus.Send(
-			insctx,
+			ctx,
 			&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse},
 		)
 		if err != nil {
@@ -528,7 +526,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 		}
 
 		results := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
-		_, err = lr.MessageBus.Send(insctx, &results)
+		_, err = lr.MessageBus.Send(ctx, &results)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}
