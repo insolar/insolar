@@ -31,6 +31,20 @@ type keyLoader struct {
 	parseFunc func(key []byte) (crypto.PrivateKey, error)
 }
 
+
+func (p *keyLoader) Load(file string) (crypto.PrivateKey, error) {
+	key, err := readJSON(file)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Load ] Could't read private key")
+	}
+
+	signer, err := p.parseFunc(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Load ] Could't parse private key")
+	}
+	return signer, nil
+}
+
 // TODO: deprecated, use PEM format
 func readJSON(path string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(path))
