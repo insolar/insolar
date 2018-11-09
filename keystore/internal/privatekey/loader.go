@@ -23,3 +23,23 @@ import (
 type keyLoader struct {
 	parseFunc func(key []byte) (crypto.PrivateKey, error)
 }
+
+// TODO: deprecated, use PEM format
+func readJSON(path string) ([]byte, error) {
+	data, err := ioutil.ReadFile(filepath.Clean(path))
+	if err != nil {
+		return nil, errors.Wrap(err, "[ read ] couldn't read keys from: "+path)
+	}
+	var keys map[string]string
+	err = json.Unmarshal(data, &keys)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ read ] failed to parse json.")
+	}
+
+	key, ok := keys["private_key"]
+	if !ok {
+		return nil, errors.Errorf("[ read ] couldn't read keys from: %s", path)
+	}
+
+	return []byte(key), nil
+}
