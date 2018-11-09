@@ -41,7 +41,7 @@ func (e *SetRecord) Type() core.MessageType {
 	return core.TypeSetRecord
 }
 
-// GetCode retrieves code from storage.
+// GetCode retrieves code From storage.
 type GetCode struct {
 	ledgerMessage
 	Code core.RecordRef
@@ -52,7 +52,7 @@ func (e *GetCode) Type() core.MessageType {
 	return core.TypeGetCode
 }
 
-// GetObject retrieves object from storage.
+// GetObject retrieves object From storage.
 type GetObject struct {
 	ledgerMessage
 	Head     core.RecordRef
