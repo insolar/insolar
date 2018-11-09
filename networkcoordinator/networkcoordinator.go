@@ -130,33 +130,33 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 }
 
 // Authorize authorizes node by verifying it's signature
-func (nc *NetworkCoordinator) Authorize(ctx context.Context, nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
+func (nc *NetworkCoordinator) Authorize(ctx context.Context, nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
 	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
 	if err != nil {
-		return "", nil, errors.Wrap(err, "[ Authorize ] Can't get nodeDomainRef")
+		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't get nodeDomainRef")
 	}
 
 	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
 
 	if err != nil {
-		return "", nil, errors.Wrap(err, "[ Authorize ] Can't send request")
+		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't send request")
 	}
 
 	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
-		return "", nil, errors.Wrap(err, "[ Authorize ] Can't extract response")
+		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't extract response")
 	}
 
 	return pubKey, role, nil
 }
 
 // RegisterNode registers node in nodedomain
-func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey string, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
 	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't get nodeDomainRef")
 	}
-	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKey, numberOfBootstrapNodes, majorityRule, roles, ip})
+	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKey, numberOfBootstrapNodes, majorityRule, role, ip})
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")
