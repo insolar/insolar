@@ -33,8 +33,8 @@ type recorder struct {
 }
 
 // NewRecorder create new recorder instance.
-func NewRecorder(s sender, tape tape, pm core.PulseManager) (*recorder, error) {
-	return &recorder{sender: s, tape: tape, pm: pm}, nil
+func NewRecorder(s sender, tape tape, pm core.PulseManager) *recorder {
+	return &recorder{sender: s, tape: tape, pm: pm}
 }
 
 // WriteTape writes recorder's tape to the provided writer.

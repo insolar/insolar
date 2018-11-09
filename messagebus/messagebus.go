@@ -65,11 +65,8 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageB
 	if err != nil {
 		return nil, err
 	}
-	rec, err := NewPlayer(mb, tape, mb.Ledger.GetPulseManager())
-	if err != nil {
-		return nil, err
-	}
-	return rec, nil
+	pl := NewPlayer(mb, tape, mb.Ledger.GetPulseManager())
+	return pl, nil
 }
 
 // NewRecorder creates a new recorder with unique tape that can be used to store message replies.
@@ -84,10 +81,7 @@ func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) 
 	if err != nil {
 		return nil, err
 	}
-	rec, err := NewRecorder(mb, tape, mb.Ledger.GetPulseManager())
-	if err != nil {
-		return nil, err
-	}
+	rec := NewRecorder(mb, tape, mb.Ledger.GetPulseManager())
 	return rec, nil
 }
 

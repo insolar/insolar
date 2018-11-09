@@ -33,8 +33,8 @@ type player struct {
 }
 
 // NewPlayer creates player instance. It will replay replies from provided tape.
-func NewPlayer(s sender, tape tape, pm core.PulseManager) (*player, error) {
-	return &player{sender: s, tape: tape, pm: pm}, nil
+func NewPlayer(s sender, tape tape, pm core.PulseManager) *player {
+	return &player{sender: s, tape: tape, pm: pm}
 }
 
 // WriteTape for player is not available.
