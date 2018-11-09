@@ -104,12 +104,12 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
 	key, _ := ecdsa.GeneratePrivateKey()
-	signed, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
+	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
 		ctx,
-		signed,
+		parcel,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -124,12 +124,12 @@ func TestBareHelloworld(t *testing.T) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
 	key, _ = ecdsa.GeneratePrivateKey()
-	signed, _ = message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
+	parcel, _ = message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(
 		ctx,
-		signed,
+		parcel,
 	)
 	assert.NoError(t, err, "contract call")
 

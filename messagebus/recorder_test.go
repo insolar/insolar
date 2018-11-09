@@ -35,8 +35,8 @@ func TestRecorder_Send(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 	msg := message.GenesisRequest{Name: "test"}
-	signedMessage := message.Parcel{Msg: &msg}
-	msgHash := GetMessageHash(&signedMessage)
+	parcel := message.Parcel{Msg: &msg}
+	msgHash := GetMessageHash(&parcel)
 	expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
 	pulse := core.Pulse{PulseNumber: 42}
 	pm := testutils.NewPulseManagerMock(mc)
@@ -51,7 +51,7 @@ func TestRecorder_Send(t *testing.T) {
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		s.SendParcelMock.Expect(ctx, &pulse, &signedMessage)
+		s.SendParcelMock.Expect(ctx, &pulse, &parcel)
 
 		_, err := recorder.Send(ctx, &msg)
 		assert.NoError(t, err)
