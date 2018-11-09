@@ -27,3 +27,13 @@ func (*sha3Provider) Hash224bits() core.Hasher {
 		},
 	}
 }
+
+func (*sha3Provider) Hash256bits() core.Hasher {
+	return &hashWrapper{
+		hash: sha3.New256(),
+		sumFunc: func(b []byte) []byte {
+			s := sha3.Sum256(b)
+			return s[:]
+		},
+	}
+}
