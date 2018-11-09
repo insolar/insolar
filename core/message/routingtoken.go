@@ -42,10 +42,9 @@ func (t *RoutingToken) GetSign() []byte {
 // NewToken creates new token with sign of its fields
 func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNumber, msgHash []byte, key *ecdsa.PrivateKey) *RoutingToken {
 	token := &RoutingToken{
-		To:      to,
-		from:    from,
-		MsgHash: msgHash,
-		Pulse:   pulseNumber,
+		To:    to,
+		From:  from,
+		Pulse: pulseNumber,
 	}
 
 	var tokenBuffer bytes.Buffer
@@ -54,6 +53,7 @@ func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNu
 	if err != nil {
 		panic(err)
 	}
+	tokenBuffer.Write(msgHash)
 
 	sign, err := crypto_helper.Sign(tokenBuffer.Bytes(), key)
 	if err != nil {
@@ -64,17 +64,16 @@ func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNu
 }
 
 // ValidateToken checks that a routing token is valid
-func ValidateToken(pubKey *ecdsa.PublicKey, msg core.SignedMessage) error {
+func ValidateToken(pubKey *ecdsa.PublicKey, msg core.Parcel) error {
 	serialized, err := ToBytes(msg.Message())
 	if err != nil {
 		return errors.Wrap(err, "filed to serialize message")
 	}
 	msgHash := hash.SHA3Bytes256(serialized)
 	token := RoutingToken{
-		To:      msg.GetToken().GetTo(),
-		from:    msg.GetToken().GetFrom(),
-		MsgHash: msgHash,
-		Pulse:   msg.Pulse(),
+		To:    msg.GetToken().GetTo(),
+		From:  msg.GetToken().GetFrom(),
+		Pulse: msg.Pulse(),
 	}
 
 	var tokenBuffer bytes.Buffer
@@ -83,6 +82,7 @@ func ValidateToken(pubKey *ecdsa.PublicKey, msg core.SignedMessage) error {
 	if err != nil {
 		panic(err)
 	}
+	tokenBuffer.Write(msgHash)
 
 	ok, err := crypto_helper.VerifyWithFullKey(tokenBuffer.Bytes(), msg.GetToken().GetSign(), pubKey)
 	if err != nil {
