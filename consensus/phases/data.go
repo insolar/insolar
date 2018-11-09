@@ -267,34 +267,34 @@ type Phase2Packet struct {
 	signatureHeaderSection2 [64]byte
 }
 
-func (p2p *Phase2Packet) isPhase3Needed() bool {
-	return p2p.packetHeader.f00
+func (phase2Packet *Phase2Packet) isPhase3Needed() bool {
+	return phase2Packet.packetHeader.f00
 }
 
-func (p2p *Phase2Packet) hasSection2() bool {
-	return p2p.packetHeader.f01
+func (phase2Packet *Phase2Packet) hasSection2() bool {
+	return phase2Packet.packetHeader.f01
 }
 
-func (p2p *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
+func (phase2Packet *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
 	if header.PacketType != types.Phase2 {
 		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
 	}
 
-	p2p.packetHeader.setRoutingFields(header, NetworkConsistency, 2)
+	phase2Packet.packetHeader.setRoutingFields(header, NetworkConsistency, 2)
 
 	return nil
 }
 
-func (p2p *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
+func (phase2Packet *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
-	if p2p.packetHeader.PacketT != NetworkConsistency {
+	if phase2Packet.packetHeader.PacketT != NetworkConsistency {
 		return nil, errors.New("Phase2Packet.GetPacketHeader: wrong packet type")
 	}
 
 	header.PacketType = types.Phase2
-	header.OriginID = p2p.packetHeader.OriginNodeID
-	header.TargetID = p2p.packetHeader.TargetNodeID
+	header.OriginID = phase2Packet.packetHeader.OriginNodeID
+	header.TargetID = phase2Packet.packetHeader.TargetNodeID
 
 	return header, nil
 }
