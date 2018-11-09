@@ -37,4 +37,8 @@ func (pcs *platformCryptographyScheme) IntegrityHasher() core.Hasher {
 	return pcs.HashProvider.Hash512bits()
 }
 
+func (pcs *platformCryptographyScheme) Signer(privateKey crypto.PrivateKey) core.Signer {
+	return pcs.SignProvider.Sign(privateKey)
+}
+
 }
