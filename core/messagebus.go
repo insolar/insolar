@@ -19,6 +19,7 @@ package core
 import (
 	"context"
 	"crypto/ecdsa"
+	"io"
 )
 
 // Arguments is a dedicated type for arguments, that represented as bynary cbored blob
@@ -80,6 +81,19 @@ type MessageBus interface {
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.
 	MustRegister(p MessageType, handler MessageHandler)
+
+	// NewPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
+	// stream is exhausted.
+	//
+	// Player can be created from MessageBus and passed as MessageBus instance.
+	NewPlayer(ctx context.Context, reader io.Reader) (MessageBus, error)
+	// NewRecorder creates a new recorder with unique tape that can be used to store message replies.
+	//
+	// Recorder can be created from MessageBus and passed as MessageBus instance.s
+	NewRecorder(ctx context.Context) (MessageBus, error)
+
+	// WriteTape writes recorder's tape to the provided writer.
+	WriteTape(ctx context.Context, writer io.Writer) error
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.

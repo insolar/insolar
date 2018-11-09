@@ -116,12 +116,16 @@ func Deserialize(buff io.Reader) (core.Parcel, error) {
 }
 
 // ToBytes deserialize a core.Message to bytes.
-func ToBytes(msg core.Message) ([]byte, error) {
+func ToBytes(msg core.Message) []byte {
 	reqBuff, err := Serialize(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
+		panic("failed to serialize message")
 	}
-	return ioutil.ReadAll(reqBuff)
+	buff, err := ioutil.ReadAll(reqBuff)
+	if err != nil {
+		panic("failed to serialize message")
+	}
+	return buff
 }
 
 // SerializeParcel returns io.Reader on buffer with encoded core.Parcel.
@@ -141,12 +145,16 @@ func DeserializeParcel(buff io.Reader) (core.Parcel, error) {
 }
 
 // ParcelToBytes deserialize a core.Parcel to bytes.
-func ParcelToBytes(msg core.Parcel) ([]byte, error) {
+func ParcelToBytes(msg core.Parcel) []byte {
 	reqBuff, err := SerializeParcel(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
+		panic("failed to serialize message")
 	}
-	return ioutil.ReadAll(reqBuff)
+	buf, err := ioutil.ReadAll(reqBuff)
+	if err != nil {
+		panic("failed to serialize message")
+	}
+	return buf
 }
 
 func init() {
