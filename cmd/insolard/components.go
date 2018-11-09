@@ -94,6 +94,10 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 
 	cm := component.Manager{}
 	cm.Register(
+		platformCryptographyScheme,
+		keyStore,
+	)
+	cm.Inject(
 		cert,
 		nodeNetwork,
 		logicRunner,
@@ -105,8 +109,6 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		metricsHandler,
 		networkCoordinator,
 		versionManager,
-		platformCryptographyScheme,
-		keyStore,
 		cryptographyService,
 	)
 

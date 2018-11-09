@@ -30,14 +30,19 @@ type Manager struct {
 	components []interface{}
 }
 
-// Register components in Manager and inject required dependencies
-// Register can inject interfaces only, tag public struct fields with `inject:""`
 func (m *Manager) Register(components ...interface{}) {
-	m.components = components
+	m.components = append(m.components, components...)
+}
+
+// Inject components in Manager and inject required dependencies
+// Inject can inject interfaces only, tag public struct fields with `inject:""`
+func (m *Manager) Inject(components ...interface{}) {
+	m.Register(components)
+
 	for _, c := range components {
 		componentValue := reflect.ValueOf(c).Elem()
 		componentType := componentValue.Type()
-		log.Infof("ComponentManager: Register component: %s", componentType.String())
+		log.Infof("ComponentManager: Inject component: %s", componentType.String())
 
 		for i := 0; i < componentType.NumField(); i++ {
 			f := componentType.Field(i)

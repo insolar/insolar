@@ -51,7 +51,7 @@ func NewKeyStore(cfg configuration.Configuration) (core.KeyStore, error) {
 	}
 
 	manager := component.Manager{}
-	manager.Register(
+	manager.Inject(
 		keyStore,
 		privatekey.NewLoader(),
 	)

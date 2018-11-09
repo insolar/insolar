@@ -86,7 +86,7 @@ func TestCalculator(t *testing.T) {
 	calculator := &calculator{}
 
 	cm := component.Manager{}
-	cm.Register(nk, l, c, calculator)
+	cm.Inject(nk, l, c, calculator)
 
 	assert.NotNil(t, calculator.Ledger)
 	assert.NotNil(t, calculator.NodeNetwork)

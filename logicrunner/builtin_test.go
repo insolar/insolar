@@ -66,7 +66,7 @@ func TestBareHelloworld(t *testing.T) {
 	nw := network.GetTestNetwork()
 
 	cm := &component.Manager{}
-	cm.Register(nk, l, lr, nw, mb)
+	cm.Inject(nk, l, lr, nw, mb)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 

@@ -35,7 +35,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	})
 
 	cm := component.Manager{}
-	cm.Register(nodeNetwork, firstPhase)
+	cm.Inject(nodeNetwork, firstPhase)
 
 	assert.NotNil(t, firstPhase.NodeNetwork)
 	activeNodes := firstPhase.NodeNetwork.GetActiveNodes()

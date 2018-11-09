@@ -50,7 +50,7 @@ func NewPlatformCryptographyScheme() core.PlatformCryptographyScheme {
 	platformCryptographyScheme := &platformCryptographyScheme{}
 
 	manager := component.Manager{}
-	manager.Register(
+	manager.Inject(
 		platformCryptographyScheme,
 
 		hash.NewSHA3Provider(),
