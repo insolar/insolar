@@ -25,6 +25,7 @@ import (
 
 const (
 	testKeys    = "testdata/keys.json"
+	testBadKeys = "testdata/bad_keys.json"
 )
 
 func getConfiguration(keyPath string) configuration.Configuration {
@@ -38,3 +39,10 @@ func TestNewKeyStore(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, ks)
 }
+
+func TestNewKeyStore_Fails(t *testing.T) {
+	ks, err := NewKeyStore(getConfiguration(testBadKeys))
+	assert.Error(t, err)
+	assert.Nil(t, ks)
+}
+
