@@ -23,7 +23,7 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	"golang.org/x/crypto/sha3"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 func min(a, b int) int {
@@ -58,12 +58,12 @@ func calcHash(nodeID core.RecordRef, entropy core.Entropy) []byte {
 		data[i] = entropy[i%core.EntropySize] ^ d
 	}
 
-	hash := sha3.New224()
-	_, err := hash.Write(data)
+	h := hash.IntegrityHasher()
+	_, err := h.Write(data)
 	if err != nil {
 		panic(err)
 	}
-	return hash.Sum(nil)
+	return h.Sum(nil)
 }
 
 func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.RecordRef, replicationFactor uint) (startIndex, endIndex int) {
