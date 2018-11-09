@@ -33,7 +33,7 @@ var pathToContracts = "application/contract/"
 func serializeInstance(contractInstance interface{}) ([]byte, error) {
 	var instanceData []byte
 
-	instanceData, err := core.CborMarshal(contractInstance)
+	instanceData, err := core.Serialize(contractInstance)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ serializeInstance ] Problem with CBORing")
 	}

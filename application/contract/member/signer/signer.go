@@ -22,5 +22,5 @@ import (
 
 // UnmarshalParams unmarshalls params
 func UnmarshalParams(data []byte, to ...interface{}) error {
-	return core.CborUnMarshal(data, to)
+	return core.Deserialize(data, to)
 }

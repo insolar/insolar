@@ -32,7 +32,7 @@ import (
 )
 
 func HashInterface(in interface{}) []byte {
-	s, err := core.CborMarshal(in)
+	s, err := core.Serialize(in)
 	if err != nil {
 		panic("Can't marshal: " + err.Error())
 	}

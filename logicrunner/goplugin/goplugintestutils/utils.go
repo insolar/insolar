@@ -349,7 +349,7 @@ func (t *TestArtifactManager) RegisterValidation(
 
 // CBORMarshal - testing serialize helper
 func CBORMarshal(t testing.TB, o interface{}) []byte {
-	data, err := core.CborMarshal(o)
+	data, err := core.Serialize(o)
 	assert.NoError(t, err, "Marshal")
 	return data
 }
@@ -357,7 +357,7 @@ func CBORMarshal(t testing.TB, o interface{}) []byte {
 // CBORUnMarshal - testing deserialize helper
 func CBORUnMarshal(t testing.TB, data []byte) interface{} {
 	var ret interface{}
-	err := core.CborUnMarshal(data, &ret)
+	err := core.Deserialize(data, &ret)
 	assert.NoError(t, err, "serialise")
 	return ret
 }

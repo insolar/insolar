@@ -21,14 +21,16 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-func CborMarshal(o interface{}) ([]byte, error) {
+// Serialize serializes interface
+func Serialize(o interface{}) ([]byte, error) {
 	ch := new(codec.CborHandle)
 	var data []byte
 	err := codec.NewEncoderBytes(&data, ch).Encode(o)
 	return data, errors.Wrap(err, "[ CBORMarshal ]")
 }
 
-func CborUnMarshal(data []byte, to interface{}) error {
+// Deserialize deserializes data to specific interface
+func Deserialize(data []byte, to interface{}) error {
 	ch := new(codec.CborHandle)
 	err := codec.NewDecoderBytes(data, ch).Decode(&to)
 	return errors.Wrap(err, "[ CBORUnMarshal ]")
@@ -38,7 +40,7 @@ func CborUnMarshal(data []byte, to interface{}) error {
 func MarshalArgs(args ...interface{}) (Arguments, error) {
 	var argsSerialized []byte
 
-	argsSerialized, err := CborMarshal(args)
+	argsSerialized, err := Serialize(args)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MarshalArgs ]")
 	}
@@ -53,7 +55,7 @@ func UnMarshalResponse(resp []byte, typeHolders []interface{}) ([]interface{}, e
 	var marshRes []interface{}
 	marshRes = append(marshRes, typeHolders...)
 
-	err := CborUnMarshal(resp, marshRes)
+	err := Deserialize(resp, marshRes)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ UnMarshalResponse ]")
 	}
