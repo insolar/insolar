@@ -17,8 +17,11 @@
 package sign
 
 import (
+	"crypto"
 	"encoding/asn1"
 	"math/big"
+
+	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
 
@@ -48,3 +51,9 @@ func (p *signature) Unmarshal(signatureRaw []byte) error {
 	}
 	return nil
 }
+
+type ecdsaSignerWrapper struct {
+	privateKey crypto.PrivateKey
+	hasher     core.Hasher
+}
+
