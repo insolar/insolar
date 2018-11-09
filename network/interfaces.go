@@ -119,7 +119,7 @@ type NodeKeeper interface {
 	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
 	// Channel will return nil node if added node has not passed the consensus.
 	// Returns error if current node is not active and cannot participate in consensus.
-	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+	AddUnsync(nodeID core.RecordRef, role core.NodeRole, address string,
 		version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error)
 	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
 	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
