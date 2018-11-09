@@ -26,7 +26,7 @@ func (t *RoutingToken) GetTo() *core.RecordRef {
 
 // GetFrom returns source of token
 func (t *RoutingToken) GetFrom() *core.RecordRef {
-	return t.from
+	return t.From
 }
 
 // GetPulse returns token's pulse
