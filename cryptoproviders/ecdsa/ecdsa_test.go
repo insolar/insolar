@@ -69,15 +69,3 @@ func TestSignVerify(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ok)
 }
-
-func TestImportExportSignature(t *testing.T) {
-	privateKey, _ := GeneratePrivateKey()
-	seed := makeSeed()
-	sign, err := Sign(seed, privateKey)
-	assert.NoError(t, err)
-
-	signStr := ExportSignature(sign)
-	decodedSign, err := ImportSignature(signStr)
-	assert.NoError(t, err)
-	assert.Equal(t, sign, decodedSign)
-}
