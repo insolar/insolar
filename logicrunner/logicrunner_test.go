@@ -19,7 +19,9 @@ package logicrunner
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -29,7 +31,9 @@ import (
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
+	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/member/signer"
+	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -1005,37 +1009,35 @@ type Caller struct {
 	t      *testing.T
 }
 
-//func (s *Caller) SignedCall(rootDomain core.RecordRef, method string, params []interface{}) interface{} {
-//	ctx := context.TODO()
-//	seed := make([]byte, 32)
-//	_, err := rand.Read(seed)
-//	assert.NoError(s.t, err)
-//
-//	buf := goplugintestutils.CBORMarshal(s.t, params)
-//
-//	args, err := core.MarshalArgs(
-//		core.NewRefFromBase58(s.member),
-//		method,
-//		buf,
-//		seed)
-//
-//	assert.NoError(s.t, err)
-//
-//	sign, err := cryptoHelper.Sign(args, s.key)
-//	assert.NoError(s.t, err)
-//
-//	// TODO add pm
-//	res, err := executeMethod(ctx, s.lr, core.NewRefFromBase58(s.member), 0, "Call", goplugintestutils.CBORMarshal(s.t, []interface{}{rootDomain, method, buf, seed, sign}))
-//	assert.NoError(s.t, err, "contract call")
-//
-//	var result interface{}
-//	var contractErr error
-//	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
-//	assert.NoError(s.t, err, "unmarshal answer")
-//	assert.NoError(s.t, contractErr)
-//
-//	return result
-//}
+func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomain core.RecordRef, method string, params []interface{}) interface{} {
+	seed := make([]byte, 32)
+	_, err := rand.Read(seed)
+	assert.NoError(s.t, err)
+
+	buf := goplugintestutils.CBORMarshal(s.t, params)
+
+	args, err := core.MarshalArgs(
+		core.NewRefFromBase58(s.member),
+		method,
+		buf,
+		seed)
+
+	assert.NoError(s.t, err)
+
+	sign, err := cryptoHelper.Sign(args, s.key)
+	assert.NoError(s.t, err)
+
+	res, err := executeMethod(ctx, s.lr, pm, core.NewRefFromBase58(s.member), 0, "Call", goplugintestutils.CBORMarshal(s.t, []interface{}{rootDomain, method, buf, seed, sign}))
+	assert.NoError(s.t, err, "contract call")
+
+	var result interface{}
+	var contractErr error
+	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
+	assert.NoError(s.t, err, "unmarshal answer")
+	assert.NoError(s.t, contractErr)
+
+	return result
+}
 
 //func TestRootDomainContract(t *testing.T) {
 //	if parallel {
