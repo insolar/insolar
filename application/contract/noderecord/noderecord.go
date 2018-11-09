@@ -64,8 +64,8 @@ func (nr *NodeRecord) GetPublicKey() (string, error) {
 }
 
 // GetRole returns role
-func (nr *NodeRecord) GetRole() ([]core.NodeRole, error) {
-	return nr.Record.Roles, nil
+func (nr *NodeRecord) GetRole() (core.NodeRole, error) {
+	return nr.Record.Role, nil
 }
 
 // Destroy makes request to destroy current node record
