@@ -17,3 +17,13 @@
 package hash
 
 type sha3Provider struct{}
+
+func (*sha3Provider) Hash224bits() core.Hasher {
+	return &hashWrapper{
+		hash: sha3.New224(),
+		sumFunc: func(b []byte) []byte {
+			s := sha3.Sum224(b)
+			return s[:]
+		},
+	}
+}
