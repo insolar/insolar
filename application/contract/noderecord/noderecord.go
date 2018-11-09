@@ -26,7 +26,7 @@ import (
 // RecordInfo holds record info
 type RecordInfo struct {
 	PublicKey string
-	Roles     []core.NodeRole
+	Role      core.NodeRole
 	IP        string
 }
 
@@ -38,20 +38,16 @@ type NodeRecord struct {
 }
 
 // NewNodeRecord creates new NodeRecord
-func NewNodeRecord(publicKey string, roles []string, ip string) (*NodeRecord, error) {
-	resultRoles := []core.NodeRole{}
-	for _, roleStr := range roles {
-		role := core.GetRoleFromString(roleStr)
-		if role == core.RoleUnknown {
-			return nil, fmt.Errorf("Role is not supported: %s", roleStr)
-		}
-		resultRoles = append(resultRoles, role)
+func NewNodeRecord(publicKey string, roleStr string, ip string) (*NodeRecord, error) {
+	role := core.GetRoleFromString(roleStr)
+	if role == core.RoleUnknown {
+		return nil, fmt.Errorf("Role is not supported: %s", roleStr)
 	}
 
 	return &NodeRecord{
 		Record: RecordInfo{
 			PublicKey: publicKey,
-			Roles:     resultRoles,
+			Role:      role,
 			IP:        ip,
 		},
 	}, nil
