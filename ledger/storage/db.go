@@ -307,7 +307,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 	var err error
 	db.waitinflight()
 
-	hw := hash.NewIDHash()
+	hw := hash.ReferenceHasher()
 	_, err = hw.Write(prevHash)
 	if err != nil {
 		return nil, nil, err
@@ -480,7 +480,7 @@ func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, gene
 		return err
 	}
 
-	hw := hash.NewIDHash()
+	hw := hash.ReferenceHasher()
 	_, err = hw.Write(messageBytes)
 	if err != nil {
 		return err

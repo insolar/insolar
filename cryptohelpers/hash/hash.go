@@ -24,8 +24,8 @@ import (
 
 var platformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
-// NewIDHash returns hash used for records ID generation.
-func NewIDHash() hash.Hash {
+// ReferenceHasher returns hash used for records ID generation.
+func ReferenceHasher() hash.Hash {
 	return platformCryptographyScheme.ReferenceHasher()
 }
 

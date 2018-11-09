@@ -490,7 +490,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	codeRecord := record.CodeRecord{
 		Code: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
 	}
-	recHash := hash.NewIDHash()
+	recHash := hash.ReferenceHasher()
 	_, err := codeRecord.WriteHashData(recHash)
 	assert.NoError(t, err)
 	latestPulse, err := db.GetLatestPulseNumber(ctx)

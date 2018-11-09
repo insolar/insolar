@@ -164,7 +164,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
-	recHash := hash.NewIDHash()
+	recHash := hash.ReferenceHasher()
 	_, err := rec.WriteHashData(recHash)
 	if err != nil {
 		return nil, err
