@@ -16,6 +16,11 @@
 
 package hash
 
+import (
+	"github.com/insolar/insolar/core"
+	"golang.org/x/crypto/sha3"
+)
+
 type sha3Provider struct{}
 
 func (*sha3Provider) Hash224bits() core.Hasher {
@@ -33,6 +38,16 @@ func (*sha3Provider) Hash256bits() core.Hasher {
 		hash: sha3.New256(),
 		sumFunc: func(b []byte) []byte {
 			s := sha3.Sum256(b)
+			return s[:]
+		},
+	}
+}
+
+func (*sha3Provider) Hash512bits() core.Hasher {
+	return &hashWrapper{
+		hash: sha3.New512(),
+		sumFunc: func(b []byte) []byte {
+			s := sha3.Sum512(b)
 			return s[:]
 		},
 	}
