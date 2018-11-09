@@ -250,14 +250,14 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
 	p := Phase1Packet{}
-	proof := merkle.PulseProof{genRandomSlice(64), genRandomSlice(64)}
+	proof := &merkle.PulseProof{genRandomSlice(64), genRandomSlice(64)}
 	err := p.SetPulseProof(proof)
 	assert.NoError(t, err)
 
 	assert.Equal(t, proof.StateHash, p.proofNodePulse.NodeStateHash[:])
 	assert.Equal(t, proof.Signature, p.proofNodePulse.NodeSignature[:])
 
-	invalidProof := merkle.PulseProof{genRandomSlice(32), genRandomSlice(128)}
+	invalidProof := &merkle.PulseProof{genRandomSlice(32), genRandomSlice(128)}
 	err = p.SetPulseProof(invalidProof)
 	assert.Error(t, err)
 
