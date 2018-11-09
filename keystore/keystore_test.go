@@ -17,6 +17,7 @@
 package keystore
 
 import (
+	"crypto/ecdsa"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -53,4 +54,17 @@ func TestKeyStore_GetPrivateKey(t *testing.T) {
 	pk, err := ks.GetPrivateKey("")
 	assert.NotNil(t, pk)
 	assert.NoError(t, err)
+}
+
+func TestKeyStore_GetPrivateKeyReturnsECDSA(t *testing.T) {
+	ks, err := NewKeyStore(getConfiguration(testKeys))
+	assert.NoError(t, err)
+
+	pk, err := ks.GetPrivateKey("")
+	assert.NotNil(t, pk)
+	assert.NoError(t, err)
+
+	ecdsaPK, ok := pk.(*ecdsa.PrivateKey)
+	assert.NotNil(t, ecdsaPK)
+	assert.True(t, ok)
 }
