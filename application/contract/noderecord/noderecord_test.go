@@ -26,25 +26,15 @@ import (
 const TestPubKey = "test"
 const TestIP = "127.0.0.1"
 
-var TestRoles = []string{"virtual"}
-
-func rolesToStrings(roles []string) []core.NodeRole {
-	var result []core.NodeRole
-	for _, role := range roles {
-		result = append(result, core.GetRoleFromString(role))
-	}
-
-	return result
-}
+var TestRole = "virtual"
 
 func TestNewNodeRecord(t *testing.T) {
 
-	r := rolesToStrings(TestRoles)
+	r := core.GetRoleFromString(TestRole)
 	assert.NotEqual(t, core.RoleUnknown, r)
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	record, err := NewNodeRecord(TestPubKey, TestRole, TestIP)
 	assert.NoError(t, err)
-	assert.Len(t, record.Record.Roles, 1)
-	assert.Equal(t, r, record.Record.Roles)
+	assert.Equal(t, r, record.Record.Role)
 	assert.Equal(t, TestPubKey, record.Record.PublicKey)
 }
 
