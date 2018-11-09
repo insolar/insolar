@@ -23,3 +23,8 @@ import (
 type signature struct {
 	R, S *big.Int
 }
+
+func fromRS(r, s *big.Int) *signature {
+	return &signature{R: r, S: s}
+}
+
