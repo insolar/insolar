@@ -57,3 +57,9 @@ type ecdsaSignerWrapper struct {
 	hasher     core.Hasher
 }
 
+
+type ecdsaVerifyWrapper struct {
+	publicKey crypto.PublicKey
+	hasher    core.Hasher
+}
+
