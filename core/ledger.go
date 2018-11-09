@@ -226,8 +226,8 @@ type RefIterator interface {
 // LocalStorage allows a node to save local data.
 type LocalStorage interface {
 	// SetMessage saves message in storage.
-	SetMessage(ctx context.Context, msg SignedMessage) (*RecordID, error)
+	SetMessage(ctx context.Context, msg Parcel) (*RecordID, error)
 
 	// GetMessage retrieves message from storage.
-	GetMessage(ctx context.Context, id RecordID) (SignedMessage, error)
+	GetMessage(ctx context.Context, id RecordID) (Parcel, error)
 }
