@@ -61,8 +61,8 @@ func (sm *Parcel) Context(ctx context.Context) context.Context {
 	return instracer.WithParentSpan(ctx, parentspan)
 }
 
-// NewSignedMessage creates and return a signed message.
-func NewSignedMessage(
+// NewParcel creates and return a signed message.
+func NewParcel(
 	ctx context.Context,
 	msg core.Message,
 	sender core.RecordRef,

@@ -92,7 +92,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 		return nil, err
 	}
 
-	signedMsg, err := message.NewSignedMessage(
+	signedMsg, err := message.NewParcel(
 		ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse.PulseNumber, nil,
 	)
 	if err != nil {

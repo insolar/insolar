@@ -89,7 +89,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		msg := start.Resp.(core.Message)
-		signed, err := message.NewSignedMessage(
+		signed, err := message.NewParcel(
 			ctx, msg, ref, lr.Network.GetPrivateKey(), lr.execution[ref].callContext.Pulse.PulseNumber, nil,
 		)
 		if err != nil {

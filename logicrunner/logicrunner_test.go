@@ -164,7 +164,7 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, objRef core.RecordR
 	}
 
 	key, _ := cryptoHelper.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0, nil)
+	signed, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,

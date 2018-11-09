@@ -17,7 +17,7 @@ func TestValidateToken(t *testing.T) {
 	ref := testutils.RandomRef()
 
 	tmp := core.Message(&GenesisRequest{})
-	msg, err := NewSignedMessage(context.TODO(), tmp, ref, key, 1234, nil)
+	msg, err := NewParcel(context.TODO(), tmp, ref, key, 1234, nil)
 	assert.NoError(t, err)
 
 	err = ValidateToken(&key.PublicKey,  msg)
