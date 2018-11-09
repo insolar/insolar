@@ -26,15 +26,15 @@ var policy = platformpolicy.NewPlatformPolicy()
 
 // NewIDHash returns hash used for records ID generation.
 func NewIDHash() hash.Hash {
-	return hashAdapter.Hash224bits()
+	return policy.CryptographyScheme().ReferenceHasher()
 }
 
 // IDHashBytes generates hash for record ID from byte slice.
 func IDHashBytes(b []byte) []byte {
-	return hashAdapter.Hash224bits().Hash(b)
+	return policy.CryptographyScheme().ReferenceHasher().Hash(b)
 }
 
 // SHA3Bytes256 generates SHA3-256 hash for byte slice.
 func SHA3Bytes256(b []byte) []byte {
-	return hashAdapter.Hash256bits().Hash(b)
+	return policy.CryptographyScheme().IntegrityHasher().Hash(b)
 }
