@@ -26,3 +26,9 @@ import (
 type platformCryptographyScheme struct {
 	HashProvider hash.AlgorithmProvider `inject:""`
 }
+
+func (pcs *platformCryptographyScheme) ReferenceHasher() core.Hasher {
+	return pcs.HashProvider.Hash224bits()
+}
+
+}
