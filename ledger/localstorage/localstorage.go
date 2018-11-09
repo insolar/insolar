@@ -17,11 +17,9 @@
 package localstorage
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -35,22 +33,20 @@ func NewLocalStorage(db *storage.DB) (*LocalStorage, error) {
 	return &LocalStorage{db: db}, nil
 }
 
-// SetMessage saves message in storage.
-func (s *LocalStorage) SetMessage(ctx context.Context, msg core.SignedMessage) (*core.RecordID, error) {
-	buff, err := message.SignedToBytes(msg)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.db.SetBlob(ctx, msg.Pulse(), buff)
+// SetMessage saves data in storage.
+func (s *LocalStorage) Set(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error {
+	return s.db.SetLocalData(ctx, pulse, key, data)
 }
 
-// GetMessage retrieves message from storage.
-func (s *LocalStorage) GetMessage(ctx context.Context, id core.RecordID) (core.SignedMessage, error) {
-	buff, err := s.db.GetBlob(ctx, &id)
-	if err != nil {
-		return nil, err
+// GetMessage retrieves data from storage.
+func (s *LocalStorage) Get(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error) {
+	buff, err := s.db.GetLocalData(ctx, pulse, key)
+	if err == storage.ErrNotFound {
+		return nil, ErrNotFound
 	}
+	return buff, err
+}
 
-	return message.DeserializeSigned(bytes.NewBuffer(buff))
+func (s *LocalStorage) Iterate(ctx context.Context, pulse core.PulseNumber, prefix []byte, handler func(k, v []byte) error) error {
+	return s.db.IterateLocalData(ctx, pulse, prefix, handler)
 }
