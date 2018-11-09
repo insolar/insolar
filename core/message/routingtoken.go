@@ -34,10 +34,6 @@ func (t *RoutingToken) GetPulse() core.PulseNumber {
 	return t.Pulse
 }
 
-// GetMsgHash returns token's message hash
-func (t *RoutingToken) GetMsgHash() []byte {
-	return t.MsgHash
-}
 
 // GetMsgHash returns token's sign
 func (t *RoutingToken) GetSign() []byte {
