@@ -17,8 +17,11 @@
 package keystore
 
 import (
+	"context"
 	"crypto"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/keystore/internal/privatekey"
+	"github.com/pkg/errors"
 )
 
 type keyStore struct {
@@ -30,3 +33,13 @@ func (ks *keyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) 
 	file := privatekey.KeyFile(ks.path)
 	return ks.Loader.Load(file)
 }
+
+func (ks *keyStore) Start(ctx context.Context) error {
+	// TODO: ugly hack; do proper checks
+	if _, err := ks.GetPrivateKey(""); err != nil {
+		return errors.Wrap(err, "[ Start ] Failed to start keyStore")
+	}
+
+	return nil
+}
+
