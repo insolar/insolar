@@ -22,6 +22,7 @@ import (
 
 	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -173,4 +174,52 @@ func TestDB_AddPulse(t *testing.T) {
 	pulse, err := db.GetPulse(ctx, latestPulse)
 	assert.NoError(t, err)
 	assert.Equal(t, record.PulseRecord{PrevPulse: core.FirstPulseNumber, Entropy: core.Entropy{1, 2, 3}}, *pulse)
+}
+
+func TestDB_SetLocalData(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	defer cleaner()
+
+	err := db.SetLocalData(ctx, 0, []byte{1}, []byte{2})
+	require.NoError(t, err)
+
+	data, err := db.GetLocalData(ctx, 0, []byte{1})
+	require.NoError(t, err)
+	assert.Equal(t, []byte{2}, data)
+
+	_, err = db.GetLocalData(ctx, 1, []byte{1})
+	assert.Equal(t, storage.ErrNotFound, err)
+}
+
+func TestDB_IterateLocalData(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	defer cleaner()
+
+	err := db.SetLocalData(ctx, 1, []byte{1, 1}, []byte{1})
+	require.NoError(t, err)
+	err = db.SetLocalData(ctx, 1, []byte{1, 2}, []byte{2})
+	require.NoError(t, err)
+	err = db.SetLocalData(ctx, 1, []byte{2, 1}, []byte{3})
+	require.NoError(t, err)
+	err = db.SetLocalData(ctx, 2, []byte{1, 1}, []byte{4})
+	require.NoError(t, err)
+
+	type tuple struct {
+		k []byte
+		v []byte
+	}
+	var results []tuple
+	err = db.IterateLocalData(ctx, 1, []byte{1}, func(k, v []byte) error {
+		results = append(results, tuple{k: k, v: v})
+		return nil
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []tuple{
+		{k: []byte{1}, v: []byte{1}},
+		{k: []byte{2}, v: []byte{2}},
+	}, results)
 }

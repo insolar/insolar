@@ -82,12 +82,7 @@ func (rpc *RPCController) SendCascadeMessage(data core.Cascade, method string, m
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	buff, err := message.SignedToBytes(msg)
-	if err != nil {
-		return errors.Wrap(err, "Failed to serialize event")
-	}
-
-	return rpc.initCascadeSendMessage(data, false, method, [][]byte{buff})
+	return rpc.initCascadeSendMessage(data, false, method, [][]byte{message.SignedToBytes(msg)})
 }
 
 func (rpc *RPCController) initCascadeSendMessage(data core.Cascade, findCurrentNode bool, method string, args [][]byte) error {
@@ -166,15 +161,11 @@ func (rpc *RPCController) requestCascadeSendMessage(data core.Cascade, nodeID co
 
 func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg core.SignedMessage) ([]byte, error) {
 	start := time.Now()
-	buff, err := message.SignedToBytes(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
-	}
 	log.Debugf("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
 		name, msg.Target().String())
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
-		Data:   [][]byte{buff},
+		Data:   [][]byte{message.SignedToBytes(msg)},
 	}).Build()
 	future, err := rpc.hostNetwork.SendRequest(request, nodeID)
 	if err != nil {
