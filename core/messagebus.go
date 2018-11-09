@@ -68,13 +68,6 @@ type MessageToken interface {
 	GetSign() []byte
 }
 
-// MessageHeader is the base interface for header of message
-type MessageHeader interface {
-	GetSender() RecordRef
-	GetTarget() RecordRef
-	GetRole() JetRole
-}
-
 // Reply for an `Message`
 type Reply interface {
 	// Type returns message type.
