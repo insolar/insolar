@@ -44,6 +44,7 @@ const (
 	scopeIDSystem   byte = 5
 	scopeIDMessage  byte = 6
 	scopeIDBlob     byte = 7
+	scopeIDLocal    byte = 8
 
 	sysGenesis     byte = 1
 	sysLatestPulse byte = 2
@@ -475,13 +476,9 @@ func (db *DB) GetBadgerDB() *badger.DB {
 
 // SetMessage persists message to the database
 func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, genericMessage core.Message) error {
-	messageBytes, err := message.ToBytes(genericMessage)
-	if err != nil {
-		return err
-	}
-
+	messageBytes := message.ToBytes(genericMessage)
 	hw := hash.NewIDHash()
-	_, err = hw.Write(messageBytes)
+	_, err := hw.Write(messageBytes)
 	if err != nil {
 		return err
 	}
@@ -492,6 +489,48 @@ func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, gene
 		prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
 		messageBytes,
 	)
+}
+
+// SetLocalData saves provided data to storage.
+func (db *DB) SetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error {
+	return db.set(
+		ctx,
+		bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), key}, nil),
+		data,
+	)
+}
+
+// GetLocalData retrieves data from storage.
+func (db *DB) GetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error) {
+	return db.get(
+		ctx,
+		bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), key}, nil),
+	)
+}
+
+// IterateLocalData iterates over all record with specified prefix and calls handler with key and value of that record.
+//
+// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
+func (db *DB) IterateLocalData(ctx context.Context, pulse core.PulseNumber, prefix []byte, handler func(k, v []byte) error) error {
+	fullPrefix := bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), prefix}, nil)
+
+	return db.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		for it.Seek(fullPrefix); it.ValidForPrefix(fullPrefix); it.Next() {
+			key := it.Item().KeyCopy(nil)[len(fullPrefix):]
+			value, err := it.Item().ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+			err = handler(key, value)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // get wraps matching transaction manager method.
