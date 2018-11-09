@@ -44,8 +44,8 @@ func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
 }
 
-// Bytes2PulseNumber deserialize pulse number.
-func Bytes2PulseNumber(buf []byte) PulseNumber {
+// NewPulseNumber creates pulse number from bytes.
+func NewPulseNumber(buf []byte) PulseNumber {
 	return PulseNumber(binary.BigEndian.Uint32(buf))
 }
 

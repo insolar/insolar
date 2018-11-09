@@ -85,10 +85,7 @@ func NewSignedMessage(
 
 // SignMessage tries to sign a core.Message.
 func signMessage(msg core.Message, key *ecdsa.PrivateKey) ([]byte, error) {
-	serialized, err := ToBytes(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "filed to serialize message")
-	}
+	serialized := ToBytes(msg)
 	sign, err := ecdsa2.Sign(serialized, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
@@ -98,17 +95,12 @@ func signMessage(msg core.Message, key *ecdsa.PrivateKey) ([]byte, error) {
 
 // IsValid checks if a sign is correct.
 func (sm *SignedMessage) IsValid(key *ecdsa.PublicKey) bool {
-	serialized, err := ToBytes(sm.Msg)
-	if err != nil {
-		log.Error(err, "filed to serialize message")
-		return false
-	}
 	exportedKey, err := ecdsa2.ExportPublicKey(key)
 	if err != nil {
 		log.Error("failed to export a public key")
 		return false
 	}
-	verified, err := ecdsa2.Verify(serialized, sm.Signature, exportedKey)
+	verified, err := ecdsa2.Verify(ToBytes(sm.Msg), sm.Signature, exportedKey)
 	if err != nil {
 		log.Error(err, "failed to verify a message")
 		return false
