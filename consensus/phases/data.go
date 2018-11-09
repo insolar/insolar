@@ -17,8 +17,6 @@
 package phases
 
 import (
-	"crypto/ecdsa"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
@@ -196,7 +194,7 @@ type NodeJoinClaim struct {
 	JoinsAfter              uint32
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
-	NodePK                  ecdsa.PublicKey
+	NodePK                  [64]byte
 	//length uint16
 }
 
