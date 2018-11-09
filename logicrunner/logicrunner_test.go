@@ -145,7 +145,6 @@ func newTestPulse(ctx context.Context, lr *LogicRunner, mb *testmessagebus.TestM
 	mb.PulseNumber = newPulseNumber
 }
 
-// TODO pass ctx
 func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, mustfail ...core.RecordRef) {
 	failmap := make(map[core.RecordRef]struct{})
 	for _, r := range mustfail {
