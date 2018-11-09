@@ -41,3 +41,7 @@ func (h *hashWrapper) Size() int {
 	return h.hash.Size()
 }
 
+func (h *hashWrapper) BlockSize() int {
+	return h.hash.BlockSize()
+}
+
