@@ -32,12 +32,12 @@ func TestCreateMember(t *testing.T) {
 
 func TestCreateMemberWrongNameType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", 111, "000")
-	assert.EqualError(t, err, "[ createMemberCall ]: [ CBORUnMarshal ]: unexpected EOF")
+	assert.EqualError(t, err, "[ createMemberCall ]: [ Deserialize ]: unexpected EOF")
 }
 
 func TestCreateMemberWrongKeyType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", "Member", 111)
-	assert.EqualError(t, err, "[ createMemberCall ]: [ CBORUnMarshal ]: EOF")
+	assert.EqualError(t, err, "[ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
 // no error
@@ -48,7 +48,7 @@ func _TestCreateMemberOneParameter(t *testing.T) {
 
 func TestCreateMemberOneParameterOtherType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", 111)
-	assert.EqualError(t, err, "[ createMemberCall ]: [ CBORUnMarshal ]: EOF")
+	assert.EqualError(t, err, "[ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
 func TestCreateMembersWithSameName(t *testing.T) {
