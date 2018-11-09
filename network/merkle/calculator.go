@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/pkg/errors"
 )
 
@@ -31,9 +30,9 @@ type Calculator interface {
 }
 
 type calculator struct {
-	Ledger      core.Ledger      `inject:""`
-	NodeNetwork core.NodeNetwork `inject:""`
-	Certificate core.Certificate `inject:""`
+	Ledger                  core.Ledger              `inject:""`
+	NodeNetwork             core.NodeNetwork         `inject:""`
+	NodeCryptographyService core.CryptographyService `inject:""`
 }
 
 func NewCalculator() Calculator {
@@ -55,14 +54,16 @@ func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]by
 	pulseHash := entry.hash()
 	nodeInfoHash := nodeInfoHash(pulseHash, stateHash)
 
-	signature, err := ecdsa.Sign(nodeInfoHash, c.Certificate.GetEcdsaPrivateKey())
+	signature, err := c.NodeCryptographyService.Sign(nodeInfoHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't sign node info hash")
 	}
 
 	return pulseHash, &PulseProof{
+		BaseProof: BaseProof{
+			Signature: signature.Bytes(),
+		},
 		StateHash: stateHash,
-		Signature: signature,
 	}, nil
 }
 
@@ -72,13 +73,15 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (
 	globuleInfoHash := globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
 	globuleHash := globuleHash(globuleInfoHash, nodeRoot)
 
-	signature, err := ecdsa.Sign(globuleHash, c.Certificate.GetEcdsaPrivateKey())
+	signature, err := c.NodeCryptographyService.Sign(globuleHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't sign globule hash")
 	}
 
 	return globuleHash, &GlobuleProof{
-		Signature:     signature,
+		BaseProof: BaseProof{
+			Signature: signature.Bytes(),
+		},
 		PrevCloudHash: entry.PrevCloudHash,
 		GlobuleIndex:  entry.GlobuleIndex,
 		NodeCount:     nodeCount,
@@ -89,12 +92,14 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (
 func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) ([]byte, *CloudProof, error) {
 	cloudHash := entry.hash()
 
-	signature, err := ecdsa.Sign(cloudHash, c.Certificate.GetEcdsaPrivateKey())
+	signature, err := c.NodeCryptographyService.Sign(cloudHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetCloudProof ] Could't sign cloud hash")
 	}
 
 	return cloudHash, &CloudProof{
-		Signature: signature,
+		BaseProof: BaseProof{
+			Signature: signature.Bytes(),
+		},
 	}, nil
 }
