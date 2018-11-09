@@ -109,7 +109,7 @@ func Test_CBORhashesMutation(t *testing.T) {
 				found[hHex] = tt.typ
 				continue
 			}
-			t.Errorf("%s failed: found %s hash for \"%s\" test, should not repeats in sha3hash224tests", tt.typ, hHex, typ)
+			t.Errorf("%s failed: found %s hash for \"%s\" test", tt.typ, hHex, typ)
 		}
 	}
 }
