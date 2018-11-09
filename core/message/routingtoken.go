@@ -13,11 +13,10 @@ import (
 
 // RoutingToken is an auth token for coordinating messages
 type RoutingToken struct {
-	To      *core.RecordRef
-	from    *core.RecordRef
-	Pulse   core.PulseNumber
-	MsgHash []byte
-	Sign    []byte
+	To    *core.RecordRef
+	From  *core.RecordRef
+	Pulse core.PulseNumber
+	Sign  []byte
 }
 
 // GetTo returns destination of token
