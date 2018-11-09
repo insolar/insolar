@@ -24,6 +24,7 @@ import (
 
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
@@ -69,8 +70,11 @@ func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get routing information from ConsensusPacket")
 	}
-	log.Debug(header.OriginID, header.TargetID, header.PacketType)
-	return nil, errors.New("not implemented")
+	p := &packet.Packet{}
+	p.Sender = &host.Host{ShortID: header.OriginID}
+	p.Receiver = &host.Host{ShortID: header.TargetID}
+	p.Type = header.PacketType
+	return p, nil
 }
 
 func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
@@ -78,6 +82,7 @@ func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 		baseTransport: newBaseTransport(proxy, publicAddress),
 		serverConn:    conn}
 	transport.sendFunc = transport.send
+	// transport.serializer = &udpSerializer{}
 
 	return transport, nil
 }

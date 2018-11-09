@@ -86,7 +86,7 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 	future := t.createFuture(msg)
 
 	go func(msg *packet.Packet, f Future) {
-		err := t.sendPacket(msg)
+		err := t.SendPacket(msg)
 		if err != nil {
 			f.Cancel()
 			log.Error(err)
@@ -100,7 +100,7 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 func (t *baseTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
 	msg.RequestID = requestID
 
-	return t.sendPacket(msg)
+	return t.SendPacket(msg)
 }
 
 // Close closes packet channels.
@@ -189,7 +189,7 @@ func (t *baseTransport) PublicAddress() string {
 	return t.publicAddress
 }
 
-func (t *baseTransport) sendPacket(p *packet.Packet) error {
+func (t *baseTransport) SendPacket(p *packet.Packet) error {
 	var recvAddress string
 	if t.proxy.ProxyHostsCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()

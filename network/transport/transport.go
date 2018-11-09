@@ -33,8 +33,11 @@ type Transport interface {
 	// SendRequest sends packet to destination. Sequence number is generated automatically.
 	SendRequest(*packet.Packet) (Future, error)
 
-	// SendResponse sends packet for request with passed request id.
+	// SendResponse sends response packet for request with passed request id.
 	SendResponse(packet.RequestID, *packet.Packet) error
+
+	// SendPacket low-level send packet without requestId and without spawning a waiting future
+	SendPacket(p *packet.Packet) error
 
 	// Start starts thread to listen incoming packets.
 	Start() error
