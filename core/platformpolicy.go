@@ -28,11 +28,11 @@ type Hasher interface {
 }
 
 type Signer interface {
-	Sign([]byte) ([]byte, error)
+	Sign([]byte) (*Signature, error)
 }
 
 type Verifier interface {
-	Verify([]byte, []byte) bool
+	Verify(Signature, []byte) bool
 }
 
 type PlatformCryptographyScheme interface {

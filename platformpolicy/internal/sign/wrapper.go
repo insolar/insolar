@@ -27,29 +27,29 @@ import (
 	"github.com/pkg/errors"
 )
 
-type signature struct {
+type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-func fromRS(r, s *big.Int) *signature {
-	return &signature{R: r, S: s}
+func fromRS(r, s *big.Int) *ecdsaSignature {
+	return &ecdsaSignature{R: r, S: s}
 }
 
-func (p *signature) Marshal() ([]byte, error) {
+func (p *ecdsaSignature) Marshal() ([]byte, error) {
 	signature, err := asn1.Marshal(p)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Marshall ] Could't marshal signature")
+		return nil, errors.Wrap(err, "[ Marshall ] Could't marshal ecdsaSignature")
 	}
 	return signature, nil
 }
 
-func (p *signature) Unmarshal(signatureRaw []byte) error {
+func (p *ecdsaSignature) Unmarshal(signatureRaw []byte) error {
 	rest, err := asn1.Unmarshal(signatureRaw, p)
 	if len(rest) != 0 {
 		return errors.New("[ Unmarshal ] len of rest must be 0")
 	}
 	if err != nil {
-		return errors.Wrap(err, "[ Unmarshal ] Could't unmarshal signature")
+		return errors.Wrap(err, "[ Unmarshal ] Could't unmarshal ecdsaSignature")
 	}
 	return nil
 }
@@ -59,7 +59,7 @@ type ecdsaSignerWrapper struct {
 	hasher     core.Hasher
 }
 
-func (sw *ecdsaSignerWrapper) Sign(data []byte) ([]byte, error) {
+func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
 	hash := sw.hasher.Hash(data)
 	privateKey := sw.privateKey.(*ecdsa.PrivateKey)
 
@@ -68,12 +68,13 @@ func (sw *ecdsaSignerWrapper) Sign(data []byte) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
 
-	signature, err := fromRS(r, s).Marshal()
+	ecdsaSignature, err := fromRS(r, s).Marshal()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
 
-	return signature, nil
+	signature := core.SignatureFromBytes(ecdsaSignature)
+	return &signature, nil
 }
 
 type ecdsaVerifyWrapper struct {
@@ -81,9 +82,9 @@ type ecdsaVerifyWrapper struct {
 	hasher    core.Hasher
 }
 
-func (sw *ecdsaVerifyWrapper) Verify(data, signatureRaw []byte) bool {
-	var signature signature
-	err := signature.Unmarshal(signatureRaw)
+func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool {
+	var ecdsaSignature ecdsaSignature
+	err := ecdsaSignature.Unmarshal(signature.Bytes())
 	if err != nil {
 		return false
 	}
@@ -91,5 +92,5 @@ func (sw *ecdsaVerifyWrapper) Verify(data, signatureRaw []byte) bool {
 	hash := sw.hasher.Hash(data)
 	publicKey := sw.publicKey.(*ecdsa.PublicKey)
 
-	return ecdsa.Verify(publicKey, hash, signature.R, signature.S)
+	return ecdsa.Verify(publicKey, hash, ecdsaSignature.R, ecdsaSignature.S)
 }
