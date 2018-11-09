@@ -37,41 +37,48 @@ func (m *Manager) Register(components ...interface{}) {
 // Inject components in Manager and inject required dependencies
 // Inject can inject interfaces only, tag public struct fields with `inject:""`
 func (m *Manager) Inject(components ...interface{}) {
-	m.Register(components)
+	m.Register(components...)
 
-	for _, c := range components {
-		componentValue := reflect.ValueOf(c).Elem()
-		componentType := componentValue.Type()
+	for _, componentMeta := range components {
+		component := reflect.ValueOf(componentMeta).Elem()
+		componentType := component.Type()
 		log.Infof("ComponentManager: Inject component: %s", componentType.String())
 
 		for i := 0; i < componentType.NumField(); i++ {
-			f := componentType.Field(i)
-			if _, ok := f.Tag.Lookup("inject"); ok {
-				log.Debugf("ComponentManager: Component %s need inject: ", componentType.String(), f.Name)
-
-				// try to inject
-				isInjected := false
-				for _, cc := range m.components {
-					fieldValue := componentValue.Field(i)
-					if reflect.ValueOf(cc).Type().Implements(fieldValue.Type()) {
-						fieldValue.Set(reflect.ValueOf(cc))
-						log.Infof("ComponentManager: Inject interface %s with %s: ", fieldValue.Type().String(), reflect.ValueOf(cc).Type().String())
-						isInjected = true
-						break
-					}
-				}
-
-				if !isInjected {
-					panic(fmt.Sprintf(
-						"Component %s injects not existing component with interface %s",
-						componentType.String(), f.Type.String(),
-					))
-				}
+			fieldMeta := componentType.Field(i)
+			if _, ok := fieldMeta.Tag.Lookup("mustInject"); ok {
+				log.Debugf("ComponentManager: Component %s need inject: ", componentType.String(), fieldMeta.Name)
 
 			}
 
+			m.mustInject(component, fieldMeta)
 		}
 	}
+}
+
+func (m *Manager) mustInject(component reflect.Value, fieldMeta reflect.StructField) {
+	for _, componentMeta := range m.components {
+		componentType := reflect.ValueOf(componentMeta).Type()
+
+		if componentType.Implements(fieldMeta.Type) {
+			field := component.FieldByName(fieldMeta.Name)
+			field.Set(reflect.ValueOf(componentMeta))
+
+			log.Infof(
+				"ComponentManager: Inject interface %s with %s: ",
+				field.Type().String(),
+				componentType.String(),
+			)
+			return
+		}
+	}
+
+	panic(fmt.Sprintf(
+		"Component %s injects not existing component with interface %s to field %s",
+		component.Type().String(),
+		fieldMeta.Type.String(),
+		fieldMeta.Name,
+	))
 }
 
 // Start invokes Start method of all components which implements Starter interface

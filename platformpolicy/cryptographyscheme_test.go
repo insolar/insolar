@@ -26,4 +26,8 @@ func TestNewPlatformPolicy(t *testing.T) {
 	pcs := NewPlatformCryptographyScheme()
 
 	assert.NotNil(t, pcs)
+
+	pcsImpl := pcs.(*platformCryptographyScheme)
+	assert.NotNil(t, pcsImpl.HashProvider)
+	assert.NotNil(t, pcsImpl.SignProvider)
 }
