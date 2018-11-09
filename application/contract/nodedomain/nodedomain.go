@@ -148,23 +148,23 @@ func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatur
 }
 
 // Authorize checks node and returns node info
-func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
+func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
 	nodeR := nd.getNodeRecord(nodeRef)
 	nodeInfo, err := nodeR.GetNodeInfo()
 	if err != nil {
-		return "", nil, fmt.Errorf("[ Authorize ] Problem with Getting info: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ Authorize ] Problem with Getting info: %s", err.Error())
 	}
 
 	pubKey := nodeInfo.PublicKey
-	roles := nodeInfo.Roles
+	role := nodeInfo.Role
 
 	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
 	if err != nil {
-		return "", nil, fmt.Errorf("[ Authorize ] Problem with verifying: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ Authorize ] Problem with verifying: %s", err.Error())
 	}
 	if !ok {
-		return "", nil, fmt.Errorf("[ Authorize ] Can't verify signature")
+		return "", core.RoleUnknown, fmt.Errorf("[ Authorize ] Can't verify signature")
 	}
 
-	return pubKey, roles, nil
+	return pubKey, role, nil
 }
