@@ -101,7 +101,8 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 	mb.queue.Push(msg)
 
 	// TODO: send to all actors of the role if nil Target
-	nodes, err := jc.QueryRole(ctx, message.ExtractRole(signedMsg.Msg), message.ExtractTarget(signedMsg.Msg), pulse.PulseNumber)
+	target := message.ExtractTarget(signedMsg.Msg)
+	nodes, err := jc.QueryRole(ctx, message.ExtractRole(signedMsg.Msg), &target, pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}

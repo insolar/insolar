@@ -205,10 +205,11 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	}
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
+	target := message.ExtractTarget(msg)
 	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(
 		ctx,
 		vb.GetRole(),
-		message.ExtractTarget(msg),
+		&target,
 		lr.pulse().PulseNumber,
 		lr.Network.GetNodeID(),
 	)
