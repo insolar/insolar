@@ -18,6 +18,7 @@ package packets
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
@@ -87,6 +88,17 @@ func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header.TargetID = p1p.packetHeader.TargetNodeID
 
 	return header, nil
+}
+
+func (p1p *Phase1Packet) SetPulseProof(proof merkle.PulseProof) error {
+
+	if len(proof.StateHash) == 64 || len(proof.Signature) == 64 {
+		copy(p1p.proofNodePulse.NodeStateHash[:], proof.StateHash[:64])
+		copy(p1p.proofNodePulse.NodeSignature[:], proof.Signature[:64])
+		return nil
+	}
+
+	return errors.New("invalid proof fields len")
 }
 
 type PacketHeader struct {
