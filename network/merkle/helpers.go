@@ -19,7 +19,7 @@ package merkle
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/cryptoproviders/hash"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 const reserved = 0xDEADBEEF

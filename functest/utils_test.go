@@ -26,7 +26,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/api/requesters"
-	"github.com/insolar/insolar/cryptoproviders/ecdsa"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptoproviders/hash"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/ugorji/go/codec"
 )
 

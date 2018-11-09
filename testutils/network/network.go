@@ -20,7 +20,7 @@ import (
 	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/core"
-	ecdsa2 "github.com/insolar/insolar/cryptoproviders/ecdsa"
+	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 type testNetwork struct {

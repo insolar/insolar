@@ -25,7 +25,7 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/core"
-	ecdsahelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )

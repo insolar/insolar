@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/api/requesters"
-	ecdsahelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"

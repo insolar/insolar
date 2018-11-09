@@ -19,7 +19,7 @@ package certificate
 import (
 	"testing"
 
-	ecdsahelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -24,7 +24,7 @@ import (
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptoproviders/hash"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"

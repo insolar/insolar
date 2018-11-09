@@ -19,7 +19,7 @@ package pulsar
 import (
 	"testing"
 
-	ecdsahelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/assert"
 )

@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	ecdsahelper "github.com/insolar/insolar/cryptoproviders/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
