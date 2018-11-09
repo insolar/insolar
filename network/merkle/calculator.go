@@ -18,16 +18,11 @@ package merkle
 
 import (
 	"context"
+	"crypto"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
-
-type Calculator interface {
-	GetPulseProof(context.Context, *PulseEntry) ([]byte, *PulseProof, error)
-	GetGlobuleProof(context.Context, *GlobuleEntry) ([]byte, *GlobuleProof, error)
-	GetCloudProof(context.Context, *CloudEntry) ([]byte, *CloudProof, error)
-}
 
 type calculator struct {
 	Ledger                  core.Ledger              `inject:""`
@@ -39,12 +34,12 @@ func NewCalculator() Calculator {
 	return &calculator{}
 }
 
-func (c *calculator) getStateHash(role core.NodeRole) ([]byte, error) {
+func (c *calculator) getStateHash(role core.NodeRole) (OriginHash, error) {
 	// TODO: do something with role
 	return c.Ledger.GetArtifactManager().State()
 }
 
-func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]byte, *PulseProof, error) {
+func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) (OriginHash, *PulseProof, error) {
 	role := c.NodeNetwork.GetOrigin().Role()
 	stateHash, err := c.getStateHash(role)
 	if err != nil {
@@ -67,7 +62,7 @@ func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]by
 	}, nil
 }
 
-func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) ([]byte, *GlobuleProof, error) {
+func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (OriginHash, *GlobuleProof, error) {
 	nodeRoot := entry.hash()
 	nodeCount := uint32(len(entry.ProofSet))
 	globuleInfoHash := globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
@@ -89,7 +84,7 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (
 	}, nil
 }
 
-func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) ([]byte, *CloudProof, error) {
+func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) (OriginHash, *CloudProof, error) {
 	cloudHash := entry.hash()
 
 	signature, err := c.NodeCryptographyService.Sign(cloudHash)
@@ -102,4 +97,9 @@ func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) ([]by
 			Signature: signature.Bytes(),
 		},
 	}, nil
+}
+
+func (c *calculator) IsValid(proof proof, hash OriginHash, publicKey crypto.PublicKey) bool {
+	signature := core.SignatureFromBytes(proof.signature())
+	return c.NodeCryptographyService.Verify(publicKey, signature, proof.hash(hash))
 }

@@ -17,25 +17,21 @@
 package merkle
 
 import (
+	"context"
 	"crypto"
-
-	"github.com/insolar/insolar/core"
 )
 
-type Proof interface {
+type OriginHash []byte
+
+type Calculator interface {
+	GetPulseProof(context.Context, *PulseEntry) (OriginHash, *PulseProof, error)
+	GetGlobuleProof(context.Context, *GlobuleEntry) (OriginHash, *GlobuleProof, error)
+	GetCloudProof(context.Context, *CloudEntry) (OriginHash, *CloudProof, error)
+
+	IsValid(proof, OriginHash, crypto.PublicKey) bool
+}
+
+type proof interface {
 	hash([]byte) []byte
 	signature() []byte
-}
-
-type ProofValidator interface {
-	IsValid(Proof, crypto.PublicKey) bool
-}
-
-type proofValidator struct {
-	NodeCryptographyService core.CryptographyService `inject:""`
-}
-
-func (pv *proofValidator) IsValid(proof Proof, data []byte, publicKey crypto.PublicKey) bool {
-	signature := core.SignatureFromBytes(proof.signature())
-	return pv.NodeCryptographyService.Verify(publicKey, signature, proof.hash(data))
 }

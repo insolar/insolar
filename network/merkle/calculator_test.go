@@ -48,9 +48,6 @@ func (t *calculatorSuite) TestGetNodeProof() {
 	t.Assert().NoError(err)
 	t.Assert().NotNil(np)
 	t.Assert().NotNil(ph)
-
-	// valid := np.isValid(context.Background(), t.nodeNetwork.GetOrigin(), ph)
-	// t.Assert().True(valid)
 }
 
 func (t *calculatorSuite) TestGetGlobuleProof() {
