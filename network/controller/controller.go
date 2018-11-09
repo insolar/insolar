@@ -41,7 +41,7 @@ type Controller struct {
 }
 
 // SendMessage send message to nodeID.
-func (c *Controller) SendMessage(nodeID core.RecordRef, name string, msg core.SignedMessage) ([]byte, error) {
+func (c *Controller) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
 	return c.rpcController.SendMessage(nodeID, name, msg)
 }
 
@@ -51,7 +51,7 @@ func (c *Controller) RemoteProcedureRegister(name string, method core.RemoteProc
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
-func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error {
+func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
 	return c.rpcController.SendCascadeMessage(data, method, msg)
 }
 
