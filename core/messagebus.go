@@ -45,8 +45,8 @@ type Signature interface {
 	IsValid(key *ecdsa.PublicKey) bool
 }
 
-// SignedMessage by senders private key.
-type SignedMessage interface {
+// Parcel by senders private key.
+type Parcel interface {
 	Message
 	Signature
 
@@ -85,7 +85,7 @@ type MessageBus interface {
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
-type MessageHandler func(context.Context, SignedMessage) (Reply, error)
+type MessageHandler func(context.Context, Parcel) (Reply, error)
 
 //go:generate stringer -type=MessageType
 const (
