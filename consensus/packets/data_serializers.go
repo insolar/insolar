@@ -179,32 +179,36 @@ func (p1p *Phase1Packet) compactReferendumClaim() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
-	err := p1p.packetHeader.Deserialize(data)
-	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize packetHeader")
+func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+	if header == nil {
+		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
+	}
+	if header.PacketT != Phase1 {
+		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Wrong packet type")
 	}
 
-	err = p1p.pulseData.Deserialize(data)
+	p1p.packetHeader = *header
+
+	err := p1p.pulseData.Deserialize(data)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize pulseData")
+		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
 	}
 
 	err = p1p.proofNodePulse.Deserialize(data)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize proofNodePulse")
+		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize proofNodePulse")
 	}
 
 	if p1p.hasSection2() {
 		claimsBuf, err := ioutil.ReadAll(data)
 		if err != nil {
-			return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't read Section 2")
+			return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read Section 2")
 		}
 		claimsSize := len(claimsBuf) - 8
 
 		err = p1p.parseReferendumClaim(claimsBuf[:claimsSize])
 		if err != nil {
-			return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't parseReferendumClaim")
+			return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't parseReferendumClaim")
 		}
 
 		data = bytes.NewReader(claimsBuf[claimsSize:])
@@ -212,7 +216,21 @@ func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
 
 	err = binary.Read(data, defaultByteOrder, &p1p.signature)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't read signature")
+		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read signature")
+	}
+
+	return nil
+}
+
+func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
+	err := p1p.packetHeader.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize packetHeader")
+	}
+
+	err = p1p.DeserializeWithoutHeader(data, &p1p.packetHeader)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize body")
 	}
 
 	return nil
