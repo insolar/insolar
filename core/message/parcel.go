@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -29,63 +30,74 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-// SignedMessage is a message signed by senders private key.
-type SignedMessage struct {
+// Parcel is a message signed by senders private key.
+type Parcel struct {
 	Sender        core.RecordRef
 	Msg           core.Message
 	Signature     []byte
 	LogTraceID    string
 	TraceSpanData []byte
-	PulseNumber   core.PulseNumber
+	Token         core.RoutingToken
+}
+
+// GetToken return current message token
+func (sm *Parcel) GetToken() core.RoutingToken {
+	return sm.Token
 }
 
 // Pulse returns pulse when message was sent.
-func (sm *SignedMessage) Pulse() core.PulseNumber {
-	return sm.PulseNumber
+func (sm *Parcel) Pulse() core.PulseNumber {
+	return sm.Token.GetPulse()
 }
 
-func (sm *SignedMessage) Message() core.Message {
+// Message returns current instance's message
+func (sm *Parcel) Message() core.Message {
 	return sm.Msg
 }
 
 // Context returns initialized context with propagated data with ctx as parent.
-func (sm *SignedMessage) Context(ctx context.Context) context.Context {
+func (sm *Parcel) Context(ctx context.Context) context.Context {
 	ctx = inslogger.ContextWithTrace(ctx, sm.LogTraceID)
 	parentspan := instracer.MustDeserialize(sm.TraceSpanData)
 	return instracer.WithParentSpan(ctx, parentspan)
 }
 
-// NewSignedMessage creates and return a signed message.
-func NewSignedMessage(
+// NewParcel creates and return a signed message.
+func NewParcel(
 	ctx context.Context,
 	msg core.Message,
 	sender core.RecordRef,
 	key *ecdsa.PrivateKey,
 	pulse core.PulseNumber,
-) (*SignedMessage, error) {
+	token core.RoutingToken,
+) (*Parcel, error) {
 	if key == nil {
 		return nil, errors.New("failed to sign a message: private key == nil")
 	}
 	if msg == nil {
 		return nil, errors.New("failed to sign a nil message")
 	}
-	sign, err := signMessage(msg, key)
+	serialized := ToBytes(msg)
+	sign, err := signMessage(serialized, key)
 	if err != nil {
 		return nil, err
 	}
-	return &SignedMessage{
-		Sender:        sender,
+
+	if token == nil {
+		target := ExtractTarget(msg)
+		token = NewRoutingToken(&target, &sender, pulse, hash.SHA3Bytes256(serialized), key)
+	}
+	return &Parcel{
+		Token:         token,
 		Msg:           msg,
 		Signature:     sign,
 		LogTraceID:    inslogger.TraceID(ctx),
 		TraceSpanData: instracer.MustSerialize(ctx),
-		PulseNumber:   pulse,
 	}, nil
 }
 
 // SignMessage tries to sign a core.Message.
-func signMessage(msg core.Message, key *ecdsa.PrivateKey) ([]byte, error) {
-	serialized := ToBytes(msg)
+func signMessage(serialized []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 	sign, err := ecdsa2.Sign(serialized, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
@@ -94,7 +106,7 @@ func signMessage(msg core.Message, key *ecdsa.PrivateKey) ([]byte, error) {
 }
 
 // IsValid checks if a sign is correct.
-func (sm *SignedMessage) IsValid(key *ecdsa.PublicKey) bool {
+func (sm *Parcel) IsValid(key *ecdsa.PublicKey) bool {
 	exportedKey, err := ecdsa2.ExportPublicKey(key)
 	if err != nil {
 		log.Error("failed to export a public key")
@@ -109,30 +121,19 @@ func (sm *SignedMessage) IsValid(key *ecdsa.PublicKey) bool {
 }
 
 // Type returns message type.
-func (sm *SignedMessage) Type() core.MessageType {
+func (sm *Parcel) Type() core.MessageType {
 	return sm.Msg.Type()
 }
 
-// Target returns target for this message. If nil, Message will be sent for all actors for the role returned by
-// Role method.
-func (sm *SignedMessage) Target() *core.RecordRef {
-	return sm.Msg.Target()
-}
-
-// TargetRole returns jet role to actors of which Message should be sent.
-func (sm *SignedMessage) TargetRole() core.JetRole {
-	return sm.Msg.TargetRole()
-}
-
 // GetCaller returns initiator of this event.
-func (sm *SignedMessage) GetCaller() *core.RecordRef {
+func (sm *Parcel) GetCaller() *core.RecordRef {
 	return sm.Msg.GetCaller()
 }
 
-func (sm *SignedMessage) GetSign() []byte {
+func (sm *Parcel) GetSign() []byte {
 	return sm.Signature
 }
 
-func (sm *SignedMessage) GetSender() core.RecordRef {
+func (sm *Parcel) GetSender() core.RecordRef {
 	return sm.Sender
 }

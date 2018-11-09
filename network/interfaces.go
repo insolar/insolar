@@ -26,12 +26,12 @@ import (
 
 // Controller contains network logic.
 type Controller interface {
-	// SendMessage send message to nodeID.
-	SendMessage(nodeID core.RecordRef, name string, msg core.SignedMessage) ([]byte, error)
+	// SendParcel send message to nodeID.
+	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
-	SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error
+	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
 	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
 	Bootstrap() error
 	// AnalyzeNetwork legacy method for old DHT network (should be removed in new network).

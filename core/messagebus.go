@@ -35,11 +35,7 @@ type ReplyType byte
 type Message interface {
 	// Type returns message type.
 	Type() MessageType
-	// Target returns target for this message. If nil, Message will be sent for all actors for the role returned by
-	// Role method.
-	Target() *RecordRef
-	// TargetRole returns jet role to actors of which Message should be sent.
-	TargetRole() JetRole
+
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
 }
@@ -50,8 +46,8 @@ type Signature interface {
 	IsValid(key *ecdsa.PublicKey) bool
 }
 
-// SignedMessage by senders private key.
-type SignedMessage interface {
+// Parcel by senders private key.
+type Parcel interface {
 	Message
 	Signature
 
@@ -59,6 +55,16 @@ type SignedMessage interface {
 	Context(context.Context) context.Context
 	// Pulse returns pulse when message was sent.
 	Pulse() PulseNumber
+	// GetToken returns a routing-token of the message
+	GetToken() RoutingToken
+}
+
+// RoutingToken is the base interface for the routing token
+type RoutingToken interface {
+	GetTo() *RecordRef
+	GetFrom() *RecordRef
+	GetPulse() PulseNumber
+	GetSign() []byte
 }
 
 // Reply for an `Message`
@@ -91,7 +97,7 @@ type MessageBus interface {
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
-type MessageHandler func(context.Context, SignedMessage) (Reply, error)
+type MessageHandler func(context.Context, Parcel) (Reply, error)
 
 //go:generate stringer -type=MessageType
 const (
@@ -110,8 +116,6 @@ const (
 
 	// Ledger
 
-	// TypeRequestCall registers call on storage.
-	TypeRequestCall
 	// TypeGetCode retrieves code from storage.
 	TypeGetCode
 	// TypeGetObject retrieves object from storage.

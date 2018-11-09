@@ -24,6 +24,6 @@ import (
 )
 
 // GetMessageHash calculates message hash.
-func GetMessageHash(msg core.SignedMessage) []byte {
-	return hash.SHA3Bytes256(message.SignedToBytes(msg))
+func GetMessageHash(msg core.Parcel) []byte {
+	return hash.SHA3Bytes256(message.ParcelToBytes(msg))
 }

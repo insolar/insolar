@@ -55,11 +55,6 @@ func (m *BaseLogicMessage) GetCallerPrototype() *core.RecordRef {
 	return &m.CallerPrototype
 }
 
-// TargetRole returns RoleVirtualExecutor as routing target role.
-func (m *BaseLogicMessage) TargetRole() core.JetRole {
-	return core.RoleVirtualExecutor
-}
-
 // GetRequest returns RoleVirtualExecutor as routing target role.
 func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 	return m.Request
@@ -81,11 +76,6 @@ func (m *CallMethod) GetReference() core.RecordRef {
 // Type returns TypeCallMethod.
 func (m *CallMethod) Type() core.MessageType {
 	return core.TypeCallMethod
-}
-
-// Target returns ObjectRef as routing target.
-func (m *CallMethod) Target() *core.RecordRef {
-	return &m.ObjectRef
 }
 
 type SaveAs int
@@ -115,14 +105,6 @@ func (m *CallConstructor) Type() core.MessageType {
 	return core.TypeCallConstructor
 }
 
-// Target returns request ref as routing target.
-func (m *CallConstructor) Target() *core.RecordRef {
-	if m.SaveAs == Delegate {
-		return &m.ParentRef
-	}
-	return core.GenRequest(m.PulseNum, MustSerializeBytes(m))
-}
-
 type ExecutorResults struct {
 	Caller      core.RecordRef
 	RecordRef   core.RecordRef
@@ -131,14 +113,6 @@ type ExecutorResults struct {
 
 func (m *ExecutorResults) Type() core.MessageType {
 	return core.TypeExecutorResults
-}
-
-func (m *ExecutorResults) TargetRole() core.JetRole {
-	return core.RoleVirtualExecutor
-}
-
-func (m *ExecutorResults) Target() *core.RecordRef {
-	return &m.RecordRef
 }
 
 // TODO change after changing pulsar
@@ -159,14 +133,6 @@ type ValidateCaseBind struct {
 
 func (m *ValidateCaseBind) Type() core.MessageType {
 	return core.TypeValidateCaseBind
-}
-
-func (m *ValidateCaseBind) TargetRole() core.JetRole {
-	return core.RoleVirtualValidator
-}
-
-func (m *ValidateCaseBind) Target() *core.RecordRef {
-	return &m.RecordRef
 }
 
 // TODO change after changing pulsar
@@ -195,14 +161,6 @@ type ValidationResults struct {
 
 func (m *ValidationResults) Type() core.MessageType {
 	return core.TypeValidationResults
-}
-
-func (m ValidationResults) TargetRole() core.JetRole {
-	return core.RoleVirtualExecutor
-}
-
-func (m *ValidationResults) Target() *core.RecordRef {
-	return &m.RecordRef
 }
 
 // TODO change after changing pulsar
