@@ -32,7 +32,7 @@ type treeNode struct {
 }
 
 func (t *treeNode) CalculateHash() ([]byte, error) {
-	return hash.IntegrityHasher(t.content), nil
+	return hash.IntegrityHasher().Hash(t.content), nil
 }
 
 func (t *treeNode) Equals(other merkletree.Content) (bool, error) {

@@ -29,6 +29,6 @@ func ReferenceHasher() core.Hasher {
 }
 
 // IntegrityHasher generates SHA3-256 hash for byte slice.
-func IntegrityHasher(b []byte) []byte {
-	return platformCryptographyScheme.IntegrityHasher().Hash(b)
+func IntegrityHasher() core.Hasher {
+	return platformCryptographyScheme.IntegrityHasher()
 }

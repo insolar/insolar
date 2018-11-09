@@ -95,7 +95,7 @@ type ecdsaPair struct {
 // Sign signs given seed.
 func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 
-	r, s, err := ecdsa.Sign(rand.Reader, key, hash.IntegrityHasher(data))
+	r, s, err := ecdsa.Sign(rand.Reader, key, hash.IntegrityHasher().Hash(data))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ]")
@@ -125,7 +125,7 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 		return false, errors.Wrap(err, "[ Verify ]")
 	}
 
-	h := hash.IntegrityHasher(data)
+	h := hash.IntegrityHasher().Hash(data)
 	return ecdsa.Verify(savedKey, h, ecdsaP.R, ecdsaP.S), nil
 }
 

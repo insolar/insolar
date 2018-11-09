@@ -27,13 +27,13 @@ const reserved = 0xDEADBEEF
 func pulseHash(pulse *core.Pulse) []byte {
 	var result []byte
 
-	pulseNumberHash := hash.IntegrityHasher(pulse.PulseNumber.Bytes())
+	pulseNumberHash := hash.IntegrityHasher().Hash(pulse.PulseNumber.Bytes())
 	result = append(result, pulseNumberHash...)
 
-	entropyHash := hash.IntegrityHasher(pulse.Entropy[:])
+	entropyHash := hash.IntegrityHasher().Hash(pulse.Entropy[:])
 	result = append(result, entropyHash...)
 
-	return hash.IntegrityHasher(result)
+	return hash.IntegrityHasher().Hash(result)
 }
 
 func nodeInfoHash(pulseHash, stateHash []byte) []byte {
@@ -42,41 +42,41 @@ func nodeInfoHash(pulseHash, stateHash []byte) []byte {
 	result = append(result, pulseHash...)
 	result = append(result, stateHash...)
 
-	return hash.IntegrityHasher(result)
+	return hash.IntegrityHasher().Hash(result)
 }
 
 func nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
 	var result []byte
 
-	nodeSignatureHash := hash.IntegrityHasher(nodeSignature)
+	nodeSignatureHash := hash.IntegrityHasher().Hash(nodeSignature)
 	result = append(result, nodeSignatureHash...)
 
 	result = append(result, nodeInfoHash...)
 
-	return hash.IntegrityHasher(result)
+	return hash.IntegrityHasher().Hash(result)
 }
 
 func bucketEntryHash(entryIndex uint32, nodeHash []byte) []byte {
 	var result []byte
 
-	entryIndexHash := hash.IntegrityHasher(utils.UInt32ToBytes(entryIndex))
+	entryIndexHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(entryIndex))
 	result = append(result, entryIndexHash...)
 
 	result = append(result, nodeHash...)
 
-	return hash.IntegrityHasher(result)
+	return hash.IntegrityHasher().Hash(result)
 }
 
 func bucketInfoHash(role core.NodeRole, nodeCount uint32) []byte {
 	var result []byte
 
-	roleHash := hash.IntegrityHasher(utils.UInt32ToBytes(uint32(role)))
+	roleHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(uint32(role)))
 	result = append(result, roleHash...)
 
-	nodeCountHash := hash.IntegrityHasher(utils.UInt32ToBytes(nodeCount))
+	nodeCountHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(nodeCount))
 	result = append(result, nodeCountHash...)
 
-	return hash.IntegrityHasher(result)
+	return hash.IntegrityHasher().Hash(result)
 }
 
 func bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
@@ -85,11 +85,11 @@ func bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
 	result = append(result, bucketInfoHash...)
 	result = append(result, bucketEntryHash...)
 
-	return hash.IntegrityHasher(result)
+	return hash.IntegrityHasher().Hash(result)
 }
 
 func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte {
-	reservedHash := hash.IntegrityHasher(utils.UInt32ToBytes(reserved))
+	reservedHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(reserved))
 
 	var tmpResult1 []byte
 
@@ -98,21 +98,21 @@ func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte
 
 	var tmpResult2 []byte
 
-	globuleIndexHash := hash.IntegrityHasher(utils.UInt32ToBytes(gobuleIndex))
+	globuleIndexHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(gobuleIndex))
 	tmpResult2 = append(tmpResult2, globuleIndexHash...)
 
-	nodeCountHash := hash.IntegrityHasher(utils.UInt32ToBytes(nodeCount))
+	nodeCountHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(nodeCount))
 	tmpResult2 = append(tmpResult2, nodeCountHash...)
 
 	var tmpResult3 []byte
 
-	tmpResult1Hash := hash.IntegrityHasher(tmpResult1)
+	tmpResult1Hash := hash.IntegrityHasher().Hash(tmpResult1)
 	tmpResult3 = append(tmpResult3, tmpResult1Hash...)
 
-	tmpResult2Hash := hash.IntegrityHasher(tmpResult2)
+	tmpResult2Hash := hash.IntegrityHasher().Hash(tmpResult2)
 	tmpResult3 = append(tmpResult3, tmpResult2Hash...)
 
-	return hash.IntegrityHasher(tmpResult3)
+	return hash.IntegrityHasher().Hash(tmpResult3)
 }
 
 func globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
@@ -121,5 +121,5 @@ func globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
 	result = append(result, globuleInfoHash...)
 	result = append(result, globuleNodeRoot...)
 
-	return hash.IntegrityHasher(result)
+	return hash.IntegrityHasher().Hash(result)
 }
