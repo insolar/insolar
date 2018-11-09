@@ -18,7 +18,7 @@ package core
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"crypto"
 	"io"
 )
 
@@ -44,16 +44,16 @@ type Message interface {
 	GetCaller() *RecordRef
 }
 
-type Signature interface {
+type MessageSignature interface {
 	GetSign() []byte
 	GetSender() RecordRef
-	IsValid(key *ecdsa.PublicKey) bool
+	IsValid(crypto.PublicKey) bool
 }
 
 // SignedMessage by senders private key.
 type SignedMessage interface {
 	Message
-	Signature
+	MessageSignature
 
 	Message() Message
 	Context(context.Context) context.Context
