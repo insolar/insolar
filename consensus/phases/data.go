@@ -36,6 +36,7 @@ const (
 	TypeNodeViolationBlame
 	TypeNodeBroadcast
 	TypeNodeLeaveClaim
+	TypeChangeNetworkClaim
 )
 
 // ----------------------------------PHASE 1--------------------------------
@@ -104,6 +105,19 @@ type ReferendumClaim interface {
 	Serializer
 	Type() ClaimType
 	Length() uint16
+}
+
+// ChangeNetworkClaim uses to change network state.
+type ChangeNetworkClaim struct {
+	length uint16
+}
+
+func (cnc *ChangeNetworkClaim) Type() ClaimType {
+	return TypeChangeNetworkClaim
+}
+
+func (cnc *ChangeNetworkClaim) Length() uint16 {
+	return cnc.length
 }
 
 // NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
