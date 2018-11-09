@@ -59,15 +59,17 @@ func (es *ExecutionState) Unlock() {
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
+	MessageBus core.MessageBus `inject:""`
+	Ledger     core.Ledger     `inject:""`
+	Network    core.Network    `inject:""`
+
 	ArtifactManager core.ArtifactManager
-	MessageBus      core.MessageBus
-	Ledger          core.Ledger
-	Network         core.Network
-	machinePrefs    []core.MachineType
-	Cfg             *configuration.LogicRunner
-	execution       map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
-	executionMutex  sync.Mutex
+
+	Executors      [core.MachineTypesLastID]core.MachineLogicExecutor
+	machinePrefs   []core.MachineType
+	Cfg            *configuration.LogicRunner
+	execution      map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
+	executionMutex sync.Mutex
 
 	// TODO move caseBind to context
 	caseBind      core.CaseBind
@@ -97,12 +99,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 // Start starts logic runner component
-func (lr *LogicRunner) Start(ctx context.Context, c core.Components) error {
-	am := c.Ledger.GetArtifactManager()
-	lr.ArtifactManager = am
-	lr.MessageBus = c.MessageBus
-	lr.Ledger = c.Ledger
-	lr.Network = c.Network
+func (lr *LogicRunner) Start(ctx context.Context) error {
+	lr.ArtifactManager = lr.Ledger.GetArtifactManager()
 
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
@@ -171,7 +169,7 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
 	if !ok {
@@ -205,10 +203,11 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	}
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
+	target := message.ExtractTarget(msg)
 	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(
 		ctx,
 		vb.GetRole(),
-		msg.Target(),
+		&target,
 		lr.pulse().PulseNumber,
 		lr.Network.GetNodeID(),
 	)

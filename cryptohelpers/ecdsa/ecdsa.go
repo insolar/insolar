@@ -129,6 +129,21 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 	return ecdsa.Verify(savedKey, h, ecdsaP.R, ecdsaP.S), nil
 }
 
+// VerifyWithFullKey verifies signature. PubKey is provided here
+func VerifyWithFullKey(data []byte, signatureRaw []byte, pubKey *ecdsa.PublicKey) (bool, error) {
+	var ecdsaP ecdsaPair
+	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaP)
+	if err != nil {
+		return false, errors.Wrap(err, "[ Verify ]")
+	}
+	if len(rest) != 0 {
+		return false, errors.New("[ Verify ] len of rest must be 0")
+	}
+
+	h := hash.IntegrityHasher().Hash(data)
+	return ecdsa.Verify(pubKey, h, ecdsaP.R, ecdsaP.S), nil
+}
+
 // GeneratePrivateKey uses for generating ecdsa-key with defaul settings.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(P256Curve, rand.Reader)

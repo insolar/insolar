@@ -80,7 +80,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		&record.CallRequest{
 			Payload: message.MustSerializeBytes(msg),
 		},
-		*msg.Target(),
+		message.ExtractTarget(msg),
 	)
 	return recid, err
 }
@@ -94,7 +94,7 @@ func (m *LedgerArtifactManager) GetCode(
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
 
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetCode{Code: code},
 	)
@@ -133,7 +133,7 @@ func (m *LedgerArtifactManager) GetObject(
 	)
 	defer instrument(ctx, "GetObject").err(&err).end()
 
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetObject{
 			Head:     head,
@@ -176,7 +176,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 	var err error
 	defer instrument(ctx, "GetDelegate").err(&err).end()
 
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetDelegate{
 			Head:   head,
@@ -203,7 +203,7 @@ func (m *LedgerArtifactManager) GetChildren(
 ) (core.RefIterator, error) {
 	var err error
 	defer instrument(ctx, "GetChildren").err(&err).end()
-	iter, err := NewChildIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
+	iter, err := NewChildIterator(ctx, m.bus(ctx), parent, pulse, m.getChildrenChunkSize)
 	return iter, err
 }
 
@@ -406,7 +406,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		IsValid:            isValid,
 		ValidationMessages: validationMessages,
 	}
-	_, err = m.messageBus.Send(ctx, &msg)
+	_, err = m.bus(ctx).Send(ctx, &msg)
 	return err
 }
 
@@ -571,7 +571,7 @@ func (m *LedgerArtifactManager) updateObject(
 }
 
 func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record, target core.RecordRef) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.SetRecord{
 			Record:    record.SerializeRecord(rec),
@@ -592,7 +592,7 @@ func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record
 }
 
 func (m *LedgerArtifactManager) setBlob(ctx context.Context, blob []byte, target core.RecordRef) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.SetBlob{
 			Memory:    blob,
@@ -624,7 +624,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	var genericReact core.Reply
 	var genericError error
 	go func() {
-		genericReact, genericError = m.messageBus.Send(
+		genericReact, genericError = m.bus(ctx).Send(
 			ctx,
 			&message.UpdateObject{
 				Record: record.SerializeRecord(rec),
@@ -637,7 +637,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	var blobReact core.Reply
 	var blobError error
 	go func() {
-		blobReact, blobError = m.messageBus.Send(
+		blobReact, blobError = m.bus(ctx).Send(
 			ctx,
 			&message.SetBlob{
 				TargetRef: object,
@@ -675,7 +675,7 @@ func (m *LedgerArtifactManager) registerChild(
 	child core.RecordRef,
 	asType *core.RecordRef,
 ) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.RegisterChild{
 			Record: record.SerializeRecord(rec),
@@ -695,4 +695,8 @@ func (m *LedgerArtifactManager) registerChild(
 	}
 
 	return &react.ID, nil
+}
+
+func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
+	return core.MessageBusFromContext(ctx, m.messageBus)
 }

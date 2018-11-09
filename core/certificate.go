@@ -25,8 +25,5 @@ type Certificate interface {
 	GetPublicKey() (string, error)
 
 	// TODO should be removed
-	GetPrivateKey() (string, error)
-
-	// TODO should be removed
 	GetEcdsaPrivateKey() *ecdsa.PrivateKey
 }
