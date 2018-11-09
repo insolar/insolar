@@ -229,5 +229,8 @@ type LocalStorage interface {
 	Set(ctx context.Context, pulse PulseNumber, key []byte, data []byte) error
 	// Get retrieves data from storage.
 	Get(ctx context.Context, pulse PulseNumber, key []byte) ([]byte, error)
+	// Iterate iterates over all record with specified prefix and calls handler with key and value of that record.
+	//
+	// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
 	Iterate(ctx context.Context, pulse PulseNumber, prefix []byte, handler func(k, v []byte) error) error
 }

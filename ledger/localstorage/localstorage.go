@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// LocalStorage allows a node to save local data.
+// LocalStorage allows node to save local data.
 type LocalStorage struct {
 	db *storage.DB
 }
@@ -33,12 +33,12 @@ func NewLocalStorage(db *storage.DB) (*LocalStorage, error) {
 	return &LocalStorage{db: db}, nil
 }
 
-// SetMessage saves data in storage.
+// Set saves data in storage.
 func (s *LocalStorage) Set(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error {
 	return s.db.SetLocalData(ctx, pulse, key, data)
 }
 
-// GetMessage retrieves data from storage.
+// Get retrieves data from storage.
 func (s *LocalStorage) Get(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error) {
 	buff, err := s.db.GetLocalData(ctx, pulse, key)
 	if err == storage.ErrNotFound {
@@ -47,6 +47,14 @@ func (s *LocalStorage) Get(ctx context.Context, pulse core.PulseNumber, key []by
 	return buff, err
 }
 
-func (s *LocalStorage) Iterate(ctx context.Context, pulse core.PulseNumber, prefix []byte, handler func(k, v []byte) error) error {
+// Iterate iterates over all record with specified prefix and calls handler with key and value of that record.
+//
+// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
+func (s *LocalStorage) Iterate(
+	ctx context.Context,
+	pulse core.PulseNumber,
+	prefix []byte,
+	handler func(k, v []byte) error,
+) error {
 	return s.db.IterateLocalData(ctx, pulse, prefix, handler)
 }
