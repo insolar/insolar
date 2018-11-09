@@ -588,7 +588,6 @@
     "github.com/chzyer/readline",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
-    "github.com/huandu/xstrings",
     "github.com/jbenet/go-base58",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",

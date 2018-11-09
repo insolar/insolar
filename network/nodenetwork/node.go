@@ -19,6 +19,7 @@ package nodenetwork
 import (
 	"crypto/ecdsa"
 	"encoding/gob"
+	"hash/crc32"
 
 	"github.com/insolar/insolar/core"
 )
@@ -26,20 +27,20 @@ import (
 type mutableNode interface {
 	core.Node
 
-	SetState(core.NodeState)
 	SetPulse(core.PulseNumber)
+	SetShortID(shortID core.ShortNodeID)
 }
 
 type node struct {
-	NID        core.RecordRef
-	NRoles     []core.NodeRole
-	NPublicKey *ecdsa.PublicKey
+	NodeID        core.RecordRef
+	NodeShortID   core.ShortNodeID
+	NodeRoles     []core.NodeRole
+	NodePublicKey *ecdsa.PublicKey
 
-	NPulseNum core.PulseNumber
-	NState    core.NodeState
+	NodePulseNum core.PulseNumber
 
-	NPhysicalAddress string
-	NVersion         string
+	NodePhysicalAddress string
+	NodeVersion         string
 }
 
 func newMutableNode(
@@ -47,17 +48,16 @@ func newMutableNode(
 	roles []core.NodeRole,
 	publicKey *ecdsa.PublicKey,
 	pulseNum core.PulseNumber,
-	state core.NodeState,
 	physicalAddress,
 	version string) mutableNode {
 	return &node{
-		NID:              id,
-		NRoles:           roles,
-		NPublicKey:       publicKey,
-		NPulseNum:        pulseNum,
-		NState:           state,
-		NPhysicalAddress: physicalAddress,
-		NVersion:         version,
+		NodeID:              id,
+		NodeShortID:         generateShortID(id),
+		NodeRoles:           roles,
+		NodePublicKey:       publicKey,
+		NodePulseNum:        pulseNum,
+		NodePhysicalAddress: physicalAddress,
+		NodeVersion:         version,
 	}
 }
 
@@ -66,51 +66,50 @@ func NewNode(
 	roles []core.NodeRole,
 	publicKey *ecdsa.PublicKey,
 	pulseNum core.PulseNumber,
-	state core.NodeState,
 	physicalAddress,
 	version string) core.Node {
-	return newMutableNode(id, roles, publicKey, pulseNum, state, physicalAddress, version)
+	return newMutableNode(id, roles, publicKey, pulseNum, physicalAddress, version)
 }
 
 func (n *node) ID() core.RecordRef {
-	return n.NID
+	return n.NodeID
+}
+
+func (n *node) ShortID() core.ShortNodeID {
+	return n.NodeShortID
 }
 
 func (n *node) Pulse() core.PulseNumber {
-	return n.NPulseNum
-}
-
-func (n *node) State() core.NodeState {
-	return n.NState
+	return n.NodePulseNum
 }
 
 func (n *node) Roles() []core.NodeRole {
-	return n.NRoles
+	return n.NodeRoles
 }
 
 func (n *node) Role() core.NodeRole {
-	return n.NRoles[0]
+	return n.NodeRoles[0]
 }
 
 func (n *node) PublicKey() *ecdsa.PublicKey {
 	// TODO: make a copy of pk
-	return n.NPublicKey
+	return n.NodePublicKey
 }
 
 func (n *node) PhysicalAddress() string {
-	return n.NPhysicalAddress
+	return n.NodePhysicalAddress
 }
 
 func (n *node) Version() string {
-	return n.NVersion
-}
-
-func (n *node) SetState(state core.NodeState) {
-	n.NState = state
+	return n.NodeVersion
 }
 
 func (n *node) SetPulse(pulseNum core.PulseNumber) {
-	n.NPulseNum = pulseNum
+	n.NodePulseNum = pulseNum
+}
+
+func (n *node) SetShortID(id core.ShortNodeID) {
+	n.NodeShortID = id
 }
 
 type mutableNodes []mutableNode
@@ -121,6 +120,11 @@ func (mn mutableNodes) Export() []core.Node {
 		nodes[i] = mn[i]
 	}
 	return nodes
+}
+
+func generateShortID(ref core.RecordRef) core.ShortNodeID {
+	result := crc32.ChecksumIEEE(ref[:])
+	return core.ShortNodeID(result)
 }
 
 func init() {

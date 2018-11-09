@@ -56,7 +56,12 @@ func ChangeTags(ctx context.Context, mutator ...tag.Mutator) context.Context {
 }
 
 // RegisterPrometheus creates prometheus exporter and registers it in opencensus view lib.
-func RegisterPrometheus(ctx context.Context, namespace string, registry *prometheus.Registry) (*censusprom.Exporter, error) {
+func RegisterPrometheus(
+	ctx context.Context,
+	namespace string,
+	registry *prometheus.Registry,
+	reportperiod time.Duration,
+) (*censusprom.Exporter, error) {
 	inslog := inslogger.FromContext(ctx)
 	exporter, err := censusprom.NewExporter(censusprom.Options{
 		Namespace: namespace,
@@ -70,6 +75,9 @@ func RegisterPrometheus(ctx context.Context, namespace string, registry *prometh
 	}
 	view.RegisterExporter(exporter)
 	// TODO: make reporting period configurable
-	view.SetReportingPeriod(1 * time.Second)
+	if reportperiod == 0 {
+		reportperiod = time.Second
+	}
+	view.SetReportingPeriod(reportperiod)
 	return exporter, nil
 }

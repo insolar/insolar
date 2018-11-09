@@ -57,7 +57,7 @@ func (mi *methodInstrumenter) end() {
 		inslog.Error(*mi.errlink)
 	}
 
-	inslog.Debug("measured time is ", latency)
+	inslog.Debugf("measured time of AM method %v is %v", mi.name, latency)
 
 	ctx := insmetrics.InsertTag(mi.ctx, tagMethod, mi.name)
 	ctx = insmetrics.ChangeTags(

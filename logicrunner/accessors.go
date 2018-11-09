@@ -109,7 +109,7 @@ func (lr *LogicRunner) GetConsensus(ctx context.Context, r Ref) (*Consensus, boo
 		validators, err := lr.Ledger.GetJetCoordinator().QueryRole(
 			ctx,
 			core.RoleVirtualValidator,
-			r,
+			&r,
 			lr.pulse(ctx).PulseNumber,
 		)
 		if err != nil {

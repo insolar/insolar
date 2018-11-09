@@ -37,7 +37,6 @@ func newActiveNode(ref core.RecordRef, role core.NodeRole) core.Node {
 		[]core.NodeRole{role},
 		nil, // TODO publicKey
 		core.PulseNumber(0),
-		core.NodeActive,
 		"",
 		"",
 	)
@@ -49,7 +48,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, 0, "", ""))
+	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))
 	c := core.Components{LogicRunner: lr, NodeNetwork: keeper}
 	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
@@ -75,14 +74,14 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		return list
 	}
 
-	selected, err := jc.QueryRole(ctx, core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber)
+	selected, err := jc.QueryRole(ctx, core.RoleVirtualExecutor, am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
 	assert.Equal(t, []core.RecordRef{ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf")}, selected)
 
-	selected, err = jc.QueryRole(ctx, core.RoleLightValidator, *am.GenesisRef(), pulse.PulseNumber)
+	selected, err = jc.QueryRole(ctx, core.RoleLightValidator, am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
 	assert.Equal(t, sorted([]core.RecordRef{ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")}), sorted(selected))
 
-	selected, err = jc.QueryRole(ctx, core.RoleHeavyExecutor, *am.GenesisRef(), pulse.PulseNumber)
+	selected, err = jc.QueryRole(ctx, core.RoleHeavyExecutor, am.GenesisRef(), pulse.PulseNumber)
 	assert.Error(t, err)
 }
