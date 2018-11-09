@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -32,6 +33,18 @@ import (
 type TestMessageBus struct {
 	handlers    map[core.MessageType]core.MessageHandler
 	PulseNumber core.PulseNumber
+}
+
+func (mb *TestMessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
+	panic("implement me")
+}
+
+func (mb *TestMessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
+	panic("implement me")
+}
+
+func (mb *TestMessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
+	panic("implement me")
 }
 
 func NewTestMessageBus() *TestMessageBus {
