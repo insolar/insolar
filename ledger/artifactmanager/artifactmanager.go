@@ -698,5 +698,5 @@ func (m *LedgerArtifactManager) registerChild(
 }
 
 func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
-	return core.NewMessageBusFromContext(ctx, m.messageBus)
+	return core.MessageBusFromContext(ctx, m.messageBus)
 }
