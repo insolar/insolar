@@ -41,4 +41,6 @@ func (pcs *platformCryptographyScheme) Signer(privateKey crypto.PrivateKey) core
 	return pcs.SignProvider.Sign(privateKey)
 }
 
+func (pcs *platformCryptographyScheme) Verifier(publicKey crypto.PublicKey) core.Verifier {
+	return pcs.SignProvider.Verify(publicKey)
 }
