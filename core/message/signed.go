@@ -32,16 +32,12 @@ import (
 
 // Parcel is a message signed by senders private key.
 type Parcel struct {
+	Sender        core.RecordRef
 	Msg           core.Message
 	Signature     []byte
 	LogTraceID    string
 	TraceSpanData []byte
-	Header        SignedMessageHeader
 	Token         core.MessageToken
-}
-
-func (sm *SignedMessage) GetHeader() core.MessageHeader {
-	return &sm.Header
 }
 
 // GetToken return current message token
@@ -88,10 +84,10 @@ func NewSignedMessage(
 	if err != nil {
 		return nil, err
 	}
-	msgHash := hash.SHA3Bytes256(serialized)
-	header := NewSignedMessageHeader(sender, msg)
+
 	if token == nil {
-		token = NewToken(&header.Target, &sender, pulse, msgHash, key)
+		target := ExtractTarget(msg)
+		token = NewToken(&target, &sender, pulse, hash.SHA3Bytes256(serialized), key)
 	}
 	return &Parcel{
 		Token:         token,
