@@ -25,6 +25,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
@@ -94,26 +95,29 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 
 	ce := certificate.GetTestCertificate()
 	nk := nodekeeper.GetTestNodekeeper(ce)
-	messageBus := testmessagebus.NewTestMessageBus()
+	mb := testmessagebus.NewTestMessageBus()
 	nw := network.GetTestNetwork()
-	c := core.Components{
-		LogicRunner: lr,
-		NodeNetwork: nk,
-		MessageBus:  messageBus,
-		Network:     nw,
-	}
-	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
-	c.Ledger = l
+	l, cleaner := ledgertestutils.TmpLedger(
+		t, "",
+		core.Components{
+			LogicRunner: lr,
+			NodeNetwork: nk,
+			MessageBus:  mb,
+			Network:     nw,
+		},
+	)
 
-	assert.NoError(t, lr.Start(ctx, c), "starting logicrunner")
+	cm := &component.Manager{}
+	cm.Register(nk, l, lr, nw, mb)
+	err = cm.Start(ctx)
+	assert.NoError(t, err)
 
-	MessageBusTrivialBehavior(messageBus, lr)
+	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
-	err = lr.Ledger.GetPulseManager().Set(
+	err = pm.Set(
 		ctx,
 		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
 	)
-	//err = pm.Set(*pulsar.NewPulse(0, 10, &entropygenerator.StandardEntropyGenerator{}))
 	assert.NoError(t, err)
 	if err != nil {
 		t.Fatal("pulse set died, ", err)

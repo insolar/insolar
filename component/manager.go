@@ -18,6 +18,7 @@ package component
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"github.com/insolar/insolar/log"
@@ -56,7 +57,10 @@ func (m *Manager) Register(components ...interface{}) {
 				}
 
 				if !isInjected {
-					panic("Not fount component with interface: " + f.Type.String())
+					panic(fmt.Sprintf(
+						"Component %s injects not existing component with interface %s",
+						componentType.String(), f.Type.String(),
+					))
 				}
 
 			}
