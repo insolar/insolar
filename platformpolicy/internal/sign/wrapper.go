@@ -38,3 +38,13 @@ func (p *signature) Marshal() ([]byte, error) {
 	return signature, nil
 }
 
+func (p *signature) Unmarshal(signatureRaw []byte) error {
+	rest, err := asn1.Unmarshal(signatureRaw, p)
+	if len(rest) != 0 {
+		return errors.New("[ Unmarshal ] len of rest must be 0")
+	}
+	if err != nil {
+		return errors.Wrap(err, "[ Unmarshal ] Could't unmarshal signature")
+	}
+	return nil
+}
