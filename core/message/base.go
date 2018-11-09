@@ -97,7 +97,7 @@ func Serialize(msg core.Message) (io.Reader, error) {
 }
 
 // Deserialize returns decoded message.
-func Deserialize(buff io.Reader) (core.SignedMessage, error) {
+func Deserialize(buff io.Reader) (core.Parcel, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
@@ -112,7 +112,7 @@ func Deserialize(buff io.Reader) (core.SignedMessage, error) {
 	if err = enc.Decode(msg); err != nil {
 		return nil, err
 	}
-	return &SignedMessage{Msg: msg}, nil
+	return &Parcel{Msg: msg}, nil
 }
 
 // ToBytes deserialize a core.Message to bytes.
@@ -124,8 +124,8 @@ func ToBytes(msg core.Message) ([]byte, error) {
 	return ioutil.ReadAll(reqBuff)
 }
 
-// SerializeSigned returns io.Reader on buffer with encoded core.SignedMessage.
-func SerializeSigned(msg core.SignedMessage) (io.Reader, error) {
+// SerializeSigned returns io.Reader on buffer with encoded core.Parcel.
+func SerializeSigned(msg core.Parcel) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	enc := gob.NewEncoder(buff)
 	err := enc.Encode(msg)
@@ -133,15 +133,15 @@ func SerializeSigned(msg core.SignedMessage) (io.Reader, error) {
 }
 
 // DeserializeSigned returns decoded signed message.
-func DeserializeSigned(buff io.Reader) (core.SignedMessage, error) {
-	var signed SignedMessage
+func DeserializeSigned(buff io.Reader) (core.Parcel, error) {
+	var signed Parcel
 	enc := gob.NewDecoder(buff)
 	err := enc.Decode(&signed)
 	return &signed, err
 }
 
-// SignedToBytes deserialize a core.SignedMessage to bytes.
-func SignedToBytes(msg core.SignedMessage) ([]byte, error) {
+// SignedToBytes deserialize a core.Parcel to bytes.
+func SignedToBytes(msg core.Parcel) ([]byte, error) {
 	reqBuff, err := SerializeSigned(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
@@ -152,6 +152,7 @@ func SignedToBytes(msg core.SignedMessage) ([]byte, error) {
 func init() {
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
+
 	// Logicrunner
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
@@ -170,11 +171,10 @@ func init() {
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
-	gob.Register(&SignedMessage{})
+	gob.Register(&Parcel{})
 	gob.Register(core.RecordRef{})
 	gob.Register(&GetChildren{})
 
 	// Meta
 	gob.Register(&RoutingToken{})
-	gob.Register(&SignedMessageHeader{})
 }
