@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
@@ -85,6 +86,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	checkError(ctx, err, "failed to load KeyStore: ")
 
 	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	cryptographyService := cryptography.NewCryptographyService()
 
 	// move to logic runner ??
 	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
@@ -105,19 +107,21 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		versionManager,
 		platformCryptographyScheme,
 		keyStore,
+		cryptographyService,
 	)
 
 	cmOld := ComponentManager{components: core.Components{
-		Certificate:        cert,
-		NodeNetwork:        nodeNetwork,
-		LogicRunner:        logicRunner,
-		Ledger:             ledger,
-		Network:            nw,
-		MessageBus:         messageBus,
-		Genesis:            gen,
-		APIRunner:          apiRunner,
-		NetworkCoordinator: networkCoordinator,
-		VersionManager:     versionManager,
+		Certificate:         cert,
+		NodeNetwork:         nodeNetwork,
+		LogicRunner:         logicRunner,
+		Ledger:              ledger,
+		Network:             nw,
+		MessageBus:          messageBus,
+		Genesis:             gen,
+		APIRunner:           apiRunner,
+		NetworkCoordinator:  networkCoordinator,
+		VersionManager:      versionManager,
+		cryptographyService: cryptographyService,
 	}}
 
 	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
