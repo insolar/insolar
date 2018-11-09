@@ -146,27 +146,27 @@ func newTestPulse(ctx context.Context, lr *LogicRunner, mb *testmessagebus.TestM
 }
 
 // TODO pass ctx
-func ValidateAllResults(t testing.TB, lr core.LogicRunner, mustfail ...core.RecordRef) {
-	//failmap := make(map[core.RecordRef]struct{})
-	//for _, r := range mustfail {
-	//	failmap[r] = struct{}{}
-	//}
-	//rlr := lr.(*LogicRunner)
-	//rlr.caseBindMutex.Lock()
-	//rlrcbr := rlr.caseBind.Records
-	//rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
-	//rlr.caseBindMutex.Unlock()
-	//for ref, cr := range rlrcbr {
-	//	log.Debugf("TEST validating: %s", ref)
-	//	vstep, err := lr.Validate(ref, *rlr.pulse(ctx), cr)
-	//	if _, ok := failmap[ref]; ok {
-	//		assert.Error(t, err, "validation %s", ref)
-	//		assert.True(t, len(cr) > vstep, "Validation failed before end %s", ref)
-	//	} else {
-	//		assert.NoError(t, err, "validation %s", ref)
-	//		assert.Equal(t, len(cr), vstep, "Validation passed to the end %s", ref)
-	//	}
-	//}
+func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, mustfail ...core.RecordRef) {
+	failmap := make(map[core.RecordRef]struct{})
+	for _, r := range mustfail {
+		failmap[r] = struct{}{}
+	}
+	rlr := lr.(*LogicRunner)
+	rlr.caseBindMutex.Lock()
+	rlrcbr := rlr.caseBind.Records
+	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
+	rlr.caseBindMutex.Unlock()
+	for ref, cr := range rlrcbr {
+		log.Debugf("TEST validating: %s", ref)
+		vstep, err := lr.Validate(ref, *rlr.pulse(ctx), cr)
+		if _, ok := failmap[ref]; ok {
+			assert.Error(t, err, "validation %s", ref)
+			assert.True(t, len(cr) > vstep, "Validation failed before end %s", ref)
+		} else {
+			assert.NoError(t, err, "validation %s", ref)
+			assert.Equal(t, len(cr), vstep, "Validation passed to the end %s", ref)
+		}
+	}
 }
 
 func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManager, objRef core.RecordRef, nonce uint64, method string, arguments core.Arguments) (core.Reply, error) {
@@ -339,7 +339,7 @@ func (r *Two) Hello(s string) (string, error) {
 		f := r.([]interface{})[0]
 		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), f)
 	}
-	ValidateAllResults(t, lr)
+	ValidateAllResults(t, ctx, lr)
 
 }
 
@@ -761,7 +761,7 @@ func New(n int) (*Child, error) {
 	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "SumChilds", goplugintestutils.CBORMarshal(t, []interface{}{}))
 	assert.NoError(t, err, "contract call")
 
-	ValidateAllResults(t, lr)
+	ValidateAllResults(t, ctx, lr)
 
 	assert.NoError(t, err, "contract call")
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
@@ -818,7 +818,7 @@ func (c *Contract) Rand() (int, error) {
 		assert.NoError(t, err, "contract call")
 	}
 
-	ValidateAllResults(t, lr, *contract)
+	ValidateAllResults(t, ctx, lr, *contract)
 }
 
 func TestErrorInterface(t *testing.T) {
@@ -918,7 +918,7 @@ func (r *Two) NoError() error {
 	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "NoError", goplugintestutils.CBORMarshal(t, []interface{}{}))
 	assert.NoError(t, err, "contract call")
 
-	ValidateAllResults(t, lr)
+	ValidateAllResults(t, ctx, lr)
 
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{nil}, r)
@@ -997,7 +997,7 @@ func (r *Two) Hello() (*string, error) {
 	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Hello", goplugintestutils.CBORMarshal(t, []interface{}{}))
 	assert.NoError(t, err, "contract call")
 
-	ValidateAllResults(t, lr)
+	ValidateAllResults(t, ctx, lr)
 
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{nil, nil}, r)
@@ -1623,7 +1623,7 @@ package main
 
 	refFromMethod := r.([]interface{})[0].([]byte)
 	assert.Equal(t, *obj, Ref{}.FromSlice(refFromMethod))
-	ValidateAllResults(t, lr)
+	ValidateAllResults(t, ctx, lr)
 }
 
 func TestReleaseRequestsAfterPulse(t *testing.T) {
