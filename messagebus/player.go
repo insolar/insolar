@@ -53,7 +53,8 @@ func (r *player) Send(ctx context.Context, msg core.Message) (core.Reply, error)
 	if err != nil {
 		return nil, err
 	}
-	signedMessage, err := r.CreateSignedMessage(ctx, pulse.PulseNumber, msg)
+
+	signedMessage, err := r.CreateParcel(ctx, pulse.PulseNumber, msg, nil)
 	id := GetMessageHash(signedMessage)
 
 	// Value from storageTape.

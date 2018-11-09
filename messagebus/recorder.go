@@ -53,7 +53,7 @@ func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, erro
 	if err != nil {
 		return nil, err
 	}
-	signedMessage, err := r.CreateSignedMessage(ctx, pulse.PulseNumber, msg)
+	signedMessage, err := r.CreateParcel(ctx, pulse.PulseNumber, msg, nil)
 	id := GetMessageHash(signedMessage)
 
 	// Check if Value for this message is already stored.
@@ -66,7 +66,7 @@ func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, erro
 	}
 
 	// Actually send message.
-	rep, err = r.SendMessage(ctx, pulse, signedMessage)
+	rep, err = r.SendParcel(ctx, pulse, signedMessage)
 	if err != nil {
 		return nil, err
 	}

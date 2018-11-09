@@ -21,10 +21,9 @@ func TestValidateToken(t *testing.T) {
 	parcel, err := NewParcel(context.TODO(), tmp, ref, key, 1234, nil)
 	assert.NoError(t, err)
 
-	serialized, err := ToBytes(parcel.Message())
-	assert.NoError(t, err)
+	serialized := ToBytes(parcel.Message())
 	msgHash := hash.SHA3Bytes256(serialized)
 
-	err = ValidateToken(&key.PublicKey, parcel.GetToken(), msgHash)
+	err = ValidateRoutingToken(&key.PublicKey, parcel.GetToken(), msgHash)
 	assert.NoError(t, err)
 }

@@ -40,7 +40,7 @@ type Controller struct {
 	rpcController       *RPCController
 }
 
-// SendMessage send message to nodeID.
+// SendParcel send message to nodeID.
 func (c *Controller) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
 	return c.rpcController.SendMessage(nodeID, name, msg)
 }

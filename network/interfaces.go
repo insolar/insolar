@@ -26,7 +26,7 @@ import (
 
 // Controller contains network logic.
 type Controller interface {
-	// SendMessage send message to nodeID.
+	// SendParcel send message to nodeID.
 	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)

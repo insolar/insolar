@@ -1,19 +1,3 @@
-/*
- *    Copyright 2018 Insolar
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
-
 package messagebus
 
 /*
@@ -22,14 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "sender" can be found in github.com/insolar/insolar/messagebus
 */
 import (
-	context "context"
-	io "io"
+	"context"
+	"io"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
-
+	"github.com/insolar/insolar/core"
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -37,10 +20,10 @@ import (
 type senderMock struct {
 	t minimock.Tester
 
-	CreateSignedMessageFunc       func(p context.Context, p1 core.PulseNumber, p2 core.Message) (r core.SignedMessage, r1 error)
-	CreateSignedMessageCounter    uint64
-	CreateSignedMessagePreCounter uint64
-	CreateSignedMessageMock       msenderMockCreateSignedMessage
+	CreateParcelFunc       func(p context.Context, p1 core.PulseNumber, p2 core.Message, p3 core.RoutingToken) (r core.Parcel, r1 error)
+	CreateParcelCounter    uint64
+	CreateParcelPreCounter uint64
+	CreateParcelMock       msenderMockCreateParcel
 
 	MustRegisterFunc       func(p core.MessageType, p1 core.MessageHandler)
 	MustRegisterCounter    uint64
@@ -67,10 +50,10 @@ type senderMock struct {
 	SendPreCounter uint64
 	SendMock       msenderMockSend
 
-	SendMessageFunc       func(p context.Context, p1 *core.Pulse, p2 core.SignedMessage) (r core.Reply, r1 error)
-	SendMessageCounter    uint64
-	SendMessagePreCounter uint64
-	SendMessageMock       msenderMockSendMessage
+	SendParcelFunc       func(p context.Context, p1 *core.Pulse, p2 core.Parcel) (r core.Reply, r1 error)
+	SendParcelCounter    uint64
+	SendParcelPreCounter uint64
+	SendParcelMock       msenderMockSendParcel
 
 	WriteTapeFunc       func(p context.Context, p1 io.Writer) (r error)
 	WriteTapeCounter    uint64
@@ -86,84 +69,85 @@ func NewsenderMock(t minimock.Tester) *senderMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.CreateSignedMessageMock = msenderMockCreateSignedMessage{mock: m}
+	m.CreateParcelMock = msenderMockCreateParcel{mock: m}
 	m.MustRegisterMock = msenderMockMustRegister{mock: m}
 	m.NewPlayerMock = msenderMockNewPlayer{mock: m}
 	m.NewRecorderMock = msenderMockNewRecorder{mock: m}
 	m.RegisterMock = msenderMockRegister{mock: m}
 	m.SendMock = msenderMockSend{mock: m}
-	m.SendMessageMock = msenderMockSendMessage{mock: m}
+	m.SendParcelMock = msenderMockSendParcel{mock: m}
 	m.WriteTapeMock = msenderMockWriteTape{mock: m}
 
 	return m
 }
 
-type msenderMockCreateSignedMessage struct {
+type msenderMockCreateParcel struct {
 	mock             *senderMock
-	mockExpectations *senderMockCreateSignedMessageParams
+	mockExpectations *senderMockCreateParcelParams
 }
 
-//senderMockCreateSignedMessageParams represents input parameters of the sender.CreateSignedMessage
-type senderMockCreateSignedMessageParams struct {
+//senderMockCreateParcelParams represents input parameters of the sender.CreateParcel
+type senderMockCreateParcelParams struct {
 	p  context.Context
 	p1 core.PulseNumber
 	p2 core.Message
+	p3 core.RoutingToken
 }
 
-//Expect sets up expected params for the sender.CreateSignedMessage
-func (m *msenderMockCreateSignedMessage) Expect(p context.Context, p1 core.PulseNumber, p2 core.Message) *msenderMockCreateSignedMessage {
-	m.mockExpectations = &senderMockCreateSignedMessageParams{p, p1, p2}
+//Expect sets up expected params for the sender.CreateParcel
+func (m *msenderMockCreateParcel) Expect(p context.Context, p1 core.PulseNumber, p2 core.Message, p3 core.RoutingToken) *msenderMockCreateParcel {
+	m.mockExpectations = &senderMockCreateParcelParams{p, p1, p2, p3}
 	return m
 }
 
-//Return sets up a mock for sender.CreateSignedMessage to return Return's arguments
-func (m *msenderMockCreateSignedMessage) Return(r core.SignedMessage, r1 error) *senderMock {
-	m.mock.CreateSignedMessageFunc = func(p context.Context, p1 core.PulseNumber, p2 core.Message) (core.SignedMessage, error) {
+//Return sets up a mock for sender.CreateParcel to return Return's arguments
+func (m *msenderMockCreateParcel) Return(r core.Parcel, r1 error) *senderMock {
+	m.mock.CreateParcelFunc = func(p context.Context, p1 core.PulseNumber, p2 core.Message, p3 core.RoutingToken) (core.Parcel, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
-//Set uses given function f as a mock of sender.CreateSignedMessage method
-func (m *msenderMockCreateSignedMessage) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.Message) (r core.SignedMessage, r1 error)) *senderMock {
-	m.mock.CreateSignedMessageFunc = f
+//Set uses given function f as a mock of sender.CreateParcel method
+func (m *msenderMockCreateParcel) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.Message, p3 core.RoutingToken) (r core.Parcel, r1 error)) *senderMock {
+	m.mock.CreateParcelFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
-//CreateSignedMessage implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) CreateSignedMessage(p context.Context, p1 core.PulseNumber, p2 core.Message) (r core.SignedMessage, r1 error) {
-	atomic.AddUint64(&m.CreateSignedMessagePreCounter, 1)
-	defer atomic.AddUint64(&m.CreateSignedMessageCounter, 1)
+//CreateParcel implements github.com/insolar/insolar/messagebus.sender interface
+func (m *senderMock) CreateParcel(p context.Context, p1 core.PulseNumber, p2 core.Message, p3 core.RoutingToken) (r core.Parcel, r1 error) {
+	atomic.AddUint64(&m.CreateParcelPreCounter, 1)
+	defer atomic.AddUint64(&m.CreateParcelCounter, 1)
 
-	if m.CreateSignedMessageMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.CreateSignedMessageMock.mockExpectations, senderMockCreateSignedMessageParams{p, p1, p2},
-			"sender.CreateSignedMessage got unexpected parameters")
+	if m.CreateParcelMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.CreateParcelMock.mockExpectations, senderMockCreateParcelParams{p, p1, p2, p3},
+			"sender.CreateParcel got unexpected parameters")
 
-		if m.CreateSignedMessageFunc == nil {
+		if m.CreateParcelFunc == nil {
 
-			m.t.Fatal("No results are set for the senderMock.CreateSignedMessage")
+			m.t.Fatal("No results are set for the senderMock.CreateParcel")
 
 			return
 		}
 	}
 
-	if m.CreateSignedMessageFunc == nil {
-		m.t.Fatal("Unexpected call to senderMock.CreateSignedMessage")
+	if m.CreateParcelFunc == nil {
+		m.t.Fatal("Unexpected call to senderMock.CreateParcel")
 		return
 	}
 
-	return m.CreateSignedMessageFunc(p, p1, p2)
+	return m.CreateParcelFunc(p, p1, p2, p3)
 }
 
-//CreateSignedMessageMinimockCounter returns a count of senderMock.CreateSignedMessageFunc invocations
-func (m *senderMock) CreateSignedMessageMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.CreateSignedMessageCounter)
+//CreateParcelMinimockCounter returns a count of senderMock.CreateParcelFunc invocations
+func (m *senderMock) CreateParcelMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.CreateParcelCounter)
 }
 
-//CreateSignedMessageMinimockPreCounter returns the value of senderMock.CreateSignedMessage invocations
-func (m *senderMock) CreateSignedMessageMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.CreateSignedMessagePreCounter)
+//CreateParcelMinimockPreCounter returns the value of senderMock.CreateParcel invocations
+func (m *senderMock) CreateParcelMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.CreateParcelPreCounter)
 }
 
 type msenderMockMustRegister struct {
@@ -500,72 +484,72 @@ func (m *senderMock) SendMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SendPreCounter)
 }
 
-type msenderMockSendMessage struct {
+type msenderMockSendParcel struct {
 	mock             *senderMock
-	mockExpectations *senderMockSendMessageParams
+	mockExpectations *senderMockSendParcelParams
 }
 
-//senderMockSendMessageParams represents input parameters of the sender.SendMessage
-type senderMockSendMessageParams struct {
+//senderMockSendParcelParams represents input parameters of the sender.SendParcel
+type senderMockSendParcelParams struct {
 	p  context.Context
 	p1 *core.Pulse
-	p2 core.SignedMessage
+	p2 core.Parcel
 }
 
-//Expect sets up expected params for the sender.SendMessage
-func (m *msenderMockSendMessage) Expect(p context.Context, p1 *core.Pulse, p2 core.SignedMessage) *msenderMockSendMessage {
-	m.mockExpectations = &senderMockSendMessageParams{p, p1, p2}
+//Expect sets up expected params for the sender.SendParcel
+func (m *msenderMockSendParcel) Expect(p context.Context, p1 *core.Pulse, p2 core.Parcel) *msenderMockSendParcel {
+	m.mockExpectations = &senderMockSendParcelParams{p, p1, p2}
 	return m
 }
 
-//Return sets up a mock for sender.SendMessage to return Return's arguments
-func (m *msenderMockSendMessage) Return(r core.Reply, r1 error) *senderMock {
-	m.mock.SendMessageFunc = func(p context.Context, p1 *core.Pulse, p2 core.SignedMessage) (core.Reply, error) {
+//Return sets up a mock for sender.SendParcel to return Return's arguments
+func (m *msenderMockSendParcel) Return(r core.Reply, r1 error) *senderMock {
+	m.mock.SendParcelFunc = func(p context.Context, p1 *core.Pulse, p2 core.Parcel) (core.Reply, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
-//Set uses given function f as a mock of sender.SendMessage method
-func (m *msenderMockSendMessage) Set(f func(p context.Context, p1 *core.Pulse, p2 core.SignedMessage) (r core.Reply, r1 error)) *senderMock {
-	m.mock.SendMessageFunc = f
+//Set uses given function f as a mock of sender.SendParcel method
+func (m *msenderMockSendParcel) Set(f func(p context.Context, p1 *core.Pulse, p2 core.Parcel) (r core.Reply, r1 error)) *senderMock {
+	m.mock.SendParcelFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
-//SendMessage implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) SendMessage(p context.Context, p1 *core.Pulse, p2 core.SignedMessage) (r core.Reply, r1 error) {
-	atomic.AddUint64(&m.SendMessagePreCounter, 1)
-	defer atomic.AddUint64(&m.SendMessageCounter, 1)
+//SendParcel implements github.com/insolar/insolar/messagebus.sender interface
+func (m *senderMock) SendParcel(p context.Context, p1 *core.Pulse, p2 core.Parcel) (r core.Reply, r1 error) {
+	atomic.AddUint64(&m.SendParcelPreCounter, 1)
+	defer atomic.AddUint64(&m.SendParcelCounter, 1)
 
-	if m.SendMessageMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SendMessageMock.mockExpectations, senderMockSendMessageParams{p, p1, p2},
-			"sender.SendMessage got unexpected parameters")
+	if m.SendParcelMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.SendParcelMock.mockExpectations, senderMockSendParcelParams{p, p1, p2},
+			"sender.SendParcel got unexpected parameters")
 
-		if m.SendMessageFunc == nil {
+		if m.SendParcelFunc == nil {
 
-			m.t.Fatal("No results are set for the senderMock.SendMessage")
+			m.t.Fatal("No results are set for the senderMock.SendParcel")
 
 			return
 		}
 	}
 
-	if m.SendMessageFunc == nil {
-		m.t.Fatal("Unexpected call to senderMock.SendMessage")
+	if m.SendParcelFunc == nil {
+		m.t.Fatal("Unexpected call to senderMock.SendParcel")
 		return
 	}
 
-	return m.SendMessageFunc(p, p1, p2)
+	return m.SendParcelFunc(p, p1, p2)
 }
 
-//SendMessageMinimockCounter returns a count of senderMock.SendMessageFunc invocations
-func (m *senderMock) SendMessageMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SendMessageCounter)
+//SendParcelMinimockCounter returns a count of senderMock.SendParcelFunc invocations
+func (m *senderMock) SendParcelMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SendParcelCounter)
 }
 
-//SendMessageMinimockPreCounter returns the value of senderMock.SendMessage invocations
-func (m *senderMock) SendMessageMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SendMessagePreCounter)
+//SendParcelMinimockPreCounter returns the value of senderMock.SendParcel invocations
+func (m *senderMock) SendParcelMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SendParcelPreCounter)
 }
 
 type msenderMockWriteTape struct {
@@ -639,8 +623,8 @@ func (m *senderMock) WriteTapeMinimockPreCounter() uint64 {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *senderMock) ValidateCallCounters() {
 
-	if m.CreateSignedMessageFunc != nil && atomic.LoadUint64(&m.CreateSignedMessageCounter) == 0 {
-		m.t.Fatal("Expected call to senderMock.CreateSignedMessage")
+	if m.CreateParcelFunc != nil && atomic.LoadUint64(&m.CreateParcelCounter) == 0 {
+		m.t.Fatal("Expected call to senderMock.CreateParcel")
 	}
 
 	if m.MustRegisterFunc != nil && atomic.LoadUint64(&m.MustRegisterCounter) == 0 {
@@ -663,8 +647,8 @@ func (m *senderMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to senderMock.Send")
 	}
 
-	if m.SendMessageFunc != nil && atomic.LoadUint64(&m.SendMessageCounter) == 0 {
-		m.t.Fatal("Expected call to senderMock.SendMessage")
+	if m.SendParcelFunc != nil && atomic.LoadUint64(&m.SendParcelCounter) == 0 {
+		m.t.Fatal("Expected call to senderMock.SendParcel")
 	}
 
 	if m.WriteTapeFunc != nil && atomic.LoadUint64(&m.WriteTapeCounter) == 0 {
@@ -688,8 +672,8 @@ func (m *senderMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *senderMock) MinimockFinish() {
 
-	if m.CreateSignedMessageFunc != nil && atomic.LoadUint64(&m.CreateSignedMessageCounter) == 0 {
-		m.t.Fatal("Expected call to senderMock.CreateSignedMessage")
+	if m.CreateParcelFunc != nil && atomic.LoadUint64(&m.CreateParcelCounter) == 0 {
+		m.t.Fatal("Expected call to senderMock.CreateParcel")
 	}
 
 	if m.MustRegisterFunc != nil && atomic.LoadUint64(&m.MustRegisterCounter) == 0 {
@@ -712,8 +696,8 @@ func (m *senderMock) MinimockFinish() {
 		m.t.Fatal("Expected call to senderMock.Send")
 	}
 
-	if m.SendMessageFunc != nil && atomic.LoadUint64(&m.SendMessageCounter) == 0 {
-		m.t.Fatal("Expected call to senderMock.SendMessage")
+	if m.SendParcelFunc != nil && atomic.LoadUint64(&m.SendParcelCounter) == 0 {
+		m.t.Fatal("Expected call to senderMock.SendParcel")
 	}
 
 	if m.WriteTapeFunc != nil && atomic.LoadUint64(&m.WriteTapeCounter) == 0 {
@@ -734,13 +718,13 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.CreateSignedMessageFunc == nil || atomic.LoadUint64(&m.CreateSignedMessageCounter) > 0)
+		ok = ok && (m.CreateParcelFunc == nil || atomic.LoadUint64(&m.CreateParcelCounter) > 0)
 		ok = ok && (m.MustRegisterFunc == nil || atomic.LoadUint64(&m.MustRegisterCounter) > 0)
 		ok = ok && (m.NewPlayerFunc == nil || atomic.LoadUint64(&m.NewPlayerCounter) > 0)
 		ok = ok && (m.NewRecorderFunc == nil || atomic.LoadUint64(&m.NewRecorderCounter) > 0)
 		ok = ok && (m.RegisterFunc == nil || atomic.LoadUint64(&m.RegisterCounter) > 0)
 		ok = ok && (m.SendFunc == nil || atomic.LoadUint64(&m.SendCounter) > 0)
-		ok = ok && (m.SendMessageFunc == nil || atomic.LoadUint64(&m.SendMessageCounter) > 0)
+		ok = ok && (m.SendParcelFunc == nil || atomic.LoadUint64(&m.SendParcelCounter) > 0)
 		ok = ok && (m.WriteTapeFunc == nil || atomic.LoadUint64(&m.WriteTapeCounter) > 0)
 
 		if ok {
@@ -750,8 +734,8 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.CreateSignedMessageFunc != nil && atomic.LoadUint64(&m.CreateSignedMessageCounter) == 0 {
-				m.t.Error("Expected call to senderMock.CreateSignedMessage")
+			if m.CreateParcelFunc != nil && atomic.LoadUint64(&m.CreateParcelCounter) == 0 {
+				m.t.Error("Expected call to senderMock.CreateParcel")
 			}
 
 			if m.MustRegisterFunc != nil && atomic.LoadUint64(&m.MustRegisterCounter) == 0 {
@@ -774,8 +758,8 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to senderMock.Send")
 			}
 
-			if m.SendMessageFunc != nil && atomic.LoadUint64(&m.SendMessageCounter) == 0 {
-				m.t.Error("Expected call to senderMock.SendMessage")
+			if m.SendParcelFunc != nil && atomic.LoadUint64(&m.SendParcelCounter) == 0 {
+				m.t.Error("Expected call to senderMock.SendParcel")
 			}
 
 			if m.WriteTapeFunc != nil && atomic.LoadUint64(&m.WriteTapeCounter) == 0 {
@@ -794,7 +778,7 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *senderMock) AllMocksCalled() bool {
 
-	if m.CreateSignedMessageFunc != nil && atomic.LoadUint64(&m.CreateSignedMessageCounter) == 0 {
+	if m.CreateParcelFunc != nil && atomic.LoadUint64(&m.CreateParcelCounter) == 0 {
 		return false
 	}
 
@@ -818,7 +802,7 @@ func (m *senderMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if m.SendMessageFunc != nil && atomic.LoadUint64(&m.SendMessageCounter) == 0 {
+	if m.SendParcelFunc != nil && atomic.LoadUint64(&m.SendParcelCounter) == 0 {
 		return false
 	}
 

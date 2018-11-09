@@ -38,8 +38,8 @@ func (t *RoutingToken) GetSign() []byte {
 	return t.Sign
 }
 
-// NewToken creates new token with sign of its fields
-func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNumber, msgHash []byte, key *ecdsa.PrivateKey) *RoutingToken {
+// NewRoutingToken creates new token with sign of its fields
+func NewRoutingToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNumber, msgHash []byte, key *ecdsa.PrivateKey) *RoutingToken {
 	token := &RoutingToken{
 		To:    to,
 		From:  from,
@@ -70,8 +70,8 @@ func NewToken(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNu
 	return token
 }
 
-// ValidateToken checks that a routing token is valid
-func ValidateToken(pubKey *ecdsa.PublicKey, token core.RoutingToken, msgHash []byte) error {
+// ValidateRoutingToken checks that a routing token is valid
+func ValidateRoutingToken(pubKey *ecdsa.PublicKey, token core.RoutingToken, msgHash []byte) error {
 	var tokenBuffer bytes.Buffer
 	enc := gob.NewEncoder(&tokenBuffer)
 	err := enc.Encode(token.GetTo())

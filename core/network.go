@@ -35,7 +35,7 @@ type RemoteProcedure func(args [][]byte) ([]byte, error)
 
 // Network is interface for network modules facade.
 type Network interface {
-	// SendMessage sends a message.
+	// SendParcel sends a message.
 	SendMessage(nodeID RecordRef, method string, msg Parcel) ([]byte, error)
 	// SendCascadeMessage sends a message.
 	SendCascadeMessage(data Cascade, method string, msg Parcel) error

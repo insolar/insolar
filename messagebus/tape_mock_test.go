@@ -22,13 +22,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "tape" can be found in github.com/insolar/insolar/messagebus
 */
 import (
-	context "context"
-	io "io"
+	"context"
+	"io"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )

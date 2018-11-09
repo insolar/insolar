@@ -66,7 +66,7 @@ func (n *ServiceNetwork) GetNodeID() core.RecordRef {
 	return n.nodeNetwork.GetOrigin().ID()
 }
 
-// SendMessage sends a message from MessageBus.
+// SendParcel sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
 	return n.controller.SendMessage(nodeID, method, msg)
 }

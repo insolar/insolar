@@ -77,10 +77,7 @@ func NewParcel(
 	if msg == nil {
 		return nil, errors.New("failed to sign a nil message")
 	}
-	serialized, err := ToBytes(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "filed to serialize message")
-	}
+	serialized := ToBytes(msg)
 	sign, err := signMessage(serialized, key)
 	if err != nil {
 		return nil, err
@@ -88,7 +85,7 @@ func NewParcel(
 
 	if token == nil {
 		target := ExtractTarget(msg)
-		token = NewToken(&target, &sender, pulse, hash.SHA3Bytes256(serialized), key)
+		token = NewRoutingToken(&target, &sender, pulse, hash.SHA3Bytes256(serialized), key)
 	}
 	return &Parcel{
 		Token:         token,
@@ -100,8 +97,7 @@ func NewParcel(
 }
 
 // SignMessage tries to sign a core.Message.
-func signMessage(msg core.Message, key *ecdsa.PrivateKey) ([]byte, error) {
-	serialized := ToBytes(msg)
+func signMessage(serialized []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 	sign, err := ecdsa2.Sign(serialized, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
