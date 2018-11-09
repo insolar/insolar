@@ -40,7 +40,7 @@ type GlobuleEntry struct {
 }
 
 func (ge *GlobuleEntry) hash() []byte {
-	nodeEntryByRole := nodeEntryByRole(ge)
+	nodeEntryByRole := nodeEntryByRole(ge.ProofSet)
 	var bucketHashes [][]byte
 
 	for role, roleEntries := range nodeEntryByRole {
@@ -88,9 +88,9 @@ func (ne *nodeEntry) hash() []byte {
 	return nodeHash(ne.PulseProof.Signature, nodeInfoHash)
 }
 
-func nodeEntryByRole(entry *GlobuleEntry) map[core.NodeRole][]*nodeEntry {
+func nodeEntryByRole(nodeProofs map[core.Node]*PulseProof) map[core.NodeRole][]*nodeEntry {
 	roleMap := make(map[core.NodeRole][]*nodeEntry)
-	for node, pulseProof := range entry.ProofSet {
+	for node, pulseProof := range nodeProofs {
 		role := node.Role()
 		roleMap[role] = append(roleMap[role], &nodeEntry{
 			Node:       node,
