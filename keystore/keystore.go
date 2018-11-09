@@ -17,6 +17,7 @@
 package keystore
 
 import (
+	"crypto"
 	"github.com/insolar/insolar/keystore/internal/privatekey"
 )
 
@@ -25,3 +26,7 @@ type keyStore struct {
 	path   string
 }
 
+func (ks *keyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) {
+	file := privatekey.KeyFile(ks.path)
+	return ks.Loader.Load(file)
+}
