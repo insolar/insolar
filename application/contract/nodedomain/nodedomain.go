@@ -40,11 +40,11 @@ func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
-func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, publicKey string, majorityRule int, roles []string) (map[string]interface{}, error) {
+func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, publicKey string, majorityRule int, role string) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 	result["majority_rule"] = majorityRule
 	result["public_key"] = publicKey
-	result["roles"] = roles
+	result["role"] = role
 
 	bNodes, err := nd.makeBootstrapNodesConfig(numberOfBootstrapNodes)
 	if err != nil {
@@ -97,7 +97,7 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 }
 
 // RegisterNode registers node in system
-func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
 	const majorityPercentage = 0.51
 
 	if majorityRule != 0 {
@@ -106,13 +106,13 @@ func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int,
 		}
 	}
 
-	result, err := nd.makeCertificate(numberOfBootstrapNodes, publicKey, majorityRule, roles)
+	result, err := nd.makeCertificate(numberOfBootstrapNodes, publicKey, majorityRule, role)
 	if err != nil {
 		return nil, fmt.Errorf("[ RegisterNode ] : %s", err.Error())
 	}
 
 	// TODO: what should be done when record already exists?
-	newRecord := noderecord.NewNodeRecord(publicKey, roles, ip)
+	newRecord := noderecord.NewNodeRecord(publicKey, role, ip)
 	record, err := newRecord.AsChild(nd.GetReference())
 	if err != nil {
 		return nil, fmt.Errorf("[ RegisterNode ]: %s", err.Error())
