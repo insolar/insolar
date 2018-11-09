@@ -75,6 +75,36 @@ func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, reader io.Read
 	return &tape, nil
 }
 
+func (t *storagetape) Write(ctx context.Context, writer io.Writer) error {
+	var err error
+
+	encoder := gob.NewEncoder(writer)
+	err = encoder.Encode(t.pulse)
+	if err != nil {
+		return err
+	}
+	err = encoder.Encode(t.id)
+	if err != nil {
+		return err
+	}
+
+	err = t.ls.Iterate(ctx, t.pulse, t.id[:], func(k, v []byte) error {
+		err = encoder.Encode(&couple{
+			Key:   k[len(t.id):],
+			Value: v,
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (t *storagetape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
 	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
 	buff, err := t.ls.Get(ctx, t.pulse, key)
