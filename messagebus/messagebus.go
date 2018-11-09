@@ -101,7 +101,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 	mb.queue.Push(msg)
 
 	// TODO: send to all actors of the role if nil Target
-	nodes, err := jc.QueryRole(ctx, signedMsg.Header.Role, signedMsg.Header.Target, pulse.PulseNumber)
+	nodes, err := jc.QueryRole(ctx, message.ExtractRole(signedMsg.Msg), message.ExtractTarget(signedMsg.Msg), pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
-func (mb *MessageBus) doDeliver(msg core.SignedMessage) (core.Reply, error) {
+func (mb *MessageBus) doDeliver(msg core.Parcel) (core.Reply, error) {
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
 		return nil, errors.New("no handler for received message type")
