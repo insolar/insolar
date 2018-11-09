@@ -31,4 +31,8 @@ func (pcs *platformCryptographyScheme) ReferenceHasher() core.Hasher {
 	return pcs.HashProvider.Hash224bits()
 }
 
+func (pcs *platformCryptographyScheme) IntegrityHasher() core.Hasher {
+	return pcs.HashProvider.Hash512bits()
+}
+
 }
