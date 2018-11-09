@@ -35,3 +35,6 @@ type PlatformCryptographyScheme interface {
 	Verifier(crypto.PublicKey) Verifier
 }
 
+type PlatformPolicy interface {
+	CryptographyScheme() PlatformCryptographyScheme
+}
