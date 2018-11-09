@@ -121,7 +121,7 @@ func (m *CallConstructor) Target() *core.RecordRef {
 	if m.SaveAs == Delegate {
 		return &m.ParentRef
 	}
-	return *genRequest(m.PulseNum, MustSerializeBytes(m))
+	return genRequest(m.PulseNum, MustSerializeBytes(m))
 }
 
 type ExecutorResults struct {

@@ -33,8 +33,7 @@ type keyStore struct {
 }
 
 func (ks *keyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) {
-	file := privatekey.KeyFile(ks.path)
-	return ks.Loader.Load(file)
+	return ks.Loader.Load(ks.path)
 }
 
 func (ks *keyStore) Start(ctx context.Context) error {
