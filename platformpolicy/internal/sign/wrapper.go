@@ -81,3 +81,15 @@ type ecdsaVerifyWrapper struct {
 	hasher    core.Hasher
 }
 
+func (sw *ecdsaVerifyWrapper) Verify(data, signatureRaw []byte) bool {
+	var signature signature
+	err := signature.Unmarshal(signatureRaw)
+	if err != nil {
+		return false
+	}
+
+	hash := sw.hasher.Hash(data)
+	publicKey := sw.publicKey.(*ecdsa.PublicKey)
+
+	return ecdsa.Verify(publicKey, hash, signature.R, signature.S)
+}
