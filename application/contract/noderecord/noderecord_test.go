@@ -44,7 +44,7 @@ func TestFromString(t *testing.T) {
 }
 
 func TestNodeRecord_GetPublicKey(t *testing.T) {
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	record, err := NewNodeRecord(TestPubKey, TestRole, TestIP)
 	assert.NoError(t, err)
 	pk, err := record.GetPublicKey()
 	assert.NoError(t, err)
@@ -52,21 +52,21 @@ func TestNodeRecord_GetPublicKey(t *testing.T) {
 }
 
 func TestNodeRecord_GetNodeInfo(t *testing.T) {
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	record, err := NewNodeRecord(TestPubKey, TestRole, TestIP)
 	assert.NoError(t, err)
 	info, err := record.GetNodeInfo()
 	assert.NoError(t, err)
 	assert.Equal(t, TestPubKey, info.PublicKey)
-	r := rolesToStrings(TestRoles)
-	assert.Equal(t, r, info.Roles)
+	r := core.GetRoleFromString(TestRole)
+	assert.Equal(t, r, info.Role)
 	assert.Equal(t, TestIP, info.IP)
 }
 
 func TestNodeRecord_GetRole(t *testing.T) {
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	record, err := NewNodeRecord(TestPubKey, TestRole, TestIP)
 	assert.NoError(t, err)
 	role, err := record.GetRole()
 	assert.NoError(t, err)
-	r := rolesToStrings(TestRoles)
+	r := core.GetRoleFromString(TestRole)
 	assert.Equal(t, r, role)
 }
