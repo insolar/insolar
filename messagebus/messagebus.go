@@ -170,7 +170,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, errors.New("failed to check a message sign")
 	}
 	err = message.ValidateToken(senderKey, msg)
-	if err != nil{
+	if err != nil {
 		return nil, errors.New("failed to check a token sign")
 	}
 
