@@ -17,7 +17,9 @@
 package sign
 
 import (
+	"encoding/asn1"
 	"math/big"
+	"github.com/pkg/errors"
 )
 
 type signature struct {
