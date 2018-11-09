@@ -27,6 +27,10 @@ type ecdsaProvider struct {
 	HashProvider hash.AlgorithmProvider `inject:""`
 }
 
+func NewECDSAProvider() AlgorithmProvider {
+	return &ecdsaProvider{}
+}
+
 func (p *ecdsaProvider) Sign(privateKey crypto.PrivateKey) core.Signer {
 	return &ecdsaSignerWrapper{
 		privateKey: privateKey,
