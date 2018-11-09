@@ -18,6 +18,13 @@ package privatekey
 
 import (
 	"crypto"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"io/ioutil"
+	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 type keyLoader struct {
@@ -42,4 +49,19 @@ func readJSON(path string) ([]byte, error) {
 	}
 
 	return []byte(key), nil
+}
+
+func pemParse(key []byte) (crypto.PrivateKey, error) {
+	block, _ := pem.Decode(key)
+	if block == nil {
+		return nil, errors.Errorf("[ Parse ] Problems with decoding. Key - %v", key)
+	}
+
+	x509Encoded := block.Bytes
+	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
+	if err != nil {
+		return nil, errors.Errorf("[ Parse ] Problems with parsing. Key - %v", key)
+	}
+
+	return privateKey, nil
 }
