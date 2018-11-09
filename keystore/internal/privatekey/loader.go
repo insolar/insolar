@@ -31,6 +31,11 @@ type keyLoader struct {
 	parseFunc func(key []byte) (crypto.PrivateKey, error)
 }
 
+func NewLoader() Loader {
+	return &keyLoader{
+		parseFunc: pemParse,
+	}
+}
 
 func (p *keyLoader) Load(file string) (crypto.PrivateKey, error) {
 	key, err := readJSON(file)
