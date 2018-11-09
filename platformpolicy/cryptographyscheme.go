@@ -21,10 +21,12 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy/internal/hash"
+	"github.com/insolar/insolar/platformpolicy/internal/sign"
 )
 
 type platformCryptographyScheme struct {
 	HashProvider hash.AlgorithmProvider `inject:""`
+	SignProvider sign.AlgorithmProvider `inject:""`
 }
 
 func (pcs *platformCryptographyScheme) ReferenceHasher() core.Hasher {
