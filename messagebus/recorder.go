@@ -49,7 +49,7 @@ func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, erro
 		return nil, err
 	}
 
-	// Save the received Value on the storagetape.
+	// Save the received Value on the storageTape.
 	err = r.tape.SetReply(ctx, id, rep)
 	if err != nil {
 		return nil, err

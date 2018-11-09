@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 )
 
-// tape is an abstraction for saving replies for messages and restoring them.
+// Tape is an abstraction for saving replies for messages and restoring them.
 //
 // There can be many active tapes simultaneously and they do not share saved replies.
 type tape interface {
@@ -21,10 +21,10 @@ type tape interface {
 	SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error
 }
 
-// storagetape saves and fetches message replies to/from local storage.
+// StorageTape saves and fetches message replies to/from local storage.
 //
-// It uses <storagetape id> + <message hash> for Value keys.
-type storagetape struct {
+// It uses <storageTape id> + <message hash> for Value keys.
+type storageTape struct {
 	ls    core.LocalStorage
 	pulse core.PulseNumber
 	id    uuid.UUID
@@ -35,21 +35,21 @@ type couple struct {
 	Value []byte
 }
 
-// NewTape creates new storagetape with random id.
-func NewTape(ls core.LocalStorage, pulse core.PulseNumber) (*storagetape, error) {
+// NewTape creates new storageTape with random id.
+func NewTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
 	}
-	return &storagetape{ls: ls, pulse: pulse, id: id}, nil
+	return &storageTape{ls: ls, pulse: pulse, id: id}, nil
 }
 
-// NewTapeFromReader creates and fills a new storagetape from a stream.
+// NewTapeFromReader creates and fills a new storageTape from a stream.
 //
 // This is a very long operation, as it saves replies in storage until the stream is exhausted.
-func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storagetape, error) {
+func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storageTape, error) {
 	var err error
-	tape := storagetape{ls: ls}
+	tape := storageTape{ls: ls}
 
 	decoder := gob.NewDecoder(r)
 	err = decoder.Decode(&tape.pulse)
@@ -79,7 +79,7 @@ func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (
 }
 
 // Write writes all saved in tape replies to provided writer.
-func (t *storagetape) Write(ctx context.Context, w io.Writer) error {
+func (t *storageTape) Write(ctx context.Context, w io.Writer) error {
 	var err error
 
 	encoder := gob.NewEncoder(w)
@@ -103,7 +103,7 @@ func (t *storagetape) Write(ctx context.Context, w io.Writer) error {
 }
 
 // GetReply returns reply if it was previously saved on that tape.
-func (t *storagetape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
+func (t *storageTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
 	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
 	buff, err := t.ls.Get(ctx, t.pulse, key)
 	if err != nil {
@@ -114,7 +114,7 @@ func (t *storagetape) GetReply(ctx context.Context, msgHash []byte) (core.Reply,
 }
 
 // SetReply stores provided reply for this tape.
-func (t *storagetape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
+func (t *storageTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
 	reader, err := reply.Serialize(rep)
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func (t *storagetape) SetReply(ctx context.Context, msgHash []byte, rep core.Rep
 	return t.setReplyBinary(ctx, msgHash, buff.Bytes())
 }
 
-func (t *storagetape) setReplyBinary(ctx context.Context, msgHash []byte, rep []byte) error {
+func (t *storageTape) setReplyBinary(ctx context.Context, msgHash []byte, rep []byte) error {
 	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
 	return t.ls.Set(ctx, t.pulse, key, rep)
 }

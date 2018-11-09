@@ -34,7 +34,7 @@ func (r *player) Send(ctx context.Context, msg core.Message) (core.Reply, error)
 	signedMessage, err := r.CreateSignedMessage(ctx, pulse.PulseNumber, msg)
 	id := GetMessageHash(signedMessage)
 
-	// Value from storagetape.
+	// Value from storageTape.
 	rep, err = r.tape.GetReply(ctx, id)
 	if err == nil {
 		return rep, nil

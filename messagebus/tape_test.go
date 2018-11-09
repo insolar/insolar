@@ -37,7 +37,7 @@ func TestTape_SetReply(t *testing.T) {
 	ls := testutils.NewLocalStorageMock(mc)
 	ls.SetMock.Expect(ctx, 1, bytes.Join([][]byte{id[:], {4, 5, 6}}, nil), buff.Bytes()).Return(nil)
 
-	tp := storagetape{ls: ls, pulse: 1, id: id}
+	tp := storageTape{ls: ls, pulse: 1, id: id}
 	err = tp.SetReply(ctx, []byte{4, 5, 6}, &rep)
 	require.NoError(t, err)
 }
@@ -57,7 +57,7 @@ func TestTape_GetReply(t *testing.T) {
 	ls := testutils.NewLocalStorageMock(mc)
 	ls.GetMock.Expect(ctx, 1, bytes.Join([][]byte{id[:], {4, 5, 6}}, nil)).Return(buff.Bytes(), nil)
 
-	tp := storagetape{ls: ls, pulse: 1, id: id}
+	tp := storageTape{ls: ls, pulse: 1, id: id}
 	rep, err := tp.GetReply(ctx, []byte{4, 5, 6})
 	require.NoError(t, err)
 	assert.Equal(t, expectedRep, *rep.(*reply.Object))
@@ -80,7 +80,7 @@ func TestTape_Write(t *testing.T) {
 		return nil
 	}
 
-	// Write buffer from storagetape.
+	// Write buffer from storageTape.
 	buff := bytes.NewBuffer(nil)
 	err = tp.Write(ctx, buff)
 	assert.NoError(t, err)
