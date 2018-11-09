@@ -30,8 +30,6 @@ type Node interface {
 	ShortID() ShortNodeID
 	// Pulse is the pulse number after which the new state is assigned to the node
 	Pulse() PulseNumber
-	// Roles is the set of candidate Roles for the node
-	Roles() []NodeRole
 	// Role is the candidate Role for the node
 	Role() NodeRole
 	// PublicKey is the public key of the node
