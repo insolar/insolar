@@ -26,12 +26,12 @@ import (
 
 // Controller contains network logic.
 type Controller interface {
-	// SendMessage send message to nodeID.
-	SendMessage(nodeID core.RecordRef, name string, msg core.SignedMessage) ([]byte, error)
+	// SendParcel send message to nodeID.
+	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
-	SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error
+	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
 	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
 	Bootstrap() error
 	// AnalyzeNetwork legacy method for old DHT network (should be removed in new network).
@@ -70,6 +70,26 @@ type HostNetwork interface {
 	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
 	BuildResponse(request Request, responseData interface{}) Response
+}
+
+type ConsensusRequestHandler func(Request)
+
+type ConsensusNetwork interface {
+	// Start listening to network requests.
+	Start()
+	// Stop listening to network requests.
+	Stop()
+	// PublicAddress returns public address that can be published for all nodes.
+	PublicAddress() string
+	// GetNodeID get current node ID.
+	GetNodeID() core.RecordRef
+
+	// SendRequest send request to a remote node.
+	SendRequest(request Request, receiver core.RecordRef) error
+	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
+	RegisterRequestHandler(t types.PacketType, handler ConsensusRequestHandler)
+	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
+	NewRequestBuilder() RequestBuilder
 }
 
 // Packet is a packet that is transported via network by HostNetwork.

@@ -500,14 +500,12 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	setRecordMessage := message.SetRecord{
 		Record: record.SerializeRecord(&codeRecord),
 	}
-	messageBytes, err := message.ToBytes(&setRecordMessage)
-	assert.NoError(t, err)
 
 	rep, err := am.messageBus.Send(
 		ctx,
 		&message.JetDrop{
 			Messages: [][]byte{
-				messageBytes,
+				message.ToBytes(&setRecordMessage),
 			},
 			PulseNumber: core.GenesisPulse.PulseNumber,
 		},

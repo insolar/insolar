@@ -31,15 +31,12 @@ func TestSerializeSigned(t *testing.T) {
 	msg := &SetRecord{
 		Record: []byte{0x0A},
 	}
-	signMsgIn := &SignedMessage{
+	signMsgIn := &Parcel{
 		Msg:       msg,
 		Signature: nil,
 	}
 
-	buff, err := SignedToBytes(signMsgIn)
-	assert.NoError(t, err)
-
-	signMsgOut, err := DeserializeSigned(bytes.NewBuffer(buff))
+	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
 	assert.NoError(t, err)
 
 	assert.Equal(t, signMsgIn, signMsgOut)
@@ -51,14 +48,12 @@ func TestSerializeSignedFail(t *testing.T) {
 		Record: []byte{0x0A},
 	}
 
-	signMsgIn := &SignedMessage{
+	signMsgIn := &Parcel{
 		Msg:       msg,
 		Signature: nil,
 	}
-	buff, err := ToBytes(signMsgIn)
-	assert.NoError(t, err)
 
-	signMsgOut, err := Deserialize(bytes.NewBuffer(buff))
+	signMsgOut, err := Deserialize(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
 	assert.Error(t, err)
 	assert.Nil(t, signMsgOut)
 }
@@ -72,16 +67,14 @@ func TestSerializeSignedWithContext(t *testing.T) {
 	ctxIn = inslogger.ContextWithTrace(context.Background(), traceid)
 	ctxIn = instracer.SetBaggage(ctxIn, instracer.Entry{Key: "traceid", Value: traceid})
 
-	signMsgIn := &SignedMessage{
+	signMsgIn := &Parcel{
 		Msg:           msg,
 		Signature:     nil,
 		TraceSpanData: instracer.MustSerialize(ctxIn),
 		LogTraceID:    inslogger.TraceID(ctxIn),
 	}
-	buff, err := SignedToBytes(signMsgIn)
-	assert.NoError(t, err)
 
-	signMsgOut, err := DeserializeSigned(bytes.NewBuffer(buff))
+	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
 	assert.NoError(t, err)
 
 	ctxOut := signMsgOut.Context(context.Background())

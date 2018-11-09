@@ -14,25 +14,16 @@
  *    limitations under the License.
  */
 
-package utils
+package messagebus
 
 import (
-	"encoding/binary"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 
-	"github.com/satori/go.uuid"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 )
 
-// RandTraceID returns random traceID in uuid format
-func RandTraceID() string {
-	qid, err := uuid.NewV4()
-	if err != nil {
-		return "createRandomTraceIDFailed:" + err.Error()
-	}
-	return qid.String()
-}
-
-func UInt32ToBytes(n uint32) []byte {
-	buff := make([]byte, 4)
-	binary.BigEndian.PutUint32(buff, n)
-	return buff
+// GetMessageHash calculates message hash.
+func GetMessageHash(msg core.Parcel) []byte {
+	return hash.SHA3Bytes256(message.ParcelToBytes(msg))
 }

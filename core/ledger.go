@@ -225,9 +225,12 @@ type RefIterator interface {
 
 // LocalStorage allows a node to save local data.
 type LocalStorage interface {
-	// SetMessage saves message in storage.
-	SetMessage(ctx context.Context, msg SignedMessage) (*RecordID, error)
-
-	// GetMessage retrieves message from storage.
-	GetMessage(ctx context.Context, id RecordID) (SignedMessage, error)
+	// Set saves data in storage.
+	Set(ctx context.Context, pulse PulseNumber, key []byte, data []byte) error
+	// Get retrieves data from storage.
+	Get(ctx context.Context, pulse PulseNumber, key []byte) ([]byte, error)
+	// Iterate iterates over all record with specified prefix and calls handler with key and value of that record.
+	//
+	// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
+	Iterate(ctx context.Context, pulse PulseNumber, prefix []byte, handler func(k, v []byte) error) error
 }
