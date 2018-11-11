@@ -17,15 +17,17 @@
 package packet
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
-// RequestPulse is data received from a pulsar
-type RequestPulse struct {
-	Pulse core.Pulse
+const (
+	TestPacket = types.PacketType(1337)
+)
+
+type RequestTest struct {
+	Data []byte
 }
 
-// RequestGetRandomHosts is data for the call that returns random hosts of the DHT network
-type RequestGetRandomHosts struct {
-	HostsNumber int
+type ResponseTest struct {
+	Number int
 }
