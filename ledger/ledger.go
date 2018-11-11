@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/blockexplorer"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -37,6 +38,7 @@ type Ledger struct {
 	jc      *jetcoordinator.JetCoordinator
 	handler *artifactmanager.MessageHandler
 	ls      *localstorage.LocalStorage
+	be      *blockexplorer.BlockExplorerManager
 }
 
 // GetPulseManager returns PulseManager.
@@ -57,6 +59,11 @@ func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 // GetLocalStorage returns local storage to work with.
 func (l *Ledger) GetLocalStorage() core.LocalStorage {
 	return l.ls
+}
+
+// GetBlockExplorer returns block explorer to work with.
+func (l *Ledger) GetBlockExplorer() core.BlockExplorer {
+	return l.be
 }
 
 // NewLedger creates new ledger instance.
@@ -86,6 +93,10 @@ func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) 
 	if err != nil {
 		return nil, err
 	}
+	be, err := blockexplorer.NewBlockExplorer(db)
+	if err != nil {
+		return nil, errors.Wrap(err, "block explorer creation failed")
+	}
 
 	err = db.Bootstrap(ctx)
 	if err != nil {
@@ -99,6 +110,7 @@ func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) 
 		jc:      jc,
 		handler: handler,
 		ls:      ls,
+		be:      be,
 	}
 
 	return &ledger, nil
@@ -113,6 +125,7 @@ func NewTestLedger(
 	jc *jetcoordinator.JetCoordinator,
 	amh *artifactmanager.MessageHandler,
 	ls *localstorage.LocalStorage,
+	be *blockexplorer.BlockExplorerManager,
 ) *Ledger {
 	return &Ledger{
 		db:      db,
@@ -121,6 +134,7 @@ func NewTestLedger(
 		jc:      jc,
 		handler: amh,
 		ls:      ls,
+		be:      be,
 	}
 }
 
@@ -128,6 +142,9 @@ func NewTestLedger(
 func (l *Ledger) Start(ctx context.Context, c core.Components) error {
 	var err error
 	if err = l.am.Link(c); err != nil {
+		return err
+	}
+	if err = l.be.Link(c); err != nil {
 		return err
 	}
 	if err = l.pm.Link(c); err != nil {

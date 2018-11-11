@@ -40,5 +40,4 @@ type Components struct {
 	APIRunner          Component
 	VersionManager     Component
 	NetworkCoordinator NetworkCoordinator
-	BlockExp           Component
 }

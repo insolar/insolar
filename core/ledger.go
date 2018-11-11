@@ -49,6 +49,9 @@ type Ledger interface {
 
 	// GetLocalStorage returns local storage to work with.
 	GetLocalStorage() LocalStorage
+
+	// GetBlockExplorer returns block explorer to work with.
+	GetBlockExplorer() BlockExplorer
 }
 
 // PulseManager provides Ledger's methods related to Pulse.
@@ -68,6 +71,14 @@ type JetCoordinator interface {
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
 	QueryRole(ctx context.Context, role JetRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
+}
+
+// BlockExplorer - interface for Block Explorer.
+type BlockExplorer interface {
+	// GetHistory returns history iterator.
+	//
+	// During iteration history refs will be fetched from remote source.
+	GetHistory(ctx context.Context, object RecordRef, pulse *PulseNumber) (RefIterator, error)
 }
 
 // ArtifactManager is a high level storage interface.
@@ -111,11 +122,6 @@ type ArtifactManager interface {
 	// During iteration children refs will be fetched from remote source (parent object).
 	GetChildren(ctx context.Context, parent RecordRef, pulse *PulseNumber) (RefIterator, error)
 
-	// GetHistory returns history iterator.
-	//
-	// During iteration history refs will be fetched from remote source.
-	GetHistory(ctx context.Context, object RecordRef, pulse *PulseNumber) (RefIterator, error)
-
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
@@ -138,6 +144,7 @@ type ArtifactManager interface {
 
 	// ActivateObject creates activate object record in storage. If memory is not provided, the prototype default
 	// memory will be used.
+
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(
@@ -215,11 +222,38 @@ type ObjectDescriptor interface {
 	// Children returns object's children references.
 	Children(pulse *PulseNumber) (RefIterator, error)
 
+	// ChildPointer returns the latest child for this object.
+	ChildPointer() *RecordID
+
+	// Parent returns object's parent.
+	Parent() *RecordRef
+}
+
+// ExplorerDescriptor represents meta info required to fetch all object data.
+type ExplorerDescriptor interface {
+	// HeadRef returns head reference to represented object record.
+	HeadRef() *RecordRef
+
+	// StateID returns reference to object state record.
+	StateID() *RecordID
+
+	// Memory fetches object memory from storage.
+	Memory() []byte
+
+	// IsPrototype determines if the object is a prototype.
+	IsPrototype() bool
+
+	// Code returns code reference.
+	Code() (*RecordRef, error)
+
+	// Prototype returns prototype reference.
+	Prototype() (*RecordRef, error)
+
 	// History returns object's history references.
 	History(pulse *PulseNumber) (RefIterator, error)
 
-	// ChildPointer returns the latest child for this object.
-	ChildPointer() *RecordID
+	// NextPointer returns the latest state for this object.
+	NextPointer() *RecordID
 
 	// Parent returns object's parent.
 	Parent() *RecordRef

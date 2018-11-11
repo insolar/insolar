@@ -56,6 +56,11 @@ func (l *MockLedger) GetPulseManager() core.PulseManager {
 	return &l.pm
 }
 
+// GetPulseManager returns pulse manager to work with.
+func (l *MockLedger) GetBlockExplorer() core.BlockExplorer {
+	return nil
+}
+
 func (pm *MockPulseManager) Current(context.Context) (*core.Pulse, error) {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()

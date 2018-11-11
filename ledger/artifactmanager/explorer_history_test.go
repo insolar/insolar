@@ -27,7 +27,7 @@ import (
 
 func TestLedgerArtifactManager_GetHistory(t *testing.T) {
 
-	ctx, db, am, cleaner := getTestData(t)
+	ctx, db, am, be, cleaner := getTestData(t)
 	defer cleaner()
 
 	objID, err := db.SetRecord(
@@ -90,7 +90,7 @@ func TestLedgerArtifactManager_GetHistory(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, memory), updateRec2.(record.ObjectState).GetMemory())
 
-	iterator, err := am.GetHistory(ctx, *genRefWithID(objID), nil)
+	iterator, err := be.GetHistory(ctx, *genRefWithID(objID), nil)
 
 	rec, err := iterator.Next()
 	assert.NoError(t, err)

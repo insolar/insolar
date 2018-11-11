@@ -19,6 +19,7 @@ package artifactmanager
 import (
 	"bytes"
 	"context"
+	"strconv"
 
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/ledger/index"
@@ -511,4 +512,77 @@ func validateState(old record.State, new record.State) error {
 		return errors.New("object is already activated")
 	}
 	return nil
+}
+
+func (h *MessageHandler) handleGetHistory(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetHistory)
+
+	idx, state, _, err := getObject(ctx, h.db, msg.Object.Record(), nil, false)
+	if err != nil {
+		return nil, err
+	}
+	history := []reply.Object{}
+	var current *core.RecordID
+
+	if msg.From != nil {
+		current = msg.From
+	} else {
+		current = state
+	}
+
+	counter := 0
+	for current != nil {
+		// We have enough results.
+		if counter >= msg.Amount {
+			return &reply.ExplorerList{Refs: history, NextState: current}, nil
+		}
+		counter++
+
+		rec, err := h.db.GetRecord(ctx, current)
+		if err != nil {
+			return nil, errors.New("failed to retrieve object state")
+		}
+		// switch rec.(type) {
+		// case record.Request:{
+		//
+		// 	}
+		// case record.ObjectState:{
+		//
+		// 	}
+		// case record.Record:{
+		//
+		// 	}
+		// }
+
+		currentState, ok := rec.(record.ObjectState)
+
+		if !ok {
+			return nil, errors.New("Cannot cust to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
+		}
+		current = currentState.PrevStateID()
+
+		// Skip records later than specified pulse.
+		// recPulse := current.Pulse()
+		// if msg.Pulse != nil && recPulse > *msg.Pulse {
+		// 	continue
+		// }
+
+		var memory []byte
+		if currentState.GetMemory() != nil {
+			memory, err = h.db.GetBlob(ctx, currentState.GetMemory())
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		history = append(history, reply.Object{
+			Head:         msg.Object,
+			Prototype:    currentState.GetImage(),
+			IsPrototype:  currentState.GetIsPrototype(),
+			ChildPointer: currentState.PrevStateID(),
+			Parent:       idx.Parent,
+			Memory:       memory,
+		})
+	}
+	return &reply.ExplorerList{Refs: history, NextState: nil}, nil
 }

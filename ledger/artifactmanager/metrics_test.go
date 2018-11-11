@@ -29,7 +29,7 @@ import (
 
 func TestLedgerArtifactManager_Metrics(t *testing.T) {
 	// BEWARE: this test should not be the parallel!
-	ctx, db, am, cleaner := getTestData(t)
+	ctx, db, am, _, cleaner := getTestData(t)
 	defer cleaner()
 
 	tmetrics := testmetrics.Start(ctx)

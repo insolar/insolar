@@ -14,12 +14,11 @@
  *    limitations under the License.
  */
 
-package artifactmanager
+package blockexplorer
 
 import (
 	"context"
 	"errors"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -75,7 +74,6 @@ func (i *HistoryIterator) Next() (*core.RecordRef, error) {
 	if ref == nil {
 		return nil, errors.New("failed to fetch record")
 	}
-
 	return ref, nil
 }
 

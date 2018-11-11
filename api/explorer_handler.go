@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -60,12 +61,15 @@ func (rh *RequestHandler) routeCallHistory(ctx context.Context, rootRef core.Rec
 
 	e := &message.GetHistory{
 		Object: object,
+		From:   rootRef.Record(),
+		Amount: 100,
 	}
 
 	res, err := rh.messageBus.Send(ctx, e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCallHistory ] couldn't send message")
 	}
+	log.Debug("Response: ", res)
 
 	return res, nil
 }
