@@ -24,16 +24,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Resolver is an interface that helps TransportResolvable to resolve NodeID -> Address.
-type Resolver interface {
-	Resolve(nodeID core.RecordRef) (string, error)
-	AddToKnownHosts(h *host.Host)
-}
-
 // TransportResolvable is implementation of HostNetwork interface that is capable of address resolving.
 type TransportResolvable struct {
 	internalTransport InternalTransport
-	resolver          Resolver
+	resolver          network.RoutingTable
 }
 
 // Start listening to network requests.
@@ -89,6 +83,6 @@ func (tr *TransportResolvable) BuildResponse(request network.Request, responseDa
 	return tr.internalTransport.BuildResponse(request, responseData)
 }
 
-func NewHostTransport(transport InternalTransport, resolver Resolver) network.HostNetwork {
+func NewHostTransport(transport InternalTransport, resolver network.RoutingTable) network.HostNetwork {
 	return &TransportResolvable{internalTransport: transport, resolver: resolver}
 }
