@@ -32,3 +32,62 @@ import (
 type keyProcessor struct {
 	curve elliptic.Curve
 }
+
+func NewKeyProcessor() core.KeyProcessor {
+	return &keyProcessor{
+		curve: elliptic.P256(),
+	}
+}
+
+func (kp *keyProcessor) GeneratePrivateKey() (crypto.PrivateKey, error) {
+	return ecdsa.GenerateKey(kp.curve, rand.Reader)
+}
+
+func (*keyProcessor) ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
+	publicKey := privateKey.(*ecdsa.PrivateKey).PublicKey
+	return &publicKey
+}
+
+func (*keyProcessor) ImportPublicKey(pemEncoded []byte) (crypto.PublicKey, error) {
+	blockPub, _ := pem.Decode(pemEncoded)
+	if blockPub == nil {
+		return nil, fmt.Errorf("[ ImportPublicKey ] Problems with decoding. Key - %v", pemEncoded)
+	}
+	x509EncodedPub := blockPub.Bytes
+	publicKey, err := x509.ParsePKIXPublicKey(x509EncodedPub)
+	if err != nil {
+		return nil, fmt.Errorf("[ ImportPublicKey ] Problems with parsing. Key - %v", pemEncoded)
+	}
+	return publicKey, nil
+}
+
+func (*keyProcessor) ImportPrivateKey(pemEncoded []byte) (crypto.PrivateKey, error) {
+	block, _ := pem.Decode(pemEncoded)
+	if block == nil {
+		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with decoding. Key - %v", pemEncoded)
+	}
+	x509Encoded := block.Bytes
+	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
+	if err != nil {
+		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with parsing. Key - %v", pemEncoded)
+	}
+	return privateKey, nil
+}
+
+func (*keyProcessor) ExportPublicKey(publicKey crypto.PublicKey) ([]byte, error) {
+	x509EncodedPub, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ExportPublicKey ]")
+	}
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+	return pemEncoded, nil
+}
+
+func (*keyProcessor) ExportPrivateKey(privateKey crypto.PrivateKey) ([]byte, error) {
+	x509Encoded, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ExportPrivateKey ]")
+	}
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+	return pemEncoded, nil
+}
