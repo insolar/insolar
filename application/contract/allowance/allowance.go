@@ -36,8 +36,9 @@ func (a *Allowance) isExpired() bool {
 	return a.GetContext().Time.After(time.Unix(a.ExpireTime, 0))
 }
 
+// TakeAmount allows take amount and delete allowance
 func (a *Allowance) TakeAmount() (uint, error) {
-	if *a.GetContext().Caller != a.To {
+	if *(a.GetContext().Caller) != a.To {
 		return 0, fmt.Errorf("[ TakeAmount ] Only recepient can take amount")
 	}
 	if a.isExpired() {
@@ -47,12 +48,14 @@ func (a *Allowance) TakeAmount() (uint, error) {
 	return a.Amount, nil
 }
 
+// GetBalanceForOwner returns balance
 func (a *Allowance) GetBalanceForOwner() (uint, error) {
 	return a.Amount, nil
 }
 
+// GetExpiredBalance gets balance from expired allowance and delete allowance
 func (a *Allowance) GetExpiredBalance() (uint, error) {
-	if *a.GetContext().Caller != *a.GetContext().Parent {
+	if *(a.GetContext().Caller) != *(a.GetContext().Parent) {
 		return 0, fmt.Errorf("[ DeleteExpiredAllowance ] Only owner can delete expiried Allowance")
 	}
 	if a.isExpired() {
@@ -62,6 +65,7 @@ func (a *Allowance) GetExpiredBalance() (uint, error) {
 	return 0, nil
 }
 
+// New check is caller wallet and makes new allowance
 func New(to *core.RecordRef, amount uint, expire int64) (*Allowance, error) {
 	if !wallet.PrototypeReference.Equal(*foundation.GetContext().CallerPrototype) {
 		return nil, fmt.Errorf("[ New Allowance ] : Can't create allowance from not wallet contract")
