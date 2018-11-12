@@ -104,6 +104,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	mb.PulseNumber = pulseNumber
 
 	nw := network.GetTestNetwork()
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, cleaner := ledgertestutils.TmpLedger(
 		t, "",
 		core.Components{
