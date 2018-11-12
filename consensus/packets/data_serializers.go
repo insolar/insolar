@@ -35,23 +35,18 @@ const (
 	// take low bit
 	hasRoutingMask = 0x1
 
-	packetTypeMask   = 0xf0
-	packetTypeOffset = 4
-
-	subtypeMask   = 0xe
-	subtypeOffset = 1
+	packetTypeMask   = 0x7f
+	packetTypeOffset = 1
 )
 
 func (ph *PacketHeader) parseRouteInfo(routInfo uint8) {
-	ph.PacketT = PacketType((routInfo & packetTypeMask) >> packetTypeOffset)
-	ph.SubType = (routInfo & subtypeMask) >> subtypeOffset
+	ph.PacketT = PacketType(routInfo&packetTypeMask) >> packetTypeOffset
 	ph.HasRouting = (routInfo & hasRoutingMask) == 1
 }
 
 func (ph *PacketHeader) compactRouteInfo() uint8 {
 	var result uint8
 	result |= uint8(ph.PacketT) << packetTypeOffset
-	result |= ph.SubType << subtypeOffset
 
 	if ph.HasRouting {
 		result |= hasRoutingMask
@@ -145,7 +140,7 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 		}
 		err = refClaim.Deserialize(claimsBufReader)
 		if err != nil {
-			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't deserialize claim.")
+			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't deserialize claim")
 		}
 		p1p.claims = append(p1p.claims, refClaim)
 
@@ -184,32 +179,36 @@ func (p1p *Phase1Packet) compactReferendumClaim() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
-	err := p1p.packetHeader.Deserialize(data)
-	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize packetHeader")
+func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+	if header == nil {
+		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
+	}
+	if header.PacketT != Phase1 {
+		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Wrong packet type")
 	}
 
-	err = p1p.pulseData.Deserialize(data)
+	p1p.packetHeader = *header
+
+	err := p1p.pulseData.Deserialize(data)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize pulseData")
+		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
 	}
 
 	err = p1p.proofNodePulse.Deserialize(data)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize proofNodePulse")
+		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize proofNodePulse")
 	}
 
 	if p1p.hasSection2() {
 		claimsBuf, err := ioutil.ReadAll(data)
 		if err != nil {
-			return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't read Section 2")
+			return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read Section 2")
 		}
 		claimsSize := len(claimsBuf) - 8
 
 		err = p1p.parseReferendumClaim(claimsBuf[:claimsSize])
 		if err != nil {
-			return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't parseReferendumClaim")
+			return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't parseReferendumClaim")
 		}
 
 		data = bytes.NewReader(claimsBuf[claimsSize:])
@@ -217,7 +216,21 @@ func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
 
 	err = binary.Read(data, defaultByteOrder, &p1p.signature)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't read signature")
+		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read signature")
+	}
+
+	return nil
+}
+
+func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
+	err := p1p.packetHeader.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize packetHeader")
+	}
+
+	err = p1p.DeserializeWithoutHeader(data, &p1p.packetHeader)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize body")
 	}
 
 	return nil
@@ -276,6 +289,12 @@ func (p1p *Phase1Packet) Serialize() ([]byte, error) {
 
 }
 
+func allocateBuffer(n int) *bytes.Buffer {
+	buf := make([]byte, 0, n)
+	result := bytes.NewBuffer(buf)
+	return result
+}
+
 // Deserialize implements interface method
 func (ph *PacketHeader) Deserialize(data io.Reader) error {
 	var routInfo uint8
@@ -303,12 +322,6 @@ func (ph *PacketHeader) Deserialize(data io.Reader) error {
 	}
 
 	return nil
-}
-
-func allocateBuffer(n int) *bytes.Buffer {
-	buf := make([]byte, 0, n)
-	result := bytes.NewBuffer(buf)
-	return result
 }
 
 // Serialize implements interface method
@@ -872,13 +885,17 @@ func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
 	// return result.Bytes(), nil
 }
 
-func (phase2Packet *Phase2Packet) Deserialize(data io.Reader) error {
-	err := phase2Packet.packetHeader.Deserialize(data)
-	if err != nil {
-		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize packetHeader")
+func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+	if header == nil {
+		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
+	}
+	if header.PacketT != Phase2 {
+		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Wrong packet type")
 	}
 
-	err = binary.Read(data, defaultByteOrder, &phase2Packet.globuleHashSignature)
+	phase2Packet.packetHeader = *header
+
+	err := binary.Read(data, defaultByteOrder, &phase2Packet.globuleHashSignature)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read globuleHashSignature")
 	}
@@ -901,6 +918,21 @@ func (phase2Packet *Phase2Packet) Deserialize(data io.Reader) error {
 	}
 
 	return nil
+}
+
+func (phase2Packet *Phase2Packet) Deserialize(data io.Reader) error {
+	err := phase2Packet.packetHeader.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize packetHeader")
+	}
+
+	err = phase2Packet.DeserializeWithoutHeader(data, &phase2Packet.packetHeader)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize body")
+	}
+
+	return nil
+
 }
 
 func (phase2Packet *Phase2Packet) Serialize() ([]byte, error) {
