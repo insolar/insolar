@@ -131,16 +131,6 @@ func findPublicKey(publicKey string, bNodes []bootstrapNode) bool {
 	return false
 }
 
-func findHost(host string, bNodes []bootstrapNode) bool {
-	for _, node := range bNodes {
-		if node.Host == host {
-			return true
-		}
-	}
-
-	return false
-}
-
 func TestRegisterNodeWithBootstrapNodes(t *testing.T) {
 	const testRole = "virtual"
 	const numNodes = 5
@@ -160,7 +150,5 @@ func TestRegisterNodeWithBootstrapNodes(t *testing.T) {
 	for i := 0; i < numNodes; i++ {
 		tPK := TESTPUBLICKEY + strconv.Itoa(i)
 		assert.True(t, findPublicKey(tPK, cert.BootstrapNodes), "Couldn't find PublicKey: %s", tPK)
-		tHost := TESTHOST + strconv.Itoa(i)
-		assert.True(t, findHost(tHost, cert.BootstrapNodes), "Couldn't find Host: %s", tHost)
 	}
 }

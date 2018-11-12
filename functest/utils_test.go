@@ -95,7 +95,6 @@ type dumpAllUsersResponse struct {
 
 type bootstrapNode struct {
 	PublicKey string `json:"public_key"`
-	Host      string `json:"host"`
 }
 
 type certificate struct {
