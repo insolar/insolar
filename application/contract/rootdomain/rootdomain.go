@@ -114,7 +114,7 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, 
 		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get name: %s", err.Error())
 	}
 
-	balance, err := w.GetTotalBalance()
+	balance, err := w.GetBalance()
 	if err != nil {
 		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get total balance: %s", err.Error())
 	}

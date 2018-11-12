@@ -109,7 +109,7 @@ func (m *Member) getMyBalance() (interface{}, error) {
 		return 0, fmt.Errorf("[ getMyBalance ]: %s", err.Error())
 	}
 
-	return w.GetTotalBalance()
+	return w.GetBalance()
 }
 
 func (m *Member) getBalance(params []byte) (interface{}, error) {
@@ -122,7 +122,7 @@ func (m *Member) getBalance(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
 
-	return w.GetTotalBalance()
+	return w.GetBalance()
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
