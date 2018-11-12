@@ -49,34 +49,34 @@ func makeSeed() []byte {
 }
 
 // Authorize checks is node authorized ( It's temporary method. Remove it when we have good tests )
-func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
+func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
 	privateKey, err := contract.GeneratePrivateKey()
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't generate private key: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't generate private key: %s", err.Error())
 	}
 
 	// Make signature
 	seed := makeSeed()
 	signature, err := contract.Sign(seed, privateKey)
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't sign: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't sign: %s", err.Error())
 	}
 
 	// Register node
 	serPubKey, err := contract.ExportPublicKey(contract.ExtractPublicKey(privateKey))
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't export public key: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't export public key: %s", err.Error())
 	}
 
 	nd := nodedomain.GetObject(rd.NodeDomainRef)
-	rawJSON, err := nd.RegisterNode(serPubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
+	rawJSON, err := nd.RegisterNode(serPubKey, 0, 0, "virtual", "127.0.0.1")
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't register node: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't register node: %s", err.Error())
 	}
 
 	nodeRef, err := networkcoordinator.ExtractNodeRef(rawJSON)
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't extract node ref: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't extract node ref: %s", err.Error())
 	}
 
 	// Validate

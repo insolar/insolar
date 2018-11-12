@@ -88,11 +88,11 @@ func parseInputParams() inputParams {
 }
 
 func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, service core.CryptographyService, nc core.NetworkCoordinator) {
-	roles := []string{"virtual", "heavy_material", "light_material"}
+	role := "virtual"
 	publicKey, err := service.GetPublicKey()
 	checkError(ctx, err, "failed to get public key")
 
-	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, roles, host)
+	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, role, host)
 	checkError(ctx, err, "can't register node")
 
 	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)

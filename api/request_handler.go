@@ -55,17 +55,17 @@ func extractStringResponse(data []byte) (*string, error) {
 	return &reference, nil
 }
 
-func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
+func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 	var pubKey string
-	var role []core.NodeRole
+	var role core.NodeRole
 	var ferr *foundation.Error
 	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &ferr})
 	if err != nil {
-		return "", nil, errors.Wrap(err, "[ extractAuthorizeResponse ]")
+		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ]")
 	}
 
 	if ferr != nil {
-		return "", nil, errors.Wrap(ferr, "[ extractAuthorizeResponse ] Has error")
+		return "", core.RoleUnknown, errors.Wrap(ferr, "[ extractAuthorizeResponse ] Has error")
 	}
 
 	return pubKey, role, nil
@@ -136,12 +136,12 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
-	pubKey, roles, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
+	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 	result["public_key"] = pubKey
-	result["roles"] = roles
+	result["role"] = role
 
 	// Check calling via networkcoordinator
 	keyService := platformpolicy.NewKeyProcessor()
@@ -167,7 +167,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 	}
 	pubKey = string(pubKeyBytes)
 
-	rawCertificate, err := rh.netCoordinator.RegisterNode(ctx, pubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
+	rawCertificate, err := rh.netCoordinator.RegisterNode(ctx, pubKey, 0, 0, "virtual", "127.0.0.1")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
 	}
