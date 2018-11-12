@@ -63,3 +63,10 @@ func (pf *parcelFactory) Create(
 	}, nil
 }
 
+func (pf *parcelFactory) Validate(publicKey crypto.PublicKey, parcel core.Parcel) error {
+	ok := pf.Cryptography.Verify(publicKey, core.SignatureFromBytes(parcel.GetSign()), message.ToBytes(parcel.Message()))
+	if !ok {
+		return errors.New("parcel isn't valid")
+	}
+	return nil
+}
