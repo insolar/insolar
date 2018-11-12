@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
@@ -159,7 +160,15 @@ func generateKeysPair(out io.Writer) {
 }
 
 func generateCertificate(out io.Writer) {
-	cert, err := certificate.NewCertificatesWithKeys(configPath)
+	boundCryptographyService, err := cryptography.NewStorageBoundCryptographyService(configPath)
+	check("[ generateCertificate ] failed to create cryptography service", err)
+
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	publicKey, err := boundCryptographyService.GetPublicKey()
+	check("[ generateCertificate ] failed to retrieve public key", err)
+
+	cert, err := certificate.NewCertificatesWithKeys(publicKey, keyProcessor)
 	check("[ generateCertificate ] Can't create certificate", err)
 
 	data, err := cert.Dump()

@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,26 +28,20 @@ const (
 	testBadKeys = "testdata/bad_keys.json"
 )
 
-func getConfiguration(keyPath string) configuration.Configuration {
-	cfg := configuration.NewConfiguration()
-	cfg.KeysPath = keyPath
-	return cfg
-}
-
 func TestNewKeyStore(t *testing.T) {
-	ks, err := NewKeyStore(getConfiguration(testKeys))
+	ks, err := NewKeyStore(testKeys)
 	assert.NoError(t, err)
 	assert.NotNil(t, ks)
 }
 
 func TestNewKeyStore_Fails(t *testing.T) {
-	ks, err := NewKeyStore(getConfiguration(testBadKeys))
+	ks, err := NewKeyStore(testBadKeys)
 	assert.Error(t, err)
 	assert.Nil(t, ks)
 }
 
 func TestKeyStore_GetPrivateKey(t *testing.T) {
-	ks, err := NewKeyStore(getConfiguration(testKeys))
+	ks, err := NewKeyStore(testKeys)
 	assert.NoError(t, err)
 
 	pk, err := ks.GetPrivateKey("")
@@ -57,7 +50,7 @@ func TestKeyStore_GetPrivateKey(t *testing.T) {
 }
 
 func TestKeyStore_GetPrivateKeyReturnsECDSA(t *testing.T) {
-	ks, err := NewKeyStore(getConfiguration(testKeys))
+	ks, err := NewKeyStore(testKeys)
 	assert.NoError(t, err)
 
 	pk, err := ks.GetPrivateKey("")

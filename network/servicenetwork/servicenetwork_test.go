@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -75,7 +76,11 @@ func mockParcelFactory(t *testing.T) message.ParcelFactory {
 
 func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) core.Components {
 	pwd, _ := os.Getwd()
-	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
+	cs, _ := cryptography.NewStorageBoundCryptographyService(path.Join(pwd, keysPath))
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
+	cert, err := certificate.NewCertificatesWithKeys(pk, kp)
+
 	assert.NoError(t, err)
 	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
 
@@ -106,7 +111,11 @@ func TestServiceNetwork_GetAddress(t *testing.T) {
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := NewServiceNetwork(cfg)
-	network.certificate, _ = certificate.NewCertificatesWithKeys(keysPath)
+
+	cs, _ := cryptography.NewStorageBoundCryptographyService(keysPath)
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
+	network.certificate, _ = certificate.NewCertificatesWithKeys(pk, kp)
 	assert.NoError(t, err)
 
 	ctx := context.TODO()

@@ -19,7 +19,10 @@ package cryptography
 import (
 	"crypto"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -59,4 +62,41 @@ func (cs *nodeCryptographyService) Verify(publicKey crypto.PublicKey, signature 
 
 func NewCryptographyService() core.CryptographyService {
 	return &nodeCryptographyService{}
+}
+
+type inPlaceKeyStore struct {
+	privateKey crypto.PrivateKey
+}
+
+func (ipks *inPlaceKeyStore) GetPrivateKey(string) (crypto.PrivateKey, error) {
+	return ipks.privateKey, nil
+}
+
+func NewKeyBoundCryptographyService(privateKey crypto.PrivateKey) core.CryptographyService {
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	keyStore := &inPlaceKeyStore{privateKey: privateKey}
+	keyProcessor := platformpolicy.NewKeyProcessor()
+	cryptographyService := NewCryptographyService()
+
+	cm := component.Manager{}
+
+	cm.Register(platformCryptographyScheme)
+	cm.Inject(keyStore, cryptographyService, keyProcessor)
+	return cryptographyService
+}
+
+func NewStorageBoundCryptographyService(path string) (core.CryptographyService, error) {
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	keyStore, err := keystore.NewKeyStore(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NewStorageBoundCryptographyService ] Failed to create KeyStore")
+	}
+	keyProcessor := platformpolicy.NewKeyProcessor()
+	cryptographyService := NewCryptographyService()
+
+	cm := component.Manager{}
+
+	cm.Register(platformCryptographyScheme, keyStore)
+	cm.Inject(cryptographyService, keyProcessor)
+	return cryptographyService, nil
 }

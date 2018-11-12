@@ -47,17 +47,17 @@ package certificate
 // }
 //
 // func TestNewCertificate_NoCert(t *testing.T) {
-// 	_, err := NewCertificate("", "")
-// 	assert.EqualError(t, err, "[ NewCertificate ] couldn't read certificate from: ")
+// 	_, err := ReadCertificate("", "")
+// 	assert.EqualError(t, err, "[ ReadCertificate ] couldn't read certificate from: ")
 // }
 //
 // func TestNewCertificate_BadCert(t *testing.T) {
-// 	_, err := NewCertificate("", TEST_BAD_CERT)
+// 	_, err := ReadCertificate("", TEST_BAD_CERT)
 // 	assert.Contains(t, err.Error(), "failed to parse certificate json")
 // }
 //
 // func TestNewCertificate_NoKeys(t *testing.T) {
-// 	_, err := NewCertificate("", TEST_CERT)
+// 	_, err := ReadCertificate("", TEST_CERT)
 // 	assert.Contains(t, err.Error(), "failed to read keys")
 // }
 //
@@ -68,7 +68,7 @@ package certificate
 // }
 //
 // func TestNewCertificate(t *testing.T) {
-// 	cert, err := NewCertificate(TEST_KEYS, TEST_CERT)
+// 	cert, err := ReadCertificate(TEST_KEYS, TEST_CERT)
 // 	assert.NoError(t, err)
 // 	assert.NotEmpty(t, cert.PublicKey)
 // 	assert.NotEmpty(t, cert.Reference)

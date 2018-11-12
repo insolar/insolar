@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
@@ -120,7 +120,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 
 	verboseInfo(ctx, "Signing request ...")
-	cs := api.NewCryptographyService(userCfg.privateKeyObject)
+	cs := cryptography.NewKeyBoundCryptographyService(userCfg.privateKeyObject)
 	signature, err := cs.Sign(serRequest)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")

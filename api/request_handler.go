@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
@@ -155,7 +156,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with generating seed")
 	}
 
-	cs := NewCryptographyService(privKey)
+	cs := cryptography.NewKeyBoundCryptographyService(privKey)
 	signature, err := cs.Sign(seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with signing")

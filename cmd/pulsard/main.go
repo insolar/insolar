@@ -88,7 +88,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
-	keyStore, err := keystore.NewKeyStore(cfg)
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)

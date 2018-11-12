@@ -40,14 +40,18 @@ import (
 	"github.com/insolar/insolar/version/manager"
 )
 
-// InitComponents creates and links all insolard components
-func InitComponents(ctx context.Context, cfg configuration.Configuration, isBootstrap bool) (*component.Manager, *ComponentManager, *Repl, error) {
-	var cert *certificate.Certificate
-	var err error
+type BootstrapComponents struct {
+	CryptographyService        core.CryptographyService
+	PlatformCryptographyScheme core.PlatformCryptographyScheme
+	KeyStore                   core.KeyStore
+	KeyProcessor               core.KeyProcessor
+	Certificate                core.Certificate
+}
 
+func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuration) BootstrapComponents {
 	earlyComponents := component.Manager{}
 
-	keyStore, err := keystore.NewKeyStore(cfg)
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	checkError(ctx, err, "failed to load KeyStore: ")
 
 	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -57,16 +61,49 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	earlyComponents.Register(platformCryptographyScheme, keyStore)
 	earlyComponents.Inject(cryptographyService, keyProcessor)
 
+	return BootstrapComponents{
+		CryptographyService:        cryptographyService,
+		PlatformCryptographyScheme: platformCryptographyScheme,
+		KeyStore:                   keyStore,
+		KeyProcessor:               keyProcessor,
+	}
+}
+
+func InitCertificate(
+	ctx context.Context,
+	cfg configuration.Configuration,
+	isBootstrap bool,
+	cryptographyService core.CryptographyService,
+	keyProcessor core.KeyProcessor,
+) *certificate.Certificate {
+	var cert *certificate.Certificate
+	var err error
+
+	publicKey, err := cryptographyService.GetPublicKey()
+	checkError(ctx, err, "failed to retrieve node public key")
+
 	if isBootstrap {
-		cert, err = certificate.NewCertificatesWithKeys(cfg.KeysPath)
+		cert, err = certificate.NewCertificatesWithKeys(publicKey, keyProcessor)
 		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
 	} else {
-		publicKey, err := cryptographyService.GetPublicKey()
-		checkError(ctx, err, "failed to get node public key")
-		cert, err = certificate.NewCertificate(publicKey, cfg.CertificatePath)
+		cert, err = certificate.ReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
 		checkError(ctx, err, "failed to start Certificate")
 	}
 
+	return cert
+}
+
+// InitComponents creates and links all insolard components
+func InitComponents(
+	ctx context.Context,
+	cfg configuration.Configuration,
+	cryptographyService core.CryptographyService,
+	platformCryptographyScheme core.PlatformCryptographyScheme,
+	keyStore core.KeyStore,
+	keyProcessor core.KeyProcessor,
+	cert core.Certificate,
+
+) (*component.Manager, *ComponentManager, *Repl, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
 	checkError(ctx, err, "failed to start NodeNetwork")
 

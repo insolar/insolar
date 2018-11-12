@@ -21,7 +21,6 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/keystore/internal/privatekey"
 	"github.com/pkg/errors"
@@ -45,9 +44,9 @@ func (ks *keyStore) Start(ctx context.Context) error {
 	return nil
 }
 
-func NewKeyStore(cfg configuration.Configuration) (core.KeyStore, error) {
+func NewKeyStore(path string) (core.KeyStore, error) {
 	keyStore := &keyStore{
-		path: cfg.KeysPath,
+		path: path,
 	}
 
 	manager := component.Manager{}
