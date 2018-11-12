@@ -20,9 +20,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/insolar/insolar/application/contract"
 	"github.com/insolar/insolar/application/proxy/noderecord"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -140,10 +140,7 @@ func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatur
 	if err != nil {
 		return false, fmt.Errorf("[ IsAuthorized ] Can't get nodes: %s", err.Error())
 	}
-	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
-	if err != nil {
-		return false, fmt.Errorf("[ IsAuthorized ] Can't verify: %s", err.Error())
-	}
+	ok := contract.Verify(seed, signatureRaw, pubKey)
 	return ok, nil
 }
 
@@ -158,10 +155,7 @@ func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRa
 	pubKey := nodeInfo.PublicKey
 	roles := nodeInfo.Roles
 
-	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
-	if err != nil {
-		return "", nil, fmt.Errorf("[ Authorize ] Problem with verifying: %s", err.Error())
-	}
+	ok := contract.Verify(seed, signatureRaw, pubKey)
 	if !ok {
 		return "", nil, fmt.Errorf("[ Authorize ] Can't verify signature")
 	}
