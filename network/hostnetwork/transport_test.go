@@ -53,9 +53,14 @@ func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
 	return result, nil
 }
 
-func (m *MockResolver) ResolveS(core.ShortNodeID) (*host.Host, error) {
-	return nil, errors.New("not needed")
+func (m *MockResolver) ResolveS(id core.ShortNodeID) (*host.Host, error) {
+	result, exist := m.smapping[id]
+	if !exist {
+		return nil, errors.New("failed to resolve")
+	}
+	return result, nil
 }
+
 func (m *MockResolver) Start(components core.Components)  {}
 func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
 func (m *MockResolver) Rebalance(network.PartitionPolicy) {}

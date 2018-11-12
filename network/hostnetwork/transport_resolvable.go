@@ -31,7 +31,7 @@ type TransportResolvable struct {
 
 // Start listening to network requests.
 func (tr *TransportResolvable) Start() {
-	go tr.internalTransport.Start()
+	tr.internalTransport.Start()
 }
 
 // Stop listening to network requests.

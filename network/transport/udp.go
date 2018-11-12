@@ -82,7 +82,7 @@ func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 		baseTransport: newBaseTransport(proxy, publicAddress),
 		serverConn:    conn}
 	transport.sendFunc = transport.send
-	// transport.serializer = &udpSerializer{}
+	transport.serializer = &udpSerializer{}
 
 	return transport, nil
 }

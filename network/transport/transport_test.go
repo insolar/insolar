@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -39,16 +40,13 @@ type transportSuite struct {
 	suite.Suite
 	node1 node
 	node2 node
-
-	testSendBigPacket bool
 }
 
-func NewSuite(cfg1 configuration.Transport, cfg2 configuration.Transport, testSendBigPacket bool) *transportSuite {
+func NewSuite(cfg1 configuration.Transport, cfg2 configuration.Transport) *transportSuite {
 	return &transportSuite{
-		Suite:             suite.Suite{},
-		testSendBigPacket: testSendBigPacket,
-		node1:             node{config: cfg1},
-		node2:             node{config: cfg2},
+		Suite: suite.Suite{},
+		node1: node{config: cfg1},
+		node2: node{config: cfg2},
 	}
 }
 
@@ -94,6 +92,9 @@ func generateRandomBytes(n int) ([]byte, error) {
 }
 
 func (t *transportSuite) TestPingPong() {
+	if t.node1.config.Protocol == "PURE_UDP" {
+		t.T().Skip("Skipping TestPingPong for PURE_UDP")
+	}
 	p := packet.NewBuilder(t.node1.host).Type(types.Ping).Receiver(t.node2.host).Build()
 	future, err := t.node1.transport.SendRequest(p)
 	t.Assert().NoError(err)
@@ -116,9 +117,8 @@ func (t *transportSuite) TestSendBigPacket() {
 	if testing.Short() {
 		t.T().Skip("Skipping TestSendBigPacket in short mode")
 	}
-	if !t.testSendBigPacket {
-		t.T().Skip("TestSendBigPacket is skipped because transport does not support transfer " +
-			"of messages that are heavier than UDP datagram")
+	if t.node1.config.Protocol == "PURE_UDP" {
+		t.T().Skip("Skipping TestSendBigPacket for PURE_UDP")
 	}
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TestPacket)
@@ -128,28 +128,42 @@ func (t *transportSuite) TestSendBigPacket() {
 	t.Assert().NoError(err)
 
 	msg := <-t.node2.transport.Packets()
-	t.Assert().Equal(packet.TestPacket, requestMsg.Type)
+	t.Assert().Equal(packet.TestPacket, msg.Type)
 	receivedData := msg.Data.(*packet.RequestTest).Data
 	t.Assert().Equal(data, receivedData)
+}
+
+func (t *transportSuite) TestSendPacketConsensus() {
+	if t.node1.config.Protocol != "PURE_UDP" {
+		t.T().Skip("Skipping TestSendPacketConsensus for non-UDP transports")
+	}
+
+	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.Phase1)
+	requestMsg := builder.Request(&consensus.Phase1Packet{}).Build()
+	_, err := t.node1.transport.SendRequest(requestMsg)
+	t.Assert().NoError(err)
+
+	msg := <-t.node2.transport.Packets()
+	t.Assert().Equal(types.Phase1, msg.Type)
 }
 
 func TestUTPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17010", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17011", BehindNAT: false}
 
-	suite.Run(t, NewSuite(cfg1, cfg2, true))
+	suite.Run(t, NewSuite(cfg1, cfg2))
 }
 
 func TestKCPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17012", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17013", BehindNAT: false}
 
-	suite.Run(t, NewSuite(cfg1, cfg2, true))
+	suite.Run(t, NewSuite(cfg1, cfg2))
 }
 
 func TestUDPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015", BehindNAT: false}
 
-	suite.Run(t, NewSuite(cfg1, cfg2, false))
+	suite.Run(t, NewSuite(cfg1, cfg2))
 }

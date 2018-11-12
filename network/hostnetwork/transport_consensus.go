@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
@@ -74,19 +73,26 @@ func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	handler((*packetWrapper)(msg))
 }
 
-func NewConsensusNetwork(origin *host.Host, resolver network.RoutingTable) (network.ConsensusNetwork, error) {
+func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
+	resolver network.RoutingTable) (network.ConsensusNetwork, error) {
+
 	conf := configuration.Transport{}
-	conf.Address = origin.Address.String()
+	conf.Address = address
 	conf.Protocol = "PURE_UDP"
 	conf.BehindNAT = false
 
 	tp, err := transport.NewTransport(conf, relay.NewProxy())
 	if err != nil {
+		return nil, errors.Wrap(err, "error creating transport")
+	}
+	origin, err := getOrigin(tp, nodeID)
+	if err != nil {
 		go tp.Stop()
 		<-tp.Stopped()
 		tp.Close()
-		return nil, errors.Wrap(err, "error creating transport")
+		return nil, errors.Wrap(err, "error getting origin")
 	}
+	origin.ShortID = shortID
 	result := &transportConsensus{handlers: make(map[types.PacketType]network.ConsensusRequestHandler)}
 	result.transport = tp
 	result.resolver = resolver

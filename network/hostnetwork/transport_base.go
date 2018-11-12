@@ -42,10 +42,12 @@ func (h *transportBase) Start() {
 		return
 	}
 	go h.listen()
-	err := h.transport.Start()
-	if err != nil {
-		log.Error(err)
-	}
+	go func() {
+		err := h.transport.Start()
+		if err != nil {
+			log.Error(err)
+		}
+	}()
 }
 
 func (h *transportBase) listen() {
