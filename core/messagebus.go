@@ -18,7 +18,6 @@ package core
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"io"
 )
 
@@ -43,7 +42,6 @@ type Message interface {
 type MessageSignature interface {
 	GetSign() []byte
 	GetSender() RecordRef
-	IsValid(*ecdsa.PublicKey) bool
 }
 
 // Parcel by senders private key.
