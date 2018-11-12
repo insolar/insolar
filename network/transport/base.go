@@ -209,10 +209,9 @@ func (t *baseTransport) SendPacket(p *packet.Packet) error {
 
 func shouldProcessPacket(future Future, msg *packet.Packet) bool {
 	typesShouldBeEqual := msg.Type == future.Request().Type
-	isPingPacket := msg.Type == types.Ping || msg.Type == types.TypePing
 	responseIsForRightSender := future.Actor().Equal(*msg.Sender)
 
-	return typesShouldBeEqual && (responseIsForRightSender || isPingPacket)
+	return typesShouldBeEqual && (responseIsForRightSender || msg.Type == types.Ping)
 }
 
 // AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.

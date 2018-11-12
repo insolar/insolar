@@ -18,6 +18,7 @@ package transport
 
 import (
 	"crypto/rand"
+	"encoding/gob"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -39,13 +40,16 @@ type transportSuite struct {
 	suite.Suite
 	node1 node
 	node2 node
+
+	testSendBigPacket bool
 }
 
-func NewSuite(cfg1 configuration.Transport, cfg2 configuration.Transport) *transportSuite {
+func NewSuite(cfg1 configuration.Transport, cfg2 configuration.Transport, testSendBigPacket bool) *transportSuite {
 	return &transportSuite{
-		Suite: suite.Suite{},
-		node1: node{config: cfg1},
-		node2: node{config: cfg2},
+		Suite:             suite.Suite{},
+		testSendBigPacket: testSendBigPacket,
+		node1:             node{config: cfg1},
+		node2:             node{config: cfg2},
 	}
 }
 
@@ -63,6 +67,7 @@ func setupNode(t *transportSuite, n *node) {
 }
 
 func (t *transportSuite) SetupTest() {
+	gob.Register(&packet.RequestTest{})
 	setupNode(t, &t.node1)
 	setupNode(t, &t.node2)
 }
@@ -92,69 +97,62 @@ func generateRandomBytes(n int) ([]byte, error) {
 }
 
 func (t *transportSuite) TestPingPong() {
-	future, err := t.node1.transport.SendRequest(packet.NewPingPacket(t.node1.host, t.node2.host))
+	p := packet.NewBuilder(t.node1.host).Type(types.Ping).Receiver(t.node2.host).Build()
+	future, err := t.node1.transport.SendRequest(p)
 	t.Assert().NoError(err)
 
 	requestMsg := <-t.node2.transport.Packets()
-	t.Assert().True(requestMsg.IsValid())
-	t.Assert().Equal(types.TypePing, requestMsg.Type)
+	t.Assert().Equal(types.Ping, requestMsg.Type)
 	t.Assert().Equal(t.node2.host, future.Actor())
 	t.Assert().False(requestMsg.IsResponse)
 
-	builder := packet.NewBuilder(t.node2.host).Receiver(requestMsg.Sender).Type(types.TypePing)
+	builder := packet.NewBuilder(t.node2.host).Receiver(requestMsg.Sender).Type(types.Ping)
 	err = t.node2.transport.SendResponse(requestMsg.RequestID, builder.Response(nil).Build())
 	t.Assert().NoError(err)
 
 	responseMsg := <-future.Result()
-	t.Assert().True(responseMsg.IsValid())
-	t.Assert().Equal(types.TypePing, responseMsg.Type)
+	t.Assert().Equal(types.Ping, responseMsg.Type)
 	t.Assert().True(responseMsg.IsResponse)
 }
 
-// TODO: temporary skip test since it doesn't suit to udp transport
-func (t *transportSuite) _TestSendBigPacket() {
+func (t *transportSuite) TestSendBigPacket() {
+	if testing.Short() {
+		t.T().Skip("Skipping TestSendBigPacket in short mode")
+	}
+	if !t.testSendBigPacket {
+		t.T().Skip("TestSendBigPacket is skipped because transport does not support transfer " +
+			"of messages that are heavier than UDP datagram")
+	}
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
-	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.TypeStore)
-	requestMsg := builder.Request(&packet.RequestDataStore{data, true}).Build()
-	t.Assert().True(requestMsg.IsValid())
+	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TestPacket)
+	requestMsg := builder.Request(&packet.RequestTest{data}).Build()
 
 	_, err := t.node1.transport.SendRequest(requestMsg)
 	t.Assert().NoError(err)
 
 	msg := <-t.node2.transport.Packets()
-	t.Assert().True(requestMsg.IsValid())
-	t.Assert().Equal(types.TypeStore, requestMsg.Type)
-	receivedData := msg.Data.(*packet.RequestDataStore).Data
+	t.Assert().Equal(packet.TestPacket, requestMsg.Type)
+	receivedData := msg.Data.(*packet.RequestTest).Data
 	t.Assert().Equal(data, receivedData)
 }
-
-// func (t *transportSuite) TestSendInvalidPacket() {
-// 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.TypeRPC)
-// 	msg := builder.Build()
-// 	t.Assert().False(msg.IsValid())
-//
-// 	future, err := t.node1.transport.SendRequest(msg)
-// 	t.Assert().Error(err)
-// 	t.Assert().Nil(future)
-// }
 
 func TestUTPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17010", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17011", BehindNAT: false}
 
-	suite.Run(t, NewSuite(cfg1, cfg2))
+	suite.Run(t, NewSuite(cfg1, cfg2, true))
 }
 
 func TestKCPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17012", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17013", BehindNAT: false}
 
-	suite.Run(t, NewSuite(cfg1, cfg2))
+	suite.Run(t, NewSuite(cfg1, cfg2, true))
 }
 
 func TestUDPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015", BehindNAT: false}
 
-	suite.Run(t, NewSuite(cfg1, cfg2))
+	suite.Run(t, NewSuite(cfg1, cfg2, false))
 }

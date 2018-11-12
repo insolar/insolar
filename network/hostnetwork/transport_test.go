@@ -52,8 +52,11 @@ func (m *MockResolver) Resolve(nodeID core.RecordRef) (string, error) {
 	return result, nil
 }
 
-func (m *MockResolver) AddToKnownHosts(h *host.Host) {
-}
+func (m *MockResolver) Start(components core.Components)  {}
+func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
+func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
+func (m *MockResolver) GetLocalNodes() []core.RecordRef   { return nil }
+func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
 
 func (m *MockResolver) addMapping(key, value string) {
 	k := core.NewRefFromBase58(key)
@@ -133,7 +136,7 @@ func TestNewHostTransport(t *testing.T) {
 		wg.Done()
 		return t2.BuildResponse(request, nil), nil
 	}
-	t2.RegisterRequestHandler(types.TypePing, handler)
+	t2.RegisterRequestHandler(types.Ping, handler)
 
 	t2.Start()
 	t1.Start()
@@ -144,7 +147,7 @@ func TestNewHostTransport(t *testing.T) {
 	}()
 
 	for i := 0; i < count; i++ {
-		request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
+		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 		_, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
 		assert.NoError(t, err)
 	}
@@ -165,7 +168,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	unknownID := core.NewRefFromBase58("unknown")
 
 	// should return error because cannot resolve NodeID -> Address
-	request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
+	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	_, err = t1.SendRequest(request, unknownID)
 	assert.Error(t, err)
 
@@ -197,7 +200,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 		return t2.BuildResponse(r, nil), nil
 	}
 
-	t2.RegisterRequestHandler(types.TypePing, handler)
+	t2.RegisterRequestHandler(types.Ping, handler)
 
 	t2.Start()
 	t1.Start()
@@ -206,7 +209,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 		t2.Stop()
 	}()
 
-	request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
+	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	assert.Equal(t, core.NewRefFromBase58(ID1), request.GetSender())
 	assert.Equal(t, t1.PublicAddress(), request.GetSenderHost().Address.String())
 
@@ -230,7 +233,7 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 		d := r.GetData().(*Data)
 		return t2.BuildResponse(r, &Data{Number: d.Number + 1}), nil
 	}
-	t2.RegisterRequestHandler(types.TypePing, handler)
+	t2.RegisterRequestHandler(types.Ping, handler)
 
 	t2.Start()
 	t1.Start()
@@ -240,7 +243,7 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	}()
 
 	magicNumber := 42
-	request := t1.NewRequestBuilder().Type(types.TypePing).Data(&Data{Number: magicNumber}).Build()
+	request := t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
 	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
 	assert.NoError(t, err)
 	assert.Equal(t, f.GetRequest().GetSender(), request.GetSender())
@@ -252,7 +255,7 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	assert.Equal(t, magicNumber+1, d.Number)
 
 	magicNumber = 666
-	request = t1.NewRequestBuilder().Type(types.TypePing).Data(&Data{Number: magicNumber}).Build()
+	request = t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
 	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
 	assert.NoError(t, err)
 
@@ -270,13 +273,13 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 		time.Sleep(time.Second)
 		return t2.BuildResponse(r, nil), nil
 	}
-	t2.RegisterRequestHandler(types.TypePing, handler)
+	t2.RegisterRequestHandler(types.Ping, handler)
 
 	t2.Start()
 	defer t2.Stop()
 	t1.Start()
 
-	request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
+	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
 	assert.NoError(t, err)
 
