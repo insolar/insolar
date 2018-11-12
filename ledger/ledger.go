@@ -32,35 +32,35 @@ import (
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	db *storage.DB
-	AM core.ArtifactManager `inject:""`
-	PM core.PulseManager    `inject:""`
-	JC core.JetCoordinator  `inject:""`
-	LS core.LocalStorage    `inject:""`
+	db              *storage.DB
+	ArtifactManager core.ArtifactManager `inject:""`
+	PulseManager    core.PulseManager    `inject:""`
+	JetCoordinator  core.JetCoordinator  `inject:""`
+	LocalStorage    core.LocalStorage    `inject:""`
 }
 
 // GetPulseManager returns PulseManager.
 func (l *Ledger) GetPulseManager() core.PulseManager {
 	log.Warn("GetPulseManager is deprecated. Use component injection.")
-	return l.PM
+	return l.PulseManager
 }
 
 // GetJetCoordinator returns JetCoordinator.
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
 	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
-	return l.JC
+	return l.JetCoordinator
 }
 
 // GetArtifactManager returns artifact manager to work with.
 func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	log.Warn("GetArtifactManager is deprecated. Use component injection.")
-	return l.AM
+	return l.ArtifactManager
 }
 
 // GetLocalStorage returns local storage to work with.
 func (l *Ledger) GetLocalStorage() core.LocalStorage {
 	log.Warn("GetLocalStorage is deprecated. Use component injection.")
-	return l.LS
+	return l.LocalStorage
 }
 
 // NewTestLedger is the util function for creation of Ledger with provided
@@ -73,11 +73,11 @@ func NewTestLedger(
 	ls *localstorage.LocalStorage,
 ) *Ledger {
 	return &Ledger{
-		db: db,
-		AM: am,
-		PM: pm,
-		JC: jc,
-		LS: ls,
+		db:              db,
+		ArtifactManager: am,
+		PulseManager:    pm,
+		JetCoordinator:  jc,
+		LocalStorage:    ls,
 	}
 }
 
