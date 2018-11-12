@@ -61,3 +61,26 @@ func (rtf *routingTokenFactory) Create(to *core.RecordRef, from *core.RecordRef,
 	return token
 }
 
+func (rtf *routingTokenFactory) Validate(publicKey crypto.PublicKey, token core.RoutingToken, msgHash []byte) error {
+	var tokenBuffer bytes.Buffer
+	enc := gob.NewEncoder(&tokenBuffer)
+	err := enc.Encode(token.GetTo())
+	if err != nil {
+		panic(err)
+	}
+	err = enc.Encode(token.GetFrom())
+	if err != nil {
+		panic(err)
+	}
+	err = enc.Encode(token.GetPulse())
+	if err != nil {
+		panic(err)
+	}
+	tokenBuffer.Write(msgHash)
+
+	ok := rtf.Cryptography.Verify(publicKey, core.SignatureFromBytes(tokenBuffer.Bytes()), token.GetSign())
+	if !ok {
+		return errors.New("token isn't valid")
+	}
+	return nil
+}
