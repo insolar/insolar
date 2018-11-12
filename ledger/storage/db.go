@@ -185,6 +185,11 @@ func (db *DB) Close() error {
 	return db.db.Close()
 }
 
+// Stop stops DB component.
+func (db *DB) Stop(ctx context.Context) error {
+	return db.Close()
+}
+
 // GetBlob returns binary value stored by record ID.
 func (db *DB) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 	var (
