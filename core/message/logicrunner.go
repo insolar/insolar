@@ -18,7 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 // MethodReturnMode ENUM to set when method returns its result
@@ -175,9 +175,10 @@ func (m *ValidationResults) GetReference() core.RecordRef {
 
 // GenRequest calculates RecordRef for request message from pulse number and request's payload.
 func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
+	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: pass hasher
 	ref := core.NewRecordRef(
 		core.RecordID{},
-		*core.NewRecordID(pn, hash.ReferenceHasher().Hash(payload)),
+		*core.NewRecordID(pn, hasher.Hash(payload)),
 	)
 	return ref
 }

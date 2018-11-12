@@ -22,9 +22,9 @@ import (
 	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
@@ -164,7 +164,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
-	recHash := hash.ReferenceHasher()
+	recHash := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: use as component
 	_, err := rec.WriteHashData(recHash)
 	if err != nil {
 		return nil, err

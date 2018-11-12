@@ -17,13 +17,12 @@
 package messagebus
 
 import (
-	"github.com/insolar/insolar/cryptohelpers/hash"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 // GetMessageHash calculates message hash.
 func GetMessageHash(msg core.Parcel) []byte {
-	return hash.IntegrityHasher().Hash(message.ParcelToBytes(msg))
+	return platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(message.ParcelToBytes(msg)) // TODO: pass hasher
 }

@@ -20,12 +20,12 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -45,7 +45,7 @@ type LedgerArtifactManager struct {
 // State returns hash state for artifact manager.
 func (m *LedgerArtifactManager) State() ([]byte, error) {
 	// This is a temporary stab to simulate real hash.
-	return hash.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
+	return platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash([]byte{1, 2, 3}), nil // TODO: use as component
 }
 
 // NewArtifactManger creates new manager instance.

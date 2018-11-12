@@ -24,12 +24,12 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
 )
@@ -65,7 +65,7 @@ func getTestData(t *testing.T) (
 ) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t, "")
-	mb := testmessagebus.NewTestMessageBus()
+	mb := testmessagebus.NewTestMessageBus(t)
 	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}}
 	handler.Link(core.Components{MessageBus: mb})
 	am := LedgerArtifactManager{
@@ -490,7 +490,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	codeRecord := record.CodeRecord{
 		Code: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
 	}
-	recHash := hash.ReferenceHasher()
+	recHash := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: pass hasher
 	_, err := codeRecord.WriteHashData(recHash)
 	assert.NoError(t, err)
 	latestPulse, err := db.GetLatestPulseNumber(ctx)

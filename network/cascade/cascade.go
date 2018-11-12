@@ -23,7 +23,7 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 func min(a, b int) int {
@@ -58,7 +58,7 @@ func calcHash(nodeID core.RecordRef, entropy core.Entropy) []byte {
 		data[i] = entropy[i%core.EntropySize] ^ d
 	}
 
-	h := hash.IntegrityHasher()
+	h := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
 	_, err := h.Write(data)
 	if err != nil {
 		panic(err)

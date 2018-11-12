@@ -22,8 +22,8 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -39,7 +39,7 @@ func HashInterface(in interface{}) []byte {
 	if err != nil {
 		panic("Can't marshal: " + err.Error())
 	}
-	sh := hash.IntegrityHasher()
+	sh := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher() // TODO: pass hasher
 	return sh.Sum(s)
 }
 

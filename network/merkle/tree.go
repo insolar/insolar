@@ -20,7 +20,6 @@ import (
 	"bytes"
 
 	"github.com/cbergoon/merkletree"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 type tree interface {
@@ -32,7 +31,7 @@ type treeNode struct {
 }
 
 func (t *treeNode) CalculateHash() ([]byte, error) {
-	return hash.IntegrityHasher().Hash(t.content), nil
+	return hash.Hash(t.content), nil
 }
 
 func (t *treeNode) Equals(other merkletree.Content) (bool, error) {

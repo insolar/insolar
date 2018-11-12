@@ -19,21 +19,23 @@ package merkle
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 const reserved = 0xDEADBEEF
 
+var hash = platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
+
 func pulseHash(pulse *core.Pulse) []byte {
 	var result []byte
 
-	pulseNumberHash := hash.IntegrityHasher().Hash(pulse.PulseNumber.Bytes())
+	pulseNumberHash := hash.Hash(pulse.PulseNumber.Bytes())
 	result = append(result, pulseNumberHash...)
 
-	entropyHash := hash.IntegrityHasher().Hash(pulse.Entropy[:])
+	entropyHash := hash.Hash(pulse.Entropy[:])
 	result = append(result, entropyHash...)
 
-	return hash.IntegrityHasher().Hash(result)
+	return hash.Hash(result)
 }
 
 func nodeInfoHash(pulseHash, stateHash []byte) []byte {
@@ -42,41 +44,41 @@ func nodeInfoHash(pulseHash, stateHash []byte) []byte {
 	result = append(result, pulseHash...)
 	result = append(result, stateHash...)
 
-	return hash.IntegrityHasher().Hash(result)
+	return hash.Hash(result)
 }
 
 func nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
 	var result []byte
 
-	nodeSignatureHash := hash.IntegrityHasher().Hash(nodeSignature)
+	nodeSignatureHash := hash.Hash(nodeSignature)
 	result = append(result, nodeSignatureHash...)
 
 	result = append(result, nodeInfoHash...)
 
-	return hash.IntegrityHasher().Hash(result)
+	return hash.Hash(result)
 }
 
 func bucketEntryHash(entryIndex uint32, nodeHash []byte) []byte {
 	var result []byte
 
-	entryIndexHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(entryIndex))
+	entryIndexHash := hash.Hash(utils.UInt32ToBytes(entryIndex))
 	result = append(result, entryIndexHash...)
 
 	result = append(result, nodeHash...)
 
-	return hash.IntegrityHasher().Hash(result)
+	return hash.Hash(result)
 }
 
 func bucketInfoHash(role core.NodeRole, nodeCount uint32) []byte {
 	var result []byte
 
-	roleHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(uint32(role)))
+	roleHash := hash.Hash(utils.UInt32ToBytes(uint32(role)))
 	result = append(result, roleHash...)
 
-	nodeCountHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(nodeCount))
+	nodeCountHash := hash.Hash(utils.UInt32ToBytes(nodeCount))
 	result = append(result, nodeCountHash...)
 
-	return hash.IntegrityHasher().Hash(result)
+	return hash.Hash(result)
 }
 
 func bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
@@ -85,11 +87,11 @@ func bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
 	result = append(result, bucketInfoHash...)
 	result = append(result, bucketEntryHash...)
 
-	return hash.IntegrityHasher().Hash(result)
+	return hash.Hash(result)
 }
 
 func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte {
-	reservedHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(reserved))
+	reservedHash := hash.Hash(utils.UInt32ToBytes(reserved))
 
 	var tmpResult1 []byte
 
@@ -98,21 +100,21 @@ func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte
 
 	var tmpResult2 []byte
 
-	globuleIndexHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(gobuleIndex))
+	globuleIndexHash := hash.Hash(utils.UInt32ToBytes(gobuleIndex))
 	tmpResult2 = append(tmpResult2, globuleIndexHash...)
 
-	nodeCountHash := hash.IntegrityHasher().Hash(utils.UInt32ToBytes(nodeCount))
+	nodeCountHash := hash.Hash(utils.UInt32ToBytes(nodeCount))
 	tmpResult2 = append(tmpResult2, nodeCountHash...)
 
 	var tmpResult3 []byte
 
-	tmpResult1Hash := hash.IntegrityHasher().Hash(tmpResult1)
+	tmpResult1Hash := hash.Hash(tmpResult1)
 	tmpResult3 = append(tmpResult3, tmpResult1Hash...)
 
-	tmpResult2Hash := hash.IntegrityHasher().Hash(tmpResult2)
+	tmpResult2Hash := hash.Hash(tmpResult2)
 	tmpResult3 = append(tmpResult3, tmpResult2Hash...)
 
-	return hash.IntegrityHasher().Hash(tmpResult3)
+	return hash.Hash(tmpResult3)
 }
 
 func globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
@@ -121,5 +123,5 @@ func globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
 	result = append(result, globuleInfoHash...)
 	result = append(result, globuleNodeRoot...)
 
-	return hash.IntegrityHasher().Hash(result)
+	return hash.Hash(result)
 }

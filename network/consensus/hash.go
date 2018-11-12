@@ -24,8 +24,8 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	hash2 "github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 func hashWriteChecked(hash hash.Hash, data []byte) {
@@ -39,7 +39,7 @@ func hashWriteChecked(hash hash.Hash, data []byte) {
 }
 
 func calculateNodeHash(node core.Node) []byte {
-	h := hash2.IntegrityHasher()
+	h := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
 	hashWriteChecked(h, node.ID().Bytes())
 	b := make([]byte, 8)
 	nodeRoles := make([]core.NodeRole, len(node.Roles()))
@@ -78,7 +78,7 @@ func CalculateHash(list []core.Node) (result []byte, err error) {
 		}
 	}()
 
-	h := hash2.IntegrityHasher()
+	h := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
 	for _, node := range list {
 		nodeHash := calculateNodeHash(node)
 		hashWriteChecked(h, nodeHash)

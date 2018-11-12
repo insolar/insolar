@@ -161,9 +161,10 @@ func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string
 		return nil, errors.New("count value should be less than values size")
 	}
 
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	hashes := make([]*idxHash, 0, len(values))
 	for i, value := range values {
-		h := hash.ReferenceHasher()
+		h := pcs.ReferenceHasher() // TODO: pass hasher
 		_, err := h.Write(entropy[:])
 		if err != nil {
 			return nil, err
