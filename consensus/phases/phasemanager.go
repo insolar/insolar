@@ -45,7 +45,7 @@ func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	ctx, cancel = contextTimeout(ctx, pulseDuration, 0.2)
 	checkError(runPhase(ctx, func() error {
-		return pm.FirstPhase.Execute(pulse)
+		return pm.FirstPhase.Execute(ctx, pulse)
 	}))
 	cancel()
 
