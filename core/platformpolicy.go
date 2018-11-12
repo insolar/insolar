@@ -42,3 +42,14 @@ type PlatformCryptographyScheme interface {
 	Signer(crypto.PrivateKey) Signer
 	Verifier(crypto.PublicKey) Verifier
 }
+
+type KeyProcessor interface {
+	GeneratePrivateKey() (crypto.PrivateKey, error)
+	ExtractPublicKey(crypto.PrivateKey) crypto.PublicKey
+
+	ImportPublicKey([]byte) (crypto.PublicKey, error)
+	ImportPrivateKey([]byte) (crypto.PrivateKey, error)
+
+	ExportPublicKey(crypto.PublicKey) ([]byte, error)
+	ExportPrivateKey(crypto.PrivateKey) ([]byte, error)
+}
