@@ -18,10 +18,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"reflect"
 	"syscall"
 
@@ -108,6 +110,25 @@ func keysFiles(ctx context.Context, nodeKeysPath string) []string {
 
 var roles = []string{"virtual", "virtual", "heavy_material", "light_material"}
 
+func readPublicKey(keysPath string) (string, error) {
+	data, err := ioutil.ReadFile(filepath.Clean(keysPath))
+	if err != nil {
+		return "", errors.Wrap(err, "[ readPublicKey ] couldn't read keys from: "+keysPath)
+	}
+	var keys map[string]string
+	err = json.Unmarshal(data, &keys)
+	if err != nil {
+		return "", errors.Wrap(err, "[ readPublicKey ] failed to parse json.")
+	}
+
+	publicKey := keys["public_key"]
+	if publicKey == "" {
+		return "", errors.Wrap(err, "[ readPublicKey ] public key is empty.")
+	}
+
+	return publicKey, nil
+}
+
 func bootstrapNodesInfo(ctx context.Context, nodeKeysPath string) []map[string]string {
 	files := keysFiles(ctx, nodeKeysPath)
 	if len(roles) < len(files) {
@@ -116,10 +137,10 @@ func bootstrapNodesInfo(ctx context.Context, nodeKeysPath string) []map[string]s
 
 	info := []map[string]string{}
 	for i, f := range files {
-		cert, err := certificate.NewCertificatesWithKeys(f)
-		checkError(ctx, err, "can't create certificate from file: "+f)
+		publicKey, err := readPublicKey(f)
+		checkError(ctx, err, "can't read public key from file: "+f)
 		nodeInfo := map[string]string{
-			"public_key": cert.PublicKey,
+			"public_key": publicKey,
 			"role":       roles[i],
 		}
 		info = append(info, nodeInfo)
