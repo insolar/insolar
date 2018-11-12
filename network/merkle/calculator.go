@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/merkle.Calculator -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/merkle.Calculator -o ../../testutils/merkle -s _mock.go
 type Calculator interface {
 	GetPulseProof(context.Context, *PulseEntry) ([]byte, *PulseProof, error)
 	GetGlobuleProof(context.Context, *GlobuleEntry) ([]byte, *GlobuleProof, error)
