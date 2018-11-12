@@ -20,6 +20,11 @@ import (
 type CryptographyServiceMock struct {
 	t minimock.Tester
 
+	GetPublicKeyFunc       func() (r crypto.PublicKey, r1 error)
+	GetPublicKeyCounter    uint64
+	GetPublicKeyPreCounter uint64
+	GetPublicKeyMock       mCryptographyServiceMockGetPublicKey
+
 	SignFunc       func(p []byte) (r *core.Signature, r1 error)
 	SignCounter    uint64
 	SignPreCounter uint64
@@ -39,10 +44,53 @@ func NewCryptographyServiceMock(t minimock.Tester) *CryptographyServiceMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.GetPublicKeyMock = mCryptographyServiceMockGetPublicKey{mock: m}
 	m.SignMock = mCryptographyServiceMockSign{mock: m}
 	m.VerifyMock = mCryptographyServiceMockVerify{mock: m}
 
 	return m
+}
+
+type mCryptographyServiceMockGetPublicKey struct {
+	mock *CryptographyServiceMock
+}
+
+//Return sets up a mock for CryptographyService.GetPublicKey to return Return's arguments
+func (m *mCryptographyServiceMockGetPublicKey) Return(r crypto.PublicKey, r1 error) *CryptographyServiceMock {
+	m.mock.GetPublicKeyFunc = func() (crypto.PublicKey, error) {
+		return r, r1
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of CryptographyService.GetPublicKey method
+func (m *mCryptographyServiceMockGetPublicKey) Set(f func() (r crypto.PublicKey, r1 error)) *CryptographyServiceMock {
+	m.mock.GetPublicKeyFunc = f
+
+	return m.mock
+}
+
+//GetPublicKey implements github.com/insolar/insolar/core.CryptographyService interface
+func (m *CryptographyServiceMock) GetPublicKey() (r crypto.PublicKey, r1 error) {
+	atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
+	defer atomic.AddUint64(&m.GetPublicKeyCounter, 1)
+
+	if m.GetPublicKeyFunc == nil {
+		m.t.Fatal("Unexpected call to CryptographyServiceMock.GetPublicKey")
+		return
+	}
+
+	return m.GetPublicKeyFunc()
+}
+
+//GetPublicKeyMinimockCounter returns a count of CryptographyServiceMock.GetPublicKeyFunc invocations
+func (m *CryptographyServiceMock) GetPublicKeyMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPublicKeyCounter)
+}
+
+//GetPublicKeyMinimockPreCounter returns the value of CryptographyServiceMock.GetPublicKey invocations
+func (m *CryptographyServiceMock) GetPublicKeyMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPublicKeyPreCounter)
 }
 
 type mCryptographyServiceMockSign struct {
@@ -183,6 +231,10 @@ func (m *CryptographyServiceMock) VerifyMinimockPreCounter() uint64 {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CryptographyServiceMock) ValidateCallCounters() {
 
+	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+		m.t.Fatal("Expected call to CryptographyServiceMock.GetPublicKey")
+	}
+
 	if m.SignFunc != nil && atomic.LoadUint64(&m.SignCounter) == 0 {
 		m.t.Fatal("Expected call to CryptographyServiceMock.Sign")
 	}
@@ -208,6 +260,10 @@ func (m *CryptographyServiceMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CryptographyServiceMock) MinimockFinish() {
 
+	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+		m.t.Fatal("Expected call to CryptographyServiceMock.GetPublicKey")
+	}
+
 	if m.SignFunc != nil && atomic.LoadUint64(&m.SignCounter) == 0 {
 		m.t.Fatal("Expected call to CryptographyServiceMock.Sign")
 	}
@@ -230,6 +286,7 @@ func (m *CryptographyServiceMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && (m.GetPublicKeyFunc == nil || atomic.LoadUint64(&m.GetPublicKeyCounter) > 0)
 		ok = ok && (m.SignFunc == nil || atomic.LoadUint64(&m.SignCounter) > 0)
 		ok = ok && (m.VerifyFunc == nil || atomic.LoadUint64(&m.VerifyCounter) > 0)
 
@@ -239,6 +296,10 @@ func (m *CryptographyServiceMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+				m.t.Error("Expected call to CryptographyServiceMock.GetPublicKey")
+			}
 
 			if m.SignFunc != nil && atomic.LoadUint64(&m.SignCounter) == 0 {
 				m.t.Error("Expected call to CryptographyServiceMock.Sign")
@@ -259,6 +320,10 @@ func (m *CryptographyServiceMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CryptographyServiceMock) AllMocksCalled() bool {
+
+	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+		return false
+	}
 
 	if m.SignFunc != nil && atomic.LoadUint64(&m.SignCounter) == 0 {
 		return false

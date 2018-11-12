@@ -26,6 +26,16 @@ import (
 type nodeCryptographyService struct {
 	KeyStore                   core.KeyStore                   `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	KeyProcessor               core.KeyProcessor               `inject:""`
+}
+
+func (cs *nodeCryptographyService) GetPublicKey() (crypto.PublicKey, error) {
+	privateKey, err := cs.KeyStore.GetPrivateKey("")
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Sign ] Failed to get private privateKey")
+	}
+
+	return cs.KeyProcessor.ExtractPublicKey(privateKey), nil
 }
 
 func (cs *nodeCryptographyService) Sign(payload []byte) (*core.Signature, error) {

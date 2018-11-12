@@ -87,9 +87,9 @@ func parseInputParams() inputParams {
 	return result
 }
 
-func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, cert core.Certificate, nc core.NetworkCoordinator) {
+func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, service core.CryptographyService, nc core.NetworkCoordinator) {
 	roles := []string{"virtual", "heavy_material", "light_material"}
-	publicKey, err := cert.GetPublicKey()
+	publicKey, err := service.GetPublicKey()
 	checkError(ctx, err, "failed to get public key")
 
 	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, roles, host)
@@ -194,7 +194,7 @@ func main() {
 			ctx,
 			cfg.Host.Transport.Address,
 			params.bootstrapCertificatePath,
-			cmOld.components.Certificate,
+			cmOld.components.CryptographyService,
 			cmOld.components.NetworkCoordinator,
 		)
 		inslog.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")

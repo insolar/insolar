@@ -55,7 +55,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 
 	// Init components.
 	if c.MessageBus == nil {
-		c.MessageBus = testmessagebus.NewTestMessageBus()
+		c.MessageBus = testmessagebus.NewTestMessageBus(t)
 	}
 	if c.NodeNetwork == nil {
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))

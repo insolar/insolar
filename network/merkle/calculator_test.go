@@ -18,6 +18,7 @@ package merkle
 
 import (
 	"context"
+	"crypto"
 	"testing"
 
 	"github.com/insolar/insolar/component"
@@ -78,16 +79,20 @@ func (t *calculatorSuite) TestGetCloudProof() {
 
 func TestCalculator(t *testing.T) {
 	c := certificate.GetTestCertificate()
-	nk := nodekeeper.GetTestNodekeeper(c)
 	l, clean := ledgertestutils.TmpLedger(t, "", core.Components{})
 
 	calculator := &calculator{}
 
 	cm := component.Manager{}
 	mock := testutils.NewCryptographyServiceMock(t)
+	nk := nodekeeper.GetTestNodekeeper(mock)
+
 	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
 		signature := core.SignatureFromBytes(nil)
 		return &signature, nil
+	}
+	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+		return nil, nil
 	}
 
 	cm.Inject(nk, l, c, calculator, mock)

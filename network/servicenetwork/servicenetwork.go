@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"context"
-	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -79,12 +78,6 @@ func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, ms
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 	n.controller.RemoteProcedureRegister(name, method)
-}
-
-// GetPrivateKey returns a private key.
-// TODO: remove, use helper functions from certificate instead
-func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
-	return n.certificate.GetEcdsaPrivateKey()
 }
 
 // Start implements core.Component
