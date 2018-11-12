@@ -29,3 +29,35 @@ import (
 type routingTokenFactory struct {
 	Cryptography core.CryptographyService `inject:""`
 }
+func (rtf *routingTokenFactory) Create(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNumber, msgHash []byte) *message.RoutingToken {
+	token := &message.RoutingToken{
+		To:    to,
+		From:  from,
+		Pulse: pulseNumber,
+	}
+
+	var tokenBuffer bytes.Buffer
+	enc := gob.NewEncoder(&tokenBuffer)
+	err := enc.Encode(to)
+	if err != nil {
+		panic(err)
+	}
+	err = enc.Encode(from)
+	if err != nil {
+		panic(err)
+	}
+	err = enc.Encode(pulseNumber)
+	if err != nil {
+		panic(err)
+	}
+	tokenBuffer.Write(msgHash)
+
+	sign, err := rtf.Cryptography.Sign(tokenBuffer.Bytes())
+	if err != nil {
+		panic(err)
+	}
+	token.Sign = sign.Bytes()
+
+	return token
+}
+
