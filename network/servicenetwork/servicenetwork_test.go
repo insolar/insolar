@@ -48,17 +48,34 @@ func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) 
 	return keeper
 }
 
+func mockCryptographyService(t *testing.T) core.CryptographyService {
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+		return true
+	}
+	return mock
+}
+
+func mockParcelFactory(t *testing.T) message.ParcelFactory {
+	mock := mockCryptographyService(t)
+	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
+	cm := &component.Manager{}
+	cm.Inject(routingTokenFactory, parcelFactory, mock)
+	return parcelFactory
+}
+
 func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) core.Components {
 	pwd, _ := os.Getwd()
 	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
 	assert.NoError(t, err)
 	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
 
-	mock := testutils.NewCryptographyServiceMock(t)
-	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes(nil)
-		return &signature, nil
-	}
+	mock := mockCryptographyService(t)
 
 	return core.Components{
 		Certificate:         cert,
@@ -93,7 +110,6 @@ func TestServiceNetwork_GetAddress(t *testing.T) {
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := NewServiceNetwork(cfg)
-	key, _ := ecdsa.GeneratePrivateKey()
 	network.certificate, _ = certificate.NewCertificatesWithKeys(keysPath)
 	assert.NoError(t, err)
 
@@ -107,7 +123,8 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	parcel, _ := message.NewParcel(ctx, e, network.GetNodeID(), key, 0, nil)
+	pf := mockParcelFactory(t)
+	parcel, _ := pf.Create(ctx, e, network.GetNodeID(), 0, nil)
 
 	ref := testutils.RandomRef()
 	network.SendMessage(ref, "test", parcel)
@@ -142,26 +159,6 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	case <-time.After(timeout):
 		return false // timed out
 	}
-}
-
-type mockLedger struct {
-	PM core.PulseManager
-}
-
-func (l *mockLedger) GetLocalStorage() core.LocalStorage {
-	panic("implement me")
-}
-
-func (l *mockLedger) GetArtifactManager() core.ArtifactManager {
-	return nil
-}
-
-func (l *mockLedger) GetJetCoordinator() core.JetCoordinator {
-	return nil
-}
-
-func (l *mockLedger) GetPulseManager() core.PulseManager {
-	return l.PM
 }
 
 func TestServiceNetwork_SendMessage2(t *testing.T) {
@@ -204,7 +201,8 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	parcel, _ := message.NewParcel(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, nil)
+	pf := mockParcelFactory(t)
+	parcel, _ := pf.Create(ctx, e, firstNode.GetNodeID(), 0, nil)
 
 	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", parcel)
 	success := waitTimeout(&wg, 100*time.Millisecond)
@@ -259,7 +257,8 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	parcel, err := message.NewParcel(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0, nil)
+	pf := mockParcelFactory(t)
+	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID(), 0, nil)
 
 	err = firstNode.SendCascadeMessage(c, "test", parcel)
 	success := waitTimeout(&wg, 100*time.Millisecond)
@@ -350,7 +349,8 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	parcel, _ := message.NewParcel(ctx, e, firstService.GetNodeID(), firstService.GetPrivateKey(), 0, nil)
+	pf := mockParcelFactory(t)
+	parcel, _ := pf.Create(ctx, e, firstService.GetNodeID(), 0, nil)
 
 	firstService.SendCascadeMessage(c, "test", parcel)
 	success := waitTimeout(&wg, 100*time.Millisecond)
