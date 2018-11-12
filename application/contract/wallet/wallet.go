@@ -32,41 +32,6 @@ type Wallet struct {
 	Balance uint
 }
 
-// Allocate returns reference to a new allowance
-func (w *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, error) {
-	// TODO check balance is enough
-	w.Balance -= amount
-	ah := allowance.New(to, amount, w.GetContext().Time.Unix()+10)
-	a, err := ah.AsChild(w.GetReference())
-	if err != nil {
-		return core.RecordRef{}, fmt.Errorf("[ Allocate ] Can't save as child: %s", err.Error())
-	}
-	return a.GetReference(), nil
-}
-
-// Receive gets money from given wallet
-func (w *Wallet) Receive(amount uint, from *core.RecordRef) error {
-	fromWallet, err := wallet.GetImplementationFrom(*from)
-	if err != nil {
-		return fmt.Errorf("[ Receive ] Can't get implementation: %s", err.Error())
-	}
-
-	v := w.GetReference()
-	aRef, err := fromWallet.Allocate(amount, &v)
-	if err != nil {
-		return fmt.Errorf("[ Allocate ] Can't make new allowance: %s", err.Error())
-	}
-
-	b, err := allowance.GetObject(aRef).TakeAmount()
-	if err != nil {
-		return fmt.Errorf("[ Allocate ] Can't take amount: %s", err.Error())
-	}
-
-	w.Balance += b
-
-	return nil
-}
-
 // Transfer transfers money to given wallet
 func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 
@@ -143,7 +108,7 @@ func (w *Wallet) ReturnAndDeleteExpiredAllowances() error {
 	}
 	for _, cref := range crefs {
 		Allowance := allowance.GetObject(cref)
-		balance, err := Allowance.DeleteExpiredAllowance()
+		balance, err := Allowance.GetExpiredBalance()
 		if err != nil {
 			return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't delete allowance: %s", err.Error())
 		}
