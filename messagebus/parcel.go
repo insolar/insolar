@@ -32,3 +32,34 @@ type parcelFactory struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	Cryptography               core.CryptographyService        `inject:""`
 }
+
+func (pf *parcelFactory) Create(
+	ctx context.Context,
+	msg core.Message,
+	sender core.RecordRef,
+	pulse core.PulseNumber,
+	token core.RoutingToken,
+) (core.Parcel, error) {
+	if msg == nil {
+		return nil, errors.New("failed to sign a nil message")
+	}
+	serialized := message.ToBytes(msg)
+	sign, err := pf.Cryptography.Sign(serialized)
+	if err != nil {
+		return nil, err
+	}
+
+	if token == nil {
+		target := message.ExtractTarget(msg)
+		hash := pf.PlatformCryptographyScheme.IntegrityHasher().Hash(serialized)
+		token = pf.RoutingTokenFactory.Create(&target, &sender, pulse, hash)
+	}
+	return &message.Parcel{
+		Token:         token,
+		Msg:           msg,
+		Signature:     sign.Bytes(),
+		LogTraceID:    inslogger.TraceID(ctx),
+		TraceSpanData: instracer.MustSerialize(ctx),
+	}, nil
+}
+
