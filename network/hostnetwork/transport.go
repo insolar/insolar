@@ -115,7 +115,7 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 
 // SendRequestPacket send request packet to a remote node.
 func (h *hostTransport) SendRequestPacket(request network.Request, receiver *host.Host) (network.Future, error) {
-	log.Debugf("Sent %s request to host %s", request.GetType().String(), receiver.String())
+	log.Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
 	f, err := h.transport.SendRequest(h.buildRequest(request, receiver))
 	if err != nil {
 		return nil, err

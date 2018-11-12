@@ -33,6 +33,7 @@ import (
 
 type transportConsensus struct {
 	transportBase
+	resolver network.RoutingTable
 	handlers map[types.PacketType]network.ConsensusRequestHandler
 }
 
@@ -46,14 +47,24 @@ func (tc *transportConsensus) RegisterRequestHandler(t types.PacketType, handler
 }
 
 func (tc *transportConsensus) SendRequest(request network.Request, receiver core.RecordRef) error {
-	// TODO: resolve NodeID -> ShortID, Address
-	p := tc.buildRequest(request, nil)
+	log.Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
+	receiverHost, err := tc.resolver.Resolve(receiver)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to send %s request to node %s",
+			request.GetType().String(), receiver.String())
+	}
+	p := tc.buildRequest(request, receiverHost)
 	return tc.transport.SendPacket(p)
 }
 
 func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	log.Debugf("Got %s request from host, shortID: %d", msg.Type.String(), msg.Sender.ShortID)
-	// TODO: resolve shortID -> NodeID, Address
+	sender, err := tc.resolver.ResolveS(msg.Sender.ShortID)
+	if err != nil {
+		log.Errorf("Error processing incoming message: failed to resolve ShortID (%d) -> NodeID", msg.Sender.ShortID)
+		return
+	}
+	msg.Sender = sender
 	handler, exist := tc.handlers[msg.Type]
 	if !exist {
 		log.Errorf("No handler set for packet type %s from node %s",
@@ -63,7 +74,7 @@ func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	handler((*packetWrapper)(msg))
 }
 
-func NewConsensusNetwork(origin *host.Host) (network.ConsensusNetwork, error) {
+func NewConsensusNetwork(origin *host.Host, resolver network.RoutingTable) (network.ConsensusNetwork, error) {
 	conf := configuration.Transport{}
 	conf.Address = origin.Address.String()
 	conf.Protocol = "PURE_UDP"
@@ -81,6 +92,7 @@ func NewConsensusNetwork(origin *host.Host) (network.ConsensusNetwork, error) {
 	}
 	result := &transportConsensus{}
 	result.transport = tp
+	result.resolver = resolver
 	result.origin = origin
 	result.messageProcessor = result.processMessage
 	return result, nil
