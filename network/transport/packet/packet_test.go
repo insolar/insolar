@@ -111,23 +111,6 @@ func TestPacket_IsValid_Fail(t *testing.T) {
 	}
 }
 
-func TestPacket_IsForMe(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
-	builder := NewBuilder(nil)
-	origin, _ := host.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
-
-	myPacket := builder.Receiver(receiver).Build()
-	notMyPacket := builder.Receiver(sender).Build()
-
-	assert.True(t, myPacket.IsForMe(*origin))
-	assert.False(t, notMyPacket.IsForMe(*origin))
-}
-
 func TestSerializePacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)

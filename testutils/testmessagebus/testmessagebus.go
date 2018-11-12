@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -30,7 +31,20 @@ import (
 )
 
 type TestMessageBus struct {
-	handlers map[core.MessageType]core.MessageHandler
+	handlers    map[core.MessageType]core.MessageHandler
+	PulseNumber core.PulseNumber
+}
+
+func (mb *TestMessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
+	panic("implement me")
+}
+
+func (mb *TestMessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
+	panic("implement me")
+}
+
+func (mb *TestMessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
+	panic("implement me")
 }
 
 func NewTestMessageBus() *TestMessageBus {
@@ -68,15 +82,15 @@ func (mb *TestMessageBus) Stop() error {
 
 func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
 	key, _ := ecdsa.GeneratePrivateKey()
-	signedMsg, err := message.NewSignedMessage(ctx, m, testutils.RandomRef(), key, 0)
+	parcel, err := message.NewParcel(ctx, m, testutils.RandomRef(), key, mb.PulseNumber, nil)
 	if err != nil {
 		return nil, err
 	}
-	t := signedMsg.Message().Type()
+	t := parcel.Message().Type()
 	handler, ok := mb.handlers[t]
 	if !ok {
 		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
-	return handler(ctx, signedMsg)
+	return handler(ctx, parcel)
 }

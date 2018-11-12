@@ -130,6 +130,21 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 	return ecdsa.Verify(savedKey, h, ecdsaP.R, ecdsaP.S), nil
 }
 
+// VerifyWithFullKey verifies signature. PubKey is provided here
+func VerifyWithFullKey(data []byte, signatureRaw []byte, pubKey *ecdsa.PublicKey) (bool, error) {
+	var ecdsaP ecdsaPair
+	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaP)
+	if err != nil {
+		return false, errors.Wrap(err, "[ Verify ]")
+	}
+	if len(rest) != 0 {
+		return false, errors.New("[ Verify ] len of rest must be 0")
+	}
+
+	h := hash.SHA3Bytes256(data)
+	return ecdsa.Verify(pubKey, h, ecdsaP.R, ecdsaP.S), nil
+}
+
 // ExportSignature serializes signature to string.
 func ExportSignature(signature []byte) string {
 	return base64.StdEncoding.EncodeToString(signature)

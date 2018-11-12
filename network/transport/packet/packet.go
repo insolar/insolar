@@ -104,11 +104,6 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 	return valid
 }
 
-// IsForMe checks if packet is addressed to our host.
-func (m *Packet) IsForMe(origin host.Origin) bool {
-	return origin.Contains(m.Receiver) || m.Type == types.TypePing
-}
-
 // SerializePacket converts packet to byte slice.
 func SerializePacket(q *Packet) ([]byte, error) {
 	var msgBuffer bytes.Buffer
