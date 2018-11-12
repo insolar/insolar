@@ -41,26 +41,34 @@ const (
 )
 
 type MockResolver struct {
-	mapping map[core.RecordRef]string
+	mapping map[core.RecordRef]*host.Host
 }
 
-func (m *MockResolver) Resolve(nodeID core.RecordRef) (string, error) {
+func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
 	result, exist := m.mapping[nodeID]
 	if !exist {
-		return "", errors.New("failed to resolve")
+		return nil, errors.New("failed to resolve")
 	}
 	return result, nil
 }
 
+func (m *MockResolver) ResolveS(core.ShortNodeID) (*host.Host, error) {
+	return nil, errors.New("not needed")
+}
 func (m *MockResolver) Start(components core.Components)  {}
 func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
 func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
 func (m *MockResolver) GetLocalNodes() []core.RecordRef   { return nil }
 func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
 
-func (m *MockResolver) addMapping(key, value string) {
+func (m *MockResolver) addMapping(key, value string) error {
 	k := core.NewRefFromBase58(key)
-	m.mapping[k] = value
+	h, err := host.NewHostN(value, k)
+	if err != nil {
+		return err
+	}
+	m.mapping[k] = h
+	return nil
 }
 
 func mockConfiguration(nodeID string, address string) configuration.Configuration {
@@ -96,7 +104,7 @@ func TestNewInternalTransport2(t *testing.T) {
 
 func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err error) {
 	m := MockResolver{
-		mapping: make(map[core.RecordRef]string),
+		mapping: make(map[core.RecordRef]*host.Host),
 	}
 
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
@@ -110,8 +118,14 @@ func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err err
 	}
 	tr2 := NewHostTransport(i2, &m)
 
-	m.addMapping(id1, tr1.PublicAddress())
-	m.addMapping(id2, tr2.PublicAddress())
+	err = m.addMapping(id1, tr1.PublicAddress())
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id1, tr1.PublicAddress())
+	}
+	err = m.addMapping(id2, tr2.PublicAddress())
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id2, tr2.PublicAddress())
+	}
 
 	return tr1, tr2, nil
 }
@@ -156,7 +170,7 @@ func TestNewHostTransport(t *testing.T) {
 
 func TestHostTransport_SendRequestPacket(t *testing.T) {
 	m := MockResolver{
-		mapping: make(map[core.RecordRef]string),
+		mapping: make(map[core.RecordRef]*host.Host),
 	}
 
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
@@ -172,8 +186,10 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	_, err = t1.SendRequest(request, unknownID)
 	assert.Error(t, err)
 
-	m.addMapping(ID2, "abirvalg")
-	m.addMapping(ID3, "127.0.0.1:9090")
+	err = m.addMapping(ID2, "abirvalg")
+	assert.Error(t, err)
+	err = m.addMapping(ID3, "127.0.0.1:9090")
+	assert.NoError(t, err)
 
 	// should return error because resolved address is invalid
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))

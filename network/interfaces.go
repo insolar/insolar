@@ -184,8 +184,10 @@ type PartitionPolicy interface {
 type RoutingTable interface {
 	// Start inject dependencies from components
 	Start(components core.Components)
-	// Resolve NodeID -> Address. Can initiate network requests.
-	Resolve(core.RecordRef) (string, error)
+	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
+	Resolve(core.RecordRef) (*host.Host, error)
+	// ResolveS ShortID -> NodeID, Address for node inside current globe.
+	ResolveS(core.ShortNodeID) (*host.Host, error)
 	// AddToKnownHosts add host to routing table.
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
