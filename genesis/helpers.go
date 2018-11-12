@@ -19,6 +19,7 @@ package genesis
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -120,6 +121,27 @@ func getRootDomainRef(ctx context.Context, c core.Components) (*core.RecordRef, 
 			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
 		}
 		return rootDomainRef, nil
+	}
+	return nil, nil
+}
+
+func getRootMemberRef(ctx context.Context, c core.Components, rootDomainRef core.RecordRef) (*core.RecordRef, error) {
+	am := c.Ledger.GetArtifactManager()
+	rootDomainObj, err := am.GetObject(ctx, rootDomainRef, nil, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get children of RootDomain object")
+	}
+	rootDomainRefChildren, err := rootDomainObj.Children(nil)
+	if err != nil {
+		return nil, err
+	}
+	if rootDomainRefChildren.HasNext() {
+		rootMemberRef, err := rootDomainRefChildren.Next()
+		fmt.Println("rootMemberRef:", rootMemberRef)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get next child of RootDomain object")
+		}
+		return rootMemberRef, nil
 	}
 	return nil, nil
 }
