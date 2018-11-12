@@ -41,7 +41,7 @@ func (m *Manager) Register(components ...interface{}) {
 
 		for i := 0; i < componentType.NumField(); i++ {
 			f := componentType.Field(i)
-			if _, ok := f.Tag.Lookup("inject"); ok {
+			if _, ok := f.Tag.Lookup("inject"); ok && componentValue.Field(i).IsNil() {
 				log.Debugf("ComponentManager: Component %s need inject: ", componentType.String(), f.Name)
 
 				// try to inject
