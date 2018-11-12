@@ -83,11 +83,11 @@ func setOptions(o *badger.Options) *badger.Options {
 
 // NewDB returns storage.DB with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
-func NewDB(conf configuration.Ledger, opts *badger.Options) *DB {
+func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	opts = setOptions(opts)
 	dir, err := filepath.Abs(conf.Storage.DataDirectory)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	opts.Dir = dir
@@ -95,14 +95,15 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) *DB {
 
 	bdb, err := badger.Open(*opts)
 	if err != nil {
-		panic(errors.Wrap(err, "local database open failed"))
+		return nil, errors.Wrap(err, "local database open failed")
 	}
 
-	return &DB{
+	db := &DB{
 		db:         bdb,
 		txretiries: conf.Storage.TxRetriesOnConflict,
 		idlocker:   NewIDLocker(),
 	}
+	return db, nil
 }
 
 // Bootstrap creates initial records in storage.
