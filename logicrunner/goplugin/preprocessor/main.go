@@ -234,7 +234,7 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
 		"Functions":      pf.functionInfoForWrapper(pf.constructors[pf.contract]),
 		"ParsedCode":     pf.code,
 		"FoundationPath": foundationPath,
-		"Imports":        pf.generateImports(true),
+		"Imports":        pf.generateImports(true, false),
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -271,14 +271,17 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		return errors.Wrap(err, "couldn't open template file for proxy")
 	}
 
+	methodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
+	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
+
 	data := map[string]interface{}{
 		"PackageName":         proxyPackageName,
 		"Types":               generateTypes(pf),
 		"ContractType":        pf.contract,
-		"MethodsProxies":      pf.functionInfoForProxy(pf.methods[pf.contract]),
-		"ConstructorsProxies": pf.functionInfoForProxy(pf.constructors[pf.contract]),
+		"MethodsProxies":      methodsProxies,
+		"ConstructorsProxies": constructorProxies,
 		"ClassReference":      classReference,
-		"Imports":             pf.generateImports(false),
+		"Imports":             pf.generateImports(false, len(methodsProxies) == 0),
 	}
 
 	var buff bytes.Buffer
@@ -343,7 +346,7 @@ func (pf *ParsedFile) typeName(t ast.Expr) string {
 	return pf.codeOfNode(t)
 }
 
-func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
+func (pf *ParsedFile) generateImports(wrapper bool, removeFoundation bool) map[string]bool {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
 	if !wrapper {
@@ -361,6 +364,11 @@ func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 			extendImportsMap(pf, fun.Type.Results, imports)
 		}
 	}
+
+	if imports[fmt.Sprintf(`"%s"`, foundationPath)] && removeFoundation {
+		delete(imports, fmt.Sprintf(`"%s"`, foundationPath))
+	}
+
 	return imports
 }
 
