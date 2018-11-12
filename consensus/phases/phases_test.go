@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/testutils/merkle"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,7 +30,7 @@ import (
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhase{}
 	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	pulseCalculatorMock := network.NewCalculatorMock(t)
+	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := network.NewCommunicatorMock(t)
 
 	nodeNetworkMock.GetActiveNodesMock.Set(func() (r []core.Node) {
