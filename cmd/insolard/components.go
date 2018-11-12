@@ -64,6 +64,9 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	nw, err := servicenetwork.NewServiceNetwork(cfg)
 	checkError(ctx, err, "failed to start Network")
 
+	routingTokeyFactory := messagebus.NewRoutingTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
+
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
@@ -103,6 +106,8 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		logicRunner,
 		ledger,
 		nw,
+		routingTokeyFactory,
+		parcelFactory,
 		messageBus,
 		gen,
 		apiRunner,
