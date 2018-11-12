@@ -55,9 +55,6 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	ledger, err := ledger.NewLedger(ctx, cfg.Ledger)
-	checkError(ctx, err, "failed to start Ledger")
-
 	nw, err := servicenetwork.NewServiceNetwork(cfg)
 	checkError(ctx, err, "failed to start Network")
 
@@ -83,12 +80,16 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
-	cm := component.Manager{}
-	cm.Register(
+	ld := ledger.Ledger{} // TODO: remove me with cmOld
+
+	components := []interface{}{
 		cert,
 		nodeNetwork,
 		logicRunner,
-		ledger,
+	}
+	components = append(components, ledger.GetLedgerComponents(ctx, cfg.Ledger)...)
+	components = append(components, &ld) // TODO: remove me with cmOld
+	components = append(components, []interface{}{
 		nw,
 		messageBus,
 		gen,
@@ -96,13 +97,15 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		metricsHandler,
 		networkCoordinator,
 		versionManager,
-	)
+	}...)
+	cm := component.Manager{}
+	cm.Register(components...)
 
 	cmOld := ComponentManager{components: core.Components{
 		Certificate:        cert,
 		NodeNetwork:        nodeNetwork,
 		LogicRunner:        logicRunner,
-		Ledger:             ledger,
+		Ledger:             &ld,
 		Network:            nw,
 		MessageBus:         messageBus,
 		Genesis:            gen,
@@ -111,5 +114,5 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		VersionManager:     versionManager,
 	}}
 
-	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
+	return &cm, &cmOld, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }
