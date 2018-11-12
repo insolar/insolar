@@ -29,8 +29,8 @@ type LocalStorage struct {
 }
 
 // NewLocalStorage create new storage instance.
-func NewLocalStorage(db *storage.DB) (*LocalStorage, error) {
-	return &LocalStorage{db: db}, nil
+func NewLocalStorage(db *storage.DB) *LocalStorage {
+	return &LocalStorage{db: db}
 }
 
 // Set saves data in storage.
