@@ -29,6 +29,11 @@ import (
 type routingTokenFactory struct {
 	Cryptography core.CryptographyService `inject:""`
 }
+
+func NewRoutingTokenFactory() message.RoutingTokenFactory {
+	return &routingTokenFactory{}
+}
+
 func (rtf *routingTokenFactory) Create(to *core.RecordRef, from *core.RecordRef, pulseNumber core.PulseNumber, msgHash []byte) *message.RoutingToken {
 	token := &message.RoutingToken{
 		To:    to,
