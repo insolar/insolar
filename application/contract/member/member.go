@@ -19,12 +19,12 @@ package member
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/application/contract"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -57,10 +57,7 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
-	verified, err := ecdsa.Verify(args, sign, key)
-	if err != nil {
-		return fmt.Errorf("[ verifySig ] Can't verify: %s", err.Error())
-	}
+	verified := contract.Verify(args, sign, key)
 	if !verified {
 		return fmt.Errorf("[ verifySig ] Incorrect signature")
 	}
