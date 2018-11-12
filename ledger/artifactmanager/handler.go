@@ -48,8 +48,8 @@ func NewMessageHandler(db *storage.DB) *MessageHandler {
 	}
 }
 
-// Start initializes handlers.
-func (h *MessageHandler) Start(ctx context.Context) error {
+// Init initializes handlers.
+func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeGetCode, h.messagePersistingWrapper(h.handleGetCode))
 	h.Bus.MustRegister(core.TypeGetObject, h.messagePersistingWrapper(h.handleGetObject))
 	h.Bus.MustRegister(core.TypeGetDelegate, h.messagePersistingWrapper(h.handleGetDelegate))

@@ -69,7 +69,7 @@ func getTestData(t *testing.T) (
 	mb := testmessagebus.NewTestMessageBus()
 	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}}
 	handler.Bus = mb
-	err := handler.Start(ctx)
+	err := handler.Init(ctx)
 	require.NoError(t, err)
 	am := LedgerArtifactManager{
 		db:                   db,

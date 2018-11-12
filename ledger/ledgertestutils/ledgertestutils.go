@@ -62,7 +62,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 
-	err := handler.Start(ctx)
+	err := handler.Init(ctx)
 	if err != nil {
 		panic(err)
 	}
