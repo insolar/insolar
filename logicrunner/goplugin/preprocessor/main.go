@@ -367,6 +367,7 @@ func (pf *ParsedFile) generateImports(wrapper bool, removeFoundation bool) map[s
 
 	if imports[fmt.Sprintf(`"%s"`, foundationPath)] && removeFoundation {
 		delete(imports, fmt.Sprintf(`"%s"`, foundationPath))
+		fmt.Println("WARNING: build proxy without methods")
 	}
 
 	return imports
