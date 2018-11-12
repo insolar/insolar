@@ -34,8 +34,9 @@ import (
 )
 
 type TestMessageBus struct {
-	handlers map[core.MessageType]core.MessageHandler
-	pf       message.ParcelFactory
+	handlers    map[core.MessageType]core.MessageHandler
+	pf          message.ParcelFactory
+	PulseNumber core.PulseNumber
 }
 
 func (mb *TestMessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
@@ -95,7 +96,7 @@ func (mb *TestMessageBus) Stop() error {
 }
 
 func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
-	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), 0, nil)
+	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), mb.PulseNumber, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -29,13 +29,10 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 func HashInterface(in interface{}) []byte {
-	var s []byte
-	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&s, ch).Encode(in)
+	s, err := core.Serialize(in)
 	if err != nil {
 		panic("Can't marshal: " + err.Error())
 	}
@@ -161,7 +158,7 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(msg.RecordRef)
+	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
 	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
 		return nil, err
 	}
@@ -173,7 +170,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(msg.RecordRef)
+	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
 	c.AddExecutor(ctx, inmsg, msg)
 	return nil, nil
 }

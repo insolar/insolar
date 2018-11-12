@@ -73,6 +73,13 @@ func TestBareHelloworld(t *testing.T) {
 	defer cleaner()
 
 	mb := testmessagebus.NewTestMessageBus(t)
+	mb.PulseNumber = 0
+
+	l.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: mb.PulseNumber, Entropy: core.Entropy{}},
+	)
+
 	nw := network.GetTestNetwork()
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -85,10 +92,6 @@ func TestBareHelloworld(t *testing.T) {
 	am := l.GetArtifactManager()
 
 	MessageBusTrivialBehavior(mb, lr)
-	l.GetPulseManager().Set(
-		ctx,
-		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
-	)
 
 	hw := helloworld.NewHelloWorld()
 
@@ -116,7 +119,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
-	parcel, _ := parcelFactory.Create(ctx, msg, testutils.RandomRef(), 0, nil)
+	parcel, _ := parcelFactory.Create(ctx, msg, testutils.RandomRef(), mb.PulseNumber, nil)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
@@ -135,7 +138,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
-	parcel, _ = parcelFactory.Create(ctx, msg, testutils.RandomRef(), 0, nil)
+	parcel, _ = parcelFactory.Create(ctx, msg, testutils.RandomRef(), mb.PulseNumber, nil)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(

@@ -48,13 +48,26 @@ type ExecutionState struct {
 	deactivate  bool
 	request     *Ref
 	traceID     string
+	queueLength int
 
 	objectbody *ObjectBody
 }
 
+func (es *ExecutionState) Lock() {
+	es.queueLength++
+	es.Mutex.Lock()
+}
+
 func (es *ExecutionState) Unlock() {
+	es.queueLength--
 	es.Mutex.Unlock()
 	es.traceID = "Done"
+}
+
+func (es *ExecutionState) ReleaseQueue() {
+	for es.queueLength > 1 {
+		es.Unlock()
+	}
 }
 
 // LogicRunner is a general interface of contract executor
@@ -184,6 +197,14 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	}
 	fuse := true
 	es.Lock()
+
+	// TODO return 302
+	// unlock comes from OnPulse()
+	// pulse changed while we was locked and we don't process anything
+	if inmsg.Pulse() != lr.pulse(ctx).PulseNumber {
+		return nil, errors.New("Abort execution: New Pulse coming")
+	}
+
 	defer func() {
 		if fuse {
 			es.Unlock()
@@ -209,7 +230,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 		ctx,
 		vb.GetRole(),
 		&target,
-		lr.pulse().PulseNumber,
+		lr.pulse(ctx).PulseNumber,
 		lr.Network.GetNodeID(),
 	)
 
@@ -241,7 +262,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 		Callee:          &ref,
 		Request:         es.request,
 		Time:            time.Now(), // TODO: probably we should take it from e
-		Pulse:           *lr.pulse(),
+		Pulse:           *lr.pulse(ctx),
 		TraceID:         inslogger.TraceID(ctx),
 		CallerPrototype: msg.GetCallerPrototype(),
 	}
@@ -485,15 +506,10 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	}
 }
 
-func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	insctx := context.TODO()
-
+func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	lr.RefreshConsensus()
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind()
-
-	// TODO INS-666
-	// TODO make refresh lr.Execution - Unlock mutexes n-1 time for each object, send some info for callers, do empty object
 
 	if len(objectsRecords) == 0 {
 		return nil
@@ -502,7 +518,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// send copy for validation
 	for ref, records := range objectsRecords {
 		_, err := lr.MessageBus.Send(
-			insctx,
+			ctx,
 			&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse},
 		)
 		if err != nil {
@@ -510,10 +526,13 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 		}
 
 		results := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
-		_, err = lr.MessageBus.Send(insctx, &results)
+		_, err = lr.MessageBus.Send(ctx, &results)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}
+
+		// release unprocessed request
+		lr.execution[ref].ReleaseQueue()
 	}
 
 	return nil

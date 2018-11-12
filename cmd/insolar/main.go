@@ -172,7 +172,7 @@ func sendRequest(out io.Writer) {
 	userCfg, err := requesters.ReadUserConfigFromFile(configPath)
 	check("[ sendRequest ]", err)
 	if rootAsCaller {
-		info, err := requesters.Info(defaultURL)
+		info, err := requesters.Info(sendUrls)
 		check("[ sendRequest ]", err)
 		userCfg.Caller = info.RootMember
 	}
@@ -188,7 +188,7 @@ func sendRequest(out io.Writer) {
 	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	response, err := requesters.Send(ctx, defaultURL, userCfg, reqCfg)
+	response, err := requesters.Send(ctx, sendUrls, userCfg, reqCfg)
 	check("[ sendRequest ]", err)
 
 	writeToOutput(out, string(response))
