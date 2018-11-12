@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
+	"crypto"
 
 	"github.com/insolar/insolar/core"
 	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -29,6 +30,11 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 )
+
+type ParcelFactory interface {
+	Create(context.Context, core.Message, core.RecordRef, core.PulseNumber, core.RoutingToken) (core.Parcel, error)
+	Validate(crypto.PublicKey, core.Parcel) error
+}
 
 // Parcel is a message signed by senders private key.
 type Parcel struct {
