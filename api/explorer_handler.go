@@ -35,7 +35,6 @@ type explorerRecord struct {
 type explorerObject struct {
 	records []explorerRecord
 	head    string
-	parent  string
 }
 
 // ProcessGetHistory processes get history request
@@ -82,7 +81,7 @@ func (rh *RequestHandler) sendRequestHistory(ctx context.Context, object core.Re
 }
 
 func extractHistoryResponse(routResult core.Reply) (string, error) {
-	refs := routResult.(*reply.ExplorerList).Refs
+	refs := routResult.(*reply.ExplorerList).States
 
 	list := explorerObject{}
 

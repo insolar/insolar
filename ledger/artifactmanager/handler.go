@@ -533,7 +533,7 @@ func (h *MessageHandler) handleGetHistory(ctx context.Context, pulseNumber core.
 	for current != nil {
 		// We have enough results.
 		if counter >= msg.Amount {
-			return &reply.ExplorerList{Refs: history, NextState: current}, nil
+			return &reply.ExplorerList{States: history, NextState: current}, nil
 		}
 		counter++
 
@@ -587,5 +587,5 @@ func (h *MessageHandler) handleGetHistory(ctx context.Context, pulseNumber core.
 			}
 		}
 	}
-	return &reply.ExplorerList{Refs: history, NextState: nil}, nil
+	return &reply.ExplorerList{States: history, NextState: nil}, nil
 }
