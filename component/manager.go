@@ -80,7 +80,24 @@ func (m *Manager) Start(ctx context.Context) error {
 				return errors.Wrap(err, "Failed to start components.")
 			}
 		} else {
-			log.Warnf("ComponentManager: Component %s has no Stop method", name)
+			log.Warnf("ComponentManager: Component %s has no Start method", name)
+		}
+	}
+	return nil
+}
+
+// Init invokes Init method of all components which implements Initer interface
+func (m *Manager) Init(ctx context.Context) error {
+	for _, c := range m.components {
+		name := reflect.TypeOf(c).Elem().String()
+		if s, ok := c.(Initer); ok {
+			log.Infoln("ComponentManager: Init component: ", name)
+			err := s.Init(ctx)
+			if err != nil {
+				return errors.Wrap(err, "Failed to init components.")
+			}
+		} else {
+			log.Warnf("ComponentManager: Component %s has no Init method", name)
 		}
 	}
 	return nil
