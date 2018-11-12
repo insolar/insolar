@@ -20,12 +20,12 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// RequestPulse is data received from a pulsar
+// RequestPulse is data received from a pulsar.
 type RequestPulse struct {
 	Pulse core.Pulse
 }
 
-// RequestGetRandomHosts is data for the call that returns random hosts of the DHT network
+// RequestGetRandomHosts is data for the call that returns random hosts of the Insolar network.
 type RequestGetRandomHosts struct {
 	HostsNumber int
 }

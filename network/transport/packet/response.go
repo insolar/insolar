@@ -20,13 +20,13 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 )
 
-// ResponsePulse is the response for a new pulse from a pulsar
+// ResponsePulse is the response for a new pulse from a pulsar.
 type ResponsePulse struct {
 	Success bool
 	Error   string
 }
 
-// ResponseGetRandomHosts is the response containing random hosts of the DHT network
+// ResponseGetRandomHosts is the response containing random hosts of the Insolar network.
 type ResponseGetRandomHosts struct {
 	Hosts []host.Host
 	Error string
