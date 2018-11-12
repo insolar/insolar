@@ -24,18 +24,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
+func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 	var pubKey string
-	var role []core.NodeRole
+	var role core.NodeRole
 	var fErr string
 
 	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &fErr})
 	if err != nil {
-		return "", nil, errors.Wrap(err, "[ networkcoordinator::extractAuthorizeResponse ]")
+		return "", core.RoleUnknown, errors.Wrap(err, "[ networkcoordinator::extractAuthorizeResponse ]")
 	}
 
 	if len(fErr) != 0 {
-		return "", nil, errors.Wrap(err, "[ networkcoordinator::extractAuthorizeResponse ] "+fErr)
+		return "", core.RoleUnknown, errors.Wrap(err, "[ networkcoordinator::extractAuthorizeResponse ] "+fErr)
 	}
 
 	return pubKey, role, nil
