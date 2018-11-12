@@ -82,15 +82,12 @@ func NewConsensusNetwork(origin *host.Host, resolver network.RoutingTable) (netw
 
 	tp, err := transport.NewTransport(conf, relay.NewProxy())
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating transport")
-	}
-	if err != nil {
 		go tp.Stop()
 		<-tp.Stopped()
 		tp.Close()
-		return nil, errors.Wrap(err, "error getting origin")
+		return nil, errors.Wrap(err, "error creating transport")
 	}
-	result := &transportConsensus{}
+	result := &transportConsensus{handlers: make(map[types.PacketType]network.ConsensusRequestHandler)}
 	result.transport = tp
 	result.resolver = resolver
 	result.origin = origin

@@ -41,7 +41,8 @@ const (
 )
 
 type MockResolver struct {
-	mapping map[core.RecordRef]*host.Host
+	mapping  map[core.RecordRef]*host.Host
+	smapping map[core.ShortNodeID]*host.Host
 }
 
 func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
@@ -71,14 +72,16 @@ func (m *MockResolver) addMapping(key, value string) error {
 	return nil
 }
 
-func (m *MockResolver) addMappingS(key, value string, shortID core.ShortNodeID) error {
-	k := core.NewRefFromBase58(key)
-	h, err := host.NewHostNS(value, k, shortID)
-	if err != nil {
-		return err
+func (m *MockResolver) addMappingHost(h *host.Host) {
+	m.mapping[h.NodeID] = h
+	m.smapping[h.ShortID] = h
+}
+
+func newMockResolver() *MockResolver {
+	return &MockResolver{
+		mapping:  make(map[core.RecordRef]*host.Host),
+		smapping: make(map[core.ShortNodeID]*host.Host),
 	}
-	m.mapping[k] = h
-	return nil
 }
 
 func mockConfiguration(nodeID string, address string) configuration.Configuration {
@@ -113,20 +116,18 @@ func TestNewInternalTransport2(t *testing.T) {
 }
 
 func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err error) {
-	m := MockResolver{
-		mapping: make(map[core.RecordRef]*host.Host),
-	}
+	m := newMockResolver()
 
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
 	if err != nil {
 		return nil, nil, err
 	}
-	tr1 := NewHostTransport(i1, &m)
+	tr1 := NewHostTransport(i1, m)
 	i2, err := NewInternalTransport(mockConfiguration(ID2, "127.0.0.1:0"))
 	if err != nil {
 		return nil, nil, err
 	}
-	tr2 := NewHostTransport(i2, &m)
+	tr2 := NewHostTransport(i2, m)
 
 	err = m.addMapping(id1, tr1.PublicAddress())
 	if err != nil {
@@ -175,17 +176,16 @@ func TestNewHostTransport(t *testing.T) {
 		_, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
 		assert.NoError(t, err)
 	}
-	wg.Wait()
+	success := network.WaitTimeout(&wg, time.Second)
+	assert.True(t, success)
 }
 
 func TestHostTransport_SendRequestPacket(t *testing.T) {
-	m := MockResolver{
-		mapping: make(map[core.RecordRef]*host.Host),
-	}
+	m := newMockResolver()
 
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
 	assert.NoError(t, err)
-	t1 := NewHostTransport(i1, &m)
+	t1 := NewHostTransport(i1, m)
 	t1.Start()
 	defer t1.Stop()
 
@@ -236,8 +236,8 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
 	assert.NoError(t, err)
-	wg.Wait()
-	assert.True(t, true)
+	success := network.WaitTimeout(&wg, time.Second)
+	assert.True(t, success)
 }
 
 func TestHostTransport_SendRequestPacket3(t *testing.T) {
@@ -362,13 +362,11 @@ func TestDoubleStart(t *testing.T) {
 }
 
 func TestHostTransport_RegisterPacketHandler(t *testing.T) {
-	m := MockResolver{
-		mapping: make(map[core.RecordRef]*host.Host),
-	}
+	m := newMockResolver()
 
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
 	assert.NoError(t, err)
-	tr1 := NewHostTransport(i1, &m)
+	tr1 := NewHostTransport(i1, m)
 	defer tr1.Stop()
 	handler := func(request network.Request) (network.Response, error) {
 		return tr1.BuildResponse(request, nil), nil
