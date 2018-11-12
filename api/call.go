@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/core/utils"
 
 	"github.com/insolar/insolar/api/seedmanager"
@@ -83,7 +82,7 @@ func (ar *Runner) verifySignature(ctx context.Context, params request) error {
 		return errors.Wrap(err, "[ VerifySignature ] Can't marshal arguments for verify signature")
 	}
 
-	cs := requesters.NewCryptographyService(nil)
+	cs := NewCryptographyService(nil)
 	verified := cs.Verify(key, core.SignatureFromBytes(params.Signature), args)
 	if !verified {
 		return errors.New("[ VerifySignature ] Incorrect signature")

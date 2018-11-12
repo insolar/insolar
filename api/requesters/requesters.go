@@ -19,17 +19,14 @@ package requesters
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -102,24 +99,6 @@ func constructParams(params []interface{}) ([]byte, error) {
 	return args, nil
 }
 
-type inPlaceKeyStore struct {
-	privateKey crypto.PrivateKey
-}
-
-func (ipks *inPlaceKeyStore) GetPrivateKey(string) (crypto.PrivateKey, error) {
-	return ipks.privateKey, nil
-}
-
-func NewCryptographyService(privateKey crypto.PrivateKey) core.CryptographyService {
-	cs := platformpolicy.NewPlatformCryptographyScheme()
-	ks := &inPlaceKeyStore{privateKey: privateKey}
-	service := cryptography.NewCryptographyService()
-	cm := component.Manager{}
-	cm.Register(cs)
-	cm.Inject(ks, service)
-	return service
-}
-
 // SendWithSeed sends request with known seed
 func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
@@ -141,7 +120,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 
 	verboseInfo(ctx, "Signing request ...")
-	cs := NewCryptographyService(userCfg.privateKeyObject)
+	cs := api.NewCryptographyService(userCfg.privateKeyObject)
 	signature, err := cs.Sign(serRequest)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")

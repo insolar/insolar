@@ -21,7 +21,6 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -156,7 +155,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with generating seed")
 	}
 
-	cs := requesters.NewCryptographyService(privKey)
+	cs := NewCryptographyService(privKey)
 	signature, err := cs.Sign(seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with signing")
