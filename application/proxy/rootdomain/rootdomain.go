@@ -81,7 +81,7 @@ func (r *RootDomain) GetPrototype() core.RecordRef {
 }
 
 // Authorize is proxy generated method
-func (r *RootDomain) Authorize() (string, []core.NodeRole, error) {
+func (r *RootDomain) Authorize() (string, core.NodeRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -89,7 +89,7 @@ func (r *RootDomain) Authorize() (string, []core.NodeRole, error) {
 	ret := [3]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
-	var ret1 []core.NodeRole
+	var ret1 core.NodeRole
 	ret[1] = &ret1
 	var ret2 *foundation.Error
 	ret[2] = &ret2

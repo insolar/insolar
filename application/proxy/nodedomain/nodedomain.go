@@ -81,12 +81,12 @@ func (r *NodeDomain) GetPrototype() core.RecordRef {
 }
 
 // RegisterNode is proxy generated method
-func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
 	var args [5]interface{}
 	args[0] = publicKey
 	args[1] = numberOfBootstrapNodes
 	args[2] = majorityRule
-	args[3] = roles
+	args[3] = role
 	args[4] = ip
 
 	var argsSerialized []byte
@@ -119,12 +119,12 @@ func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, 
 }
 
 // RegisterNodeNoWait is proxy generated method
-func (r *NodeDomain) RegisterNodeNoWait(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) error {
+func (r *NodeDomain) RegisterNodeNoWait(publicKey string, numberOfBootstrapNodes int, majorityRule int, role string, ip string) error {
 	var args [5]interface{}
 	args[0] = publicKey
 	args[1] = numberOfBootstrapNodes
 	args[2] = majorityRule
-	args[3] = roles
+	args[3] = role
 	args[4] = ip
 
 	var argsSerialized []byte
@@ -253,7 +253,7 @@ func (r *NodeDomain) IsAuthorizedNoWait(nodeRef core.RecordRef, seed []byte, sig
 }
 
 // Authorize is proxy generated method
-func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
+func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -264,7 +264,7 @@ func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw
 	ret := [3]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
-	var ret1 []core.NodeRole
+	var ret1 core.NodeRole
 	ret[1] = &ret1
 	var ret2 *foundation.Error
 	ret[2] = &ret2

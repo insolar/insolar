@@ -18,10 +18,9 @@ package packets
 
 import (
 	"bytes"
+	"crypto/rand"
 	"reflect"
 	"testing"
-
-	"crypto/rand"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
@@ -245,6 +244,27 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 	nodeLeaveClaim.length = uint16(333)
 	checkBadDataSerializationDeserialization(t, nodeLeaveClaim,
 		"[ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
+}
+
+func TestPhase1Packet_SetPulseProof(t *testing.T) {
+	p := Phase1Packet{}
+	proofStateHash := genRandomSlice(64)
+	proofSignature := genRandomSlice(64)
+
+	err := p.SetPulseProof(proofStateHash, proofSignature)
+	assert.NoError(t, err)
+
+	assert.Equal(t, proofStateHash, p.proofNodePulse.NodeStateHash[:])
+	assert.Equal(t, proofSignature, p.proofNodePulse.NodeSignature[:])
+
+	invalidStateHash := genRandomSlice(32)
+	invalidSignature := genRandomSlice(128)
+	err = p.SetPulseProof(invalidStateHash, invalidSignature)
+	assert.Error(t, err)
+
+	assert.NotEqual(t, invalidStateHash, p.proofNodePulse.NodeStateHash[:])
+	assert.NotEqual(t, invalidSignature, p.proofNodePulse.NodeSignature[:])
+
 }
 
 // ----------------------------------PHASE 2--------------------------------

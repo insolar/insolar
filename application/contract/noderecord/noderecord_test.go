@@ -26,25 +26,15 @@ import (
 const TestPubKey = "test"
 const TestIP = "127.0.0.1"
 
-var TestRoles = []string{"virtual"}
-
-func rolesToStrings(roles []string) []core.NodeRole {
-	var result []core.NodeRole
-	for _, role := range roles {
-		result = append(result, core.GetRoleFromString(role))
-	}
-
-	return result
-}
+var TestRole = "virtual"
 
 func TestNewNodeRecord(t *testing.T) {
 
-	r := rolesToStrings(TestRoles)
+	r := core.GetRoleFromString(TestRole)
 	assert.NotEqual(t, core.RoleUnknown, r)
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	record, err := NewNodeRecord(TestPubKey, TestRole, TestIP)
 	assert.NoError(t, err)
-	assert.Len(t, record.Record.Roles, 1)
-	assert.Equal(t, r, record.Record.Roles)
+	assert.Equal(t, r, record.Record.Role)
 	assert.Equal(t, TestPubKey, record.Record.PublicKey)
 }
 
@@ -54,7 +44,7 @@ func TestFromString(t *testing.T) {
 }
 
 func TestNodeRecord_GetPublicKey(t *testing.T) {
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	record, err := NewNodeRecord(TestPubKey, TestRole, TestIP)
 	assert.NoError(t, err)
 	pk, err := record.GetPublicKey()
 	assert.NoError(t, err)
@@ -62,21 +52,21 @@ func TestNodeRecord_GetPublicKey(t *testing.T) {
 }
 
 func TestNodeRecord_GetNodeInfo(t *testing.T) {
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	record, err := NewNodeRecord(TestPubKey, TestRole, TestIP)
 	assert.NoError(t, err)
 	info, err := record.GetNodeInfo()
 	assert.NoError(t, err)
 	assert.Equal(t, TestPubKey, info.PublicKey)
-	r := rolesToStrings(TestRoles)
-	assert.Equal(t, r, info.Roles)
+	r := core.GetRoleFromString(TestRole)
+	assert.Equal(t, r, info.Role)
 	assert.Equal(t, TestIP, info.IP)
 }
 
 func TestNodeRecord_GetRole(t *testing.T) {
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	record, err := NewNodeRecord(TestPubKey, TestRole, TestIP)
 	assert.NoError(t, err)
 	role, err := record.GetRole()
 	assert.NoError(t, err)
-	r := rolesToStrings(TestRoles)
+	r := core.GetRoleFromString(TestRole)
 	assert.Equal(t, r, role)
 }

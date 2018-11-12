@@ -17,17 +17,37 @@
 package phases
 
 import (
+	"context"
+
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/merkle"
+	"github.com/pkg/errors"
 )
 
 // FirstPhase is a first phase.
 type FirstPhase struct {
-	NodeNetwork core.NodeNetwork `inject:""`
-	State       *FirstPhaseState
+	NodeNetwork  core.NodeNetwork  `inject:""`
+	Calculator   merkle.Calculator `inject:""`
+	Communicator Communicator      `inject:""`
+	State        *FirstPhaseState
 }
 
-func (fp *FirstPhase) Execute(pulse *core.Pulse) error {
+// Execute do first phase
+func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) error {
 	// TODO: do something here
+	_, proof, err := fp.Calculator.GetPulseProof(ctx, &merkle.PulseEntry{Pulse: pulse})
+	if err != nil {
+		return errors.Wrap(err, "[Execute] Failed to calculate pulse proof.")
+	}
+
+	p := packets.Phase1Packet{}
+	err = p.SetPulseProof(proof.StateHash, proof.Signature)
+	if err != nil {
+		return errors.Wrap(err, "[Execute] Failed to set pulse proof in Phase1Packet.")
+	}
+
+	//TODO: fp.Communicator.ExchangeData(ctx, p.,)
 	return nil
 }
 

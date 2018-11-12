@@ -21,13 +21,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSeedFromBytes_BadInputSize(t *testing.T) {
 	var badSeedBytes []byte
 	res := SeedFromBytes(badSeedBytes)
-	assert.Nil(t, res)
+	require.Nil(t, res)
 }
 
 func TestSeedFromBytes(t *testing.T) {
@@ -36,19 +36,19 @@ func TestSeedFromBytes(t *testing.T) {
 		seedBytes = append(seedBytes, 'A'+i)
 	}
 	res := SeedFromBytes(seedBytes)
-	assert.NotNil(t, res)
-	assert.Equal(t, seedBytes, res[:])
+	require.NotNil(t, res)
+	require.Equal(t, seedBytes, res[:])
 }
 
 func TestNew(t *testing.T) {
 	sm := New()
-	assert.Empty(t, sm.seedPool)
+	require.Empty(t, sm.seedPool)
 }
 
 func getSeed(t *testing.T) Seed {
 	sg := SeedGenerator{}
 	seed, err := sg.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return *seed
 }
 
@@ -56,7 +56,7 @@ func TestSeedManager_Add(t *testing.T) {
 	sm := NewSpecified(time.Duration(5*time.Millisecond), DefaultCleanPeriod)
 	seed := getSeed(t)
 	sm.Add(seed)
-	assert.True(t, sm.Exists(seed))
+	require.True(t, sm.Exists(seed))
 }
 
 func TestSeedManager_ExpiredSeed(t *testing.T) {
@@ -65,7 +65,7 @@ func TestSeedManager_ExpiredSeed(t *testing.T) {
 	seed := getSeed(t)
 	sm.Add(seed)
 	<-time.After(expTime * 2)
-	assert.False(t, sm.Exists(seed))
+	require.False(t, sm.Exists(seed))
 }
 
 func TestSeedManager_ExistsThanExpiredSeed(t *testing.T) {
@@ -73,9 +73,9 @@ func TestSeedManager_ExistsThanExpiredSeed(t *testing.T) {
 	ttl := time.Duration(8 * time.Millisecond)
 	sm := NewSpecified(ttl, DefaultCleanPeriod)
 	sm.Add(seed)
-	assert.True(t, sm.Exists(seed))
+	require.True(t, sm.Exists(seed))
 	<-time.After(ttl * 2)
-	assert.False(t, sm.Exists(seed))
+	require.False(t, sm.Exists(seed))
 }
 
 func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
@@ -84,7 +84,7 @@ func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
 	seed := getSeed(t)
 	sm.Add(seed)
 	<-time.After(8 * time.Millisecond)
-	assert.False(t, sm.Exists(seed))
+	require.False(t, sm.Exists(seed))
 }
 
 func TestRace(t *testing.T) {
