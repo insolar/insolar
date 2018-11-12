@@ -124,6 +124,26 @@ func getRootDomainRef(ctx context.Context, c core.Components) (*core.RecordRef, 
 	return nil, nil
 }
 
+func getRootMemberRef(ctx context.Context, c core.Components, rootDomainRef core.RecordRef) (*core.RecordRef, error) {
+	am := c.Ledger.GetArtifactManager()
+	rootDomainObj, err := am.GetObject(ctx, rootDomainRef, nil, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get children of RootDomain object")
+	}
+	rootDomainRefChildren, err := rootDomainObj.Children(nil)
+	if err != nil {
+		return nil, err
+	}
+	if rootDomainRefChildren.HasNext() {
+		rootMemberRef, err := rootDomainRefChildren.Next()
+		if err != nil {
+			return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get next child of RootDomain object")
+		}
+		return rootMemberRef, nil
+	}
+	return nil, nil
+}
+
 func getRootMemberPubKey(ctx context.Context, file string) (string, error) {
 	absPath, err := filepath.Abs(file)
 	if err != nil {
