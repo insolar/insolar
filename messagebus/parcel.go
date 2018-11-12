@@ -33,6 +33,10 @@ type parcelFactory struct {
 	Cryptography               core.CryptographyService        `inject:""`
 }
 
+func NewParcelFactory() message.ParcelFactory {
+	return &parcelFactory{}
+}
+
 func (pf *parcelFactory) Create(
 	ctx context.Context,
 	msg core.Message,
