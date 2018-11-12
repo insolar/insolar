@@ -93,24 +93,24 @@ func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 	return &ret, r.Step
 }
 
-func (lr *LogicRunner) pulse() *core.Pulse {
-	pulse, err := lr.Ledger.GetPulseManager().Current(context.TODO())
+func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {
+	pulse, err := lr.Ledger.GetPulseManager().Current(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return pulse
 }
 
-func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
+func (lr *LogicRunner) GetConsensus(ctx context.Context, r Ref) (*Consensus, bool) {
 	lr.consensusMutex.Lock()
 	defer lr.consensusMutex.Unlock()
 	c, ok := lr.consensus[r]
 	if !ok {
 		validators, err := lr.Ledger.GetJetCoordinator().QueryRole(
-			context.TODO(),
+			ctx,
 			core.RoleVirtualValidator,
-			r,
-			lr.pulse().PulseNumber,
+			&r,
+			lr.pulse(ctx).PulseNumber,
 		)
 		if err != nil {
 			panic("cannot QueryRole")

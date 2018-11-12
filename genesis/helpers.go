@@ -90,7 +90,7 @@ func isLightExecutor(ctx context.Context, c core.Components) (bool, error) {
 	isLightExecutor, err := jc.IsAuthorized(
 		ctx,
 		core.RoleLightExecutor,
-		*am.GenesisRef(),
+		am.GenesisRef(),
 		currentPulse.PulseNumber,
 		nodeID,
 	)

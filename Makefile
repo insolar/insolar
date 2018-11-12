@@ -94,3 +94,9 @@ docker-insgorund:
 
 docker: docker-insolard docker-pulsar docker-insgorund
 
+mocks:
+	minimock -i ./core.MessageBus   -o ./testutils  -s _mock.go
+	minimock -i ./core.PulseManager -o ./testutils  -s _mock.go
+	minimock -i ./core.LocalStorage -o ./testutils  -s _mock.go
+	minimock -i ./messagebus.sender -o ./messagebus
+	minimock -i ./messagebus.tape   -o ./messagebus
