@@ -4,11 +4,17 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/gob"
+	"crypto"
 
 	"github.com/insolar/insolar/core"
 	crypto_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/pkg/errors"
 )
+
+type RoutingTokenFactory interface {
+	Create(*core.RecordRef, *core.RecordRef, core.PulseNumber, []byte) *RoutingToken
+	Validate(crypto.PublicKey, core.RoutingToken, []byte) error
+}
 
 // RoutingToken is an auth token for coordinating messages
 type RoutingToken struct {
