@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// HeavyRecords carries Key/Value records for replication on Heavy Material node.
+// HeavyRecords carries Key/Value records for replication to Heavy Material node.
 type HeavyRecords struct {
 	Records []core.KV
 }

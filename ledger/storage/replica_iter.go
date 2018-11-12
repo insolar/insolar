@@ -33,16 +33,15 @@ type iterstate struct {
 }
 
 // ReplicaIter provides partial iterator over BadgerDB key/value pairs
-// required for replication on Heavy Material node in provideid pulse.
+// required for replication to Heavy Material node in provided pulse.
 //
 // Required kv-pairs are all records in provided pulse and all indexes available in database.
 //
-// "Partial" means it check size of fetched data while iteration and if it overflows limit,
-// saves current position and returns accumulated key/value pairs.
-// This is not so honest alogrithm, because could lead to fecthed size:
-// 	(limit-1) + 1 key/value pair size
+// "Partial" means it fetches data in chunks of the specified size.
+// After a chunk has been fetched, it saves the current position.
+// This is not an "honest" alogrithm, because the last record size can exceed the limit.
 //
-// Better implementation is for future work.
+// Better implementation is for the future work.
 type ReplicaIter struct {
 	ctx        context.Context
 	db         *DB
@@ -50,7 +49,7 @@ type ReplicaIter struct {
 	istates    []*iterstate
 }
 
-// NewReplicaIter creates ReplicaIter with provided pulsenumber and per iteration fetch limit.
+// NewReplicaIter creates ReplicaIter with provided pulsenumber and iteration fetch limit.
 func NewReplicaIter(ctx context.Context, db *DB, pulsenum core.PulseNumber, limit int) *ReplicaIter {
 	recordsPrefix := bytes.Join([][]byte{{scopeIDRecord}, pulsenum.Bytes()}, nil)
 	indexesPrefix := []byte{scopeIDLifeline}
@@ -66,7 +65,7 @@ func NewReplicaIter(ctx context.Context, db *DB, pulsenum core.PulseNumber, limi
 	}
 }
 
-// NextRecords fetch next part of key value pairs.
+// NextRecords fetches next part of key value pairs.
 func (r *ReplicaIter) NextRecords() ([]core.KV, error) {
 	if r.isDone() {
 		return nil, ErrReplicatorDone
