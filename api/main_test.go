@@ -104,9 +104,9 @@ func TestNewApiRunnerNilConfig(t *testing.T) {
 func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 	cfg := configuration.APIRunner{}
 	_, err := NewRunner(&cfg)
-	assert.EqualError(t, err, "[ NewAPIRunner ] Port must not be 0")
+	assert.EqualError(t, err, "[ NewAPIRunner ] Address must not be empty")
 
-	cfg.Port = 100
+	cfg.Address = "address:100"
 	_, err = NewRunner(&cfg)
 	assert.EqualError(t, err, "[ NewAPIRunner ] Location must exist")
 
