@@ -30,8 +30,9 @@ type Manager struct {
 	components []interface{}
 }
 
-// Register components in Manager and inject required dependencies
-// Register can inject interfaces only, tag public struct fields with `inject:""`
+// Register components in Manager and inject required dependencies.
+// Register can inject interfaces only, tag public struct fields with `inject:""`.
+// If the injectable struct already has a value on the tagged field, the value WILL NOT be overridden.
 func (m *Manager) Register(components ...interface{}) {
 	m.components = components
 	for _, c := range components {
