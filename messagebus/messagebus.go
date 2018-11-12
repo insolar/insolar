@@ -38,7 +38,8 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Service      core.Network     `inject:""`
+	Service core.Network `inject:""`
+	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	Ledger       core.Ledger      `inject:""`
 	ActiveNodes  core.NodeNetwork `inject:""`
 	handlers     map[core.MessageType]core.MessageHandler

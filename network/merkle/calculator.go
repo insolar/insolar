@@ -31,6 +31,7 @@ type Calculator interface {
 }
 
 type calculator struct {
+	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	Ledger      core.Ledger      `inject:""`
 	NodeNetwork core.NodeNetwork `inject:""`
 	Certificate core.Certificate `inject:""`
