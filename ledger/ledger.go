@@ -83,8 +83,11 @@ func NewTestLedger(
 
 // GetLedgerComponents returns ledger components.
 func GetLedgerComponents(ctx context.Context, conf configuration.Ledger) []interface{} {
-	db := storage.NewDB(conf, nil)
-	err := db.Bootstrap(ctx)
+	db, err := storage.NewDB(conf, nil)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to initialize DB"))
+	}
+	err = db.Bootstrap(ctx)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to bootstrap DB"))
 	}
