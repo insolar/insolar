@@ -44,7 +44,12 @@ type Serializer interface {
 	Deserialize(data io.Reader) error
 }
 
+type HeaderSkipDeserializer interface {
+	DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error
+}
+
 type ConsensusPacket interface {
+	HeaderSkipDeserializer
 	Serializer
 	PacketRoutable
 }
@@ -59,21 +64,16 @@ func ExtractPacket(reader io.Reader) (ConsensusPacket, error) {
 	var packet ConsensusPacket
 	switch header.PacketT {
 	case Phase1:
-		packet1 := &Phase1Packet{}
-		err := packet1.DeserializeWithoutHeader(reader, &header)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ ExtractPacket ] Can't DeserializeWithoutHeader packet1")
-		}
-		packet = packet1
+		packet = &Phase1Packet{}
 	case Phase2:
-		packet2 := &Phase2Packet{}
-		err := packet2.DeserializeWithoutHeader(reader, &header)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ ExtractPacket ] Can't DeserializeWithoutHeader packet2")
-		}
-		packet = packet2
+		packet = &Phase2Packet{}
 	default:
 		return nil, errors.New("[ ExtractPacket ] Unknown extract packet type. " + strconv.Itoa(int(header.PacketT)))
+	}
+
+	err = packet.DeserializeWithoutHeader(reader, &header)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ExtractPacket ] Can't DeserializeWithoutHeader packet2")
 	}
 
 	return packet, nil
