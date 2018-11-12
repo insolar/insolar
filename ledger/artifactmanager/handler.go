@@ -514,20 +514,19 @@ func validateState(old record.State, new record.State) error {
 	return nil
 }
 
-func (h *MessageHandler) handleGetHistory(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.SignedMessage) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.GetHistory)
-
-	idx, state, _, err := getObject(ctx, h.db, msg.Object.Record(), nil, false)
+func (h *MessageHandler) handleGetHistory(ctx context.Context, pulseNumber core.PulseNumber, inmsg core.Parcel) (core.Reply, error) {
+	msg := inmsg.Message().(*message.GetHistory)
+	idx, _, _, err := getObject(ctx, h.db, msg.Object.Record(), nil, false)
 	if err != nil {
 		return nil, err
 	}
-	history := []reply.Object{}
+	var history []reply.ExplorerObject
 	var current *core.RecordID
 
 	if msg.From != nil {
 		current = msg.From
 	} else {
-		current = state
+		current = idx.LatestState
 	}
 
 	counter := 0
@@ -542,47 +541,51 @@ func (h *MessageHandler) handleGetHistory(ctx context.Context, pulseNumber core.
 		if err != nil {
 			return nil, errors.New("failed to retrieve object state")
 		}
-		// switch rec.(type) {
-		// case record.Request:{
-		//
-		// 	}
-		// case record.ObjectState:{
-		//
-		// 	}
-		// case record.Record:{
-		//
-		// 	}
-		// }
 
-		currentState, ok := rec.(record.ObjectState)
+		switch rec.(type) {
+		case record.ObjectState:
+			{
+				currentState, ok := rec.(record.ObjectState)
 
-		if !ok {
-			return nil, errors.New("Cannot cust to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
-		}
-		current = currentState.PrevStateID()
+				if !ok {
+					return nil, errors.New("Cannot cast to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
+				}
+				current = currentState.PrevStateID()
 
-		// Skip records later than specified pulse.
-		// recPulse := current.Pulse()
-		// if msg.Pulse != nil && recPulse > *msg.Pulse {
-		// 	continue
-		// }
+				var memory []byte
+				if currentState.GetMemory() != nil {
+					memory, err = h.db.GetBlob(ctx, currentState.GetMemory())
+					if err != nil {
+						return nil, err
+					}
+				}
 
-		var memory []byte
-		if currentState.GetMemory() != nil {
-			memory, err = h.db.GetBlob(ctx, currentState.GetMemory())
-			if err != nil {
-				return nil, err
+				history = append(history, reply.ExplorerObject{
+					Pulse:     pulseNumber,
+					Memory:    memory,
+					NextState: currentState.PrevStateID(),
+				})
+			}
+		case record.Request:
+			{
+				currentState, ok := rec.(record.Request)
+				if !ok {
+					return nil, errors.New("Cannot cast to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
+				}
+				memory := currentState.GetPayload()
+
+				history = append(history, reply.ExplorerObject{
+					Memory:    memory,
+					Pulse:     pulseNumber,
+					NextState: nil,
+				})
+
+			}
+		case record.Record:
+			{
+				return nil, errors.New("Cannot cast to object state: record.Record")
 			}
 		}
-
-		history = append(history, reply.Object{
-			Head:         msg.Object,
-			Prototype:    currentState.GetImage(),
-			IsPrototype:  currentState.GetIsPrototype(),
-			ChildPointer: currentState.PrevStateID(),
-			Parent:       idx.Parent,
-			Memory:       memory,
-		})
 	}
 	return &reply.ExplorerList{Refs: history, NextState: nil}, nil
 }

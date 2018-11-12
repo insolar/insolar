@@ -34,7 +34,7 @@ type HistoryIterator struct {
 	chunkSize  int
 	fromPulse  *core.PulseNumber
 	fromState  *core.RecordID
-	buff       []reply.Object
+	buff       []reply.ExplorerObject
 	buffIndex  int
 	canFetch   bool
 }
@@ -83,7 +83,7 @@ func (i *HistoryIterator) nextFromBuffer() *core.RecordRef {
 	}
 	ref := core.NewRecordRef(
 		*i.object.Domain(),
-		*i.buff[i.buffIndex].ChildPointer,
+		*i.buff[i.buffIndex].NextState,
 	)
 	i.buffIndex++
 	return ref

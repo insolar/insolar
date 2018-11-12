@@ -50,15 +50,15 @@ type memberInfo struct {
 }
 
 func Test_ExplorerHandlerExtractHistory(t *testing.T) {
-	head := core.NewRecordRef(core.RecordID{0}, core.RecordID{0})
-	objList := []reply.Object{}
-	objList = append(objList, reply.Object{
-		Head:   *head,
-		Memory: []byte{},
+	head := core.RecordID{0}
+	objList := []reply.ExplorerObject{}
+	objList = append(objList, reply.ExplorerObject{
+		NextState: &head,
+		Memory:    []byte{},
 	})
-	objList = append(objList, reply.Object{
-		Head:   *head,
-		Memory: []byte{},
+	objList = append(objList, reply.ExplorerObject{
+		NextState: &head,
+		Memory:    []byte{},
 	})
 	repl := &reply.ExplorerList{
 		Refs: objList,
@@ -70,6 +70,7 @@ func Test_ExplorerHandlerExtractHistory(t *testing.T) {
 }
 
 func Test_ExplorerHandlerApi(t *testing.T) {
+	t.Skip()
 	ctx, _ = inslogger.WithTraceField(context.Background(), "APItests")
 	member1, err := createMember("Test1")
 	assert.NoError(t, err)

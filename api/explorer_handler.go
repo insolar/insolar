@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
+	"strconv"
 )
 
 type explorerRecord struct {
@@ -58,18 +59,16 @@ func (rh *RequestHandler) routeCallHistory(ctx context.Context, rootRef core.Rec
 	if rh.messageBus == nil {
 		return nil, errors.New("[ RouteCallHistory ] message bus was not set during initialization")
 	}
-
 	e := &message.GetHistory{
 		Object: object,
 		From:   rootRef.Record(),
 		Amount: 100,
 	}
-
 	res, err := rh.messageBus.Send(ctx, e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCallHistory ] couldn't send message")
 	}
-	log.Debug("Response: ", res)
+	log.Info("Response: ", res)
 
 	return res, nil
 }
@@ -84,18 +83,17 @@ func (rh *RequestHandler) sendRequestHistory(ctx context.Context, object core.Re
 
 func extractHistoryResponse(routResult core.Reply) (string, error) {
 	refs := routResult.(*reply.ExplorerList).Refs
-	firstSt := true
+
 	list := explorerObject{}
+
 	for _, ref := range refs {
-		resp, _ := core.UnMarshalResponse(ref.Memory, []interface{}{})
+
+		obj, _ := core.UnMarshalResponse(ref.Memory, []interface{}{})
+		log.Info("Object: ", obj)
+
 		elem := explorerRecord{
-			data:  resp,
-			pulse: string(ref.State.Pulse().Bytes()),
-		}
-		if firstSt {
-			list.head = ref.Head.String()
-			list.parent = ref.Head.String()
-			firstSt = false
+			data:  obj,
+			pulse: strconv.FormatUint(uint64(ref.Pulse), 10),
 		}
 		list.records = append(list.records, elem)
 	}

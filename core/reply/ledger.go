@@ -81,8 +81,14 @@ func (e *Children) Type() core.ReplyType {
 // ExplorerList is common reaction for methods returning
 // - list of block explorer history
 // - or list of last transactions
+type ExplorerObject struct {
+	Memory    []byte
+	Pulse     core.PulseNumber
+	NextState *core.RecordID
+}
+
 type ExplorerList struct {
-	Refs      []Object
+	Refs      []ExplorerObject
 	NextState *core.RecordID
 }
 

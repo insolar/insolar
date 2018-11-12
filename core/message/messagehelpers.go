@@ -21,6 +21,8 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.RecordRef
 	case *GetChildren:
 		return t.Parent
+	case *GetHistory:
+		return t.Object
 	case *GetCode:
 		return t.Code
 	case *GetDelegate:
@@ -61,6 +63,8 @@ func ExtractRole(msg core.Message) core.JetRole {
 	case *ExecutorResults:
 		return core.RoleVirtualExecutor
 	case *GetChildren:
+		return core.RoleLightExecutor
+	case *GetHistory:
 		return core.RoleLightExecutor
 	case *GetCode:
 		return core.RoleLightExecutor
