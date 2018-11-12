@@ -99,7 +99,7 @@ func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) (Orig
 	}, nil
 }
 
-func (c *calculator) IsValid(proof proof, hash OriginHash, publicKey crypto.PublicKey) bool {
+func (c *calculator) IsValid(proof Proof, hash OriginHash, publicKey crypto.PublicKey) bool {
 	signature := core.SignatureFromBytes(proof.signature())
 	return c.CryptographyService.Verify(publicKey, signature, proof.hash(hash))
 }

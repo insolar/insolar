@@ -89,6 +89,17 @@ func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 	return header, nil
 }
 
+// SetPulseProof sets PulseProof and check struct fields len, returns error if invalid len
+func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) error {
+	if len(proofStateHash) == 64 || len(proofSignature) == 64 {
+		copy(p1p.proofNodePulse.NodeStateHash[:], proofStateHash[:64])
+		copy(p1p.proofNodePulse.NodeSignature[:], proofSignature[:64])
+		return nil
+	}
+
+	return errors.New("invalid proof fields len")
+}
+
 type PacketHeader struct {
 	PacketT    PacketType
 	SubType    uint8

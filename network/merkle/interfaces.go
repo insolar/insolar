@@ -23,15 +23,16 @@ import (
 
 type OriginHash []byte
 
+//go:generate minimock -i github.com/insolar/insolar/network/merkle.Calculator -o ../../testutils/merkle -s _mock.go
 type Calculator interface {
 	GetPulseProof(context.Context, *PulseEntry) (OriginHash, *PulseProof, error)
 	GetGlobuleProof(context.Context, *GlobuleEntry) (OriginHash, *GlobuleProof, error)
 	GetCloudProof(context.Context, *CloudEntry) (OriginHash, *CloudProof, error)
 
-	IsValid(proof, OriginHash, crypto.PublicKey) bool
+	IsValid(Proof, OriginHash, crypto.PublicKey) bool
 }
 
-type proof interface {
+type Proof interface {
 	hash([]byte) []byte
 	signature() []byte
 }

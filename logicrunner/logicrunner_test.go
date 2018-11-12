@@ -1345,11 +1345,6 @@ type Two struct {
 func New() (*Two, error) {
 	return nil, nil
 }
-// Contract without methods can't build because of import error in proxy
-// TODO: INS-737
-func (r *Two) Hello() (*string, error) {
-	return nil, nil
-}
 `
 	ctx := context.TODO()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
