@@ -38,7 +38,7 @@ import (
 )
 
 // InitComponents creates and links all insolard components
-func InitComponents(ctx context.Context, cfg configuration.Configuration, isBootstrap bool) (*component.Manager, *ComponentManager, *Repl, error) {
+func InitComponents(ctx context.Context, cfg configuration.Configuration, isBootstrap bool, nodeKeysPath string) (*component.Manager, *ComponentManager, *Repl, error) {
 	var cert *certificate.Certificate
 	var err error
 	if isBootstrap {
@@ -64,7 +64,7 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	gen, err := genesis.NewGenesis(cfg.Genesis)
+	gen, err := genesis.NewGenesis(cfg.Genesis, isBootstrap, bootstrapNodesInfo(ctx, nodeKeysPath))
 	checkError(ctx, err, "failed to start Bootstrapper")
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)

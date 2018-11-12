@@ -26,6 +26,7 @@ import (
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
+	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -67,6 +68,7 @@ type inputParams struct {
 	isBootstrap              bool
 	bootstrapCertificatePath string
 	traceEnabled             bool
+	nodeKeysPath             string
 }
 
 func parseInputParams() inputParams {
@@ -76,6 +78,7 @@ func parseInputParams() inputParams {
 	rootCmd.Flags().BoolVarP(&result.isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
 	rootCmd.Flags().StringVarP(&result.bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
 	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
+	rootCmd.Flags().StringVarP(&result.nodeKeysPath, "nodeskeys", "k", "", "path to dir with node keys files for bootstrap")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
@@ -84,7 +87,44 @@ func parseInputParams() inputParams {
 	if result.isBootstrap && len(result.bootstrapCertificatePath) == 0 {
 		log.Fatal("flag '--cert_out|-r' must not be empty, if '--bootstrap|-b' exists")
 	}
+
+	if result.isBootstrap && len(result.nodeKeysPath) == 0 {
+		log.Fatal("flag '--nodeskeys|-k' must not be empty, if '--bootstrap|-b' exists")
+	}
 	return result
+}
+
+func keysFiles(ctx context.Context, nodeKeysPath string) []string {
+	var keysFiles []string
+	files, err := ioutil.ReadDir(nodeKeysPath)
+	checkError(ctx, err, "failed to read dir for nodes keys")
+	for _, f := range files {
+		if f.IsDir() {
+			keysFiles = append(keysFiles, f.Name())
+		}
+	}
+}
+
+var roles = []string{"virtual", "virtual", "heavy_material", "light_material"}
+
+func bootstrapNodesInfo(ctx context.Context, nodeKeysPath string) []map[string]string {
+	files := keysFiles(ctx, nodeKeysPath)
+	if len(roles) < len(files) {
+		checkError(ctx, errors.New("not enough roles"), "there more files with nodes keys than roles for them")
+	}
+
+	info := []map[string]string{}
+	for i, f := range files {
+		cert, err := certificate.NewCertificatesWithKeys(f)
+		checkError(ctx, err, "can't create certificate from file: "+f)
+		nodeInfo := map[string]string{
+			"public_key": cert.PublicKey,
+			"role":       roles[i],
+		}
+		info = append(info, nodeInfo)
+	}
+
+	return info
 }
 
 func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, cert core.Certificate, nc core.NetworkCoordinator) {
@@ -159,7 +199,7 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, cmOld, repl, err := InitComponents(ctx, *cfg, params.isBootstrap)
+	cm, cmOld, repl, err := InitComponents(ctx, *cfg, params.isBootstrap, params.nodeKeysPath)
 	checkError(ctx, err, "failed to init components")
 
 	cmOld.linkAll(ctx)
