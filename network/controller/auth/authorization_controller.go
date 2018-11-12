@@ -228,6 +228,7 @@ func (ac *AuthorizationController) processAuthorizeRequest(request network.Reque
 		core.PulseNumber(0),
 		data.Address,
 		data.Version)
+	// TODO: move short ID collision detection and correction to AddUnsync to prevent races
 	if CheckShortIDCollision(ac.keeper, node.ShortID()) {
 		CorrectShortIDCollision(ac.keeper, node)
 	}
