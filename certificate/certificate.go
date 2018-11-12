@@ -46,7 +46,7 @@ type Certificate struct {
 func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, certPath string) (*Certificate, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(certPath))
 	if err != nil {
-		return nil, errors.New("[ ReadCertificate ] couldn't read certificate from: " + certPath)
+		return nil, errors.New("[ ReadCertificate ] failed to read certificate from: " + certPath)
 	}
 	cert := Certificate{}
 	err = json.Unmarshal(data, &cert)
