@@ -18,9 +18,21 @@ package auth
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
 )
 
+// MajorityRuleCheck
 func MajorityRuleCheck(activeNodesLists [][]core.Node, majorityRule int) (activeNodesList []core.Node, success bool) {
 	// TODO: fair majorityRule check keeping in mind possible discovery redirects
 	return activeNodesLists[0], true
+}
+
+// CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
+func CheckShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
+	return keeper.GetActiveNodeByShortID(id) != nil
+}
+
+// CorrectShortIDCollision correct ShortID of the node so it does not conflict with existing active node list
+func CorrectShortIDCollision(keeper network.NodeKeeper, node core.Node) {
+	// TODO: fair correct
 }

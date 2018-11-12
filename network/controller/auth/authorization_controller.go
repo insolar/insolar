@@ -221,15 +221,17 @@ func (ac *AuthorizationController) processAuthorizeRequest(request network.Reque
 	// 	return ac.getAuthErrorResponse(request, "Error adding to unsync list: timeout"), nil
 	// }
 
-	ac.keeper.AddActiveNodes([]core.Node{
-		nodenetwork.NewNode(
-			request.GetSender(),
-			data.NodeRoles,
-			nil,
-			core.PulseNumber(0),
-			data.Address,
-			data.Version),
-	})
+	node := nodenetwork.NewNode(
+		request.GetSender(),
+		data.NodeRoles,
+		nil,
+		core.PulseNumber(0),
+		data.Address,
+		data.Version)
+	if CheckShortIDCollision(ac.keeper, node.ShortID()) {
+		CorrectShortIDCollision(ac.keeper, node)
+	}
+	ac.keeper.AddActiveNodes([]core.Node{node})
 
 	return ac.transport.BuildResponse(request, &ResponseAuthorize{ActiveNodes: ac.keeper.GetActiveNodes()}), nil
 }
