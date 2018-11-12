@@ -40,7 +40,7 @@ import (
 func TestStore_DropWaitWrites(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	var txFin time.Time
