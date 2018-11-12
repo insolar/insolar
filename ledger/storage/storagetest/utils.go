@@ -35,14 +35,12 @@ func TmpDB(ctx context.Context, t testing.TB, dir string) (*storage.DB, func()) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := storage.NewDB(configuration.Ledger{
+	db := storage.NewDB(configuration.Ledger{
 		Storage: configuration.Storage{
 			DataDirectory: tmpdir,
 		},
 	}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+
 	// Bootstrap
 	err = db.Bootstrap(ctx)
 	assert.NoError(t, err)
