@@ -113,7 +113,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 
 	c := core.Components{LogicRunner: lr}
 	c.MessageBus = testmessagebus.NewTestMessageBus()
-	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))
+	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.RoleUnknown, nil, 0, "", ""))
 
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	nodeConfig := configuration.NewConfiguration()

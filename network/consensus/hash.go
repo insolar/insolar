@@ -42,16 +42,8 @@ func calculateNodeHash(node core.Node) []byte {
 	hash := sha3.New224()
 	hashWriteChecked(hash, node.ID().Bytes())
 	b := make([]byte, 8)
-	nodeRoles := make([]core.NodeRole, len(node.Roles()))
-	copy(nodeRoles, node.Roles())
-	sort.Slice(nodeRoles[:], func(i, j int) bool {
-		return nodeRoles[i] < nodeRoles[j]
-	})
-	for _, nodeRole := range nodeRoles {
-		binary.LittleEndian.PutUint32(b, uint32(nodeRole))
-		hashWriteChecked(hash, b[:4])
-	}
-	hashWriteChecked(hash, b[:])
+	binary.LittleEndian.PutUint32(b, uint32(node.Role()))
+	hashWriteChecked(hash, b[:4])
 	binary.LittleEndian.PutUint32(b, uint32(node.Pulse()))
 	hashWriteChecked(hash, b[:4])
 	// TODO: pass correctly public key to active node

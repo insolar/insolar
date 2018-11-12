@@ -34,7 +34,7 @@ func newActiveNode(ref core.RecordRef, role core.NodeRole) core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
 	return nodenetwork.NewNode(
 		ref,
-		[]core.NodeRole{role},
+		role,
 		nil, // TODO publicKey
 		core.PulseNumber(0),
 		"",
@@ -48,7 +48,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))
+	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.RoleUnknown, nil, 0, "", ""))
 	c := core.Components{LogicRunner: lr, NodeNetwork: keeper}
 	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()

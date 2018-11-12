@@ -34,7 +34,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	communicatorMock := network.NewCommunicatorMock(t)
 
 	nodeNetworkMock.GetActiveNodesMock.Set(func() (r []core.Node) {
-		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", "")}
+		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, core.RoleUnknown, nil, 0, "", "")}
 	})
 
 	cm := component.Manager{}

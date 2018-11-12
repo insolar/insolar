@@ -30,7 +30,7 @@ func newActiveNode(ref byte, pulse int) core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
 	return nodenetwork.NewNode(
 		core.RecordRef{ref},
-		[]core.NodeRole{core.RoleUnknown},
+		core.RoleUnknown,
 		nil, // TODO publicKey
 		core.PulseNumber(pulse),
 		"",

@@ -61,7 +61,7 @@ func createOrigin(configuration configuration.Configuration) (mutableNode, error
 	// TODO: pass public key
 	return newMutableNode(
 		nodeID,
-		[]core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+		core.RoleVirtual,
 		nil,
 		0,
 		publicAddress,
@@ -245,7 +245,7 @@ func (nk *nodekeeper) Sync(syncCandidates []core.Node, number core.PulseNumber) 
 	nk.syncUnsafe(syncCandidates)
 }
 
-func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, role core.NodeRole, address string,
 	version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error) {
 
 	nk.unsyncLock.Lock()
@@ -253,7 +253,7 @@ func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, ad
 
 	node := newMutableNode(
 		nodeID,
-		roles,
+		role,
 		nil, // TODO publicKey
 		nk.pulse,
 		address,
@@ -334,14 +334,14 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 		log.Infof("Added origin node %s to active list", nk.origin.ID())
 	}
 	nk.active[node.ID()] = node
-	for _, role := range node.Roles() {
-		list, ok := nk.indexNode[role]
-		if !ok {
-			list := make([]core.RecordRef, 0)
-			nk.indexNode[role] = list
-		}
-		nk.indexNode[role] = append(list, node.ID())
+
+	list, ok := nk.indexNode[node.Role()]
+	if !ok {
+		list := make([]core.RecordRef, 0)
+		nk.indexNode[node.Role()] = list
 	}
+	nk.indexNode[node.Role()] = append(list, node.ID())
+
 	nk.indexShortID[node.ShortID()] = node
 }
 
