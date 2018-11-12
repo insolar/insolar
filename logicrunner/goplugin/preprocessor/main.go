@@ -274,6 +274,12 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	methodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
 
+	removeFoundation := false
+	if len(methodsProxies) == 0 {
+		removeFoundation = true
+		fmt.Println("WARNING: build proxy without methods")
+	}
+
 	data := map[string]interface{}{
 		"PackageName":         proxyPackageName,
 		"Types":               generateTypes(pf),
@@ -281,7 +287,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		"MethodsProxies":      methodsProxies,
 		"ConstructorsProxies": constructorProxies,
 		"ClassReference":      classReference,
-		"Imports":             pf.generateImports(false, len(methodsProxies) == 0),
+		"Imports":             pf.generateImports(false, removeFoundation),
 	}
 
 	var buff bytes.Buffer
@@ -367,7 +373,6 @@ func (pf *ParsedFile) generateImports(wrapper bool, removeFoundation bool) map[s
 
 	if imports[fmt.Sprintf(`"%s"`, foundationPath)] && removeFoundation {
 		delete(imports, fmt.Sprintf(`"%s"`, foundationPath))
-		fmt.Println("WARNING: build proxy without methods")
 	}
 
 	return imports
