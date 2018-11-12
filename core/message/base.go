@@ -31,6 +31,7 @@ import (
 // GetEmptyMessage constructs specified message
 func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	switch mt {
+
 	// Logicrunner
 	case core.TypeCallMethod:
 		return &CallMethod{}, nil
@@ -44,8 +45,6 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &ValidationResults{}, nil
 
 	// Ledger
-	case core.TypeRequestCall:
-		return &RequestCall{}, nil
 	case core.TypeGetCode:
 		return &GetCode{}, nil
 	case core.TypeGetObject:
@@ -100,7 +99,7 @@ func Serialize(msg core.Message) (io.Reader, error) {
 }
 
 // Deserialize returns decoded message.
-func Deserialize(buff io.Reader) (core.SignedMessage, error) {
+func Deserialize(buff io.Reader) (core.Parcel, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
@@ -115,7 +114,7 @@ func Deserialize(buff io.Reader) (core.SignedMessage, error) {
 	if err = enc.Decode(msg); err != nil {
 		return nil, err
 	}
-	return &SignedMessage{Msg: msg}, nil
+	return &Parcel{Msg: msg}, nil
 }
 
 // ToBytes deserialize a core.Message to bytes.
@@ -131,25 +130,25 @@ func ToBytes(msg core.Message) []byte {
 	return buff
 }
 
-// SerializeSigned returns io.Reader on buffer with encoded core.SignedMessage.
-func SerializeSigned(msg core.SignedMessage) (io.Reader, error) {
+// SerializeParcel returns io.Reader on buffer with encoded core.Parcel.
+func SerializeParcel(parcel core.Parcel) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	enc := gob.NewEncoder(buff)
-	err := enc.Encode(msg)
+	err := enc.Encode(parcel)
 	return buff, err
 }
 
-// DeserializeSigned returns decoded signed message.
-func DeserializeSigned(buff io.Reader) (core.SignedMessage, error) {
-	var signed SignedMessage
+// DeserializeParcel returns decoded signed message.
+func DeserializeParcel(buff io.Reader) (core.Parcel, error) {
+	var signed Parcel
 	enc := gob.NewDecoder(buff)
 	err := enc.Decode(&signed)
 	return &signed, err
 }
 
-// SignedToBytes deserialize a core.SignedMessage to bytes.
-func SignedToBytes(msg core.SignedMessage) []byte {
-	reqBuff, err := SerializeSigned(msg)
+// ParcelToBytes deserialize a core.Parcel to bytes.
+func ParcelToBytes(msg core.Parcel) []byte {
+	reqBuff, err := SerializeParcel(msg)
 	if err != nil {
 		panic("failed to serialize message")
 	}
@@ -163,6 +162,7 @@ func SignedToBytes(msg core.SignedMessage) []byte {
 func init() {
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
+
 	// Logicrunner
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
@@ -171,7 +171,6 @@ func init() {
 	gob.Register(&ValidationResults{})
 
 	// Ledger
-	gob.Register(&RequestCall{})
 	gob.Register(&GetCode{})
 	gob.Register(&GetObject{})
 	gob.Register(&GetDelegate{})
@@ -180,10 +179,15 @@ func init() {
 	gob.Register(&JetDrop{})
 	gob.Register(&SetRecord{})
 
+	// BlockExplorer
+	gob.Register(&GetHistory{})
+
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
-	gob.Register(&SignedMessage{})
+	gob.Register(&Parcel{})
 	gob.Register(core.RecordRef{})
 	gob.Register(&GetChildren{})
-	gob.Register(&GetHistory{})
+
+	// Meta
+	gob.Register(&RoutingToken{})
 }

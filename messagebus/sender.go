@@ -27,6 +27,6 @@ import (
 // Sender provides access to private MessageBus methods.
 type sender interface {
 	core.MessageBus
-	CreateSignedMessage(ctx context.Context, pulse core.PulseNumber, msg core.Message) (core.SignedMessage, error)
-	SendMessage(ctx context.Context, pulse *core.Pulse, msg core.SignedMessage) (core.Reply, error)
+	CreateParcel(ctx context.Context, pulse core.PulseNumber, msg core.Message, token core.RoutingToken) (core.Parcel, error)
+	SendParcel(ctx context.Context, pulse *core.Pulse, msg core.Parcel) (core.Reply, error)
 }

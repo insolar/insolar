@@ -35,7 +35,7 @@ import (
 )
 
 func TestGetMessageHash(t *testing.T) {
-	assert.Equal(t, 32, len(GetMessageHash(&message.SignedMessage{Msg: &message.GenesisRequest{}})))
+	assert.Equal(t, 32, len(GetMessageHash(&message.Parcel{Msg: &message.GenesisRequest{}})))
 }
 
 func TestTape_SetReply(t *testing.T) {

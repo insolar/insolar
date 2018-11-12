@@ -48,26 +48,41 @@ type ExecutionState struct {
 	deactivate  bool
 	request     *Ref
 	traceID     string
+	queueLength int
 
 	objectbody *ObjectBody
 }
 
+func (es *ExecutionState) Lock() {
+	es.queueLength++
+	es.Mutex.Lock()
+}
+
 func (es *ExecutionState) Unlock() {
+	es.queueLength--
 	es.Mutex.Unlock()
 	es.traceID = "Done"
 }
 
+func (es *ExecutionState) ReleaseQueue() {
+	for es.queueLength > 1 {
+		es.Unlock()
+	}
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
+	MessageBus core.MessageBus `inject:""`
+	Ledger     core.Ledger     `inject:""`
+	Network    core.Network    `inject:""`
+
 	ArtifactManager core.ArtifactManager
-	MessageBus      core.MessageBus
-	Ledger          core.Ledger
-	Network         core.Network
-	machinePrefs    []core.MachineType
-	Cfg             *configuration.LogicRunner
-	execution       map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
-	executionMutex  sync.Mutex
+
+	Executors      [core.MachineTypesLastID]core.MachineLogicExecutor
+	machinePrefs   []core.MachineType
+	Cfg            *configuration.LogicRunner
+	execution      map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
+	executionMutex sync.Mutex
 
 	// TODO move caseBind to context
 	caseBind      core.CaseBind
@@ -97,12 +112,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 // Start starts logic runner component
-func (lr *LogicRunner) Start(ctx context.Context, c core.Components) error {
-	am := c.Ledger.GetArtifactManager()
-	lr.ArtifactManager = am
-	lr.MessageBus = c.MessageBus
-	lr.Ledger = c.Ledger
-	lr.Network = c.Network
+func (lr *LogicRunner) Start(ctx context.Context) error {
+	lr.ArtifactManager = lr.Ledger.GetArtifactManager()
 
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
@@ -171,7 +182,7 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
 	if !ok {
@@ -185,6 +196,14 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	}
 	fuse := true
 	es.Lock()
+
+	// TODO return 302
+	// unlock comes from OnPulse()
+	// pulse changed while we was locked and we don't process anything
+	if inmsg.Pulse() != lr.pulse(ctx).PulseNumber {
+		return nil, errors.New("Abort execution: New Pulse coming")
+	}
+
 	defer func() {
 		if fuse {
 			es.Unlock()
@@ -205,11 +224,12 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 	}
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
+	target := message.ExtractTarget(msg)
 	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(
 		ctx,
 		vb.GetRole(),
-		msg.Target(),
-		lr.pulse().PulseNumber,
+		&target,
+		lr.pulse(ctx).PulseNumber,
 		lr.Network.GetNodeID(),
 	)
 
@@ -241,7 +261,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.SignedMessage) (c
 		Callee:          &ref,
 		Request:         es.request,
 		Time:            time.Now(), // TODO: probably we should take it from e
-		Pulse:           *lr.pulse(),
+		Pulse:           *lr.pulse(ctx),
 		TraceID:         inslogger.TraceID(ctx),
 		CallerPrototype: msg.GetCallerPrototype(),
 	}
@@ -485,15 +505,10 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	}
 }
 
-func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	insctx := context.TODO()
-
+func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	lr.RefreshConsensus()
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind()
-
-	// TODO INS-666
-	// TODO make refresh lr.Execution - Unlock mutexes n-1 time for each object, send some info for callers, do empty object
 
 	if len(objectsRecords) == 0 {
 		return nil
@@ -502,7 +517,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// send copy for validation
 	for ref, records := range objectsRecords {
 		_, err := lr.MessageBus.Send(
-			insctx,
+			ctx,
 			&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse},
 		)
 		if err != nil {
@@ -510,10 +525,13 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 		}
 
 		results := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
-		_, err = lr.MessageBus.Send(insctx, &results)
+		_, err = lr.MessageBus.Send(ctx, &results)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}
+
+		// release unprocessed request
+		lr.execution[ref].ReleaseQueue()
 	}
 
 	return nil
