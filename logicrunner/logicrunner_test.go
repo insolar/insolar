@@ -19,6 +19,7 @@ package logicrunner
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto"
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
@@ -28,6 +29,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils/certificate"
+	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -75,7 +78,7 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicR
 	mb.ReRegister(core.TypeExecutorResults, lr.ExecutorResults)
 }
 
-func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
+func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
 	ctx := context.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
@@ -93,9 +96,18 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	ce := certificate.GetTestCertificate()
-	nk := nodekeeper.GetTestNodekeeper(ce)
-	mb := testmessagebus.NewTestMessageBus()
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.GetPublicKeyFunc = func() (crypto.PublicKey, error) {
+		return nil, nil
+	}
+
+	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	nk := nodekeeper.GetTestNodekeeper(mock)
+	mb := testmessagebus.NewTestMessageBus(t)
 	nw := network.GetTestNetwork()
 	l, cleaner := ledgertestutils.TmpLedger(
 		t, "",
@@ -107,8 +119,9 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 		},
 	)
 
+	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
-	cm.Inject(nk, l, lr, nw, mb)
+	cm.Inject(nk, l, lr, nw, mb, routingTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -131,6 +144,18 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 		cleaner()
 		rundCleaner()
 	}
+}
+
+func mockCryptographyService(t *testing.T) core.CryptographyService {
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+		return true
+	}
+	return mock
 }
 
 func ValidateAllResults(t testing.TB, lr core.LogicRunner, mustfail ...core.RecordRef) {
@@ -167,8 +192,8 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, objRef core.RecordR
 		msg.Nonce = nonce
 	}
 
-	key, _ := cryptoHelper.GeneratePrivateKey()
-	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
+	pf := lr.(*LogicRunner).ParcelFactory
+	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef(), 0, nil)
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,
@@ -180,15 +205,6 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, objRef core.RecordR
 
 func TestTypeCompatibility(t *testing.T) {
 	var _ core.LogicRunner = (*LogicRunner)(nil)
-}
-
-type testExecutor struct {
-	constructorResponses []*testResp
-	methodResponses      []*testResp
-}
-
-func (r *testExecutor) Stop() error {
-	return nil
 }
 
 type testResp struct {
@@ -989,9 +1005,9 @@ func (r *Two) Hello() (*string, error) {
 
 type Caller struct {
 	member string
-	key    *ecdsa.PrivateKey
 	lr     core.LogicRunner
 	t      *testing.T
+	cs     core.CryptographyService
 }
 
 func (s *Caller) SignedCall(rootDomain core.RecordRef, method string, params []interface{}) interface{} {
@@ -1010,7 +1026,7 @@ func (s *Caller) SignedCall(rootDomain core.RecordRef, method string, params []i
 
 	assert.NoError(s.t, err)
 
-	sign, err := cryptoHelper.Sign(args, s.key)
+	sign, err := s.cs.Sign(args)
 	assert.NoError(s.t, err)
 
 	res, err := executeMethod(ctx, s.lr, core.NewRefFromBase58(s.member), 0, "Call", goplugintestutils.CBORMarshal(s.t, []interface{}{rootDomain, method, buf, seed, sign}))
@@ -1097,7 +1113,8 @@ func TestRootDomainContract(t *testing.T) {
 	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
-	root := Caller{rootMemberRef.String(), rootKey, lr, t}
+	cryptographyService := mockCryptographyService(t)
+	root := Caller{rootMemberRef.String(), lr, t, cryptographyService}
 
 	// Creating Member1
 	member1Key, err := cryptoHelper.GeneratePrivateKey()
@@ -1505,7 +1522,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
-	root := Caller{rootMemberRef.String(), rootKey, lr, t}
+	root := Caller{rootMemberRef.String(), lr, t, mockCryptographyService(t)}
 
 	// Creating Member
 	memberKey, err := cryptoHelper.GeneratePrivateKey()

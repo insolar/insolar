@@ -18,13 +18,13 @@ package logicrunner
 
 import (
 	"context"
+	"crypto"
 	"testing"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/messagebus"
 
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -54,19 +54,29 @@ func TestBareHelloworld(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 
-	ce := certificate.GetTestCertificate()
-	nk := nodekeeper.GetTestNodekeeper(ce)
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+		return nil, nil
+	}
+	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
+
+	nk := nodekeeper.GetTestNodekeeper(mock)
 
 	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 
-	mb := testmessagebus.NewTestMessageBus()
+	mb := testmessagebus.NewTestMessageBus(t)
 	nw := network.GetTestNetwork()
 
 	cm := &component.Manager{}
-	cm.Inject(nk, l, lr, nw, mb)
+	cm.Inject(nk, l, lr, nw, mb, routingTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -104,8 +114,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
-	key, _ := ecdsa.GeneratePrivateKey()
-	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
+	parcel, _ := parcelFactory.Create(ctx, msg, testutils.RandomRef(), 0, nil)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
@@ -124,8 +133,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
-	key, _ = ecdsa.GeneratePrivateKey()
-	parcel, _ = message.NewParcel(ctx, msg, testutils.RandomRef(), key, 0, nil)
+	parcel, _ = parcelFactory.Create(ctx, msg, testutils.RandomRef(), 0, nil)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(

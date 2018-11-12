@@ -59,9 +59,10 @@ func (es *ExecutionState) Unlock() {
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	MessageBus core.MessageBus `inject:""`
-	Ledger     core.Ledger     `inject:""`
-	Network    core.Network    `inject:""`
+	MessageBus    core.MessageBus       `inject:""`
+	Ledger        core.Ledger           `inject:""`
+	Network       core.Network          `inject:""`
+	ParcelFactory message.ParcelFactory `inject:""`
 
 	ArtifactManager core.ArtifactManager
 
