@@ -37,23 +37,25 @@ func (a *Allowance) isExpired() bool {
 }
 
 func (a *Allowance) TakeAmount() (uint, error) {
-	caller := a.GetContext().Caller
-	if *caller == a.To && !a.isExpired() {
-		a.SelfDestruct()
-		return a.Amount, nil
+	if *a.GetContext().Caller != a.To {
+		return 0, fmt.Errorf("[ TakeAmount ] Only recepient can take amount")
 	}
-	return 0, nil
+	if a.isExpired() {
+		return 0, fmt.Errorf("[ TakeAmount ] Allowance expiried")
+	}
+	a.SelfDestruct()
+	return a.Amount, nil
 }
 
 func (a *Allowance) GetBalanceForOwner() (uint, error) {
-	if !a.isExpired() {
-		return a.Amount, nil
-	}
-	return 0, nil
+	return a.Amount, nil
 }
 
-func (a *Allowance) DeleteExpiredAllowance() (uint, error) {
-	if a.GetContext().Caller == a.GetContext().Parent && !a.isExpired() {
+func (a *Allowance) GetExpiredBalance() (uint, error) {
+	if *a.GetContext().Caller != *a.GetContext().Parent {
+		return 0, fmt.Errorf("[ DeleteExpiredAllowance ] Only owner can delete expiried Allowance")
+	}
+	if a.isExpired() {
 		a.SelfDestruct()
 		return a.Amount, nil
 	}
