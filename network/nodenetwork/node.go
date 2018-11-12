@@ -17,7 +17,7 @@
 package nodenetwork
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 	"encoding/gob"
 	"hash/crc32"
 
@@ -35,7 +35,7 @@ type node struct {
 	NodeID        core.RecordRef
 	NodeShortID   core.ShortNodeID
 	NodeRoles     []core.NodeRole
-	NodePublicKey *ecdsa.PublicKey
+	NodePublicKey crypto.PublicKey
 
 	NodePulseNum core.PulseNumber
 
@@ -46,7 +46,7 @@ type node struct {
 func newMutableNode(
 	id core.RecordRef,
 	roles []core.NodeRole,
-	publicKey *ecdsa.PublicKey,
+	publicKey crypto.PublicKey,
 	pulseNum core.PulseNumber,
 	physicalAddress,
 	version string) mutableNode {
@@ -64,7 +64,7 @@ func newMutableNode(
 func NewNode(
 	id core.RecordRef,
 	roles []core.NodeRole,
-	publicKey *ecdsa.PublicKey,
+	publicKey crypto.PublicKey,
 	pulseNum core.PulseNumber,
 	physicalAddress,
 	version string) core.Node {
@@ -91,7 +91,7 @@ func (n *node) Role() core.NodeRole {
 	return n.NodeRoles[0]
 }
 
-func (n *node) PublicKey() *ecdsa.PublicKey {
+func (n *node) PublicKey() crypto.PublicKey {
 	// TODO: make a copy of pk
 	return n.NodePublicKey
 }

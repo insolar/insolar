@@ -18,12 +18,14 @@ package networkcoordinator
 
 import (
 	"context"
+	"crypto"
 	"crypto/rand"
 	"encoding/binary"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -33,6 +35,7 @@ type NetworkCoordinator struct {
 	messageBus    core.MessageBus
 	nodeDomainRef *core.RecordRef
 	rootDomainRef *core.RecordRef
+	KeyProcessor  core.KeyProcessor
 }
 
 // New creates new NetworkCoordinator
@@ -45,6 +48,7 @@ func (nc *NetworkCoordinator) Start(ctx context.Context, c core.Components) erro
 	nc.logicRunner = c.LogicRunner
 	nc.messageBus = c.MessageBus
 	nc.rootDomainRef = c.Genesis.GetRootDomainRef()
+	nc.KeyProcessor = platformpolicy.NewKeyProcessor()
 
 	return nil
 }
@@ -151,13 +155,18 @@ func (nc *NetworkCoordinator) Authorize(ctx context.Context, nodeRef core.Record
 }
 
 // RegisterNode registers node in nodedomain
-func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey crypto.PublicKey, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't get nodeDomainRef")
 	}
-	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKey, numberOfBootstrapNodes, majorityRule, roles, ip})
 
+	publicKeyStr, err := nc.KeyProcessor.ExportPublicKey(publicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ RegisterNode ] Can't import public key")
+	}
+
+	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKeyStr, numberOfBootstrapNodes, majorityRule, roles, ip})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")
 	}

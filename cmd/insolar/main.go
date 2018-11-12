@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,9 +27,9 @@ import (
 	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
@@ -139,37 +138,24 @@ func randomRef(out io.Writer) {
 }
 
 func generateKeysPair(out io.Writer) {
-	privKey, err := ecdsahelper.GeneratePrivateKey()
+	ks := platformpolicy.NewKeyProcessor()
+
+	privKey, err := ks.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
 
-	privKeyStr, err := ecdsahelper.ExportPrivateKey(privKey)
+	privKeyStr, err := ks.ExportPrivateKey(privKey)
 	check("Problems with serialization of private key:", err)
 
-	pubKeyStr, err := ecdsahelper.ExportPublicKey(&privKey.PublicKey)
+	pubKeyStr, err := ks.ExportPublicKey(ks.ExtractPublicKey(privKey))
 	check("Problems with serialization of public key:", err)
 
 	result, err := json.MarshalIndent(map[string]interface{}{
-		"private_key": privKeyStr,
-		"public_key":  pubKeyStr,
+		"private_key": string(privKeyStr),
+		"public_key":  string(pubKeyStr),
 	}, "", "    ")
 	check("Problems with marshaling keys:", err)
 
 	writeToOutput(out, string(result))
-}
-
-func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
-	kk := []map[string]string{}
-	for _, key := range keys {
-		pubKey, err := ecdsahelper.ExportPublicKey(&key.PublicKey)
-		check("[ makeKeysJSON ]", err)
-
-		privKey, err := ecdsahelper.ExportPrivateKey(key)
-		check("[ makeKeysJSON ]", err)
-
-		kk = append(kk, map[string]string{"public_key": pubKey, "private_key": privKey})
-	}
-
-	return json.MarshalIndent(map[string]interface{}{"keys": kk}, "", "    ")
 }
 
 func generateCertificate(out io.Writer) {

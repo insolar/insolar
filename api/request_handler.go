@@ -21,13 +21,14 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/networkcoordinator"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -143,7 +144,8 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 	result["roles"] = roles
 
 	// Check calling via networkcoordinator
-	privKey, err := ecdsahelper.GeneratePrivateKey()
+	keyService := platformpolicy.NewKeyProcessor()
+	privKey, err := keyService.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with key generating")
 	}
@@ -153,14 +155,17 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with generating seed")
 	}
-	signature, err := ecdsahelper.Sign(seed, privKey)
+
+	cs := requesters.NewCryptographyService(privKey)
+	signature, err := cs.Sign(seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with signing")
 	}
-	pubKey, err = ecdsahelper.ExportPublicKey(&privKey.PublicKey)
+	pubKeyBytes, err := keyService.ExportPublicKey(keyService.ExtractPublicKey(privKey))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
 	}
+	pubKey = string(pubKeyBytes)
 
 	rawCertificate, err := rh.netCoordinator.RegisterNode(ctx, pubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
 	if err != nil {
@@ -172,7 +177,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
 	}
 
-	regPubKey, _, err := rh.netCoordinator.Authorize(ctx, core.NewRefFromBase58(nodeRef), seed, signature)
+	regPubKey, _, err := rh.netCoordinator.Authorize(ctx, core.NewRefFromBase58(nodeRef), seed, signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::Authorize")
 	}

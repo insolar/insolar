@@ -17,12 +17,12 @@
 package requesters
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/pkg/errors"
 )
@@ -31,7 +31,7 @@ import (
 type UserConfigJSON struct {
 	PrivateKey       string `json:"private_key"`
 	Caller           string `json:"caller"`
-	privateKeyObject *ecdsa.PrivateKey
+	privateKeyObject crypto.PrivateKey
 }
 
 // RequestConfigJSON holds info about request
@@ -62,7 +62,8 @@ func ReadUserConfigFromFile(path string) (*UserConfigJSON, error) {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
 	}
 
-	cfgJSON.privateKeyObject, err = ecdsahelper.ImportPrivateKey(cfgJSON.PrivateKey)
+	ks := platformpolicy.NewKeyProcessor()
+	cfgJSON.privateKeyObject, err = ks.ImportPrivateKey([]byte(cfgJSON.PrivateKey))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] Problem with reading private key")
 	}
@@ -85,6 +86,8 @@ func ReadRequestConfigFromFile(path string) (*RequestConfigJSON, error) {
 func CreateUserConfig(caller string, privKey string) (*UserConfigJSON, error) {
 	userConfig := UserConfigJSON{PrivateKey: privKey, Caller: caller}
 	var err error
-	userConfig.privateKeyObject, err = ecdsahelper.ImportPrivateKey(privKey)
+
+	ks := platformpolicy.NewKeyProcessor()
+	userConfig.privateKeyObject, err = ks.ImportPrivateKey([]byte(privKey))
 	return &userConfig, err
 }
