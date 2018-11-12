@@ -64,8 +64,14 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	gen, err := genesis.NewGenesis(cfg.Genesis, isBootstrap, bootstrapNodesInfo(ctx, nodeKeysPath))
-	checkError(ctx, err, "failed to start Bootstrapper")
+	var gen core.Genesis
+	if isBootstrap {
+		gen, err = genesis.NewGenesis(cfg.Genesis, isBootstrap, bootstrapNodesInfo(ctx, nodeKeysPath))
+		checkError(ctx, err, "failed to start Bootstrapper (bootstrap mode)")
+	} else {
+		gen, err = genesis.NewGenesis(cfg.Genesis, isBootstrap, []map[string]string{})
+		checkError(ctx, err, "failed to start Bootstrapper")
+	}
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")

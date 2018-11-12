@@ -103,6 +103,7 @@ func keysFiles(ctx context.Context, nodeKeysPath string) []string {
 			keysFiles = append(keysFiles, f.Name())
 		}
 	}
+	return keysFiles
 }
 
 var roles = []string{"virtual", "virtual", "heavy_material", "light_material"}

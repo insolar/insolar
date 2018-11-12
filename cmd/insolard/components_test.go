@@ -31,7 +31,7 @@ func TestInitComponents(t *testing.T) {
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 
-	cm, _, repl, err := InitComponents(ctx, cfg, false)
+	cm, _, repl, err := InitComponents(ctx, cfg, false, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, cm)
 	assert.NotNil(t, repl)
