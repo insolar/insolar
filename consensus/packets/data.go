@@ -18,7 +18,6 @@ package packets
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
@@ -91,10 +90,10 @@ func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 }
 
 // SetPulseProof sets PulseProof and check struct fields len, returns error if invalid len
-func (p1p *Phase1Packet) SetPulseProof(proof *merkle.PulseProof) error {
-	if len(proof.StateHash) == 64 || len(proof.Signature) == 64 {
-		copy(p1p.proofNodePulse.NodeStateHash[:], proof.StateHash[:64])
-		copy(p1p.proofNodePulse.NodeSignature[:], proof.Signature[:64])
+func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) error {
+	if len(proofStateHash) == 64 || len(proofSignature) == 64 {
+		copy(p1p.proofNodePulse.NodeStateHash[:], proofStateHash[:64])
+		copy(p1p.proofNodePulse.NodeSignature[:], proofSignature[:64])
 		return nil
 	}
 

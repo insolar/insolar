@@ -42,7 +42,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) error {
 	}
 
 	p := packets.Phase1Packet{}
-	err = p.SetPulseProof(proof)
+	err = p.SetPulseProof(proof.StateHash, proof.Signature)
 	if err != nil {
 		return errors.Wrap(err, "[Execute] Failed to set pulse proof in Phase1Packet.")
 	}

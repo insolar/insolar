@@ -18,13 +18,11 @@ package packets
 
 import (
 	"bytes"
+	"crypto/rand"
 	"reflect"
 	"testing"
 
-	"crypto/rand"
-
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -250,19 +248,22 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
 	p := Phase1Packet{}
-	proof := &merkle.PulseProof{genRandomSlice(64), genRandomSlice(64)}
-	err := p.SetPulseProof(proof)
+	proofStateHash := genRandomSlice(64)
+	proofSignature := genRandomSlice(64)
+
+	err := p.SetPulseProof(proofStateHash, proofSignature)
 	assert.NoError(t, err)
 
-	assert.Equal(t, proof.StateHash, p.proofNodePulse.NodeStateHash[:])
-	assert.Equal(t, proof.Signature, p.proofNodePulse.NodeSignature[:])
+	assert.Equal(t, proofStateHash, p.proofNodePulse.NodeStateHash[:])
+	assert.Equal(t, proofSignature, p.proofNodePulse.NodeSignature[:])
 
-	invalidProof := &merkle.PulseProof{genRandomSlice(32), genRandomSlice(128)}
-	err = p.SetPulseProof(invalidProof)
+	invalidStateHash := genRandomSlice(32)
+	invalidSignature := genRandomSlice(128)
+	err = p.SetPulseProof(invalidStateHash, invalidSignature)
 	assert.Error(t, err)
 
-	assert.NotEqual(t, invalidProof.StateHash, p.proofNodePulse.NodeStateHash[:])
-	assert.NotEqual(t, invalidProof.Signature, p.proofNodePulse.NodeSignature[:])
+	assert.NotEqual(t, invalidStateHash, p.proofNodePulse.NodeStateHash[:])
+	assert.NotEqual(t, invalidSignature, p.proofNodePulse.NodeSignature[:])
 
 }
 
