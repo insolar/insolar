@@ -23,7 +23,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -38,9 +37,13 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Service      core.Network     `inject:""`
-	Ledger       core.Ledger      `inject:""`
-	ActiveNodes  core.NodeNetwork `inject:""`
+	Service                    core.Network                    `inject:""`
+	Ledger                     core.Ledger                     `inject:""`
+	ActiveNodes                core.NodeNetwork                `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	RoutingTokenFactory        message.RoutingTokenFactory     `inject:""`
+	ParcelFactory              message.ParcelFactory           `inject:""`
+
 	handlers     map[core.MessageType]core.MessageHandler
 	queue        *ExpiryQueue
 	signmessages bool
@@ -140,7 +143,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, e
 func (mb *MessageBus) CreateParcel(
 	ctx context.Context, pulse core.PulseNumber, msg core.Message, token core.RoutingToken,
 ) (core.Parcel, error) {
-	return message.NewParcel(ctx, msg, mb.Service.GetNodeID(), mb.Service.GetPrivateKey(), pulse, token)
+	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), pulse, token)
 }
 
 // SendParcel sends provided message via network.
@@ -209,25 +212,28 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when mb.deliver()")
 	}
-	msg, err := message.DeserializeParcel(bytes.NewBuffer(args[0]))
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}
 
-	senderKey := mb.ActiveNodes.GetActiveNode(msg.GetSender()).PublicKey()
-	if mb.signmessages && !msg.IsValid(senderKey) {
-		return nil, errors.New("failed to check a message sign")
+	senderKey := mb.ActiveNodes.GetActiveNode(parcel.GetSender()).PublicKey()
+	if mb.signmessages {
+		err := mb.ParcelFactory.Validate(senderKey, parcel)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to check a message sign")
+		}
 	}
 
-	serialized := message.ToBytes(msg)
-	msgHash := hash.IntegrityHasher().Hash(serialized)
+	serialized := message.ToBytes(parcel)
+	msgHash := mb.PlatformCryptographyScheme.IntegrityHasher().Hash(serialized)
 
-	err = message.ValidateRoutingToken(senderKey, msg.GetToken(), msgHash)
+	err = mb.RoutingTokenFactory.Validate(senderKey, parcel.GetToken(), msgHash)
 	if err != nil {
 		return nil, errors.New("failed to check a token sign")
 	}
 
-	resp, err := mb.doDeliver(msg)
+	resp, err := mb.doDeliver(parcel)
 	if err != nil {
 		return nil, err
 	}

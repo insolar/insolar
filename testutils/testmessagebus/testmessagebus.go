@@ -23,15 +23,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/testutils"
 )
 
 type TestMessageBus struct {
 	handlers map[core.MessageType]core.MessageHandler
+	pf       message.ParcelFactory
 }
 
 func (mb *TestMessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
@@ -46,8 +49,18 @@ func (mb *TestMessageBus) NewRecorder(ctx context.Context) (core.MessageBus, err
 	panic("implement me")
 }
 
-func NewTestMessageBus() *TestMessageBus {
-	return &TestMessageBus{handlers: map[core.MessageType]core.MessageHandler{}}
+func NewTestMessageBus(t *testing.T) *TestMessageBus {
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
+	cm := &component.Manager{}
+	cm.Inject(routingTokenFactory, parcelFactory, mock)
+
+	return &TestMessageBus{handlers: map[core.MessageType]core.MessageHandler{}, pf: parcelFactory}
 }
 
 func (mb *TestMessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
@@ -80,8 +93,7 @@ func (mb *TestMessageBus) Stop() error {
 }
 
 func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
-	key, _ := ecdsa.GeneratePrivateKey()
-	parcel, err := message.NewParcel(ctx, m, testutils.RandomRef(), key, 0, nil)
+	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), 0, nil)
 	if err != nil {
 		return nil, err
 	}
