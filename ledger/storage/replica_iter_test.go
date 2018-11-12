@@ -42,6 +42,53 @@ var (
 	scopeIDRecord   = byte(2)
 )
 
+func Test_StoreKeyValues(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	var expected []keySize
+	var allKVs []core.KV
+	pulsescount := 3
+
+	func() {
+		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+		defer cleaner()
+		for i := 1; i <= pulsescount; i++ {
+			addRecords(ctx, t, db, core.PulseNumber(i))
+		}
+
+		for n := 1; n <= pulsescount; n++ {
+			replicator := storage.NewReplicaIter(ctx, db, core.PulseNumber(n), 99)
+
+			for i := 0; ; i++ {
+				recs, err := replicator.NextRecords()
+				if err == storage.ErrReplicatorDone {
+					break
+				}
+				if err != nil {
+					panic(err)
+				}
+				allKVs = append(allKVs, recs...)
+			}
+		}
+		expected = getallkeys(db.GetBadgerDB())
+	}()
+
+	var got []keySize
+	func() {
+		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+		defer cleaner()
+		err := db.StoreKeyValues(ctx, allKVs)
+		require.NoError(t, err)
+		got = getallkeys(db.GetBadgerDB())
+	}()
+
+	require.Equal(t, expected, got)
+	// fmt.Println("expect:", outputKeySizes(expected))
+	// fmt.Println("got:", outputKeySizes(got))
+	// fmt.Printf("allKVs: %#v\n", allKVs)
+}
+
 func Test_ReplicaIter(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)

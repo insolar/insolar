@@ -570,6 +570,19 @@ func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
 	return nodes, nil
 }
 
+// StoreKeyValues stores provided key/value pairs.
+func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
+	return db.Update(ctx, func(tx *TransactionManager) error {
+		for _, rec := range kvs {
+			err := tx.set(ctx, rec.K, rec.V)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // get wraps matching transaction manager method.
 func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
 	tx := db.BeginTransaction(false)
