@@ -74,52 +74,26 @@ func (w *Wallet) Accept(aRef *core.RecordRef) error {
 	return nil
 }
 
-// GetTotalBalance gets total balance
-func (w *Wallet) GetTotalBalance() (uint, error) {
-	var totalAllowanced uint
+// GetBalance gets total balance
+func (w *Wallet) GetBalance() (uint, error) {
 	crefs, err := w.GetChildrenTyped(allowance.GetPrototype())
 	if err != nil {
-		return 0, fmt.Errorf("[ GetTotalBalance ] Can't get children: %s", err.Error())
+		return 0, fmt.Errorf("[ GetBalance ] Can't get children: %s", err.Error())
 	}
 	for _, cref := range crefs {
 		a := allowance.GetObject(cref)
-		balance, err := a.GetBalanceForOwner()
+		balance, err := a.GetExpiredBalance()
 		if err != nil {
-			return 0, fmt.Errorf("[ GetTotalBalance ] Can't get balance for owner: %s", err.Error())
-		}
-
-		totalAllowanced, err = safemath.Add(totalAllowanced, balance)
-		if err != nil {
-			return 0, fmt.Errorf("[ GetTotalBalance ] Couldn't add allowance to balance: %s", err.Error())
-		}
-	}
-	out, err := safemath.Add(w.Balance, totalAllowanced)
-	if err != nil {
-		return 0, fmt.Errorf("[ GetTotalBalance ] Couldn't calculate total balance: %s", err.Error())
-	}
-	return out, nil
-}
-
-// ReturnAndDeleteExpiredAllowances gets all allowances destroy them and update balance
-func (w *Wallet) ReturnAndDeleteExpiredAllowances() error {
-	crefs, err := w.GetChildrenTyped(allowance.GetPrototype())
-	if err != nil {
-		return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't get children: %s", err.Error())
-	}
-	for _, cref := range crefs {
-		Allowance := allowance.GetObject(cref)
-		balance, err := Allowance.GetExpiredBalance()
-		if err != nil {
-			return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't delete allowance: %s", err.Error())
+			balance = 0
+			//return 0, fmt.Errorf("[ GetBalance ] Can't get balance for owner: %s", err.Error())
 		}
 
 		w.Balance, err = safemath.Add(w.Balance, balance)
 		if err != nil {
-			// TODO in error case we must not delete allowance
-			return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't add allowance to balance: %s", err.Error())
+			return 0, fmt.Errorf("[ GetTotalBalance ] Couldn't add expired allowance to balance: %s", err.Error())
 		}
 	}
-	return nil
+	return w.Balance, nil
 }
 
 // New creates new allowance
