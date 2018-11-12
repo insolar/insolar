@@ -287,14 +287,10 @@ func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsar
 	}
 
 	logger.Debug("Init output port")
-	pulsarHostAddress, err := host.NewAddress(currentPulsar.Config.BootstrapListener.Address)
+	pulsarHost, err = host.NewHost(currentPulsar.Config.BootstrapListener.Address)
 	if err != nil {
 		return
 	}
-	if err != nil {
-		return
-	}
-	pulsarHost = host.NewHost(pulsarHostAddress)
 	pulsarHost.NodeID = core.RecordRef{}
 	logger.Debug("Network is ready")
 
@@ -311,12 +307,11 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 
 	logger.Infof("Before sending pulse to bootstraps - %v", currentPulsar.Config.BootstrapNodes)
 	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
-		receiverAddress, err := host.NewAddress(bootstrapNode)
+		receiverHost, err := host.NewHost(bootstrapNode)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
-		receiverHost := host.NewHost(receiverAddress)
 
 		b := packet.NewBuilder(pulsarHost)
 		pingPacket := b.Receiver(receiverHost).Type(types.Ping).Build()

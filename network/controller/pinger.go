@@ -33,11 +33,10 @@ type Pinger struct {
 // PingWithTimeout ping remote host with timeout
 func (p *Pinger) Ping(address string, timeout time.Duration) (*host.Host, error) {
 	request := p.transport.NewRequestBuilder().Type(types.Ping).Build()
-	addr, err := host.NewAddress(address)
+	h, err := host.NewHost(address)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to resolve address %s", address)
 	}
-	h := host.NewHost(addr)
 	future, err := p.transport.SendRequestPacket(request, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to ping address %s", address)

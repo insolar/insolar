@@ -25,18 +25,14 @@ import (
 )
 
 func TestNewHost(t *testing.T) {
-	addr, _ := NewAddress("127.0.0.1:31337")
-	actualHost := NewHost(addr)
-	expectedHost := &Host{
-		Address: addr,
-	}
+	actualHost, _ := NewHost("127.0.0.1:31337")
+	expectedHost, _ := NewHost("127.0.0.1:31337")
 
 	assert.Equal(t, expectedHost, actualHost)
 }
 
 func TestHost_String(t *testing.T) {
-	addr, _ := NewAddress("127.0.0.1:31337")
-	nd := NewHost(addr)
+	nd, _ := NewHost("127.0.0.1:31337")
 	nd.NodeID = testutils.RandomRef()
 	string := nd.NodeID.String() + " (" + nd.Address.String() + ")"
 

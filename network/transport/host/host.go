@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
 // Host is the over-the-wire representation of a host.
@@ -32,11 +33,33 @@ type Host struct {
 	Address *Address
 }
 
-// NewHost creates a new Host for bootstrapping.
-func NewHost(address *Address) *Host {
-	return &Host{
-		Address: address,
+// NewHost creates a new Host with specified physical address.
+func NewHost(address string) (*Host, error) {
+	addr, err := NewAddress(address)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to create Host")
 	}
+	return &Host{Address: addr}, nil
+}
+
+// NewHostN creates a new Host with specified physical address and NodeID.
+func NewHostN(address string, nodeID core.RecordRef) (*Host, error) {
+	h, err := NewHost(address)
+	if err != nil {
+		return nil, err
+	}
+	h.NodeID = nodeID
+	return h, nil
+}
+
+// NewHostNS creates a new Host with specified physical address, NodeID and ShortID.
+func NewHostNS(address string, nodeID core.RecordRef, shortID core.ShortNodeID) (*Host, error) {
+	h, err := NewHostN(address, nodeID)
+	if err != nil {
+		return nil, err
+	}
+	h.ShortID = shortID
+	return h, nil
 }
 
 // String representation of Host.

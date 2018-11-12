@@ -32,12 +32,8 @@ func init() {
 }
 
 func TestSerializePacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.NodeID = testutils.RandomRef()
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.NodeID = testutils.RandomRef()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
 	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
 
@@ -47,12 +43,8 @@ func TestSerializePacket(t *testing.T) {
 }
 
 func TestDeserializePacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.NodeID = testutils.RandomRef()
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.NodeID = testutils.RandomRef()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
 	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
 
@@ -69,8 +61,7 @@ func TestDeserializePacket(t *testing.T) {
 }
 
 func TestDeserializeBigPacket(t *testing.T) {
-	address, _ := host.NewAddress("127.0.0.1:31337")
-	hostOne := host.NewHost(address)
+	hostOne, _ := host.NewHost("127.0.0.1:31337")
 
 	data := make([]byte, 1024*1024*10)
 	rand.Read(data)

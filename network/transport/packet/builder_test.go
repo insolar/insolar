@@ -32,14 +32,9 @@ func TestBuilder_Build_EmptyPacket(t *testing.T) {
 }
 
 func TestBuilder_Build_RequestPacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.NodeID = testutils.RandomRef()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.NodeID = testutils.RandomRef()
-
 	m := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
 
 	expectedPacket := &Packet{
@@ -54,14 +49,9 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 }
 
 func TestBuilder_Build_ResponsePacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.NodeID = testutils.RandomRef()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.NodeID = testutils.RandomRef()
-
 	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{42}).Build()
 
 	expectedPacket := &Packet{
@@ -76,14 +66,9 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 }
 
 func TestBuilder_Build_ErrorPacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.NodeID = testutils.RandomRef()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.NodeID = testutils.RandomRef()
-
 	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{}).Error(errors.New("test error")).Build()
 
 	expectedPacket := &Packet{

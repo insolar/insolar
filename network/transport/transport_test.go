@@ -33,7 +33,6 @@ type node struct {
 	config    configuration.Transport
 	transport Transport
 	host      *host.Host
-	address   *host.Address
 }
 
 type transportSuite struct {
@@ -55,10 +54,8 @@ func NewSuite(cfg1 configuration.Transport, cfg2 configuration.Transport, testSe
 
 func setupNode(t *transportSuite, n *node) {
 	var err error
-	n.address, err = host.NewAddress(n.config.Address)
+	n.host, err = host.NewHost(n.config.Address)
 	t.Assert().NoError(err)
-
-	n.host = host.NewHost(n.address)
 
 	n.transport, err = NewTransport(n.config, relay.NewProxy())
 	t.Require().NoError(err)
