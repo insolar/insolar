@@ -101,8 +101,8 @@ func keysFiles(ctx context.Context, nodeKeysPath string) []string {
 	files, err := ioutil.ReadDir(nodeKeysPath)
 	checkError(ctx, err, "failed to read dir for nodes keys")
 	for _, f := range files {
-		if f.IsDir() {
-			keysFiles = append(keysFiles, f.Name())
+		if !f.IsDir() {
+			keysFiles = append(keysFiles, filepath.Join(nodeKeysPath, f.Name()))
 		}
 	}
 	return keysFiles
@@ -111,7 +111,7 @@ func keysFiles(ctx context.Context, nodeKeysPath string) []string {
 var roles = []string{"virtual", "virtual", "heavy_material", "light_material"}
 
 func readPublicKey(keysPath string) (string, error) {
-	data, err := ioutil.ReadFile(filepath.Clean(keysPath))
+	data, err := ioutil.ReadFile(keysPath)
 	if err != nil {
 		return "", errors.Wrap(err, "[ readPublicKey ] couldn't read keys from: "+keysPath)
 	}
