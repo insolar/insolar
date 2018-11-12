@@ -52,7 +52,7 @@ func CorrectShortIDCollision(keeper network.NodeKeeper, node core.Node) {
 
 func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core.ShortNodeID) core.ShortNodeID {
 	index := sort.Search(len(sortedSlice), func(i int) bool {
-		return sortedSlice[i] == conflictingID
+		return sortedSlice[i] >= conflictingID
 	})
 	result := conflictingID
 	for {

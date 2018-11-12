@@ -71,6 +71,16 @@ func (m *MockResolver) addMapping(key, value string) error {
 	return nil
 }
 
+func (m *MockResolver) addMappingS(key, value string, shortID core.ShortNodeID) error {
+	k := core.NewRefFromBase58(key)
+	h, err := host.NewHostNS(value, k, shortID)
+	if err != nil {
+		return err
+	}
+	m.mapping[k] = h
+	return nil
+}
+
 func mockConfiguration(nodeID string, address string) configuration.Configuration {
 	result := configuration.Configuration{}
 	result.Host.Transport = configuration.Transport{Protocol: "UTP", Address: address, BehindNAT: false}
@@ -194,11 +204,6 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	// should return error because resolved address is invalid
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
 	assert.Error(t, err)
-
-	// request = t1.NewRequestBuilder().Type(InvalidPacket).Data(nil).Build()
-	// should return error because packet type is invalid
-	// _, err = t1.SendRequest(request, core.NewRefFromBase58(ID3))
-	// assert.Error(t, err)
 }
 
 func TestHostTransport_SendRequestPacket2(t *testing.T) {
@@ -308,4 +313,50 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 
 	_, err = f.GetResponse(time.Second)
 	assert.Error(t, err)
+}
+
+func TestHostTransport_WrongHandler(t *testing.T) {
+	t1, t2, err := createTwoHostNetworks(ID1, ID2)
+	assert.NoError(t, err)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	handler := func(r network.Request) (network.Response, error) {
+		log.Info("handler triggered")
+		wg.Done()
+		return t2.BuildResponse(r, nil), nil
+	}
+	t2.RegisterRequestHandler(InvalidPacket, handler)
+
+	t2.Start()
+	t1.Start()
+	defer func() {
+		t1.Stop()
+		t2.Stop()
+	}()
+
+	request := t1.NewRequestBuilder().Type(types.Ping).Build()
+	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	assert.NoError(t, err)
+
+	// should timeout because there is no handler set for Ping packet
+	result := network.WaitTimeout(&wg, time.Millisecond*10)
+	assert.False(t, result)
+}
+
+func TestDoubleStart(t *testing.T) {
+	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	assert.NoError(t, err)
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	f := func(group *sync.WaitGroup, t network.InternalTransport) {
+		wg.Done()
+		t.Start()
+	}
+	go f(&wg, tp)
+	go f(&wg, tp)
+	wg.Wait()
+	defer tp.Stop()
 }
