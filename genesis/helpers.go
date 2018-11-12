@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 var pathToContracts = "application/contract/"
@@ -34,10 +33,7 @@ var pathToContracts = "application/contract/"
 func serializeInstance(contractInstance interface{}) ([]byte, error) {
 	var instanceData []byte
 
-	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&instanceData, ch).Encode(
-		contractInstance,
-	)
+	instanceData, err := core.Serialize(contractInstance)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ serializeInstance ] Problem with CBORing")
 	}
