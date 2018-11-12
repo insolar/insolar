@@ -28,9 +28,9 @@ import (
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
 	db      *storage.DB
-	lr      core.LogicRunner
-	bus     core.MessageBus
-	nodenet core.NodeNetwork
+	LR      core.LogicRunner `inject:""`
+	Bus     core.MessageBus  `inject:""`
+	NodeNet core.NodeNetwork `inject:""`
 }
 
 // Current returns current pulse structure.
@@ -83,7 +83,7 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 		Messages:    messages,
 		PulseNumber: latestPulseNumber,
 	}
-	_, err = m.bus.Send(ctx, msg)
+	_, err = m.Bus.Send(ctx, msg)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	// execute only on material executor
-	if m.nodenet.GetOrigin().Role() == core.RoleLightMaterial {
+	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
 		err := m.processDrop(ctx)
 		if err != nil {
 			return err
@@ -105,19 +105,10 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 		return err
 	}
 
-	return m.lr.OnPulse(ctx, pulse)
+	return m.LR.OnPulse(ctx, pulse)
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB) (*PulseManager, error) {
-	pm := PulseManager{db: db}
-	return &pm, nil
-}
-
-// Link links external components.
-func (m *PulseManager) Link(components core.Components) error {
-	m.bus = components.MessageBus
-	m.lr = components.LogicRunner
-	m.nodenet = components.NodeNetwork
-	return nil
+func NewPulseManager(db *storage.DB) *PulseManager {
+	return &PulseManager{db: db}
 }
