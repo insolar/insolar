@@ -108,7 +108,7 @@ func (w *Wallet) ReturnAndDeleteExpiredAllowances() error {
 	}
 	for _, cref := range crefs {
 		Allowance := allowance.GetObject(cref)
-		balance, err := Allowance.DeleteExpiredAllowance()
+		balance, err := Allowance.GetExpiredBalance()
 		if err != nil {
 			return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't delete allowance: %s", err.Error())
 		}
