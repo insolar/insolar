@@ -360,3 +360,22 @@ func TestDoubleStart(t *testing.T) {
 	wg.Wait()
 	defer tp.Stop()
 }
+
+func TestHostTransport_RegisterPacketHandler(t *testing.T) {
+	m := MockResolver{
+		mapping: make(map[core.RecordRef]*host.Host),
+	}
+
+	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	assert.NoError(t, err)
+	tr1 := NewHostTransport(i1, &m)
+	defer tr1.Stop()
+	handler := func(request network.Request) (network.Response, error) {
+		return tr1.BuildResponse(request, nil), nil
+	}
+	f := func() {
+		tr1.RegisterRequestHandler(types.Ping, handler)
+	}
+	assert.NotPanics(t, f, "first request handler register should not panic")
+	assert.Panics(t, f, "second request handler register should panic because it is already registered")
+}
