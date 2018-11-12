@@ -299,6 +299,13 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 	}
 	if rootDomainRef != nil {
 		g.rootDomainRef = rootDomainRef
+
+		rootMemberRef, err := getRootMemberRef(ctx, c, *g.rootDomainRef)
+		if err != nil {
+			return errors.Wrap(err, "[ Bootstrapper ] couldn't get ref of rootMember")
+		}
+
+		g.rootMemberRef = rootMemberRef
 		inslog.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
 		return nil
 	}
