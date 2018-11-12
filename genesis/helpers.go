@@ -19,7 +19,6 @@ package genesis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -137,7 +136,6 @@ func getRootMemberRef(ctx context.Context, c core.Components, rootDomainRef core
 	}
 	if rootDomainRefChildren.HasNext() {
 		rootMemberRef, err := rootDomainRefChildren.Next()
-		fmt.Println("rootMemberRef:", rootMemberRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get next child of RootDomain object")
 		}
