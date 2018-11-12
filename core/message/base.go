@@ -61,6 +61,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &JetDrop{}, nil
 	case core.TypeSetRecord:
 		return &SetRecord{}, nil
+
+	// BlockExplorer
 	case core.TypeGetHistory:
 		return &GetHistory{}, nil
 

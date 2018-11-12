@@ -105,14 +105,13 @@ func (i *HistoryIterator) fetch() error {
 
 	switch rep := genericReply.(type) {
 	case *reply.ExplorerList:
-		{
-			if rep.NextState == nil {
-				i.canFetch = false
-			}
-			i.buff = rep.Refs
-			i.buffIndex = 0
-			i.fromState = rep.NextState
+		if rep.NextState == nil {
+			i.canFetch = false
 		}
+		i.buff = rep.States
+		i.buffIndex = 0
+		i.fromState = rep.NextState
+
 	case *reply.Error:
 		err = rep.Error()
 	default:

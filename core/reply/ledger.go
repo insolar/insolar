@@ -88,7 +88,7 @@ type ExplorerObject struct {
 }
 
 type ExplorerList struct {
-	Refs      []ExplorerObject
+	States    []ExplorerObject
 	NextState *core.RecordID
 }
 
