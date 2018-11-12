@@ -28,15 +28,18 @@ import (
 
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhase{}
-	nodeNetwork := network.NewNodeNetworkMock(t)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	pulseCalculatorMock := network.NewCalculatorMock(t)
+	communicatorMock := network.NewCommunicatorMock(t)
 
-	nodeNetwork.GetActiveNodesMock.Set(func() (r []core.Node) {
+	nodeNetworkMock.GetActiveNodesMock.Set(func() (r []core.Node) {
 		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", "")}
 	})
 
 	cm := component.Manager{}
-	cm.Register(nodeNetwork, firstPhase)
+	cm.Register(nodeNetworkMock, firstPhase, pulseCalculatorMock, communicatorMock)
 
+	assert.NotNil(t, firstPhase.Calculator)
 	assert.NotNil(t, firstPhase.NodeNetwork)
 	activeNodes := firstPhase.NodeNetwork.GetActiveNodes()
 	assert.Equal(t, 1, len(activeNodes))
