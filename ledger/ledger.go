@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -78,7 +79,8 @@ func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
-	handler, err := artifactmanager.NewMessageHandler(db)
+	rObjectsIndex := index.NewRecentObjectsIndexInMemoryProvider()
+	handler, err := artifactmanager.NewMessageHandler(db, rObjectsIndex)
 	if err != nil {
 		return nil, err
 	}

@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -42,7 +43,9 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	ctx := inslogger.TestContext(t.(*testing.T))
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
-	handler, err := artifactmanager.NewMessageHandler(db)
+
+	rObjectsIndex := index.NewRecentObjectsIndexInMemoryProvider()
+	handler, err := artifactmanager.NewMessageHandler(db, rObjectsIndex)
 	assert.NoError(t, err)
 	am, err := artifactmanager.NewArtifactManger(db)
 	assert.NoError(t, err)

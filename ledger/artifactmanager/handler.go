@@ -35,15 +35,17 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	db              *storage.DB
-	jetDropHandlers map[core.MessageType]internalHandler
+	db                  *storage.DB
+	jetDropHandlers     map[core.MessageType]internalHandler
+	recentIndexProvider index.RecentObjectsIndexProvider
 }
 
 // NewMessageHandler creates new handler.
-func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
+func NewMessageHandler(db *storage.DB, recentIndexProvider index.RecentObjectsIndexProvider) (*MessageHandler, error) {
 	return &MessageHandler{
-		db:              db,
-		jetDropHandlers: map[core.MessageType]internalHandler{},
+		db:                  db,
+		jetDropHandlers:     map[core.MessageType]internalHandler{},
+		recentIndexProvider: recentIndexProvider,
 	}, nil
 }
 
@@ -154,6 +156,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 			return nil, err
 		}
 	}
+	h.recentIndexProvider.AddToFetchedObjects(idx)
 
 	var childPointer *core.RecordID
 	if idx.ChildPointer != nil {
@@ -185,6 +188,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	if err != nil {
 		return nil, err
 	}
+	h.recentIndexProvider.AddToFetchedObjects(idx)
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -205,6 +209,7 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 	if err != nil {
 		return nil, err
 	}
+	h.recentIndexProvider.AddToFetchedObjects(msg.Parent.Record().Bytes())
 
 	var (
 		refs         []core.RecordRef
@@ -288,6 +293,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		return nil, err
 	}
+	h.recentIndexProvider.AddToUpdatedObjects(idx)
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -309,12 +315,16 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		return nil, errors.New("wrong child record")
 	}
 
-	var child *core.RecordID
+	var (
+		child *core.RecordID
+		idx   *index.ObjectLifeline
+	)
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, _, _, err := getObject(ctx, tx, msg.Parent.Record(), nil, false)
 		if err != nil {
 			return err
 		}
+
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
 			return errors.New("invalid child record")
@@ -339,6 +349,8 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	if err != nil {
 		return nil, err
 	}
+
+	h.recentIndexProvider.AddToUpdatedObjects(idx)
 
 	return &reply.ID{ID: *child}, nil
 }
@@ -372,6 +384,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.ValidateRecord)
 
+	var idx *index.ObjectLifeline
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(ctx, msg.Object.Record(), true)
 		if err != nil {
@@ -415,6 +428,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 
 		return nil
 	})
+	h.recentIndexProvider.AddToUpdatedObjects(idx)
 
 	if err != nil {
 		return nil, err
@@ -455,11 +469,13 @@ func getObject(
 	head *core.RecordID,
 	state *core.RecordID,
 	approved bool,
+	provider index.RecentObjectsIndexProvider,
 ) (*index.ObjectLifeline, *core.RecordID, record.ObjectState, error) {
 	idx, err := s.GetObjectIndex(ctx, head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to fetch object index")
 	}
+	provider.AddToFetchedObjects(head.Bytes())
 
 	var stateID *core.RecordID
 	if state != nil {
