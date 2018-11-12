@@ -19,15 +19,10 @@ package pulsar
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/rand"
-	"encoding/asn1"
-	"math/big"
 	"sort"
 
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -87,7 +82,7 @@ func (currentPulsar *Pulsar) clearState() {
 
 func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
 	currentPulsar.GeneratedEntropy = currentPulsar.EntropyGenerator.GenerateEntropy()
-	signature, err := signData(currentPulsar.PrivateKey, currentPulsar.GeneratedEntropy)
+	signature, err := signData(currentPulsar.CryptographyService, currentPulsar.GeneratedEntropy)
 	if err != nil {
 		return err
 	}
@@ -97,7 +92,7 @@ func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
 }
 
 func (currentPulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
-	sign, err := signData(currentPulsar.PrivateKey, body)
+	sign, err := signData(currentPulsar.CryptographyService, body)
 	if err != nil {
 		return nil, err
 	}
@@ -105,15 +100,17 @@ func (currentPulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) 
 	return &Payload{Body: body, PublicKey: currentPulsar.PublicKeyRaw, Signature: sign}, nil
 }
 
-type ecdsaSignature struct {
-	R, S *big.Int
+func checkPayloadSignature(service core.CryptographyService, processor core.KeyProcessor, request *Payload) (bool, error) {
+	return checkSignature(service, processor, request.Body, request.PublicKey, request.Signature)
 }
 
-func checkPayloadSignature(request *Payload) (bool, error) {
-	return checkSignature(request.Body, request.PublicKey, request.Signature)
-}
-
-func checkSignature(data interface{}, pub string, signature []byte) (bool, error) {
+func checkSignature(
+	service core.CryptographyService,
+	processor core.KeyProcessor,
+	data interface{},
+	pub string,
+	signature []byte,
+) (bool, error) {
 	cborH := &codec.CborHandle{}
 	var b bytes.Buffer
 	enc := codec.NewEncoder(&b, cborH)
@@ -122,25 +119,15 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 		return false, err
 	}
 
-	var ecdsaP ecdsaSignature
-	rest, err := asn1.Unmarshal(signature, &ecdsaP)
-	if err != nil {
-		return false, errors.Wrap(err, "[ checkSignature ]")
-	}
-
-	if len(rest) != 0 {
-		return false, errors.New("[ checkSignature ] len of  rest must be 0")
-	}
-
-	publicKey, err := ecdsahelper.ImportPublicKey(pub)
+	publicKey, err := processor.ImportPublicKey([]byte(pub))
 	if err != nil {
 		return false, err
 	}
 
-	return ecdsa.Verify(publicKey, b.Bytes(), ecdsaP.R, ecdsaP.S), nil
+	return service.Verify(publicKey, core.SignatureFromBytes(signature), b.Bytes()), nil
 }
 
-func signData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
+func signData(service core.CryptographyService, data interface{}) ([]byte, error) {
 	cborH := &codec.CborHandle{}
 	var b bytes.Buffer
 	enc := codec.NewEncoder(&b, cborH)
@@ -148,7 +135,12 @@ func signData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return privateKey.Sign(rand.Reader, b.Bytes(), nil)
+	signature, err := service.Sign(b.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	return signature.Bytes(), nil
 }
 
 func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string, error) { // nolint: megacheck

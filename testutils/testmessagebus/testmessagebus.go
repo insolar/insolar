@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -58,6 +59,7 @@ func NewTestMessageBus(t *testing.T) *TestMessageBus {
 	routingTokenFactory := messagebus.NewRoutingTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
+	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
 	cm.Inject(routingTokenFactory, parcelFactory, mock)
 
 	return &TestMessageBus{handlers: map[core.MessageType]core.MessageHandler{}, pf: parcelFactory}

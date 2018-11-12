@@ -36,10 +36,10 @@ import (
 
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger andh cleanup function.
-func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, func()) {
+func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, func()) {
 	var err error
 	// Init subcomponents.
-	ctx := inslogger.TestContext(t.(*testing.T))
+	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
 	handler, err := artifactmanager.NewMessageHandler(db)

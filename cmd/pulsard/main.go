@@ -23,10 +23,13 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/storage"
@@ -85,11 +88,17 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
-	cert, err := certificate.NewCertificatesWithKeys(cfg.KeysPath)
+	keyStore, err := keystore.NewKeyStore(cfg)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
+	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	cryptographyService := cryptography.NewCryptographyService()
+
+	cm := &component.Manager{}
+	cm.Register(cryptographyScheme, keyStore)
+	cm.Inject(cryptographyService)
 
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
@@ -97,12 +106,14 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 		panic(err)
 	}
 	switcher := &pulsar.StateSwitcherImpl{}
-	server, err := pulsar.NewPulsar(cfg.Pulsar,
+	server, err := pulsar.NewPulsar(
+		cfg.Pulsar,
+		cryptographyService,
+		platformpolicy.NewKeyProcessor(),
 		storage,
 		&pulsar.RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
 		switcher,
-		cert,
 		net.Listen,
 	)
 

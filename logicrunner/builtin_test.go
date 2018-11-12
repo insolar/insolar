@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
-
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -74,8 +74,10 @@ func TestBareHelloworld(t *testing.T) {
 
 	mb := testmessagebus.NewTestMessageBus(t)
 	nw := network.GetTestNetwork()
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	cm := &component.Manager{}
+	cm.Register(scheme)
 	cm.Inject(nk, l, lr, nw, mb, routingTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)

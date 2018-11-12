@@ -44,11 +44,26 @@ import (
 func InitComponents(ctx context.Context, cfg configuration.Configuration, isBootstrap bool) (*component.Manager, *ComponentManager, *Repl, error) {
 	var cert *certificate.Certificate
 	var err error
+
+	earlyComponents := component.Manager{}
+
+	keyStore, err := keystore.NewKeyStore(cfg)
+	checkError(ctx, err, "failed to load KeyStore: ")
+
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	cryptographyService := cryptography.NewCryptographyService()
+	earlyComponents.Register(platformCryptographyScheme, keyStore)
+	earlyComponents.Inject(cryptographyService, keyProcessor)
+
 	if isBootstrap {
 		cert, err = certificate.NewCertificatesWithKeys(cfg.KeysPath)
 		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
 	} else {
-		cert, err = certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
+		publicKey, err := cryptographyService.GetPublicKey()
+		checkError(ctx, err, "failed to get node public key")
+		cert, err = certificate.NewCertificate(publicKey, cfg.CertificatePath)
 		checkError(ctx, err, "failed to start Certificate")
 	}
 
@@ -85,12 +100,6 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	versionManager, err := manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
-	keyStore, err := keystore.NewKeyStore(cfg)
-	checkError(ctx, err, "failed to load KeyStore: ")
-
-	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
-	cryptographyService := cryptography.NewCryptographyService()
-
 	// move to logic runner ??
 	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
@@ -99,6 +108,8 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	cm.Register(
 		platformCryptographyScheme,
 		keyStore,
+		cryptographyService,
+		keyProcessor,
 	)
 	cm.Inject(
 		cert,
@@ -114,7 +125,6 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		metricsHandler,
 		networkCoordinator,
 		versionManager,
-		cryptographyService,
 	)
 
 	cmOld := ComponentManager{components: core.Components{

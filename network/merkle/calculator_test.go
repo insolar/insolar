@@ -85,21 +85,20 @@ func TestCalculator(t *testing.T) {
 
 	cm := component.Manager{}
 	mock := testutils.NewCryptographyServiceMock(t)
-	nk := nodekeeper.GetTestNodekeeper(mock)
-
 	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
 		signature := core.SignatureFromBytes(nil)
 		return &signature, nil
 	}
 	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
-		return nil, nil
+		return "key", nil
 	}
 
+	nk := nodekeeper.GetTestNodekeeper(mock)
 	cm.Inject(nk, l, c, calculator, mock)
 
 	assert.NotNil(t, calculator.Ledger)
 	assert.NotNil(t, calculator.NodeNetwork)
-	assert.NotNil(t, calculator.NodeCryptographyService)
+	assert.NotNil(t, calculator.CryptographyService)
 
 	s := &calculatorSuite{
 		Suite:        suite.Suite{},

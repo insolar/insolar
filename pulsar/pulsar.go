@@ -18,7 +18,7 @@ package pulsar
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"crypto"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -27,7 +27,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/certificate"
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 
@@ -47,8 +46,9 @@ type Pulsar struct {
 	SockConnectionType configuration.ConnectionType
 	RPCServer          *rpc.Server
 
-	Neighbours   map[string]*Neighbour
-	PrivateKey   *ecdsa.PrivateKey
+	Neighbours map[string]*Neighbour
+
+	PublicKey    crypto.PublicKey
 	PublicKeyRaw string
 
 	Config configuration.Pulsar
@@ -76,18 +76,21 @@ type Pulsar struct {
 	bftGrid     map[string]map[string]*BftCell
 	BftGridLock sync.RWMutex
 
-	StateSwitcher StateSwitcher
-	Certificate   certificate.Certificate
+	StateSwitcher       StateSwitcher
+	Certificate         certificate.Certificate
+	CryptographyService core.CryptographyService
+	KeyProcessor        core.KeyProcessor
 }
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
 	configuration configuration.Pulsar,
+	cryptographyService core.CryptographyService,
+	keyProcessor core.KeyProcessor,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator entropygenerator.EntropyGenerator,
 	stateSwitcher StateSwitcher,
-	certificate core.Certificate,
 	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 
 	log.Debug("[NewPulsar]")
@@ -99,27 +102,32 @@ func NewPulsar(
 	}
 
 	pulsar := &Pulsar{
-		Sock:             listenerImpl,
-		Neighbours:       map[string]*Neighbour{},
-		PrivateKey:       certificate.GetEcdsaPrivateKey(),
-		Config:           configuration,
-		Storage:          storage,
-		EntropyGenerator: entropyGenerator,
-		StateSwitcher:    stateSwitcher,
+		Sock:                listenerImpl,
+		Neighbours:          map[string]*Neighbour{},
+		CryptographyService: cryptographyService,
+		KeyProcessor:        keyProcessor,
+		Config:              configuration,
+		Storage:             storage,
+		EntropyGenerator:    entropyGenerator,
+		StateSwitcher:       stateSwitcher,
 	}
 	pulsar.clearState()
 
-	pubKey, err := ecdsahelper.ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	pubKey, err := cryptographyService.GetPublicKey()
 	if err != nil {
 		log.Fatal(err)
-		panic(err)
 	}
-	pulsar.PublicKeyRaw = pubKey
+	pulsar.PublicKey = pubKey
+
+	pubKeyRaw, err := keyProcessor.ExportPublicKey(pubKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pulsar.PublicKeyRaw = string(pubKeyRaw)
 
 	lastPulse, err := storage.GetLastPulse()
 	if err != nil {
 		log.Fatal(err)
-		panic(err)
 	}
 	pulsar.SetLastPulse(lastPulse)
 
@@ -134,7 +142,7 @@ func NewPulsar(
 		if len(neighbour.PublicKey) == 0 {
 			continue
 		}
-		publicKey, err := ecdsahelper.ImportPublicKey(neighbour.PublicKey)
+		publicKey, err := keyProcessor.ImportPublicKey([]byte(neighbour.PublicKey))
 		if err != nil {
 			continue
 		}
@@ -167,7 +175,6 @@ func (currentPulsar *Pulsar) StartServer(ctx context.Context) {
 	err := server.RegisterName("Pulsar", &Handler{Pulsar: currentPulsar})
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
-		panic(err)
 	}
 	currentPulsar.RPCServer = server
 	server.Accept(currentPulsar.Sock)
@@ -222,7 +229,7 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pu
 	}
 	casted := reply.Reply.(*Payload)
 
-	result, err := checkPayloadSignature(casted)
+	result, err := checkPayloadSignature(currentPulsar.CryptographyService, currentPulsar.KeyProcessor, casted)
 	if err != nil {
 		return err
 	}

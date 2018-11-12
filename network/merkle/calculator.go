@@ -25,9 +25,9 @@ import (
 )
 
 type calculator struct {
-	Ledger                  core.Ledger              `inject:""`
-	NodeNetwork             core.NodeNetwork         `inject:""`
-	NodeCryptographyService core.CryptographyService `inject:""`
+	Ledger              core.Ledger              `inject:""`
+	NodeNetwork         core.NodeNetwork         `inject:""`
+	CryptographyService core.CryptographyService `inject:""`
 }
 
 func NewCalculator() Calculator {
@@ -49,7 +49,7 @@ func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) (Orig
 	pulseHash := entry.hash()
 	nodeInfoHash := nodeInfoHash(pulseHash, stateHash)
 
-	signature, err := c.NodeCryptographyService.Sign(nodeInfoHash)
+	signature, err := c.CryptographyService.Sign(nodeInfoHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't sign node info hash")
 	}
@@ -68,7 +68,7 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (
 	globuleInfoHash := globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
 	globuleHash := globuleHash(globuleInfoHash, nodeRoot)
 
-	signature, err := c.NodeCryptographyService.Sign(globuleHash)
+	signature, err := c.CryptographyService.Sign(globuleHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't sign globule hash")
 	}
@@ -87,7 +87,7 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (
 func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) (OriginHash, *CloudProof, error) {
 	cloudHash := entry.hash()
 
-	signature, err := c.NodeCryptographyService.Sign(cloudHash)
+	signature, err := c.CryptographyService.Sign(cloudHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetCloudProof ] Could't sign cloud hash")
 	}
@@ -101,5 +101,5 @@ func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) (Orig
 
 func (c *calculator) IsValid(proof proof, hash OriginHash, publicKey crypto.PublicKey) bool {
 	signature := core.SignatureFromBytes(proof.signature())
-	return c.NodeCryptographyService.Verify(publicKey, signature, proof.hash(hash))
+	return c.CryptographyService.Verify(publicKey, signature, proof.hash(hash))
 }

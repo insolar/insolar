@@ -16,14 +16,5 @@
 
 package core
 
-import (
-	"crypto/ecdsa"
-)
-
 // Certificate interface provides methods to manage keys
-type Certificate interface {
-	GetPublicKey() (string, error)
-
-	// TODO should be removed
-	GetEcdsaPrivateKey() *ecdsa.PrivateKey
-}
+type Certificate interface{}

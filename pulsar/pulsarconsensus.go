@@ -18,7 +18,7 @@ package pulsar
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"crypto"
 	"fmt"
 	"sync"
 
@@ -110,13 +110,13 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 
 	type bftMember struct {
 		PubPem string
-		PubKey *ecdsa.PublicKey
+		PubKey crypto.PublicKey
 	}
 
 	var finalEntropySet []core.Entropy
 
 	keys := []string{currentPulsar.PublicKeyRaw}
-	activePulsars := []*bftMember{{currentPulsar.PublicKeyRaw, &currentPulsar.PrivateKey.PublicKey}}
+	activePulsars := []*bftMember{{currentPulsar.PublicKeyRaw, currentPulsar.PublicKey}}
 	for key, neighbour := range currentPulsar.Neighbours {
 		activePulsars = append(activePulsars, &bftMember{key, neighbour.PublicKey})
 		keys = append(keys, key)
@@ -134,7 +134,13 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 				continue
 			}
 
-			ok, err := checkSignature(bftCell.GetEntropy(), column.PubPem, bftCell.GetSign())
+			ok, err := checkSignature(
+				currentPulsar.CryptographyService,
+				currentPulsar.KeyProcessor,
+				bftCell.GetEntropy(),
+				column.PubPem,
+				bftCell.GetSign(),
+			)
 			if !ok || err != nil {
 				currentColumnStat["nil"]++
 				continue
@@ -188,7 +194,7 @@ func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
 		//here confirmation myself
-		signature, err := signData(currentPulsar.PrivateKey, core.PulseSenderConfirmation{
+		signature, err := signData(currentPulsar.CryptographyService, core.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Entropy:         currentPulsar.CurrentSlotEntropy,
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
