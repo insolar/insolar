@@ -56,8 +56,6 @@ func (nc *NaiveCommunicator) Start(ctx context.Context) error {
 	return nil
 }
 
-//TODO: проброс пульса в фазу1 или фаз манагер
-
 // ExchangeData used in first consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	//futures := make([]network.Future, len(participants))
@@ -105,10 +103,10 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 
 	nc.phase1result[request.GetSender()] = p
 
-	//p.Deserialize(request.GetData().())
-	//packet.DeserializePacket()
-
-	nc.PulseHandler.OnPulse(context.TODO(), p.GetPulse())
+	newPulse := p.GetPulse()
+	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
+		nc.PulseHandler.OnPulse(context.TODO(), p.GetPulse())
+	}
 }
 
 func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
