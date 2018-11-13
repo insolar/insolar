@@ -74,7 +74,7 @@ type JetCoordinator interface {
 	QueryRole(ctx context.Context, role JetRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
 }
 
-// BlockExplorer - interface for Block Explorer.
+// ExplorerManager - interface for Block Explorer.
 type ExplorerManager interface {
 	// GetHistory returns history iterator.
 	//

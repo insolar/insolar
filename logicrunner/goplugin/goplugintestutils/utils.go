@@ -575,3 +575,31 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	}
 	return nil
 }
+
+// TestArtifactManager implementation for tests
+type TestExplorerManager struct {
+	Types      []core.MachineType
+	Codes      map[core.RecordRef]*TestCodeDescriptor
+	Objects    map[core.RecordRef]*TestObjectDescriptor
+	Prototypes map[core.RecordRef]*TestObjectDescriptor
+}
+
+// GetHistory implementation for tests
+func (t *TestExplorerManager) GetHistory(ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+	panic("implement me")
+}
+
+// NewTestArtifactManager implementation for tests
+func NewTestExplorerManager() *TestExplorerManager {
+	return &TestExplorerManager{
+		Codes:      make(map[core.RecordRef]*TestCodeDescriptor),
+		Objects:    make(map[core.RecordRef]*TestObjectDescriptor),
+		Prototypes: make(map[core.RecordRef]*TestObjectDescriptor),
+	}
+}
+
+// Start implementation for tests
+func (t *TestExplorerManager) Start(components core.Components) error { return nil }
+
+// Stop implementation for tests
+func (t *TestExplorerManager) Stop() error { return nil }
