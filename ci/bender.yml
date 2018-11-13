@@ -110,6 +110,9 @@ jobs:
         icon_emoji: ':sun_with_face:'
         silent: true
         text: rebuild branches
+    ensure:
+      put: lock
+      params: {release: lock}
   - put: deploy
     params:
       pipelines:
@@ -119,8 +122,6 @@ jobs:
         unpaused: true
         vars_files:
         - pipelines/vars.yml
-  - put: lock
-    params: {release: lock}
 - name: pull-requests
   plan:
   - get: pull-requests
@@ -154,6 +155,9 @@ jobs:
       - name: insolar
       outputs:
       - name: pipelines
+    ensure:
+      put: lock
+      params: {release: lock}
   - put: deploy
     params:
       pipelines:
@@ -163,5 +167,3 @@ jobs:
         unpaused: true
         vars_files:
         - pipelines/vars.yml
-  - put: lock
-    params: {release: lock}
