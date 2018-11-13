@@ -22,7 +22,6 @@ import (
 	"context"
 	"encoding/gob"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -57,26 +56,29 @@ type ExecutionState struct {
 	objectbody *ObjectBody
 }
 
+type LogicRunnerError struct {
+	Err      error
+	Request  Ref
+	Contract Ref
+	Method   string
+}
+
+func (lre LogicRunnerError) Error() string {
+	return lre.Err.Error() + "  Contract=" + lre.Contract.String() + " Method=" + lre.Method + " Request=" + lre.Request.String()
+}
+
 func (es *ExecutionState) ErrorWrap(err error, message string) error {
-	var errorMessage string
-	var errorData []string
-	if es.request.String() != "" {
-		errorData = append(errorData, "request ref: "+es.request.String())
+	if err == nil {
+		err = errors.New(message)
+	} else {
+		err = errors.Wrap(err, message)
 	}
-	if es.Ref.String() != "" {
-		errorData = append(errorData, "contract ref: "+es.Ref.String())
+	return LogicRunnerError{
+		Err:      err,
+		Request:  *es.request,
+		Contract: es.Ref,
+		Method:   es.Method,
 	}
-	if es.Method != "" {
-		errorData = append(errorData, "contract method: "+es.Method)
-	}
-	if message != "" {
-		errorData = append(errorData, "error: "+message)
-	}
-
-	errorMessage = strings.Join(errorData, "; ")
-	errorMessage = "Execution state: [ " + errorMessage + " ]"
-
-	return errors.Wrap(err, errorMessage)
 }
 
 func (es *ExecutionState) Lock() {
@@ -217,7 +219,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 
 	es := lr.UpsertExecution(ref)
 	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
-		return nil, es.ErrorWrap(errors.New("loop detected"), "")
+		return nil, es.ErrorWrap(nil, "loop detected")
 	}
 	fuse := true
 	es.Lock()
@@ -225,7 +227,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
 	if inmsg.Pulse() != lr.pulse(ctx).PulseNumber {
-		return nil, es.ErrorWrap(errors.New("abort execution: new Pulse coming"), "")
+		return nil, es.ErrorWrap(nil, "abort execution: new Pulse coming")
 	}
 
 	defer func() {
@@ -421,7 +423,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 
 	executor, err := lr.GetExecutor(es.objectbody.CodeMachineType)
 	if err != nil {
-		return nil, errors.Wrap(err, "no executor registered")
+		return nil, es.ErrorWrap(err, "no executor registered")
 	}
 
 	executer := func() (*reply.CallMethod, error) {
@@ -434,7 +436,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			ctx, es.callContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "executor error")
+			return nil, es.ErrorWrap(err, "executor error")
 		}
 
 		if vb.NeedSave() {
@@ -449,11 +451,11 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 				)
 			}
 			if err != nil {
-				return nil, errors.Wrap(err, "couldn't update object")
+				return nil, es.ErrorWrap(err, "couldn't update object")
 			}
 			_, err = am.RegisterResult(ctx, *es.request, result)
 			if err != nil {
-				return nil, errors.Wrap(err, "couldn't save results")
+				return nil, es.ErrorWrap(err, "couldn't save results")
 			}
 
 		}
@@ -497,20 +499,20 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 
 	codeRef, err := protoDesc.Code()
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't code reference")
+		return nil, es.ErrorWrap(err, "couldn't code reference")
 	}
 	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't code")
+		return nil, es.ErrorWrap(err, "couldn't code")
 	}
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
-		return nil, errors.Wrap(err, "no executer registered")
+		return nil, es.ErrorWrap(err, "no executer registered")
 	}
 
 	newData, err := executor.CallConstructor(ctx, es.callContext, *codeDesc.Ref(), m.Name, m.Arguments)
 	if err != nil {
-		return nil, errors.Wrap(err, "executer error")
+		return nil, es.ErrorWrap(err, "executer error")
 	}
 
 	switch m.SaveAs {
@@ -527,7 +529,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 		})
 		return &reply.CallConstructor{Object: es.request}, err
 	default:
-		return nil, errors.New("unsupported type of save object")
+		return nil, es.ErrorWrap(nil, "unsupported type of save object")
 	}
 }
 
