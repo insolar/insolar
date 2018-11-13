@@ -94,12 +94,14 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	factoryMock.CreateWrapperMock.Return(clientMock)
 	cryptographyServiceMock := mockCryptographyService(t)
 	keyProcessor := mockKeyProcessor(t)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	result, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "testType",
 		MainListenerAddress: "listedAddress",
 	},
 		cryptographyServiceMock,
+		scheme,
 		keyProcessor,
 		storage,
 		factoryMock,
@@ -135,6 +137,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	factoryMock.CreateWrapperMock.Return(clientMock)
 
 	cryptographyServiceMock := mockCryptographyService(t)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	result, err := NewPulsar(
 		configuration.Pulsar{
@@ -146,6 +149,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 			},
 		},
 		cryptographyServiceMock,
+		scheme,
 		keyProcessormock,
 		storage,
 		factoryMock,
@@ -802,14 +806,16 @@ func TestPulsar_verify_Success(t *testing.T) {
 
 	cryptographyServiceMock := mockCryptographyService(t)
 	processor := mockKeyProcessor(t)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	pulsar := &Pulsar{
-		KeyProcessor:        processor,
-		StateSwitcher:       mockSwitcher,
-		CryptographyService: cryptographyServiceMock,
-		PublicKeyRaw:        currentPulsarPublicKey,
-		OwnedBftRow:         map[string]*BftCell{},
-		bftGrid:             map[string]map[string]*BftCell{},
+		KeyProcessor:               processor,
+		StateSwitcher:              mockSwitcher,
+		CryptographyService:        cryptographyServiceMock,
+		PlatformCryptographyScheme: scheme,
+		PublicKeyRaw:               currentPulsarPublicKey,
+		OwnedBftRow:                map[string]*BftCell{},
+		bftGrid:                    map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: pub2, OutgoingClient: &clientMock},

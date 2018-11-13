@@ -76,16 +76,18 @@ type Pulsar struct {
 	bftGrid     map[string]map[string]*BftCell
 	BftGridLock sync.RWMutex
 
-	StateSwitcher       StateSwitcher
-	Certificate         certificate.Certificate
-	CryptographyService core.CryptographyService
-	KeyProcessor        core.KeyProcessor
+	StateSwitcher              StateSwitcher
+	Certificate                certificate.Certificate
+	CryptographyService        core.CryptographyService
+	PlatformCryptographyScheme core.PlatformCryptographyScheme
+	KeyProcessor               core.KeyProcessor
 }
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
 	configuration configuration.Pulsar,
 	cryptographyService core.CryptographyService,
+	scheme core.PlatformCryptographyScheme,
 	keyProcessor core.KeyProcessor,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
@@ -102,14 +104,15 @@ func NewPulsar(
 	}
 
 	pulsar := &Pulsar{
-		Sock:                listenerImpl,
-		Neighbours:          map[string]*Neighbour{},
-		CryptographyService: cryptographyService,
-		KeyProcessor:        keyProcessor,
-		Config:              configuration,
-		Storage:             storage,
-		EntropyGenerator:    entropyGenerator,
-		StateSwitcher:       stateSwitcher,
+		Sock:                       listenerImpl,
+		Neighbours:                 map[string]*Neighbour{},
+		CryptographyService:        cryptographyService,
+		PlatformCryptographyScheme: scheme,
+		KeyProcessor:               keyProcessor,
+		Config:                     configuration,
+		Storage:                    storage,
+		EntropyGenerator:           entropyGenerator,
+		StateSwitcher:              stateSwitcher,
 	}
 	pulsar.clearState()
 

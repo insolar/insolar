@@ -22,7 +22,6 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -143,7 +142,7 @@ func signData(service core.CryptographyService, data interface{}) ([]byte, error
 	return signature.Bytes(), nil
 }
 
-func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string, error) { // nolint: megacheck
+func selectByEntropy(scheme core.PlatformCryptographyScheme, entropy core.Entropy, values []string, count int) ([]string, error) { // nolint: megacheck
 	type idxHash struct {
 		idx  int
 		hash []byte
@@ -153,10 +152,9 @@ func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string
 		return nil, errors.New("count value should be less than values size")
 	}
 
-	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	hashes := make([]*idxHash, 0, len(values))
 	for i, value := range values {
-		h := pcs.ReferenceHasher() // TODO: pass hasher
+		h := scheme.ReferenceHasher()
 		_, err := h.Write(entropy[:])
 		if err != nil {
 			return nil, err

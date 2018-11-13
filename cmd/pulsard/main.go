@@ -109,6 +109,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	server, err := pulsar.NewPulsar(
 		cfg.Pulsar,
 		cryptographyService,
+		cryptographyScheme,
 		platformpolicy.NewKeyProcessor(),
 		storage,
 		&pulsar.RPCClientWrapperFactoryImpl{},

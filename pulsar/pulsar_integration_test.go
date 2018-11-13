@@ -42,6 +42,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 
 	service := mockCryptographyService(t)
 	keyProcessor := mockKeyProcessor(t)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
@@ -55,6 +56,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			},
 		},
 		service,
+		pcs,
 		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
@@ -73,6 +75,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			},
 		},
 		service,
+		pcs,
 		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
@@ -107,13 +110,15 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, []core.NodeRole{core.RoleVirtual}, nil, 0, "", ""))
 	c.CryptographyService = mockCryptographyService(t)
 
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	c.Ledger = tempLedger
 
 	nodeConfig := configuration.NewConfiguration()
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
-	serviceNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig)
+	serviceNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig, scheme)
 	assert.NoError(t, err)
 	err = serviceNetwork.Start(ctx, c)
 	assert.NoError(t, err)
@@ -134,6 +139,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 
 	service := mockCryptographyService(t)
 	keyProcessor := mockKeyProcessor(t)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	newPulsar, err := NewPulsar(
 		configuration.Pulsar{
@@ -144,6 +150,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 			Neighbours:          []configuration.PulsarNodeAddress{},
 		},
 		service,
+		pcs,
 		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
@@ -198,6 +205,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	service := mockCryptographyService(t)
 	keyProcessor := mockKeyProcessor(t)
 
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	firstStateSwitcher := &StateSwitcherImpl{}
 	firstPulsar, err := NewPulsar(
 		configuration.Pulsar{
@@ -214,6 +223,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 			ReceivingVectorTimeout:         50,
 		},
 		service,
+		pcs,
 		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
@@ -240,6 +250,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 			ReceivingVectorTimeout:         50,
 		},
 		service,
+		pcs,
 		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
@@ -303,6 +314,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	pulsars := [7]*Pulsar{}
 	mainAddresses := []string{
@@ -351,6 +363,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		pulsar, err := NewPulsar(
 			conf.Pulsar,
 			service,
+			pcs,
 			keyProcessor,
 			storage,
 			&RPCClientWrapperFactoryImpl{},
