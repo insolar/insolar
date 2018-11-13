@@ -91,14 +91,15 @@ func (m *Manager) Start(ctx context.Context) error {
 func (m *Manager) Init(ctx context.Context) error {
 	for _, c := range m.components {
 		name := reflect.TypeOf(c).Elem().String()
-		if s, ok := c.(Initer); ok {
-			log.Infoln("ComponentManager: Init component: ", name)
-			err := s.Init(ctx)
-			if err != nil {
-				return errors.Wrap(err, "Failed to init components.")
-			}
-		} else {
-			log.Warnf("ComponentManager: Component %s has no Init method", name)
+		s, ok := c.(Initer)
+		if !ok {
+			log.Debugf("ComponentManager: Component %s has no Init method", name)
+			continue
+		}
+		log.Infoln("ComponentManager: Init component: ", name)
+		err := s.Init(ctx)
+		if err != nil {
+			return errors.Wrap(err, "Failed to init components.")
 		}
 	}
 	return nil
