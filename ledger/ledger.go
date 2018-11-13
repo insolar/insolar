@@ -38,7 +38,7 @@ type Ledger struct {
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
 	LocalStorage    core.LocalStorage    `inject:""`
-	BlockExplorer   core.BlockExplorer   `inject:""`
+	ExplorerManager core.ExplorerManager `inject:""`
 }
 
 // GetPulseManager returns PulseManager.
@@ -65,6 +65,12 @@ func (l *Ledger) GetLocalStorage() core.LocalStorage {
 	return l.LocalStorage
 }
 
+// GetLocalStorage returns local storage to work with.
+func (l *Ledger) GetExplorerManager() core.ExplorerManager {
+	log.Warn("GetExplorerManager is deprecated. Use component injection.")
+	return l.ExplorerManager
+}
+
 // NewTestLedger is the util function for creation of Ledger with provided
 // private members (suitable for tests).
 func NewTestLedger(
@@ -81,7 +87,7 @@ func NewTestLedger(
 		PulseManager:    pm,
 		JetCoordinator:  jc,
 		LocalStorage:    ls,
-		BlockExplorer:   be,
+		ExplorerManager: be,
 	}
 }
 
@@ -103,7 +109,7 @@ func GetLedgerComponents(ctx context.Context, conf configuration.Ledger) []inter
 		pulsemanager.NewPulseManager(db),
 		artifactmanager.NewMessageHandler(db),
 		localstorage.NewLocalStorage(db),
-		blockexplorer.NewBlockExplorer(db),
+		blockexplorer.NewExplorerManager(db),
 	}
 }
 

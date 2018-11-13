@@ -49,7 +49,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	pm := pulsemanager.NewPulseManager(db)
 	ls := localstorage.NewLocalStorage(db)
-	be := blockexplorer.NewBlockExplorer(db)
+	be := blockexplorer.NewExplorerManager(db)
 
 	// Init components.
 	if c.MessageBus == nil {

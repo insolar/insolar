@@ -58,7 +58,7 @@ func (l *MockLedger) GetPulseManager() core.PulseManager {
 }
 
 // GetPulseManager returns pulse manager to work with.
-func (l *MockLedger) GetBlockExplorer() core.BlockExplorer {
+func (l *MockLedger) GetBlockExplorer() core.ExplorerManager {
 	return nil
 }
 

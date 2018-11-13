@@ -51,8 +51,8 @@ type Ledger interface {
 	// GetLocalStorage returns local storage to work with.
 	GetLocalStorage() LocalStorage
 
-	// GetBlockExplorer returns block explorer to work with.
-	GetBlockExplorer() BlockExplorer
+	// GetExplorerManager returns block explorer to work with.
+	GetExplorerManager() ExplorerManager
 }
 
 // PulseManager provides Ledger's methods related to Pulse.
@@ -75,7 +75,7 @@ type JetCoordinator interface {
 }
 
 // BlockExplorer - interface for Block Explorer.
-type BlockExplorer interface {
+type ExplorerManager interface {
 	// GetHistory returns history iterator.
 	//
 	// During iteration history refs will be fetched from remote source.
