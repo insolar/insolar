@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/cryptography"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
@@ -1136,8 +1137,8 @@ func TestRootDomainContract(t *testing.T) {
 	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
-	cryptographyService := mockCryptographyService(t)
-	root := Caller{rootMemberRef.String(), lr, t, cryptographyService}
+	csRoot := cryptography.NewKeyBoundCryptographyService(rootKey)
+	root := Caller{rootMemberRef.String(), lr, t, csRoot}
 
 	// Creating Member1
 	member1Key, err := kp.GeneratePrivateKey()
@@ -1160,7 +1161,8 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NotEqual(t, "", member2Ref)
 
 	// Transfer 1 coin from Member1 to Member2
-	member1 := Caller{member1Ref, lr, t, cryptographyService}
+	csMember1 := cryptography.NewKeyBoundCryptographyService(member1Key)
+	member1 := Caller{member1Ref, lr, t, csMember1}
 	member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", []interface{}{1, member2Ref})
 
 	// Verify Member1 balance
@@ -1539,7 +1541,8 @@ func (r *One) CreateAllowance(member string) (error) {
 	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
-	root := Caller{rootMemberRef.String(), lr, t, mockCryptographyService(t)}
+	cs := cryptography.NewKeyBoundCryptographyService(rootKey)
+	root := Caller{rootMemberRef.String(), lr, t, cs}
 
 	// Creating Member
 	memberKey, err := kp.GeneratePrivateKey()
