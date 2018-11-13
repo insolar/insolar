@@ -231,7 +231,11 @@ func (m *TransactionManager) GetObjectIndex(
 	if err != nil {
 		return nil, err
 	}
-	return index.DecodeObjectLifeline(buf)
+	index, err := index.DecodeObjectLifeline(buf)
+	if err == nil{
+		m.recentObjectsIndex.addToFetched(id)
+	}
+	return index,err
 }
 
 // SetObjectIndex stores object lifeline index.
@@ -249,7 +253,11 @@ func (m *TransactionManager) SetObjectIndex(
 	if err != nil {
 		return err
 	}
-	return m.set(ctx, k, encoded)
+	err = m.set(ctx, k, encoded)
+	if err == nil{
+		m.recentObjectsIndex.addToUpdated(id)
+	}
+	return err
 }
 
 // GetLatestPulseNumber returns current pulse number.
@@ -259,6 +267,43 @@ func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.Pul
 		return 0, err
 	}
 	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
+}
+
+func (m *TransactionManager) GetLatestObjects(ctx context.Context) ([]*index.ObjectLifeline) {
+	indexCount := len(m.recentObjectsIndex.fetchedObjects) + len(m.recentObjectsIndex.updatedObjects)
+	result :=  make([]*index.ObjectLifeline, 0, indexCount)
+	resultLock := sync.Mutex{}
+
+	wg := sync.WaitGroup{}
+	wg.Add(indexCount)
+
+	fetchIndexFunc := func(id *core.RecordID) {
+		defer wg.Done()
+		k := prefixkey(scopeIDLifeline, id[:])
+		buf, err := m.get(ctx, k)
+		if err != nil {
+			inslogger.FromContext(ctx).Errorf("problems with fetching index - %v", err)
+		}
+		index, err := index.DecodeObjectLifeline(buf)
+		if err != nil {
+			inslogger.FromContext(ctx).Errorf("problems with decoding index - %v", err)
+		}
+
+		resultLock.Lock()
+		result = append(result, index)
+		resultLock.Unlock()
+	}
+
+	for _, value := range m.recentObjectsIndex.fetchedObjects{
+		go fetchIndexFunc(value)
+	}
+	for _, value := range m.recentObjectsIndex.updatedObjects{
+		go fetchIndexFunc(value)
+	}
+
+	wg.Wait()
+
+	return result
 }
 
 // set stores value by key.
