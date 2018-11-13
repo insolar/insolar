@@ -1418,8 +1418,12 @@ func (r *One) Recursive() (error) {
 
 	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Recursive", goplugintestutils.CBORMarshal(t, []interface{}{}))
 	assert.NoError(t, err, "contract call")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{map[interface{}]interface{}{"S": "on calling main API: couldn't dispatch event: loop detected"}}, r)
+
+	var contractErr *foundation.Error
+	err = signer.UnmarshalParams(resp.(*reply.CallMethod).Result, &contractErr)
+	assert.NoError(t, err, "unmarshal answer")
+	assert.NotNil(t, contractErr)
+	assert.Contains(t, contractErr.Error(), "loop detected")
 }
 
 func TestNewAllowanceNotFromWallet(t *testing.T) {
@@ -1706,10 +1710,9 @@ func (r *One) ShortSleep() (error) {
 	log.Debugf("!!!!! Short start")
 	_, err = executeMethod(ctx, lr, pm, *contract, 0, "ShortSleep", goplugintestutils.CBORMarshal(t, []interface{}{}))
 	log.Debugf("!!!!! Short end")
-
-	// TODO check for 302
 	assert.Error(t, err, "contract call")
-	assert.Equal(t, "Abort execution: New Pulse coming", err.Error())
+
+	assert.Contains(t, err.Error(), "abort execution: new Pulse coming")
 }
 
 func getLogicRunnerWithoutValidation(lr core.LogicRunner) *LogicRunner {

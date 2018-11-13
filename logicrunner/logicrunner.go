@@ -217,7 +217,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 
 	es := lr.UpsertExecution(ref)
 	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
-		return nil, errors.Errorf("loop detected")
+		return nil, es.ErrorWrap(errors.New("loop detected"), "")
 	}
 	fuse := true
 	es.Lock()
@@ -225,7 +225,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
 	if inmsg.Pulse() != lr.pulse(ctx).PulseNumber {
-		return nil, errors.New("Abort execution: New Pulse coming")
+		return nil, es.ErrorWrap(errors.New("abort execution: new Pulse coming"), "")
 	}
 
 	defer func() {
@@ -258,10 +258,10 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	)
 
 	if err != nil {
-		return nil, errors.New("Authorization failed with error: " + err.Error())
+		return nil, es.ErrorWrap(err, "authorization failed with error")
 	}
 	if !isAuthorized {
-		return nil, errors.New("Can't execute this object")
+		return nil, es.ErrorWrap(err, "can't execute this object")
 	}
 
 	vb.Begin(ref, core.CaseRecord{
@@ -277,7 +277,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	es.request, err = vb.RegisterRequest(msg)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't create request")
+		return nil, es.ErrorWrap(err, "can't create request")
 	}
 
 	es.callContext = &core.LogicCallContext{
