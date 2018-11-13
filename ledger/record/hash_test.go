@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -78,6 +79,7 @@ func Test_HashesTheSame(t *testing.T) {
 	}
 }
 
+var pcs = platformpolicy.NewPlatformCryptographyScheme()
 var hashtestsRecordsMutate = []struct {
 	typ     string
 	records []Record
@@ -86,9 +88,9 @@ var hashtestsRecordsMutate = []struct {
 		"CodeRecord",
 		[]Record{
 			&CodeRecord{},
-			&CodeRecord{Code: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
+			&CodeRecord{Code: CalculateIDForBlob(pcs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
 			&CodeRecord{
-				Code: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+				Code: CalculateIDForBlob(pcs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 				SideEffectRecord: SideEffectRecord{
 					Domain: core.RecordRef{1, 2, 3},
 				},

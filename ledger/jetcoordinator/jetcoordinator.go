@@ -27,10 +27,11 @@ import (
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db          *storage.DB
-	rootJetNode *JetNode
-	roleCounts  map[core.JetRole]int
-	NodeNet     core.NodeNetwork `inject:""`
+	db                         *storage.DB
+	rootJetNode                *JetNode
+	roleCounts                 map[core.JetRole]int
+	NodeNet                    core.NodeNetwork                `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 }
 
 // NewJetCoordinator creates new coordinator instance.
@@ -103,7 +104,7 @@ func (jc *JetCoordinator) QueryRole(
 		return nil, errors.New("no candidate count for this role")
 	}
 
-	selected, err := selectByEntropy(pulseData.Entropy, candidates, count)
+	selected, err := selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Entropy, candidates, count)
 	if err != nil {
 		return nil, err
 	}

@@ -20,7 +20,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -36,8 +35,9 @@ const (
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
-	db         *storage.DB
-	DefaultBus core.MessageBus `inject:""`
+	db                         *storage.DB
+	DefaultBus                 core.MessageBus                 `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 
 	getChildrenChunkSize int
 }
@@ -45,7 +45,7 @@ type LedgerArtifactManager struct {
 // State returns hash state for artifact manager.
 func (m *LedgerArtifactManager) State() ([]byte, error) {
 	// This is a temporary stab to simulate real hash.
-	return platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash([]byte{1, 2, 3}), nil // TODO: use as component
+	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
 // NewArtifactManger creates new manager instance.
@@ -253,7 +253,7 @@ func (m *LedgerArtifactManager) DeployCode(
 					Domain:  domain,
 					Request: request,
 				},
-				Code:        record.CalculateIDForBlob(pulseNumber, code),
+				Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, code),
 				MachineType: machineType,
 			},
 			request,
@@ -448,7 +448,7 @@ func (m *LedgerArtifactManager) activateObject(
 				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(pulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, memory),
 				Image:       prototype,
 				IsPrototype: isPrototype,
 			},
@@ -538,7 +538,7 @@ func (m *LedgerArtifactManager) updateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(pulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, memory),
 				Image:       *image,
 				IsPrototype: object.IsPrototype(),
 			},

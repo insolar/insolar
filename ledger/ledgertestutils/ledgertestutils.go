@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
@@ -39,13 +40,18 @@ import (
 func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
 	handler := artifactmanager.NewMessageHandler(db)
+	handler.PlatformCryptographyScheme = pcs
 	am := artifactmanager.NewArtifactManger(db)
+	am.PlatformCryptographyScheme = pcs
 	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
+	jc.PlatformCryptographyScheme = pcs
 	pm := pulsemanager.NewPulseManager(db)
 	ls := localstorage.NewLocalStorage(db)
 

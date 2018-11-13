@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,6 +41,7 @@ func TmpDB(ctx context.Context, t testing.TB, dir string) (*storage.DB, func()) 
 			DataDirectory: tmpdir,
 		},
 	}, nil)
+	db.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 	if err != nil {
 		t.Fatal(err)
 	}

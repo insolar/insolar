@@ -23,7 +23,6 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -52,6 +51,8 @@ const (
 
 // DB represents BadgerDB storage implementation.
 type DB struct {
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+
 	db         *badger.DB
 	genesisRef *core.RecordRef
 
@@ -313,7 +314,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 	var err error
 	db.waitinflight()
 
-	hw := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: use as component
+	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err = hw.Write(prevHash)
 	if err != nil {
 		return nil, nil, err
@@ -482,7 +483,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 // SetMessage persists message to the database
 func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, genericMessage core.Message) error {
 	messageBytes := message.ToBytes(genericMessage)
-	hw := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: use as component
+	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
 	if err != nil {
 		return err

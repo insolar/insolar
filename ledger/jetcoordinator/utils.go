@@ -22,10 +22,9 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
-func selectByEntropy(entropy core.Entropy, values []core.RecordRef, count int) ([]core.RecordRef, error) { // nolint: megacheck
+func selectByEntropy(scheme core.PlatformCryptographyScheme, entropy core.Entropy, values []core.RecordRef, count int) ([]core.RecordRef, error) { // nolint: megacheck
 	type idxHash struct {
 		idx  int
 		hash []byte
@@ -35,11 +34,9 @@ func selectByEntropy(entropy core.Entropy, values []core.RecordRef, count int) (
 		return nil, errors.New("count value should be less than values size")
 	}
 
-	pcs := platformpolicy.NewPlatformCryptographyScheme()
-
 	hashes := make([]*idxHash, 0, len(values))
 	for i, value := range values {
-		h := pcs.ReferenceHasher() // TODO: pass hasher
+		h := scheme.ReferenceHasher()
 		_, err := h.Write(entropy[:])
 		if err != nil {
 			return nil, err

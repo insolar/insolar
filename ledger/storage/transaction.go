@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -125,7 +124,7 @@ func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]
 
 // SetBlob saves binary value for provided pulse.
 func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
-	id := record.CalculateIDForBlob(pulseNumber, blob)
+	id := record.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
 	k := prefixkey(scopeIDBlob, id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
@@ -164,7 +163,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
-	recHash := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: use as component
+	recHash := m.db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := rec.WriteHashData(recHash)
 	if err != nil {
 		return nil, err
