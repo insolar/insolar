@@ -63,6 +63,7 @@ jobs:
              make pre-build
              make build
              make test_with_coverage
+  - get: lock
   - put: lock
     params: {release: lock}
 {% endfor %}
