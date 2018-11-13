@@ -51,13 +51,13 @@ jobs:
 - name: unit-{{ pull.number }}
   public: true
   plan:
-  - put: lock
-    params: {acquire: true}
   - put: pull-request-{{ pull.number }}
     params:
       state: pending
   - get: master
     trigger: true
+  - put: lock
+    params: {acquire: true}
   - get: pull-request-{{ pull.number }}
     trigger: true
   - task: unit
