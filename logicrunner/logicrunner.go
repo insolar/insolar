@@ -183,7 +183,6 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
-	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
@@ -197,7 +196,6 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	fuse := true
 	es.Lock()
 
-	// TODO return 302
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
 	if inmsg.Pulse() != lr.pulse(ctx).PulseNumber {
