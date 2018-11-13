@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/stretchr/testify/assert"
@@ -30,15 +31,22 @@ func TestLedgerArtifactManager_GetHistory(t *testing.T) {
 	ctx, db, am, be, cleaner := getTestData(t)
 	defer cleaner()
 
+	msg := message.GenesisRequest{Name: "my test message"}
+	reqRef, err := am.RegisterRequest(ctx, &msg)
+	assert.NoError(t, err)
+	requestRef := core.NewRecordRef(domainID, *reqRef)
+
 	objID, err := db.SetRecord(
 		ctx,
 		core.PulseNumber(0),
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
-				Domain: domainRef,
+				Domain:  domainRef,
+				Request: *requestRef,
 			},
 		},
 	)
+
 	db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
 		State:               record.StateActivation,
 		LatestState:         objID,
@@ -50,7 +58,7 @@ func TestLedgerArtifactManager_GetHistory(t *testing.T) {
 	obj1, err := am.UpdateObject(
 		ctx,
 		domainRef,
-		requestRef,
+		*requestRef,
 		&ObjectDescriptor{
 			ctx:       ctx,
 			head:      *genRefWithID(objID),
@@ -69,7 +77,7 @@ func TestLedgerArtifactManager_GetHistory(t *testing.T) {
 	obj2, err := am.UpdateObject(
 		ctx,
 		domainRef,
-		requestRef,
+		*requestRef,
 		&ObjectDescriptor{
 			ctx:       ctx,
 			head:      *genRefWithID(objID),

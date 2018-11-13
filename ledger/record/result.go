@@ -48,6 +48,8 @@ type ObjectState interface {
 	GetMemory() *core.RecordID
 	// PrevStateID returns previous state id.
 	PrevStateID() *core.RecordID
+	// GetRequest returns request record.
+	GetRequest() *core.RecordID
 }
 
 // ResultRecord represents result of a VM method.
@@ -139,6 +141,11 @@ func (r *ObjectActivateRecord) PrevStateID() *core.RecordID {
 	return nil
 }
 
+// GetRequest returns request record.
+func (r *ObjectActivateRecord) GetRequest() *core.RecordID {
+	return r.Request.Record()
+}
+
 // State returns state id.
 func (r *ObjectActivateRecord) State() State {
 	return StateActivation
@@ -165,6 +172,11 @@ func (r *ObjectAmendRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
+// GetRequest returns request record.
+func (r *ObjectAmendRecord) GetRequest() *core.RecordID {
+	return r.Request.Record()
+}
+
 // State returns state id.
 func (r *ObjectAmendRecord) State() State {
 	return StateAmend
@@ -187,6 +199,11 @@ type DeactivationRecord struct {
 // PrevStateID returns previous state id.
 func (r *DeactivationRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
+}
+
+// GetRequest returns request record.
+func (r *DeactivationRecord) GetRequest() *core.RecordID {
+	return r.Request.Record()
 }
 
 // State returns state id.

@@ -19,6 +19,7 @@ package blockexplorer
 import (
 	"context"
 	"errors"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -102,7 +103,9 @@ func (i *HistoryIterator) fetch() error {
 			Amount: i.chunkSize,
 		},
 	)
-
+	if genericReply == nil {
+		return errors.New("Object not found")
+	}
 	switch rep := genericReply.(type) {
 	case *reply.ExplorerList:
 		if rep.NextState == nil {
@@ -117,6 +120,7 @@ func (i *HistoryIterator) fetch() error {
 	default:
 		err = ErrUnexpectedReply
 	}
+
 	return err
 }
 

@@ -83,8 +83,8 @@ func (e *Children) Type() core.ReplyType {
 // - or list of last transactions
 type ExplorerObject struct {
 	Memory    []byte
-	Pulse     core.PulseNumber
 	NextState *core.RecordID
+	Parcel    core.Parcel
 }
 
 type ExplorerList struct {

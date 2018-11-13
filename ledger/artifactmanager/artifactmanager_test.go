@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"context"
-	"github.com/insolar/insolar/ledger/blockexplorer"
 	"math/rand"
 	"testing"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/blockexplorer"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"

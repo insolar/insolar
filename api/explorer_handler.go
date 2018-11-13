@@ -24,12 +24,14 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
-	"strconv"
 )
 
 type explorerRecord struct {
-	data  interface{}
-	pulse string
+	Caller      *core.RecordRef
+	MessageType string
+	Pulse       uint32
+	Sender      core.RecordRef
+	Memory      string
 }
 
 type explorerObject struct {
@@ -87,14 +89,15 @@ func extractHistoryResponse(routResult core.Reply) (string, error) {
 
 	for _, ref := range refs {
 
-		obj, _ := core.UnMarshalResponse(ref.Memory, []interface{}{})
-		log.Info("Object: ", obj)
-
-		elem := explorerRecord{
-			data:  obj,
-			pulse: strconv.FormatUint(uint64(ref.Pulse), 10),
+		record := explorerRecord{
+			Caller:      ref.Parcel.GetCaller(),
+			MessageType: ref.Parcel.Message().(core.Message).Type().String(),
+			Pulse:       uint32(ref.Parcel.Pulse()),
+			Sender:      ref.Parcel.GetSender(),
+			Memory:      string(ref.Memory),
 		}
-		list.records = append(list.records, elem)
+		log.Info("Object: ", record)
+		list.records = append(list.records, record)
 	}
 
 	result, err := json.Marshal(list)
