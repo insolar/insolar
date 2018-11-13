@@ -56,14 +56,14 @@ type ExecutionState struct {
 	objectbody *ObjectBody
 }
 
-type LogicRunnerError struct {
+type Error struct {
 	Err      error
 	Request  Ref
 	Contract Ref
 	Method   string
 }
 
-func (lre LogicRunnerError) Error() string {
+func (lre Error) Error() string {
 	return lre.Err.Error() + "  Contract=" + lre.Contract.String() + " Method=" + lre.Method + " Request=" + lre.Request.String()
 }
 
@@ -73,7 +73,7 @@ func (es *ExecutionState) ErrorWrap(err error, message string) error {
 	} else {
 		err = errors.Wrap(err, message)
 	}
-	return LogicRunnerError{
+	return Error{
 		Err:      err,
 		Request:  *es.request,
 		Contract: es.Ref,
