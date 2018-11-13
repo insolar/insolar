@@ -30,7 +30,7 @@ const (
 // BlockExplorerManager provides concrete API to block explorer module.
 type ExplorerManager struct {
 	db         *storage.DB
-	messageBus core.MessageBus
+	DefaultBus core.MessageBus `inject:""`
 
 	getHistoryChunkSize int
 }
@@ -40,13 +40,6 @@ func NewBlockExplorer(db *storage.DB) *ExplorerManager {
 	return &ExplorerManager{db: db, getHistoryChunkSize: getHistoryChunkSize}
 }
 
-// Link links external components.
-func (m *ExplorerManager) Link(components core.Components) error {
-	m.messageBus = components.MessageBus
-
-	return nil
-}
-
 // GetHistory returns history iterator.
 //
 // During iteration history will be fetched from remote source.
@@ -54,6 +47,10 @@ func (m *ExplorerManager) GetHistory(ctx context.Context, object core.RecordRef,
 	pulse *core.PulseNumber) (core.RefIterator, error) {
 	var err error
 	defer instrument(ctx, "GetHistory").err(&err).end()
-	iter, err := NewHistoryIterator(ctx, m.messageBus, object, pulse, m.getHistoryChunkSize)
+	iter, err := NewHistoryIterator(ctx, m.bus(ctx), object, pulse, m.getHistoryChunkSize)
 	return iter, err
+}
+
+func (m *ExplorerManager) bus(ctx context.Context) core.MessageBus {
+	return core.MessageBusFromContext(ctx, m.DefaultBus)
 }

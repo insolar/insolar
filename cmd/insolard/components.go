@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -47,7 +48,6 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 		cert, err = certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
 		checkError(ctx, err, "failed to start Certificate")
 	}
-
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
 	checkError(ctx, err, "failed to start NodeNetwork")
 
