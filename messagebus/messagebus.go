@@ -37,7 +37,7 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Service                    core.Network                    `inject:""`
+	Service core.Network `inject:""`
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	Ledger                     core.Ledger                     `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
@@ -217,8 +217,8 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-<<<<<<< HEAD
-	senderKey := mb.ActiveNodes.GetActiveNode(parcel.GetSender()).PublicKey()
+	sender := parcel.GetSender()
+	senderKey := mb.ActiveNodes.GetActiveNode(sender).PublicKey()
 	if mb.signmessages {
 		err := mb.ParcelFactory.Validate(senderKey, parcel)
 		if err != nil {
@@ -226,18 +226,9 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		}
 	}
 
-	serialized := message.ToBytes(parcel)
-	msgHash := mb.PlatformCryptographyScheme.IntegrityHasher().Hash(serialized)
-=======
-	sender := msg.GetSender()
-	senderKey := mb.ActiveNodes.GetActiveNode(sender).PublicKey()
-	if mb.signmessages && !msg.IsValid(senderKey) {
-		return nil, errors.New("failed to check a message sign")
-	}
+	ctx := parcel.Context(context.Background())
 
-	ctx := msg.Context(context.Background())
-
-	sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(msg)
+	sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
 	if sendingObject != nil {
 		currentPulse, err := mb.Ledger.GetPulseManager().Current(ctx)
 		if err != nil {
@@ -256,20 +247,15 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		}
 	}
 
-	serialized := message.ToBytes(msg)
-	msgHash := hash.SHA3Bytes256(serialized)
->>>>>>> f21f7a81723c2d62b6b54c179246a23409e9754a
+	serialized := message.ToBytes(parcel)
+	parcelHash := mb.PlatformCryptographyScheme.IntegrityHasher().Hash(serialized)
 
-	err = mb.RoutingTokenFactory.Validate(senderKey, parcel.GetToken(), msgHash)
+	err = mb.RoutingTokenFactory.Validate(senderKey, parcel.GetToken(), parcelHash)
 	if err != nil {
 		return nil, errors.New("failed to check a token sign")
 	}
 
-<<<<<<< HEAD
-	resp, err := mb.doDeliver(parcel)
-=======
-	resp, err := mb.doDeliver(ctx, msg)
->>>>>>> f21f7a81723c2d62b6b54c179246a23409e9754a
+	resp, err := mb.doDeliver(ctx, parcel)
 	if err != nil {
 		return nil, err
 	}
