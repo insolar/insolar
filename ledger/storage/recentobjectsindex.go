@@ -7,40 +7,26 @@ import (
 )
 
 type RecentObjectsIndex struct {
-	fetchedObjects map[string]*core.RecordID
-	updatedObjects map[string]*core.RecordID
-
-	fetchedObjectsLock sync.Mutex
-	updatedObjectsLock sync.Mutex
+	recentObjects map[string]struct{}
+	lock          sync.Mutex
 }
 
 func NewRecentObjectsIndex() *RecentObjectsIndex {
 	return &RecentObjectsIndex{
-		fetchedObjects: map[string]*core.RecordID{},
-		updatedObjects: map[string]*core.RecordID{},
+		recentObjects: map[string]struct{}{},
 	}
 }
 
-func (r *RecentObjectsIndex) addToFetched(id *core.RecordID) {
-	r.fetchedObjectsLock.Lock()
-	defer r.fetchedObjectsLock.Unlock()
+func (r *RecentObjectsIndex) addId(id *core.RecordID) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 
-	r.fetchedObjects[id.String()] = id
-}
-
-func (r *RecentObjectsIndex) addToUpdated(id *core.RecordID) {
-	r.updatedObjectsLock.Lock()
-	defer r.updatedObjectsLock.Unlock()
-
-	r.updatedObjects[id.String()] = id
+	r.recentObjects[string(id.Bytes())] = struct{}{}
 }
 
 func (r *RecentObjectsIndex) clear() {
-	r.updatedObjectsLock.Lock()
-	defer r.updatedObjectsLock.Unlock()
-	r.fetchedObjectsLock.Lock()
-	defer r.fetchedObjectsLock.Unlock()
+	r.lock.Lock()
+	defer r.lock.Unlock()
 
-	r.updatedObjects = map[string]*core.RecordID{}
-	r.fetchedObjects = map[string]*core.RecordID{}
+	r.recentObjects = map[string]struct{}{}
 }

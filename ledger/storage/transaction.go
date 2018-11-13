@@ -208,7 +208,7 @@ func (m *TransactionManager) GetObjectIndex(
 	}
 	index, err := index.DecodeObjectLifeline(buf)
 	if err == nil {
-		m.recentObjectsIndex.addToFetched(id)
+		m.recentObjectsIndex.addId(id)
 	}
 	return index, err
 }
@@ -229,7 +229,7 @@ func (m *TransactionManager) SetObjectIndex(
 	}
 	err = m.set(ctx, k, encoded)
 	if err == nil {
-		m.recentObjectsIndex.addToUpdated(id)
+		m.recentObjectsIndex.addId(id)
 	}
 	return err
 }
@@ -244,37 +244,35 @@ func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.Pul
 }
 
 func (m *TransactionManager) GetLatestObjects(ctx context.Context) []*index.ObjectLifeline {
-	indexCount := len(m.recentObjectsIndex.fetchedObjects) + len(m.recentObjectsIndex.updatedObjects)
-	result := make([]*index.ObjectLifeline, 0, indexCount)
+	result := make([]*index.ObjectLifeline, 0, len(m.recentObjectsIndex.recentObjects))
 	resultLock := sync.Mutex{}
 
 	wg := sync.WaitGroup{}
-	wg.Add(indexCount)
+	wg.Add(len(m.recentObjectsIndex.recentObjects))
 
-	fetchIndexFunc := func(id *core.RecordID) {
-		defer wg.Done()
-		k := prefixkey(scopeIDLifeline, id[:])
-		buf, err := m.get(ctx, k)
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("problems with fetching index - %v", err)
-		}
-		index, err := index.DecodeObjectLifeline(buf)
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("problems with decoding index - %v", err)
-		}
+	for key := range m.recentObjectsIndex.recentObjects {
+		var id core.RecordID
+		copy(id[:], []byte(key))
+		go func() {
+			defer wg.Done()
 
-		resultLock.Lock()
-		result = append(result, index)
-		resultLock.Unlock()
+			k := prefixkey(scopeIDLifeline, id[:])
+			buf, err := m.get(ctx, k)
+			if err != nil {
+				inslogger.FromContext(ctx).Errorf("problems with fetching index - %v", err)
+				return
+			}
+			index, err := index.DecodeObjectLifeline(buf)
+			if err != nil {
+				inslogger.FromContext(ctx).Errorf("problems with decoding index - %v", err)
+				return
+			}
+
+			resultLock.Lock()
+			result = append(result, index)
+			resultLock.Unlock()
+		}()
 	}
-
-	for _, value := range m.recentObjectsIndex.fetchedObjects {
-		go fetchIndexFunc(value)
-	}
-	for _, value := range m.recentObjectsIndex.updatedObjects {
-		go fetchIndexFunc(value)
-	}
-
 	wg.Wait()
 
 	return result
