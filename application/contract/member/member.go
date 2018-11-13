@@ -57,7 +57,13 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
-	verified := contract.Verify(args, sign, key)
+
+	publicKey, err := contract.ImportPublicKey(key)
+	if err != nil {
+		return fmt.Errorf("[ verifySig ] Invalid public key")
+	}
+
+	verified := contract.Verify(args, sign, publicKey)
 	if !verified {
 		return fmt.Errorf("[ verifySig ] Incorrect signature")
 	}

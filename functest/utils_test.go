@@ -223,16 +223,17 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 func newUserWithKeys() (*user, error) {
 	ks := platformpolicy.NewKeyProcessor()
 
-	key, err := ks.GeneratePrivateKey()
+	privateKey, err := ks.GeneratePrivateKey()
 	if err != nil {
 		return nil, err
 	}
 
-	privKeyStr, err := ks.ExportPrivateKey(key)
+	privKeyStr, err := ks.ExportPrivateKey(privateKey)
 	if err != nil {
 		return nil, err
 	}
-	pubKeyStr, err := ks.ExportPublicKey(key)
+	publicKey := ks.ExtractPublicKey(privateKey)
+	pubKeyStr, err := ks.ExportPublicKey(publicKey)
 	if err != nil {
 		return nil, err
 	}

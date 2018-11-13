@@ -42,12 +42,6 @@ func TestNewCertificate_BadCert(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to parse certificate json")
 }
 
-func TestNewCertificate_NoKeys(t *testing.T) {
-	keyProcessor := platformpolicy.NewKeyProcessor()
-	_, err := ReadCertificate(nil, keyProcessor, TestCert)
-	assert.Contains(t, err.Error(), "failed to retrieve public key from node private key")
-}
-
 func checkKeys(cert *Certificate, cs core.CryptographyService, t *testing.T) {
 	kp := platformpolicy.NewKeyProcessor()
 

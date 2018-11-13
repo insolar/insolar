@@ -35,12 +35,16 @@ func Sign(data []byte, key crypto.PrivateKey) ([]byte, error) {
 }
 
 // Verify verifies signature.
-func Verify(data []byte, signatureRaw []byte, pubKey string) bool {
-	return platformpolicy.NewPlatformCryptographyScheme().Verifier(pubKey).Verify(core.SignatureFromBytes(signatureRaw), data)
+func Verify(data []byte, signatureRaw []byte, publicKey crypto.PublicKey) bool {
+	return platformpolicy.NewPlatformCryptographyScheme().Verifier(publicKey).Verify(core.SignatureFromBytes(signatureRaw), data)
 }
 
 func GeneratePrivateKey() (crypto.PrivateKey, error) {
 	return platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+}
+
+func ImportPublicKey(publicKey string) (crypto.PublicKey, error) {
+	return platformpolicy.NewKeyProcessor().ImportPublicKey([]byte(publicKey))
 }
 
 func ExportPublicKey(publicKey crypto.PublicKey) (string, error) {

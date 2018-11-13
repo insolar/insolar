@@ -161,13 +161,12 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with signing")
 	}
-	pubKeyBytes, err := keyService.ExportPublicKey(keyService.ExtractPublicKey(privKey))
+	publicKey := keyService.ExtractPublicKey(privKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
 	}
-	pubKey = string(pubKeyBytes)
 
-	rawCertificate, err := rh.netCoordinator.RegisterNode(ctx, pubKey, 0, 0, "virtual", "127.0.0.1")
+	rawCertificate, err := rh.netCoordinator.RegisterNode(ctx, publicKey, 0, 0, "virtual", "127.0.0.1")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
 	}
@@ -182,7 +181,11 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::Authorize")
 	}
 
-	if regPubKey != pubKey {
+	pubKeyBytes, err := keyService.ExportPublicKey(publicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with ExportPublicKey")
+	}
+	if regPubKey != string(pubKeyBytes) {
 		return nil, errors.New("[ ProcessIsAuthorized ] PubKeys are not the same. " + regPubKey + ". Orig: " + pubKey)
 	}
 
