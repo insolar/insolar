@@ -52,7 +52,7 @@ type Controller interface {
 type RequestHandler func(Request) (Response, error)
 
 // HostNetwork simple interface to send network requests and process network responses.
-//TODO: fix issue with go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ./testutils/network/
+//go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 type HostNetwork interface {
 	// Start listening to network requests.
 	Start()
