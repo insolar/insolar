@@ -18,7 +18,7 @@ package logicrunner
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"crypto"
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
@@ -26,9 +26,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/cryptography"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils/certificate"
+	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -40,7 +44,6 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
-	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -76,7 +79,7 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicR
 	mb.ReRegister(core.TypeExecutorResults, lr.ExecutorResults)
 }
 
-func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
+func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
 	ctx := context.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
@@ -94,13 +97,22 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	ce := certificate.GetTestCertificate()
-	nk := nodekeeper.GetTestNodekeeper(ce)
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.GetPublicKeyFunc = func() (crypto.PublicKey, error) {
+		return nil, nil
+	}
+
+	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	nk := nodekeeper.GetTestNodekeeper(mock)
+	mb := testmessagebus.NewTestMessageBus(t)
 
 	var pulseNumber core.PulseNumber
 	pulseNumber = 0
 
-	mb := testmessagebus.NewTestMessageBus()
 	mb.PulseNumber = pulseNumber
 
 	nw := network.GetTestNetwork()
@@ -115,8 +127,10 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 		},
 	)
 
+	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
-	cm.Register(nk, l, lr, nw, mb)
+	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
+	cm.Inject(nk, l, lr, nw, mb, routingTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -138,6 +152,18 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 		cleaner()
 		rundCleaner()
 	}
+}
+
+func mockCryptographyService(t *testing.T) core.CryptographyService {
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+		return true
+	}
+	return mock
 }
 
 func newTestPulse(ctx context.Context, lr *LogicRunner, mb *testmessagebus.TestMessageBus) {
@@ -187,9 +213,8 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManage
 
 	pulse, _ := pm.Current(ctx)
 
-	key, _ := cryptoHelper.GeneratePrivateKey()
-
-	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, pulse.PulseNumber, nil)
+	pf := lr.(*LogicRunner).ParcelFactory
+	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef(), pulse.PulseNumber, nil)
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,
@@ -995,9 +1020,9 @@ func (r *Two) Hello() (*string, error) {
 
 type Caller struct {
 	member string
-	key    *ecdsa.PrivateKey
 	lr     core.LogicRunner
 	t      *testing.T
+	cs     core.CryptographyService
 }
 
 func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomain core.RecordRef, method string, params []interface{}) interface{} {
@@ -1015,18 +1040,21 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 
 	assert.NoError(s.t, err)
 
-	sign, err := cryptoHelper.Sign(args, s.key)
+	signature, err := s.cs.Sign(args)
 	assert.NoError(s.t, err)
 
-	res, err := executeMethod(ctx, s.lr, pm, core.NewRefFromBase58(s.member), 0, "Call", goplugintestutils.CBORMarshal(s.t, []interface{}{rootDomain, method, buf, seed, sign}))
+	res, err := executeMethod(ctx, s.lr, pm, core.NewRefFromBase58(s.member), 0, "Call", goplugintestutils.CBORMarshal(
+		s.t, []interface{}{rootDomain, method, buf, seed, signature.Bytes()}),
+	)
 	assert.NoError(s.t, err, "contract call")
 
+	fmt.Printf("%s", res)
+
 	var result interface{}
-	var contractErr error
+	var contractErr interface{}
 	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
 	assert.NoError(s.t, err, "unmarshal answer")
-	assert.NoError(s.t, contractErr)
-
+	require.Nilf(s.t, contractErr, "[ SignedCall ] Got error %v", contractErr)
 	return result
 }
 
@@ -1075,17 +1103,19 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, rootDomainRef, nil, "contract created")
 
+	kp := platformpolicy.NewKeyProcessor()
+
 	// Creating Root member
-	rootKey, err := cryptoHelper.GeneratePrivateKey()
+	rootKey, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
+	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
 	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
-	m, err := member.New("root", rootPubKey)
+	m, err := member.New("root", string(rootPubKey))
 	assert.NoError(t, err)
 
 	_, err = am.ActivateObject(
@@ -1103,12 +1133,13 @@ func TestRootDomainContract(t *testing.T) {
 	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
-	root := Caller{rootMemberRef.String(), rootKey, lr, t}
+	csRoot := cryptography.NewKeyBoundCryptographyService(rootKey)
+	root := Caller{rootMemberRef.String(), lr, t, csRoot}
 
 	// Creating Member1
-	member1Key, err := cryptoHelper.GeneratePrivateKey()
+	member1Key, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	member1PubKey, err := cryptoHelper.ExportPublicKey(&member1Key.PublicKey)
+	member1PubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(member1Key))
 	assert.NoError(t, err)
 
 	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member1", member1PubKey})
@@ -1116,9 +1147,9 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NotEqual(t, "", member1Ref)
 
 	// Creating Member2
-	member2Key, err := cryptoHelper.GeneratePrivateKey()
+	member2Key, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	member2PubKey, err := cryptoHelper.ExportPublicKey(&member2Key.PublicKey)
+	member2PubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(member2Key))
 	assert.NoError(t, err)
 
 	res2 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member2", member2PubKey})
@@ -1126,7 +1157,8 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NotEqual(t, "", member2Ref)
 
 	// Transfer 1 coin from Member1 to Member2
-	member1 := Caller{member1Ref, member1Key, lr, t}
+	csMember1 := cryptography.NewKeyBoundCryptographyService(member1Key)
+	member1 := Caller{member1Ref, lr, t, csMember1}
 	member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", []interface{}{1, member2Ref})
 
 	// Verify Member1 balance
@@ -1463,6 +1495,8 @@ func (r *One) CreateAllowance(member string) (error) {
 	err = cb.Build(map[string]string{"one": contractOneCode, "member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
 	assert.NoError(t, err)
 
+	kp := platformpolicy.NewKeyProcessor()
+
 	// Initializing Root Domain
 	rootDomainID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c1"})
 	assert.NoError(t, err)
@@ -1480,16 +1514,16 @@ func (r *One) CreateAllowance(member string) (error) {
 	assert.NotEqual(t, rootDomainRef, nil, "contract created")
 
 	// Creating Root member
-	rootKey, err := cryptoHelper.GeneratePrivateKey()
+	rootKey, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
+	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
 	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
-	m, err := member.New("root", rootPubKey)
+	m, err := member.New("root", string(rootPubKey))
 	assert.NoError(t, err)
 
 	_, err = am.ActivateObject(
@@ -1507,15 +1541,16 @@ func (r *One) CreateAllowance(member string) (error) {
 	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
-	root := Caller{rootMemberRef.String(), rootKey, lr, t}
+	cs := cryptography.NewKeyBoundCryptographyService(rootKey)
+	root := Caller{rootMemberRef.String(), lr, t, cs}
 
 	// Creating Member
-	memberKey, err := cryptoHelper.GeneratePrivateKey()
+	memberKey, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	memberPubKey, err := cryptoHelper.ExportPublicKey(&memberKey.PublicKey)
+	memberPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(memberKey))
 	assert.NoError(t, err)
 
-	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member", memberPubKey})
+	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member", string(memberPubKey)})
 	memberRef := res1.(string)
 	assert.NotEqual(t, "", memberRef)
 

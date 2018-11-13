@@ -14,7 +14,12 @@
  *    limitations under the License.
  */
 
-// Package hash contains Writer interface and SHA3 hasher.
-//
-// hash.Writer intended to be implemented by records for proper hashing.
-package hash
+package privatekey
+
+import (
+	"crypto"
+)
+
+type Loader interface {
+	Load(string) (crypto.PrivateKey, error)
+}

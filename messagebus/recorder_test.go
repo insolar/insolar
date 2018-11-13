@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,10 +34,12 @@ func TestRecorder_Send(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	ctx := inslogger.TestContext(t)
 	msg := message.GenesisRequest{Name: "test"}
 	parcel := message.Parcel{Msg: &msg}
-	msgHash := GetMessageHash(&parcel)
+	msgHash := GetMessageHash(pcs, &parcel)
 	expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
 	pulse := core.Pulse{PulseNumber: 42}
 	pm := testutils.NewPulseManagerMock(mc)
@@ -47,7 +50,7 @@ func TestRecorder_Send(t *testing.T) {
 	}
 
 	tape := NewtapeMock(mc)
-	recorder := NewRecorder(s, tape, pm)
+	recorder := newRecorder(s, tape, pm, pcs)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)

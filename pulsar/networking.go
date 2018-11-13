@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -46,7 +45,7 @@ func (handler *Handler) isRequestValid(ctx context.Context, request *Payload) (s
 		return false, neighbour, err
 	}
 
-	result, err := checkPayloadSignature(request)
+	result, err := checkPayloadSignature(handler.Pulsar.CryptographyService, handler.Pulsar.KeyProcessor, request)
 	if err != nil {
 		inslogger.FromContext(ctx).Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
 		return false, neighbour, err
@@ -77,7 +76,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 
-	result, err := checkPayloadSignature(request)
+	result, err := checkPayloadSignature(handler.Pulsar.CryptographyService, handler.Pulsar.KeyProcessor, request)
 	if err != nil {
 		inslog.Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
 		return err
@@ -88,13 +87,8 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	}
 
 	generator := entropygenerator.StandardEntropyGenerator{}
-	convertedKey, err := ecdsa.ExportPublicKey(&handler.Pulsar.PrivateKey.PublicKey)
-	if err != nil {
-		inslog.Warn(err)
-		return err
-	}
-	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
-	message.Signature, err = signData(handler.Pulsar.PrivateKey, message.Body)
+	message := Payload{PublicKey: handler.Pulsar.PublicKeyRaw, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
+	message.Signature, err = signData(handler.Pulsar.CryptographyService, message.Body)
 	if err != nil {
 		inslog.Error(err)
 		return err
@@ -169,7 +163,13 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	}
 
 	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
-		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.GetSign())
+		isVerified, err := checkSignature(
+			handler.Pulsar.CryptographyService,
+			handler.Pulsar.KeyProcessor,
+			requestBody.Entropy,
+			request.PublicKey,
+			btfCell.GetSign(),
+		)
 		if err != nil || !isVerified {
 			handler.Pulsar.OwnedBftRow[request.PublicKey] = nil
 			inslog.Errorf("signature and Entropy aren't matched. error - %v isVerified - %v", err, isVerified)
@@ -229,11 +229,17 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		return fmt.Errorf("processing pulse number is bigger than received one")
 	}
 
-	isVerified, err := checkSignature(core.PulseSenderConfirmation{
-		ChosenPublicKey: requestBody.ChosenPublicKey,
-		Entropy:         requestBody.Entropy,
-		PulseNumber:     requestBody.PulseNumber,
-	}, request.PublicKey, requestBody.Signature)
+	isVerified, err := checkSignature(
+		handler.Pulsar.CryptographyService,
+		handler.Pulsar.KeyProcessor,
+		core.PulseSenderConfirmation{
+			ChosenPublicKey: requestBody.ChosenPublicKey,
+			Entropy:         requestBody.Entropy,
+			PulseNumber:     requestBody.PulseNumber,
+		},
+		request.PublicKey,
+		requestBody.Signature,
+	)
 
 	if !isVerified || err != nil {
 		inslog.Errorf("signature and chosen publicKey aren't matched. error - %v isVerified - %v", err, isVerified)

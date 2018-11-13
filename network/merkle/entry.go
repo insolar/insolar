@@ -27,8 +27,8 @@ type PulseEntry struct {
 	Pulse *core.Pulse
 }
 
-func (pe *PulseEntry) hash() []byte {
-	return pulseHash(pe.Pulse)
+func (pe *PulseEntry) hash(helper *merkleHelper) []byte {
+	return helper.pulseHash(pe.Pulse)
 }
 
 type GlobuleEntry struct {
@@ -39,21 +39,21 @@ type GlobuleEntry struct {
 	GlobuleIndex  uint32
 }
 
-func (ge *GlobuleEntry) hash() []byte {
-	nodeEntryByRole := nodeEntryByRole(ge)
+func (ge *GlobuleEntry) hash(helper *merkleHelper) []byte {
+	nodeEntryByRole := nodeEntryByRole(ge.ProofSet)
 	var bucketHashes [][]byte
 
 	for role, roleEntries := range nodeEntryByRole {
 		sortEntries(roleEntries)
 
-		bucketEntryRoot := roleEntryRoot(roleEntries)
-		bucketInfoHash := bucketInfoHash(role, uint32(len(roleEntries)))
-		bucketHash := bucketHash(bucketInfoHash, bucketEntryRoot)
+		bucketEntryRoot := roleEntryRoot(roleEntries, helper)
+		bucketInfoHash := helper.bucketInfoHash(role, uint32(len(roleEntries)))
+		bucketHash := helper.bucketHash(bucketInfoHash, bucketEntryRoot)
 
 		bucketHashes = append(bucketHashes, bucketHash)
 	}
 
-	return fromList(bucketHashes).MerkleRoot()
+	return fromList(bucketHashes, helper.hasher).MerkleRoot()
 }
 
 type CloudEntry struct {
@@ -63,16 +63,16 @@ type CloudEntry struct {
 	// ProofSet map[core.Globule]*GlobuleProof
 }
 
-func (ce *CloudEntry) hash() []byte {
+func (ce *CloudEntry) hash(helper *merkleHelper) []byte {
 	var result [][]byte
 
 	for _, proof := range ce.ProofSet {
-		globuleInfoHash := globuleInfoHash(ce.PrevCloudHash, proof.GlobuleIndex, proof.NodeCount)
-		globuleHash := globuleHash(globuleInfoHash, proof.NodeRoot)
+		globuleInfoHash := helper.globuleInfoHash(ce.PrevCloudHash, proof.GlobuleIndex, proof.NodeCount)
+		globuleHash := helper.globuleHash(globuleInfoHash, proof.NodeRoot)
 		result = append(result, globuleHash)
 	}
 
-	mt := fromList(result)
+	mt := fromList(result, helper.hasher)
 	return mt.MerkleRoot()
 }
 
@@ -82,15 +82,15 @@ type nodeEntry struct {
 	Node       core.Node
 }
 
-func (ne *nodeEntry) hash() []byte {
-	pulseHash := ne.PulseEntry.hash()
-	nodeInfoHash := nodeInfoHash(pulseHash, ne.PulseProof.StateHash)
-	return nodeHash(ne.PulseProof.Signature, nodeInfoHash)
+func (ne *nodeEntry) hash(helper *merkleHelper) []byte {
+	pulseHash := ne.PulseEntry.hash(helper)
+	nodeInfoHash := helper.nodeInfoHash(pulseHash, ne.PulseProof.StateHash)
+	return helper.nodeHash(ne.PulseProof.Signature, nodeInfoHash)
 }
 
-func nodeEntryByRole(entry *GlobuleEntry) map[core.NodeRole][]*nodeEntry {
+func nodeEntryByRole(nodeProofs map[core.Node]*PulseProof) map[core.NodeRole][]*nodeEntry {
 	roleMap := make(map[core.NodeRole][]*nodeEntry)
-	for node, pulseProof := range entry.ProofSet {
+	for node, pulseProof := range nodeProofs {
 		role := node.Role()
 		roleMap[role] = append(roleMap[role], &nodeEntry{
 			Node:       node,
@@ -108,11 +108,11 @@ func sortEntries(roleEntries []*nodeEntry) {
 	})
 }
 
-func roleEntryRoot(roleEntries []*nodeEntry) []byte {
+func roleEntryRoot(roleEntries []*nodeEntry, helper *merkleHelper) []byte {
 	var roleEntriesHashes [][]byte
 	for index, entry := range roleEntries {
-		bucketEntryHash := bucketEntryHash(uint32(index), entry.hash())
+		bucketEntryHash := helper.bucketEntryHash(uint32(index), entry.hash(helper))
 		roleEntriesHashes = append(roleEntriesHashes, bucketEntryHash)
 	}
-	return fromList(roleEntriesHashes).MerkleRoot()
+	return fromList(roleEntriesHashes, helper.hasher).MerkleRoot()
 }

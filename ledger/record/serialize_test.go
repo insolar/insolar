@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,9 +59,11 @@ func Test_TypeIDConversion(t *testing.T) {
 }
 
 func TestSerializeDeserializeRecord(t *testing.T) {
+	cs := platformpolicy.NewPlatformCryptographyScheme()
+
 	rec := ObjectActivateRecord{
 		ObjectStateRecord: ObjectStateRecord{
-			Memory: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+			Memory: CalculateIDForBlob(cs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		},
 	}
 	serialized := SerializeRecord(&rec)
