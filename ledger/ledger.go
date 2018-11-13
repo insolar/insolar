@@ -73,7 +73,7 @@ func NewTestLedger(
 	pm *pulsemanager.PulseManager,
 	jc *jetcoordinator.JetCoordinator,
 	ls *localstorage.LocalStorage,
-	be *blockexplorer.BlockExplorerManager,
+	be *blockexplorer.ExplorerManager,
 ) *Ledger {
 	return &Ledger{
 		db:              db,
@@ -103,6 +103,7 @@ func GetLedgerComponents(ctx context.Context, conf configuration.Ledger) []inter
 		pulsemanager.NewPulseManager(db),
 		artifactmanager.NewMessageHandler(db),
 		localstorage.NewLocalStorage(db),
+		blockexplorer.NewBlockExplorer(db),
 	}
 }
 

@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -26,17 +27,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-type explorerRecord struct {
-	Caller      *core.RecordRef
+type ExplorerRecord struct {
+	Caller      string
 	MessageType string
 	Pulse       uint32
-	Sender      core.RecordRef
+	Sender      string
 	Memory      string
-}
-
-type explorerObject struct {
-	records []explorerRecord
-	head    string
 }
 
 // ProcessGetHistory processes get history request
@@ -85,19 +81,22 @@ func (rh *RequestHandler) sendRequestHistory(ctx context.Context, object core.Re
 func extractHistoryResponse(routResult core.Reply) (string, error) {
 	refs := routResult.(*reply.ExplorerList).States
 
-	list := explorerObject{}
+	list := []ExplorerRecord{}
 
 	for _, ref := range refs {
-
-		record := explorerRecord{
-			Caller:      ref.Parcel.GetCaller(),
+		record := ExplorerRecord{
 			MessageType: ref.Parcel.Message().(core.Message).Type().String(),
 			Pulse:       uint32(ref.Parcel.Pulse()),
-			Sender:      ref.Parcel.GetSender(),
+			Sender:      ref.Parcel.GetSender().String(),
 			Memory:      string(ref.Memory),
 		}
+		caller := ref.Parcel.GetCaller()
+		if caller != nil {
+			record.Caller = caller.String()
+		}
+
 		log.Info("Object: ", record)
-		list.records = append(list.records, record)
+		list = append(list, record)
 	}
 
 	result, err := json.Marshal(list)

@@ -26,7 +26,7 @@ import (
 // ExplorerDescriptor represents meta info required to fetch all object data.
 type ExplorerDescriptor struct {
 	ctx context.Context
-	be  *BlockExplorerManager
+	be  *ExplorerManager
 
 	head        core.RecordRef
 	state       core.RecordID

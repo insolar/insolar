@@ -63,7 +63,7 @@ func getTestData(t *testing.T) (
 	context.Context,
 	*storage.DB,
 	*LedgerArtifactManager,
-	*blockexplorer.BlockExplorerManager,
+	*blockexplorer.ExplorerManager,
 	func(), // cleaner
 ) {
 	ctx := inslogger.TestContext(t)

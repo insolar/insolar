@@ -22,13 +22,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
 	"io/ioutil"
 	"net/http"
 	"testing"
 
 	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
@@ -52,21 +53,34 @@ type memberInfo struct {
 func Test_ExplorerHandlerExtractHistory(t *testing.T) {
 	head := core.RecordID{0}
 	objList := []reply.ExplorerObject{}
+	parcel := &message.Parcel{
+		Sender: core.RecordRef{0},
+		Token: &message.RoutingToken{
+			To:    &core.RecordRef{0},
+			From:  &core.RecordRef{0},
+			Pulse: 0,
+			Sign:  []byte{},
+		},
+		Msg:        &message.GenesisRequest{"Hello world"},
+		Signature:  []byte{},
+		LogTraceID: "",
+	}
 	objList = append(objList, reply.ExplorerObject{
 		NextState: &head,
 		Memory:    []byte{},
+		Parcel:    parcel,
 	})
 	objList = append(objList, reply.ExplorerObject{
 		NextState: &head,
 		Memory:    []byte{},
+		Parcel:    parcel,
 	})
 	repl := &reply.ExplorerList{
-		Refs: objList,
+		States: objList,
 	}
 	response, err := extractHistoryResponse(repl)
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
-
 }
 
 func Test_ExplorerHandlerApi(t *testing.T) {
