@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -63,7 +62,7 @@ func (l *Ledger) GetLocalStorage() core.LocalStorage {
 // NewLedger creates new ledger instance.
 func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) {
 	var err error
-	db, err := storage.NewDB(conf, nil)
+	db, err := storage.NewDB(conf, nil, storage.NewRecentObjectsIndex())
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
@@ -79,8 +78,8 @@ func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
-	rObjectsIndex := index.NewRecentObjectsIndexInMemoryProvider()
-	handler, err := artifactmanager.NewMessageHandler(db, rObjectsIndex)
+
+	handler, err := artifactmanager.NewMessageHandler(db)
 	if err != nil {
 		return nil, err
 	}

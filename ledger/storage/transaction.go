@@ -43,33 +43,8 @@ type TransactionManager struct {
 	locks     []*core.RecordID
 	txupdates map[string]keyval
 
-	recentObjectsIndex *recentObjectsIndex
+	recentObjectsIndex *RecentObjectsIndex
 }
-
-type recentObjectsIndex struct{
-	fetchedObjects map[string]*core.RecordID
-	updatedObjects map[string]*core.RecordID
-
-	fetchedObjectsLock sync.Mutex
-	updatedObjectsLock sync.Mutex
-}
-
-func (r *recentObjectsIndex) addToFetched(id *core.RecordID){
-	r.fetchedObjectsLock.Lock()
-	defer r.fetchedObjectsLock.Unlock()
-
-	r.fetchedObjects[id.String()] = id
-}
-
-func (r *recentObjectsIndex) addToUpdated(id *core.RecordID){
-	r.updatedObjectsLock.Lock()
-	defer r.updatedObjectsLock.Unlock()
-
-	r.updatedObjects[id.String()] = id
-}
-
-
-
 
 type byte2hex byte
 
@@ -232,10 +207,10 @@ func (m *TransactionManager) GetObjectIndex(
 		return nil, err
 	}
 	index, err := index.DecodeObjectLifeline(buf)
-	if err == nil{
+	if err == nil {
 		m.recentObjectsIndex.addToFetched(id)
 	}
-	return index,err
+	return index, err
 }
 
 // SetObjectIndex stores object lifeline index.
@@ -254,7 +229,7 @@ func (m *TransactionManager) SetObjectIndex(
 		return err
 	}
 	err = m.set(ctx, k, encoded)
-	if err == nil{
+	if err == nil {
 		m.recentObjectsIndex.addToUpdated(id)
 	}
 	return err
@@ -269,9 +244,9 @@ func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.Pul
 	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
 }
 
-func (m *TransactionManager) GetLatestObjects(ctx context.Context) ([]*index.ObjectLifeline) {
+func (m *TransactionManager) GetLatestObjects(ctx context.Context) []*index.ObjectLifeline {
 	indexCount := len(m.recentObjectsIndex.fetchedObjects) + len(m.recentObjectsIndex.updatedObjects)
-	result :=  make([]*index.ObjectLifeline, 0, indexCount)
+	result := make([]*index.ObjectLifeline, 0, indexCount)
 	resultLock := sync.Mutex{}
 
 	wg := sync.WaitGroup{}
@@ -294,10 +269,10 @@ func (m *TransactionManager) GetLatestObjects(ctx context.Context) ([]*index.Obj
 		resultLock.Unlock()
 	}
 
-	for _, value := range m.recentObjectsIndex.fetchedObjects{
+	for _, value := range m.recentObjectsIndex.fetchedObjects {
 		go fetchIndexFunc(value)
 	}
-	for _, value := range m.recentObjectsIndex.updatedObjects{
+	for _, value := range m.recentObjectsIndex.updatedObjects {
 		go fetchIndexFunc(value)
 	}
 

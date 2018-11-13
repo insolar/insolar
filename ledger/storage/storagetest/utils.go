@@ -39,7 +39,7 @@ func TmpDB(ctx context.Context, t testing.TB, dir string) (*storage.DB, func()) 
 		Storage: configuration.Storage{
 			DataDirectory: tmpdir,
 		},
-	}, nil)
+	}, nil, storage.NewRecentObjectsIndex())
 	if err != nil {
 		t.Fatal(err)
 	}

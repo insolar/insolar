@@ -35,15 +35,15 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	db                  *storage.DB
-	jetDropHandlers     map[core.MessageType]internalHandler
+	db              *storage.DB
+	jetDropHandlers map[core.MessageType]internalHandler
 }
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
 	return &MessageHandler{
-		db:                  db,
-		jetDropHandlers:     map[core.MessageType]internalHandler{},
+		db:              db,
+		jetDropHandlers: map[core.MessageType]internalHandler{},
 	}, nil
 }
 
