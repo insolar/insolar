@@ -17,6 +17,8 @@
 package controller
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -25,9 +27,9 @@ import (
 )
 
 type PulseController struct {
-	pulseCallback network.OnPulse
-	hostNetwork   network.HostNetwork
-	routingTable  network.RoutingTable
+	pulseHandler network.PulseHandler
+	hostNetwork  network.HostNetwork
+	routingTable network.RoutingTable
 }
 
 func (pc *PulseController) ResendPulse(pulse core.Pulse) {
@@ -51,7 +53,7 @@ func (pc *PulseController) Start() {
 
 func (pc *PulseController) processPulse(request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestPulse)
-	go pc.pulseCallback(data.Pulse)
+	go pc.pulseHandler.OnPulse(context.TODO(), data.Pulse)
 	return pc.hostNetwork.BuildResponse(request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }
 
@@ -61,7 +63,7 @@ func (pc *PulseController) processGetRandomHosts(request network.Request) (netwo
 	return pc.hostNetwork.BuildResponse(request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
-func NewPulseController(pulseCallback network.OnPulse, hostNetwork network.HostNetwork,
+func NewPulseController(pulseCallback network.PulseHandler, hostNetwork network.HostNetwork,
 	routingTable network.RoutingTable) *PulseController {
-	return &PulseController{pulseCallback: pulseCallback, hostNetwork: hostNetwork, routingTable: routingTable}
+	return &PulseController{pulseHandler: pulseCallback, hostNetwork: hostNetwork, routingTable: routingTable}
 }

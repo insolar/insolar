@@ -46,7 +46,7 @@ type ServiceNetwork struct {
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{}
 
-	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork.onPulse)
+	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf)
 	if err != nil {
 		log.Error("failed to create network components: %s", err.Error())
 	}
@@ -172,8 +172,7 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 }
 
 // NewNetworkComponents create network.HostNetwork and network.Controller for new network
-func NewNetworkComponents(conf configuration.Configuration,
-	pulseCallback network.OnPulse) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
+func NewNetworkComponents(conf configuration.Configuration) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
 	routingTable := routing.NewTable()
 	internalTransport, err := hostnetwork.NewInternalTransport(conf)
 	if err != nil {
@@ -181,6 +180,6 @@ func NewNetworkComponents(conf configuration.Configuration,
 	}
 	hostNetwork := hostnetwork.NewHostTransport(internalTransport, routingTable)
 	options := controller.ConfigureOptions(conf.Host)
-	networkController := controller.NewNetworkController(pulseCallback, options, internalTransport, routingTable, hostNetwork)
+	networkController := controller.NewNetworkController(options, internalTransport, routingTable, hostNetwork)
 	return routingTable, hostNetwork, networkController, nil
 }

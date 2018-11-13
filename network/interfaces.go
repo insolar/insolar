@@ -17,6 +17,7 @@
 package network
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -123,8 +124,10 @@ type RequestBuilder interface {
 	Build() Request
 }
 
-// OnPulse callback function to process new pulse from pulsar.
-type OnPulse func(pulse core.Pulse)
+// PulseHandler interface to process new pulse.
+type PulseHandler interface {
+	OnPulse(ctx context.Context, pulse core.Pulse)
+}
 
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {

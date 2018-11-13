@@ -88,7 +88,7 @@ func (c *Controller) Inject(components core.Components) {
 	})
 	c.bootstrapController.Start()
 	c.authController.Start(components)
-	c.pulseController.Start()
+	//	c.pulseController.Start()
 	c.rpcController.Start()
 }
 
@@ -114,7 +114,6 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 
 // NewNetworkController create new network controller.
 func NewNetworkController(
-	pulseCallback network.OnPulse,
 	options *common.Options,
 	transport network.InternalTransport,
 	routingTable network.RoutingTable,
@@ -125,7 +124,7 @@ func NewNetworkController(
 	c.options = options
 	c.bootstrapController = NewBootstrapController(c.options, transport)
 	c.authController = auth.NewAuthorizationController(c.options, c.bootstrapController, transport)
-	c.pulseController = NewPulseController(pulseCallback, network, routingTable)
+	//c.pulseController = NewPulseController(pulseHandler, network, routingTable)
 	c.rpcController = NewRPCController(c.options, network)
 
 	return &c
