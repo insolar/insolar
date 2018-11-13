@@ -18,6 +18,13 @@ resource_types:
     tag: latest
 
 resources:
+- name: lock
+  type: pool
+  source:
+    uri: git@github.com:insolar/locks.git
+    branch: master
+    pool: builds
+    private_key: ((meta.github.lock_key))
 - name: master
   type: git
   source:
@@ -44,6 +51,8 @@ jobs:
 - name: unit-{{ pull.number }}
   public: true
   plan:
+  - put: lock
+    params: {acquire: true}
   - put: pull-request-{{ pull.number }}
     params:
       state: pending
@@ -102,4 +111,6 @@ jobs:
         params:
           silent: true
           text: ":new_moon_with_face: {{ pull.number }}, {{ pull.title }} $ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
+  - put: lock
+    params: {release: lock}
 {% endfor %}

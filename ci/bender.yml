@@ -84,9 +84,15 @@ jobs:
         path: sh
         args:
         - -ec
-        - "echo Generate pipelines \necho \"Input: $(cat branches/branches.json)\"\njinja2
-          insolar/ci/templates/branches.yml.j2 branches/branches.json > pipelines/branches.yml\necho
-          \"Output: \"\ncat pipelines/branches.yml\n"
+        - |
+          echo Generate pipelines
+          echo "Input: $(cat branches/branches.json)"
+          jinja2 insolar/ci/templates/branches.yml.j2 branches/branches.json > pipelines/branches.yml
+          echo "Output: "
+          cat pipelines/branches.yml
+          cat << EOF > pipelines/vars.yml
+          ((meta.concourse.vars))
+          EOF
       inputs:
       - name: branches
       - name: insolar
@@ -111,6 +117,8 @@ jobs:
         name: branches
         team: insolar
         unpaused: true
+        vars_files:
+        - pipelines/vars.yml
   - put: lock
     params: {release: lock}
 - name: pull-requests
