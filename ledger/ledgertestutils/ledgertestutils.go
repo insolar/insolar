@@ -61,6 +61,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 
 	handler.Bus = c.MessageBus
 	am.DefaultBus = c.MessageBus
+	be.DefaultBus = c.MessageBus
 	jc.NodeNet = c.NodeNetwork
 	pm.NodeNet = c.NodeNetwork
 	pm.Bus = c.MessageBus
