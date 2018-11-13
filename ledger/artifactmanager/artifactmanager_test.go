@@ -73,7 +73,7 @@ func getTestData(t *testing.T) (
 	require.NoError(t, err)
 	am := LedgerArtifactManager{
 		db:                   db,
-		Bus:                  mb,
+		DefaultBus:           mb,
 		getChildrenChunkSize: 100,
 	}
 
@@ -504,7 +504,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 		Record: record.SerializeRecord(&codeRecord),
 	}
 
-	rep, err := am.Bus.Send(
+	rep, err := am.DefaultBus.Send(
 		ctx,
 		&message.JetDrop{
 			Messages: [][]byte{
