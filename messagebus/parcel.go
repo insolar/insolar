@@ -45,10 +45,10 @@ func (pf *parcelFactory) Create(
 	token core.RoutingToken,
 ) (core.Parcel, error) {
 	if msg == nil {
-		return nil, errors.New("failed to sign a nil message")
+		return nil, errors.New("failed to signature a nil message")
 	}
 	serialized := message.ToBytes(msg)
-	sign, err := pf.Cryptography.Sign(serialized)
+	signature, err := pf.Cryptography.Sign(serialized)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (pf *parcelFactory) Create(
 	return &message.Parcel{
 		Token:         token,
 		Msg:           msg,
-		Signature:     sign.Bytes(),
+		Signature:     signature.Bytes(),
 		LogTraceID:    inslogger.TraceID(ctx),
 		TraceSpanData: instracer.MustSerialize(ctx),
 	}, nil

@@ -57,11 +57,11 @@ func (rtf *routingTokenFactory) Create(to *core.RecordRef, from *core.RecordRef,
 	}
 	tokenBuffer.Write(msgHash)
 
-	sign, err := rtf.Cryptography.Sign(tokenBuffer.Bytes())
+	signature, err := rtf.Cryptography.Sign(tokenBuffer.Bytes())
 	if err != nil {
 		panic(err)
 	}
-	token.Sign = sign.Bytes()
+	token.Sign = signature.Bytes()
 
 	return token
 }

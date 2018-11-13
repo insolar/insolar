@@ -1043,10 +1043,12 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 
 	assert.NoError(s.t, err)
 
-	sign, err := s.cs.Sign(args)
+	signature, err := s.cs.Sign(args)
 	assert.NoError(s.t, err)
 
-	res, err := executeMethod(ctx, s.lr, pm, core.NewRefFromBase58(s.member), 0, "Call", goplugintestutils.CBORMarshal(s.t, []interface{}{rootDomain, method, buf, seed, sign}))
+	res, err := executeMethod(ctx, s.lr, pm, core.NewRefFromBase58(s.member), 0, "Call", goplugintestutils.CBORMarshal(
+		s.t, []interface{}{rootDomain, method, buf, seed, signature.Bytes()}),
+	)
 	assert.NoError(s.t, err, "contract call")
 
 	var result interface{}
