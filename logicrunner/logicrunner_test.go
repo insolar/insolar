@@ -162,7 +162,7 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
 		log.Debugf("TEST validating: %s", ref)
-		vstep, err := lr.Validate(ref, *rlr.pulse(ctx), cr)
+		vstep, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), cr)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation %s", ref)
 			assert.True(t, len(cr) > vstep, "Validation failed before end %s", ref)
@@ -1327,11 +1327,6 @@ type Two struct {
 	foundation.BaseContract
 }
 func New() (*Two, error) {
-	return nil, nil
-}
-// Contract without methods can't build because of import error in proxy
-// TODO: INS-737
-func (r *Two) Hello() (*string, error) {
 	return nil, nil
 }
 `

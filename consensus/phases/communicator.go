@@ -25,6 +25,7 @@ import (
 )
 
 // Communicator interface provides methods to exchange data between nodes
+//go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o ../../testutils/network -s _mock.go
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
 	ExchangeData(ctx context.Context, participants []core.Node, pulseData packets.PulseData, packet packets.Phase1Packet) (map[core.RecordRef]packets.Phase1Packet, error)

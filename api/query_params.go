@@ -44,18 +44,18 @@ func QTypeFromString(strQType string) QueryType {
 
 // Params contains supported query params
 type Params struct {
-	QueryType              string   `json:"query_type"`
-	Name                   string   `json:"name"`
-	Reference              string   `json:"reference"`
-	From                   string   `json:"from"`
-	To                     string   `json:"to"`
-	Method                 string   `json:"method"`
-	Requester              string   `json:"requester"`
-	Target                 string   `json:"target"`
-	Amount                 uint     `json:"amount"`
-	PublicKey              string   `json:"public_key"`
-	Roles                  []string `json:"roles"`
-	NumberOfBootstrapNodes uint     `json:"bootstrap_nodes_num"`
-	MajorityRule           uint     `json:"majority_rule"`
-	Host                   string   `json:"host"`
+	QueryType              string `json:"query_type"`
+	Name                   string `json:"name"`
+	Reference              string `json:"reference"`
+	From                   string `json:"from"`
+	To                     string `json:"to"`
+	Method                 string `json:"method"`
+	Requester              string `json:"requester"`
+	Target                 string `json:"target"`
+	Amount                 uint   `json:"amount"`
+	PublicKey              string `json:"public_key"`
+	Role                   string `json:"role"`
+	NumberOfBootstrapNodes uint   `json:"bootstrap_nodes_num"`
+	MajorityRule           uint   `json:"majority_rule"`
+	Host                   string `json:"host"`
 }

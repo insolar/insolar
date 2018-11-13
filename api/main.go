@@ -172,16 +172,16 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	if cfg == nil {
 		return nil, errors.New("[ NewAPIRunner ] config is nil")
 	}
-	if cfg.Port == 0 {
-		return nil, errors.New("[ NewAPIRunner ] Port must not be 0")
+	if cfg.Address == "" {
+		return nil, errors.New("[ NewAPIRunner ] Address must not be empty")
 	}
 	if len(cfg.Location) == 0 {
 		return nil, errors.New("[ NewAPIRunner ] Location must exist")
 	}
 
-	portStr := fmt.Sprint(cfg.Port)
+	addrStr := fmt.Sprint(cfg.Address)
 	ar := Runner{
-		server:    &http.Server{Addr: ":" + portStr},
+		server:    &http.Server{Addr: addrStr},
 		cfg:       cfg,
 		keyCache:  make(map[string]string),
 		cacheLock: &sync.RWMutex{},

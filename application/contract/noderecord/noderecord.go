@@ -26,7 +26,7 @@ import (
 // RecordInfo holds record info
 type RecordInfo struct {
 	PublicKey string
-	Roles     []core.NodeRole
+	Role      core.NodeRole
 	IP        string
 }
 
@@ -38,29 +38,27 @@ type NodeRecord struct {
 }
 
 // NewNodeRecord creates new NodeRecord
-func NewNodeRecord(publicKey string, roles []string, ip string) (*NodeRecord, error) {
+func NewNodeRecord(publicKey string, roleStr string, ip string) (*NodeRecord, error) {
+
 	if len(publicKey) == 0 {
 		return nil, fmt.Errorf("[ NewNodeRecord ] public key is required")
 	}
-	if len(roles) == 0 {
-		return nil, fmt.Errorf("[ NewNodeRecord ] roles is required")
+	if len(roleStr) == 0 {
+		return nil, fmt.Errorf("[ NewNodeRecord ] role is required")
 	}
 	if len(ip) == 0 {
 		return nil, fmt.Errorf("[ NewNodeRecord ] ip is required")
 	}
-	resultRoles := []core.NodeRole{}
-	for _, roleStr := range roles {
-		role := core.GetRoleFromString(roleStr)
-		if role == core.RoleUnknown {
-			return nil, fmt.Errorf("Role is not supported: %s", roleStr)
-		}
-		resultRoles = append(resultRoles, role)
+
+	role := core.GetRoleFromString(roleStr)
+	if role == core.RoleUnknown {
+		return nil, fmt.Errorf("Role is not supported: %s", roleStr)
 	}
 
 	return &NodeRecord{
 		Record: RecordInfo{
 			PublicKey: publicKey,
-			Roles:     resultRoles,
+			Role:      role,
 			IP:        ip,
 		},
 	}, nil
@@ -77,8 +75,8 @@ func (nr *NodeRecord) GetPublicKey() (string, error) {
 }
 
 // GetRole returns role
-func (nr *NodeRecord) GetRole() ([]core.NodeRole, error) {
-	return nr.Record.Roles, nil
+func (nr *NodeRecord) GetRole() (core.NodeRole, error) {
+	return nr.Record.Role, nil
 }
 
 // Destroy makes request to destroy current node record

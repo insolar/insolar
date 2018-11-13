@@ -19,32 +19,32 @@ package requesters
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadFile_BadFile(t *testing.T) {
 	err := readFile("zzz", nil)
-	assert.EqualError(t, err, "[ readFile ] Problem with reading config: open zzz: no such file or directory")
+	require.EqualError(t, err, "[ readFile ] Problem with reading config: open zzz: no such file or directory")
 }
 
 func TestReadFile_NotJson(t *testing.T) {
 	err := readFile("testdata/bad_json.json", nil)
-	assert.EqualError(t, err, "[ readFile ] Problem with unmarshaling config: invalid character ']' after object key")
+	require.EqualError(t, err, "[ readFile ] Problem with unmarshaling config: invalid character ']' after object key")
 }
 
 func TestReadRequestConfigFromFile(t *testing.T) {
 	conf, err := ReadRequestConfigFromFile("testdata/requestConfig.json")
-	assert.NoError(t, err)
-	assert.Equal(t, "CreateMember", conf.Method)
+	require.NoError(t, err)
+	require.Equal(t, "CreateMember", conf.Method)
 
-	assert.Len(t, conf.Params, 2)
-	assert.Equal(t, float64(200), conf.Params[0])
-	assert.Equal(t, "Test", conf.Params[1])
+	require.Len(t, conf.Params, 2)
+	require.Equal(t, float64(200), conf.Params[0])
+	require.Equal(t, "Test", conf.Params[1])
 }
 
 func TestReadUserConfigFromFile(t *testing.T) {
 	conf, err := ReadUserConfigFromFile("testdata/userConfig.json")
-	assert.NoError(t, err)
-	assert.Contains(t, conf.PrivateKey, "MHcCAQEEIPOsF3ujjM7jnb7V")
-	assert.Equal(t, "VGVzdA==", conf.Caller)
+	require.NoError(t, err)
+	require.Contains(t, conf.PrivateKey, "MHcCAQEEIPOsF3ujjM7jnb7V")
+	require.Equal(t, "VGVzdA==", conf.Caller)
 }

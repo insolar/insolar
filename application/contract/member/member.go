@@ -109,7 +109,7 @@ func (m *Member) getMyBalance() (interface{}, error) {
 		return 0, fmt.Errorf("[ getMyBalance ]: %s", err.Error())
 	}
 
-	return w.GetTotalBalance()
+	return w.GetBalance()
 }
 
 func (m *Member) getBalance(params []byte) (interface{}, error) {
@@ -122,7 +122,7 @@ func (m *Member) getBalance(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
 
-	return w.GetTotalBalance()
+	return w.GetBalance()
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
@@ -164,9 +164,9 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	var publicKey string
 	var numberOfBootstrapNodes float64
 	var majorityRule float64
-	var roles []string
+	var role string
 	var ip string
-	if err := signer.UnmarshalParams(params, &publicKey, &numberOfBootstrapNodes, &majorityRule, &roles, &ip); err != nil {
+	if err := signer.UnmarshalParams(params, &publicKey, &numberOfBootstrapNodes, &majorityRule, &role, &ip); err != nil {
 		return nil, fmt.Errorf("[ registerNodeCall ] Can't unmarshal params: %s", err.Error())
 	}
 
@@ -177,7 +177,7 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	cert, err := nd.RegisterNode(publicKey, int(numberOfBootstrapNodes), int(majorityRule), roles, ip)
+	cert, err := nd.RegisterNode(publicKey, int(numberOfBootstrapNodes), int(majorityRule), role, ip)
 	if err != nil {
 		return nil, fmt.Errorf("[ registerNodeCall ] Problems with RegisterNode: %s", err.Error())
 	}
