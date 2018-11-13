@@ -153,7 +153,7 @@ func InitComponents(
 		nodeNetwork,
 		logicRunner,
 	}
-	components = append(components, ledger.GetLedgerComponents(ctx, cfg.Ledger)...)
+	components = append(components, ledger.GetLedgerComponents(cfg.Ledger)...)
 	components = append(components, &ld) // TODO: remove me with cmOld
 	components = append(components, []interface{}{
 		nw,

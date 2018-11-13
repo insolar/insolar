@@ -46,7 +46,7 @@ func TmpDB(ctx context.Context, t testing.TB, dir string) (*storage.DB, func()) 
 		t.Fatal(err)
 	}
 	// Bootstrap
-	err = db.Bootstrap(ctx)
+	err = db.Init(ctx)
 	assert.NoError(t, err)
 
 	return db, func() {
