@@ -97,7 +97,7 @@ func TestCalculator(t *testing.T) {
 	nk := nodekeeper.GetTestNodekeeper(mock)
 	cm.Inject(nk, l, c, calculator, mock)
 
-	assert.NotNil(t, calculator.Ledger)
+	assert.NotNil(t, calculator.ArtifactManager)
 	assert.NotNil(t, calculator.NodeNetwork)
 	assert.NotNil(t, calculator.CryptographyService)
 
