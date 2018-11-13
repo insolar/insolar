@@ -36,6 +36,7 @@ const (
 	RoleHeavyExecutor
 )
 
+// Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 // FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
 type Ledger interface {
 	// GetArtifactManager returns artifact manager to work with.

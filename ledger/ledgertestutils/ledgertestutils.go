@@ -33,6 +33,8 @@ import (
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
+// TmpLedger crteates ledger on top of temporary database.
+// Returns *ledger.Ledger andh cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
 func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
