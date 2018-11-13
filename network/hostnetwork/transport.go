@@ -18,7 +18,6 @@ package hostnetwork
 
 import (
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -34,46 +33,8 @@ import (
 )
 
 type hostTransport struct {
-	started   uint32
-	transport transport.Transport
-	origin    *host.Host
-	handlers  map[types.PacketType]network.RequestHandler
-}
-
-type builder struct {
-	sender *host.Host
-	t      types.PacketType
-	data   interface{}
-}
-
-func (b *builder) Type(packetType types.PacketType) network.RequestBuilder {
-	b.t = packetType
-	return b
-}
-
-func (b *builder) Data(data interface{}) network.RequestBuilder {
-	b.data = data
-	return b
-}
-
-func (b *builder) GetSender() core.RecordRef {
-	return b.sender.NodeID
-}
-
-func (b *builder) GetSenderHost() *host.Host {
-	return b.sender
-}
-
-func (b *builder) GetType() types.PacketType {
-	return b.t
-}
-
-func (b *builder) GetData() interface{} {
-	return b.data
-}
-
-func (b *builder) Build() network.Request {
-	return b
+	transportBase
+	handlers map[types.PacketType]network.RequestHandler
 }
 
 type packetWrapper packet.Packet
@@ -131,40 +92,6 @@ func (f future) GetRequest() network.Request {
 	return (*packetWrapper)(request)
 }
 
-// Listen start listening to network requests, should be started in goroutine.
-func (h *hostTransport) Start() {
-	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
-		log.Warn("double listen initiated")
-		return
-	}
-	go h.listen()
-	err := h.transport.Start()
-	if err != nil {
-		log.Error(err)
-	}
-}
-
-func (h *hostTransport) listen() {
-	for {
-		select {
-		case msg := <-h.transport.Packets():
-			if msg == nil {
-				log.Error("HostNetwork receiving channel is closed")
-				break
-			}
-			if msg.Error != nil {
-				log.Warnf("Received error response: %s", msg.Error.Error())
-			}
-			go h.processMessage(msg)
-		case <-h.transport.Stopped():
-			if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
-				h.transport.Close()
-			}
-			return
-		}
-	}
-}
-
 func (h *hostTransport) processMessage(msg *packet.Packet) {
 	log.Debugf("Got %s request from host %s", msg.Type.String(), msg.Sender.String())
 	handler, exist := h.handlers[msg.Type]
@@ -186,38 +113,14 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 	}
 }
 
-// Disconnect stop listening to network requests.
-func (h *hostTransport) Stop() {
-	go h.transport.Stop()
-	if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
-		<-h.transport.Stopped()
-		h.transport.Close()
-	}
-}
-
-// PublicAddress returns public address that can be published for all nodes.
-func (h *hostTransport) PublicAddress() string {
-	return h.origin.Address.String()
-}
-
-// GetNodeID get current node ID.
-func (h *hostTransport) GetNodeID() core.RecordRef {
-	return h.origin.NodeID
-}
-
 // SendRequestPacket send request packet to a remote node.
 func (h *hostTransport) SendRequestPacket(request network.Request, receiver *host.Host) (network.Future, error) {
-	log.Debugf("Sent %s request to host %s", request.GetType().String(), receiver.String())
+	log.Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
 	f, err := h.transport.SendRequest(h.buildRequest(request, receiver))
 	if err != nil {
 		return nil, err
 	}
 	return future{Future: f}, nil
-}
-
-func (h *hostTransport) buildRequest(request network.Request, receiver *host.Host) *packet.Packet {
-	return packet.NewBuilder(h.origin).Receiver(receiver).
-		Type(request.GetType()).Request(request.GetData()).Build()
 }
 
 // RegisterPacketHandler register a handler function to process incoming request packets of a specific type.
@@ -229,11 +132,6 @@ func (h *hostTransport) RegisterPacketHandler(t types.PacketType, handler networ
 	h.handlers[t] = handler
 }
 
-// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
-func (h *hostTransport) NewRequestBuilder() network.RequestBuilder {
-	return &builder{sender: h.origin}
-}
-
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (h *hostTransport) BuildResponse(request network.Request, responseData interface{}) network.Response {
 	sender := request.(*packetWrapper).Sender
@@ -241,20 +139,7 @@ func (h *hostTransport) BuildResponse(request network.Request, responseData inte
 	return (*packetWrapper)(p)
 }
 
-func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
-	address, err := host.NewAddress(tp.PublicAddress())
-	if err != nil {
-		return nil, errors.Wrap(err, "error resolving address")
-	}
-	nodeID := core.NewRefFromBase58(id)
-	if nodeID.Equal(core.RecordRef{}) {
-		return nil, errors.New("error parsing NodeID from string (NodeID is zero)")
-	}
-	origin := &host.Host{NodeID: nodeID, Address: address}
-	return origin, nil
-}
-
-func NewInternalTransport(conf configuration.Configuration) (InternalTransport, error) {
+func NewInternalTransport(conf configuration.Configuration) (network.InternalTransport, error) {
 	tp, err := transport.NewTransport(conf.Host.Transport, relay.NewProxy())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
@@ -266,5 +151,9 @@ func NewInternalTransport(conf configuration.Configuration) (InternalTransport, 
 		tp.Close()
 		return nil, errors.Wrap(err, "error getting origin")
 	}
-	return &hostTransport{transport: tp, origin: origin, handlers: make(map[types.PacketType]network.RequestHandler)}, nil
+	result := &hostTransport{handlers: make(map[types.PacketType]network.RequestHandler)}
+	result.transport = tp
+	result.origin = origin
+	result.messageProcessor = result.processMessage
+	return result, nil
 }

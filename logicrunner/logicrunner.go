@@ -113,8 +113,9 @@ func (es *ExecutionState) ReleaseQueue() {
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	MessageBus core.MessageBus `inject:""`
-	Ledger     core.Ledger     `inject:""`
-	Network    core.Network    `inject:""`
+	// FIXME: Ledger component is deprecated. Inject required sub-components.
+	Ledger  core.Ledger  `inject:""`
+	Network core.Network `inject:""`
 
 	ArtifactManager core.ArtifactManager
 

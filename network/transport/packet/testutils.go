@@ -14,19 +14,20 @@
  *    limitations under the License.
  */
 
-package id
+package packet
 
 import (
-	"crypto/rand"
-	"io"
+	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
-var random io.Reader = &cryptoReader{}
+const (
+	TestPacket = types.PacketType(1337)
+)
 
-type cryptoReader struct{}
+type RequestTest struct {
+	Data []byte
+}
 
-// Read implements io.Reader interface.
-// Can be replaced with mock reader for testing purposes.
-func (cr *cryptoReader) Read(b []byte) (n int, err error) {
-	return rand.Read(b)
+type ResponseTest struct {
+	Number int
 }

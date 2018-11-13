@@ -80,6 +80,7 @@ func (t *calculatorSuite) TestGetCloudProof() {
 func TestCalculator(t *testing.T) {
 	c := certificate.GetTestCertificate()
 	nk := nodekeeper.GetTestNodekeeper(c)
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, clean := ledgertestutils.TmpLedger(t, "", core.Components{})
 
 	calculator := &calculator{}

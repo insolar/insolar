@@ -27,8 +27,7 @@ import (
 )
 
 func TestNewFuture(t *testing.T) {
-	addr, _ := host.NewAddress("127.0.0.1:8080")
-	n := host.NewHost(addr)
+	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -37,8 +36,7 @@ func TestNewFuture(t *testing.T) {
 }
 
 func TestFuture_ID(t *testing.T) {
-	addr, _ := host.NewAddress("127.0.0.1:8080")
-	n := host.NewHost(addr)
+	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -47,8 +45,7 @@ func TestFuture_ID(t *testing.T) {
 }
 
 func TestFuture_Actor(t *testing.T) {
-	addr, _ := host.NewAddress("127.0.0.1:8080")
-	n := host.NewHost(addr)
+	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -57,8 +54,7 @@ func TestFuture_Actor(t *testing.T) {
 }
 
 func TestFuture_Result(t *testing.T) {
-	addr, _ := host.NewAddress("127.0.0.1:8080")
-	n := host.NewHost(addr)
+	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -67,8 +63,7 @@ func TestFuture_Result(t *testing.T) {
 }
 
 func TestFuture_Request(t *testing.T) {
-	addr, _ := host.NewAddress("127.0.0.1:8080")
-	n := host.NewHost(addr)
+	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -77,8 +72,7 @@ func TestFuture_Request(t *testing.T) {
 }
 
 func TestFuture_SetResult(t *testing.T) {
-	addr, _ := host.NewAddress("127.0.0.1:8080")
-	n := host.NewHost(addr)
+	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -103,8 +97,7 @@ func TestFuture_SetResult(t *testing.T) {
 }
 
 func TestFuture_Cancel(t *testing.T) {
-	addr, _ := host.NewAddress("127.0.0.1:8080")
-	n := host.NewHost(addr)
+	n, _ := host.NewHost("127.0.0.1:8080")
 
 	cbCalled := false
 
@@ -122,8 +115,7 @@ func TestFuture_Cancel(t *testing.T) {
 }
 
 func TestFuture_GetResult(t *testing.T) {
-	addr, _ := host.NewAddress("127.0.0.1:8080")
-	n := host.NewHost(addr)
+	n, _ := host.NewHost("127.0.0.1:8080")
 	m := &packet.Packet{}
 	var cancelled uint32 = 0
 	cancelCallback := func(f Future) {
@@ -141,8 +133,7 @@ func TestFuture_GetResult(t *testing.T) {
 }
 
 func TestFuture_GetResult2(t *testing.T) {
-	addr, _ := host.NewAddress("127.0.0.1:8080")
-	n := host.NewHost(addr)
+	n, _ := host.NewHost("127.0.0.1:8080")
 	c := make(chan *packet.Packet)
 	var f Future = &future{
 		result:         c,

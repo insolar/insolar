@@ -115,6 +115,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	c.MessageBus = testmessagebus.NewTestMessageBus()
 	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))
 
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	nodeConfig := configuration.NewConfiguration()
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
