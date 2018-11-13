@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/gob"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -54,6 +55,28 @@ type ExecutionState struct {
 	queueLength int
 
 	objectbody *ObjectBody
+}
+
+func (es *ExecutionState) ErrorWrap(err error, message string) error {
+	var errorMessage string
+	var errorData []string
+	if es.request.String() != "" {
+		errorData = append(errorData, "request ref: "+es.request.String())
+	}
+	if es.Ref.String() != "" {
+		errorData = append(errorData, "contract ref: "+es.Ref.String())
+	}
+	if es.Method != "" {
+		errorData = append(errorData, "contract method: "+es.Method)
+	}
+	if message != "" {
+		errorData = append(errorData, "error: "+message)
+	}
+
+	errorMessage = strings.Join(errorData, "; ")
+	errorMessage = "Execution state: [ " + errorMessage + " ]"
+
+	return errors.Wrap(err, errorMessage)
 }
 
 func (es *ExecutionState) Lock() {
