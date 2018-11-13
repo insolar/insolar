@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
+	"sync"
 
 	"github.com/dgraph-io/badger"
 
@@ -41,6 +42,16 @@ type TransactionManager struct {
 	update    bool
 	locks     []*core.RecordID
 	txupdates map[string]keyval
+
+	recentObjectsIndex *recentObjectsIndex
+}
+
+type recentObjectsIndex struct{
+	fetchedObjects map[string]*core.RecordID
+	updatedObjects map[string]*core.RecordID
+
+	fetchedObjectsLock sync.Mutex
+	updatedObjectsLock sync.Mutex
 }
 
 type byte2hex byte
