@@ -38,6 +38,7 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // e.g. glue between network and logic runner
 type MessageBus struct {
 	Service                    core.Network                    `inject:""`
+	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	Ledger                     core.Ledger                     `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
@@ -170,7 +171,7 @@ func (mb *MessageBus) SendParcel(ctx context.Context, pulse *core.Pulse, msg cor
 
 	// Short path when sending to self node. Skip serialization
 	if nodes[0].Equal(mb.Service.GetNodeID()) {
-		return mb.doDeliver(msg)
+		return mb.doDeliver(msg.Context(context.Background()), msg)
 	}
 
 	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, msg)
@@ -189,13 +190,12 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
-func (mb *MessageBus) doDeliver(msg core.Parcel) (core.Reply, error) {
+func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
 		return nil, errors.New("no handler for received message type")
 	}
 
-	ctx := msg.Context(context.Background())
 	ctx = hack.SetSkipValidation(ctx, true)
 	resp, err := handler(ctx, msg)
 	if err != nil {
@@ -217,6 +217,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
+<<<<<<< HEAD
 	senderKey := mb.ActiveNodes.GetActiveNode(parcel.GetSender()).PublicKey()
 	if mb.signmessages {
 		err := mb.ParcelFactory.Validate(senderKey, parcel)
@@ -227,13 +228,48 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 
 	serialized := message.ToBytes(parcel)
 	msgHash := mb.PlatformCryptographyScheme.IntegrityHasher().Hash(serialized)
+=======
+	sender := msg.GetSender()
+	senderKey := mb.ActiveNodes.GetActiveNode(sender).PublicKey()
+	if mb.signmessages && !msg.IsValid(senderKey) {
+		return nil, errors.New("failed to check a message sign")
+	}
+
+	ctx := msg.Context(context.Background())
+
+	sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(msg)
+	if sendingObject != nil {
+		currentPulse, err := mb.Ledger.GetPulseManager().Current(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		jc := mb.Ledger.GetJetCoordinator()
+		validSender, err := jc.IsAuthorized(
+			ctx, allowedSenderRole, sendingObject, currentPulse.PulseNumber, sender,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if !validSender {
+			return nil, errors.New("sender is not allowed to act on behalve of that object")
+		}
+	}
+
+	serialized := message.ToBytes(msg)
+	msgHash := hash.SHA3Bytes256(serialized)
+>>>>>>> f21f7a81723c2d62b6b54c179246a23409e9754a
 
 	err = mb.RoutingTokenFactory.Validate(senderKey, parcel.GetToken(), msgHash)
 	if err != nil {
 		return nil, errors.New("failed to check a token sign")
 	}
 
+<<<<<<< HEAD
 	resp, err := mb.doDeliver(parcel)
+=======
+	resp, err := mb.doDeliver(ctx, msg)
+>>>>>>> f21f7a81723c2d62b6b54c179246a23409e9754a
 	if err != nil {
 		return nil, err
 	}

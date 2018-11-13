@@ -113,6 +113,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	mb.PulseNumber = pulseNumber
 
 	nw := network.GetTestNetwork()
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, cleaner := ledgertestutils.TmpLedger(
 		t, "",
 		core.Components{
@@ -185,7 +186,7 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
 		log.Debugf("TEST validating: %s", ref)
-		vstep, err := lr.Validate(ref, *rlr.pulse(ctx), cr)
+		vstep, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), cr)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation %s", ref)
 			assert.True(t, len(cr) > vstep, "Validation failed before end %s", ref)

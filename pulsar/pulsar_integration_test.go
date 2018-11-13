@@ -107,6 +107,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, []core.NodeRole{core.RoleVirtual}, nil, 0, "", ""))
 	c.CryptographyService = mockCryptographyService(t)
 
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	c.Ledger = tempLedger
 

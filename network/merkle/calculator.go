@@ -25,7 +25,7 @@ import (
 )
 
 type calculator struct {
-	Ledger              core.Ledger              `inject:""`
+	ArtifactManager     core.ArtifactManager     `inject:""`
 	NodeNetwork         core.NodeNetwork         `inject:""`
 	CryptographyService core.CryptographyService `inject:""`
 }
@@ -36,7 +36,7 @@ func NewCalculator() Calculator {
 
 func (c *calculator) getStateHash(role core.NodeRole) (OriginHash, error) {
 	// TODO: do something with role
-	return c.Ledger.GetArtifactManager().State()
+	return c.ArtifactManager.State()
 }
 
 func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) (OriginHash, *PulseProof, error) {

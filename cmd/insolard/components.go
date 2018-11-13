@@ -110,9 +110,6 @@ func InitComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	ledger, err := ledger.NewLedger(ctx, cfg.Ledger)
-	checkError(ctx, err, "failed to start Ledger")
-
 	nw, err := servicenetwork.NewServiceNetwork(cfg)
 	checkError(ctx, err, "failed to start Network")
 
@@ -148,11 +145,17 @@ func InitComponents(
 		cryptographyService,
 		keyProcessor,
 	)
-	cm.Inject(
+
+	ld := ledger.Ledger{} // TODO: remove me with cmOld
+
+	components := []interface{}{
 		cert,
 		nodeNetwork,
 		logicRunner,
-		ledger,
+	}
+	components = append(components, ledger.GetLedgerComponents(ctx, cfg.Ledger)...)
+	components = append(components, &ld) // TODO: remove me with cmOld
+	components = append(components, []interface{}{
 		nw,
 		routingTokeyFactory,
 		parcelFactory,
@@ -162,13 +165,14 @@ func InitComponents(
 		metricsHandler,
 		networkCoordinator,
 		versionManager,
-	)
+	}...)
+	cm.Inject(components...)
 
 	cmOld := ComponentManager{components: core.Components{
 		Certificate:         cert,
 		NodeNetwork:         nodeNetwork,
 		LogicRunner:         logicRunner,
-		Ledger:              ledger,
+		Ledger:              &ld,
 		Network:             nw,
 		MessageBus:          messageBus,
 		Genesis:             gen,
@@ -178,5 +182,5 @@ func InitComponents(
 		CryptographyService: cryptographyService,
 	}}
 
-	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
+	return &cm, &cmOld, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }

@@ -40,13 +40,12 @@ func HashInterface(in interface{}) []byte {
 	return sh.Sum(s)
 }
 
-func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
+func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
 
 	es := lr.UpsertExecution(ref)
-	ctx := context.TODO()
 	es.insContext = ctx
 	es.validate = true
 	es.objectbody = nil
@@ -140,7 +139,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
-	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
 	_, err := lr.MessageBus.Send(
 		ctx,
 		&message.ValidationResults{

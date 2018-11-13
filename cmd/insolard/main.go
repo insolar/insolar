@@ -177,6 +177,9 @@ func main() {
 	)
 	checkError(ctx, err, "failed to init components")
 
+	err = cm.Init(ctx)
+	checkError(ctx, err, "failed to init components")
+
 	cmOld.linkAll(ctx)
 
 	err = cm.Start(ctx)

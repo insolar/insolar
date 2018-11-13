@@ -90,3 +90,48 @@ func ExtractRole(msg core.Message) core.JetRole {
 		panic(fmt.Sprintf("unknow message type - %v", t))
 	}
 }
+
+// ExtractAllowedSenderObjectAndRole extracts information from message
+// verify senderrequired to 's "caller" for sender
+// verification purpose. If nil then check of sender's role is not
+// provided by the message bus
+func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.JetRole) {
+	switch t := msg.(type) {
+	case *GenesisRequest:
+		return nil, 0
+	case *CallConstructor:
+		return t.GetCaller(), core.RoleVirtualExecutor
+	case *CallMethod:
+		return t.GetCaller(), core.RoleVirtualExecutor
+	case *ExecutorResults:
+		return nil, 0
+	case *GetChildren:
+		return nil, 0
+	case *GetCode:
+		return nil, 0
+	case *GetDelegate:
+		return nil, 0
+	case *GetObject:
+		return nil, 0
+	case *JetDrop:
+		return nil, 0
+	case *RegisterChild:
+		return nil, 0
+	case *SetBlob:
+		return nil, 0
+	case *SetRecord:
+		return nil, 0
+	case *UpdateObject:
+		return nil, 0
+	case *ValidateCaseBind:
+		return &t.RecordRef, core.RoleVirtualExecutor
+	case *ValidateRecord:
+		return nil, 0
+	case *ValidationResults:
+		return &t.RecordRef, core.RoleVirtualValidator
+	case *Parcel:
+		return ExtractAllowedSenderObjectAndRole(t.Msg)
+	default:
+		panic(fmt.Sprintf("unknow message type - %v", t))
+	}
+}
