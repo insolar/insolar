@@ -533,6 +533,10 @@ func (db *DB) IterateLocalData(ctx context.Context, pulse core.PulseNumber, pref
 	})
 }
 
+func (db *DB) GetLatestObjects(ctx context.Context) ([]*index.ObjectLifeline) {
+	panic("implement me")
+}
+
 // get wraps matching transaction manager method.
 func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
 	tx := db.BeginTransaction(false)
