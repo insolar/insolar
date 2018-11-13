@@ -75,7 +75,7 @@ type HostNetwork interface {
 
 type ConsensusRequestHandler func(Request)
 
-//go:generate minimock -i github.com/insolar/insolar/network/network.ConsensusNetwork -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
 type ConsensusNetwork interface {
 	// Start listening to network requests.
 	Start()
