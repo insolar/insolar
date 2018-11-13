@@ -21,6 +21,7 @@ package network
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
 )
@@ -81,4 +82,18 @@ func (pm *MockPulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 
 func (pm *MockPulseManager) SetCallback(callback func(core.Pulse)) {
 	pm.callback = callback
+}
+
+func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return true // completed normally
+	case <-time.After(timeout):
+		return false // timed out
+	}
 }

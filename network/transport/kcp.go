@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
 	"github.com/xtaci/kcp-go"
@@ -104,7 +103,7 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 			log.Errorln(err.Error())
 		}
 		// Wait for Packets
-		msg, err := packet.DeserializePacket(session)
+		msg, err := t.serializer.DeserializePacket(session)
 		if err != nil {
 			// TODO should we penalize this Host somehow ? Ban it ?
 			// if err.Error() != "EOF" {

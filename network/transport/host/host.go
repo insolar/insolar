@@ -20,38 +20,54 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/transport/id"
+	"github.com/pkg/errors"
 )
 
 // Host is the over-the-wire representation of a host.
 type Host struct {
 	// NodeID is unique identifier of the node
 	NodeID core.RecordRef
-	// ID is a 20 byte unique identifier (for old DHT network, deprecated)
-	ID id.ID
+	// ShortID is shortened unique identifier of the node inside the globe
+	ShortID core.ShortNodeID
 	// Address is IP and port.
 	Address *Address
 }
 
-// NewHost creates a new Host for bootstrapping.
-func NewHost(address *Address) *Host {
-	return &Host{
-		Address: address,
+// NewHost creates a new Host with specified physical address.
+func NewHost(address string) (*Host, error) {
+	addr, err := NewAddress(address)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to create Host")
 	}
+	return &Host{Address: addr}, nil
+}
+
+// NewHostN creates a new Host with specified physical address and NodeID.
+func NewHostN(address string, nodeID core.RecordRef) (*Host, error) {
+	h, err := NewHost(address)
+	if err != nil {
+		return nil, err
+	}
+	h.NodeID = nodeID
+	return h, nil
+}
+
+// NewHostNS creates a new Host with specified physical address, NodeID and ShortID.
+func NewHostNS(address string, nodeID core.RecordRef, shortID core.ShortNodeID) (*Host, error) {
+	h, err := NewHostN(address, nodeID)
+	if err != nil {
+		return nil, err
+	}
+	h.ShortID = shortID
+	return h, nil
 }
 
 // String representation of Host.
 func (host Host) String() string {
-	var id string
-	if host.NodeID.Equal(core.RecordRef{}) {
-		id = host.ID.String()
-	} else {
-		id = host.NodeID.String()
-	}
-	return fmt.Sprintf("%s (%s)", id, host.Address.String())
+	return fmt.Sprintf("%s (%s)", host.NodeID.String(), host.Address.String())
 }
 
 // Equal checks if host equals to other host (e.g. hosts' IDs and network addresses match).
 func (host Host) Equal(other Host) bool {
-	return host.ID.Equal(other.ID.Bytes()) && (other.Address != nil) && host.Address.Equal(*other.Address)
+	return host.NodeID.Equal(other.NodeID) && (other.Address != nil) && host.Address.Equal(*other.Address)
 }
