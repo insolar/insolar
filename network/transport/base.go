@@ -17,6 +17,7 @@
 package transport
 
 import (
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -30,6 +31,21 @@ import (
 	"github.com/pkg/errors"
 )
 
+type transportSerializer interface {
+	SerializePacket(q *packet.Packet) ([]byte, error)
+	DeserializePacket(conn io.Reader) (*packet.Packet, error)
+}
+
+type baseSerializer struct{}
+
+func (b *baseSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
+	return packet.SerializePacket(q)
+}
+
+func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error) {
+	return packet.DeserializePacket(conn)
+}
+
 type baseTransport struct {
 	received chan *packet.Packet
 	sequence *uint64
@@ -40,10 +56,10 @@ type baseTransport struct {
 	mutex   *sync.RWMutex
 	futures map[packet.RequestID]Future
 
-	proxy          relay.Proxy
-	publicAddress  string
-	sendFunc       func(recvAddress string, data []byte) error
-	serializerFunc func(q *packet.Packet) ([]byte, error)
+	proxy         relay.Proxy
+	publicAddress string
+	sendFunc      func(recvAddress string, data []byte) error
+	serializer    transportSerializer
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
@@ -57,9 +73,9 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 		mutex:   &sync.RWMutex{},
 		futures: make(map[packet.RequestID]Future),
 
-		proxy:          proxy,
-		publicAddress:  publicAddress,
-		serializerFunc: packet.SerializePacket,
+		proxy:         proxy,
+		publicAddress: publicAddress,
+		serializer:    &baseSerializer{},
 	}
 }
 
@@ -70,7 +86,7 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 	future := t.createFuture(msg)
 
 	go func(msg *packet.Packet, f Future) {
-		err := t.sendPacket(msg)
+		err := t.SendPacket(msg)
 		if err != nil {
 			f.Cancel()
 			log.Error(err)
@@ -84,7 +100,7 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 func (t *baseTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
 	msg.RequestID = requestID
 
-	return t.sendPacket(msg)
+	return t.SendPacket(msg)
 }
 
 // Close closes packet channels.
@@ -173,7 +189,7 @@ func (t *baseTransport) PublicAddress() string {
 	return t.publicAddress
 }
 
-func (t *baseTransport) sendPacket(p *packet.Packet) error {
+func (t *baseTransport) SendPacket(p *packet.Packet) error {
 	var recvAddress string
 	if t.proxy.ProxyHostsCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()
@@ -182,7 +198,7 @@ func (t *baseTransport) sendPacket(p *packet.Packet) error {
 		recvAddress = p.Receiver.Address.String()
 	}
 
-	data, err := t.serializerFunc(p)
+	data, err := t.serializer.SerializePacket(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
@@ -193,10 +209,9 @@ func (t *baseTransport) sendPacket(p *packet.Packet) error {
 
 func shouldProcessPacket(future Future, msg *packet.Packet) bool {
 	typesShouldBeEqual := msg.Type == future.Request().Type
-	isPingPacket := msg.Type == types.Ping || msg.Type == types.TypePing
 	responseIsForRightSender := future.Actor().Equal(*msg.Sender)
 
-	return typesShouldBeEqual && (responseIsForRightSender || isPingPacket)
+	return typesShouldBeEqual && (responseIsForRightSender || msg.Type == types.Ping)
 }
 
 // AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.

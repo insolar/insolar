@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-type mutableNode interface {
+type MutableNode interface {
 	core.Node
 
 	SetPulse(core.PulseNumber)
@@ -49,7 +49,7 @@ func newMutableNode(
 	publicKey *ecdsa.PublicKey,
 	pulseNum core.PulseNumber,
 	physicalAddress,
-	version string) mutableNode {
+	version string) MutableNode {
 	return &node{
 		NodeID:              id,
 		NodeShortID:         generateShortID(id),
@@ -112,7 +112,7 @@ func (n *node) SetShortID(id core.ShortNodeID) {
 	n.NodeShortID = id
 }
 
-type mutableNodes []mutableNode
+type mutableNodes []MutableNode
 
 func (mn mutableNodes) Export() []core.Node {
 	nodes := make([]core.Node, len(mn))

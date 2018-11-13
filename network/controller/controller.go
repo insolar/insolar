@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/auth"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
@@ -116,7 +115,7 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 func NewNetworkController(
 	pulseCallback network.OnPulse,
 	options *common.Options,
-	transport hostnetwork.InternalTransport,
+	transport network.InternalTransport,
 	routingTable network.RoutingTable,
 	network network.HostNetwork) network.Controller {
 
