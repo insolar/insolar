@@ -40,7 +40,7 @@ type NaiveCommunicator struct {
 	PulseHandler     network.PulseHandler     `inject:""`
 
 	phase1packet *packets.Phase1Packet
-	result       map[core.RecordRef]*packets.Phase1Packet
+	phase1result map[core.RecordRef]*packets.Phase1Packet
 	currentPulse core.Pulse
 }
 
@@ -91,9 +91,6 @@ func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []co
 }
 
 func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
-	//TODO: check pulse?
-	//TODO: return serialized nc.phase1packet
-
 	if request.GetType() != types.Phase1 {
 		log.Warn("Wrong handler for request type: ", request.GetType().String())
 		return
@@ -101,19 +98,17 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 
 	p, ok := request.GetData().(*packets.Phase1Packet)
 	if !ok {
-		//return nil, errors.New("invalid Phase1Packet")
+		log.Errorln("invalid Phase1Packet")
+		return
 	}
-	nc.result[request.GetSender()] = p
-	//nc.HostNetwork.BuildResponse(request, )
-	//request.
+	//TODO: check current pulse??
 
-	//	nc.pulseCallback(p.pulseData.)
+	nc.phase1result[request.GetSender()] = p
+
 	//p.Deserialize(request.GetData().())
 	//packet.DeserializePacket()
 
-	//nc.PulseHandler.OnPulse(p. get pulse)
-
-	//return nil, nil
+	nc.PulseHandler.OnPulse(context.TODO(), p.GetPulse())
 }
 
 func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
