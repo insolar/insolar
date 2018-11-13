@@ -79,6 +79,7 @@ func getTestData(t *testing.T) (
 		getChildrenChunkSize: 100,
 	}
 	be := blockexplorer.NewExplorerManager(db)
+	be.DefaultBus = mb
 	return ctx, db, &am, be, cleaner
 }
 
