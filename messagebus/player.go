@@ -28,13 +28,14 @@ import (
 // and transferred to player.
 type player struct {
 	sender
-	tape tape
-	pm   core.PulseManager
+	tape   tape
+	pm     core.PulseManager
+	scheme core.PlatformCryptographyScheme
 }
 
 // NewPlayer creates player instance. It will replay replies from provided tape.
-func NewPlayer(s sender, tape tape, pm core.PulseManager) *player {
-	return &player{sender: s, tape: tape, pm: pm}
+func NewPlayer(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *player {
+	return &player{sender: s, tape: tape, pm: pm, scheme: scheme}
 }
 
 // WriteTape for player is not available.
@@ -55,7 +56,7 @@ func (r *player) Send(ctx context.Context, msg core.Message) (core.Reply, error)
 	}
 
 	parcel, err := r.CreateParcel(ctx, pulse.PulseNumber, msg, nil)
-	id := GetMessageHash(parcel)
+	id := GetMessageHash(r.scheme, parcel)
 
 	// Value from storageTape.
 	rep, err = r.tape.GetReply(ctx, id)

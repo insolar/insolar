@@ -28,13 +28,14 @@ import (
 // used by Player to replay those replies.
 type recorder struct {
 	sender
-	tape tape
-	pm   core.PulseManager
+	tape   tape
+	pm     core.PulseManager
+	scheme core.PlatformCryptographyScheme
 }
 
 // NewRecorder create new recorder instance.
-func NewRecorder(s sender, tape tape, pm core.PulseManager) *recorder {
-	return &recorder{sender: s, tape: tape, pm: pm}
+func NewRecorder(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *recorder {
+	return &recorder{sender: s, tape: tape, pm: pm, scheme: scheme}
 }
 
 // WriteTape writes recorder's tape to the provided writer.
@@ -54,7 +55,7 @@ func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, erro
 		return nil, err
 	}
 	parcel, err := r.CreateParcel(ctx, pulse.PulseNumber, msg, nil)
-	id := GetMessageHash(parcel)
+	id := GetMessageHash(r.scheme, parcel)
 
 	// Check if Value for this message is already stored.
 	rep, err = r.tape.GetReply(ctx, id)

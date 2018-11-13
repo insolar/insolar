@@ -70,7 +70,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageB
 	if err != nil {
 		return nil, err
 	}
-	pl := NewPlayer(mb, tape, mb.Ledger.GetPulseManager())
+	pl := NewPlayer(mb, tape, mb.Ledger.GetPulseManager(), mb.PlatformCryptographyScheme)
 	return pl, nil
 }
 
@@ -86,7 +86,7 @@ func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) 
 	if err != nil {
 		return nil, err
 	}
-	rec := NewRecorder(mb, tape, mb.Ledger.GetPulseManager())
+	rec := NewRecorder(mb, tape, mb.Ledger.GetPulseManager(), mb.PlatformCryptographyScheme)
 	return rec, nil
 }
 
