@@ -73,10 +73,11 @@ func (es *ExecutionState) ReleaseQueue() {
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
-	MessageBus    core.MessageBus       `inject:""`
-	Ledger        core.Ledger           `inject:""`
-	Network       core.Network          `inject:""`
-	ParcelFactory message.ParcelFactory `inject:""`
+	MessageBus                 core.MessageBus                 `inject:""`
+	Ledger                     core.Ledger                     `inject:""`
+	Network                    core.Network                    `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	ParcelFactory              message.ParcelFactory           `inject:""`
 
 	ArtifactManager core.ArtifactManager
 
@@ -308,18 +309,18 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 			if core.CaseRecordTypeSignObject != cr.Type {
 				return errors.Errorf("Wrong validation type on CaseRecordTypeSignObject %d, ", cr.Type)
 			}
-			if !bytes.Equal(cr.ReqSig, HashInterface(objref)) {
+			if !bytes.Equal(cr.ReqSig, HashInterface(lr.PlatformCryptographyScheme, objref)) {
 				return errors.New("Wrong validation sig on CaseRecordTypeSignObject")
 			}
-			if !bytes.Equal(cr.Resp.([]byte), HashInterface(es.objectbody)) {
+			if !bytes.Equal(cr.Resp.([]byte), HashInterface(lr.PlatformCryptographyScheme, es.objectbody)) {
 				return errors.New("Wrong validation comparision on CaseRecordTypeSignObject")
 			}
 
 		} else {
 			lr.addObjectCaseRecord(objref, core.CaseRecord{
 				Type:   core.CaseRecordTypeSignObject,
-				ReqSig: HashInterface(objref),
-				Resp:   HashInterface(es.objectbody),
+				ReqSig: HashInterface(lr.PlatformCryptographyScheme, objref),
+				Resp:   HashInterface(lr.PlatformCryptographyScheme, es.objectbody),
 			})
 		}
 		return nil
@@ -329,7 +330,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 		if core.CaseRecordTypeGetObject != cr.Type {
 			return errors.Errorf("Wrong validation type on CaseRecordTypeGetObject %d", cr.Type)
 		}
-		sig := HashInterface(objref)
+		sig := HashInterface(lr.PlatformCryptographyScheme, objref)
 		if !bytes.Equal(cr.ReqSig, sig) {
 			return errors.New("Wrong validation sig on CaseRecordTypeGetObject")
 		}
@@ -369,7 +370,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	copy(bcopy.Object, es.objectbody.Object)
 	lr.addObjectCaseRecord(objref, core.CaseRecord{
 		Type:   core.CaseRecordTypeGetObject,
-		ReqSig: HashInterface(objref),
+		ReqSig: HashInterface(lr.PlatformCryptographyScheme, objref),
 		Resp:   &bcopy,
 	})
 	return nil

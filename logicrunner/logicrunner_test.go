@@ -1054,6 +1054,8 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 	)
 	assert.NoError(s.t, err, "contract call")
 
+	fmt.Printf("%s", res)
+
 	var result interface{}
 	var contractErr interface{}
 	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
@@ -1550,7 +1552,8 @@ func (r *One) CreateAllowance(member string) (error) {
 	memberPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(memberKey))
 	assert.NoError(t, err)
 
-	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member", memberPubKey})
+	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member", string(memberPubKey)})
+	fmt.Println(res1)
 	memberRef := res1.(string)
 	assert.NotEqual(t, "", memberRef)
 

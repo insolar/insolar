@@ -27,16 +27,17 @@ type Component interface {
 // Components is a registry for other core interfaces
 // Fields order are important and represent start and stop order in the daemon
 type Components struct {
-	Certificate         Certificate
-	NodeNetwork         NodeNetwork
-	LogicRunner         LogicRunner
-	Ledger              Ledger
-	Network             Network
-	MessageBus          MessageBus
-	Metrics             Component
-	Genesis             Genesis
-	APIRunner           Component
-	VersionManager      Component
-	NetworkCoordinator  NetworkCoordinator
-	CryptographyService CryptographyService
+	Certificate                Certificate
+	NodeNetwork                NodeNetwork
+	LogicRunner                LogicRunner
+	Ledger                     Ledger
+	Network                    Network
+	MessageBus                 MessageBus
+	Metrics                    Component
+	Genesis                    Genesis
+	APIRunner                  Component
+	VersionManager             Component
+	NetworkCoordinator         NetworkCoordinator
+	PlatformCryptographyScheme PlatformCryptographyScheme
+	CryptographyService        CryptographyService
 }

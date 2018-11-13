@@ -23,7 +23,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -31,13 +30,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-func HashInterface(in interface{}) []byte {
+func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byte {
 	s, err := core.Serialize(in)
 	if err != nil {
 		panic("Can't marshal: " + err.Error())
 	}
-	sh := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher() // TODO: pass hasher
-	return sh.Sum(s)
+	return scheme.IntegrityHasher().Hash(s)
 }
 
 func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
@@ -200,7 +198,7 @@ func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, er
 
 	vb.lr.addObjectCaseRecord(m.GetReference(), core.CaseRecord{
 		Type:   core.CaseRecordTypeRequest,
-		ReqSig: HashInterface(m),
+		ReqSig: HashInterface(vb.lr.PlatformCryptographyScheme, m),
 		Resp:   reqref,
 	})
 	return &reqref, err
@@ -236,7 +234,7 @@ func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, 
 	if core.CaseRecordTypeRequest != cr.Type {
 		return nil, errors.New("Wrong validation type on Request")
 	}
-	if !bytes.Equal(cr.ReqSig, HashInterface(m)) {
+	if !bytes.Equal(cr.ReqSig, HashInterface(vb.lr.PlatformCryptographyScheme, m)) {
 		return nil, errors.New("Wrong validation sig on Request")
 	}
 	if req, ok := cr.Resp.(Ref); ok {

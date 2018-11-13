@@ -25,9 +25,12 @@ import (
 
 // TODO: this file should be removed
 
+var platformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
+var keyProcessor = platformpolicy.NewKeyProcessor()
+
 // Sign signs given seed.
 func Sign(data []byte, key crypto.PrivateKey) ([]byte, error) {
-	signature, err := platformpolicy.NewPlatformCryptographyScheme().Signer(key).Sign(data)
+	signature, err := platformCryptographyScheme.Signer(key).Sign(data)
 	if err != nil {
 		return nil, err
 	}
@@ -36,22 +39,22 @@ func Sign(data []byte, key crypto.PrivateKey) ([]byte, error) {
 
 // Verify verifies signature.
 func Verify(data []byte, signatureRaw []byte, publicKey crypto.PublicKey) bool {
-	return platformpolicy.NewPlatformCryptographyScheme().Verifier(publicKey).Verify(core.SignatureFromBytes(signatureRaw), data)
+	return platformCryptographyScheme.Verifier(publicKey).Verify(core.SignatureFromBytes(signatureRaw), data)
 }
 
 func GeneratePrivateKey() (crypto.PrivateKey, error) {
-	return platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	return keyProcessor.GeneratePrivateKey()
 }
 
 func ImportPublicKey(publicKey string) (crypto.PublicKey, error) {
-	return platformpolicy.NewKeyProcessor().ImportPublicKey([]byte(publicKey))
+	return keyProcessor.ImportPublicKey([]byte(publicKey))
 }
 
 func ExportPublicKey(publicKey crypto.PublicKey) (string, error) {
-	key, err := platformpolicy.NewKeyProcessor().ExportPublicKey(publicKey)
+	key, err := keyProcessor.ExportPublicKey(publicKey)
 	return string(key), err
 }
 
 func ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
-	return platformpolicy.NewKeyProcessor().ExtractPublicKey(privateKey)
+	return keyProcessor.ExtractPublicKey(privateKey)
 }
