@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -38,7 +37,7 @@ type AuthorizationController struct {
 	options             *common.Options
 	bootstrapController common.BootstrapController
 	signer              *Signer
-	transport           hostnetwork.InternalTransport
+	transport           network.InternalTransport
 	keeper              network.NodeKeeper
 }
 
@@ -222,15 +221,18 @@ func (ac *AuthorizationController) processAuthorizeRequest(request network.Reque
 	// 	return ac.getAuthErrorResponse(request, "Error adding to unsync list: timeout"), nil
 	// }
 
-	ac.keeper.AddActiveNodes([]core.Node{
-		nodenetwork.NewNode(
-			request.GetSender(),
-			data.NodeRoles,
-			nil,
-			core.PulseNumber(0),
-			data.Address,
-			data.Version),
-	})
+	node := nodenetwork.NewNode(
+		request.GetSender(),
+		data.NodeRoles,
+		nil,
+		core.PulseNumber(0),
+		data.Address,
+		data.Version)
+	// TODO: move short ID collision detection and correction to AddUnsync to prevent races
+	if CheckShortIDCollision(ac.keeper, node.ShortID()) {
+		CorrectShortIDCollision(ac.keeper, node)
+	}
+	ac.keeper.AddActiveNodes([]core.Node{node})
 
 	return ac.transport.BuildResponse(request, &ResponseAuthorize{ActiveNodes: ac.keeper.GetActiveNodes()}), nil
 }
@@ -249,6 +251,6 @@ func (ac *AuthorizationController) Start(components core.Components) {
 }
 
 func NewAuthorizationController(options *common.Options, bootstrapController common.BootstrapController,
-	transport hostnetwork.InternalTransport) *AuthorizationController {
+	transport network.InternalTransport) *AuthorizationController {
 	return &AuthorizationController{options: options, bootstrapController: bootstrapController, transport: transport}
 }

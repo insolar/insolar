@@ -152,20 +152,6 @@ func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID strin
 	return cfg
 }
 
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return true // completed normally
-	case <-time.After(timeout):
-		return false // timed out
-	}
-}
-
 func TestServiceNetwork_SendMessage2(t *testing.T) {
 	ctx := context.TODO()
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
@@ -210,7 +196,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	parcel, _ := pf.Create(ctx, e, firstNode.GetNodeID(), 0, nil)
 
 	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", parcel)
-	success := waitTimeout(&wg, 100*time.Millisecond)
+	success := network.WaitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
 }
@@ -266,7 +252,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID(), 0, nil)
 
 	err = firstNode.SendCascadeMessage(c, "test", parcel)
-	success := waitTimeout(&wg, 100*time.Millisecond)
+	success := network.WaitTimeout(&wg, 100*time.Millisecond)
 
 	assert.NoError(t, err)
 	assert.True(t, success)
@@ -358,7 +344,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	parcel, _ := pf.Create(ctx, e, firstService.GetNodeID(), 0, nil)
 
 	firstService.SendCascadeMessage(c, "test", parcel)
-	success := waitTimeout(&wg, 100*time.Millisecond)
+	success := network.WaitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
 }
@@ -413,7 +399,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 // 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 //
 // 	// pulse is passed to the second node and stored there, too
-// 	success := waitTimeout(&wg, time.Millisecond*100)
+// 	success := WaitTimeout(&wg, time.Millisecond*100)
 // 	assert.True(t, success)
 // 	secondStoredPulse, _ := secondLedger.GetPulseManager().Current(ctx)
 // 	assert.Equal(t, core.PulseNumber(1), secondStoredPulse.PulseNumber)
@@ -503,7 +489,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 // 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 //
 // 	// pulse is passed to the other 4 nodes and stored there, too
-// 	success := waitTimeout(&wg, time.Second)
+// 	success := WaitTimeout(&wg, time.Second)
 // 	assert.True(t, success)
 //
 // 	for _, ldgr := range ledgers {
