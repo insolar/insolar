@@ -25,13 +25,21 @@ import (
 )
 
 type calculator struct {
-	ArtifactManager     core.ArtifactManager     `inject:""`
-	NodeNetwork         core.NodeNetwork         `inject:""`
-	CryptographyService core.CryptographyService `inject:""`
+	ArtifactManager            core.ArtifactManager            `inject:""`
+	NodeNetwork                core.NodeNetwork                `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
+
+	merkleHelper *merkleHelper
 }
 
 func NewCalculator() Calculator {
 	return &calculator{}
+}
+
+func (c *calculator) Init(ctx context.Context) error {
+	c.merkleHelper = newMerkleHelper(c.PlatformCryptographyScheme)
+	return nil
 }
 
 func (c *calculator) getStateHash(role core.NodeRole) (OriginHash, error) {
@@ -46,8 +54,8 @@ func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) (Orig
 		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't get node stateHash")
 	}
 
-	pulseHash := entry.hash()
-	nodeInfoHash := nodeInfoHash(pulseHash, stateHash)
+	pulseHash := entry.hash(c.merkleHelper)
+	nodeInfoHash := c.merkleHelper.nodeInfoHash(pulseHash, stateHash)
 
 	signature, err := c.CryptographyService.Sign(nodeInfoHash)
 	if err != nil {
@@ -63,10 +71,10 @@ func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) (Orig
 }
 
 func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (OriginHash, *GlobuleProof, error) {
-	nodeRoot := entry.hash()
+	nodeRoot := entry.hash(c.merkleHelper)
 	nodeCount := uint32(len(entry.ProofSet))
-	globuleInfoHash := globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
-	globuleHash := globuleHash(globuleInfoHash, nodeRoot)
+	globuleInfoHash := c.merkleHelper.globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
+	globuleHash := c.merkleHelper.globuleHash(globuleInfoHash, nodeRoot)
 
 	signature, err := c.CryptographyService.Sign(globuleHash)
 	if err != nil {
@@ -85,7 +93,7 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (
 }
 
 func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) (OriginHash, *CloudProof, error) {
-	cloudHash := entry.hash()
+	cloudHash := entry.hash(c.merkleHelper)
 
 	signature, err := c.CryptographyService.Sign(cloudHash)
 	if err != nil {
@@ -101,5 +109,5 @@ func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) (Orig
 
 func (c *calculator) IsValid(proof Proof, hash OriginHash, publicKey crypto.PublicKey) bool {
 	signature := core.SignatureFromBytes(proof.signature())
-	return c.CryptographyService.Verify(publicKey, signature, proof.hash(hash))
+	return c.CryptographyService.Verify(publicKey, signature, proof.hash(hash, c.merkleHelper))
 }

@@ -42,10 +42,9 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
+func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{}
-
-	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork.onPulse)
+	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork.onPulse, scheme)
 	if err != nil {
 		log.Error("failed to create network components: %s", err.Error())
 	}
@@ -162,7 +161,7 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 
 // NewNetworkComponents create network.HostNetwork and network.Controller for new network
 func NewNetworkComponents(conf configuration.Configuration,
-	pulseCallback network.OnPulse) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
+	pulseCallback network.OnPulse, scheme core.PlatformCryptographyScheme) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
 	routingTable := routing.NewTable()
 	internalTransport, err := hostnetwork.NewInternalTransport(conf)
 	if err != nil {
@@ -170,6 +169,6 @@ func NewNetworkComponents(conf configuration.Configuration,
 	}
 	hostNetwork := hostnetwork.NewHostTransport(internalTransport, routingTable)
 	options := controller.ConfigureOptions(conf.Host)
-	networkController := controller.NewNetworkController(pulseCallback, options, internalTransport, routingTable, hostNetwork)
+	networkController := controller.NewNetworkController(pulseCallback, options, internalTransport, routingTable, hostNetwork, scheme)
 	return routingTable, hostNetwork, networkController, nil
 }

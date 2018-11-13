@@ -33,6 +33,6 @@ type Calculator interface {
 }
 
 type Proof interface {
-	hash([]byte) []byte
+	hash([]byte, *merkleHelper) []byte
 	signature() []byte
 }

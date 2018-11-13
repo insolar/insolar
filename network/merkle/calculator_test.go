@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/nodekeeper"
@@ -93,13 +94,18 @@ func TestCalculator(t *testing.T) {
 	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
 		return "key", nil
 	}
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	nk := nodekeeper.GetTestNodekeeper(mock)
-	cm.Inject(nk, l.ArtifactManager, c, calculator, mock)
+	cm.Inject(nk, l.ArtifactManager, c, calculator, mock, scheme)
 
 	assert.NotNil(t, calculator.ArtifactManager)
 	assert.NotNil(t, calculator.NodeNetwork)
 	assert.NotNil(t, calculator.CryptographyService)
+	assert.NotNil(t, calculator.PlatformCryptographyScheme)
+
+	err := cm.Init(context.Background())
+	assert.NoError(t, err)
 
 	s := &calculatorSuite{
 		Suite:        suite.Suite{},

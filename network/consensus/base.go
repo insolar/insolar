@@ -28,9 +28,10 @@ import (
 
 // exchangeResults is thread safe results struct
 type exchangeResults struct {
-	mutex *sync.Mutex
-	data  map[core.RecordRef][]core.Node
-	hash  []*network.NodeUnsyncHash
+	mutex  *sync.Mutex
+	data   map[core.RecordRef][]core.Node
+	hash   []*network.NodeUnsyncHash
+	scheme core.PlatformCryptographyScheme
 }
 
 func (r *exchangeResults) writeResultData(id core.RecordRef, data []core.Node) {
@@ -44,7 +45,7 @@ func (r *exchangeResults) calculateResultHash() []*network.NodeUnsyncHash {
 	defer r.mutex.Unlock()
 
 	for id, x := range r.data {
-		d, err := CalculateNodeUnsyncHash(id, x)
+		d, err := CalculateNodeUnsyncHash(r.scheme, id, x)
 		if err != nil {
 			log.Error(err)
 			continue
@@ -65,11 +66,12 @@ func (r *exchangeResults) getAllCollectedNodes() []core.Node {
 	return result
 }
 
-func newExchangeResults(participantsCount int) *exchangeResults {
+func newExchangeResults(scheme core.PlatformCryptographyScheme, participantsCount int) *exchangeResults {
 	return &exchangeResults{
-		mutex: &sync.Mutex{},
-		data:  make(map[core.RecordRef][]core.Node, participantsCount),
-		hash:  make([]*network.NodeUnsyncHash, 0),
+		mutex:  &sync.Mutex{},
+		data:   make(map[core.RecordRef][]core.Node, participantsCount),
+		hash:   make([]*network.NodeUnsyncHash, 0),
+		scheme: scheme,
 	}
 }
 
@@ -79,6 +81,7 @@ type baseConsensus struct {
 	communicator    Communicator
 	holder          UnsyncHolder
 	results         *exchangeResults
+	scheme          core.PlatformCryptographyScheme
 }
 
 // DoConsensus implements consensus interface
@@ -87,7 +90,7 @@ func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, se
 	c.self = self
 	c.allParticipants = allParticipants
 	c.holder = holder
-	c.results = newExchangeResults(len(c.allParticipants))
+	c.results = newExchangeResults(c.scheme, len(c.allParticipants))
 
 	c.exchangeDataWithOtherParticipants(ctx)
 	c.exchangeHashWithOtherParticipants(ctx)

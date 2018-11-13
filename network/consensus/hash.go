@@ -25,7 +25,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 func hashWriteChecked(hash hash.Hash, data []byte) {
@@ -38,8 +37,8 @@ func hashWriteChecked(hash hash.Hash, data []byte) {
 	}
 }
 
-func calculateNodeHash(node core.Node) []byte {
-	h := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
+func calculateNodeHash(scheme core.PlatformCryptographyScheme, node core.Node) []byte {
+	h := scheme.IntegrityHasher()
 	hashWriteChecked(h, node.ID().Bytes())
 	b := make([]byte, 8)
 	nodeRoles := make([]core.NodeRole, len(node.Roles()))
@@ -66,7 +65,7 @@ func calculateNodeHash(node core.Node) []byte {
 }
 
 // CalculateHash calculates hash of active node list
-func CalculateHash(list []core.Node) (result []byte, err error) {
+func CalculateHash(scheme core.PlatformCryptographyScheme, list []core.Node) (result []byte, err error) {
 	sort.Slice(list[:], func(i, j int) bool {
 		return bytes.Compare(list[i].ID().Bytes(), list[j].ID().Bytes()) < 0
 	})
@@ -78,17 +77,17 @@ func CalculateHash(list []core.Node) (result []byte, err error) {
 		}
 	}()
 
-	h := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
+	h := scheme.IntegrityHasher()
 	for _, node := range list {
-		nodeHash := calculateNodeHash(node)
+		nodeHash := calculateNodeHash(scheme, node)
 		hashWriteChecked(h, nodeHash)
 	}
 	return h.Sum(nil), nil
 }
 
 // CalculateNodeUnsyncHash calculates hash for a NodeUnsyncHash
-func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []core.Node) (*network.NodeUnsyncHash, error) {
-	h, err := CalculateHash(list)
+func CalculateNodeUnsyncHash(scheme core.PlatformCryptographyScheme, nodeID core.RecordRef, list []core.Node) (*network.NodeUnsyncHash, error) {
+	h, err := CalculateHash(scheme, list)
 	if err != nil {
 		return nil, err
 	}

@@ -96,21 +96,25 @@ func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBoots
 
 func TestNewServiceNetwork(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	sn, err := NewServiceNetwork(cfg)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
+	sn, err := NewServiceNetwork(cfg, scheme)
 	assert.NoError(t, err)
 	assert.NotNil(t, sn)
 }
 
 func TestServiceNetwork_GetAddress(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	network, err := NewServiceNetwork(cfg)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	network, err := NewServiceNetwork(cfg, scheme)
 	assert.NoError(t, err)
 	assert.True(t, strings.Contains(network.GetAddress(), strings.Split(cfg.Host.Transport.Address, ":")[0]))
 }
 
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	network, err := NewServiceNetwork(cfg)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	network, err := NewServiceNetwork(cfg, scheme)
 
 	cs, _ := cryptography.NewStorageBoundCryptographyService(keysPath)
 	kp := platformpolicy.NewKeyProcessor()
@@ -156,16 +160,17 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	ctx := context.TODO()
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	firstNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10000",
 		[]string{"127.0.0.1:10001"},
-		firstNodeId))
+		firstNodeId), scheme)
 	assert.NoError(t, err)
 	secondNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10001",
 		nil,
-		secondNodeId))
+		secondNodeId), scheme)
 	assert.NoError(t, err)
 
 	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true))
@@ -205,16 +210,17 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	ctx := context.TODO()
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	firstNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10100",
 		[]string{"127.0.0.1:10101"},
-		firstNodeId))
+		firstNodeId), scheme)
 	assert.NoError(t, err)
 	secondNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10101",
 		nil,
-		secondNodeId))
+		secondNodeId), scheme)
 	assert.NoError(t, err)
 
 	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true))
@@ -300,10 +306,11 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		}
 	}()
 
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	// init node and register test function
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
-		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
+		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node), scheme)
 		service.Start(ctx, core.Components{})
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()

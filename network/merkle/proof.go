@@ -30,8 +30,8 @@ type PulseProof struct {
 	StateHash []byte
 }
 
-func (np *PulseProof) hash(pulseHash []byte) []byte {
-	return nodeInfoHash(pulseHash, np.StateHash)
+func (np *PulseProof) hash(pulseHash []byte, helper *merkleHelper) []byte {
+	return helper.nodeInfoHash(pulseHash, np.StateHash)
 }
 
 type GlobuleProof struct {
@@ -43,7 +43,7 @@ type GlobuleProof struct {
 	NodeRoot      []byte
 }
 
-func (gp *GlobuleProof) hash(globuleHash []byte) []byte {
+func (gp *GlobuleProof) hash(globuleHash []byte, helper *merkleHelper) []byte {
 	return globuleHash
 }
 
@@ -51,6 +51,6 @@ type CloudProof struct {
 	BaseProof
 }
 
-func (cp *CloudProof) hash(cloudHash []byte) []byte {
+func (cp *CloudProof) hash(cloudHash []byte, helper *merkleHelper) []byte {
 	return cloudHash
 }

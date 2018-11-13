@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,9 +31,11 @@ const (
 )
 
 func TestNodeConsensus_calculateNodeHash(t *testing.T) {
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
 	nodeID := testutils.RandomRef()
-	hash1, _ := CalculateNodeUnsyncHash(nodeID, nil)
-	hash2, _ := CalculateNodeUnsyncHash(nodeID, []core.Node{})
+	hash1, _ := CalculateNodeUnsyncHash(scheme, nodeID, nil)
+	hash2, _ := CalculateNodeUnsyncHash(scheme, nodeID, []core.Node{})
 
 	assert.Equal(t, nullHash, hex.EncodeToString(hash1.Hash))
 	assert.Equal(t, hash1, hash2)
@@ -44,20 +47,20 @@ func TestNodeConsensus_calculateNodeHash(t *testing.T) {
 	activeNode1Slice := []core.Node{activeNode1}
 	activeNode2Slice := []core.Node{activeNode2}
 
-	hash1, _ = CalculateNodeUnsyncHash(nodeID, activeNode1Slice)
-	hash2, _ = CalculateNodeUnsyncHash(nodeID, activeNode2Slice)
+	hash1, _ = CalculateNodeUnsyncHash(scheme, nodeID, activeNode1Slice)
+	hash2, _ = CalculateNodeUnsyncHash(scheme, nodeID, activeNode2Slice)
 	assert.Equal(t, hash1, hash2)
 
 	activeNode3 := newActiveNode(1, 0)
 	activeNode3Slice := []core.Node{activeNode3}
-	hash3, _ := CalculateNodeUnsyncHash(nodeID, activeNode3Slice)
+	hash3, _ := CalculateNodeUnsyncHash(scheme, nodeID, activeNode3Slice)
 	assert.NotEqual(t, hash1, hash3)
 
 	// nodes order in slice should not affect hash calculating
 	slice1 := []core.Node{activeNode1, activeNode2}
 	slice2 := []core.Node{activeNode2, activeNode1}
-	hash1, _ = CalculateNodeUnsyncHash(nodeID, slice1)
-	hash2, _ = CalculateNodeUnsyncHash(nodeID, slice2)
+	hash1, _ = CalculateNodeUnsyncHash(scheme, nodeID, slice1)
+	hash2, _ = CalculateNodeUnsyncHash(scheme, nodeID, slice2)
 	assert.Equal(t, hash1, hash2)
 	assert.Equal(t, nodeID, hash1.NodeID)
 }

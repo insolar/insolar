@@ -20,6 +20,7 @@ import (
 	"bytes"
 
 	"github.com/cbergoon/merkletree"
+	"github.com/insolar/insolar/core"
 )
 
 type tree interface {
@@ -28,10 +29,11 @@ type tree interface {
 
 type treeNode struct {
 	content []byte
+	hasher  core.Hasher
 }
 
 func (t *treeNode) CalculateHash() ([]byte, error) {
-	return hash.Hash(t.content), nil
+	return t.hasher.Hash(t.content), nil
 }
 
 func (t *treeNode) Equals(other merkletree.Content) (bool, error) {
@@ -39,11 +41,11 @@ func (t *treeNode) Equals(other merkletree.Content) (bool, error) {
 	return equal, nil
 }
 
-func fromList(list [][]byte) tree {
+func fromList(list [][]byte, hasher core.Hasher) tree {
 	var result []merkletree.Content
 
 	for _, content := range list {
-		result = append(result, &treeNode{content: content})
+		result = append(result, &treeNode{content: content, hasher: hasher})
 	}
 
 	mt, err := merkletree.NewTree(result)
