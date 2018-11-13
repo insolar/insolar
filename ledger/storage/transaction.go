@@ -223,7 +223,6 @@ func (m *TransactionManager) SetObjectIndex(
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
-	id.String()
 	encoded, err := index.EncodeObjectLifeline(idx)
 	if err != nil {
 		return err
