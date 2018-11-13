@@ -30,8 +30,9 @@ type Manager struct {
 	components []interface{}
 }
 
-// Register components in Manager and inject required dependencies
-// Register can inject interfaces only, tag public struct fields with `inject:""`
+// Register components in Manager and inject required dependencies.
+// Register can inject interfaces only, tag public struct fields with `inject:""`.
+// If the injectable struct already has a value on the tagged field, the value WILL NOT be overridden.
 func (m *Manager) Register(components ...interface{}) {
 	m.components = components
 	for _, c := range components {
@@ -41,7 +42,7 @@ func (m *Manager) Register(components ...interface{}) {
 
 		for i := 0; i < componentType.NumField(); i++ {
 			f := componentType.Field(i)
-			if _, ok := f.Tag.Lookup("inject"); ok {
+			if _, ok := f.Tag.Lookup("inject"); ok && componentValue.Field(i).IsNil() {
 				log.Debugf("ComponentManager: Component %s need inject: ", componentType.String(), f.Name)
 
 				// try to inject
@@ -80,7 +81,25 @@ func (m *Manager) Start(ctx context.Context) error {
 				return errors.Wrap(err, "Failed to start components.")
 			}
 		} else {
-			log.Warnf("ComponentManager: Component %s has no Stop method", name)
+			log.Warnf("ComponentManager: Component %s has no Start method", name)
+		}
+	}
+	return nil
+}
+
+// Init invokes Init method of all components which implements Initer interface
+func (m *Manager) Init(ctx context.Context) error {
+	for _, c := range m.components {
+		name := reflect.TypeOf(c).Elem().String()
+		s, ok := c.(Initer)
+		if !ok {
+			log.Debugf("ComponentManager: Component %s has no Init method", name)
+			continue
+		}
+		log.Infoln("ComponentManager: Init component: ", name)
+		err := s.Init(ctx)
+		if err != nil {
+			return errors.Wrap(err, "Failed to init components.")
 		}
 	}
 	return nil

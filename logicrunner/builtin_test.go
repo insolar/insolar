@@ -59,6 +59,7 @@ func TestBareHelloworld(t *testing.T) {
 
 	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 

@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -69,10 +70,12 @@ func getTestData(t *testing.T) (
 	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	mb := testmessagebus.NewTestMessageBus()
 	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}}
-	handler.Link(core.Components{MessageBus: mb})
+	handler.Bus = mb
+	err := handler.Init(ctx)
+	require.NoError(t, err)
 	am := LedgerArtifactManager{
 		db:                   db,
-		messageBus:           mb,
+		DefaultBus:           mb,
 		getChildrenChunkSize: 100,
 	}
 	be, _ := blockexplorer.NewBlockExplorer(db)
@@ -504,7 +507,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 		Record: record.SerializeRecord(&codeRecord),
 	}
 
-	rep, err := am.messageBus.Send(
+	rep, err := am.DefaultBus.Send(
 		ctx,
 		&message.JetDrop{
 			Messages: [][]byte{
