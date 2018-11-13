@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/insolar/insolar/application/contract"
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
@@ -50,20 +50,20 @@ func makeSeed() []byte {
 
 // Authorize checks is node authorized ( It's temporary method. Remove it when we have good tests )
 func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
-	privateKey, err := contract.GeneratePrivateKey()
+	privateKey, err := application.GeneratePrivateKey()
 	if err != nil {
 		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't generate private key: %s", err.Error())
 	}
 
 	// Make signature
 	seed := makeSeed()
-	signature, err := contract.Sign(seed, privateKey)
+	signature, err := application.Sign(seed, privateKey)
 	if err != nil {
 		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't sign: %s", err.Error())
 	}
 
 	// Register node
-	serPubKey, err := contract.ExportPublicKey(contract.ExtractPublicKey(privateKey))
+	serPubKey, err := application.ExportPublicKey(application.ExtractPublicKey(privateKey))
 	if err != nil {
 		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't export public key: %s", err.Error())
 	}
