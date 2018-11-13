@@ -19,6 +19,7 @@ package phases
 import (
 	"context"
 
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -30,45 +31,49 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o ../../testutils/network -s _mock.go
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, participants []core.Node, packet Phase1Packet) (map[core.RecordRef]*Phase1Packet, error)
+	ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error)
 }
 
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
 type NaiveCommunicator struct {
-	HostNetwork  network.HostNetwork `inject:""`
-	phase1packet *Phase1Packet
+	ConsensusNetwork network.ConsensusNetwork `inject:""`
+
+	phase1packet  *packets.Phase1Packet
+	result        map[core.RecordRef]*packets.Phase1Packet
+	pulseCallback network.OnPulse
+	currentPulse  core.Pulse
 }
 
 // NewNaiveCommunicator constructor creates new NaiveCommunicator
-func NewNaiveCommunicator() *NaiveCommunicator {
-	return &NaiveCommunicator{}
+func NewNaiveCommunicator(pulseCallback network.OnPulse) *NaiveCommunicator {
+	return &NaiveCommunicator{pulseCallback: pulseCallback}
 }
 
 // Start method implements Starter interface
 func (nc *NaiveCommunicator) Start(ctx context.Context) error {
-	nc.HostNetwork.RegisterRequestHandler(types.ConsensusPhase1Exchange, nc.exchangeDataHandler)
+	nc.ConsensusNetwork.RegisterRequestHandler(types.Phase1, nc.exchangeDataHandler)
 	return nil
 }
 
 // ExchangeData used in first consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet Phase1Packet) (map[core.RecordRef]*Phase1Packet, error) {
-	futures := make([]network.Future, len(participants))
+func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
+	//futures := make([]network.Future, len(participants))
 
 	packetBuffer, err := packet.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ExchangeData] Failed to serialize Phase1Packet.")
 	}
 
-	requestBuilder := nc.HostNetwork.NewRequestBuilder()
-	request := requestBuilder.Type(types.ConsensusPhase1Exchange).Data(packetBuffer).Build()
+	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
+	request := requestBuilder.Type(types.Phase1).Data(packetBuffer).Build()
 
 	for _, node := range participants {
-		future, err := nc.HostNetwork.SendRequest(request, node.ID())
+		err := nc.ConsensusNetwork.SendRequest(request, node.ID())
 		if err != nil {
 			// TODO: mark participant as unreachable
 			log.Errorln(err.Error())
 		} else {
-			futures = append(futures, future)
+			//futures = append(futures, future)
 		}
 	}
 
@@ -82,8 +87,22 @@ func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []co
 	return nil, nil
 }
 
-func (nc *NaiveCommunicator) exchangeDataHandler(network.Request) (network.Response, error) {
+func (nc *NaiveCommunicator) exchangeDataHandler(request network.Request) {
 	//TODO: check pulse?
 	//TODO: return serialized nc.phase1packet
-	panic("implement me")
+	if request.GetType() == types.Phase1 {
+		p, ok := request.GetData().(*packets.Phase1Packet)
+		if !ok {
+			//return nil, errors.New("invalid Phase1Packet")
+		}
+		nc.result[request.GetSender()] = p
+		//nc.HostNetwork.BuildResponse(request, )
+		//request.
+
+		//	nc.pulseCallback(p.pulseData.)
+		//p.Deserialize(request.GetData().())
+		//packet.DeserializePacket()
+	}
+
+	//return nil, nil
 }

@@ -21,8 +21,11 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/transport/packet/types"
+	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -31,19 +34,27 @@ type communicatorSuite struct {
 	componentManager component.Manager
 	communicator     Communicator
 	participants     []core.Node
-	hostNetwork      *network.HostNetworkMock
+	hostNetwork      *networkUtils.HostNetworkMock
 }
 
 func NewSuite() *communicatorSuite {
 	return &communicatorSuite{
 		Suite:        suite.Suite{},
-		communicator: NewNaiveCommunicator(),
+		communicator: NewNaiveCommunicator(nil),
 		participants: nil,
 	}
 }
 
 func (s *communicatorSuite) SetupTest() {
-	s.hostNetwork = network.NewHostNetworkMock(s.T())
+	s.hostNetwork = networkUtils.NewHostNetworkMock(s.T())
+	s.hostNetwork.RegisterRequestHandlerMock.Set(func(p types.PacketType, p1 network.RequestHandler) {
+
+	})
+
+	s.hostNetwork.NewRequestBuilderMock.Set(func() (r network.RequestBuilder) {
+		return nil
+	})
+
 	s.componentManager.Register(s.communicator, s.hostNetwork)
 	err := s.componentManager.Start(nil)
 	s.NoError(err)
@@ -51,7 +62,7 @@ func (s *communicatorSuite) SetupTest() {
 
 func (s *communicatorSuite) TestExchangeData() {
 	s.Assert().NotNil(s.communicator)
-	_, err := s.communicator.ExchangeData(context.Background(), s.participants, Phase1Packet{})
+	_, err := s.communicator.ExchangeData(context.Background(), s.participants, packets.Phase1Packet{})
 	s.Assert().NoError(err)
 }
 
