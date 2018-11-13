@@ -202,21 +202,6 @@ func TestTypeCompatibility(t *testing.T) {
 	var _ core.LogicRunner = (*LogicRunner)(nil)
 }
 
-type testExecutor struct {
-	constructorResponses []*testResp
-	methodResponses      []*testResp
-}
-
-func (r *testExecutor) Stop() error {
-	return nil
-}
-
-type testResp struct {
-	data []byte
-	res  core.Arguments
-	err  error
-}
-
 func getRefFromID(id *core.RecordID) *core.RecordRef {
 	ref := core.RecordRef{}
 	ref.SetRecord(*id)
