@@ -173,9 +173,10 @@ func (m *ValidationResults) GetReference() core.RecordRef {
 	return m.RecordRef
 }
 
+var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
+
 // GenRequest calculates RecordRef for request message from pulse number and request's payload.
 func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
-	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: pass hasher
 	ref := core.NewRecordRef(
 		core.RecordID{},
 		*core.NewRecordID(pn, hasher.Hash(payload)),
