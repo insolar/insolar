@@ -64,7 +64,19 @@ type Error struct {
 }
 
 func (lre Error) Error() string {
-	return lre.Err.Error() + "  Contract=" + lre.Contract.String() + " Method=" + lre.Method + " Request=" + lre.Request.String()
+	var buffer bytes.Buffer
+
+	if lre.Contract.String() != "" {
+		buffer.WriteString("Contract=" + lre.Contract.String())
+	}
+	if lre.Method != "" {
+		buffer.WriteString("Method=" + lre.Method)
+	}
+	if lre.Request.String() != "" {
+		buffer.WriteString("Request=" + lre.Request.String())
+	}
+
+	return buffer.String()
 }
 
 func (es *ExecutionState) ErrorWrap(err error, message string) error {
