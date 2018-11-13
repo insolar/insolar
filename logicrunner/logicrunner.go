@@ -41,6 +41,9 @@ type Ref = core.RecordRef
 // Context of one contract execution
 type ExecutionState struct {
 	sync.Mutex
+	Ref    Ref
+	Method string
+
 	noWait      bool
 	validate    bool
 	insContext  context.Context
@@ -266,11 +269,13 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
+		es.Method = m.Method
 		fuse = false
 		re, err := lr.executeMethodCall(es, m, vb)
 		return re, err
 
 	case *message.CallConstructor:
+		es.Method = m.Name
 		fuse = false
 		re, err := lr.executeConstructorCall(es, m, vb)
 		return re, err
