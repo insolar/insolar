@@ -152,16 +152,20 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 			return
 		}
 		log.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-		go func(network *ServiceNetwork) {
-			network.controller.ResendPulseToKnownHosts(pulse)
-			if network.coordinator == nil {
-				return
-			}
-			err := network.coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
-			if err != nil {
-				log.Warn("Writing active nodes to ledger: " + err.Error())
-			}
-		}(n)
+
+		// deprecated
+		/*
+			go func(network *ServiceNetwork) {
+				network.controller.ResendPulseToKnownHosts(pulse)
+				if network.coordinator == nil {
+					return
+				}
+				err := network.coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
+				if err != nil {
+					log.Warn("Writing active nodes to ledger: " + err.Error())
+				}
+			}(n)
+		*/
 
 		// TODO: PLACE NEW CONSENSUS HERE
 	}

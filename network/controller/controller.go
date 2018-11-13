@@ -71,6 +71,7 @@ func (c *Controller) Authorize() error {
 }
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
+// DEPRECATED
 func (c *Controller) ResendPulseToKnownHosts(pulse core.Pulse) {
 	c.pulseController.ResendPulse(pulse)
 }

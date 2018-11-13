@@ -39,6 +39,7 @@ type Controller interface {
 	// Authorize start authorization process on discovery node.
 	Authorize() error
 	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
+	// DEPRECATED
 	ResendPulseToKnownHosts(pulse core.Pulse)
 
 	// GetNodeID get self node id (should be removed in far future).
