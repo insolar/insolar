@@ -162,6 +162,9 @@ func main() {
 	cm, cmOld, repl, err := InitComponents(ctx, *cfg, params.isBootstrap)
 	checkError(ctx, err, "failed to init components")
 
+	err = cm.Init(ctx)
+	checkError(ctx, err, "failed to init components")
+
 	cmOld.linkAll(ctx)
 
 	err = cm.Start(ctx)

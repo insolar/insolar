@@ -37,7 +37,7 @@ const (
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
 	db         *storage.DB
-	messageBus core.MessageBus
+	DefaultBus core.MessageBus `inject:""`
 
 	getChildrenChunkSize int
 }
@@ -49,15 +49,8 @@ func (m *LedgerArtifactManager) State() ([]byte, error) {
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
-	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}, nil
-}
-
-// Link links external components.
-func (m *LedgerArtifactManager) Link(components core.Components) error {
-	m.messageBus = components.MessageBus
-
-	return nil
+func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
+	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}
 }
 
 // GenesisRef returns the root record reference.
@@ -698,5 +691,5 @@ func (m *LedgerArtifactManager) registerChild(
 }
 
 func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
-	return core.MessageBusFromContext(ctx, m.messageBus)
+	return core.MessageBusFromContext(ctx, m.DefaultBus)
 }
