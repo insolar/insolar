@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package application
+package foundation
 
 import (
 	"crypto"

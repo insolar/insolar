@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/proxy/noderecord"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -141,12 +140,12 @@ func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatur
 		return false, fmt.Errorf("[ IsAuthorized ] Can't get nodes: %s", err.Error())
 	}
 
-	publicKey, err := application.ImportPublicKey(pubKey)
+	publicKey, err := foundation.ImportPublicKey(pubKey)
 	if err != nil {
 		return false, fmt.Errorf("[ verifySig ] Invalid public key")
 	}
 
-	ok := application.Verify(seed, signatureRaw, publicKey)
+	ok := foundation.Verify(seed, signatureRaw, publicKey)
 	return ok, nil
 }
 
@@ -161,12 +160,12 @@ func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRa
 	pubKey := nodeInfo.PublicKey
 	role := nodeInfo.Role
 
-	publicKey, err := application.ImportPublicKey(pubKey)
+	publicKey, err := foundation.ImportPublicKey(pubKey)
 	if err != nil {
 		return "", core.RoleUnknown, fmt.Errorf("[ verifySig ] Invalid public key")
 	}
 
-	ok := application.Verify(seed, signatureRaw, publicKey)
+	ok := foundation.Verify(seed, signatureRaw, publicKey)
 	if !ok {
 		return "", core.RoleUnknown, fmt.Errorf("[ Authorize ] Can't verify signature")
 	}

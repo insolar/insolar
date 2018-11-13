@@ -19,7 +19,6 @@ package member
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
@@ -58,12 +57,12 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
 
-	publicKey, err := application.ImportPublicKey(key)
+	publicKey, err := foundation.ImportPublicKey(key)
 	if err != nil {
 		return fmt.Errorf("[ verifySig ] Invalid public key")
 	}
 
-	verified := application.Verify(args, sign, publicKey)
+	verified := foundation.Verify(args, sign, publicKey)
 	if !verified {
 		return fmt.Errorf("[ verifySig ] Incorrect signature")
 	}
