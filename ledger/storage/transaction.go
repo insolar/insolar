@@ -54,6 +54,23 @@ type recentObjectsIndex struct{
 	updatedObjectsLock sync.Mutex
 }
 
+func (r *recentObjectsIndex) addToFetched(id *core.RecordID){
+	r.fetchedObjectsLock.Lock()
+	defer r.fetchedObjectsLock.Unlock()
+
+	r.fetchedObjects[id.String()] = id
+}
+
+func (r *recentObjectsIndex) addToUpdated(id *core.RecordID){
+	r.updatedObjectsLock.Lock()
+	defer r.updatedObjectsLock.Unlock()
+
+	r.updatedObjects[id.String()] = id
+}
+
+
+
+
 type byte2hex byte
 
 func (b byte2hex) String() string {
