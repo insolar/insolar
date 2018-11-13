@@ -41,11 +41,9 @@ func TestRecorder_Send(t *testing.T) {
 	parcel := message.Parcel{Msg: &msg}
 	msgHash := GetMessageHash(pcs, &parcel)
 	expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
-	pulse := core.Pulse{PulseNumber: 42}
 	pm := testutils.NewPulseManagerMock(mc)
-	pm.CurrentMock.Return(&pulse, nil)
 	s := NewsenderMock(mc)
-	s.CreateParcelFunc = func(p context.Context, p1 core.PulseNumber, p2 core.Message, p3 core.RoutingToken) (r core.Parcel, r1 error) {
+	s.CreateParcelFunc = func(p context.Context, p2 core.Message) (r core.Parcel, r1 error) {
 		return &message.Parcel{Msg: p2}, nil
 	}
 
@@ -54,7 +52,7 @@ func TestRecorder_Send(t *testing.T) {
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		s.SendParcelMock.Expect(ctx, &pulse, &parcel)
+		s.SendParcelMock.Expect(ctx, &parcel)
 
 		_, err := recorder.Send(ctx, &msg)
 		assert.NoError(t, err)

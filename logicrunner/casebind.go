@@ -84,7 +84,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 
 		msg := start.Resp.(core.Message)
 		parcel, err := lr.ParcelFactory.Create(
-			ctx, msg, ref, lr.execution[ref].callContext.Pulse.PulseNumber, nil,
+			ctx, msg, ref,
 		)
 		if err != nil {
 			return 0, errors.New("failed to create a parcel message")

@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
@@ -57,11 +58,11 @@ func NewTestMessageBus(t *testing.T) *TestMessageBus {
 		signature := core.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
-	cm.Inject(routingTokenFactory, parcelFactory, mock)
+	cm.Inject(delegationTokenFactory, parcelFactory, mock)
 
 	return &TestMessageBus{handlers: map[core.MessageType]core.MessageHandler{}, pf: parcelFactory}
 }
@@ -96,7 +97,7 @@ func (mb *TestMessageBus) Stop() error {
 }
 
 func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
-	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), mb.PulseNumber, nil)
+	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef())
 	if err != nil {
 		return nil, err
 	}

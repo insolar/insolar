@@ -50,12 +50,8 @@ func (r *player) Send(ctx context.Context, msg core.Message) (core.Reply, error)
 		rep core.Reply
 		err error
 	)
-	pulse, err := r.pm.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
 
-	parcel, err := r.CreateParcel(ctx, pulse.PulseNumber, msg, nil)
+	parcel, err := r.CreateParcel(ctx, msg)
 	id := GetMessageHash(r.scheme, parcel)
 
 	// Value from storageTape.

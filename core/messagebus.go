@@ -51,18 +51,7 @@ type Parcel interface {
 
 	Message() Message
 	Context(context.Context) context.Context
-	// Pulse returns pulse when message was sent.
-	Pulse() PulseNumber
-	// GetToken returns a routing-token of the message
-	GetToken() RoutingToken
-}
-
-// RoutingToken is the base interface for the routing token
-type RoutingToken interface {
-	GetTo() *RecordRef
-	GetFrom() *RecordRef
-	GetPulse() PulseNumber
-	GetSign() []byte
+	DelegationToken() []byte
 }
 
 // Reply for an `Message`
@@ -161,4 +150,13 @@ const (
 
 	// TypeBootstrapRequest used for bootstrap object generation.
 	TypeBootstrapRequest
+)
+
+// DelegationTokenType is an enum type of delegation token
+type DelegationTokenType byte
+
+//go:generate stringer -type=DelegationTokenType
+const (
+	// DTTypePendingExecution allows to continue method calls
+	DTTypePendingExecution DelegationTokenType = iota
 )
