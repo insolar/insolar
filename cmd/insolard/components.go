@@ -110,7 +110,7 @@ func InitComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme)
 	checkError(ctx, err, "failed to start Network")
 
 	routingTokeyFactory := messagebus.NewRoutingTokenFactory()
@@ -169,17 +169,18 @@ func InitComponents(
 	cm.Inject(components...)
 
 	cmOld := ComponentManager{components: core.Components{
-		Certificate:         cert,
-		NodeNetwork:         nodeNetwork,
-		LogicRunner:         logicRunner,
-		Ledger:              &ld,
-		Network:             nw,
-		MessageBus:          messageBus,
-		Genesis:             gen,
-		APIRunner:           apiRunner,
-		NetworkCoordinator:  networkCoordinator,
-		VersionManager:      versionManager,
-		CryptographyService: cryptographyService,
+		Certificate:                cert,
+		NodeNetwork:                nodeNetwork,
+		LogicRunner:                logicRunner,
+		Ledger:                     &ld,
+		Network:                    nw,
+		MessageBus:                 messageBus,
+		Genesis:                    gen,
+		APIRunner:                  apiRunner,
+		NetworkCoordinator:         networkCoordinator,
+		VersionManager:             versionManager,
+		PlatformCryptographyScheme: platformCryptographyScheme,
+		CryptographyService:        cryptographyService,
 	}}
 
 	return &cm, &cmOld, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
