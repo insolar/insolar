@@ -50,7 +50,7 @@ func TestRecorder_Send(t *testing.T) {
 	}
 
 	tape := NewtapeMock(mc)
-	recorder := NewRecorder(s, tape, pm, pcs)
+	recorder := newRecorder(s, tape, pm, pcs)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)

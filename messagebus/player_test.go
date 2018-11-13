@@ -48,7 +48,7 @@ func TestPlayer_Send(t *testing.T) {
 		return &parcel, nil
 	}
 	tape := NewtapeMock(mc)
-	player := NewPlayer(s, tape, pm, pcs)
+	player := newPlayer(s, tape, pm, pcs)
 
 	t.Run("with no reply on the storageTape doesn't send the message and returns an error", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(nil, ErrNoReply)

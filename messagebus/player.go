@@ -33,8 +33,8 @@ type player struct {
 	scheme core.PlatformCryptographyScheme
 }
 
-// NewPlayer creates player instance. It will replay replies from provided tape.
-func NewPlayer(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *player {
+// newPlayer creates player instance. It will replay replies from provided tape.
+func newPlayer(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *player {
 	return &player{sender: s, tape: tape, pm: pm, scheme: scheme}
 }
 

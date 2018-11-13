@@ -33,8 +33,8 @@ type recorder struct {
 	scheme core.PlatformCryptographyScheme
 }
 
-// NewRecorder create new recorder instance.
-func NewRecorder(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *recorder {
+// newRecorder create new recorder instance.
+func newRecorder(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *recorder {
 	return &recorder{sender: s, tape: tape, pm: pm, scheme: scheme}
 }
 

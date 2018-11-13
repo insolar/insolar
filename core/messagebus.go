@@ -72,6 +72,7 @@ type Reply interface {
 }
 
 // MessageBus interface
+//go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
 	Send(context.Context, Message) (Reply, error)
