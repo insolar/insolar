@@ -17,7 +17,6 @@
 package sign
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/asn1"
@@ -55,15 +54,14 @@ func (p *ecdsaSignature) Unmarshal(signatureRaw []byte) error {
 }
 
 type ecdsaSignerWrapper struct {
-	privateKey crypto.PrivateKey
+	privateKey *ecdsa.PrivateKey
 	hasher     core.Hasher
 }
 
 func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
 	hash := sw.hasher.Hash(data)
-	privateKey := sw.privateKey.(*ecdsa.PrivateKey)
 
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
+	r, s, err := ecdsa.Sign(rand.Reader, sw.privateKey, hash)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
@@ -78,7 +76,7 @@ func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
 }
 
 type ecdsaVerifyWrapper struct {
-	publicKey crypto.PublicKey
+	publicKey *ecdsa.PublicKey
 	hasher    core.Hasher
 }
 
@@ -90,7 +88,6 @@ func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool
 	}
 
 	hash := sw.hasher.Hash(data)
-	publicKey := sw.publicKey.(*ecdsa.PublicKey)
 
-	return ecdsa.Verify(publicKey, hash, ecdsaSignature.R, ecdsaSignature.S)
+	return ecdsa.Verify(sw.publicKey, hash, ecdsaSignature.R, ecdsaSignature.S)
 }

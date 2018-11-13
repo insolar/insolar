@@ -26,6 +26,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy/internal/sign"
 	"github.com/pkg/errors"
 )
 
@@ -44,7 +45,8 @@ func (kp *keyProcessor) GeneratePrivateKey() (crypto.PrivateKey, error) {
 }
 
 func (*keyProcessor) ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
-	publicKey := privateKey.(*ecdsa.PrivateKey).PublicKey
+	ecdsaPrivateKey := sign.MustConvertPrivateKeyToEcdsa(privateKey)
+	publicKey := ecdsaPrivateKey.PublicKey
 	return &publicKey
 }
 
@@ -75,7 +77,8 @@ func (*keyProcessor) ImportPrivateKey(pemEncoded []byte) (crypto.PrivateKey, err
 }
 
 func (*keyProcessor) ExportPublicKey(publicKey crypto.PublicKey) ([]byte, error) {
-	x509EncodedPub, err := x509.MarshalPKIXPublicKey(publicKey)
+	ecdsaPublicKey := sign.MustConvertPublicKeyToEcdsa(publicKey)
+	x509EncodedPub, err := x509.MarshalPKIXPublicKey(ecdsaPublicKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ExportPublicKey ]")
 	}
@@ -84,7 +87,8 @@ func (*keyProcessor) ExportPublicKey(publicKey crypto.PublicKey) ([]byte, error)
 }
 
 func (*keyProcessor) ExportPrivateKey(privateKey crypto.PrivateKey) ([]byte, error) {
-	x509Encoded, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
+	ecdsaPrivateKey := sign.MustConvertPrivateKeyToEcdsa(privateKey)
+	x509Encoded, err := x509.MarshalECPrivateKey(ecdsaPrivateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ExportPrivateKey ]")
 	}

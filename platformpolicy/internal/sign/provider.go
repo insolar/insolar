@@ -33,14 +33,14 @@ func NewECDSAProvider() AlgorithmProvider {
 
 func (p *ecdsaProvider) Sign(privateKey crypto.PrivateKey) core.Signer {
 	return &ecdsaSignerWrapper{
-		privateKey: privateKey,
+		privateKey: MustConvertPrivateKeyToEcdsa(privateKey),
 		hasher:     p.HashProvider.Hash512bits(),
 	}
 }
 
 func (p *ecdsaProvider) Verify(publicKey crypto.PublicKey) core.Verifier {
 	return &ecdsaVerifyWrapper{
-		publicKey: publicKey,
+		publicKey: MustConvertPublicKeyToEcdsa(publicKey),
 		hasher:    p.HashProvider.Hash512bits(),
 	}
 }
