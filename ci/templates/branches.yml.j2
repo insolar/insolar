@@ -6,14 +6,14 @@ groups:
 {% endfor %}
 
 resources:
-{% for branch in branches %}
-- name: lock-{{ branch }}
+- name: lock
   type: pool
   source:
     uri: git@github.com:insolar/locks.git
     branch: master
     pool: builds
     private_key: ((meta.github.lock_key))
+{% for branch in branches %}
 - name: insolar-{{ branch }}
   type: git
   source:
@@ -28,7 +28,7 @@ jobs:
   plan:
   - get: insolar-{{ branch }}
     trigger: true
-  - put: lock-{{ branch }}
+  - put: lock
     params: {acquire: true}
   - task: unit
     timeout: 10m
@@ -63,6 +63,7 @@ jobs:
              make pre-build
              make build
              make test_with_coverage
-  - put: lock-{{ branch }}
-    params: {release: lock-{{ branch }}}
+    ensure:
+      put: lock
+      params: {release: lock}
 {% endfor %}
