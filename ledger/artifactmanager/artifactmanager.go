@@ -36,8 +36,8 @@ const (
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
-	db  *storage.DB
-	Bus core.MessageBus `inject:""`
+	db         *storage.DB
+	DefaultBus core.MessageBus `inject:""`
 
 	getChildrenChunkSize int
 }
@@ -691,5 +691,5 @@ func (m *LedgerArtifactManager) registerChild(
 }
 
 func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
-	return core.MessageBusFromContext(ctx, m.Bus)
+	return core.MessageBusFromContext(ctx, m.DefaultBus)
 }
