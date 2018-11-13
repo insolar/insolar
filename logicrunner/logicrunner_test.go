@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
@@ -1052,11 +1054,10 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 	assert.NoError(s.t, err, "contract call")
 
 	var result interface{}
-	var contractErr error
+	var contractErr interface{}
 	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
 	assert.NoError(s.t, err, "unmarshal answer")
-	assert.NoError(s.t, contractErr)
-
+	require.Nilf(s.t, contractErr, "[ SignedCall ] Got error %v", contractErr)
 	return result
 }
 
