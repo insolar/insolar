@@ -78,7 +78,7 @@ func getTestData(t *testing.T) (
 		DefaultBus:           mb,
 		getChildrenChunkSize: 100,
 	}
-	be, _ := blockexplorer.NewBlockExplorer(db)
+	be := blockexplorer.NewBlockExplorer(db)
 	be.Link(core.Components{MessageBus: mb})
 	return ctx, db, &am, be, cleaner
 }

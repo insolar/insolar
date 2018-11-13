@@ -36,8 +36,8 @@ type BlockExplorerManager struct {
 }
 
 // NewArtifactManger creates new manager instance.
-func NewBlockExplorer(db *storage.DB) (*BlockExplorerManager, error) {
-	return &BlockExplorerManager{db: db, getHistoryChunkSize: getHistoryChunkSize}, nil
+func NewBlockExplorer(db *storage.DB) *BlockExplorerManager {
+	return &BlockExplorerManager{db: db, getHistoryChunkSize: getHistoryChunkSize}
 }
 
 // Link links external components.

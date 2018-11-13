@@ -17,6 +17,7 @@
 package ledgertestutils
 
 import (
+	"github.com/insolar/insolar/ledger/blockexplorer"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -48,6 +49,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	pm := pulsemanager.NewPulseManager(db)
 	ls := localstorage.NewLocalStorage(db)
+	be := blockexplorer.NewBlockExplorer(db)
 
 	// Init components.
 	if c.MessageBus == nil {
@@ -70,7 +72,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	}
 
 	// Create ledger.
-	l := ledger.NewTestLedger(db, am, pm, jc, ls)
+	l := ledger.NewTestLedger(db, am, pm, jc, ls, be)
 
 	return l, dbcancel
 }

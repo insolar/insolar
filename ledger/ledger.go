@@ -38,7 +38,7 @@ type Ledger struct {
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
 	LocalStorage    core.LocalStorage    `inject:""`
-	BlockExplorer   *blockexplorer.BlockExplorerManager
+	BlockExplorer   core.BlockExplorer   `inject:""`
 }
 
 // GetPulseManager returns PulseManager.
