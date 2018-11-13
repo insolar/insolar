@@ -37,10 +37,10 @@ type Communicator interface {
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
 type NaiveCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
+	PulseHandler     network.PulseHandler     `inject:""`
 
 	phase1packet *packets.Phase1Packet
 	result       map[core.RecordRef]*packets.Phase1Packet
-	pulseHandler network.PulseHandler `inject:""`
 	currentPulse core.Pulse
 }
 
@@ -110,6 +110,8 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 	//	nc.pulseCallback(p.pulseData.)
 	//p.Deserialize(request.GetData().())
 	//packet.DeserializePacket()
+
+	//nc.PulseHandler.OnPulse(p. get pulse)
 
 	//return nil, nil
 }

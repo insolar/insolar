@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/suite"
@@ -34,7 +35,10 @@ type communicatorSuite struct {
 	componentManager component.Manager
 	communicator     Communicator
 	participants     []core.Node
-	hostNetwork      *networkUtils.HostNetworkMock
+	hostNetworkMock  *networkUtils.HostNetworkMock
+
+	consensusNetworkMock *networkUtils.ConsensusNetworkMock
+	pulseHandlerMock     *networkUtils.PulseHandlerMock
 }
 
 func NewSuite() *communicatorSuite {
@@ -46,16 +50,18 @@ func NewSuite() *communicatorSuite {
 }
 
 func (s *communicatorSuite) SetupTest() {
-	s.hostNetwork = networkUtils.NewHostNetworkMock(s.T())
-	s.hostNetwork.RegisterRequestHandlerMock.Set(func(p types.PacketType, p1 network.RequestHandler) {
+	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
+	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
+
+	s.consensusNetworkMock.RegisterRequestHandlerMock.Set(func(p types.PacketType, p1 network.ConsensusRequestHandler) {
 
 	})
 
-	s.hostNetwork.NewRequestBuilderMock.Set(func() (r network.RequestBuilder) {
-		return nil
+	s.consensusNetworkMock.NewRequestBuilderMock.Set(func() (r network.RequestBuilder) {
+		return &hostnetwork.Builder{}
 	})
 
-	s.componentManager.Register(s.communicator, s.hostNetwork)
+	s.componentManager.Register(s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
 	err := s.componentManager.Start(nil)
 	s.NoError(err)
 }
@@ -67,7 +73,5 @@ func (s *communicatorSuite) TestExchangeData() {
 }
 
 func TestNaiveCommunicator(t *testing.T) {
-	t.Skip("fix mocks")
-
 	suite.Run(t, NewSuite())
 }

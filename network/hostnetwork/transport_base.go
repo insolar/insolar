@@ -95,9 +95,9 @@ func (h *transportBase) GetNodeID() core.RecordRef {
 	return h.origin.NodeID
 }
 
-// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
+// NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
 func (h *transportBase) NewRequestBuilder() network.RequestBuilder {
-	return &builder{sender: h.origin}
+	return &Builder{sender: h.origin}
 }
 
 func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
