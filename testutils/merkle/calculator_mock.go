@@ -6,7 +6,6 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Calculator" can be found in github.com/insolar/insolar/network/merkle
 */
 import (
-	context "context"
 	crypto "crypto"
 	"sync/atomic"
 	"time"
@@ -21,17 +20,17 @@ import (
 type CalculatorMock struct {
 	t minimock.Tester
 
-	GetCloudProofFunc       func(p context.Context, p1 *merkle.CloudEntry) (r merkle.OriginHash, r1 *merkle.CloudProof, r2 error)
+	GetCloudProofFunc       func(p *merkle.CloudEntry) (r merkle.OriginHash, r1 *merkle.CloudProof, r2 error)
 	GetCloudProofCounter    uint64
 	GetCloudProofPreCounter uint64
 	GetCloudProofMock       mCalculatorMockGetCloudProof
 
-	GetGlobuleProofFunc       func(p context.Context, p1 *merkle.GlobuleEntry) (r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error)
+	GetGlobuleProofFunc       func(p *merkle.GlobuleEntry) (r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error)
 	GetGlobuleProofCounter    uint64
 	GetGlobuleProofPreCounter uint64
 	GetGlobuleProofMock       mCalculatorMockGetGlobuleProof
 
-	GetPulseProofFunc       func(p context.Context, p1 *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error)
+	GetPulseProofFunc       func(p *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error)
 	GetPulseProofCounter    uint64
 	GetPulseProofPreCounter uint64
 	GetPulseProofMock       mCalculatorMockGetPulseProof
@@ -65,38 +64,37 @@ type mCalculatorMockGetCloudProof struct {
 
 //CalculatorMockGetCloudProofParams represents input parameters of the Calculator.GetCloudProof
 type CalculatorMockGetCloudProofParams struct {
-	p  context.Context
-	p1 *merkle.CloudEntry
+	p *merkle.CloudEntry
 }
 
 //Expect sets up expected params for the Calculator.GetCloudProof
-func (m *mCalculatorMockGetCloudProof) Expect(p context.Context, p1 *merkle.CloudEntry) *mCalculatorMockGetCloudProof {
-	m.mockExpectations = &CalculatorMockGetCloudProofParams{p, p1}
+func (m *mCalculatorMockGetCloudProof) Expect(p *merkle.CloudEntry) *mCalculatorMockGetCloudProof {
+	m.mockExpectations = &CalculatorMockGetCloudProofParams{p}
 	return m
 }
 
 //Return sets up a mock for Calculator.GetCloudProof to return Return's arguments
 func (m *mCalculatorMockGetCloudProof) Return(r merkle.OriginHash, r1 *merkle.CloudProof, r2 error) *CalculatorMock {
-	m.mock.GetCloudProofFunc = func(p context.Context, p1 *merkle.CloudEntry) (merkle.OriginHash, *merkle.CloudProof, error) {
+	m.mock.GetCloudProofFunc = func(p *merkle.CloudEntry) (merkle.OriginHash, *merkle.CloudProof, error) {
 		return r, r1, r2
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Calculator.GetCloudProof method
-func (m *mCalculatorMockGetCloudProof) Set(f func(p context.Context, p1 *merkle.CloudEntry) (r merkle.OriginHash, r1 *merkle.CloudProof, r2 error)) *CalculatorMock {
+func (m *mCalculatorMockGetCloudProof) Set(f func(p *merkle.CloudEntry) (r merkle.OriginHash, r1 *merkle.CloudProof, r2 error)) *CalculatorMock {
 	m.mock.GetCloudProofFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetCloudProof implements github.com/insolar/insolar/network/merkle.Calculator interface
-func (m *CalculatorMock) GetCloudProof(p context.Context, p1 *merkle.CloudEntry) (r merkle.OriginHash, r1 *merkle.CloudProof, r2 error) {
+func (m *CalculatorMock) GetCloudProof(p *merkle.CloudEntry) (r merkle.OriginHash, r1 *merkle.CloudProof, r2 error) {
 	atomic.AddUint64(&m.GetCloudProofPreCounter, 1)
 	defer atomic.AddUint64(&m.GetCloudProofCounter, 1)
 
 	if m.GetCloudProofMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.GetCloudProofMock.mockExpectations, CalculatorMockGetCloudProofParams{p, p1},
+		testify_assert.Equal(m.t, *m.GetCloudProofMock.mockExpectations, CalculatorMockGetCloudProofParams{p},
 			"Calculator.GetCloudProof got unexpected parameters")
 
 		if m.GetCloudProofFunc == nil {
@@ -112,7 +110,7 @@ func (m *CalculatorMock) GetCloudProof(p context.Context, p1 *merkle.CloudEntry)
 		return
 	}
 
-	return m.GetCloudProofFunc(p, p1)
+	return m.GetCloudProofFunc(p)
 }
 
 //GetCloudProofMinimockCounter returns a count of CalculatorMock.GetCloudProofFunc invocations
@@ -132,38 +130,37 @@ type mCalculatorMockGetGlobuleProof struct {
 
 //CalculatorMockGetGlobuleProofParams represents input parameters of the Calculator.GetGlobuleProof
 type CalculatorMockGetGlobuleProofParams struct {
-	p  context.Context
-	p1 *merkle.GlobuleEntry
+	p *merkle.GlobuleEntry
 }
 
 //Expect sets up expected params for the Calculator.GetGlobuleProof
-func (m *mCalculatorMockGetGlobuleProof) Expect(p context.Context, p1 *merkle.GlobuleEntry) *mCalculatorMockGetGlobuleProof {
-	m.mockExpectations = &CalculatorMockGetGlobuleProofParams{p, p1}
+func (m *mCalculatorMockGetGlobuleProof) Expect(p *merkle.GlobuleEntry) *mCalculatorMockGetGlobuleProof {
+	m.mockExpectations = &CalculatorMockGetGlobuleProofParams{p}
 	return m
 }
 
 //Return sets up a mock for Calculator.GetGlobuleProof to return Return's arguments
 func (m *mCalculatorMockGetGlobuleProof) Return(r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error) *CalculatorMock {
-	m.mock.GetGlobuleProofFunc = func(p context.Context, p1 *merkle.GlobuleEntry) (merkle.OriginHash, *merkle.GlobuleProof, error) {
+	m.mock.GetGlobuleProofFunc = func(p *merkle.GlobuleEntry) (merkle.OriginHash, *merkle.GlobuleProof, error) {
 		return r, r1, r2
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Calculator.GetGlobuleProof method
-func (m *mCalculatorMockGetGlobuleProof) Set(f func(p context.Context, p1 *merkle.GlobuleEntry) (r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error)) *CalculatorMock {
+func (m *mCalculatorMockGetGlobuleProof) Set(f func(p *merkle.GlobuleEntry) (r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error)) *CalculatorMock {
 	m.mock.GetGlobuleProofFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetGlobuleProof implements github.com/insolar/insolar/network/merkle.Calculator interface
-func (m *CalculatorMock) GetGlobuleProof(p context.Context, p1 *merkle.GlobuleEntry) (r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error) {
+func (m *CalculatorMock) GetGlobuleProof(p *merkle.GlobuleEntry) (r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error) {
 	atomic.AddUint64(&m.GetGlobuleProofPreCounter, 1)
 	defer atomic.AddUint64(&m.GetGlobuleProofCounter, 1)
 
 	if m.GetGlobuleProofMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.GetGlobuleProofMock.mockExpectations, CalculatorMockGetGlobuleProofParams{p, p1},
+		testify_assert.Equal(m.t, *m.GetGlobuleProofMock.mockExpectations, CalculatorMockGetGlobuleProofParams{p},
 			"Calculator.GetGlobuleProof got unexpected parameters")
 
 		if m.GetGlobuleProofFunc == nil {
@@ -179,7 +176,7 @@ func (m *CalculatorMock) GetGlobuleProof(p context.Context, p1 *merkle.GlobuleEn
 		return
 	}
 
-	return m.GetGlobuleProofFunc(p, p1)
+	return m.GetGlobuleProofFunc(p)
 }
 
 //GetGlobuleProofMinimockCounter returns a count of CalculatorMock.GetGlobuleProofFunc invocations
@@ -199,38 +196,37 @@ type mCalculatorMockGetPulseProof struct {
 
 //CalculatorMockGetPulseProofParams represents input parameters of the Calculator.GetPulseProof
 type CalculatorMockGetPulseProofParams struct {
-	p  context.Context
-	p1 *merkle.PulseEntry
+	p *merkle.PulseEntry
 }
 
 //Expect sets up expected params for the Calculator.GetPulseProof
-func (m *mCalculatorMockGetPulseProof) Expect(p context.Context, p1 *merkle.PulseEntry) *mCalculatorMockGetPulseProof {
-	m.mockExpectations = &CalculatorMockGetPulseProofParams{p, p1}
+func (m *mCalculatorMockGetPulseProof) Expect(p *merkle.PulseEntry) *mCalculatorMockGetPulseProof {
+	m.mockExpectations = &CalculatorMockGetPulseProofParams{p}
 	return m
 }
 
 //Return sets up a mock for Calculator.GetPulseProof to return Return's arguments
 func (m *mCalculatorMockGetPulseProof) Return(r merkle.OriginHash, r1 *merkle.PulseProof, r2 error) *CalculatorMock {
-	m.mock.GetPulseProofFunc = func(p context.Context, p1 *merkle.PulseEntry) (merkle.OriginHash, *merkle.PulseProof, error) {
+	m.mock.GetPulseProofFunc = func(p *merkle.PulseEntry) (merkle.OriginHash, *merkle.PulseProof, error) {
 		return r, r1, r2
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Calculator.GetPulseProof method
-func (m *mCalculatorMockGetPulseProof) Set(f func(p context.Context, p1 *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error)) *CalculatorMock {
+func (m *mCalculatorMockGetPulseProof) Set(f func(p *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error)) *CalculatorMock {
 	m.mock.GetPulseProofFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetPulseProof implements github.com/insolar/insolar/network/merkle.Calculator interface
-func (m *CalculatorMock) GetPulseProof(p context.Context, p1 *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error) {
+func (m *CalculatorMock) GetPulseProof(p *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error) {
 	atomic.AddUint64(&m.GetPulseProofPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulseProofCounter, 1)
 
 	if m.GetPulseProofMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.GetPulseProofMock.mockExpectations, CalculatorMockGetPulseProofParams{p, p1},
+		testify_assert.Equal(m.t, *m.GetPulseProofMock.mockExpectations, CalculatorMockGetPulseProofParams{p},
 			"Calculator.GetPulseProof got unexpected parameters")
 
 		if m.GetPulseProofFunc == nil {
@@ -246,7 +242,7 @@ func (m *CalculatorMock) GetPulseProof(p context.Context, p1 *merkle.PulseEntry)
 		return
 	}
 
-	return m.GetPulseProofFunc(p, p1)
+	return m.GetPulseProofFunc(p)
 }
 
 //GetPulseProofMinimockCounter returns a count of CalculatorMock.GetPulseProofFunc invocations
