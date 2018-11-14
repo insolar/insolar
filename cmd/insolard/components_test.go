@@ -47,6 +47,8 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
+		false,
+		"",
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, cm)

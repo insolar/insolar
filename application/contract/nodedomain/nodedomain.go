@@ -83,7 +83,7 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 
 		bConf := map[string]string{}
 		bConf["public_key"] = recordInfo.PublicKey
-		bConf["host"] = recordInfo.IP
+		bConf["host"] = ""
 
 		result = append(result, bConf)
 	}

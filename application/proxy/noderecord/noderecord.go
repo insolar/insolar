@@ -9,7 +9,6 @@ import (
 type RecordInfo struct {
 	PublicKey string
 	Role      core.NodeRole
-	IP        string
 }
 
 // PrototypeReference to prototype of this contract

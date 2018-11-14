@@ -27,7 +27,6 @@ import (
 type RecordInfo struct {
 	PublicKey string
 	Role      core.NodeRole
-	IP        string
 }
 
 // NodeRecord contains info about node
@@ -59,7 +58,6 @@ func NewNodeRecord(publicKey string, roleStr string, ip string) (*NodeRecord, er
 		Record: RecordInfo{
 			PublicKey: publicKey,
 			Role:      role,
-			IP:        ip,
 		},
 	}, nil
 }

@@ -59,7 +59,6 @@ func TestNodeRecord_GetNodeInfo(t *testing.T) {
 	assert.Equal(t, TestPubKey, info.PublicKey)
 	r := core.GetRoleFromString(TestRole)
 	assert.Equal(t, r, info.Role)
-	assert.Equal(t, TestIP, info.IP)
 }
 
 func TestNodeRecord_GetRole(t *testing.T) {

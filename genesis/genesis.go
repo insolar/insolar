@@ -52,6 +52,8 @@ type Genesis struct {
 	rootPubKey    string
 	rootBalance   uint
 	prototypeRefs map[string]*core.RecordRef
+	isBootstrap   bool
+	nodesInfo     []map[string]string
 }
 
 // Info returns json with references for info api endpoint
@@ -73,11 +75,13 @@ func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 }
 
 // NewGenesis creates new Genesis
-func NewGenesis(cfg configuration.Genesis) (*Genesis, error) {
+func NewGenesis(cfg configuration.Genesis, isBootstrap bool, nodesInfo []map[string]string) (*Genesis, error) {
 	genesis := &Genesis{}
 	genesis.rootKeysFile = cfg.RootKeys
 	genesis.rootBalance = cfg.RootBalance
 	genesis.rootDomainRef = &core.RecordRef{}
+	genesis.isBootstrap = isBootstrap
+	genesis.nodesInfo = nodesInfo
 	return genesis, nil
 }
 
@@ -342,6 +346,16 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 	err = g.activateSmartContracts(ctx, am, cb)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ]")
+	}
+
+	if g.isBootstrap {
+		for _, nodeInfo := range g.nodesInfo {
+			nc := c.NetworkCoordinator
+			_, err := nc.RegisterNode(ctx, nodeInfo["public_key"], 0, 0, nodeInfo["role"], "")
+			if err != nil {
+				return errors.Wrap(err, "can't register node")
+			}
+		}
 	}
 
 	return nil
