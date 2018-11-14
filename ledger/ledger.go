@@ -62,7 +62,7 @@ func (l *Ledger) GetLocalStorage() core.LocalStorage {
 // NewLedger creates new ledger instance.
 func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) {
 	var err error
-	db, err := storage.NewDB(conf, nil, storage.NewRecentObjectsIndex())
+	db, err := storage.NewDB(conf, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
@@ -79,7 +79,7 @@ func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) 
 		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
 
-	handler, err := artifactmanager.NewMessageHandler(db)
+	handler, err := artifactmanager.NewMessageHandler(db, storage.NewRecentObjectsIndex(8))
 	if err != nil {
 		return nil, err
 	}

@@ -20,6 +20,7 @@ func NewRecentObjectsIndex(defaultTtl int) *RecentObjectsIndex {
 	return &RecentObjectsIndex{
 		RecentObjects: map[string]*RecentObjectsIndexMeta{},
 		DefaultTtl:    defaultTtl,
+		lock:          sync.Mutex{},
 	}
 }
 

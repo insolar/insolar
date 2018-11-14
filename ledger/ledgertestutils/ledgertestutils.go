@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 
@@ -43,7 +44,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
 
-	handler, err := artifactmanager.NewMessageHandler(db)
+	handler, err := artifactmanager.NewMessageHandler(db, storage.NewRecentObjectsIndex(0))
 	assert.NoError(t, err)
 	am, err := artifactmanager.NewArtifactManger(db)
 	assert.NoError(t, err)

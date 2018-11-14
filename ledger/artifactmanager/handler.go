@@ -37,11 +37,11 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 type MessageHandler struct {
 	db              *storage.DB
 	jetDropHandlers map[core.MessageType]internalHandler
-	recentObjects   storage.RecentObjectsIndex
+	recentObjects   *storage.RecentObjectsIndex
 }
 
 // NewMessageHandler creates new handler.
-func NewMessageHandler(db *storage.DB, recentObjects storage.RecentObjectsIndex) (*MessageHandler, error) {
+func NewMessageHandler(db *storage.DB, recentObjects *storage.RecentObjectsIndex) (*MessageHandler, error) {
 	return &MessageHandler{
 		db:              db,
 		jetDropHandlers: map[core.MessageType]internalHandler{},

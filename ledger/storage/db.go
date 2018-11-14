@@ -418,10 +418,9 @@ func (db *DB) BeginTransaction(update bool) *TransactionManager {
 		db.dropWG.Add(1)
 	}
 	return &TransactionManager{
-		db:                 db,
-		update:             update,
-		txupdates:          make(map[string]keyval),
-		recentObjectsIndex: db.recentObjectsIndex,
+		db:        db,
+		update:    update,
+		txupdates: make(map[string]keyval),
 	}
 }
 

@@ -66,7 +66,7 @@ func getTestData(t *testing.T) (
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	mb := testmessagebus.NewTestMessageBus()
-	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}}
+	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, recentObjects: storage.NewRecentObjectsIndex(1)}
 	handler.Link(core.Components{MessageBus: mb})
 	am := LedgerArtifactManager{
 		db:                   db,
