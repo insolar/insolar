@@ -18,9 +18,11 @@ package servicenetwork
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
@@ -83,22 +85,21 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) error {
 	n.inject(components)
 	n.routingTable.Start(components)
-	log.Infoln("Network starts listening")
-	n.hostNetwork.Start()
+	log.Infoln("Network starts listening...")
+	n.hostNetwork.Start(ctx)
 
 	n.controller.Inject(components)
 
 	log.Infoln("Bootstrapping network...")
-	n.bootstrap()
-
-	err := n.controller.AnalyzeNetwork()
+	err := n.controller.Bootstrap(ctx)
 	if err != nil {
-		log.Error(err)
+		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	err = n.controller.Authorize()
+	log.Infoln("Authorizing network...")
+	err = n.controller.Authorize(ctx)
 	if err != nil {
-		return errors.Wrap(err, "error authorizing node")
+		return errors.Wrap(err, "Failed to authorize network")
 	}
 
 	return nil
@@ -117,43 +118,38 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) bootstrap() {
-	err := n.controller.Bootstrap()
-	if err != nil {
-		log.Errorln("Failed to bootstrap network", err.Error())
-	}
-}
-
 func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
-	ctx := context.TODO()
+	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
+	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
 	log.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.pulseManager == nil {
-		log.Error("PulseManager is not initialized")
+		logger.Error("PulseManager is not initialized")
 		return
 	}
 	currentPulse, err := n.pulseManager.Current(ctx)
 	if err != nil {
-		log.Error(errors.Wrap(err, "Could not get current pulse"))
+		logger.Error(errors.Wrap(err, "Could not get current pulse"))
 		return
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
 		err = n.pulseManager.Set(ctx, pulse)
 		if err != nil {
-			log.Error(errors.Wrap(err, "Failed to set pulse"))
+			logger.Error(errors.Wrap(err, "Failed to set pulse"))
 			return
 		}
-		log.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-		go func(network *ServiceNetwork) {
-			network.controller.ResendPulseToKnownHosts(pulse)
+		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
+		go func(logger core.Logger, network *ServiceNetwork) {
+			// FIXME: we need to resend pulse only to nodes outside the globe, we send pulse to nodes inside the globe on phase1 of the consensus
+			// network.controller.ResendPulseToKnownHosts(pulse)
 			if network.coordinator == nil {
 				return
 			}
 			err := network.coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
 			if err != nil {
-				log.Warn("Writing active nodes to ledger: " + err.Error())
+				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
-		}(n)
+		}(logger, n)
 
 		// TODO: PLACE NEW CONSENSUS HERE
 	}

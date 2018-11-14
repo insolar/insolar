@@ -275,12 +275,12 @@ func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsar
 		return
 	}
 
-	go func() {
-		err = t.Start()
+	go func(ctx context.Context) {
+		err = t.Start(ctx)
 		if err != nil {
 			logger.Error(err)
 		}
-	}()
+	}(ctx)
 
 	if err != nil {
 		return

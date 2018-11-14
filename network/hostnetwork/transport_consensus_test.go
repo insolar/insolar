@@ -69,8 +69,8 @@ func TestTransportConsensus_SendRequest(t *testing.T) {
 	}
 	cn2.RegisterRequestHandler(types.Phase1, handler)
 
-	cn2.Start()
-	cn1.Start()
+	cn2.Start(testContext)
+	cn1.Start(testContext)
 	defer func() {
 		cn1.Stop()
 		cn2.Stop()

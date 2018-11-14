@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"context"
 	"encoding/gob"
 	"sync"
 	"testing"
@@ -39,6 +40,8 @@ const (
 	ID2 string = "234"
 	ID3 string = "345"
 )
+
+var testContext = context.Background()
 
 type MockResolver struct {
 	mapping  map[core.RecordRef]*host.Host
@@ -112,7 +115,7 @@ func TestNewInternalTransport(t *testing.T) {
 func TestNewInternalTransport2(t *testing.T) {
 	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
 	assert.NoError(t, err)
-	go tp.Start()
+	go tp.Start(testContext)
 	// no assertion, check that Stop does not block
 	defer func(t *testing.T) {
 		tp.Stop()
@@ -168,8 +171,8 @@ func TestNewHostTransport(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start()
-	t1.Start()
+	t2.Start(testContext)
+	t1.Start(testContext)
 
 	defer func() {
 		t1.Stop()
@@ -191,7 +194,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
 	assert.NoError(t, err)
 	t1 := NewHostTransport(i1, m)
-	t1.Start()
+	t1.Start(testContext)
 	defer t1.Stop()
 
 	unknownID := core.NewRefFromBase58("unknown")
@@ -228,8 +231,8 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start()
-	t1.Start()
+	t2.Start(testContext)
+	t1.Start(testContext)
 	defer func() {
 		t1.Stop()
 		t2.Stop()
@@ -261,8 +264,8 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start()
-	t1.Start()
+	t2.Start(testContext)
+	t1.Start(testContext)
 	defer func() {
 		t1.Stop()
 		t2.Stop()
@@ -301,9 +304,9 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start()
+	t2.Start(testContext)
 	defer t2.Stop()
-	t1.Start()
+	t1.Start(testContext)
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
@@ -334,8 +337,8 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(InvalidPacket, handler)
 
-	t2.Start()
-	t1.Start()
+	t2.Start(testContext)
+	t1.Start(testContext)
 	defer func() {
 		t1.Stop()
 		t2.Stop()
@@ -358,7 +361,7 @@ func TestDoubleStart(t *testing.T) {
 
 	f := func(group *sync.WaitGroup, t network.InternalTransport) {
 		wg.Done()
-		t.Start()
+		t.Start(testContext)
 	}
 	go f(&wg, tp)
 	go f(&wg, tp)
