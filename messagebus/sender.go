@@ -25,6 +25,7 @@ import (
 // Sender is an internal interface used by recorder and player. It should not be publicated.
 //
 // Sender provides access to private MessageBus methods.
+//go:generate minimock -i github.com/insolar/insolar/messagebus.sender -o .
 type sender interface {
 	core.MessageBus
 	CreateParcel(ctx context.Context, pulse core.PulseNumber, msg core.Message, token core.RoutingToken) (core.Parcel, error)

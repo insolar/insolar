@@ -37,6 +37,7 @@ const (
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
+// FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
 type Ledger interface {
 	// GetArtifactManager returns artifact manager to work with.
 	GetArtifactManager() ArtifactManager
@@ -52,6 +53,7 @@ type Ledger interface {
 }
 
 // PulseManager provides Ledger's methods related to Pulse.
+//go:generate minimock -i github.com/insolar/insolar/core.PulseManager -o ../testutils -s _mock.go
 type PulseManager interface {
 	// Current returns current pulse structure.
 	Current(context.Context) (*Pulse, error)
@@ -224,6 +226,7 @@ type RefIterator interface {
 }
 
 // LocalStorage allows a node to save local data.
+//go:generate minimock -i github.com/insolar/insolar/core.LocalStorage -o ../testutils -s _mock.go
 type LocalStorage interface {
 	// Set saves data in storage.
 	Set(ctx context.Context, pulse PulseNumber, key []byte, data []byte) error

@@ -19,9 +19,12 @@ package transport
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net"
 
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
@@ -39,11 +42,47 @@ type udpTransport struct {
 	serverConn net.PacketConn
 }
 
+type udpSerializer struct{}
+
+func (b *udpSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
+	data, ok := q.Data.(consensus.ConsensusPacket)
+	if !ok {
+		return nil, errors.New("could not convert packet to ConsensusPacket type")
+	}
+	header := &consensus.RoutingHeader{
+		OriginID:   q.Sender.ShortID,
+		TargetID:   q.Receiver.ShortID,
+		PacketType: q.Type,
+	}
+	err := data.SetPacketHeader(header)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not set routing information for ConsensusPacket")
+	}
+	return data.Serialize()
+}
+
+func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error) {
+	data, err := consensus.ExtractPacket(conn)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert network datagram to ConsensusPacket")
+	}
+	header, err := data.GetPacketHeader()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get routing information from ConsensusPacket")
+	}
+	p := &packet.Packet{}
+	p.Sender = &host.Host{ShortID: header.OriginID}
+	p.Receiver = &host.Host{ShortID: header.TargetID}
+	p.Type = header.PacketType
+	return p, nil
+}
+
 func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
 	transport := &udpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
 		serverConn:    conn}
 	transport.sendFunc = transport.send
+	transport.serializer = &udpSerializer{}
 
 	return transport, nil
 }
@@ -104,7 +143,7 @@ func (udpT *udpTransport) Stop() {
 
 func (udpT *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
 	r := bytes.NewReader(data)
-	msg, err := packet.DeserializePacket(r)
+	msg, err := udpT.serializer.DeserializePacket(r)
 	if err != nil {
 		log.Error("[ handleAcceptedConnection ] ", err)
 		return

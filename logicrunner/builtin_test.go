@@ -18,13 +18,13 @@ package logicrunner
 
 import (
 	"context"
+	"crypto"
 	"testing"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/testutils/certificate"
+	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
@@ -54,16 +54,26 @@ func TestBareHelloworld(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 
-	ce := certificate.GetTestCertificate()
-	nk := nodekeeper.GetTestNodekeeper(ce)
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+		return nil, nil
+	}
+	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
+
+	nk := nodekeeper.GetTestNodekeeper(mock)
 
 	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 
-	mb := testmessagebus.NewTestMessageBus()
-
+	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseNumber = 0
 
 	l.GetPulseManager().Set(
@@ -72,9 +82,11 @@ func TestBareHelloworld(t *testing.T) {
 	)
 
 	nw := network.GetTestNetwork()
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	cm := &component.Manager{}
-	cm.Register(nk, l, lr, nw, mb)
+	cm.Register(scheme)
+	cm.Inject(nk, l, lr, nw, mb, routingTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -108,9 +120,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
-	key, _ := ecdsa.GeneratePrivateKey()
-
-	parcel, _ := message.NewParcel(ctx, msg, testutils.RandomRef(), key, mb.PulseNumber, nil)
+	parcel, _ := parcelFactory.Create(ctx, msg, testutils.RandomRef(), mb.PulseNumber, nil)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
@@ -129,8 +139,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
-	key, _ = ecdsa.GeneratePrivateKey()
-	parcel, _ = message.NewParcel(ctx, msg, testutils.RandomRef(), key, mb.PulseNumber, nil)
+	parcel, _ = parcelFactory.Create(ctx, msg, testutils.RandomRef(), mb.PulseNumber, nil)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(

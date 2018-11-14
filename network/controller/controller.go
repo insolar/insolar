@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/auth"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
@@ -116,9 +115,10 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 func NewNetworkController(
 	pulseCallback network.OnPulse,
 	options *common.Options,
-	transport hostnetwork.InternalTransport,
+	transport network.InternalTransport,
 	routingTable network.RoutingTable,
-	network network.HostNetwork) network.Controller {
+	network network.HostNetwork,
+	scheme core.PlatformCryptographyScheme) network.Controller {
 
 	c := Controller{}
 	c.network = network
@@ -126,7 +126,7 @@ func NewNetworkController(
 	c.bootstrapController = NewBootstrapController(c.options, transport)
 	c.authController = auth.NewAuthorizationController(c.options, c.bootstrapController, transport)
 	c.pulseController = NewPulseController(pulseCallback, network, routingTable)
-	c.rpcController = NewRPCController(c.options, network)
+	c.rpcController = NewRPCController(c.options, network, scheme)
 
 	return &c
 }

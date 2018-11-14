@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -52,6 +51,8 @@ const (
 
 // DB represents BadgerDB storage implementation.
 type DB struct {
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+
 	db         *badger.DB
 	genesisRef *core.RecordRef
 
@@ -107,7 +108,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 }
 
 // Bootstrap creates initial records in storage.
-func (db *DB) Bootstrap(ctx context.Context) error {
+func (db *DB) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
 	getGenesisRef := func() (*core.RecordRef, error) {
@@ -184,6 +185,11 @@ func (db *DB) GenesisRef() *core.RecordRef {
 func (db *DB) Close() error {
 	// TODO: add close flag and mutex guard on Close method
 	return db.db.Close()
+}
+
+// Stop stops DB component.
+func (db *DB) Stop(ctx context.Context) error {
+	return db.Close()
 }
 
 // GetBlob returns binary value stored by record ID.
@@ -308,7 +314,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 	var err error
 	db.waitinflight()
 
-	hw := hash.NewIDHash()
+	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err = hw.Write(prevHash)
 	if err != nil {
 		return nil, nil, err
@@ -477,7 +483,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 // SetMessage persists message to the database
 func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, genericMessage core.Message) error {
 	messageBytes := message.ToBytes(genericMessage)
-	hw := hash.NewIDHash()
+	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
 	if err != nil {
 		return err

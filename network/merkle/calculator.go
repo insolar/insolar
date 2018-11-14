@@ -18,68 +18,73 @@ package merkle
 
 import (
 	"context"
+	"crypto"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/merkle.Calculator -o ../../testutils/merkle -s _mock.go
-type Calculator interface {
-	GetPulseProof(context.Context, *PulseEntry) ([]byte, *PulseProof, error)
-	GetGlobuleProof(context.Context, *GlobuleEntry) ([]byte, *GlobuleProof, error)
-	GetCloudProof(context.Context, *CloudEntry) ([]byte, *CloudProof, error)
-}
-
 type calculator struct {
-	Ledger      core.Ledger      `inject:""`
-	NodeNetwork core.NodeNetwork `inject:""`
-	Certificate core.Certificate `inject:""`
+	ArtifactManager            core.ArtifactManager            `inject:""`
+	NodeNetwork                core.NodeNetwork                `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
+
+	merkleHelper *merkleHelper
 }
 
 func NewCalculator() Calculator {
 	return &calculator{}
 }
 
-func (c *calculator) getStateHash(role core.NodeRole) ([]byte, error) {
-	// TODO: do something with role
-	return c.Ledger.GetArtifactManager().State()
+func (c *calculator) Init(ctx context.Context) error {
+	c.merkleHelper = newMerkleHelper(c.PlatformCryptographyScheme)
+	return nil
 }
 
-func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) ([]byte, *PulseProof, error) {
+func (c *calculator) getStateHash(role core.NodeRole) (OriginHash, error) {
+	// TODO: do something with role
+	return c.ArtifactManager.State()
+}
+
+func (c *calculator) GetPulseProof(ctx context.Context, entry *PulseEntry) (OriginHash, *PulseProof, error) {
 	role := c.NodeNetwork.GetOrigin().Role()
 	stateHash, err := c.getStateHash(role)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't get node stateHash")
 	}
 
-	pulseHash := entry.hash()
-	nodeInfoHash := nodeInfoHash(pulseHash, stateHash)
+	pulseHash := entry.hash(c.merkleHelper)
+	nodeInfoHash := c.merkleHelper.nodeInfoHash(pulseHash, stateHash)
 
-	signature, err := ecdsa.Sign(nodeInfoHash, c.Certificate.GetEcdsaPrivateKey())
+	signature, err := c.CryptographyService.Sign(nodeInfoHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Could't sign node info hash")
 	}
 
 	return pulseHash, &PulseProof{
+		BaseProof: BaseProof{
+			Signature: signature.Bytes(),
+		},
 		StateHash: stateHash,
-		Signature: signature,
 	}, nil
 }
 
-func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) ([]byte, *GlobuleProof, error) {
-	nodeRoot := entry.hash()
+func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (OriginHash, *GlobuleProof, error) {
+	nodeRoot := entry.hash(c.merkleHelper)
 	nodeCount := uint32(len(entry.ProofSet))
-	globuleInfoHash := globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
-	globuleHash := globuleHash(globuleInfoHash, nodeRoot)
+	globuleInfoHash := c.merkleHelper.globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
+	globuleHash := c.merkleHelper.globuleHash(globuleInfoHash, nodeRoot)
 
-	signature, err := ecdsa.Sign(globuleHash, c.Certificate.GetEcdsaPrivateKey())
+	signature, err := c.CryptographyService.Sign(globuleHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetGlobuleProof ] Could't sign globule hash")
 	}
 
 	return globuleHash, &GlobuleProof{
-		Signature:     signature,
+		BaseProof: BaseProof{
+			Signature: signature.Bytes(),
+		},
 		PrevCloudHash: entry.PrevCloudHash,
 		GlobuleIndex:  entry.GlobuleIndex,
 		NodeCount:     nodeCount,
@@ -87,15 +92,22 @@ func (c *calculator) GetGlobuleProof(ctx context.Context, entry *GlobuleEntry) (
 	}, nil
 }
 
-func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) ([]byte, *CloudProof, error) {
-	cloudHash := entry.hash()
+func (c *calculator) GetCloudProof(ctx context.Context, entry *CloudEntry) (OriginHash, *CloudProof, error) {
+	cloudHash := entry.hash(c.merkleHelper)
 
-	signature, err := ecdsa.Sign(cloudHash, c.Certificate.GetEcdsaPrivateKey())
+	signature, err := c.CryptographyService.Sign(cloudHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ GetCloudProof ] Could't sign cloud hash")
 	}
 
 	return cloudHash, &CloudProof{
-		Signature: signature,
+		BaseProof: BaseProof{
+			Signature: signature.Bytes(),
+		},
 	}, nil
+}
+
+func (c *calculator) IsValid(proof Proof, hash OriginHash, publicKey crypto.PublicKey) bool {
+	signature := core.SignatureFromBytes(proof.signature())
+	return c.CryptographyService.Verify(publicKey, signature, proof.hash(hash, c.merkleHelper))
 }

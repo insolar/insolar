@@ -18,11 +18,14 @@ package merkle
 
 import (
 	"context"
+	"crypto"
 	"testing"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/stretchr/testify/assert"
@@ -46,9 +49,7 @@ func (t *calculatorSuite) TestGetNodeProof() {
 
 	t.Assert().NoError(err)
 	t.Assert().NotNil(np)
-
-	valid := np.IsValid(context.Background(), t.nodeNetwork.GetOrigin(), ph)
-	t.Assert().True(valid)
+	t.Assert().NotNil(ph)
 }
 
 func (t *calculatorSuite) TestGetGlobuleProof() {
@@ -60,7 +61,7 @@ func (t *calculatorSuite) TestGetGlobuleProof() {
 	// globuleHash, err := t.calculator.GetGlobuleHash(context.Background(), t.nodeNetwork.GetActiveNodes())
 	// t.Assert().NoError(err)
 	//
-	// valid := gp.IsValid(context.Background(), t.nodeNetwork.GetOrigin(), globuleHash)
+	// valid := gp.isValid(context.Background(), t.nodeNetwork.GetOrigin(), globuleHash)
 	// t.Assert().True(valid)
 }
 
@@ -73,23 +74,38 @@ func (t *calculatorSuite) TestGetCloudProof() {
 	// cloudHash, err := t.calculator.GetCloudHash(context.Background())
 	// t.Assert().NoError(err)
 	//
-	// valid := cp.IsValid(context.Background(), t.nodeNetwork.GetOrigin(), cloudHash)
+	// valid := cp.isValid(context.Background(), t.nodeNetwork.GetOrigin(), cloudHash)
 	// t.Assert().True(valid)
 }
 
 func TestCalculator(t *testing.T) {
 	c := certificate.GetTestCertificate()
-	nk := nodekeeper.GetTestNodekeeper(c)
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, clean := ledgertestutils.TmpLedger(t, "", core.Components{})
 
 	calculator := &calculator{}
 
 	cm := component.Manager{}
-	cm.Register(nk, l, c, calculator)
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+		return "key", nil
+	}
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	assert.NotNil(t, calculator.Ledger)
+	nk := nodekeeper.GetTestNodekeeper(mock)
+	cm.Inject(nk, l.ArtifactManager, c, calculator, mock, scheme)
+
+	assert.NotNil(t, calculator.ArtifactManager)
 	assert.NotNil(t, calculator.NodeNetwork)
-	assert.NotNil(t, calculator.Certificate)
+	assert.NotNil(t, calculator.CryptographyService)
+	assert.NotNil(t, calculator.PlatformCryptographyScheme)
+
+	err := cm.Init(context.Background())
+	assert.NoError(t, err)
 
 	s := &calculatorSuite{
 		Suite:        suite.Suite{},

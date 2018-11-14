@@ -31,7 +31,25 @@ func TestInitComponents(t *testing.T) {
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 
-	cm, _, repl, err := InitComponents(ctx, cfg, false, "")
+	bootstrapComponents := InitBootstrapComponents(ctx, cfg)
+	cert := InitCertificate(
+		ctx,
+		cfg,
+		false,
+		bootstrapComponents.CryptographyService,
+		bootstrapComponents.KeyProcessor,
+	)
+	cm, _, repl, err := InitComponents(
+		ctx,
+		cfg,
+		bootstrapComponents.CryptographyService,
+		bootstrapComponents.PlatformCryptographyScheme,
+		bootstrapComponents.KeyStore,
+		bootstrapComponents.KeyProcessor,
+		cert,
+		false,
+		"",
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, cm)
 	assert.NotNil(t, repl)

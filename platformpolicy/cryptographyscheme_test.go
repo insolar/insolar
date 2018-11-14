@@ -14,7 +14,20 @@
  *    limitations under the License.
  */
 
-// Package hash contains Writer interface and SHA3 hasher.
-//
-// hash.Writer intended to be implemented by records for proper hashing.
-package hash
+package platformpolicy
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewPlatformPolicy(t *testing.T) {
+	pcs := NewPlatformCryptographyScheme()
+
+	assert.NotNil(t, pcs)
+
+	pcsImpl := pcs.(*platformCryptographyScheme)
+	assert.NotNil(t, pcsImpl.HashProvider)
+	assert.NotNil(t, pcsImpl.SignProvider)
+}

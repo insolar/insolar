@@ -14,19 +14,12 @@
  *    limitations under the License.
  */
 
-package id
+package privatekey
 
 import (
-	"crypto/rand"
-	"io"
+	"crypto"
 )
 
-var random io.Reader = &cryptoReader{}
-
-type cryptoReader struct{}
-
-// Read implements io.Reader interface.
-// Can be replaced with mock reader for testing purposes.
-func (cr *cryptoReader) Read(b []byte) (n int, err error) {
-	return rand.Read(b)
+type Loader interface {
+	Load(string) (crypto.PrivateKey, error)
 }

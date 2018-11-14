@@ -17,10 +17,7 @@
 package network
 
 import (
-	"crypto/ecdsa"
-
 	"github.com/insolar/insolar/core"
-	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 type testNetwork struct {
@@ -41,10 +38,6 @@ func (n *testNetwork) GetAddress() string {
 }
 func (n *testNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 
-}
-func (n *testNetwork) GetPrivateKey() *ecdsa.PrivateKey {
-	key, _ := ecdsa2.GeneratePrivateKey()
-	return key
 }
 
 func GetTestNetwork() core.Network {

@@ -17,6 +17,8 @@
 package routing
 
 import (
+	"strconv"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -32,24 +34,33 @@ func (t *Table) isLocalNode(core.RecordRef) bool {
 	return true
 }
 
-func (t *Table) resolveRemoteNode(ref core.RecordRef) (string, error) {
-	return "", errors.New("not implemented")
+func (t *Table) resolveRemoteNode(ref core.RecordRef) (*host.Host, error) {
+	return nil, errors.New("not implemented")
 }
 
 func (t *Table) addRemoteHost(h *host.Host) {
 	log.Warn("not implemented")
 }
 
-// Resolve NodeID -> Address. Can initiate network requests.
-func (t *Table) Resolve(ref core.RecordRef) (string, error) {
+// Resolve NodeID -> ShortID, Address. Can initiate network requests.
+func (t *Table) Resolve(ref core.RecordRef) (*host.Host, error) {
 	if t.isLocalNode(ref) {
 		node := t.keeper.GetActiveNode(ref)
 		if node == nil {
-			return "", errors.New("no such local node")
+			return nil, errors.New("no such local node with NodeID: " + ref.String())
 		}
-		return node.PhysicalAddress(), nil
+		return host.NewHostNS(node.PhysicalAddress(), node.ID(), node.ShortID())
 	}
 	return t.resolveRemoteNode(ref)
+}
+
+// ResolveS ShortID -> NodeID, Address for node inside current globe.
+func (t *Table) ResolveS(id core.ShortNodeID) (*host.Host, error) {
+	node := t.keeper.GetActiveNodeByShortID(id)
+	if node == nil {
+		return nil, errors.New("no such local node with ShortID: " + strconv.FormatUint(uint64(id), 10))
+	}
+	return host.NewHostNS(node.PhysicalAddress(), node.ID(), node.ShortID())
 }
 
 // AddToKnownHosts add host to routing table.

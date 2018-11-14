@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/core"
@@ -31,13 +32,15 @@ import (
 )
 
 func TestPlayer_Send(t *testing.T) {
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
 	ctx := inslogger.TestContext(t)
 	msg := message.GenesisRequest{Name: "test"}
 	parcel := message.Parcel{Msg: &msg}
-	msgHash := GetMessageHash(&parcel)
+	msgHash := GetMessageHash(pcs, &parcel)
 	pm := testutils.NewPulseManagerMock(mc)
 	pm.CurrentMock.Return(&core.Pulse{PulseNumber: 42}, nil)
 	s := NewsenderMock(mc)
@@ -45,7 +48,7 @@ func TestPlayer_Send(t *testing.T) {
 		return &parcel, nil
 	}
 	tape := NewtapeMock(mc)
-	player := NewPlayer(s, tape, pm)
+	player := newPlayer(s, tape, pm, pcs)
 
 	t.Run("with no reply on the storageTape doesn't send the message and returns an error", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(nil, ErrNoReply)

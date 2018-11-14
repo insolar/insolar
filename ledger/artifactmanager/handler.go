@@ -35,32 +35,32 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	db              *storage.DB
-	jetDropHandlers map[core.MessageType]internalHandler
+	db                         *storage.DB
+	jetDropHandlers            map[core.MessageType]internalHandler
+	Bus                        core.MessageBus                 `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 }
 
 // NewMessageHandler creates new handler.
-func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
+func NewMessageHandler(db *storage.DB) *MessageHandler {
 	return &MessageHandler{
 		db:              db,
 		jetDropHandlers: map[core.MessageType]internalHandler{},
-	}, nil
+	}
 }
 
-// Link links external components.
-func (h *MessageHandler) Link(components core.Components) error {
-	bus := components.MessageBus
-
-	bus.MustRegister(core.TypeGetCode, h.messagePersistingWrapper(h.handleGetCode))
-	bus.MustRegister(core.TypeGetObject, h.messagePersistingWrapper(h.handleGetObject))
-	bus.MustRegister(core.TypeGetDelegate, h.messagePersistingWrapper(h.handleGetDelegate))
-	bus.MustRegister(core.TypeGetChildren, h.messagePersistingWrapper(h.handleGetChildren))
-	bus.MustRegister(core.TypeUpdateObject, h.messagePersistingWrapper(h.handleUpdateObject))
-	bus.MustRegister(core.TypeRegisterChild, h.messagePersistingWrapper(h.handleRegisterChild))
-	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
-	bus.MustRegister(core.TypeSetRecord, h.messagePersistingWrapper(h.handleSetRecord))
-	bus.MustRegister(core.TypeSetBlob, h.messagePersistingWrapper(h.handleSetBlob))
-	bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
+// Init initializes handlers.
+func (h *MessageHandler) Init(ctx context.Context) error {
+	h.Bus.MustRegister(core.TypeGetCode, h.messagePersistingWrapper(h.handleGetCode))
+	h.Bus.MustRegister(core.TypeGetObject, h.messagePersistingWrapper(h.handleGetObject))
+	h.Bus.MustRegister(core.TypeGetDelegate, h.messagePersistingWrapper(h.handleGetDelegate))
+	h.Bus.MustRegister(core.TypeGetChildren, h.messagePersistingWrapper(h.handleGetChildren))
+	h.Bus.MustRegister(core.TypeUpdateObject, h.messagePersistingWrapper(h.handleUpdateObject))
+	h.Bus.MustRegister(core.TypeRegisterChild, h.messagePersistingWrapper(h.handleRegisterChild))
+	h.Bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
+	h.Bus.MustRegister(core.TypeSetRecord, h.messagePersistingWrapper(h.handleSetRecord))
+	h.Bus.MustRegister(core.TypeSetBlob, h.messagePersistingWrapper(h.handleSetBlob))
+	h.Bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
 	h.jetDropHandlers[core.TypeGetObject] = h.handleGetObject
@@ -103,7 +103,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetBlob)
 
-	calculatedID := record.CalculateIDForBlob(pulseNumber, msg.Memory)
+	calculatedID := record.CalculateIDForBlob(h.PlatformCryptographyScheme, pulseNumber, msg.Memory)
 	_, err := h.db.GetBlob(ctx, calculatedID)
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
