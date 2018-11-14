@@ -7,26 +7,52 @@ import (
 )
 
 type RecentObjectsIndex struct {
-	recentObjects map[string]struct{}
+	RecentObjects map[string]*RecentObjectsIndexMeta
 	lock          sync.Mutex
+	DefaultTtl    int
 }
 
-func NewRecentObjectsIndex() *RecentObjectsIndex {
+type RecentObjectsIndexMeta struct {
+	Ttl int
+}
+
+func NewRecentObjectsIndex(defaultTtl int) *RecentObjectsIndex {
 	return &RecentObjectsIndex{
-		recentObjects: map[string]struct{}{},
+		RecentObjects: map[string]*RecentObjectsIndexMeta{},
+		DefaultTtl:    defaultTtl,
 	}
 }
 
-func (r *RecentObjectsIndex) addId(id *core.RecordID) {
+func (r *RecentObjectsIndex) AddId(id *core.RecordID) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	r.recentObjects[string(id.Bytes())] = struct{}{}
+	value, ok := r.RecentObjects[string(id.Bytes())]
+
+	if !ok {
+		r.RecentObjects[string(id.Bytes())] = &RecentObjectsIndexMeta{
+			Ttl: r.DefaultTtl,
+		}
+		return
+	}
+
+	value.Ttl = r.DefaultTtl
 }
 
-func (r *RecentObjectsIndex) clear() {
+func (r *RecentObjectsIndex) RemoveWithTtlMoreThen(ttl int) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	r.recentObjects = map[string]struct{}{}
+	for key, value := range r.RecentObjects {
+		if value.Ttl == 0 {
+			delete(r.RecentObjects, key)
+		}
+	}
+}
+
+func (r *RecentObjectsIndex) Clear() {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	r.RecentObjects = map[string]*RecentObjectsIndexMeta{}
 }

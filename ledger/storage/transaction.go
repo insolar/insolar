@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
-	"sync"
 
 	"github.com/dgraph-io/badger"
 
@@ -206,11 +205,7 @@ func (m *TransactionManager) GetObjectIndex(
 	if err != nil {
 		return nil, err
 	}
-	index, err := index.DecodeObjectLifeline(buf)
-	if err == nil {
-		m.recentObjectsIndex.addId(id)
-	}
-	return index, err
+	return index.DecodeObjectLifeline(buf)
 }
 
 // SetObjectIndex stores object lifeline index.
@@ -227,11 +222,7 @@ func (m *TransactionManager) SetObjectIndex(
 	if err != nil {
 		return err
 	}
-	err = m.set(ctx, k, encoded)
-	if err == nil {
-		m.recentObjectsIndex.addId(id)
-	}
-	return err
+	return m.set(ctx, k, encoded)
 }
 
 // GetLatestPulseNumber returns current pulse number.
@@ -241,41 +232,6 @@ func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.Pul
 		return 0, err
 	}
 	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
-}
-
-func (m *TransactionManager) GetLatestObjects(ctx context.Context) []*index.ObjectLifeline {
-	result := make([]*index.ObjectLifeline, 0, len(m.recentObjectsIndex.recentObjects))
-	resultLock := sync.Mutex{}
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(m.recentObjectsIndex.recentObjects))
-
-	for key := range m.recentObjectsIndex.recentObjects {
-		var id core.RecordID
-		copy(id[:], []byte(key))
-		go func() {
-			defer wg.Done()
-
-			k := prefixkey(scopeIDLifeline, id[:])
-			buf, err := m.get(ctx, k)
-			if err != nil {
-				inslogger.FromContext(ctx).Errorf("problems with fetching index - %v", err)
-				return
-			}
-			index, err := index.DecodeObjectLifeline(buf)
-			if err != nil {
-				inslogger.FromContext(ctx).Errorf("problems with decoding index - %v", err)
-				return
-			}
-
-			resultLock.Lock()
-			result = append(result, index)
-			resultLock.Unlock()
-		}()
-	}
-	wg.Wait()
-
-	return result
 }
 
 // set stores value by key.

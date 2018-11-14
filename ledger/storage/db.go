@@ -63,8 +63,7 @@ type DB struct {
 	// so txretiries is our knob to tune up retry logic.
 	txretiries int
 
-	idlocker           *IDLocker
-	recentObjectsIndex *RecentObjectsIndex
+	idlocker *IDLocker
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
@@ -84,7 +83,7 @@ func setOptions(o *badger.Options) *badger.Options {
 
 // NewDB returns storage.DB with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
-func NewDB(conf configuration.Ledger, opts *badger.Options, recent *RecentObjectsIndex) (*DB, error) {
+func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	opts = setOptions(opts)
 	dir, err := filepath.Abs(conf.Storage.DataDirectory)
 	if err != nil {
@@ -100,10 +99,9 @@ func NewDB(conf configuration.Ledger, opts *badger.Options, recent *RecentObject
 	}
 
 	db := &DB{
-		db:                 bdb,
-		txretiries:         conf.Storage.TxRetriesOnConflict,
-		idlocker:           NewIDLocker(),
-		recentObjectsIndex: recent,
+		db:         bdb,
+		txretiries: conf.Storage.TxRetriesOnConflict,
+		idlocker:   NewIDLocker(),
 	}
 	return db, nil
 }
@@ -534,11 +532,6 @@ func (db *DB) IterateLocalData(ctx context.Context, pulse core.PulseNumber, pref
 		}
 		return nil
 	})
-}
-
-func (db *DB) GetLatestObjects(ctx context.Context) []*index.ObjectLifeline {
-	tx := db.BeginTransaction(false)
-	return tx.GetLatestObjects(ctx)
 }
 
 // get wraps matching transaction manager method.
