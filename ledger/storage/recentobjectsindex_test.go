@@ -38,15 +38,15 @@ func Test_AddId(t *testing.T) {
 	wg.Add(3)
 
 	go func() {
-		index.AddId(core.NewRecordID(123, []byte{1}))
+		index.AddID(core.NewRecordID(123, []byte{1}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddId(core.NewRecordID(123, []byte{2}))
+		index.AddID(core.NewRecordID(123, []byte{2}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddId(core.NewRecordID(123, []byte{3}))
+		index.AddID(core.NewRecordID(123, []byte{3}))
 		wg.Done()
 	}()
 
@@ -59,15 +59,15 @@ func Test_Clear(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
-		index.AddId(core.NewRecordID(123, []byte{1}))
+		index.AddID(core.NewRecordID(123, []byte{1}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddId(core.NewRecordID(123, []byte{2}))
+		index.AddID(core.NewRecordID(123, []byte{2}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddId(core.NewRecordID(123, []byte{3}))
+		index.AddID(core.NewRecordID(123, []byte{3}))
 		wg.Done()
 	}()
 	wg.Wait()

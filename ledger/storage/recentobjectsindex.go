@@ -43,8 +43,8 @@ func NewRecentObjectsIndex(defaultTTL int) *RecentObjectsIndex {
 	}
 }
 
-// AddId adds object to cache
-func (r *RecentObjectsIndex) AddId(id *core.RecordID) {
+// AddID adds object to cache
+func (r *RecentObjectsIndex) AddID(id *core.RecordID) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
