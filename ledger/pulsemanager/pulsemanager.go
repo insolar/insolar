@@ -18,6 +18,7 @@ package pulsemanager
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -31,6 +32,8 @@ type PulseManager struct {
 	LR      core.LogicRunner `inject:""`
 	Bus     core.MessageBus  `inject:""`
 	NodeNet core.NodeNetwork `inject:""`
+
+	setLock sync.Mutex
 }
 
 // Current returns current pulse structure.
@@ -92,7 +95,11 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
-	// execute only on material executor
+	// Ensure this does not execute in parallel.
+	m.setLock.Lock()
+	defer m.setLock.Unlock()
+
+	// Run only on material executor.
 	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
 		err := m.processDrop(ctx)
 		if err != nil {
@@ -101,6 +108,11 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	err := m.db.AddPulse(ctx, pulse)
+	if err != nil {
+		return err
+	}
+
+	err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
 	if err != nil {
 		return err
 	}
