@@ -17,6 +17,8 @@
 package merkle
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
 )
@@ -37,8 +39,17 @@ func newMerkleHelper(scheme core.PlatformCryptographyScheme) *merkleHelper {
 
 func (mh *merkleHelper) doubleSliceHash(slice1, slice2 []byte) []byte {
 	hasher := mh.scheme.IntegrityHasher()
-	hasher.Write(slice1)
-	hasher.Write(slice2)
+	var err error
+
+	_, err = hasher.Write(slice1)
+	if err != nil {
+		panic(fmt.Sprintf("[ doubleSliceHash ] Hash write error: %s", err.Error()))
+	}
+	_, err = hasher.Write(slice2)
+	if err != nil {
+		panic(fmt.Sprintf("[ doubleSliceHash ] Hash write error: %s", err.Error()))
+	}
+
 	return hasher.Sum(nil)
 }
 
