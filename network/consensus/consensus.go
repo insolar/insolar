@@ -59,6 +59,6 @@ type Communicator interface {
 }
 
 // NewConsensus creates consensus
-func NewConsensus(communicator Communicator) Consensus {
-	return &baseConsensus{communicator: communicator}
+func NewConsensus(communicator Communicator, scheme core.PlatformCryptographyScheme) Consensus {
+	return &baseConsensus{communicator: communicator, scheme: scheme}
 }

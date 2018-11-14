@@ -21,8 +21,6 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -34,22 +32,16 @@ func TestBuilder_Build_EmptyPacket(t *testing.T) {
 }
 
 func TestBuilder_Build_RequestPacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
-	ref := testutils.RandomRef()
-
-	m := builder.Receiver(receiver).Type(types.TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
+	m := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
-		Type:       types.TypeRPC,
-		Data:       &RequestDataRPC{ref, "test", [][]byte{}},
+		Type:       TestPacket,
+		Data:       &RequestTest{[]byte{0, 1, 2, 3}},
 		IsResponse: false,
 		Error:      nil,
 	}
@@ -57,21 +49,16 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 }
 
 func TestBuilder_Build_ResponsePacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
-
-	m := builder.Receiver(receiver).Type(types.TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
+	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{42}).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
-		Type:       types.TypeRPC,
-		Data:       &ResponseDataRPC{true, []byte("ok"), ""},
+		Type:       TestPacket,
+		Data:       &ResponseTest{42},
 		IsResponse: true,
 		Error:      nil,
 	}
@@ -79,21 +66,16 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 }
 
 func TestBuilder_Build_ErrorPacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
-
-	m := builder.Receiver(receiver).Type(types.TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()
+	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{}).Error(errors.New("test error")).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
-		Type:       types.TypeRPC,
-		Data:       &ResponseDataRPC{},
+		Type:       TestPacket,
+		Data:       &ResponseTest{},
 		IsResponse: true,
 		Error:      errors.New("test error"),
 	}

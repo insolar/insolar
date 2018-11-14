@@ -17,7 +17,7 @@
 package core
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 )
 
 // ShortNodeID is the shortened ID of node that is unique inside the globe
@@ -32,8 +32,8 @@ type Node interface {
 	Pulse() PulseNumber
 	// Role is the candidate Role for the node
 	Role() NodeRole
-	// PublicKey is the public key of the node
-	PublicKey() *ecdsa.PublicKey
+	// GetPublicKey is the public key of the node
+	PublicKey() crypto.PublicKey
 	// PhysicalAddress is the network address of the node
 	PhysicalAddress() string
 	// Version of node software

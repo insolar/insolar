@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,7 +36,8 @@ import (
 )
 
 func TestGetMessageHash(t *testing.T) {
-	assert.Equal(t, 32, len(GetMessageHash(&message.Parcel{Msg: &message.GenesisRequest{}})))
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	assert.Equal(t, 64, len(GetMessageHash(pcs, &message.Parcel{Msg: &message.GenesisRequest{}})))
 }
 
 func TestTape_SetReply(t *testing.T) {

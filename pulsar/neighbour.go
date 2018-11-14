@@ -17,7 +17,7 @@
 package pulsar
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 	"net"
 	"net/rpc"
 	"sync"
@@ -113,5 +113,5 @@ type Neighbour struct {
 	ConnectionType    configuration.ConnectionType
 	ConnectionAddress string
 	OutgoingClient    RPCClientWrapper
-	PublicKey         *ecdsa.PublicKey
+	PublicKey         crypto.PublicKey
 }

@@ -25,7 +25,7 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/core"
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
@@ -120,7 +120,8 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 
 	verboseInfo(ctx, "Signing request ...")
-	signature, err := ecdsahelper.Sign(serRequest, userCfg.privateKeyObject)
+	cs := cryptography.NewKeyBoundCryptographyService(userCfg.privateKeyObject)
+	signature, err := cs.Sign(serRequest)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}
@@ -131,7 +132,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		"method":    reqCfg.Method,
 		"reference": userCfg.Caller,
 		"seed":      seed,
-		"signature": signature,
+		"signature": signature.Bytes(),
 	})
 
 	if err != nil {

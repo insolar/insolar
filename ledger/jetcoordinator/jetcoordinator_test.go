@@ -50,6 +50,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	assert.NoError(t, err)
 	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.RoleUnknown, nil, 0, "", ""))
 	c := core.Components{LogicRunner: lr, NodeNetwork: keeper}
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 

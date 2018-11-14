@@ -2,19 +2,13 @@ package nodekeeper
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	testNetwork "github.com/insolar/insolar/testutils/network"
 )
 
-func GetTestNodekeeper(c core.Certificate) network.NodeKeeper {
-	pks, err := c.GetPublicKey()
-	if err != nil {
-		panic(err)
-	}
-
-	pk, err := ecdsa.ImportPublicKey(pks)
+func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
+	pk, err := cs.GetPublicKey()
 	if err != nil {
 		panic(err)
 	}

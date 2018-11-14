@@ -50,7 +50,7 @@ func NewNodeNetwork(configuration configuration.Configuration) (core.NodeNetwork
 	return nodeKeeper, nil
 }
 
-func createOrigin(configuration configuration.Configuration) (mutableNode, error) {
+func createOrigin(configuration configuration.Configuration) (MutableNode, error) {
 	nodeID := core.NewRefFromBase58(configuration.Node.Node.ID)
 	publicAddress, err := resolveAddress(configuration)
 	if err != nil {
@@ -88,7 +88,7 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		state:        undefined,
 		active:       make(map[core.RecordRef]core.Node),
 		sync:         make([]core.Node, 0),
-		unsync:       make([]mutableNode, 0),
+		unsync:       make([]MutableNode, 0),
 		listWaiters:  make([]chan *UnsyncList, 0),
 		nodeWaiters:  make(map[core.RecordRef]chan core.Node),
 		indexNode:    make(map[core.NodeRole][]core.RecordRef),
@@ -116,7 +116,7 @@ type nodekeeper struct {
 	sync         []core.Node
 
 	unsyncLock  sync.Mutex
-	unsync      []mutableNode
+	unsync      []MutableNode
 	unsyncList  *UnsyncList
 	listWaiters []chan *UnsyncList
 	nodeWaiters map[core.RecordRef]chan core.Node
@@ -353,7 +353,7 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) network.UnsyncList 
 		node.SetPulse(nk.pulse)
 	}
 	tmp := nk.unsync
-	nk.unsync = make([]mutableNode, 0)
+	nk.unsync = make([]MutableNode, 0)
 
 	unsyncNodes := mutableNodes(tmp).Export()
 

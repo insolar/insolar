@@ -17,14 +17,14 @@
 package nodenetwork
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 	"encoding/gob"
 	"hash/crc32"
 
 	"github.com/insolar/insolar/core"
 )
 
-type mutableNode interface {
+type MutableNode interface {
 	core.Node
 
 	SetPulse(core.PulseNumber)
@@ -35,7 +35,7 @@ type node struct {
 	NodeID        core.RecordRef
 	NodeShortID   core.ShortNodeID
 	NodeRole      core.NodeRole
-	NodePublicKey *ecdsa.PublicKey
+	NodePublicKey crypto.PublicKey
 
 	NodePulseNum core.PulseNumber
 
@@ -46,10 +46,10 @@ type node struct {
 func newMutableNode(
 	id core.RecordRef,
 	role core.NodeRole,
-	publicKey *ecdsa.PublicKey,
+	publicKey crypto.PublicKey,
 	pulseNum core.PulseNumber,
 	physicalAddress,
-	version string) mutableNode {
+	version string) MutableNode {
 	return &node{
 		NodeID:              id,
 		NodeShortID:         generateShortID(id),
@@ -64,7 +64,8 @@ func newMutableNode(
 func NewNode(
 	id core.RecordRef,
 	role core.NodeRole,
-	publicKey *ecdsa.PublicKey,
+	publicKey crypto.PublicKey,
+
 	pulseNum core.PulseNumber,
 	physicalAddress,
 	version string) core.Node {
@@ -87,7 +88,7 @@ func (n *node) Role() core.NodeRole {
 	return n.NodeRole
 }
 
-func (n *node) PublicKey() *ecdsa.PublicKey {
+func (n *node) PublicKey() crypto.PublicKey {
 	// TODO: make a copy of pk
 	return n.NodePublicKey
 }
@@ -108,7 +109,7 @@ func (n *node) SetShortID(id core.ShortNodeID) {
 	n.NodeShortID = id
 }
 
-type mutableNodes []mutableNode
+type mutableNodes []MutableNode
 
 func (mn mutableNodes) Export() []core.Node {
 	nodes := make([]core.Node, len(mn))

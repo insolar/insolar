@@ -17,8 +17,8 @@
 package relay
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
 
 	"errors"
 )
@@ -64,7 +64,7 @@ func NewRelay() Relay {
 
 // AddClient add client to relay list.
 func (r *relay) AddClient(host *host.Host) error {
-	if _, n := r.findClient(host.ID); n != nil {
+	if _, n := r.findClient(host.NodeID); n != nil {
 		return errors.New("client exists already")
 	}
 	r.clients = append(r.clients, host)
@@ -73,7 +73,7 @@ func (r *relay) AddClient(host *host.Host) error {
 
 // RemoveClient removes client from relay list.
 func (r *relay) RemoveClient(host *host.Host) error {
-	idx, n := r.findClient(host.ID)
+	idx, n := r.findClient(host.NodeID)
 	if n == nil {
 		return errors.New("client not found")
 	}
@@ -96,9 +96,9 @@ func (r *relay) NeedToRelay(targetAddress string) bool {
 	return false
 }
 
-func (r *relay) findClient(id id.ID) (int, *host.Host) {
+func (r *relay) findClient(id core.RecordRef) (int, *host.Host) {
 	for idx, hostIterator := range r.clients {
-		if hostIterator.ID.Equal(id.Bytes()) {
+		if hostIterator.NodeID.Equal(id) {
 			return idx, hostIterator
 		}
 	}

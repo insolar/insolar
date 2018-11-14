@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -36,8 +35,9 @@ const (
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
-	db         *storage.DB
-	messageBus core.MessageBus
+	db                         *storage.DB
+	DefaultBus                 core.MessageBus                 `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 
 	getChildrenChunkSize int
 }
@@ -45,19 +45,12 @@ type LedgerArtifactManager struct {
 // State returns hash state for artifact manager.
 func (m *LedgerArtifactManager) State() ([]byte, error) {
 	// This is a temporary stab to simulate real hash.
-	return hash.SHA3Bytes256([]byte{1, 2, 3}), nil
+	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
-	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}, nil
-}
-
-// Link links external components.
-func (m *LedgerArtifactManager) Link(components core.Components) error {
-	m.messageBus = components.MessageBus
-
-	return nil
+func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
+	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}
 }
 
 // GenesisRef returns the root record reference.
@@ -260,7 +253,7 @@ func (m *LedgerArtifactManager) DeployCode(
 					Domain:  domain,
 					Request: request,
 				},
-				Code:        record.CalculateIDForBlob(pulseNumber, code),
+				Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, code),
 				MachineType: machineType,
 			},
 			request,
@@ -455,7 +448,7 @@ func (m *LedgerArtifactManager) activateObject(
 				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(pulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, memory),
 				Image:       prototype,
 				IsPrototype: isPrototype,
 			},
@@ -545,7 +538,7 @@ func (m *LedgerArtifactManager) updateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(pulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, memory),
 				Image:       *image,
 				IsPrototype: object.IsPrototype(),
 			},
@@ -698,5 +691,5 @@ func (m *LedgerArtifactManager) registerChild(
 }
 
 func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
-	return core.MessageBusFromContext(ctx, m.messageBus)
+	return core.MessageBusFromContext(ctx, m.DefaultBus)
 }

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -117,10 +118,12 @@ func TestDB_CreateDrop(t *testing.T) {
 			Entropy:     core.Entropy{1, 2, 3},
 		},
 	)
+	cs := platformpolicy.NewPlatformCryptographyScheme()
+
 	for i := 1; i < 4; i++ {
 		setRecordMessage := message.SetRecord{
 			Record: record.SerializeRecord(&record.CodeRecord{
-				Code: record.CalculateIDForBlob(pulse, []byte{byte(i)}),
+				Code: record.CalculateIDForBlob(cs, pulse, []byte{byte(i)}),
 			}),
 		}
 		db.SetMessage(ctx, pulse, &setRecordMessage)
