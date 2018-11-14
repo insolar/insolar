@@ -41,8 +41,6 @@ type TransactionManager struct {
 	update    bool
 	locks     []*core.RecordID
 	txupdates map[string]keyval
-
-	recentObjectsIndex *RecentObjectsIndex
 }
 
 type byte2hex byte
