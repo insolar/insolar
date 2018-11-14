@@ -36,7 +36,7 @@ type Controller interface {
 	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
 	Bootstrap(ctx context.Context) error
 	// Authorize start authorization process on discovery node.
-	Authorize() error
+	Authorize(ctx context.Context) error
 	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
 	ResendPulseToKnownHosts(pulse core.Pulse)
 

@@ -60,8 +60,8 @@ func (c *Controller) Bootstrap(ctx context.Context) error {
 }
 
 // Authorize start authorization process on discovery node.
-func (c *Controller) Authorize() error {
-	return c.authController.Authorize()
+func (c *Controller) Authorize(ctx context.Context) error {
+	return c.authController.Authorize(ctx)
 }
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.

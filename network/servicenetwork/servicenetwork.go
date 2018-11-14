@@ -95,7 +95,7 @@ func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) 
 	}
 
 	log.Infoln("Authorizing network...")
-	err = n.controller.Authorize()
+	err = n.controller.Authorize(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to authorize network")
 	}
