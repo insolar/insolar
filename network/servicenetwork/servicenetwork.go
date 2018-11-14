@@ -83,22 +83,21 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) error {
 	n.inject(components)
 	n.routingTable.Start(components)
-	log.Infoln("Network starts listening")
+	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start()
 
 	n.controller.Inject(components)
 
 	log.Infoln("Bootstrapping network...")
-	n.bootstrap()
-
-	err := n.controller.AnalyzeNetwork()
+	err := n.controller.Bootstrap()
 	if err != nil {
-		log.Error(err)
+		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
+	log.Infoln("Authorizing network...")
 	err = n.controller.Authorize()
 	if err != nil {
-		return errors.Wrap(err, "error authorizing node")
+		return errors.Wrap(err, "Failed to authorize network")
 	}
 
 	return nil
@@ -115,13 +114,6 @@ func (n *ServiceNetwork) inject(components core.Components) {
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	n.hostNetwork.Stop()
 	return nil
-}
-
-func (n *ServiceNetwork) bootstrap() {
-	err := n.controller.Bootstrap()
-	if err != nil {
-		log.Errorln("Failed to bootstrap network", err.Error())
-	}
 }
 
 func (n *ServiceNetwork) onPulse(pulse core.Pulse) {

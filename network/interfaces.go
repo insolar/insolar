@@ -34,8 +34,6 @@ type Controller interface {
 	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
 	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
 	Bootstrap() error
-	// AnalyzeNetwork legacy method for old DHT network (should be removed in new network).
-	AnalyzeNetwork() error
 	// Authorize start authorization process on discovery node.
 	Authorize() error
 	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.

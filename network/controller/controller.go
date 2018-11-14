@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/auth"
 	"github.com/insolar/insolar/network/controller/common"
@@ -57,12 +56,6 @@ func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg co
 // Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
 func (c *Controller) Bootstrap() error {
 	return c.bootstrapController.Bootstrap()
-}
-
-// AnalyzeNetwork legacy method for old DHT network (should be removed in new network).
-func (c *Controller) AnalyzeNetwork() error {
-	log.Warn("this method was created for compatibility with old network, should be deleted")
-	return nil
 }
 
 // Authorize start authorization process on discovery node.
