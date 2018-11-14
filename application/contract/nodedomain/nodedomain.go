@@ -96,7 +96,7 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 }
 
 // RegisterNode registers node in system
-func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
+func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, role string) ([]byte, error) {
 	const majorityPercentage = 0.51
 
 	if majorityRule != 0 {
@@ -111,7 +111,7 @@ func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int,
 	}
 
 	// TODO: what should be done when record already exists?
-	newRecord := noderecord.NewNodeRecord(publicKey, role, ip)
+	newRecord := noderecord.NewNodeRecord(publicKey, role)
 	record, err := newRecord.AsChild(nd.GetReference())
 	if err != nil {
 		return nil, fmt.Errorf("[ RegisterNode ]: %s", err.Error())

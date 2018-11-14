@@ -179,7 +179,7 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	cert, err := nd.RegisterNode(publicKey, int(numberOfBootstrapNodes), int(majorityRule), role, ip)
+	cert, err := nd.RegisterNode(publicKey, int(numberOfBootstrapNodes), int(majorityRule), role)
 	if err != nil {
 		return nil, fmt.Errorf("[ registerNodeCall ] Problems with RegisterNode: %s", err.Error())
 	}

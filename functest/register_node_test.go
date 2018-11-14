@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const TESTHOST = "127.0.0.1"
 const TESTPUBLICKEY = "some_fancy_public_key"
 
 type registerAnswer struct {
@@ -49,7 +48,7 @@ func registerNodeSignedCall(params ...interface{}) (*registerAnswer, error) {
 }
 
 func sendNoEnoughNodesRequest(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 5, 0, "virtual", TESTHOST)
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 5, 0, "virtual")
 	assert.EqualError(t, err, "[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ] : Can't make bootstrap nodes config: [ makeBootstrapNodesConfig ] There no enough nodes")
 }
 
@@ -67,7 +66,7 @@ func TestRegisterNodeNoEnoughNodes(t *testing.T) {
 
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
-	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole, TESTHOST)
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
 	assert.NoError(t, err)
 
 	assert.Equal(t, testRole, cert.Role)
@@ -77,7 +76,7 @@ func TestRegisterNodeVirtual(t *testing.T) {
 
 func TestRegisterNodeHeavyMaterial(t *testing.T) {
 	const testRole = "heavy_material"
-	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole, TESTHOST)
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
 	assert.NoError(t, err)
 
 	assert.Equal(t, testRole, cert.Role)
@@ -86,7 +85,7 @@ func TestRegisterNodeHeavyMaterial(t *testing.T) {
 
 func TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
-	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole, TESTHOST)
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
 	assert.NoError(t, err)
 
 	assert.Equal(t, testRole, cert.Role)
@@ -94,31 +93,31 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, "some_not_fancy_role", TESTHOST)
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, "some_not_fancy_role")
 	assert.Contains(t, err.Error(),
 		"[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ]: on calling main API: couldn't save new object as child: executer error: problem with API call: Can't call constructor NewNodeRecord: Role is not supported: some_not_fancy_role")
 }
 
 // TODO An error is expected but got nil.
 func _TestRegisterNodeWithoutRole(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, nil, TESTHOST)
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, nil)
 	assert.Error(t, err)
 }
 
 // TODO An error is expected but got nil.
 func _TestRegisterNodeWithoutPulicKey(t *testing.T) {
-	_, err := registerNodeSignedCall("", 0, 0, "virtual", TESTHOST)
+	_, err := registerNodeSignedCall("", 0, 0, "virtual")
 	assert.Error(t, err)
 }
 
 // TODO An error is expected but got nil.
 func _TestRegisterNodeWithoutHost(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, "virtual", "")
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, "virtual")
 	assert.Error(t, err)
 }
 
 func TestRegisterNodeBadMajorityRule(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 10, 3, "virtual", TESTHOST)
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 10, 3, "virtual")
 	assert.EqualError(t, err, "[ registerNodeCall ] Problems with RegisterNode: majorityRule must be more than 0.51 * numberOfBootstrapNodes")
 }
 
@@ -137,11 +136,11 @@ func TestRegisterNodeWithBootstrapNodes(t *testing.T) {
 	const numNodes = 5
 	// Adding nodes
 	for i := 0; i < numNodes; i++ {
-		_, err := registerNodeSignedCall(TESTPUBLICKEY+strconv.Itoa(i), 0, 0, testRole, TESTHOST+strconv.Itoa(i))
+		_, err := registerNodeSignedCall(TESTPUBLICKEY+strconv.Itoa(i), 0, 0, testRole)
 		assert.NoError(t, err)
 	}
 
-	cert, err := registerNodeSignedCall("FFFF", numNodes, numNodes, "heavy_material", TESTHOST+"new")
+	cert, err := registerNodeSignedCall("FFFF", numNodes, numNodes, "heavy_material")
 	assert.NoError(t, err)
 
 	assert.Equal(t, "heavy_material", cert.Role)

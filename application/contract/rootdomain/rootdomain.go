@@ -68,7 +68,7 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
 	}
 
 	nd := nodedomain.GetObject(rd.NodeDomainRef)
-	rawJSON, err := nd.RegisterNode(serPubKey, 0, 0, "virtual", "127.0.0.1")
+	rawJSON, err := nd.RegisterNode(serPubKey, 0, 0, "virtual")
 	if err != nil {
 		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't register node: %s", err.Error())
 	}

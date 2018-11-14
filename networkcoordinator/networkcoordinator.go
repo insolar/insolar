@@ -165,7 +165,7 @@ func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey crypto
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't import public key")
 	}
 
-	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKeyStr, numberOfBootstrapNodes, majorityRule, role, ip})
+	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKeyStr, numberOfBootstrapNodes, majorityRule, role})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")
 	}
