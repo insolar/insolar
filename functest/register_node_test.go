@@ -96,7 +96,7 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 func TestRegisterNodeNotExistRole(t *testing.T) {
 	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, "some_not_fancy_role", TESTHOST)
 	assert.Contains(t, err.Error(),
-		"[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ]: on calling main API: couldn't save new object as child: executer error: problem with API call: Can't call constructor NewNodeRecord: Role is not supported: some_not_fancy_role")
+		"[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ]: on calling main API: couldn't save new object as child:")
 }
 
 // TODO An error is expected but got nil.
