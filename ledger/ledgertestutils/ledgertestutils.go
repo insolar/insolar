@@ -31,29 +31,35 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger andh cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, func()) {
+func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	// Init subcomponents.
-	ctx := inslogger.TestContext(t.(*testing.T))
+	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
 	handler := artifactmanager.NewMessageHandler(db)
+	handler.PlatformCryptographyScheme = pcs
 	am := artifactmanager.NewArtifactManger(db)
+	am.PlatformCryptographyScheme = pcs
 	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
+	jc.PlatformCryptographyScheme = pcs
 	pm := pulsemanager.NewPulseManager(db)
 	ls := localstorage.NewLocalStorage(db)
 	be := blockexplorer.NewExplorerManager(db)
 
 	// Init components.
 	if c.MessageBus == nil {
-		c.MessageBus = testmessagebus.NewTestMessageBus()
+		c.MessageBus = testmessagebus.NewTestMessageBus(t)
 	}
 	if c.NodeNetwork == nil {
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))

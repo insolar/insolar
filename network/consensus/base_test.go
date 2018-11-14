@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,11 +36,13 @@ func TestBaseConsensus_exchangeDataWithOtherParticipants(t *testing.T) {
 	participant4 := NewParticipant(4, nil)
 	participant5 := NewParticipant(5, list5)
 
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
 	c := baseConsensus{self: self,
 		allParticipants: []Participant{participant2, self, participant3, participant5, participant4},
 		communicator:    &testCommunicator{self: self},
 		holder:          &mockUnsyncHolder{},
-		results:         newExchangeResults(5),
+		results:         newExchangeResults(scheme, 5),
 	}
 
 	ctx := context.Background()

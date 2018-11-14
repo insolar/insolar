@@ -181,7 +181,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 		return
 	}
 
-	signature, err := signData(currentPulsar.PrivateKey, core.PulseSenderConfirmation{
+	signature, err := signData(currentPulsar.CryptographyService, core.PulseSenderConfirmation{
 		Entropy:         currentPulsar.CurrentSlotEntropy,
 		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 		PulseNumber:     currentPulsar.ProcessingPulseNumber,

@@ -18,7 +18,6 @@ package core
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"io"
 )
 
@@ -40,16 +39,15 @@ type Message interface {
 	GetCaller() *RecordRef
 }
 
-type Signature interface {
+type MessageSignature interface {
 	GetSign() []byte
 	GetSender() RecordRef
-	IsValid(key *ecdsa.PublicKey) bool
 }
 
 // Parcel by senders private key.
 type Parcel interface {
 	Message
-	Signature
+	MessageSignature
 
 	Message() Message
 	Context(context.Context) context.Context
@@ -74,6 +72,7 @@ type Reply interface {
 }
 
 // MessageBus interface
+//go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
 	Send(context.Context, Message) (Reply, error)

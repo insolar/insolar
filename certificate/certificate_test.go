@@ -19,124 +19,65 @@ package certificate
 import (
 	"testing"
 
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
-const TEST_CERT = "testdata/cert.json"
-const TEST_BAD_CERT = "testdata/bad_cert.json"
+const TestCert = "testdata/cert.json"
+const TestBadCert = "testdata/bad_cert.json"
+const TestInvalidFileCert = "testdata/bad_cert11111.json"
 
-const TEST_KEYS = "testdata/keys.json"
-const TEST_BAD_KEYS = "testdata/bad_keys.json"
-
-func TestAreKeysTheSame(t *testing.T) {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	pubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	assert.NoError(t, err)
-	assert.NoError(t, AreKeysTheSame(privateKey, pubKey))
-}
-
-func TestAreKeysTheSame_NotTheSame(t *testing.T) {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	err = AreKeysTheSame(privateKey, "")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Public keys in certificate and keypath file are not the same")
-}
+const TestKeys = "testdata/keys.json"
+const TestDifferentKeys = "testdata/different_keys.json"
 
 func TestNewCertificate_NoCert(t *testing.T) {
-	_, err := NewCertificate("", "")
-	assert.EqualError(t, err, "[ NewCertificate ] couldn't read certificate from: ")
+	_, err := ReadCertificate(nil, nil, TestInvalidFileCert)
+	assert.EqualError(t, err, "[ ReadCertificate ] failed to read certificate from: "+TestInvalidFileCert)
 }
 
 func TestNewCertificate_BadCert(t *testing.T) {
-	_, err := NewCertificate("", TEST_BAD_CERT)
+	_, err := ReadCertificate(nil, nil, TestBadCert)
 	assert.Contains(t, err.Error(), "failed to parse certificate json")
 }
 
-func TestNewCertificate_NoKeys(t *testing.T) {
-	_, err := NewCertificate("", TEST_CERT)
-	assert.Contains(t, err.Error(), "failed to read keys")
-}
+func checkKeys(cert *Certificate, cs core.CryptographyService, t *testing.T) {
+	kp := platformpolicy.NewKeyProcessor()
 
-func checkKeys(cert *Certificate, t *testing.T) {
-	pubKey, err := ecdsahelper.ExportPublicKey(&cert.privateKey.PublicKey)
+	pubKey, err := cs.GetPublicKey()
 	assert.NoError(t, err)
-	assert.Equal(t, pubKey, cert.PublicKey)
+
+	pubKeyString, err := kp.ExportPublicKey(pubKey)
+	assert.NoError(t, err)
+
+	assert.Equal(t, string(pubKeyString), cert.PublicKey)
 }
 
-func TestNewCertificate(t *testing.T) {
-	cert, err := NewCertificate(TEST_KEYS, TEST_CERT)
+func TestReadCertificate(t *testing.T) {
+	cs, _ := cryptography.NewStorageBoundCryptographyService(TestKeys)
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
+
+	cert, err := ReadCertificate(pk, kp, TestCert)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cert.PublicKey)
 	assert.NotEmpty(t, cert.Reference)
 
-	checkKeys(cert, t)
-}
-
-func TestCertificate_GenerateKeys(t *testing.T) {
-	cert := Certificate{}
-	assert.Nil(t, cert.privateKey)
-	assert.Empty(t, cert.PublicKey)
-
-	assert.NoError(t, cert.GenerateKeys())
-
-	assert.NotNil(t, cert.privateKey)
-	assert.NotEmpty(t, cert.PublicKey)
-}
-
-func TestNewCertificatesWithKeys(t *testing.T) {
-	cert, err := NewCertificatesWithKeys(TEST_KEYS)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, cert.Reference)
-	checkKeys(cert, t)
-}
-
-func TestNewCertificatesWithKeys_NoFile(t *testing.T) {
-	_, err := NewCertificatesWithKeys("")
-	assert.Contains(t, err.Error(), "failed to read keys: [ readKeys ] couldn't read keys from")
-}
-
-func TestReadPrivateKey(t *testing.T) {
-	_, err := readPrivateKey("")
-	assert.Contains(t, err.Error(), "couldn't read keys from")
+	checkKeys(cert, cs, t)
 }
 
 func TestReadPrivateKey_BadJson(t *testing.T) {
-	_, err := readPrivateKey(TEST_BAD_CERT)
-	assert.Contains(t, err.Error(), "failed to parse json")
-}
-
-func TestReadPrivateKey_BadPrivateKey(t *testing.T) {
-	_, err := readPrivateKey(TEST_BAD_KEYS)
-	assert.Contains(t, err.Error(), "Failed to import private key")
+	keyProcessor := platformpolicy.NewKeyProcessor()
+	_, err := ReadCertificate(nil, keyProcessor, TestBadCert)
+	assert.Contains(t, err.Error(), "failed to parse certificate json")
 }
 
 func TestReadPrivateKey_BadKeyPair(t *testing.T) {
-	_, err := readPrivateKey("testdata/different_keys.json")
-	assert.Contains(t, err.Error(), "public key is not valid")
-}
+	cs, _ := cryptography.NewStorageBoundCryptographyService(TestDifferentKeys)
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
 
-func TestIsPublicKeyValid(t *testing.T) {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	pubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	assert.NoError(t, err)
-
-	assert.Nil(t, isValidPublicKey(pubKey, privateKey))
-}
-
-func TestIsPublicKeyValid_BadKeyPair(t *testing.T) {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	pubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	assert.NoError(t, err)
-
-	anotherPrivateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-
-	err = isValidPublicKey(pubKey, anotherPrivateKey)
-	assert.Contains(t, err.Error(), "[ isValidPublicKey ] invalid public key in config")
-
+	_, err := ReadCertificate(pk, kp, TestCert)
+	assert.Contains(t, err.Error(), "Different public keys")
 }

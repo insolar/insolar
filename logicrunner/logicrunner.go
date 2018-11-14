@@ -41,6 +41,9 @@ type Ref = core.RecordRef
 // Context of one contract execution
 type ExecutionState struct {
 	sync.Mutex
+	Ref    Ref
+	Method string
+
 	noWait      bool
 	validate    bool
 	insContext  context.Context
@@ -51,6 +54,31 @@ type ExecutionState struct {
 	queueLength int
 
 	objectbody *ObjectBody
+}
+
+type LogicRunnerError struct {
+	Err      error
+	Request  Ref
+	Contract Ref
+	Method   string
+}
+
+func (lre LogicRunnerError) Error() string {
+	return lre.Err.Error() + "  Contract=" + lre.Contract.String() + " Method=" + lre.Method + " Request=" + lre.Request.String()
+}
+
+func (es *ExecutionState) ErrorWrap(err error, message string) error {
+	if err == nil {
+		err = errors.New(message)
+	} else {
+		err = errors.Wrap(err, message)
+	}
+	return LogicRunnerError{
+		Err:      err,
+		Request:  *es.request,
+		Contract: es.Ref,
+		Method:   es.Method,
+	}
 }
 
 func (es *ExecutionState) Lock() {
@@ -72,10 +100,12 @@ func (es *ExecutionState) ReleaseQueue() {
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	MessageBus core.MessageBus `inject:""`
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
-	Ledger  core.Ledger  `inject:""`
-	Network core.Network `inject:""`
+	MessageBus                 core.MessageBus                 `inject:""`
+	Ledger                     core.Ledger                     `inject:""`
+	Network                    core.Network                    `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	ParcelFactory              message.ParcelFactory           `inject:""`
 
 	ArtifactManager core.ArtifactManager
 
@@ -184,7 +214,6 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
-	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
@@ -193,16 +222,15 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 
 	es := lr.UpsertExecution(ref)
 	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
-		return nil, errors.Errorf("loop detected")
+		return nil, es.ErrorWrap(nil, "loop detected")
 	}
 	fuse := true
 	es.Lock()
 
-	// TODO return 302
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
 	if inmsg.Pulse() != lr.pulse(ctx).PulseNumber {
-		return nil, errors.New("Abort execution: New Pulse coming")
+		return nil, es.ErrorWrap(nil, "abort execution: new Pulse coming")
 	}
 
 	defer func() {
@@ -235,10 +263,10 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	)
 
 	if err != nil {
-		return nil, errors.New("Authorization failed with error: " + err.Error())
+		return nil, es.ErrorWrap(err, "authorization failed with error")
 	}
 	if !isAuthorized {
-		return nil, errors.New("Can't execute this object")
+		return nil, es.ErrorWrap(err, "can't execute this object")
 	}
 
 	vb.Begin(ref, core.CaseRecord{
@@ -254,7 +282,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	es.request, err = vb.RegisterRequest(msg)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't create request")
+		return nil, es.ErrorWrap(err, "can't create request")
 	}
 
 	es.callContext = &core.LogicCallContext{
@@ -269,11 +297,13 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
+		es.Method = m.Method
 		fuse = false
 		re, err := lr.executeMethodCall(es, m, vb)
 		return re, err
 
 	case *message.CallConstructor:
+		es.Method = m.Name
 		fuse = false
 		re, err := lr.executeConstructorCall(es, m, vb)
 		return re, err
@@ -307,18 +337,18 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 			if core.CaseRecordTypeSignObject != cr.Type {
 				return errors.Errorf("Wrong validation type on CaseRecordTypeSignObject %d, ", cr.Type)
 			}
-			if !bytes.Equal(cr.ReqSig, HashInterface(objref)) {
+			if !bytes.Equal(cr.ReqSig, HashInterface(lr.PlatformCryptographyScheme, objref)) {
 				return errors.New("Wrong validation sig on CaseRecordTypeSignObject")
 			}
-			if !bytes.Equal(cr.Resp.([]byte), HashInterface(es.objectbody)) {
+			if !bytes.Equal(cr.Resp.([]byte), HashInterface(lr.PlatformCryptographyScheme, es.objectbody)) {
 				return errors.New("Wrong validation comparision on CaseRecordTypeSignObject")
 			}
 
 		} else {
 			lr.addObjectCaseRecord(objref, core.CaseRecord{
 				Type:   core.CaseRecordTypeSignObject,
-				ReqSig: HashInterface(objref),
-				Resp:   HashInterface(es.objectbody),
+				ReqSig: HashInterface(lr.PlatformCryptographyScheme, objref),
+				Resp:   HashInterface(lr.PlatformCryptographyScheme, es.objectbody),
 			})
 		}
 		return nil
@@ -328,7 +358,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 		if core.CaseRecordTypeGetObject != cr.Type {
 			return errors.Errorf("Wrong validation type on CaseRecordTypeGetObject %d", cr.Type)
 		}
-		sig := HashInterface(objref)
+		sig := HashInterface(lr.PlatformCryptographyScheme, objref)
 		if !bytes.Equal(cr.ReqSig, sig) {
 			return errors.New("Wrong validation sig on CaseRecordTypeGetObject")
 		}
@@ -368,7 +398,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	copy(bcopy.Object, es.objectbody.Object)
 	lr.addObjectCaseRecord(objref, core.CaseRecord{
 		Type:   core.CaseRecordTypeGetObject,
-		ReqSig: HashInterface(objref),
+		ReqSig: HashInterface(lr.PlatformCryptographyScheme, objref),
 		Resp:   &bcopy,
 	})
 	return nil
@@ -396,7 +426,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 
 	executor, err := lr.GetExecutor(es.objectbody.CodeMachineType)
 	if err != nil {
-		return nil, errors.Wrap(err, "no executor registered")
+		return nil, es.ErrorWrap(err, "no executor registered")
 	}
 
 	executer := func() (*reply.CallMethod, error) {
@@ -409,7 +439,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			ctx, es.callContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "executor error")
+			return nil, es.ErrorWrap(err, "executor error")
 		}
 
 		if vb.NeedSave() {
@@ -424,11 +454,11 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 				)
 			}
 			if err != nil {
-				return nil, errors.Wrap(err, "couldn't update object")
+				return nil, es.ErrorWrap(err, "couldn't update object")
 			}
 			_, err = am.RegisterResult(ctx, *es.request, result)
 			if err != nil {
-				return nil, errors.Wrap(err, "couldn't save results")
+				return nil, es.ErrorWrap(err, "couldn't save results")
 			}
 
 		}
@@ -472,20 +502,20 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 
 	codeRef, err := protoDesc.Code()
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't code reference")
+		return nil, es.ErrorWrap(err, "couldn't code reference")
 	}
 	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't code")
+		return nil, es.ErrorWrap(err, "couldn't code")
 	}
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
-		return nil, errors.Wrap(err, "no executer registered")
+		return nil, es.ErrorWrap(err, "no executer registered")
 	}
 
 	newData, err := executor.CallConstructor(ctx, es.callContext, *codeDesc.Ref(), m.Name, m.Arguments)
 	if err != nil {
-		return nil, errors.Wrap(err, "executer error")
+		return nil, es.ErrorWrap(err, "executer error")
 	}
 
 	switch m.SaveAs {
@@ -502,7 +532,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 		})
 		return &reply.CallConstructor{Object: es.request}, err
 	default:
-		return nil, errors.New("unsupported type of save object")
+		return nil, es.ErrorWrap(nil, "unsupported type of save object")
 	}
 }
 

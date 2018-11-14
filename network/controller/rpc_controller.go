@@ -36,6 +36,7 @@ type RPCController struct {
 	options     *common.Options
 	hostNetwork network.HostNetwork
 	methodTable map[string]core.RemoteProcedure
+	scheme      core.PlatformCryptographyScheme
 }
 
 type RequestRPC struct {
@@ -98,9 +99,9 @@ func (rpc *RPCController) initCascadeSendMessage(data core.Cascade, findCurrentN
 
 	if findCurrentNode {
 		nodeID := rpc.hostNetwork.GetNodeID()
-		nextNodes, err = cascade.CalculateNextNodes(data, &nodeID)
+		nextNodes, err = cascade.CalculateNextNodes(rpc.scheme, data, &nodeID)
 	} else {
-		nextNodes, err = cascade.CalculateNextNodes(data, nil)
+		nextNodes, err = cascade.CalculateNextNodes(rpc.scheme, data, nil)
 	}
 	if err != nil {
 		return errors.Wrap(err, "Failed to CalculateNextNodes")
@@ -219,6 +220,6 @@ func (rpc *RPCController) Start() {
 	rpc.hostNetwork.RegisterRequestHandler(types.Cascade, rpc.processCascade)
 }
 
-func NewRPCController(options *common.Options, hostNetwork network.HostNetwork) *RPCController {
+func NewRPCController(options *common.Options, hostNetwork network.HostNetwork, scheme core.PlatformCryptographyScheme) *RPCController {
 	return &RPCController{options: options, hostNetwork: hostNetwork, methodTable: make(map[string]core.RemoteProcedure)}
 }

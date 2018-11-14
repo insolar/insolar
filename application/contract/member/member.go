@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -57,10 +56,13 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
-	verified, err := ecdsa.Verify(args, sign, key)
+
+	publicKey, err := foundation.ImportPublicKey(key)
 	if err != nil {
-		return fmt.Errorf("[ verifySig ] Can't verify: %s", err.Error())
+		return fmt.Errorf("[ verifySig ] Invalid public key")
 	}
+
+	verified := foundation.Verify(args, sign, publicKey)
 	if !verified {
 		return fmt.Errorf("[ verifySig ] Incorrect signature")
 	}

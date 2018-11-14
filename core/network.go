@@ -16,10 +16,6 @@
 
 package core
 
-import (
-	"crypto/ecdsa"
-)
-
 // Cascade contains routing data for cascade sending
 type Cascade struct {
 	// NodeIds contains the slice of node identifiers that will receive the message
@@ -45,6 +41,4 @@ type Network interface {
 	RemoteProcedureRegister(name string, method RemoteProcedure)
 	// GetNodeID returns current node id.
 	GetNodeID() RecordRef
-	// GetPrivateKey returns a private key.
-	GetPrivateKey() *ecdsa.PrivateKey
 }

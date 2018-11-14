@@ -119,5 +119,5 @@ func TestIncorrectSign(t *testing.T) {
 	var res map[string]interface{}
 	err = json.Unmarshal(body, &res)
 	assert.NoError(t, err)
-	assert.Contains(t, res["error"], "[ VerifySignature ] Can't verify signature: [ Verify ]: asn1: structure error: ")
+	assert.Contains(t, res["error"], "[ VerifySignature ] Incorrect signature")
 }

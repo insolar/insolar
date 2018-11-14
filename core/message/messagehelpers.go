@@ -14,7 +14,7 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		if t.SaveAs == Delegate {
 			return t.ParentRef
 		}
-		return *core.GenRequest(t.PulseNum, MustSerializeBytes(t))
+		return *genRequest(t.PulseNum, MustSerializeBytes(t))
 	case *CallMethod:
 		return t.ObjectRef
 	case *ExecutorResults:
