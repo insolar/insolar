@@ -12,7 +12,7 @@ func TestNewRecentObjectsIndex(t *testing.T) {
 	index := NewRecentObjectsIndex(123)
 	require.NotNil(t, index)
 	require.NotNil(t, index.RecentObjects)
-	require.Equal(t, 123, index.DefaultTtl)
+	require.Equal(t, 123, index.DefaultTTL)
 }
 
 func Test_addToFetched(t *testing.T) {

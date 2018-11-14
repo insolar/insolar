@@ -9,17 +9,17 @@ import (
 type RecentObjectsIndex struct {
 	RecentObjects map[string]*RecentObjectsIndexMeta
 	lock          sync.Mutex
-	DefaultTtl    int
+	DefaultTTL    int
 }
 
 type RecentObjectsIndexMeta struct {
-	Ttl int
+	TTL int
 }
 
 func NewRecentObjectsIndex(defaultTtl int) *RecentObjectsIndex {
 	return &RecentObjectsIndex{
 		RecentObjects: map[string]*RecentObjectsIndexMeta{},
-		DefaultTtl:    defaultTtl,
+		DefaultTTL:    defaultTtl,
 		lock:          sync.Mutex{},
 	}
 }
@@ -32,12 +32,12 @@ func (r *RecentObjectsIndex) AddId(id *core.RecordID) {
 
 	if !ok {
 		r.RecentObjects[string(id.Bytes())] = &RecentObjectsIndexMeta{
-			Ttl: r.DefaultTtl,
+			TTL: r.DefaultTTL,
 		}
 		return
 	}
 
-	value.Ttl = r.DefaultTtl
+	value.TTL = r.DefaultTTL
 }
 
 func (r *RecentObjectsIndex) RemoveWithTtlMoreThen(ttl int) {
@@ -45,7 +45,7 @@ func (r *RecentObjectsIndex) RemoveWithTtlMoreThen(ttl int) {
 	defer r.lock.Unlock()
 
 	for key, value := range r.RecentObjects {
-		if value.Ttl == 0 {
+		if value.TTL == 0 {
 			delete(r.RecentObjects, key)
 		}
 	}
