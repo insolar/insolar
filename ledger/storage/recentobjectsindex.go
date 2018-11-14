@@ -6,32 +6,36 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// RecentObjectsIndex is a base structure
 type RecentObjectsIndex struct {
-	RecentObjects map[string]*RecentObjectsIndexMeta
+	recentObjects map[string]*RecentObjectsIndexMeta
 	lock          sync.Mutex
 	DefaultTTL    int
 }
 
+// RecentObjectsIndexMeta contains meta about indexes
 type RecentObjectsIndexMeta struct {
 	TTL int
 }
 
-func NewRecentObjectsIndex(defaultTtl int) *RecentObjectsIndex {
+// NewRecentObjectsIndex creates default RecentObjectsIndex object
+func NewRecentObjectsIndex(defaultTTl int) *RecentObjectsIndex {
 	return &RecentObjectsIndex{
-		RecentObjects: map[string]*RecentObjectsIndexMeta{},
-		DefaultTTL:    defaultTtl,
+		recentObjects: map[string]*RecentObjectsIndexMeta{},
+		DefaultTTL:    defaultTTl,
 		lock:          sync.Mutex{},
 	}
 }
 
+// AddId adds object to cache
 func (r *RecentObjectsIndex) AddId(id *core.RecordID) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	value, ok := r.RecentObjects[string(id.Bytes())]
+	value, ok := r.recentObjects[string(id.Bytes())]
 
 	if !ok {
-		r.RecentObjects[string(id.Bytes())] = &RecentObjectsIndexMeta{
+		r.recentObjects[string(id.Bytes())] = &RecentObjectsIndexMeta{
 			TTL: r.DefaultTTL,
 		}
 		return
@@ -40,20 +44,35 @@ func (r *RecentObjectsIndex) AddId(id *core.RecordID) {
 	value.TTL = r.DefaultTTL
 }
 
-func (r *RecentObjectsIndex) RemoveWithTtlMoreThen(ttl int) {
+// GetObjects returns hot-indexes
+func (r *RecentObjectsIndex) GetObjects() map[string]*RecentObjectsIndexMeta {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	for key, value := range r.RecentObjects {
+	targetMap := map[string]*RecentObjectsIndexMeta{}
+	for key, value := range r.recentObjects {
+		targetMap[key] = value
+	}
+
+	return targetMap
+}
+
+// ClearZeroTTL clears objects with zero TTL
+func (r *RecentObjectsIndex) ClearZeroTTL() {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	for key, value := range r.recentObjects {
 		if value.TTL == 0 {
-			delete(r.RecentObjects, key)
+			delete(r.recentObjects, key)
 		}
 	}
 }
 
+// Clear clears the whole cache
 func (r *RecentObjectsIndex) Clear() {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	r.RecentObjects = map[string]*RecentObjectsIndexMeta{}
+	r.recentObjects = map[string]*RecentObjectsIndexMeta{}
 }
