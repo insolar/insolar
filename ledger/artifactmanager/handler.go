@@ -156,7 +156,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 			return nil, err
 		}
 	}
-	go h.recentObjects.AddID(msg.Head.Record())
+	h.recentObjects.AddID(msg.Head.Record())
 
 	var childPointer *core.RecordID
 	if idx.ChildPointer != nil {
@@ -188,7 +188,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	if err != nil {
 		return nil, err
 	}
-	go h.recentObjects.AddID(msg.Head.Record())
+	h.recentObjects.AddID(msg.Head.Record())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
