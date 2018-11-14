@@ -17,6 +17,7 @@
 package network
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -52,7 +53,7 @@ type RequestHandler func(Request) (Response, error)
 // HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
 	// Start listening to network requests.
-	Start()
+	Start(ctx context.Context)
 	// Stop listening to network requests.
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
@@ -74,7 +75,7 @@ type ConsensusRequestHandler func(Request)
 
 type ConsensusNetwork interface {
 	// Start listening to network requests.
-	Start()
+	Start(ctx context.Context)
 	// Stop listening to network requests.
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
@@ -199,7 +200,7 @@ type RoutingTable interface {
 // InternalTransport simple interface to send network requests and process network responses.
 type InternalTransport interface {
 	// Start listening to network requests, should be started in goroutine.
-	Start()
+	Start(ctx context.Context)
 	// Stop listening to network requests.
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.

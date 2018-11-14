@@ -84,7 +84,7 @@ func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) 
 	n.inject(components)
 	n.routingTable.Start(components)
 	log.Infoln("Network starts listening...")
-	n.hostNetwork.Start()
+	n.hostNetwork.Start(ctx)
 
 	n.controller.Inject(components)
 
