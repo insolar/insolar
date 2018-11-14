@@ -89,7 +89,7 @@ func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) 
 	n.controller.Inject(components)
 
 	log.Infoln("Bootstrapping network...")
-	err := n.controller.Bootstrap()
+	err := n.controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}

@@ -34,7 +34,7 @@ type Controller interface {
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
 	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
 	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
-	Bootstrap() error
+	Bootstrap(ctx context.Context) error
 	// Authorize start authorization process on discovery node.
 	Authorize() error
 	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.

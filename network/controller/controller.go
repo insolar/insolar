@@ -17,6 +17,7 @@
 package controller
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -54,8 +55,8 @@ func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg co
 }
 
 // Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
-func (c *Controller) Bootstrap() error {
-	return c.bootstrapController.Bootstrap()
+func (c *Controller) Bootstrap(ctx context.Context) error {
+	return c.bootstrapController.Bootstrap(ctx)
 }
 
 // Authorize start authorization process on discovery node.
