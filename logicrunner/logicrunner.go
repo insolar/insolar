@@ -66,14 +66,15 @@ type Error struct {
 func (lre Error) Error() string {
 	var buffer bytes.Buffer
 
+	buffer.WriteString(lre.Err.Error())
 	if lre.Contract.String() != "" {
-		buffer.WriteString("Contract=" + lre.Contract.String())
+		buffer.WriteString(" Contract=" + lre.Contract.String())
 	}
 	if lre.Method != "" {
-		buffer.WriteString("Method=" + lre.Method)
+		buffer.WriteString(" Method=" + lre.Method)
 	}
 	if lre.Request.String() != "" {
-		buffer.WriteString("Request=" + lre.Request.String())
+		buffer.WriteString(" Request=" + lre.Request.String())
 	}
 
 	return buffer.String()
