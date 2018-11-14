@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
-	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/networkcoordinator"
 
 	"github.com/insolar/insolar/core"
@@ -49,34 +48,34 @@ func makeSeed() []byte {
 }
 
 // Authorize checks is node authorized ( It's temporary method. Remove it when we have good tests )
-func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
-	privateKey, err := cryptoHelper.GeneratePrivateKey()
+func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
+	privateKey, err := foundation.GeneratePrivateKey()
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't generate private key: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't generate private key: %s", err.Error())
 	}
 
 	// Make signature
 	seed := makeSeed()
-	signature, err := cryptoHelper.Sign(seed, privateKey)
+	signature, err := foundation.Sign(seed, privateKey)
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't sign: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't sign: %s", err.Error())
 	}
 
 	// Register node
-	serPubKey, err := cryptoHelper.ExportPublicKey(&privateKey.PublicKey)
+	serPubKey, err := foundation.ExportPublicKey(foundation.ExtractPublicKey(privateKey))
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't export public key: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't export public key: %s", err.Error())
 	}
 
 	nd := nodedomain.GetObject(rd.NodeDomainRef)
-	rawJSON, err := nd.RegisterNode(serPubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
+	rawJSON, err := nd.RegisterNode(serPubKey, 0, 0, "virtual", "127.0.0.1")
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't register node: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't register node: %s", err.Error())
 	}
 
 	nodeRef, err := networkcoordinator.ExtractNodeRef(rawJSON)
 	if err != nil {
-		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't extract node ref: %s", err.Error())
+		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't extract node ref: %s", err.Error())
 	}
 
 	// Validate
@@ -114,7 +113,7 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, 
 		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get name: %s", err.Error())
 	}
 
-	balance, err := w.GetTotalBalance()
+	balance, err := w.GetBalance()
 	if err != nil {
 		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get total balance: %s", err.Error())
 	}

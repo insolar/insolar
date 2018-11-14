@@ -20,12 +20,18 @@ import (
 	"context"
 )
 
-// Starter interface provide method to start component
+// Initer interface provides method to init a component. During initialization components may NOT be ready. Only safe
+// methods (e.g. not dependant on other components) can be called during initialization.
+type Initer interface {
+	Init(ctx context.Context) error
+}
+
+// Starter interface provides method to start a component.
 type Starter interface {
 	Start(ctx context.Context) error
 }
 
-// Stopper interface provide method to stop component
+// Stopper interface provides method to stop a component.
 type Stopper interface {
 	Stop(ctx context.Context) error
 }

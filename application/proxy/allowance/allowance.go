@@ -187,8 +187,8 @@ func (r *Allowance) GetBalanceForOwnerNoWait() error {
 	return nil
 }
 
-// DeleteExpiredAllowance is proxy generated method
-func (r *Allowance) DeleteExpiredAllowance() (uint, error) {
+// GetExpiredBalance is proxy generated method
+func (r *Allowance) GetExpiredBalance() (uint, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -204,7 +204,7 @@ func (r *Allowance) DeleteExpiredAllowance() (uint, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DeleteExpiredAllowance", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetExpiredBalance", argsSerialized)
 	if err != nil {
 		return ret0, err
 	}
@@ -220,8 +220,8 @@ func (r *Allowance) DeleteExpiredAllowance() (uint, error) {
 	return ret0, nil
 }
 
-// DeleteExpiredAllowanceNoWait is proxy generated method
-func (r *Allowance) DeleteExpiredAllowanceNoWait() error {
+// GetExpiredBalanceNoWait is proxy generated method
+func (r *Allowance) GetExpiredBalanceNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -231,7 +231,7 @@ func (r *Allowance) DeleteExpiredAllowanceNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DeleteExpiredAllowance", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetExpiredBalance", argsSerialized)
 	if err != nil {
 		return err
 	}

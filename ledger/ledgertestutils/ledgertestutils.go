@@ -22,51 +22,63 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/stretchr/testify/assert"
-
-	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger andh cleanup function.
-func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, func()) {
-	var err error
+// FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
+func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, func()) {
+	log.Warn("TmpLedger is deprecated. Use mocks.")
+
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	// Init subcomponents.
-	ctx := inslogger.TestContext(t.(*testing.T))
+	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
 
-	handler, err := artifactmanager.NewMessageHandler(db, storage.NewRecentObjectsIndex(0))
-	assert.NoError(t, err)
-	am, err := artifactmanager.NewArtifactManger(db)
-	assert.NoError(t, err)
-	jc, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
-	assert.NoError(t, err)
-	pm, err := pulsemanager.NewPulseManager(db)
-	assert.NoError(t, err)
-	ls, err := localstorage.NewLocalStorage(db)
-	assert.NoError(t, err)
+	handler := artifactmanager.NewMessageHandler(db, storage.NewRecentObjectsIndex(0))
+	handler.PlatformCryptographyScheme = pcs
+	am := artifactmanager.NewArtifactManger(db)
+	am.PlatformCryptographyScheme = pcs
+	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
+	jc.PlatformCryptographyScheme = pcs
+	pm := pulsemanager.NewPulseManager(db)
+	ls := localstorage.NewLocalStorage(db)
 
 	// Init components.
 	if c.MessageBus == nil {
-		c.MessageBus = testmessagebus.NewTestMessageBus()
+		c.MessageBus = testmessagebus.NewTestMessageBus(t)
 	}
 	if c.NodeNetwork == nil {
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))
 	}
 
+	handler.Bus = c.MessageBus
+	am.DefaultBus = c.MessageBus
+	jc.NodeNet = c.NodeNetwork
+	pm.NodeNet = c.NodeNetwork
+	pm.Bus = c.MessageBus
+	pm.LR = c.LogicRunner
+
+	err := handler.Init(ctx)
+	if err != nil {
+		panic(err)
+	}
+
 	// Create ledger.
-	l := ledger.NewTestLedger(db, am, pm, jc, handler, ls)
-	err = l.Start(ctx, c)
-	assert.NoError(t, err)
+	l := ledger.NewTestLedger(db, am, pm, jc, ls)
 
 	return l, dbcancel
 }

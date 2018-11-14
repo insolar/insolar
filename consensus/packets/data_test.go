@@ -18,10 +18,10 @@ package packets
 
 import (
 	"bytes"
-	"reflect"
-	"testing"
-
 	"crypto/rand"
+	"reflect"
+	"strings"
+	"testing"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
@@ -29,11 +29,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func makeDefaultPacketHeader() *PacketHeader {
+func makeDefaultPacketHeader(packetType PacketType) *PacketHeader {
 	packetHeader := &PacketHeader{}
 	packetHeader.HasRouting = true
-	packetHeader.SubType = 3
-	packetHeader.PacketT = Referendum
+	packetHeader.PacketT = packetType
 	// -------------------
 	packetHeader.f00 = true
 	packetHeader.f01 = true
@@ -72,11 +71,11 @@ func checkBadDataSerializationDeserialization(t *testing.T, orig Serializer, msg
 }
 
 func TestPacketHeaderReadWrite(t *testing.T) {
-	checkSerializationDeserialization(t, makeDefaultPacketHeader())
+	checkSerializationDeserialization(t, makeDefaultPacketHeader(Phase1))
 }
 
 func TestPacketHeaderReadWrite_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(),
+	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(Phase1),
 		"[ PacketHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
 }
 
@@ -247,6 +246,27 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 		"[ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 }
 
+func TestPhase1Packet_SetPulseProof(t *testing.T) {
+	p := Phase1Packet{}
+	proofStateHash := genRandomSlice(64)
+	proofSignature := genRandomSlice(64)
+
+	err := p.SetPulseProof(proofStateHash, proofSignature)
+	assert.NoError(t, err)
+
+	assert.Equal(t, proofStateHash, p.proofNodePulse.NodeStateHash[:])
+	assert.Equal(t, proofSignature, p.proofNodePulse.NodeSignature[:])
+
+	invalidStateHash := genRandomSlice(32)
+	invalidSignature := genRandomSlice(128)
+	err = p.SetPulseProof(invalidStateHash, invalidSignature)
+	assert.Error(t, err)
+
+	assert.NotEqual(t, invalidStateHash, p.proofNodePulse.NodeStateHash[:])
+	assert.NotEqual(t, invalidSignature, p.proofNodePulse.NodeSignature[:])
+
+}
+
 // ----------------------------------PHASE 2--------------------------------
 
 func makeReferendumVote() *ReferendumVote {
@@ -316,18 +336,19 @@ func _TestDeviantBitSet_BadData(t *testing.T) {
 func TestParseAndCompactRouteInfo(t *testing.T) {
 	var routInfoTests = []PacketHeader{
 		PacketHeader{
-			PacketT:    NetworkConsistency,
-			SubType:    1,
+			PacketT:    Phase1,
 			HasRouting: true,
 		},
 		PacketHeader{
-			PacketT:    NetworkConsistency,
-			SubType:    1,
+			PacketT:    Phase1,
 			HasRouting: false,
 		},
 		PacketHeader{
-			PacketT:    Referendum,
-			SubType:    0,
+			PacketT:    Phase2,
+			HasRouting: true,
+		},
+		PacketHeader{
+			PacketT:    Phase2,
 			HasRouting: false,
 		},
 	}
@@ -380,7 +401,7 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 
 func makePhase1Packet() *Phase1Packet {
 	phase1Packet := &Phase1Packet{}
-	phase1Packet.packetHeader = *makeDefaultPacketHeader()
+	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
 	phase1Packet.pulseData = *makeDefaultPulseDataExt()
 	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray64(), NodeStateHash: randomArray64()}
 
@@ -399,14 +420,15 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 
 func TestPhase1Packet_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makePhase1Packet(),
-		"[ Phase1Packet.Deserialize ] Can't parseReferendumClaim: [ PacketHeader.parseReferendumClaim ] "+
-			"Can't deserialize claim.: [ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
+		"[ Phase1Packet.Deserialize ] Can't deserialize body: [ Phase1Packet.DeserializeWithoutHeader ] "+
+			"Can't parseReferendumClaim: [ PacketHeader.parseReferendumClaim ] "+
+			"Can't deserialize claim: [ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 
 }
 
 func makePhase2Packet() *Phase2Packet {
 	phase2Packet := &Phase2Packet{}
-	phase2Packet.packetHeader = *makeDefaultPacketHeader()
+	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
 	phase2Packet.globuleHashSignature = randomArray64()
 	phase2Packet.deviantBitSet = *makeDeviantBitSet()
 	phase2Packet.signatureHeaderSection1 = randomArray64()
@@ -425,6 +447,56 @@ func TestPhase2Packet_Deserialize(t *testing.T) {
 
 func TestPhase2Packet_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makePhase2Packet(),
-		"[ Phase2Packet.Deserialize ] Can't read signatureHeaderSection2: unexpected EOF")
+		"[ Phase2Packet.Deserialize ] Can't deserialize body: [ Phase2Packet.Deserialize ] "+
+			"Can't read signatureHeaderSection2: unexpected EOF")
 
+}
+
+func checkExtractPacket(t *testing.T, packet Serializer) {
+	data, err := packet.Serialize()
+	require.NoError(t, err)
+
+	buf := bytes.NewReader(data)
+	consensusPacket, err := ExtractPacket(buf)
+	require.NoError(t, err)
+
+	newRawPacket, err := consensusPacket.Serialize()
+	require.NoError(t, err)
+
+	assert.Equal(t, data, newRawPacket)
+}
+
+func TestExtractPacket_Phase1(t *testing.T) {
+	checkExtractPacket(t, makePhase2Packet())
+}
+
+func TestExtractPacket_Phase2(t *testing.T) {
+	checkExtractPacket(t, makePhase1Packet())
+}
+
+func TestExtractPacket_BadHeader(t *testing.T) {
+	reader := strings.NewReader("1")
+	_, err := ExtractPacket(reader)
+	require.EqualError(t, err, "[ ExtractPacket ] Can't read packet header")
+}
+
+func checkWrongPacket(t *testing.T, packet Serializer) {
+	data, err := packet.Serialize()
+	require.NoError(t, err)
+
+	buf := bytes.NewReader(data[:(len(data)-1)/3])
+	_, err = ExtractPacket(buf)
+	require.Contains(t, err.Error(), "Can't DeserializeWithoutHeader")
+}
+
+func TestExtractPacket_Phase2_BadExtract(t *testing.T) {
+	packet := makePhase2Packet()
+	packet.packetHeader.PacketT = Phase1
+	checkWrongPacket(t, packet)
+}
+
+func TestExtractPacket_Phase1_BadExtract(t *testing.T) {
+	packet := makePhase1Packet()
+	packet.packetHeader.PacketT = Phase2
+	checkWrongPacket(t, packet)
 }

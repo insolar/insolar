@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -31,28 +30,19 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
 )
 
-func newCertificate(t *testing.T) *certificate.Certificate {
-	cert, err := certificate.NewCertificatesWithKeys("../testdata/functional/bootstrap_keys.json")
-	assert.NoError(t, err)
-	err = cert.GenerateKeys()
-	assert.NoError(t, err)
-	return cert
-}
-
 func TestTwoPulsars_Handshake(t *testing.T) {
-	t.Skip()
 	ctx := inslogger.TestContext(t)
-	cert1 := newCertificate(t)
-	cert2 := newCertificate(t)
 
-	firstPublicExported, _ := cert1.GetPublicKey()
-	secondPublicExported, _ := cert2.GetPublicKey()
+	service := mockCryptographyService(t)
+	keyProcessor := mockKeyProcessor(t)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
@@ -62,14 +52,16 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			ConnectionType:      "tcp",
 			MainListenerAddress: ":1639",
 			Neighbours: []configuration.PulsarNodeAddress{
-				{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublicExported},
+				{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: "publicKey"},
 			},
 		},
+		service,
+		pcs,
+		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutils.MockEntropyGenerator{},
 		nil,
-		cert1,
 		net.Listen,
 	)
 	assert.NoError(t, err)
@@ -79,25 +71,27 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			ConnectionType:      "tcp",
 			MainListenerAddress: ":1640",
 			Neighbours: []configuration.PulsarNodeAddress{
-				{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublicExported},
+				{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: "publicKey"},
 			},
 		},
+		service,
+		pcs,
+		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutils.MockEntropyGenerator{},
 		nil,
-		cert2,
 		net.Listen,
 	)
 	assert.NoError(t, err)
 
 	go firstPulsar.StartServer(ctx)
 	go secondPulsar.StartServer(ctx)
-	err = secondPulsar.EstablishConnectionToPulsar(ctx, firstPublicExported)
+	err = secondPulsar.EstablishConnectionToPulsar(ctx, "publicKey")
 
 	assert.NoError(t, err)
-	assert.Equal(t, true, firstPulsar.Neighbours[secondPublicExported].OutgoingClient.IsInitialised())
-	assert.Equal(t, true, secondPulsar.Neighbours[firstPublicExported].OutgoingClient.IsInitialised())
+	assert.Equal(t, true, firstPulsar.Neighbours["publicKey"].OutgoingClient.IsInitialised())
+	assert.Equal(t, true, secondPulsar.Neighbours["publicKey"].OutgoingClient.IsInitialised())
 
 	defer func() {
 		firstPulsar.StopServer(ctx)
@@ -112,24 +106,27 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	assert.NoError(t, err)
 
 	c := core.Components{LogicRunner: lr}
-	c.MessageBus = testmessagebus.NewTestMessageBus()
-	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))
+	c.MessageBus = testmessagebus.NewTestMessageBus(t)
+	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, []core.NodeRole{core.RoleVirtual}, nil, 0, "", ""))
+	c.CryptographyService = mockCryptographyService(t)
 
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, "", c)
-	nodeConfig := configuration.NewConfiguration()
-	nodeConfig.Host.BootstrapHosts = bootstrapHosts
-	nodeNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig)
 	c.Ledger = tempLedger
 
+	nodeConfig := configuration.NewConfiguration()
+	nodeConfig.Host.BootstrapHosts = bootstrapHosts
+	serviceNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig, scheme)
 	assert.NoError(t, err)
-	err = nodeNetwork.Start(ctx, c)
+	err = serviceNetwork.Start(ctx, c)
 	assert.NoError(t, err)
-	address := nodeNetwork.GetAddress()
-	return tempLedger, cleaner, nodeNetwork, address
+	address := serviceNetwork.GetAddress()
+	return tempLedger, cleaner, serviceNetwork, address
 }
 
 func TestPulsar_SendPulseToNode(t *testing.T) {
-	t.Skip()
 	ctx := inslogger.TestContext(t)
 	// Arrange
 	bootstrapLedger, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(ctx, t, nil)
@@ -140,6 +137,10 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	storage.SetLastPulseFunc = func(p *core.Pulse) (r error) { return nil }
 	stateSwitcher := &StateSwitcherImpl{}
 
+	service := mockCryptographyService(t)
+	keyProcessor := mockKeyProcessor(t)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	newPulsar, err := NewPulsar(
 		configuration.Pulsar{
 			ConnectionType:      "tcp",
@@ -148,11 +149,13 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 			BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1890", BehindNAT: false},
 			Neighbours:          []configuration.PulsarNodeAddress{},
 		},
+		service,
+		pcs,
+		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutils.MockEntropyGenerator{},
 		stateSwitcher,
-		newCertificate(t),
 		net.Listen,
 	)
 	stateSwitcher.SetPulsar(newPulsar)
@@ -191,7 +194,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	t.Skip()
 	ctx := inslogger.TestContext(t)
-	t.Skip("rewrite pulsar tests respecting new active node managing logic")
+
 	// Arrange
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(ctx, t, nil)
 	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(ctx, t, []string{bootstrapAddress})
@@ -199,10 +202,10 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
 
-	cert1 := newCertificate(t)
-	cert2 := newCertificate(t)
-	firstPubKey, _ := cert1.GetPublicKey()
-	secondPubKey, _ := cert2.GetPublicKey()
+	service := mockCryptographyService(t)
+	keyProcessor := mockKeyProcessor(t)
+
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	firstStateSwitcher := &StateSwitcherImpl{}
 	firstPulsar, err := NewPulsar(
@@ -212,18 +215,20 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 			BootstrapNodes:      []string{bootstrapAddress},
 			BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
 			Neighbours: []configuration.PulsarNodeAddress{
-				{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: secondPubKey},
+				{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: "publicKey"},
 			},
 			ReceivingSignTimeout:           50,
 			ReceivingNumberTimeout:         50,
 			ReceivingSignsForChosenTimeout: 50,
 			ReceivingVectorTimeout:         50,
 		},
+		service,
+		pcs,
+		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
 		firstStateSwitcher,
-		cert1,
 		net.Listen,
 	)
 	firstStateSwitcher.setState(WaitingForStart)
@@ -237,18 +242,20 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 			BootstrapNodes:      []string{bootstrapAddress},
 			BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
 			Neighbours: []configuration.PulsarNodeAddress{
-				{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: firstPubKey},
+				{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: "publicKey"},
 			},
 			ReceivingSignTimeout:           50,
 			ReceivingNumberTimeout:         50,
 			ReceivingSignsForChosenTimeout: 50,
 			ReceivingVectorTimeout:         50,
 		},
+		service,
+		pcs,
+		keyProcessor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
 		secondStateSwitcher,
-		cert2,
 		net.Listen,
 	)
 	secondStateSwitcher.setState(WaitingForStart)
@@ -256,7 +263,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	go firstPulsar.StartServer(ctx)
 	go secondPulsar.StartServer(ctx)
-	err = firstPulsar.EstablishConnectionToPulsar(ctx, secondPubKey)
+	err = firstPulsar.EstablishConnectionToPulsar(ctx, "publicKey")
 	assert.NoError(t, err)
 
 	// Act
@@ -307,8 +314,8 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	keys := [7]certificate.Certificate{}
 	pulsars := [7]*Pulsar{}
 	mainAddresses := []string{
 		"127.0.0.1:1641",
@@ -320,11 +327,6 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		"127.0.0.1:1647",
 	}
 	transportAddress := "127.0.0.1:1648"
-
-	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
-		err := keys[pulsarIndex].GenerateKeys()
-		assert.NoError(t, err)
-	}
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 		conf := configuration.Configuration{
@@ -347,22 +349,26 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 			if configIndex == pulsarIndex {
 				continue
 			}
-			pubKey, _ := keys[configIndex].GetPublicKey()
 			conf.Pulsar.Neighbours = append(conf.Pulsar.Neighbours, configuration.PulsarNodeAddress{
 				ConnectionType: "tcp",
 				Address:        mainAddresses[configIndex],
-				PublicKey:      pubKey,
+				PublicKey:      "publicKey",
 			})
 		}
+
+		service := mockCryptographyService(t)
+		keyProcessor := mockKeyProcessor(t)
 
 		switcher := &StateSwitcherImpl{}
 		pulsar, err := NewPulsar(
 			conf.Pulsar,
+			service,
+			pcs,
+			keyProcessor,
 			storage,
 			&RPCClientWrapperFactoryImpl{},
 			&entropygenerator.StandardEntropyGenerator{},
 			switcher,
-			&keys[pulsarIndex],
 			net.Listen,
 		)
 		switcher.setState(WaitingForStart)
@@ -374,8 +380,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 		for neighbourIndex := pulsarIndex + 1; neighbourIndex < 7; neighbourIndex++ {
-			pubKey, _ := keys[neighbourIndex].GetPublicKey()
-			err := pulsars[pulsarIndex].EstablishConnectionToPulsar(ctx, pubKey)
+			err := pulsars[pulsarIndex].EstablishConnectionToPulsar(ctx, "publicKey")
 			assert.NoError(t, err)
 		}
 	}
@@ -411,20 +416,21 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
 
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
 	for _, pulsar := range pulsars {
 		assert.Equal(t, WaitingForStart, pulsar.StateSwitcher.GetState())
 		pulsar.lastPulseLock.RLock()
 		assert.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.GetLastPulse().PulseNumber)
 		assert.Equal(t, 7, len(pulsar.GetLastPulse().Signs))
-		for _, keysItem := range keys {
-			pubKey, _ := keysItem.GetPublicKey()
 
-			sign := pulsar.GetLastPulse().Signs[pubKey]
-			isOk, err := checkSignature(core.PulseSenderConfirmation{
+		for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
+			sign := pulsar.GetLastPulse().Signs["publicKey"]
+			isOk, err := checkSignature(pulsar.CryptographyService, keyProcessor, core.PulseSenderConfirmation{
 				PulseNumber:     sign.PulseNumber,
 				ChosenPublicKey: sign.ChosenPublicKey,
 				Entropy:         sign.Entropy,
-			}, pubKey, sign.Signature)
+			}, "publicKey", sign.Signature)
 			assert.Equal(t, true, isOk)
 			assert.NoError(t, err)
 		}

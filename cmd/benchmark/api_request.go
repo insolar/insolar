@@ -22,8 +22,8 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/api/requesters"
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
@@ -79,16 +79,18 @@ func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 	for i := 0; i < concurrent*repetitions*2; i++ {
 		memberName := testutils.RandomString()
 
-		memberPrivKey, err := ecdsahelper.GeneratePrivateKey()
+		ks := platformpolicy.NewKeyProcessor()
+
+		memberPrivKey, err := ks.GeneratePrivateKey()
 		check("Problems with generating of private key:", err)
 
-		memberPrivKeyStr, err := ecdsahelper.ExportPrivateKey(memberPrivKey)
+		memberPrivKeyStr, err := ks.ExportPrivateKey(memberPrivKey)
 		check("Problems with serialization of private key:", err)
 
-		memberPubKeyStr, err := ecdsahelper.ExportPublicKey(&memberPrivKey.PublicKey)
+		memberPubKeyStr, err := ks.ExportPublicKey(ks.ExtractPublicKey(memberPrivKey))
 		check("Problems with serialization of public key:", err)
 
-		params := []interface{}{memberName, memberPubKeyStr}
+		params := []interface{}{memberName, string(memberPubKeyStr)}
 		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("createMemberNumber%d", i))
 
 		body := sendRequest(ctx, "CreateMember", params, rootMember)
@@ -99,7 +101,7 @@ func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 		}
 		memberRef := memberResponse.Result.(string)
 
-		members = append(members, memberInfo{memberRef, memberPrivKeyStr})
+		members = append(members, memberInfo{memberRef, string(memberPrivKeyStr)})
 	}
 	return members, nil
 }

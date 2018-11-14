@@ -26,7 +26,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/api/requesters"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,7 +74,7 @@ type getSeedResponse struct {
 type isAuthorized struct {
 	baseResponse
 	PublicKey     string `json:"public_key"`
-	Roles         []int  `json:"roles"`
+	Role          int    `json:"role"`
 	NetCoordCheck bool   `json:"netcoord_auth_success"`
 }
 
@@ -221,20 +221,24 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 }
 
 func newUserWithKeys() (*user, error) {
-	key, err := ecdsa.GeneratePrivateKey()
+	ks := platformpolicy.NewKeyProcessor()
+
+	privateKey, err := ks.GeneratePrivateKey()
 	if err != nil {
 		return nil, err
 	}
-	privKeyStr, err := ecdsa.ExportPrivateKey(key)
+
+	privKeyStr, err := ks.ExportPrivateKey(privateKey)
 	if err != nil {
 		return nil, err
 	}
-	pubKeyStr, err := ecdsa.ExportPublicKey(&key.PublicKey)
+	publicKey := ks.ExtractPublicKey(privateKey)
+	pubKeyStr, err := ks.ExportPublicKey(publicKey)
 	if err != nil {
 		return nil, err
 	}
 	return &user{
-		privKey: privKeyStr,
-		pubKey:  pubKeyStr,
+		privKey: string(privKeyStr),
+		pubKey:  string(pubKeyStr),
 	}, nil
 }

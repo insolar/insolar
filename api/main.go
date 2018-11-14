@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/contract/member/signer"
@@ -160,7 +162,7 @@ type Runner struct {
 	server         *http.Server
 	cfg            *configuration.APIRunner
 	netCoordinator core.NetworkCoordinator
-	keyCache       map[string]string
+	keyCache       map[string]crypto.PublicKey
 	cacheLock      *sync.RWMutex
 	seedmanager    *seedmanager.SeedManager
 }
@@ -170,18 +172,18 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	if cfg == nil {
 		return nil, errors.New("[ NewAPIRunner ] config is nil")
 	}
-	if cfg.Port == 0 {
-		return nil, errors.New("[ NewAPIRunner ] Port must not be 0")
+	if cfg.Address == "" {
+		return nil, errors.New("[ NewAPIRunner ] Address must not be empty")
 	}
 	if len(cfg.Location) == 0 {
 		return nil, errors.New("[ NewAPIRunner ] Location must exist")
 	}
 
-	portStr := fmt.Sprint(cfg.Port)
+	addrStr := fmt.Sprint(cfg.Address)
 	ar := Runner{
-		server:    &http.Server{Addr: ":" + portStr},
+		server:    &http.Server{Addr: addrStr},
 		cfg:       cfg,
-		keyCache:  make(map[string]string),
+		keyCache:  make(map[string]crypto.PublicKey),
 		cacheLock: &sync.RWMutex{},
 	}
 
@@ -235,16 +237,16 @@ func (ar *Runner) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (string, error) { //nolint
+func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.PublicKey, error) { //nolint
 	ar.cacheLock.RLock()
-	key, ok := ar.keyCache[ref]
+	publicKey, ok := ar.keyCache[ref]
 	ar.cacheLock.RUnlock()
 	if ok {
-		return key, nil
+		return publicKey, nil
 	}
 	args, err := core.MarshalArgs()
 	if err != nil {
-		return "", errors.Wrap(err, "Can't marshal empty args")
+		return nil, errors.Wrap(err, "Can't marshal empty args")
 	}
 	res, err := ar.messageBus.Send(
 		ctx,
@@ -255,20 +257,27 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (string, erro
 		},
 	)
 	if err != nil {
-		return "", errors.Wrap(err, "Can't get public key")
+		return nil, errors.Wrap(err, "Can't get public key")
 	}
 
+	var publicKeyString string
 	var contractErr error
-	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &key, &contractErr)
+	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &publicKeyString, &contractErr)
 	if err != nil {
-		return "", errors.Wrap(err, "Can't unmarshal public key")
+		return nil, errors.Wrap(err, "Can't unmarshal public key")
 	}
 	if contractErr != nil {
-		return "", errors.Wrap(contractErr, "Error in get public key")
+		return nil, errors.Wrap(contractErr, "Error in get public key")
+	}
+
+	kp := platformpolicy.NewKeyProcessor()
+	publicKey, err = kp.ImportPublicKey([]byte(publicKeyString))
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to convert public key")
 	}
 
 	ar.cacheLock.Lock()
-	ar.keyCache[ref] = key
+	ar.keyCache[ref] = publicKey
 	ar.cacheLock.Unlock()
-	return key, nil
+	return publicKey, nil
 }

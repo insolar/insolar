@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,14 +69,8 @@ func makeHosts(count int, t *testing.T) []*host.Host {
 	addresses := makeAddresses(count, t)
 
 	for i := 0; i < count; i++ {
-		id, err := id.NewID()
-
-		if err != nil {
-			assert.Errorf(t, nil, "error: %s", err.Error())
-			continue
-		}
-
-		result = append(result, &host.Host{ID: id, Address: addresses[i]})
+		id := testutils.RandomRef()
+		result = append(result, &host.Host{NodeID: id, Address: addresses[i]})
 	}
 
 	return result

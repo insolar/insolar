@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/pkg/errors"
 )
 
@@ -30,19 +29,19 @@ type Nonce []byte
 
 // Signer is a component which signs and checks authorization nonce.
 type Signer struct {
-	lock        *sync.Mutex
-	nonces      map[core.RecordRef]Nonce
-	certificate core.Certificate
-	coordinator core.NetworkCoordinator
+	lock                *sync.Mutex
+	nonces              map[core.RecordRef]Nonce
+	cryptographyService core.CryptographyService
+	coordinator         core.NetworkCoordinator
 }
 
 // NewSignHandler creates a new sign handler.
-func NewSigner(certificate core.Certificate, coordinator core.NetworkCoordinator) *Signer {
+func NewSigner(cryptographyService core.CryptographyService, coordinator core.NetworkCoordinator) *Signer {
 	return &Signer{
-		lock:        &sync.Mutex{},
-		certificate: certificate,
-		coordinator: coordinator,
-		nonces:      make(map[core.RecordRef]Nonce),
+		lock:                &sync.Mutex{},
+		cryptographyService: cryptographyService,
+		coordinator:         coordinator,
+		nonces:              make(map[core.RecordRef]Nonce),
 	}
 }
 
@@ -98,8 +97,8 @@ func (signer *Signer) getNonce(ref core.RecordRef) (Nonce, bool) {
 }
 
 // SignNonce sign a nonce.
-func (signer *Signer) SignNonce(nonce Nonce) ([]byte, error) {
-	sign, err := ecdsa.Sign(nonce, signer.certificate.GetEcdsaPrivateKey())
+func (signer *Signer) SignNonce(nonce Nonce) (*core.Signature, error) {
+	sign, err := signer.cryptographyService.Sign(nonce)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to sign nonce")
 	}

@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -172,32 +171,32 @@ func TestMain(m *testing.M) {
 
 func TestGetSeed(t *testing.T) {
 	seed, err := GetSeed(URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
-	assert.NoError(t, err)
-	assert.Equal(t, decodedSeed, seed)
+	require.NoError(t, err)
+	require.Equal(t, decodedSeed, seed)
 }
 
 func TestGetResponseBodyBadRequest(t *testing.T) {
 	_, err := GetResponseBody("test", PostParams{})
-	assert.EqualError(t, err, "[ getResponseBody ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
+	require.EqualError(t, err, "[ getResponseBody ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
 }
 
 func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 	_, err := GetResponseBody(URL+"TEST", PostParams{})
-	assert.EqualError(t, err, "[ getResponseBody ] Bad http response code: 404")
+	require.EqualError(t, err, "[ getResponseBody ] Bad http response code: 404")
 }
 
 func TestGetResponseBody(t *testing.T) {
 	data, err := GetResponseBody(URL, PostParams{})
-	assert.NoError(t, err)
-	assert.Contains(t, string(data), `"random_data": "VGVzdA=="`)
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
 }
 
 func TestSetVerbose(t *testing.T) {
-	assert.False(t, verbose)
+	require.False(t, verbose)
 	SetVerbose(true)
-	assert.True(t, verbose)
+	require.True(t, verbose)
 }
 
 func readConfigs(t *testing.T) (*UserConfigJSON, *RequestConfigJSON) {
@@ -213,43 +212,43 @@ func TestSend(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
 	resp, err := Send(ctx, URL, userConf, reqConf)
-	assert.NoError(t, err)
-	assert.Contains(t, string(resp), TESTREFERENCE)
+	require.NoError(t, err)
+	require.Contains(t, string(resp), TESTREFERENCE)
 }
 
 func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
 	resp, err := SendWithSeed(ctx, URL, userConf, reqConf, []byte(TESTSEED))
-	assert.NoError(t, err)
-	assert.Contains(t, string(resp), TESTREFERENCE)
+	require.NoError(t, err)
+	require.Contains(t, string(resp), TESTREFERENCE)
 }
 
 func TestSendWithSeed_WithBadUrl(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
 	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, []byte(TESTSEED))
-	assert.EqualError(t, err, "[ Send ] Problem with sending target request: [ getResponseBody ] Bad http response code: 404")
+	require.EqualError(t, err, "[ Send ] Problem with sending target request: [ getResponseBody ] Bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
 	_, err := SendWithSeed(ctx, URL, nil, nil, []byte(TESTSEED))
-	assert.EqualError(t, err, "[ Send ] Configs must be initialized")
+	require.EqualError(t, err, "[ Send ] Configs must be initialized")
 }
 
 func TestSend_BadSeedUrl(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend_BadSeedUrl")
 	userConf, reqConf := readConfigs(t)
 	_, err := Send(ctx, URL+"TTT", userConf, reqConf)
-	assert.EqualError(t, err, "[ Send ] Problem with getting seed: [ getSeed ]: [ getResponseBody ] Bad http response code: 404")
+	require.EqualError(t, err, "[ Send ] Problem with getting seed: [ getSeed ]: [ getResponseBody ] Bad http response code: 404")
 }
 
 func TestInfo(t *testing.T) {
 	resp, err := Info(URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fmt.Println(resp.RootDomain)
-	assert.Equal(t, resp, &InfoResponse{
+	require.Equal(t, resp, &InfoResponse{
 		RootMember: "root_member_ref",
 		RootDomain: "root_domain_ref",
 		Prototypes: map[string]string{},

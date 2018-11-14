@@ -23,7 +23,6 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	"golang.org/x/crypto/sha3"
 )
 
 func min(a, b int) int {
@@ -51,19 +50,19 @@ func geometricProgressionSum(a int, r int, n int) int {
 	return a * (1 - S) / (1 - r)
 }
 
-func calcHash(nodeID core.RecordRef, entropy core.Entropy) []byte {
+func calcHash(scheme core.PlatformCryptographyScheme, nodeID core.RecordRef, entropy core.Entropy) []byte {
 	data := make([]byte, core.RecordRefSize)
 	copy(data, nodeID[:])
 	for i, d := range data {
 		data[i] = entropy[i%core.EntropySize] ^ d
 	}
 
-	hash := sha3.New224()
-	_, err := hash.Write(data)
+	h := scheme.IntegrityHasher()
+	_, err := h.Write(data)
 	if err != nil {
 		panic(err)
 	}
-	return hash.Sum(nil)
+	return h.Sum(nil)
 }
 
 func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.RecordRef, replicationFactor uint) (startIndex, endIndex int) {
@@ -104,7 +103,7 @@ func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.Recor
 }
 
 // CalculateNextNodes get nodes of the next cascade layer from the input nodes slice
-func CalculateNextNodes(data core.Cascade, currentNode *core.RecordRef) (nextNodeIds []core.RecordRef, err error) {
+func CalculateNextNodes(scheme core.PlatformCryptographyScheme, data core.Cascade, currentNode *core.RecordRef) (nextNodeIds []core.RecordRef, err error) {
 	nodeIds := make([]core.RecordRef, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
 
@@ -117,8 +116,8 @@ func CalculateNextNodes(data core.Cascade, currentNode *core.RecordRef) (nextNod
 
 	sort.SliceStable(nodeIds, func(i, j int) bool {
 		return bytes.Compare(
-			calcHash(nodeIds[i], data.Entropy),
-			calcHash(nodeIds[j], data.Entropy)) < 0
+			calcHash(scheme, nodeIds[i], data.Entropy),
+			calcHash(scheme, nodeIds[j], data.Entropy)) < 0
 	})
 
 	if currentNode == nil {

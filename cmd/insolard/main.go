@@ -87,26 +87,24 @@ func parseInputParams() inputParams {
 	return result
 }
 
-func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, cert core.Certificate, nc core.NetworkCoordinator) {
-	roles := []string{"virtual", "heavy_material", "light_material"}
-	publicKey, err := cert.GetPublicKey()
+func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, service core.CryptographyService, nc core.NetworkCoordinator) {
+	role := "virtual"
+	publicKey, err := service.GetPublicKey()
 	checkError(ctx, err, "failed to get public key")
 
-	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, roles, host)
+	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, role, host)
 	checkError(ctx, err, "can't register node")
 
 	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)
 	checkError(ctx, err, "can't write certificate")
 }
 
-func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration) {
+func mergeConfigAndCertificate(ctx context.Context, cfg configuration.Configuration, cert *certificate.Certificate) {
 	inslog := inslogger.FromContext(ctx)
 	if len(cfg.CertificatePath) == 0 {
 		inslog.Info("No certificate path - No merge")
 		return
 	}
-	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
-	checkError(ctx, err, "can't create certificate")
 
 	cfg.Host.BootstrapHosts = []string{}
 	for _, bn := range cert.BootstrapNodes {
@@ -144,8 +142,17 @@ func main() {
 	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
 	ctx, inslog := initLogger(ctx, cfg.Log)
 
+	bootstrapComponents := InitBootstrapComponents(ctx, *cfg)
+	cert := InitCertificate(
+		ctx,
+		*cfg,
+		params.isBootstrap,
+		bootstrapComponents.CryptographyService,
+		bootstrapComponents.KeyProcessor,
+	)
+
 	if !params.isBootstrap {
-		mergeConfigAndCertificate(ctx, cfg)
+		mergeConfigAndCertificate(ctx, *cfg, cert)
 	}
 	cfg.Metrics.Namespace = "insolard"
 
@@ -159,7 +166,18 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, cmOld, repl, err := InitComponents(ctx, *cfg, params.isBootstrap)
+	cm, cmOld, repl, err := InitComponents(
+		ctx,
+		*cfg,
+		bootstrapComponents.CryptographyService,
+		bootstrapComponents.PlatformCryptographyScheme,
+		bootstrapComponents.KeyStore,
+		bootstrapComponents.KeyProcessor,
+		cert,
+	)
+	checkError(ctx, err, "failed to init components")
+
+	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
 	cmOld.linkAll(ctx)
@@ -194,7 +212,7 @@ func main() {
 			ctx,
 			cfg.Host.Transport.Address,
 			params.bootstrapCertificatePath,
-			cmOld.components.Certificate,
+			cmOld.components.CryptographyService,
 			cmOld.components.NetworkCoordinator,
 		)
 		inslog.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
