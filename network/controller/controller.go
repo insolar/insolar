@@ -88,7 +88,7 @@ func (c *Controller) Inject(components core.Components) {
 	})
 	c.bootstrapController.Start()
 	c.authController.Start(components)
-	//TODO:	c.pulseController.Start()
+	c.pulseController.Start()
 	c.rpcController.Start()
 }
 
