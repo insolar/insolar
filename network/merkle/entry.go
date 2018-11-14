@@ -21,6 +21,7 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
 )
 
 type PulseEntry struct {
@@ -32,7 +33,7 @@ func (pe *PulseEntry) hash(helper *merkleHelper) []byte {
 }
 
 type GlobuleEntry struct {
-	PulseEntry
+	*PulseEntry
 	ProofSet      map[core.Node]*PulseProof
 	PulseHash     []byte
 	PrevCloudHash []byte
@@ -40,20 +41,28 @@ type GlobuleEntry struct {
 }
 
 func (ge *GlobuleEntry) hash(helper *merkleHelper) []byte {
-	nodeEntryByRole := nodeEntryByRole(ge.ProofSet)
+	nodeEntryByRole := nodeEntryByRole(ge.PulseEntry, ge.ProofSet)
 	var bucketHashes [][]byte
 
-	for role, roleEntries := range nodeEntryByRole {
-		sortEntries(roleEntries)
+	for _, role := range core.AllNodeRoles {
+		var bucketEntryRoot []byte
 
-		bucketEntryRoot := roleEntryRoot(roleEntries, helper)
+		roleEntries, ok := nodeEntryByRole[role]
+		if !ok {
+			roleEntries = make([]*nodeEntry, 0)
+			bucketEntryRoot = utils.UInt32ToBytes(reserved)
+		} else {
+			sortEntries(roleEntries)
+			bucketEntryRoot = roleEntryRoot(roleEntries, helper)
+		}
+
 		bucketInfoHash := helper.bucketInfoHash(role, uint32(len(roleEntries)))
 		bucketHash := helper.bucketHash(bucketInfoHash, bucketEntryRoot)
 
 		bucketHashes = append(bucketHashes, bucketHash)
 	}
 
-	return fromList(bucketHashes, helper.scheme.IntegrityHasher()).MerkleRoot()
+	return fromList(bucketHashes, helper.scheme.IntegrityHasher()).Root()
 }
 
 type CloudEntry struct {
@@ -71,11 +80,11 @@ func (ce *CloudEntry) hash(helper *merkleHelper) []byte {
 	}
 
 	mt := fromList(result, helper.scheme.IntegrityHasher())
-	return mt.MerkleRoot()
+	return mt.Root()
 }
 
 type nodeEntry struct {
-	PulseEntry
+	*PulseEntry
 	PulseProof *PulseProof
 	Node       core.Node
 }
@@ -86,11 +95,12 @@ func (ne *nodeEntry) hash(helper *merkleHelper) []byte {
 	return helper.nodeHash(ne.PulseProof.Signature, nodeInfoHash)
 }
 
-func nodeEntryByRole(nodeProofs map[core.Node]*PulseProof) map[core.NodeRole][]*nodeEntry {
+func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[core.Node]*PulseProof) map[core.NodeRole][]*nodeEntry {
 	roleMap := make(map[core.NodeRole][]*nodeEntry)
 	for node, pulseProof := range nodeProofs {
 		role := node.Role()
 		roleMap[role] = append(roleMap[role], &nodeEntry{
+			PulseEntry: pulseEntry,
 			Node:       node,
 			PulseProof: pulseProof,
 		})
@@ -112,5 +122,5 @@ func roleEntryRoot(roleEntries []*nodeEntry, helper *merkleHelper) []byte {
 		bucketEntryHash := helper.bucketEntryHash(uint32(index), entry.hash(helper))
 		roleEntriesHashes = append(roleEntriesHashes, bucketEntryHash)
 	}
-	return fromList(roleEntriesHashes, helper.scheme.IntegrityHasher()).MerkleRoot()
+	return fromList(roleEntriesHashes, helper.scheme.IntegrityHasher()).Root()
 }

@@ -17,41 +17,17 @@
 package merkle
 
 import (
-	"bytes"
-
-	"github.com/cbergoon/merkletree"
 	"github.com/insolar/insolar/core"
+	"github.com/onrik/gomerkle"
 )
 
 type tree interface {
-	MerkleRoot() []byte
-}
-
-type treeNode struct {
-	content []byte
-	hasher  core.Hasher
-}
-
-func (t *treeNode) CalculateHash() ([]byte, error) {
-	return t.hasher.Hash(t.content), nil
-}
-
-func (t *treeNode) Equals(other merkletree.Content) (bool, error) {
-	equal := bytes.Equal(t.content, other.(*treeNode).content)
-	return equal, nil
+	Root() []byte
 }
 
 func fromList(list [][]byte, hasher core.Hasher) tree {
-	var result []merkletree.Content
-
-	for _, content := range list {
-		result = append(result, &treeNode{content: content, hasher: hasher})
-	}
-
-	mt, err := merkletree.NewTree(result)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return mt
+	mt := gomerkle.NewTree(hasher)
+	mt.AddData(list...)
+	mt.Generate()
+	return &mt
 }
