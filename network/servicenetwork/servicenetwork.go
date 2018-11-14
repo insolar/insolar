@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"context"
-	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -43,10 +42,9 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
+func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{}
-
-	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf)
+	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork, scheme)
 	if err != nil {
 		log.Error("failed to create network components: %s", err.Error())
 	}
@@ -79,12 +77,6 @@ func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, ms
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 	n.controller.RemoteProcedureRegister(name, method)
-}
-
-// GetPrivateKey returns a private key.
-// TODO: remove, use helper functions from certificate instead
-func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
-	return n.certificate.GetEcdsaPrivateKey()
 }
 
 // Start implements core.Component
@@ -132,8 +124,7 @@ func (n *ServiceNetwork) bootstrap() {
 	}
 }
 
-func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
-	ctx := context.TODO()
+func (n *ServiceNetwork) OnPulse(ctx context.Context, pulse core.Pulse) {
 	log.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.pulseManager == nil {
 		log.Error("PulseManager is not initialized")
@@ -152,27 +143,24 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 			return
 		}
 		log.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-
-		// deprecated
-		/*
-			go func(network *ServiceNetwork) {
-				network.controller.ResendPulseToKnownHosts(pulse)
-				if network.coordinator == nil {
-					return
-				}
-				err := network.coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
-				if err != nil {
-					log.Warn("Writing active nodes to ledger: " + err.Error())
-				}
-			}(n)
-		*/
+		go func(network *ServiceNetwork) {
+			network.controller.ResendPulseToKnownHosts(pulse)
+			if network.coordinator == nil {
+				return
+			}
+			err := network.coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
+			if err != nil {
+				log.Warn("Writing active nodes to ledger: " + err.Error())
+			}
+		}(n)
 
 		// TODO: PLACE NEW CONSENSUS HERE
 	}
 }
 
 // NewNetworkComponents create network.HostNetwork and network.Controller for new network
-func NewNetworkComponents(conf configuration.Configuration) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
+func NewNetworkComponents(conf configuration.Configuration,
+	pulseHandler network.PulseHandler, scheme core.PlatformCryptographyScheme) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
 	routingTable := routing.NewTable()
 	internalTransport, err := hostnetwork.NewInternalTransport(conf)
 	if err != nil {
@@ -180,6 +168,6 @@ func NewNetworkComponents(conf configuration.Configuration) (network.RoutingTabl
 	}
 	hostNetwork := hostnetwork.NewHostTransport(internalTransport, routingTable)
 	options := controller.ConfigureOptions(conf.Host)
-	networkController := controller.NewNetworkController(options, internalTransport, routingTable, hostNetwork)
+	networkController := controller.NewNetworkController(pulseHandler, options, internalTransport, routingTable, hostNetwork, scheme)
 	return routingTable, hostNetwork, networkController, nil
 }

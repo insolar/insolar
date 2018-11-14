@@ -103,10 +103,9 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 
 	nc.phase1result[request.GetSender()] = p
 
-	newPulse := p.GetPulse()
 	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
 		nc.currentPulse = newPulse
-		nc.FirstPhase.Execute(context.TODO(), p.GetPulse())
+		nc.FirstPhase.Execute(context.TODO(), &newPulse)
 	}
 }
 

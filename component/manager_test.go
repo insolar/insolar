@@ -72,7 +72,7 @@ func (cm *Component2) Method2() {
 
 func TestComponentManager_Register(t *testing.T) {
 	cm := Manager{}
-	cm.Register(&Component1{}, &Component2{})
+	cm.Inject(&Component1{}, &Component2{})
 
 	assert.NoError(t, cm.Start(nil))
 	assert.NoError(t, cm.Stop(nil))

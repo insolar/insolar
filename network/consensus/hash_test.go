@@ -21,18 +21,21 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
-	nullHash = "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7"
+	nullHash = "a69f73cca23a9ac5c8b567dc185a756e97c982164fe25859e0d1dcc1475c80a615b2123af1f5f94c11e3e9402c3ac558f500199d95b6d3e301758586281dcd26"
 )
 
 func TestNodeConsensus_calculateNodeHash(t *testing.T) {
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
 	nodeID := testutils.RandomRef()
-	hash1, _ := CalculateNodeUnsyncHash(nodeID, nil)
-	hash2, _ := CalculateNodeUnsyncHash(nodeID, []core.Node{})
+	hash1, _ := CalculateNodeUnsyncHash(scheme, nodeID, nil)
+	hash2, _ := CalculateNodeUnsyncHash(scheme, nodeID, []core.Node{})
 
 	assert.Equal(t, nullHash, hex.EncodeToString(hash1.Hash))
 	assert.Equal(t, hash1, hash2)
@@ -44,20 +47,20 @@ func TestNodeConsensus_calculateNodeHash(t *testing.T) {
 	activeNode1Slice := []core.Node{activeNode1}
 	activeNode2Slice := []core.Node{activeNode2}
 
-	hash1, _ = CalculateNodeUnsyncHash(nodeID, activeNode1Slice)
-	hash2, _ = CalculateNodeUnsyncHash(nodeID, activeNode2Slice)
+	hash1, _ = CalculateNodeUnsyncHash(scheme, nodeID, activeNode1Slice)
+	hash2, _ = CalculateNodeUnsyncHash(scheme, nodeID, activeNode2Slice)
 	assert.Equal(t, hash1, hash2)
 
 	activeNode3 := newActiveNode(1, 0)
 	activeNode3Slice := []core.Node{activeNode3}
-	hash3, _ := CalculateNodeUnsyncHash(nodeID, activeNode3Slice)
+	hash3, _ := CalculateNodeUnsyncHash(scheme, nodeID, activeNode3Slice)
 	assert.NotEqual(t, hash1, hash3)
 
 	// nodes order in slice should not affect hash calculating
 	slice1 := []core.Node{activeNode1, activeNode2}
 	slice2 := []core.Node{activeNode2, activeNode1}
-	hash1, _ = CalculateNodeUnsyncHash(nodeID, slice1)
-	hash2, _ = CalculateNodeUnsyncHash(nodeID, slice2)
+	hash1, _ = CalculateNodeUnsyncHash(scheme, nodeID, slice1)
+	hash2, _ = CalculateNodeUnsyncHash(scheme, nodeID, slice2)
 	assert.Equal(t, hash1, hash2)
 	assert.Equal(t, nodeID, hash1.NodeID)
 }

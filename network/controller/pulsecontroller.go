@@ -63,7 +63,7 @@ func (pc *PulseController) processGetRandomHosts(request network.Request) (netwo
 	return pc.hostNetwork.BuildResponse(request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
-func NewPulseController(pulseCallback network.PulseHandler, hostNetwork network.HostNetwork,
+func NewPulseController(pulseHandler network.PulseHandler, hostNetwork network.HostNetwork,
 	routingTable network.RoutingTable) *PulseController {
-	return &PulseController{pulseHandler: pulseCallback, hostNetwork: hostNetwork, routingTable: routingTable}
+	return &PulseController{pulseHandler: pulseHandler, hostNetwork: hostNetwork, routingTable: routingTable}
 }

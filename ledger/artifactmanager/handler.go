@@ -35,9 +35,10 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	db              *storage.DB
-	jetDropHandlers map[core.MessageType]internalHandler
-	Bus             core.MessageBus `inject:""`
+	db                         *storage.DB
+	jetDropHandlers            map[core.MessageType]internalHandler
+	Bus                        core.MessageBus                 `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 }
 
 // NewMessageHandler creates new handler.
@@ -102,7 +103,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetBlob)
 
-	calculatedID := record.CalculateIDForBlob(pulseNumber, msg.Memory)
+	calculatedID := record.CalculateIDForBlob(h.PlatformCryptographyScheme, pulseNumber, msg.Memory)
 	_, err := h.db.GetBlob(ctx, calculatedID)
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil

@@ -18,17 +18,17 @@ package message
 
 import (
 	"context"
-	"crypto/ecdsa"
-
-	"github.com/insolar/insolar/cryptohelpers/hash"
-	"github.com/pkg/errors"
+	"crypto"
 
 	"github.com/insolar/insolar/core"
-	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 )
+
+type ParcelFactory interface {
+	Create(context.Context, core.Message, core.RecordRef, core.PulseNumber, core.RoutingToken) (core.Parcel, error)
+	Validate(crypto.PublicKey, core.Parcel) error
+}
 
 // Parcel is a message signed by senders private key.
 type Parcel struct {
@@ -60,64 +60,6 @@ func (sm *Parcel) Context(ctx context.Context) context.Context {
 	ctx = inslogger.ContextWithTrace(ctx, sm.LogTraceID)
 	parentspan := instracer.MustDeserialize(sm.TraceSpanData)
 	return instracer.WithParentSpan(ctx, parentspan)
-}
-
-// NewParcel creates and return a signed message.
-func NewParcel(
-	ctx context.Context,
-	msg core.Message,
-	sender core.RecordRef,
-	key *ecdsa.PrivateKey,
-	pulse core.PulseNumber,
-	token core.RoutingToken,
-) (*Parcel, error) {
-	if key == nil {
-		return nil, errors.New("failed to sign a message: private key == nil")
-	}
-	if msg == nil {
-		return nil, errors.New("failed to sign a nil message")
-	}
-	serialized := ToBytes(msg)
-	sign, err := signMessage(serialized, key)
-	if err != nil {
-		return nil, err
-	}
-
-	if token == nil {
-		target := ExtractTarget(msg)
-		token = NewRoutingToken(&target, &sender, pulse, hash.SHA3Bytes256(serialized), key)
-	}
-	return &Parcel{
-		Token:         token,
-		Msg:           msg,
-		Signature:     sign,
-		LogTraceID:    inslogger.TraceID(ctx),
-		TraceSpanData: instracer.MustSerialize(ctx),
-	}, nil
-}
-
-// SignMessage tries to sign a core.Message.
-func signMessage(serialized []byte, key *ecdsa.PrivateKey) ([]byte, error) {
-	sign, err := ecdsa2.Sign(serialized, key)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign a message")
-	}
-	return sign, nil
-}
-
-// IsValid checks if a sign is correct.
-func (sm *Parcel) IsValid(key *ecdsa.PublicKey) bool {
-	exportedKey, err := ecdsa2.ExportPublicKey(key)
-	if err != nil {
-		log.Error("failed to export a public key")
-		return false
-	}
-	verified, err := ecdsa2.Verify(ToBytes(sm.Msg), sm.Signature, exportedKey)
-	if err != nil {
-		log.Error(err, "failed to verify a message")
-		return false
-	}
-	return verified
 }
 
 // Type returns message type.
