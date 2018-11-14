@@ -92,7 +92,7 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 		return
 	}
 
-	payload, err := currentPulsar.preparePayload(EntropyPayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Entropy: currentPulsar.GeneratedEntropy})
+	payload, err := currentPulsar.preparePayload(EntropyPayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Entropy: *currentPulsar.GetGeneratedEntropy()})
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
@@ -120,7 +120,7 @@ func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context) {
 	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
 	payload, err := currentPulsar.preparePayload(PulsePayload{Pulse: core.Pulse{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
-		Entropy:     currentPulsar.CurrentSlotEntropy,
+		Entropy:     *currentPulsar.GetCurrentSlotEntropy(),
 		Signs:       currentPulsar.CurrentSlotSenderConfirmations,
 	}})
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
@@ -182,7 +182,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	}
 
 	signature, err := signData(currentPulsar.CryptographyService, core.PulseSenderConfirmation{
-		Entropy:         currentPulsar.CurrentSlotEntropy,
+		Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 		PulseNumber:     currentPulsar.ProcessingPulseNumber,
 	})
@@ -193,7 +193,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	confirmation := core.PulseSenderConfirmation{
 		PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
-		Entropy:         currentPulsar.CurrentSlotEntropy,
+		Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 		Signature:       signature,
 	}
 
@@ -225,7 +225,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
 	pulseForSending := core.Pulse{
 		PulseNumber:      currentPulsar.ProcessingPulseNumber,
-		Entropy:          currentPulsar.CurrentSlotEntropy,
+		Entropy:          *currentPulsar.GetCurrentSlotEntropy(),
 		Signs:            currentPulsar.CurrentSlotSenderConfirmations,
 		NextPulseNumber:  currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
 		PrevPulseNumber:  currentPulsar.lastPulse.PulseNumber,
