@@ -37,7 +37,7 @@ type Communicator interface {
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
 type NaiveCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
-	PulseHandler     network.PulseHandler     `inject:""`
+	FirstPhase       FirstPhase               `inject:""`
 
 	phase1packet *packets.Phase1Packet
 	phase1result map[core.RecordRef]*packets.Phase1Packet
@@ -60,6 +60,7 @@ func (nc *NaiveCommunicator) Start(ctx context.Context) error {
 func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	//futures := make([]network.Future, len(participants))
 
+	nc.currentPulse = packet.GetPulse() // todo check
 	packetBuffer, err := packet.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ExchangeData] Failed to serialize Phase1Packet.")
@@ -73,17 +74,10 @@ func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []co
 		if err != nil {
 			// TODO: mark participant as unreachable
 			log.Errorln(err.Error())
-		} else {
-			//futures = append(futures, future)
 		}
 	}
 
-	//TODO: get futures results
-	/*
-		for _, f := range futures {
-			f.GetResponse(time.Second)
-		}
-	*/
+	//TODO: get  results
 
 	return nil, nil
 }
@@ -99,13 +93,20 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 		log.Errorln("invalid Phase1Packet")
 		return
 	}
+	newPulse := p.GetPulse()
+	if newPulse.PulseNumber < nc.currentPulse.PulseNumber {
+		log.Warnln("ignore old pulse")
+		return
+	}
+
 	//TODO: check current pulse??
 
 	nc.phase1result[request.GetSender()] = p
 
 	newPulse := p.GetPulse()
 	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
-		nc.PulseHandler.OnPulse(context.TODO(), p.GetPulse())
+		nc.currentPulse = newPulse
+		nc.FirstPhase.Execute(context.TODO(), p.GetPulse())
 	}
 }
 
