@@ -24,111 +24,66 @@ import (
 const reserved = 0xDEADBEEF
 
 type merkleHelper struct {
-	hasher core.Hasher
+	scheme     core.PlatformCryptographyScheme
+	leafHasher core.Hasher
 }
 
 func newMerkleHelper(scheme core.PlatformCryptographyScheme) *merkleHelper {
 	return &merkleHelper{
-		hasher: scheme.IntegrityHasher(),
+		scheme:     scheme,
+		leafHasher: scheme.IntegrityHasher(),
 	}
 }
 
+func (mh *merkleHelper) doubleSliceHash(slice1, slice2 []byte) []byte {
+	hasher := mh.scheme.IntegrityHasher()
+	hasher.Write(slice1)
+	hasher.Write(slice2)
+	return hasher.Sum(nil)
+}
+
 func (mh *merkleHelper) pulseHash(pulse *core.Pulse) []byte {
-	var result []byte
+	pulseNumberHash := mh.leafHasher.Hash(pulse.PulseNumber.Bytes())
+	entropyHash := mh.leafHasher.Hash(pulse.Entropy[:])
 
-	pulseNumberHash := mh.hasher.Hash(pulse.PulseNumber.Bytes())
-	result = append(result, pulseNumberHash...)
-
-	entropyHash := mh.hasher.Hash(pulse.Entropy[:])
-	result = append(result, entropyHash...)
-
-	return mh.hasher.Hash(result)
+	return mh.doubleSliceHash(pulseNumberHash, entropyHash)
 }
 
 func (mh *merkleHelper) nodeInfoHash(pulseHash, stateHash []byte) []byte {
-	var result []byte
-
-	result = append(result, pulseHash...)
-	result = append(result, stateHash...)
-
-	return mh.hasher.Hash(result)
+	return mh.doubleSliceHash(pulseHash, stateHash)
 }
 
 func (mh *merkleHelper) nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
-	var result []byte
-
-	nodeSignatureHash := mh.hasher.Hash(nodeSignature)
-	result = append(result, nodeSignatureHash...)
-
-	result = append(result, nodeInfoHash...)
-
-	return mh.hasher.Hash(result)
+	nodeSignatureHash := mh.leafHasher.Hash(nodeSignature)
+	return mh.doubleSliceHash(nodeSignatureHash, nodeInfoHash)
 }
 
 func (mh *merkleHelper) bucketEntryHash(entryIndex uint32, nodeHash []byte) []byte {
-	var result []byte
-
-	entryIndexHash := mh.hasher.Hash(utils.UInt32ToBytes(entryIndex))
-	result = append(result, entryIndexHash...)
-
-	result = append(result, nodeHash...)
-
-	return mh.hasher.Hash(result)
+	entryIndexHash := mh.leafHasher.Hash(utils.UInt32ToBytes(entryIndex))
+	return mh.doubleSliceHash(entryIndexHash, nodeHash)
 }
 
 func (mh *merkleHelper) bucketInfoHash(role core.NodeRole, nodeCount uint32) []byte {
-	var result []byte
-
-	roleHash := mh.hasher.Hash(utils.UInt32ToBytes(uint32(role)))
-	result = append(result, roleHash...)
-
-	nodeCountHash := mh.hasher.Hash(utils.UInt32ToBytes(nodeCount))
-	result = append(result, nodeCountHash...)
-
-	return mh.hasher.Hash(result)
+	roleHash := mh.leafHasher.Hash(utils.UInt32ToBytes(uint32(role)))
+	nodeCountHash := mh.leafHasher.Hash(utils.UInt32ToBytes(nodeCount))
+	return mh.doubleSliceHash(roleHash, nodeCountHash)
 }
 
 func (mh *merkleHelper) bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
-	var result []byte
-
-	result = append(result, bucketInfoHash...)
-	result = append(result, bucketEntryHash...)
-
-	return mh.hasher.Hash(result)
+	return mh.doubleSliceHash(bucketInfoHash, bucketEntryHash)
 }
 
-func (mh *merkleHelper) globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte {
-	reservedHash := mh.hasher.Hash(utils.UInt32ToBytes(reserved))
+func (mh *merkleHelper) globuleInfoHash(prevCloudHash []byte, globuleIndex, nodeCount uint32) []byte {
+	reservedHash := mh.leafHasher.Hash(utils.UInt32ToBytes(reserved))
+	globuleIndexHash := mh.leafHasher.Hash(utils.UInt32ToBytes(globuleIndex))
+	nodeCountHash := mh.leafHasher.Hash(utils.UInt32ToBytes(nodeCount))
 
-	var tmpResult1 []byte
-
-	tmpResult1 = append(tmpResult1, reservedHash...)
-	tmpResult1 = append(tmpResult1, prevCloudHash...)
-
-	var tmpResult2 []byte
-
-	globuleIndexHash := mh.hasher.Hash(utils.UInt32ToBytes(gobuleIndex))
-	tmpResult2 = append(tmpResult2, globuleIndexHash...)
-
-	nodeCountHash := mh.hasher.Hash(utils.UInt32ToBytes(nodeCount))
-	tmpResult2 = append(tmpResult2, nodeCountHash...)
-
-	var tmpResult3 []byte
-
-	tmpResult1Hash := mh.hasher.Hash(tmpResult1)
-	tmpResult3 = append(tmpResult3, tmpResult1Hash...)
-
-	tmpResult2Hash := mh.hasher.Hash(tmpResult2)
-	tmpResult3 = append(tmpResult3, tmpResult2Hash...)
-
-	return mh.hasher.Hash(tmpResult3)
+	return mh.doubleSliceHash(
+		mh.doubleSliceHash(reservedHash, prevCloudHash),
+		mh.doubleSliceHash(globuleIndexHash, nodeCountHash),
+	)
 }
 
 func (mh *merkleHelper) globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
-	var result []byte
-
-	result = append(result, globuleInfoHash...)
-	result = append(result, globuleNodeRoot...)
-
-	return mh.hasher.Hash(result)
+	return mh.doubleSliceHash(globuleInfoHash, globuleNodeRoot)
 }

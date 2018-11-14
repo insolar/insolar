@@ -53,14 +53,12 @@ func (ge *GlobuleEntry) hash(helper *merkleHelper) []byte {
 		bucketHashes = append(bucketHashes, bucketHash)
 	}
 
-	return fromList(bucketHashes, helper.hasher).MerkleRoot()
+	return fromList(bucketHashes, helper.scheme.IntegrityHasher()).MerkleRoot()
 }
 
 type CloudEntry struct {
 	ProofSet      []*GlobuleProof
 	PrevCloudHash []byte
-	// TODO: implement later
-	// ProofSet map[core.Globule]*GlobuleProof
 }
 
 func (ce *CloudEntry) hash(helper *merkleHelper) []byte {
@@ -72,7 +70,7 @@ func (ce *CloudEntry) hash(helper *merkleHelper) []byte {
 		result = append(result, globuleHash)
 	}
 
-	mt := fromList(result, helper.hasher)
+	mt := fromList(result, helper.scheme.IntegrityHasher())
 	return mt.MerkleRoot()
 }
 
@@ -114,5 +112,5 @@ func roleEntryRoot(roleEntries []*nodeEntry, helper *merkleHelper) []byte {
 		bucketEntryHash := helper.bucketEntryHash(uint32(index), entry.hash(helper))
 		roleEntriesHashes = append(roleEntriesHashes, bucketEntryHash)
 	}
-	return fromList(roleEntriesHashes, helper.hasher).MerkleRoot()
+	return fromList(roleEntriesHashes, helper.scheme.IntegrityHasher()).MerkleRoot()
 }
