@@ -184,7 +184,11 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetDelegate)
 
-	idx, _, _, err := getObject(ctx, h.db, msg.Head.Record(), nil, false)
+	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+
 	if err != nil {
 		return nil, err
 	}
