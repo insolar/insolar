@@ -18,17 +18,13 @@ package api
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/networkcoordinator"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -127,7 +123,7 @@ func (rh *RequestHandler) routeCall(ctx context.Context, ref core.RecordRef, met
 }
 
 // ProcessIsAuthorized processes is_auth query type
-func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]interface{}, error) {
+/*func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]interface{}, error) {
 
 	// Check calling smart contract
 	result := make(map[string]interface{})
@@ -192,7 +188,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]i
 	result["netcoord_auth_success"] = true
 
 	return result, nil
-}
+}*/
 
 // ProcessGetSeed processes get seed request
 func (rh *RequestHandler) ProcessGetSeed(ctx context.Context) (map[string]interface{}, error) {

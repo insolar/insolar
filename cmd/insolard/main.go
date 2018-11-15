@@ -18,17 +18,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"reflect"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
-	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -66,36 +62,42 @@ func (cm *ComponentManager) linkAll(ctx context.Context) {
 }
 
 type inputParams struct {
-	configPath               string
-	isBootstrap              bool
-	bootstrapCertificatePath string
-	traceEnabled             bool
-	nodeKeysPath             string
+	configPath        string
+	isGenesis         bool
+	genesisConfigPath string
+	//bootstrapCertificatePath string
+	traceEnabled bool
+	//nodeKeysPath             string
 }
 
 func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
-	rootCmd.Flags().BoolVarP(&result.isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
-	rootCmd.Flags().StringVarP(&result.bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
+	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "genesis", "g", "", "path to genesis config file")
+	//rootCmd.Flags().BoolVarP(&result.isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
+	//rootCmd.Flags().StringVarP(&result.bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
 	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
-	rootCmd.Flags().StringVarP(&result.nodeKeysPath, "nodeskeys", "k", "", "path to dir with node keys files for bootstrap")
+	//rootCmd.Flags().StringVarP(&result.nodeKeysPath, "nodeskeys", "k", "", "path to dir with node keys files for bootstrap")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
 	}
 
-	if result.isBootstrap && len(result.bootstrapCertificatePath) == 0 {
+	if result.genesisConfigPath != "" {
+		result.isGenesis = true
+	}
+
+	/*if result.isBootstrap && len(result.bootstrapCertificatePath) == 0 {
 		log.Fatal("flag '--cert_out|-r' must not be empty, if '--bootstrap|-b' exists")
 	}
 	if result.isBootstrap && len(result.nodeKeysPath) == 0 {
 		log.Fatal("flag '--nodeskeys|-k' must not be empty, if '--bootstrap|-b' exists")
-	}
+	}*/
 	return result
 }
 
-func keysFiles(ctx context.Context, nodeKeysPath string) []string {
+/*func keysFiles(ctx context.Context, nodeKeysPath string) []string {
 	var keysFiles []string
 	files, err := ioutil.ReadDir(nodeKeysPath)
 	checkError(ctx, err, "failed to read dir for nodes keys")
@@ -141,9 +143,9 @@ func bootstrapNodesInfo(ctx context.Context, nodeKeysPath string) []map[string]s
 		info = append(info, nodeInfo)
 	}
 	return info
-}
+}*/
 
-func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, service core.CryptographyService, nc core.NetworkCoordinator) {
+/*func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, service core.CryptographyService, nc core.NetworkCoordinator) {
 	role := "virtual"
 	publicKey, err := service.GetPublicKey()
 	checkError(ctx, err, "failed to get public key")
@@ -153,7 +155,7 @@ func registerCurrentNode(ctx context.Context, host string, bootstrapCertificateP
 
 	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)
 	checkError(ctx, err, "can't write certificate")
-}
+}*/
 
 func mergeConfigAndCertificate(ctx context.Context, cfg configuration.Configuration, cert *certificate.Certificate) {
 	inslog := inslogger.FromContext(ctx)
@@ -202,12 +204,12 @@ func main() {
 	cert := InitCertificate(
 		ctx,
 		*cfg,
-		params.isBootstrap,
+		params.isGenesis,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
 
-	if !params.isBootstrap {
+	if !params.isGenesis {
 		mergeConfigAndCertificate(ctx, *cfg, cert)
 	}
 	cfg.Metrics.Namespace = "insolard"
@@ -230,8 +232,8 @@ func main() {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
-		params.isBootstrap,
-		params.nodeKeysPath,
+		params.isGenesis,
+		params.genesisConfigPath,
 	)
 	checkError(ctx, err, "failed to init components")
 
@@ -265,7 +267,7 @@ func main() {
 	}()
 
 	// move to bootstrap component
-	if params.isBootstrap {
+	/*if params.isBootstrap {
 		registerCurrentNode(
 			ctx,
 			cfg.Host.Transport.Address,
@@ -275,7 +277,7 @@ func main() {
 		)
 		inslog.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
 		gracefulStop <- syscall.SIGINT
-	}
+	}*/
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")

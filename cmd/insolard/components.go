@@ -103,8 +103,8 @@ func InitComponents(
 	keyStore core.KeyStore,
 	keyProcessor core.KeyProcessor,
 	cert core.Certificate,
-	isBootstrap bool,
-	nodeKeysPath string,
+	isGenesis bool,
+	genesisConfigPath string,
 
 ) (*component.Manager, *ComponentManager, *Repl, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
@@ -123,11 +123,11 @@ func InitComponents(
 	checkError(ctx, err, "failed to start MessageBus")
 
 	var gen core.Genesis
-	if isBootstrap {
-		gen, err = genesis.NewGenesis(cfg.Genesis, isBootstrap, bootstrapNodesInfo(ctx, nodeKeysPath))
+	if isGenesis {
+		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath) //bootstrapNodesInfo(ctx, nodeKeysPath))
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
 	} else {
-		gen, err = genesis.NewGenesis(cfg.Genesis, isBootstrap, []map[string]string{})
+		gen, err = genesis.NewGenesis(isGenesis, "") //[]map[string]string{})
 		checkError(ctx, err, "failed to start Bootstrapper")
 	}
 

@@ -26,10 +26,10 @@ import (
 	"github.com/insolar/insolar/application/contract/noderecord"
 	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/application/contract/wallet"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 )
@@ -50,12 +50,9 @@ type Genesis struct {
 	rootDomainRef *core.RecordRef
 	nodeDomainRef *core.RecordRef
 	rootMemberRef *core.RecordRef
-	rootKeysFile  string
-	rootPubKey    string
-	rootBalance   uint
 	prototypeRefs map[string]*core.RecordRef
-	isBootstrap   bool
-	nodesInfo     []map[string]string
+	isGenesis     bool
+	config        *genesisConfig
 }
 
 // Info returns json with references for info api endpoint
@@ -77,14 +74,13 @@ func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 }
 
 // NewGenesis creates new Genesis
-func NewGenesis(cfg configuration.Genesis, isBootstrap bool, nodesInfo []map[string]string) (*Genesis, error) {
+func NewGenesis(isGenesis bool, genesisConfigPath string) /*nodesInfo []map[string]string)*/ (*Genesis, error) {
+	var err error
 	genesis := &Genesis{}
-	genesis.rootKeysFile = cfg.RootKeys
-	genesis.rootBalance = cfg.RootBalance
 	genesis.rootDomainRef = &core.RecordRef{}
-	genesis.isBootstrap = isBootstrap
-	genesis.nodesInfo = nodesInfo
-	return genesis, nil
+	genesis.isGenesis = isGenesis
+	genesis.config, err = parseGenesisConfig(genesisConfigPath)
+	return genesis, err
 }
 
 func buildSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
@@ -177,9 +173,10 @@ func (g *Genesis) activateNodeDomain(
 }
 
 func (g *Genesis) activateRootMember(
-	ctx context.Context, domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
+	ctx context.Context, domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, rootPubKey string,
 ) error {
-	m, err := member.New("RootMember", g.rootPubKey)
+
+	m, err := member.New("RootMember", rootPubKey)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
@@ -236,7 +233,7 @@ func (g *Genesis) updateRootDomain(
 func (g *Genesis) activateRootMemberWallet(
 	ctx context.Context, domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
 ) error {
-	w, err := wallet.New(g.rootBalance)
+	w, err := wallet.New(g.config.RootBalance)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
@@ -267,7 +264,7 @@ func (g *Genesis) activateRootMemberWallet(
 	return nil
 }
 
-func (g *Genesis) activateSmartContracts(ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+func (g *Genesis) activateSmartContracts(ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, rootPubKey string) error {
 	domain, domainDesc, err := g.activateRootDomain(ctx, am, cb)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
@@ -277,7 +274,7 @@ func (g *Genesis) activateSmartContracts(ctx context.Context, am core.ArtifactMa
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMember(ctx, domain, am, cb)
+	err = g.activateRootMember(ctx, domain, am, cb, rootPubKey)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
@@ -316,9 +313,9 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 		return nil
 	}
 
-	g.rootPubKey, err = getRootMemberPubKey(ctx, g.rootKeysFile)
+	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
 	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root member keys")
+		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root keys")
 	}
 
 	isLightExecutor, err := isLightExecutor(ctx, c)
@@ -345,23 +342,23 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build contracts")
 	}
 
-	err = g.activateSmartContracts(ctx, am, cb)
+	err = g.activateSmartContracts(ctx, am, cb, rootPubKey)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ]")
 	}
 
-	if g.isBootstrap {
-		for i, nodeInfo := range g.nodesInfo {
-			nc := c.NetworkCoordinator
-			_, err := nc.RegisterNode(ctx, nodeInfo["public_key"], 0, 0, nodeInfo["role"], "")
-			//if err != nil {
-			//	return errors.Wrap(err, "can't register node")
-			//}
+	if g.isGenesis {
+		for i, discoverNode := range g.config.DiscoveryNodes {
+			//_, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
+			nodePubKey := ""
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			nodeState := &noderecord.NodeRecord{
 				Record: noderecord.RecordInfo{
-					PublicKey: nodeInfo["public_key"],
-					Role:      core.GetRoleFromString(nodeInfo["role"]),
+					PublicKey: nodePubKey,
+					Role:      core.GetRoleFromString(discoverNode.Role),
 				},
 			}
 			nodeData, err := serializeInstance(nodeState)

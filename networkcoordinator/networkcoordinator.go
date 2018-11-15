@@ -18,7 +18,6 @@ package networkcoordinator
 
 import (
 	"context"
-	"crypto"
 	"crypto/rand"
 	"encoding/binary"
 
@@ -134,7 +133,7 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 }
 
 // Authorize authorizes node by verifying it's signature
-func (nc *NetworkCoordinator) Authorize(ctx context.Context, nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
+/*func (nc *NetworkCoordinator) Authorize(ctx context.Context, nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
 	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
 	if err != nil {
 		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't get nodeDomainRef")
@@ -152,10 +151,10 @@ func (nc *NetworkCoordinator) Authorize(ctx context.Context, nodeRef core.Record
 	}
 
 	return pubKey, role, nil
-}
+}*/
 
 // RegisterNode registers node in nodedomain
-func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey crypto.PublicKey, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
+/*func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey crypto.PublicKey, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
 	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't get nodeDomainRef")
@@ -177,3 +176,4 @@ func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey crypto
 
 	return rawCertificate, nil
 }
+*/

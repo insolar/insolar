@@ -18,6 +18,7 @@ package genesis
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -144,22 +146,30 @@ func getRootMemberRef(ctx context.Context, c core.Components, rootDomainRef core
 	return nil, nil
 }
 
-func getRootMemberPubKey(ctx context.Context, file string) (string, error) {
+func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, string, error) {
 	absPath, err := filepath.Abs(file)
 	if err != nil {
-		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't get abs path")
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't get abs path")
 	}
 	data, err := ioutil.ReadFile(absPath)
 	if err != nil {
-		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't read rootkeys file "+absPath)
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
 	}
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)
 	if err != nil {
-		return "", errors.Wrapf(err, "[ getRootMemberPubKey ] couldn't unmarshal data from %s", absPath)
+		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't unmarshal data from %s", absPath)
+	}
+	if keys["private_key"] == "" {
+		return nil, "", errors.New("[ getKeyFromFile ] empty private key")
 	}
 	if keys["public_key"] == "" {
-		return "", errors.New("empty root public key")
+		return nil, "", errors.New("[ getKeyFromFile ] empty public key")
 	}
-	return keys["public_key"], nil
+	kp := platformpolicy.NewKeyProcessor()
+	key, err := kp.ImportPrivateKey([]byte(keys["private_key"]))
+	if err != nil {
+		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't import private key")
+	}
+	return key, keys["public_key"], nil
 }
