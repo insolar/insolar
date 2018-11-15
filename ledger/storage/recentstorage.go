@@ -24,7 +24,7 @@ import (
 
 // RecentStorage is a base structure
 type RecentStorage struct {
-	recentObjects   map[string]*RecentObjectsIndexMeta
+	recentObjects   map[core.RecordID]*RecentObjectsIndexMeta
 	objectLock      sync.Mutex
 	pendingRequests map[core.RecordID]struct{}
 	requestLock     sync.Mutex
@@ -39,7 +39,7 @@ type RecentObjectsIndexMeta struct {
 // NewRecentStorage creates default RecentStorage object
 func NewRecentStorage(defaultTTL int) *RecentStorage {
 	return &RecentStorage{
-		recentObjects:   map[string]*RecentObjectsIndexMeta{},
+		recentObjects:   map[core.RecordID]*RecentObjectsIndexMeta{},
 		pendingRequests: map[core.RecordID]struct{}{},
 		DefaultTTL:      defaultTTL,
 		objectLock:      sync.Mutex{},
@@ -47,14 +47,14 @@ func NewRecentStorage(defaultTTL int) *RecentStorage {
 }
 
 // AddObject adds object to cache
-func (r *RecentStorage) AddObject(id *core.RecordID) {
+func (r *RecentStorage) AddObject(id core.RecordID) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	value, ok := r.recentObjects[string(id.Bytes())]
+	value, ok := r.recentObjects[id]
 
 	if !ok {
-		r.recentObjects[string(id.Bytes())] = &RecentObjectsIndexMeta{
+		r.recentObjects[id] = &RecentObjectsIndexMeta{
 			TTL: r.DefaultTTL,
 		}
 		return
@@ -83,11 +83,11 @@ func (r *RecentStorage) RemovePendingRequest(id core.RecordID) {
 }
 
 // GetObjects returns object hot-indexes.
-func (r *RecentStorage) GetObjects() map[string]*RecentObjectsIndexMeta {
+func (r *RecentStorage) GetObjects() map[core.RecordID]*RecentObjectsIndexMeta {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	targetMap := make(map[string]*RecentObjectsIndexMeta, len(r.recentObjects))
+	targetMap := make(map[core.RecordID]*RecentObjectsIndexMeta, len(r.recentObjects))
 	for key, value := range r.recentObjects {
 		targetMap[key] = value
 	}
@@ -125,5 +125,5 @@ func (r *RecentStorage) ClearObjects() {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	r.recentObjects = map[string]*RecentObjectsIndexMeta{}
+	r.recentObjects = map[core.RecordID]*RecentObjectsIndexMeta{}
 }
