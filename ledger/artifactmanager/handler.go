@@ -94,9 +94,16 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetRecord)
-	id, err := h.db.SetRecord(ctx, pulseNumber, record.DeserializeRecord(msg.Record))
+
+	rec := record.DeserializeRecord(msg.Record)
+
+	id, err := h.db.SetRecord(ctx, pulseNumber, rec)
 	if err != nil {
 		return nil, err
+	}
+
+	if _, ok := rec.(record.Request); ok {
+		h.recentObjects.AddPendingRequest(*id)
 	}
 
 	return &reply.ID{ID: *id}, nil
