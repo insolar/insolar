@@ -17,6 +17,8 @@
 package hostnetwork
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -30,8 +32,8 @@ type TransportResolvable struct {
 }
 
 // Start listening to network requests.
-func (tr *TransportResolvable) Start() {
-	tr.internalTransport.Start()
+func (tr *TransportResolvable) Start(ctx context.Context) {
+	tr.internalTransport.Start(ctx)
 }
 
 // Stop listening to network requests.

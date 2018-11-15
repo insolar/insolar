@@ -17,10 +17,11 @@
 package controller
 
 import (
+	"context"
 	"encoding/gob"
 	"time"
 
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/host"
@@ -63,13 +64,13 @@ func (bc *BootstrapController) GetBootstrapHosts() []*host.Host {
 	return bc.bootstrapHosts
 }
 
-func (bc *BootstrapController) Bootstrap() error {
+func (bc *BootstrapController) Bootstrap(ctx context.Context) error {
 	if len(bc.options.BootstrapHosts) == 0 {
 		bc.bootstrapHosts = make([]*host.Host, 0)
 		return nil
 	}
-	ch := bc.getBootstrapHostsChannel()
-	hosts := bc.waitResultsFromChannel(ch)
+	ch := bc.getBootstrapHostsChannel(ctx)
+	hosts := bc.waitResultsFromChannel(ctx, ch)
 
 	if len(hosts) == 0 {
 		return errors.New("Failed to bootstrap to any of discovery nodes")
@@ -78,23 +79,23 @@ func (bc *BootstrapController) Bootstrap() error {
 	return nil
 }
 
-func (bc *BootstrapController) getBootstrapHostsChannel() <-chan *host.Host {
+func (bc *BootstrapController) getBootstrapHostsChannel(ctx context.Context) <-chan *host.Host {
 	bootstrapHosts := make(chan *host.Host, len(bc.options.BootstrapHosts))
 	for _, bootstrapAddress := range bc.options.BootstrapHosts {
-		go func(address string, ch chan<- *host.Host) {
-			log.Infof("Starting bootstrap to address %s", address)
+		go func(ctx context.Context, address string, ch chan<- *host.Host) {
+			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
 			bootstrapHost, err := bc.bootstrap(address)
 			if err != nil {
-				log.Errorf("Error bootstrapping to address %s: %s", address, err.Error())
+				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return
 			}
 			bootstrapHosts <- bootstrapHost
-		}(bootstrapAddress, bootstrapHosts)
+		}(ctx, bootstrapAddress, bootstrapHosts)
 	}
 	return bootstrapHosts
 }
 
-func (bc *BootstrapController) waitResultsFromChannel(ch <-chan *host.Host) []*host.Host {
+func (bc *BootstrapController) waitResultsFromChannel(ctx context.Context, ch <-chan *host.Host) []*host.Host {
 	result := make([]*host.Host, 0)
 	for {
 		select {
@@ -104,7 +105,8 @@ func (bc *BootstrapController) waitResultsFromChannel(ch <-chan *host.Host) []*h
 				return result
 			}
 		case <-time.After(bc.options.BootstrapTimeout):
-			log.Warnf("Bootstrap timeout, successful bootstraps: %d/%d", len(result), len(bc.options.BootstrapHosts))
+			inslogger.FromContext(ctx).Warnf("Bootstrap timeout, successful bootstraps: %d/%d",
+				len(result), len(bc.options.BootstrapHosts))
 			return result
 		}
 	}

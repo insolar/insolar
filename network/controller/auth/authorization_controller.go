@@ -17,10 +17,12 @@
 package auth
 
 import (
+	"context"
 	"encoding/gob"
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
@@ -71,26 +73,26 @@ func init() {
 	gob.Register(&ResponseAuthorize{})
 }
 
-func (ac *AuthorizationController) Authorize() error {
+func (ac *AuthorizationController) Authorize(ctx context.Context) error {
 	hosts := ac.bootstrapController.GetBootstrapHosts()
 	if len(hosts) == 0 {
-		log.Info("Empty list of bootstrap hosts")
+		inslogger.FromContext(ctx).Info("Empty list of bootstrap hosts")
 		return nil
 	}
 
 	ch := make(chan []core.Node, len(hosts))
 	for _, h := range hosts {
-		go func(ch chan<- []core.Node, h *host.Host) {
-			activeNodes, err := ac.authorizeOnHost(h)
+		go func(ctx context.Context, ch chan<- []core.Node, h *host.Host) {
+			activeNodes, err := ac.authorizeOnHost(ctx, h)
 			if err != nil {
 				log.Error(err)
 				return
 			}
 			ch <- activeNodes
-		}(ch, h)
+		}(ctx, ch, h)
 	}
 
-	activeLists := ac.collectActiveLists(ch, len(hosts))
+	activeLists := ac.collectActiveLists(ctx, ch, len(hosts))
 	if len(activeLists) == 0 {
 		return errors.New("Failed to authorize on any of discovery nodes")
 	}
@@ -102,7 +104,7 @@ func (ac *AuthorizationController) Authorize() error {
 	return nil
 }
 
-func (ac *AuthorizationController) collectActiveLists(ch <-chan []core.Node, count int) [][]core.Node {
+func (ac *AuthorizationController) collectActiveLists(ctx context.Context, ch <-chan []core.Node, count int) [][]core.Node {
 	receivedResults := make([][]core.Node, 0)
 	for {
 		select {
@@ -112,21 +114,21 @@ func (ac *AuthorizationController) collectActiveLists(ch <-chan []core.Node, cou
 				return receivedResults
 			}
 		case <-time.After(ac.options.AuthorizeTimeout):
-			log.Warnf("Authorize timeout, successful auths: %d/%d", len(receivedResults), count)
+			inslogger.FromContext(ctx).Warnf("Authorize timeout, successful auths: %d/%d", len(receivedResults), count)
 			return receivedResults
 		}
 	}
 }
 
 // authorizeOnHost send all authorize requests to host and get list of active nodes
-func (ac *AuthorizationController) authorizeOnHost(h *host.Host) ([]core.Node, error) {
-	log.Infof("Authorizing on host: %s", h)
+func (ac *AuthorizationController) authorizeOnHost(ctx context.Context, h *host.Host) ([]core.Node, error) {
+	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", h)
 
 	nonce, err := ac.sendNonceRequest(h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting nonce from discovery node %s", h)
 	}
-	log.Debugf("Got nonce from discovery node: %s", base58.Encode(nonce))
+	inslogger.FromContext(ctx).Debugf("Got nonce from discovery node: %s", base58.Encode(nonce))
 	signedNonce, err := ac.signer.SignNonce(nonce)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error signing received nonce from node %s", h)

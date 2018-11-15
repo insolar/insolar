@@ -18,11 +18,13 @@ package transport
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net"
 
 	consensus "github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -113,8 +115,8 @@ func (udpT *udpTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (udpT *udpTransport) Start() error {
-	log.Info("Start UDP transport")
+func (udpT *udpTransport) Start(ctx context.Context) error {
+	inslogger.FromContext(ctx).Info("Start UDP transport")
 	for {
 		buf := make([]byte, udpMaxPacketSize)
 		n, addr, err := udpT.serverConn.ReadFrom(buf)

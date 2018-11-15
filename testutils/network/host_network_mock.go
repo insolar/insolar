@@ -6,6 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "HostNetwork" can be found in github.com/insolar/insolar/network
 */
 import (
+	context "context"
 	"sync/atomic"
 	"time"
 
@@ -51,7 +52,7 @@ type HostNetworkMock struct {
 	SendRequestPreCounter uint64
 	SendRequestMock       mHostNetworkMockSendRequest
 
-	StartFunc       func()
+	StartFunc       func(p context.Context)
 	StartCounter    uint64
 	StartPreCounter uint64
 	StartMock       mHostNetworkMockStart
@@ -410,35 +411,59 @@ func (m *HostNetworkMock) SendRequestMinimockPreCounter() uint64 {
 }
 
 type mHostNetworkMockStart struct {
-	mock *HostNetworkMock
+	mock             *HostNetworkMock
+	mockExpectations *HostNetworkMockStartParams
+}
+
+//HostNetworkMockStartParams represents input parameters of the HostNetwork.Start
+type HostNetworkMockStartParams struct {
+	p context.Context
+}
+
+//Expect sets up expected params for the HostNetwork.Start
+func (m *mHostNetworkMockStart) Expect(p context.Context) *mHostNetworkMockStart {
+	m.mockExpectations = &HostNetworkMockStartParams{p}
+	return m
 }
 
 //Return sets up a mock for HostNetwork.Start to return Return's arguments
 func (m *mHostNetworkMockStart) Return() *HostNetworkMock {
-	m.mock.StartFunc = func() {
+	m.mock.StartFunc = func(p context.Context) {
 		return
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of HostNetwork.Start method
-func (m *mHostNetworkMockStart) Set(f func()) *HostNetworkMock {
+func (m *mHostNetworkMockStart) Set(f func(p context.Context)) *HostNetworkMock {
 	m.mock.StartFunc = f
-
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Start implements github.com/insolar/insolar/network.HostNetwork interface
-func (m *HostNetworkMock) Start() {
+func (m *HostNetworkMock) Start(p context.Context) {
 	atomic.AddUint64(&m.StartPreCounter, 1)
 	defer atomic.AddUint64(&m.StartCounter, 1)
+
+	if m.StartMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.StartMock.mockExpectations, HostNetworkMockStartParams{p},
+			"HostNetwork.Start got unexpected parameters")
+
+		if m.StartFunc == nil {
+
+			m.t.Fatal("No results are set for the HostNetworkMock.Start")
+
+			return
+		}
+	}
 
 	if m.StartFunc == nil {
 		m.t.Fatal("Unexpected call to HostNetworkMock.Start")
 		return
 	}
 
-	m.StartFunc()
+	m.StartFunc(p)
 }
 
 //StartMinimockCounter returns a count of HostNetworkMock.StartFunc invocations

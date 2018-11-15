@@ -34,11 +34,9 @@ type Controller interface {
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
 	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
 	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
-	Bootstrap() error
-	// AnalyzeNetwork legacy method for old DHT network (should be removed in new network).
-	AnalyzeNetwork() error
+	Bootstrap(ctx context.Context) error
 	// Authorize start authorization process on discovery node.
-	Authorize() error
+	Authorize(ctx context.Context) error
 	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
 	// DEPRECATED
 	ResendPulseToKnownHosts(pulse core.Pulse)
@@ -57,7 +55,7 @@ type RequestHandler func(Request) (Response, error)
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 type HostNetwork interface {
 	// Start listening to network requests.
-	Start()
+	Start(ctx context.Context)
 	// Stop listening to network requests.
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
@@ -80,7 +78,7 @@ type ConsensusRequestHandler func(Request)
 //go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
 type ConsensusNetwork interface {
 	// Start listening to network requests.
-	Start()
+	Start(ctx context.Context)
 	// Stop listening to network requests.
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
@@ -208,7 +206,7 @@ type RoutingTable interface {
 // InternalTransport simple interface to send network requests and process network responses.
 type InternalTransport interface {
 	// Start listening to network requests, should be started in goroutine.
-	Start()
+	Start(ctx context.Context)
 	// Stop listening to network requests.
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.

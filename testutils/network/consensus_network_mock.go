@@ -6,6 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "ConsensusNetwork" can be found in github.com/insolar/insolar/network
 */
 import (
+	context "context"
 	"sync/atomic"
 	"time"
 
@@ -46,7 +47,7 @@ type ConsensusNetworkMock struct {
 	SendRequestPreCounter uint64
 	SendRequestMock       mConsensusNetworkMockSendRequest
 
-	StartFunc       func()
+	StartFunc       func(p context.Context)
 	StartCounter    uint64
 	StartPreCounter uint64
 	StartMock       mConsensusNetworkMockStart
@@ -337,35 +338,59 @@ func (m *ConsensusNetworkMock) SendRequestMinimockPreCounter() uint64 {
 }
 
 type mConsensusNetworkMockStart struct {
-	mock *ConsensusNetworkMock
+	mock             *ConsensusNetworkMock
+	mockExpectations *ConsensusNetworkMockStartParams
+}
+
+//ConsensusNetworkMockStartParams represents input parameters of the ConsensusNetwork.Start
+type ConsensusNetworkMockStartParams struct {
+	p context.Context
+}
+
+//Expect sets up expected params for the ConsensusNetwork.Start
+func (m *mConsensusNetworkMockStart) Expect(p context.Context) *mConsensusNetworkMockStart {
+	m.mockExpectations = &ConsensusNetworkMockStartParams{p}
+	return m
 }
 
 //Return sets up a mock for ConsensusNetwork.Start to return Return's arguments
 func (m *mConsensusNetworkMockStart) Return() *ConsensusNetworkMock {
-	m.mock.StartFunc = func() {
+	m.mock.StartFunc = func(p context.Context) {
 		return
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of ConsensusNetwork.Start method
-func (m *mConsensusNetworkMockStart) Set(f func()) *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockStart) Set(f func(p context.Context)) *ConsensusNetworkMock {
 	m.mock.StartFunc = f
-
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Start implements github.com/insolar/insolar/network.ConsensusNetwork interface
-func (m *ConsensusNetworkMock) Start() {
+func (m *ConsensusNetworkMock) Start(p context.Context) {
 	atomic.AddUint64(&m.StartPreCounter, 1)
 	defer atomic.AddUint64(&m.StartCounter, 1)
+
+	if m.StartMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.StartMock.mockExpectations, ConsensusNetworkMockStartParams{p},
+			"ConsensusNetwork.Start got unexpected parameters")
+
+		if m.StartFunc == nil {
+
+			m.t.Fatal("No results are set for the ConsensusNetworkMock.Start")
+
+			return
+		}
+	}
 
 	if m.StartFunc == nil {
 		m.t.Fatal("Unexpected call to ConsensusNetworkMock.Start")
 		return
 	}
 
-	m.StartFunc()
+	m.StartFunc(p)
 }
 
 //StartMinimockCounter returns a count of ConsensusNetworkMock.StartFunc invocations

@@ -17,9 +17,11 @@
 package hostnetwork
 
 import (
+	"context"
 	"sync/atomic"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
@@ -36,18 +38,18 @@ type transportBase struct {
 }
 
 // Listen start listening to network requests, should be started in goroutine.
-func (h *transportBase) Start() {
+func (h *transportBase) Start(ctx context.Context) {
 	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
-		log.Warn("double listen initiated")
+		inslogger.FromContext(ctx).Warn("double listen initiated")
 		return
 	}
 	go h.listen()
-	go func() {
-		err := h.transport.Start()
+	go func(ctx context.Context) {
+		err := h.transport.Start(ctx)
 		if err != nil {
-			log.Error(err)
+			inslogger.FromContext(ctx).Error(err)
 		}
-	}()
+	}(ctx)
 }
 
 func (h *transportBase) listen() {
