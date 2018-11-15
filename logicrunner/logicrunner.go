@@ -36,6 +36,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
+const deny_test_call_constructor = false
+
 type Ref = core.RecordRef
 
 // Context of one contract execution
@@ -429,10 +431,6 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		}
 	}()
 
-	if es.callContext.Caller.Equal(Ref{}) {
-		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
-	}
-
 	err := lr.getObjectMessage(es, m.ObjectRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object message")
@@ -514,7 +512,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 		es.Unlock()
 	}()
 
-	if es.callContext.Caller.Equal(Ref{}) {
+	if deny_test_call_constructor && es.callContext.Caller.Equal(Ref{}) {
 		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
 	}
 
