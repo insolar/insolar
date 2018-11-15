@@ -145,7 +145,11 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetObject)
 
-	idx, stateID, state, err := getObject(ctx, h.db, msg.Head.Record(), msg.State, msg.Approved)
+	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+	stateID, state, err := getObjectState(ctx, h.db, idx, msg.State, msg.Approved)
 	if err != nil {
 		switch err {
 		case ErrObjectDeactivated:
