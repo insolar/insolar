@@ -36,7 +36,7 @@ func TestLedgerArtifactManager_Metrics(t *testing.T) {
 	defer tmetrics.Stop()
 
 	msg := message.GenesisRequest{Name: "my little message"}
-	_, err := am.RegisterRequest(ctx, &msg)
+	_, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &msg})
 	require.NoError(t, err)
 
 	time.Sleep(1500 * time.Millisecond)
