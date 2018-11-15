@@ -28,14 +28,15 @@ import (
 
 // iterstate stores iterator state
 type iterstate struct {
-	prefix []byte
 	start  []byte
+	prefix []byte
 }
 
 // ReplicaIter provides partial iterator over BadgerDB key/value pairs
 // required for replication to Heavy Material node in provided pulse.
 //
-// Required kv-pairs are all records in provided pulse and all indexes available in database.
+// Required kv-pairs are all records into and after provided pulse
+// and all indexes available in database.
 //
 // "Partial" means it fetches data in chunks of the specified size.
 // After a chunk has been fetched, it saves the current position.
@@ -49,9 +50,10 @@ type ReplicaIter struct {
 	istates    []*iterstate
 }
 
-// NewReplicaIter creates ReplicaIter with provided pulsenumber and iteration fetch limit.
+// NewReplicaIter creates ReplicaIter started from provided pulse number with per iteration fetch limit.
 func NewReplicaIter(ctx context.Context, db *DB, pulsenum core.PulseNumber, limit int) *ReplicaIter {
-	recordsPrefix := bytes.Join([][]byte{{scopeIDRecord}, pulsenum.Bytes()}, nil)
+	recordsPrefix := []byte{scopeIDRecord}
+	recordsStart := bytes.Join([][]byte{recordsPrefix, pulsenum.Bytes()}, nil)
 	indexesPrefix := []byte{scopeIDLifeline}
 	return &ReplicaIter{
 		ctx:        ctx,
@@ -59,7 +61,7 @@ func NewReplicaIter(ctx context.Context, db *DB, pulsenum core.PulseNumber, limi
 		limitBytes: limit,
 
 		istates: []*iterstate{
-			&iterstate{recordsPrefix, recordsPrefix},
+			&iterstate{recordsStart, recordsPrefix},
 			&iterstate{indexesPrefix, indexesPrefix},
 		},
 	}
