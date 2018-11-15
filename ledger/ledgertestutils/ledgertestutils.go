@@ -19,12 +19,12 @@ package ledgertestutils
 import (
 	"testing"
 
-	"github.com/insolar/insolar/ledger/blockexplorer"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/blockexplorer"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -56,7 +56,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	jc.PlatformCryptographyScheme = pcs
 	pm := pulsemanager.NewPulseManager(db)
 	ls := localstorage.NewLocalStorage(db)
-	handlerBe := artifactmanager.NewMessageHandler(db, storage.NewRecentObjectsIndex(0))
+	handlerBe := blockexplorer.NewMessageHandler(db)
 	handlerBe.PlatformCryptographyScheme = pcs
 	be := blockexplorer.NewExplorerManager(db)
 	be.PlatformCryptographyScheme = pcs

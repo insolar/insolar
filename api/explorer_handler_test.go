@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
 )
@@ -47,7 +47,6 @@ const infoURL = URL + "/info"
 type memberInfo struct {
 	ref        string
 	privateKey string
-	pubKey     string
 }
 
 func Test_ExplorerHandlerExtractHistory(t *testing.T) {
@@ -117,17 +116,37 @@ func transfer(ctx context.Context, amount float64, from *memberInfo, to *memberI
 	return "success"
 }
 
+func getRootMemberInfo(fileName string) (*memberInfo, error) {
+
+	rawConf, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	keys := memberKeys{}
+	err = json.Unmarshal(rawConf, &keys)
+	if err != nil {
+		return nil, err
+	}
+	return &memberInfo{getRootMemberRef(), keys.Private}, nil
+}
+
 func createMember(memberName string) (*memberInfo, error) {
 
-	memberPrivKey, _ := ecdsahelper.GeneratePrivateKey()
-	memberPrivKeyStr, _ := ecdsahelper.ExportPrivateKey(memberPrivKey)
-	memberPubKeyStr, _ := ecdsahelper.ExportPublicKey(&memberPrivKey.PublicKey)
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	memberPrivKey, _ := keyProcessor.GeneratePrivateKey()
+	memberPrivKeyStr, _ := keyProcessor.ExportPrivateKey(memberPrivKey)
+	memberPubKeyStr, _ := keyProcessor.ExportPublicKey(keyProcessor.ExtractPublicKey(memberPrivKey))
 
 	params := []interface{}{memberName, memberPubKeyStr}
 	ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("createMemberNumber: "+memberName))
 
-	rootMember = getRootMemberInfo("scripts/insolard/configs/root_member_keys.json")
-	body := sendRequest(ctx, "CreateMember", params, rootMember)
+	rootMember, err := getRootMemberInfo("scripts/insolard/configs/root_member_keys.json")
+	if err != nil {
+		return nil, err
+	}
+
+	body := sendRequest(ctx, "CreateMember", params, *rootMember)
 	memberResponse := getResponse(body)
 	if memberResponse.Error != "" {
 		return nil, errors.New("Create member error")
@@ -135,8 +154,7 @@ func createMember(memberName string) (*memberInfo, error) {
 	memberRef := memberResponse.Result.(string)
 	return &memberInfo{
 		memberRef,
-		memberPrivKeyStr,
-		memberPubKeyStr,
+		string(memberPrivKeyStr),
 	}, nil
 }
 
@@ -182,14 +200,4 @@ func info() infoResponse {
 	infoResp := infoResponse{}
 	_ = json.Unmarshal(body, &infoResp)
 	return infoResp
-}
-
-func getRootMemberInfo(fileName string) memberInfo {
-	rawConf, _ := ioutil.ReadFile(fileName)
-	memberPrivKey, _ := ecdsahelper.GeneratePrivateKey()
-	ecdsahelper.ExportPrivateKey(memberPrivKey)
-	keys := memberKeys{}
-	_ = json.Unmarshal(rawConf, &keys)
-
-	return memberInfo{getRootMemberRef(), keys.Private, keys.Public}
 }
