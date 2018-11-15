@@ -36,8 +36,8 @@ type RecentObjectsIndexMeta struct {
 	TTL int
 }
 
-// NewRecentObjectsIndex creates default RecentStorage object
-func NewRecentObjectsIndex(defaultTTL int) *RecentStorage {
+// NewRecentStorage creates default RecentStorage object
+func NewRecentStorage(defaultTTL int) *RecentStorage {
 	return &RecentStorage{
 		recentObjects:   map[string]*RecentObjectsIndexMeta{},
 		pendingRequests: map[core.RecordID]struct{}{},
@@ -72,6 +72,14 @@ func (r *RecentStorage) AddPendingRequest(id core.RecordID) {
 		r.pendingRequests[id] = struct{}{}
 		return
 	}
+}
+
+// RemovePendingRequest removes request from cache.
+func (r *RecentStorage) RemovePendingRequest(id core.RecordID) {
+	r.requestLock.Lock()
+	defer r.requestLock.Unlock()
+
+	delete(r.pendingRequests, id)
 }
 
 // GetObjects returns object hot-indexes.
