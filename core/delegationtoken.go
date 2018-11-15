@@ -14,20 +14,18 @@
  *    limitations under the License.
  */
 
-package messagebus
+package core
 
-import (
-	"context"
+type DelegationTokenFactory interface {
+	IssuePendingExecution(msg Message, pulse PulseNumber) ([]byte, error)
+	Verify(token []byte, msg Message) (bool, error)
+}
 
-	"github.com/insolar/insolar/core"
-)
+// DelegationToken is the base interface for delegation tokens
+type DelegationToken interface {
+	// Type returns token type.
+	Type() DelegationTokenType
 
-// Sender is an internal interface used by recorder and player. It should not be publicated.
-//
-// Sender provides access to private MessageBus methods.
-//go:generate minimock -i github.com/insolar/insolar/messagebus.sender -o .
-type sender interface {
-	core.MessageBus
-	CreateParcel(ctx context.Context, msg core.Message) (core.Parcel, error)
-	SendParcel(ctx context.Context, msg core.Parcel) (core.Reply, error)
+	// Verify checks against the token. See also delegationtoken.Verify(...)
+	Verify(msg Message) (bool, error)
 }

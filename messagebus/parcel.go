@@ -28,7 +28,7 @@ import (
 )
 
 type parcelFactory struct {
-	RoutingTokenFactory        message.RoutingTokenFactory     `inject:""`
+	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	Cryptography               core.CryptographyService        `inject:""`
 }
@@ -41,8 +41,6 @@ func (pf *parcelFactory) Create(
 	ctx context.Context,
 	msg core.Message,
 	sender core.RecordRef,
-	pulse core.PulseNumber,
-	token core.RoutingToken,
 ) (core.Parcel, error) {
 	if msg == nil {
 		return nil, errors.New("failed to signature a nil message")
@@ -53,13 +51,7 @@ func (pf *parcelFactory) Create(
 		return nil, err
 	}
 
-	if token == nil {
-		target := message.ExtractTarget(msg)
-		hash := pf.PlatformCryptographyScheme.IntegrityHasher().Hash(serialized)
-		token = pf.RoutingTokenFactory.Create(&target, &sender, pulse, hash)
-	}
 	return &message.Parcel{
-		Token:         token,
 		Msg:           msg,
 		Signature:     signature.Bytes(),
 		LogTraceID:    inslogger.TraceID(ctx),

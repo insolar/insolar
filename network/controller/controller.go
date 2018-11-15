@@ -65,6 +65,7 @@ func (c *Controller) Authorize(ctx context.Context) error {
 }
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
+// DEPRECATED
 func (c *Controller) ResendPulseToKnownHosts(pulse core.Pulse) {
 	c.pulseController.ResendPulse(pulse)
 }
@@ -107,7 +108,7 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 
 // NewNetworkController create new network controller.
 func NewNetworkController(
-	pulseCallback network.OnPulse,
+	pulseHandler network.PulseHandler,
 	options *common.Options,
 	transport network.InternalTransport,
 	routingTable network.RoutingTable,
@@ -119,7 +120,7 @@ func NewNetworkController(
 	c.options = options
 	c.bootstrapController = NewBootstrapController(c.options, transport)
 	c.authController = auth.NewAuthorizationController(c.options, c.bootstrapController, transport)
-	c.pulseController = NewPulseController(pulseCallback, network, routingTable)
+	c.pulseController = NewPulseController(pulseHandler, network, routingTable)
 	c.rpcController = NewRPCController(c.options, network, scheme)
 
 	return &c

@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/keystore"
@@ -115,7 +116,7 @@ func InitComponents(
 	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme)
 	checkError(ctx, err, "failed to start Network")
 
-	routingTokeyFactory := messagebus.NewRoutingTokenFactory()
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
 
 	messageBus, err := messagebus.NewMessageBus(cfg)
@@ -165,7 +166,7 @@ func InitComponents(
 	components = append(components, &ld) // TODO: remove me with cmOld
 	components = append(components, []interface{}{
 		nw,
-		routingTokeyFactory,
+		delegationTokenFactory,
 		parcelFactory,
 		messageBus,
 		gen,

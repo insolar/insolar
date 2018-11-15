@@ -23,38 +23,39 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
-type builder struct {
+// Builder implements RequestBuilder interface
+type Builder struct {
 	sender *host.Host
 	t      types.PacketType
 	data   interface{}
 }
 
-func (b *builder) Type(packetType types.PacketType) network.RequestBuilder {
+func (b *Builder) Type(packetType types.PacketType) network.RequestBuilder {
 	b.t = packetType
 	return b
 }
 
-func (b *builder) Data(data interface{}) network.RequestBuilder {
+func (b *Builder) Data(data interface{}) network.RequestBuilder {
 	b.data = data
 	return b
 }
 
-func (b *builder) GetSender() core.RecordRef {
+func (b *Builder) GetSender() core.RecordRef {
 	return b.sender.NodeID
 }
 
-func (b *builder) GetSenderHost() *host.Host {
+func (b *Builder) GetSenderHost() *host.Host {
 	return b.sender
 }
 
-func (b *builder) GetType() types.PacketType {
+func (b *Builder) GetType() types.PacketType {
 	return b.t
 }
 
-func (b *builder) GetData() interface{} {
+func (b *Builder) GetData() interface{} {
 	return b.data
 }
 
-func (b *builder) Build() network.Request {
+func (b *Builder) Build() network.Request {
 	return b
 }
