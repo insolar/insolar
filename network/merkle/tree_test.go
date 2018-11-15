@@ -14,34 +14,25 @@
  *    limitations under the License.
  */
 
-package core
+package merkle
 
-// NodeRole holds role of node
-type NodeRole int
+import (
+	"testing"
 
-const (
-	RoleUnknown = NodeRole(iota)
-	RoleVirtual
-	RoleHeavyMaterial
-	RoleLightMaterial
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/assert"
 )
 
-var AllNodeRoles = []NodeRole{
-	RoleVirtual,
-	RoleLightMaterial,
-	RoleHeavyMaterial,
-}
+func TestFromList(t *testing.T) {
+	cs := platformpolicy.NewPlatformCryptographyScheme()
 
-// GetRoleFromString converts role from string to NodeRole
-func GetRoleFromString(role string) NodeRole {
-	switch role {
-	case "virtual":
-		return RoleVirtual
-	case "heavy_material":
-		return RoleHeavyMaterial
-	case "light_material":
-		return RoleLightMaterial
-	}
+	mt, err := treeFromHashList([][]byte{
+		cs.IntegrityHasher().Hash([]byte("123")),
+		cs.IntegrityHasher().Hash([]byte("456")),
+	}, cs.IntegrityHasher())
+	assert.NoError(t, err)
 
-	return RoleUnknown
+	root := mt.Root()
+
+	assert.NotNil(t, root)
 }

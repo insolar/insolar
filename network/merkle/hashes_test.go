@@ -18,12 +18,13 @@ package merkle
 
 import (
 	"context"
+	"crypto"
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
@@ -32,29 +33,19 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type calculatorSuite struct {
-	suite.Suite
-
-	pulse       *core.Pulse
-	nodeNetwork core.NodeNetwork
-	service     core.CryptographyService
-
-	calculator Calculator
-}
-
-func (t *calculatorSuite) TestGetNodeProof() {
-	ph, np, err := t.calculator.GetPulseProof(&PulseEntry{Pulse: t.pulse})
-
-	t.Assert().NoError(err)
-	t.Assert().NotNil(np)
-
-	key, err := t.service.GetPublicKey()
+func (t *calculatorHashesSuite) TestGetPulseHash() {
+	pulseEntry := &PulseEntry{Pulse: t.pulse}
+	ph, _, err := t.calculator.GetPulseProof(pulseEntry)
 	t.Assert().NoError(err)
 
-	t.Assert().True(t.calculator.IsValid(np, ph, key))
+	expectedHash, _ := hex.DecodeString(
+		"bd18c009950389026c5c6f85c838b899d188ec0d667f77948aa72a49747c3ed31835b1bdbb8bd1d1de62846b5f308ae3eac5127c7d36d7d5464985004122cc90",
+	)
+
+	t.Assert().Equal(OriginHash(expectedHash), ph)
 }
 
-func (t *calculatorSuite) TestGetGlobuleProof() {
+func (t *calculatorHashesSuite) TestGetGlobuleHash() {
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
 	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
 	t.Assert().NoError(err)
@@ -72,19 +63,17 @@ func (t *calculatorSuite) TestGetGlobuleProof() {
 		PrevCloudHash: prevCloudHash,
 		GlobuleIndex:  0,
 	}
-	gh, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
-
-	t.Assert().NoError(err)
-	t.Assert().NotNil(gp)
-
-	key, err := t.service.GetPublicKey()
+	gh, _, err := t.calculator.GetGlobuleProof(globuleEntry)
 	t.Assert().NoError(err)
 
-	valid := t.calculator.IsValid(gp, gh, key)
-	t.Assert().True(valid)
+	expectedHash, _ := hex.DecodeString(
+		"68cd36762548acd48795678c2e308978edd1ff74de2f5daf0511c1b52cf7a7bef44e09d5dd5806e99aa4ed4253aca88390e6b376e0c5f5a49ff48a8f9547e5c5",
+	)
+
+	t.Assert().Equal(OriginHash(expectedHash), gh)
 }
 
-func (t *calculatorSuite) TestGetCloudProof() {
+func (t *calculatorHashesSuite) TestGetCloudHash() {
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
 	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
 	t.Assert().NoError(err)
@@ -104,40 +93,54 @@ func (t *calculatorSuite) TestGetCloudProof() {
 	}
 	_, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
 
-	ch, cp, err := t.calculator.GetCloudProof(&CloudEntry{
+	ch, _, err := t.calculator.GetCloudProof(&CloudEntry{
 		ProofSet:      []*GlobuleProof{gp},
 		PrevCloudHash: prevCloudHash,
 	})
 
 	t.Assert().NoError(err)
-	t.Assert().NotNil(gp)
 
-	key, err := t.service.GetPublicKey()
-	t.Assert().NoError(err)
+	expectedHash, _ := hex.DecodeString(
+		"68cd36762548acd48795678c2e308978edd1ff74de2f5daf0511c1b52cf7a7bef44e09d5dd5806e99aa4ed4253aca88390e6b376e0c5f5a49ff48a8f9547e5c5",
+	)
 
-	valid := t.calculator.IsValid(cp, ch, key)
-	t.Assert().True(valid)
+	fmt.Println(hex.EncodeToString(ch))
+
+	t.Assert().Equal(OriginHash(expectedHash), ch)
 }
 
-func TestNewCalculator(t *testing.T) {
-	c := NewCalculator()
-	assert.NotNil(t, c)
+type calculatorHashesSuite struct {
+	suite.Suite
+
+	pulse       *core.Pulse
+	nodeNetwork core.NodeNetwork
+	service     core.CryptographyService
+
+	calculator Calculator
 }
 
-func TestCalculator(t *testing.T) {
+func TestCalculatorHashes(t *testing.T) {
 	calculator := &calculator{}
 
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	assert.NotNil(t, key)
 
-	service := cryptography.NewKeyBoundCryptographyService(key)
-	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	nk := nodekeeper.GetTestNodekeeper(service)
+	service := testutils.NewCryptographyServiceMock(t)
+	service.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes([]byte("signature"))
+		return &signature, nil
+	}
+	service.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+		return "key", nil
+	}
 
 	am := testutils.NewArtifactManagerMock(t)
 	am.StateFunc = func() (r []byte, r1 error) {
 		return []byte("state"), nil
 	}
+
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	nk := nodekeeper.GetTestNodekeeper(service)
 
 	cm := component.Manager{}
 	cm.Inject(nk, am, calculator, service, scheme)
@@ -156,7 +159,7 @@ func TestCalculator(t *testing.T) {
 		Entropy:         pulsartestutils.MockEntropyGenerator{}.GenerateEntropy(),
 	}
 
-	s := &calculatorSuite{
+	s := &calculatorHashesSuite{
 		Suite:       suite.Suite{},
 		calculator:  calculator,
 		pulse:       pulse,
