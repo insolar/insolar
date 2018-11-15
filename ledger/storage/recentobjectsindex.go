@@ -92,7 +92,7 @@ func (r *RecentObjectsIndex) GetRequests() []core.RecordID {
 	r.requestLock.Lock()
 	defer r.requestLock.Unlock()
 
-	requests := make([]core.RecordID, len(r.pendingRequests))
+	requests := make([]core.RecordID, 0, len(r.pendingRequests))
 	for id := range r.pendingRequests {
 		requests = append(requests, id)
 	}

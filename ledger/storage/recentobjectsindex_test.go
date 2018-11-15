@@ -17,6 +17,8 @@
 package storage
 
 import (
+	"bytes"
+	"sort"
 	"sync"
 	"testing"
 
@@ -31,7 +33,7 @@ func TestNewRecentObjectsIndex(t *testing.T) {
 	require.Equal(t, 123, index.DefaultTTL)
 }
 
-func Test_AddId(t *testing.T) {
+func TestRecentObjectsIndex_AddId(t *testing.T) {
 	index := NewRecentObjectsIndex(123)
 
 	wg := sync.WaitGroup{}
@@ -54,7 +56,39 @@ func Test_AddId(t *testing.T) {
 	require.Equal(t, 3, len(index.GetObjects()))
 }
 
-func Test_Clear(t *testing.T) {
+func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
+	index := NewRecentObjectsIndex(123)
+
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+
+	expectedIDs := []core.RecordID{
+		*core.NewRecordID(123, []byte{1}),
+		*core.NewRecordID(123, []byte{2}),
+		*core.NewRecordID(123, []byte{3}),
+	}
+	go func() {
+		index.AddPendingRequest(expectedIDs[0])
+		wg.Done()
+	}()
+	go func() {
+		index.AddPendingRequest(expectedIDs[1])
+		wg.Done()
+	}()
+	go func() {
+		index.AddPendingRequest(expectedIDs[2])
+		wg.Done()
+	}()
+
+	wg.Wait()
+	actualRequests := index.GetRequests()
+	sort.Slice(actualRequests, func(i, j int) bool {
+		return bytes.Compare(actualRequests[i][:], actualRequests[j][:]) == -1
+	})
+	require.Equal(t, expectedIDs, actualRequests)
+}
+
+func TestRecentObjectsIndex_ClearObjects(t *testing.T) {
 	index := NewRecentObjectsIndex(123)
 	wg := sync.WaitGroup{}
 	wg.Add(3)
