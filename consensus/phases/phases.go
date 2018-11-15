@@ -18,12 +18,25 @@ package phases
 
 import (
 	"context"
+	"math"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
+
+const ConsensusAtPercents = 0.66
+
+func consensusReached(resultLen, participanstLen int) bool {
+	minParticipants := int(math.Floor(ConsensusAtPercents*float64(participanstLen))) + 1
+
+	if resultLen < minParticipants {
+		return false
+	}
+
+	return true
+}
 
 // FirstPhase is a first phase.
 type FirstPhase struct {
@@ -47,7 +60,8 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase1Packet.")
 	}
 
-	proofSet, err := fp.Communicator.ExchangePhase1(ctx, fp.NodeNetwork.GetActiveNodes(), packet)
+	activeNodes := fp.NodeNetwork.GetActiveNodes()
+	proofSet, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
@@ -66,6 +80,10 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		if !fp.Calculator.IsValid(proof, pulseHash, node.PublicKey()) {
 			nodeProofs[node] = proof
 		}
+	}
+
+	if !consensusReached(len(nodeProofs), len(activeNodes)) {
+		return nil, errors.New("[ Execute ] Consensus not reached")
 	}
 
 	return &FirstPhaseState{
@@ -104,10 +122,11 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	packet := packets.Phase2Packet{}
 	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase1Packet.")
+		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase2Packet.")
 	}
 
-	proofSet, err := sp.Communicator.ExchangePhase2(ctx, sp.NodeNetwork.GetActiveNodes(), packet)
+	activeNodes := sp.NodeNetwork.GetActiveNodes()
+	proofSet, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
@@ -130,13 +149,17 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		}
 	}
 
+	if !consensusReached(len(nodeProofs), len(activeNodes)) {
+		return nil, errors.New("[ Execute ] Consensus not reached")
+	}
+
 	return &SecondPhaseState{
 		FirstPhaseState: state,
 
 		GlobuleEntry:    entry,
 		GlobuleHash:     globuleHash,
 		GlobuleProof:    globuleProof,
-		GlobuleProofSet: nil,
+		GlobuleProofSet: nodeProofs,
 	}, nil
 }
 

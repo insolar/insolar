@@ -44,7 +44,16 @@ func NewPhaseManager() *PhaseManager {
 func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	var err error
 
-	pulseDuration, err := pm.getPulseDuration(ctx)
+	currentPulse, err := pm.PulseManager.Current(ctx)
+	if err != nil {
+		return errors.Wrap(err, " [ OnPulse ] Failed to get current pulse")
+	}
+
+	if pulse.PulseNumber <= currentPulse.PulseNumber {
+		return errors.Wrap(err, " [ OnPulse ] New pulse number equal or less current")
+	}
+
+	pulseDuration, err := getPulseDuration(currentPulse)
 	if err != nil {
 		return errors.Wrap(err, "[ OnPulse ] Failed to get pulse duration")
 	}
@@ -76,12 +85,7 @@ func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	return nil
 }
 
-func (pm *PhaseManager) getPulseDuration(ctx context.Context) (*time.Duration, error) {
-	pulse, err := pm.PulseManager.Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, " [ getPulseDuration ] Failed to get current pulse")
-	}
-
+func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
 	duration := time.Duration(pulse.PulseNumber-pulse.PrevPulseNumber) * time.Second
 	return &duration, nil
 }

@@ -18,6 +18,7 @@ package phases
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
@@ -55,7 +56,7 @@ type NaiveCommunicator struct {
 	phase1result chan phase1Result
 	phase2result chan phase2Result
 
-	currentPulse core.Pulse
+	currentPulseNumber uint32
 }
 
 // NewNaiveCommunicator constructor creates new NaiveCommunicator
@@ -71,13 +72,35 @@ func (nc *NaiveCommunicator) Start(ctx context.Context) error {
 	return nil
 }
 
+func (nc *NaiveCommunicator) getPulseNumber() core.PulseNumber {
+	pulseNumber := atomic.LoadUint32(&nc.currentPulseNumber)
+	return core.PulseNumber(pulseNumber)
+}
+
+func (nc *NaiveCommunicator) setPulseNumber(new core.PulseNumber) bool {
+	old := nc.getPulseNumber()
+	return old < new && atomic.CompareAndSwapUint32(&nc.currentPulseNumber, uint32(old), uint32(new))
+}
+
+func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, request network.Request) {
+	for _, node := range participants {
+		go func() {
+			err := nc.ConsensusNetwork.SendRequest(request, node.ID())
+			if err != nil {
+				log.Errorln(err.Error())
+			}
+		}()
+	}
+}
+
 // ExchangePhase1 used in first consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
 
 	result[nc.ConsensusNetwork.GetNodeID()] = &packet
 
-	nc.currentPulse = packet.GetPulse() // todo check
+	nc.setPulseNumber(packet.GetPulse().PulseNumber)
+
 	packetBuffer, err := packet.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ExchangePhase1] Failed to serialize Phase1Packet.")
@@ -86,17 +109,12 @@ func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []
 	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
 	request := requestBuilder.Type(types.Phase1).Data(packetBuffer).Build()
 
-	for _, node := range participants {
-		err := nc.ConsensusNetwork.SendRequest(request, node.ID())
-		if err != nil {
-			log.Errorln(err.Error())
-		}
-	}
+	nc.sendRequestToNodes(participants, request)
 
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	select {
 	case res := <-nc.phase1result:
-		if res.packet.GetPulse().PulseNumber == nc.currentPulse.PulseNumber {
+		if res.packet.GetPulse().PulseNumber == core.PulseNumber(nc.currentPulseNumber) {
 
 			if val, ok := result[res.id]; !ok || val == nil {
 				// send response
@@ -132,12 +150,7 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
 	request := requestBuilder.Type(types.Phase2).Data(packetBuffer).Build()
 
-	for _, node := range participants {
-		err := nc.ConsensusNetwork.SendRequest(request, node.ID())
-		if err != nil {
-			log.Errorln(err.Error())
-		}
-	}
+	nc.sendRequestToNodes(participants, request)
 
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	select {
@@ -173,13 +186,13 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 		return
 	}
 	newPulse := p.GetPulse()
-	if newPulse.PulseNumber < nc.currentPulse.PulseNumber {
+
+	if newPulse.PulseNumber < nc.getPulseNumber() {
 		log.Warnln("ignore old pulse")
 		return
 	}
 
-	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
-		nc.currentPulse = newPulse
+	if nc.setPulseNumber(newPulse.PulseNumber) {
 		go nc.PulseHandler.HandlePulse(context.Background(), newPulse)
 	}
 
