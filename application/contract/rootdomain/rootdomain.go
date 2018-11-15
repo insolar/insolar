@@ -47,6 +47,8 @@ func makeSeed() []byte {
 	return seed
 }
 
+var INSATTR_Authorize_API = true
+
 // Authorize checks is node authorized ( It's temporary method. Remove it when we have good tests )
 func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
 	privateKey, err := foundation.GeneratePrivateKey()
@@ -164,6 +166,8 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 	resJSON, _ := json.Marshal(res)
 	return resJSON, nil
 }
+
+var INSATTR_GetNodeDomainRef_API = true
 
 // GetNodeDomainRef returns reference of NodeDomain instance
 func (rd *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
