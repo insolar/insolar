@@ -62,7 +62,7 @@ func (ge *GlobuleEntry) hash(helper *merkleHelper) []byte {
 		bucketHashes = append(bucketHashes, bucketHash)
 	}
 
-	return fromList(bucketHashes, helper.scheme.IntegrityHasher()).Root()
+	return treeFromHashList(bucketHashes, helper.scheme.IntegrityHasher()).Root()
 }
 
 type CloudEntry struct {
@@ -79,7 +79,7 @@ func (ce *CloudEntry) hash(helper *merkleHelper) []byte {
 		result = append(result, globuleHash)
 	}
 
-	mt := fromList(result, helper.scheme.IntegrityHasher())
+	mt := treeFromHashList(result, helper.scheme.IntegrityHasher())
 	return mt.Root()
 }
 
@@ -122,5 +122,5 @@ func roleEntryRoot(roleEntries []*nodeEntry, helper *merkleHelper) []byte {
 		bucketEntryHash := helper.bucketEntryHash(uint32(index), entry.hash(helper))
 		roleEntriesHashes = append(roleEntriesHashes, bucketEntryHash)
 	}
-	return fromList(roleEntriesHashes, helper.scheme.IntegrityHasher()).Root()
+	return treeFromHashList(roleEntriesHashes, helper.scheme.IntegrityHasher()).Root()
 }

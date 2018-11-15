@@ -26,9 +26,9 @@ import (
 func TestFromList(t *testing.T) {
 	cs := platformpolicy.NewPlatformCryptographyScheme()
 
-	mt := fromList([][]byte{
-		[]byte("123"),
-		[]byte("456"),
+	mt := treeFromHashList([][]byte{
+		cs.IntegrityHasher().Hash([]byte("123")),
+		cs.IntegrityHasher().Hash([]byte("456")),
 	}, cs.IntegrityHasher())
 
 	root := mt.Root()

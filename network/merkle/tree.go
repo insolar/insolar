@@ -25,9 +25,9 @@ type tree interface {
 	Root() []byte
 }
 
-func fromList(list [][]byte, hasher core.Hasher) tree {
+func treeFromHashList(list [][]byte, hasher core.Hasher) tree {
 	mt := gomerkle.NewTree(hasher)
-	mt.AddData(list...)
+	mt.AddHash(list...)
 	mt.Generate()
 	return &mt
 }
