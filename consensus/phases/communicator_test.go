@@ -84,7 +84,7 @@ func makeRandomNode() core.Node {
 
 func (s *communicatorSuite) TestExchangeData() {
 	s.Assert().NotNil(s.communicator)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
 	result, err := s.communicator.ExchangeData(ctx, s.participants, packets.Phase1Packet{})

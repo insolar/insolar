@@ -55,6 +55,7 @@ func NewNaiveCommunicator() *NaiveCommunicator {
 
 // Start method implements Starter interface
 func (nc *NaiveCommunicator) Start(ctx context.Context) error {
+	nc.phase1result = make(chan phase1Result)
 	nc.ConsensusNetwork.RegisterRequestHandler(types.Phase1, nc.phase1DataHandler)
 	nc.ConsensusNetwork.RegisterRequestHandler(types.Phase2, nc.phase2DataHandler)
 	return nil
@@ -63,7 +64,6 @@ func (nc *NaiveCommunicator) Start(ctx context.Context) error {
 // ExchangeData used in first consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	phase1result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
-	nc.phase1result = make(chan phase1Result, len(participants))
 
 	phase1result[nc.ConsensusNetwork.GetNodeID()] = &packet
 
@@ -86,14 +86,21 @@ func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []co
 	log.Infof("phase1result len %d", len(phase1result))
 	select {
 	case res := <-nc.phase1result:
-		if val, ok := phase1result[res.id]; !ok || val == nil {
-			// send response
-			err := nc.ConsensusNetwork.SendRequest(request, res.id)
-			if err != nil {
-				log.Errorln(err.Error())
+		if res.packet.GetPulse().PulseNumber == nc.currentPulse.PulseNumber {
+
+			if val, ok := phase1result[res.id]; !ok || val == nil {
+				// send response
+				err := nc.ConsensusNetwork.SendRequest(request, res.id)
+				if err != nil {
+					log.Errorln(err.Error())
+				}
 			}
+			phase1result[res.id] = res.packet
+
 		}
-		phase1result[res.id] = res.packet
+		if len(phase1result) == len(participants) {
+			return phase1result, nil
+		}
 	case <-ctx.Done():
 		return phase1result, nil
 	}
@@ -118,12 +125,12 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 		return
 	}
 
-	nc.phase1result <- phase1Result{request.GetSender(), p}
-
 	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
 		nc.currentPulse = newPulse
-		nc.PulseHandler.HandlePulse(context.Background(), newPulse)
+		go nc.PulseHandler.HandlePulse(context.Background(), newPulse)
 	}
+
+	nc.phase1result <- phase1Result{request.GetSender(), p}
 }
 
 func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
