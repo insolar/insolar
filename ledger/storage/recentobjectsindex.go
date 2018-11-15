@@ -24,9 +24,11 @@ import (
 
 // RecentObjectsIndex is a base structure
 type RecentObjectsIndex struct {
-	recentObjects map[string]*RecentObjectsIndexMeta
-	lock          sync.Mutex
-	DefaultTTL    int
+	recentObjects   map[string]*RecentObjectsIndexMeta
+	objectLock      sync.Mutex
+	pendingRequests map[core.RecordID]struct{}
+	requestLock     sync.Mutex
+	DefaultTTL      int
 }
 
 // RecentObjectsIndexMeta contains meta about indexes
@@ -37,16 +39,17 @@ type RecentObjectsIndexMeta struct {
 // NewRecentObjectsIndex creates default RecentObjectsIndex object
 func NewRecentObjectsIndex(defaultTTL int) *RecentObjectsIndex {
 	return &RecentObjectsIndex{
-		recentObjects: map[string]*RecentObjectsIndexMeta{},
-		DefaultTTL:    defaultTTL,
-		lock:          sync.Mutex{},
+		recentObjects:   map[string]*RecentObjectsIndexMeta{},
+		pendingRequests: map[core.RecordID]struct{}{},
+		DefaultTTL:      defaultTTL,
+		objectLock:      sync.Mutex{},
 	}
 }
 
 // AddID adds object to cache
 func (r *RecentObjectsIndex) AddID(id *core.RecordID) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+	r.objectLock.Lock()
+	defer r.objectLock.Unlock()
 
 	value, ok := r.recentObjects[string(id.Bytes())]
 
@@ -60,12 +63,23 @@ func (r *RecentObjectsIndex) AddID(id *core.RecordID) {
 	value.TTL = r.DefaultTTL
 }
 
-// GetObjects returns hot-indexes
-func (r *RecentObjectsIndex) GetObjects() map[string]*RecentObjectsIndexMeta {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+// AddPendingRequest adds request to cache.
+func (r *RecentObjectsIndex) AddPendingRequest(id core.RecordID) {
+	r.requestLock.Lock()
+	defer r.requestLock.Unlock()
 
-	targetMap := map[string]*RecentObjectsIndexMeta{}
+	if _, ok := r.pendingRequests[id]; !ok {
+		r.pendingRequests[id] = struct{}{}
+		return
+	}
+}
+
+// GetObjects returns object hot-indexes.
+func (r *RecentObjectsIndex) GetObjects() map[string]*RecentObjectsIndexMeta {
+	r.objectLock.Lock()
+	defer r.objectLock.Unlock()
+
+	targetMap := make(map[string]*RecentObjectsIndexMeta, len(r.recentObjects))
 	for key, value := range r.recentObjects {
 		targetMap[key] = value
 	}
@@ -73,10 +87,23 @@ func (r *RecentObjectsIndex) GetObjects() map[string]*RecentObjectsIndexMeta {
 	return targetMap
 }
 
-// ClearZeroTTL clears objects with zero TTL
-func (r *RecentObjectsIndex) ClearZeroTTL() {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+// GetRequests returns request hot-indexes.
+func (r *RecentObjectsIndex) GetRequests() []core.RecordID {
+	r.requestLock.Lock()
+	defer r.requestLock.Unlock()
+
+	requests := make([]core.RecordID, len(r.pendingRequests))
+	for id := range r.pendingRequests {
+		requests = append(requests, id)
+	}
+
+	return requests
+}
+
+// ClearZeroTTLObjects clears objects with zero TTL
+func (r *RecentObjectsIndex) ClearZeroTTLObjects() {
+	r.objectLock.Lock()
+	defer r.objectLock.Unlock()
 
 	for key, value := range r.recentObjects {
 		if value.TTL == 0 {
@@ -85,10 +112,10 @@ func (r *RecentObjectsIndex) ClearZeroTTL() {
 	}
 }
 
-// Clear clears the whole cache
-func (r *RecentObjectsIndex) Clear() {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+// ClearObjects clears the whole cache
+func (r *RecentObjectsIndex) ClearObjects() {
+	r.objectLock.Lock()
+	defer r.objectLock.Unlock()
 
 	r.recentObjects = map[string]*RecentObjectsIndexMeta{}
 }

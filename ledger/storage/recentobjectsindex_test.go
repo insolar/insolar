@@ -72,7 +72,7 @@ func Test_Clear(t *testing.T) {
 	}()
 	wg.Wait()
 
-	index.Clear()
+	index.ClearObjects()
 
 	require.Equal(t, 0, len(index.GetObjects()))
 }
