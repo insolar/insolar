@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -46,7 +47,8 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
-	handler := artifactmanager.NewMessageHandler(db)
+
+	handler := artifactmanager.NewMessageHandler(db, storage.NewRecentObjectsIndex(0))
 	handler.PlatformCryptographyScheme = pcs
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
