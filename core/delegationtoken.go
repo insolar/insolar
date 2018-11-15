@@ -14,16 +14,18 @@
  *    limitations under the License.
  */
 
-package common
+package core
 
-import (
-	"context"
+type DelegationTokenFactory interface {
+	IssuePendingExecution(msg Message, pulse PulseNumber) ([]byte, error)
+	Verify(token []byte, msg Message) (bool, error)
+}
 
-	"github.com/insolar/insolar/network/transport/host"
-)
+// DelegationToken is the base interface for delegation tokens
+type DelegationToken interface {
+	// Type returns token type.
+	Type() DelegationTokenType
 
-type BootstrapController interface {
-	Start()
-	Bootstrap(ctx context.Context) error
-	GetBootstrapHosts() []*host.Host
+	// Verify checks against the token. See also delegationtoken.Verify(...)
+	Verify(msg Message) (bool, error)
 }

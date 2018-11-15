@@ -42,9 +42,8 @@ func TestPlayer_Send(t *testing.T) {
 	parcel := message.Parcel{Msg: &msg}
 	msgHash := GetMessageHash(pcs, &parcel)
 	pm := testutils.NewPulseManagerMock(mc)
-	pm.CurrentMock.Return(&core.Pulse{PulseNumber: 42}, nil)
 	s := NewsenderMock(mc)
-	s.CreateParcelFunc = func(p context.Context, p1 core.PulseNumber, p2 core.Message, p3 core.RoutingToken) (r core.Parcel, r1 error) {
+	s.CreateParcelFunc = func(p context.Context, p2 core.Message) (r core.Parcel, r1 error) {
 		return &parcel, nil
 	}
 	tape := NewtapeMock(mc)

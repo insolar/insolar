@@ -17,6 +17,7 @@
 package transport
 
 import (
+	"context"
 	"net"
 
 	"github.com/insolar/insolar/configuration"
@@ -40,7 +41,7 @@ type Transport interface {
 	SendPacket(p *packet.Packet) error
 
 	// Start starts thread to listen incoming packets.
-	Start() error
+	Start(ctx context.Context) error
 
 	// Stop gracefully stops listening.
 	Stop()

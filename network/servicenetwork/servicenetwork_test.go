@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/messagebus"
@@ -66,11 +67,11 @@ func mockCryptographyService(t *testing.T) core.CryptographyService {
 
 func mockParcelFactory(t *testing.T) message.ParcelFactory {
 	mock := mockCryptographyService(t)
-	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
-	cm.Inject(routingTokenFactory, parcelFactory, mock)
+	cm.Inject(delegationTokenFactory, parcelFactory, mock)
 	return parcelFactory
 }
 
@@ -133,7 +134,8 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	}
 
 	pf := mockParcelFactory(t)
-	parcel, _ := pf.Create(ctx, e, network.GetNodeID(), 0, nil)
+	parcel, err := pf.Create(ctx, e, network.GetNodeID())
+	assert.NoError(t, err)
 
 	ref := testutils.RandomRef()
 	network.SendMessage(ref, "test", parcel)
@@ -198,7 +200,8 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	}
 
 	pf := mockParcelFactory(t)
-	parcel, _ := pf.Create(ctx, e, firstNode.GetNodeID(), 0, nil)
+	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID())
+	assert.NoError(t, err)
 
 	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", parcel)
 	success := network.WaitTimeout(&wg, 100*time.Millisecond)
@@ -255,7 +258,8 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	}
 
 	pf := mockParcelFactory(t)
-	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID(), 0, nil)
+	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID())
+	assert.NoError(t, err)
 
 	err = firstNode.SendCascadeMessage(c, "test", parcel)
 	success := network.WaitTimeout(&wg, 100*time.Millisecond)
@@ -348,7 +352,8 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	}
 
 	pf := mockParcelFactory(t)
-	parcel, _ := pf.Create(ctx, e, firstService.GetNodeID(), 0, nil)
+	parcel, err := pf.Create(ctx, e, firstService.GetNodeID())
+	assert.NoError(t, err)
 
 	firstService.SendCascadeMessage(c, "test", parcel)
 	success := network.WaitTimeout(&wg, 100*time.Millisecond)

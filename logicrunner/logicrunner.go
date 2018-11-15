@@ -237,12 +237,14 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
 		return nil, es.ErrorWrap(nil, "loop detected")
 	}
+	entryPulse := lr.pulse(ctx).PulseNumber
+
 	fuse := true
 	es.Lock()
 
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
-	if parcel.Pulse() != lr.pulse(ctx).PulseNumber {
+	if entryPulse != lr.pulse(ctx).PulseNumber {
 		return nil, es.ErrorWrap(nil, "abort execution: new Pulse coming")
 	}
 

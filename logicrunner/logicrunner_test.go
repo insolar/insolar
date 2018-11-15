@@ -41,6 +41,7 @@ import (
 	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
@@ -106,7 +107,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		return nil, nil
 	}
 
-	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	nk := nodekeeper.GetTestNodekeeper(mock)
 	mb := testmessagebus.NewTestMessageBus(t)
 
@@ -130,7 +131,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
-	cm.Inject(nk, l, lr, nw, mb, routingTokenFactory, parcelFactory, mock)
+	cm.Inject(nk, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -211,10 +212,8 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManage
 		msg.Nonce = nonce
 	}
 
-	pulse, _ := pm.Current(ctx)
-
 	pf := lr.(*LogicRunner).ParcelFactory
-	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef(), pulse.PulseNumber, nil)
+	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef())
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,

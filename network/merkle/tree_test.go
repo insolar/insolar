@@ -14,16 +14,25 @@
  *    limitations under the License.
  */
 
-package common
+package merkle
 
 import (
-	"context"
+	"testing"
 
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/assert"
 )
 
-type BootstrapController interface {
-	Start()
-	Bootstrap(ctx context.Context) error
-	GetBootstrapHosts() []*host.Host
+func TestFromList(t *testing.T) {
+	cs := platformpolicy.NewPlatformCryptographyScheme()
+
+	mt, err := treeFromHashList([][]byte{
+		cs.IntegrityHasher().Hash([]byte("123")),
+		cs.IntegrityHasher().Hash([]byte("456")),
+	}, cs.IntegrityHasher())
+	assert.NoError(t, err)
+
+	root := mt.Root()
+
+	assert.NotNil(t, root)
 }

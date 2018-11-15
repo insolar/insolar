@@ -74,6 +74,14 @@ func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 	return nil
 }
 
+func (p1p *Phase1Packet) GetPulse() core.Pulse {
+	//TODO: need convert method with pulse signature check
+	return core.Pulse{
+		PulseNumber: core.PulseNumber(p1p.packetHeader.Pulse),
+		Entropy:     p1p.pulseData.Entropy,
+	}
+}
+
 func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 

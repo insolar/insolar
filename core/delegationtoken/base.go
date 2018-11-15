@@ -14,25 +14,34 @@
  *    limitations under the License.
  */
 
-package merkle
+// DelegationToken is an authorization token that allows a node to perform
+// actions it can not normally perform during this pulse
+package delegationtoken
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/onrik/gomerkle"
 	"github.com/pkg/errors"
 )
 
-type tree interface {
-	Root() []byte
+type BaseDelegationToken struct {
+	Signature []byte
 }
 
-func treeFromHashList(list [][]byte, hasher core.Hasher) (tree, error) {
-	mt := gomerkle.NewTree(hasher)
-	mt.AddHash(list...)
+type PendingExecution struct {
+	BaseDelegationToken
+}
 
-	if err := mt.Generate(); err != nil {
-		return nil, errors.Wrap(err, "[ treeFromHashList ] Failed to generate merkle tree")
+func (t *PendingExecution) Type() core.DelegationTokenType {
+	return core.DTTypePendingExecution
+}
+
+func (t *PendingExecution) Verify(msg core.Message) (bool, error) {
+	switch mt := msg.Type(); mt {
+
+	//TODO: stab should start verification
+	case core.TypeCallMethod:
+		return false, nil
+	default:
+		return false, errors.Errorf("Message of type %s can't be delegated with %s token", t.Type(), mt)
 	}
-
-	return &mt, nil
 }
