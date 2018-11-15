@@ -35,8 +35,7 @@ type Components struct {
 	MessageBus                 MessageBus
 	Metrics                    Component
 	Genesis                    Genesis
-	APIRunner                  Component
-	VersionManager             Component
+	APIRunner                  APIRunner
 	NetworkCoordinator         NetworkCoordinator
 	PlatformCryptographyScheme PlatformCryptographyScheme
 	CryptographyService        CryptographyService
