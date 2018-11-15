@@ -21,7 +21,7 @@ import (
 type CommunicatorMock struct {
 	t minimock.Tester
 
-	ExchangeDataFunc       func(p context.Context, p1 []core.Node, p2 packets.PulseData, p3 packets.Phase1Packet) (r map[core.RecordRef]packets.Phase1Packet, r1 error)
+	ExchangeDataFunc       func(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (r map[core.RecordRef]*packets.Phase1Packet, r1 error)
 	ExchangeDataCounter    uint64
 	ExchangeDataPreCounter uint64
 	ExchangeDataMock       mCommunicatorMockExchangeData
@@ -49,38 +49,37 @@ type mCommunicatorMockExchangeData struct {
 type CommunicatorMockExchangeDataParams struct {
 	p  context.Context
 	p1 []core.Node
-	p2 packets.PulseData
-	p3 packets.Phase1Packet
+	p2 packets.Phase1Packet
 }
 
 //Expect sets up expected params for the Communicator.ExchangeData
-func (m *mCommunicatorMockExchangeData) Expect(p context.Context, p1 []core.Node, p2 packets.PulseData, p3 packets.Phase1Packet) *mCommunicatorMockExchangeData {
-	m.mockExpectations = &CommunicatorMockExchangeDataParams{p, p1, p2, p3}
+func (m *mCommunicatorMockExchangeData) Expect(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) *mCommunicatorMockExchangeData {
+	m.mockExpectations = &CommunicatorMockExchangeDataParams{p, p1, p2}
 	return m
 }
 
 //Return sets up a mock for Communicator.ExchangeData to return Return's arguments
-func (m *mCommunicatorMockExchangeData) Return(r map[core.RecordRef]packets.Phase1Packet, r1 error) *CommunicatorMock {
-	m.mock.ExchangeDataFunc = func(p context.Context, p1 []core.Node, p2 packets.PulseData, p3 packets.Phase1Packet) (map[core.RecordRef]packets.Phase1Packet, error) {
+func (m *mCommunicatorMockExchangeData) Return(r map[core.RecordRef]*packets.Phase1Packet, r1 error) *CommunicatorMock {
+	m.mock.ExchangeDataFunc = func(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Communicator.ExchangeData method
-func (m *mCommunicatorMockExchangeData) Set(f func(p context.Context, p1 []core.Node, p2 packets.PulseData, p3 packets.Phase1Packet) (r map[core.RecordRef]packets.Phase1Packet, r1 error)) *CommunicatorMock {
+func (m *mCommunicatorMockExchangeData) Set(f func(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (r map[core.RecordRef]*packets.Phase1Packet, r1 error)) *CommunicatorMock {
 	m.mock.ExchangeDataFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //ExchangeData implements github.com/insolar/insolar/consensus/phases.Communicator interface
-func (m *CommunicatorMock) ExchangeData(p context.Context, p1 []core.Node, p2 packets.PulseData, p3 packets.Phase1Packet) (r map[core.RecordRef]packets.Phase1Packet, r1 error) {
+func (m *CommunicatorMock) ExchangeData(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (r map[core.RecordRef]*packets.Phase1Packet, r1 error) {
 	atomic.AddUint64(&m.ExchangeDataPreCounter, 1)
 	defer atomic.AddUint64(&m.ExchangeDataCounter, 1)
 
 	if m.ExchangeDataMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.ExchangeDataMock.mockExpectations, CommunicatorMockExchangeDataParams{p, p1, p2, p3},
+		testify_assert.Equal(m.t, *m.ExchangeDataMock.mockExpectations, CommunicatorMockExchangeDataParams{p, p1, p2},
 			"Communicator.ExchangeData got unexpected parameters")
 
 		if m.ExchangeDataFunc == nil {
@@ -96,7 +95,7 @@ func (m *CommunicatorMock) ExchangeData(p context.Context, p1 []core.Node, p2 pa
 		return
 	}
 
-	return m.ExchangeDataFunc(p, p1, p2, p3)
+	return m.ExchangeDataFunc(p, p1, p2)
 }
 
 //ExchangeDataMinimockCounter returns a count of CommunicatorMock.ExchangeDataFunc invocations

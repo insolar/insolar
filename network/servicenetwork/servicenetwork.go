@@ -46,7 +46,7 @@ type ServiceNetwork struct {
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{}
-	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork.onPulse, scheme)
+	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork, scheme)
 	if err != nil {
 		log.Error("failed to create network components: %s", err.Error())
 	}
@@ -118,9 +118,9 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
-	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
+	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	log.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.pulseManager == nil {
 		logger.Error("PulseManager is not initialized")
@@ -157,7 +157,7 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 
 // NewNetworkComponents create network.HostNetwork and network.Controller for new network
 func NewNetworkComponents(conf configuration.Configuration,
-	pulseCallback network.OnPulse, scheme core.PlatformCryptographyScheme) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
+	pulseHandler network.PulseHandler, scheme core.PlatformCryptographyScheme) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
 	routingTable := routing.NewTable()
 	internalTransport, err := hostnetwork.NewInternalTransport(conf)
 	if err != nil {
@@ -165,6 +165,6 @@ func NewNetworkComponents(conf configuration.Configuration,
 	}
 	hostNetwork := hostnetwork.NewHostTransport(internalTransport, routingTable)
 	options := controller.ConfigureOptions(conf.Host)
-	networkController := controller.NewNetworkController(pulseCallback, options, internalTransport, routingTable, hostNetwork, scheme)
+	networkController := controller.NewNetworkController(pulseHandler, options, internalTransport, routingTable, hostNetwork, scheme)
 	return routingTable, hostNetwork, networkController, nil
 }
