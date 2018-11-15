@@ -36,8 +36,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
-const deny_test_call_constructor = false
-
 type Ref = core.RecordRef
 
 // Context of one contract execution
@@ -512,7 +510,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 		es.Unlock()
 	}()
 
-	if deny_test_call_constructor && es.callContext.Caller.Equal(Ref{}) {
+	if es.callContext.Caller.Equal(Ref{}) {
 		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
 	}
 
