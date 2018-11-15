@@ -41,7 +41,7 @@ type Ref = core.RecordRef
 // Context of one contract execution
 type ExecutionState struct {
 	sync.Mutex
-	Ref    Ref
+	Ref    *Ref
 	Method string
 
 	noWait      bool
@@ -58,8 +58,8 @@ type ExecutionState struct {
 
 type Error struct {
 	Err      error
-	Request  Ref
-	Contract Ref
+	Request  *Ref
+	Contract *Ref
 	Method   string
 }
 
@@ -67,13 +67,13 @@ func (lre Error) Error() string {
 	var buffer bytes.Buffer
 
 	buffer.WriteString(lre.Err.Error())
-	if lre.Contract.String() != "" {
+	if lre.Contract != nil {
 		buffer.WriteString(" Contract=" + lre.Contract.String())
 	}
 	if lre.Method != "" {
 		buffer.WriteString(" Method=" + lre.Method)
 	}
-	if lre.Request.String() != "" {
+	if lre.Request != nil {
 		buffer.WriteString(" Request=" + lre.Request.String())
 	}
 
@@ -88,7 +88,7 @@ func (es *ExecutionState) ErrorWrap(err error, message string) error {
 	}
 	return Error{
 		Err:      err,
-		Request:  *es.request,
+		Request:  es.request,
 		Contract: es.Ref,
 		Method:   es.Method,
 	}
@@ -428,6 +428,10 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			es.Unlock()
 		}
 	}()
+
+	if es.callContext.Caller.Equal(Ref{}) {
+		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
+	}
 
 	err := lr.getObjectMessage(es, m.ObjectRef)
 	if err != nil {
