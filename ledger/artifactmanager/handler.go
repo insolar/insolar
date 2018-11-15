@@ -19,17 +19,15 @@ package artifactmanager
 import (
 	"bytes"
 	"context"
-	"strconv"
-
-	"github.com/insolar/insolar/instrumentation/hack"
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/hack"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/pkg/errors"
 )
 
 type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error)
@@ -56,7 +54,6 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeGetObject, h.messagePersistingWrapper(h.handleGetObject))
 	h.Bus.MustRegister(core.TypeGetDelegate, h.messagePersistingWrapper(h.handleGetDelegate))
 	h.Bus.MustRegister(core.TypeGetChildren, h.messagePersistingWrapper(h.handleGetChildren))
-	h.Bus.MustRegister(core.TypeGetHistory, h.messagePersistingWrapper(h.handleGetHistory))
 	h.Bus.MustRegister(core.TypeUpdateObject, h.messagePersistingWrapper(h.handleUpdateObject))
 	h.Bus.MustRegister(core.TypeRegisterChild, h.messagePersistingWrapper(h.handleRegisterChild))
 	h.Bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
@@ -95,6 +92,7 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetRecord)
 	id, err := h.db.SetRecord(ctx, pulseNumber, record.DeserializeRecord(msg.Record))
+	inslogger.FromContext(ctx).Infof("new id - %v", id)
 	if err != nil {
 		return nil, err
 	}
@@ -512,101 +510,4 @@ func validateState(old record.State, new record.State) error {
 		return errors.New("object is already activated")
 	}
 	return nil
-}
-
-func (h *MessageHandler) handleGetHistory(ctx context.Context, pulseNumber core.PulseNumber, inmsg core.Parcel) (core.Reply, error) {
-	msg := inmsg.Message().(*message.GetHistory)
-	idx, _, _, err := getObject(ctx, h.db, msg.Object.Record(), nil, false)
-	if err != nil {
-		return nil, err
-	}
-	var history []reply.ExplorerObject
-	var current *core.RecordID
-
-	if msg.From != nil {
-		current = msg.From
-	} else {
-		current = idx.LatestState
-	}
-
-	counter := 0
-	for current != nil {
-		// We have enough results.
-		if counter >= msg.Amount {
-			return &reply.ExplorerList{States: history, NextState: current}, nil
-		}
-		counter++
-
-		rec, err := h.db.GetRecord(ctx, current)
-		if err != nil {
-			return nil, errors.New("failed to retrieve object state")
-		}
-
-		switch rec.(type) {
-		case record.ObjectState:
-			{
-				currentState, ok := rec.(record.ObjectState)
-				if !ok {
-					return nil, errors.New("Cannot cast to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
-				}
-				current = currentState.PrevStateID()
-
-				var memory []byte
-				if currentState.GetMemory() != nil {
-					memory, err = h.db.GetBlob(ctx, currentState.GetMemory())
-					if err != nil {
-						return nil, err
-					}
-				}
-
-				parcel, err := h.getParcel(ctx, currentState.GetRequest())
-				if err != nil && err != errors.New("storage object not found") {
-					return nil, err
-				}
-				history = append(history, reply.ExplorerObject{
-					Parcel:    parcel,
-					Memory:    memory,
-					NextState: currentState.PrevStateID(),
-				})
-			}
-		case record.Request:
-			{
-				currentState, ok := rec.(record.Request)
-				if !ok {
-					return nil, errors.New("Cannot cast to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
-				}
-				parcel, err := extractParcelFromRecord(currentState)
-				if err != nil {
-					return nil, err
-				}
-
-				history = append(history, reply.ExplorerObject{
-					Memory:    nil,
-					Parcel:    parcel,
-					NextState: nil,
-				})
-				current = nil
-			}
-		}
-	}
-	return &reply.ExplorerList{States: history, NextState: nil}, nil
-}
-
-func (h *MessageHandler) getParcel(ctx context.Context, request *core.RecordID) (core.Parcel, error) {
-	if request == nil {
-		return nil, errors.New("Сan not get the history of the incoming request")
-	}
-	req, err := h.db.GetRecord(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-	return extractParcelFromRecord(req)
-}
-
-func extractParcelFromRecord(rec record.Record) (core.Parcel, error) {
-	parcel, err := message.Deserialize(bytes.NewBuffer(rec.(record.Request).GetPayload()))
-	if err != nil {
-		return nil, err
-	}
-	return parcel, nil
 }

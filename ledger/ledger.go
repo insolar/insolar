@@ -105,6 +105,7 @@ func GetLedgerComponents(conf configuration.Ledger) []interface{} {
 		artifactmanager.NewMessageHandler(db),
 		localstorage.NewLocalStorage(db),
 		blockexplorer.NewExplorerManager(db),
+		blockexplorer.NewMessageHandler(db),
 	}
 }
 

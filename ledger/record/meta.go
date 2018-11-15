@@ -26,6 +26,10 @@ import (
 type GenesisRecord struct {
 }
 
+func (r *GenesisRecord) GetRequest() *core.RecordID {
+	return r.GetRequest()
+}
+
 // PrevStateID returns previous state id.
 func (r *GenesisRecord) PrevStateID() *core.RecordID {
 	return nil

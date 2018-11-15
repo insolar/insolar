@@ -47,14 +47,16 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
-	handler := artifactmanager.NewMessageHandler(db)
-	handler.PlatformCryptographyScheme = pcs
+	handlerAm := artifactmanager.NewMessageHandler(db)
+	handlerAm.PlatformCryptographyScheme = pcs
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
 	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	jc.PlatformCryptographyScheme = pcs
 	pm := pulsemanager.NewPulseManager(db)
 	ls := localstorage.NewLocalStorage(db)
+	handlerBe := artifactmanager.NewMessageHandler(db)
+	handlerBe.PlatformCryptographyScheme = pcs
 	be := blockexplorer.NewExplorerManager(db)
 	be.PlatformCryptographyScheme = pcs
 
@@ -66,7 +68,8 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))
 	}
 
-	handler.Bus = c.MessageBus
+	handlerAm.Bus = c.MessageBus
+	handlerBe.Bus = c.MessageBus
 	am.DefaultBus = c.MessageBus
 	be.DefaultBus = c.MessageBus
 	jc.NodeNet = c.NodeNetwork
@@ -74,7 +77,12 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 
-	err := handler.Init(ctx)
+	err := handlerAm.Init(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	err = handlerBe.Init(ctx)
 	if err != nil {
 		panic(err)
 	}
