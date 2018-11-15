@@ -52,6 +52,11 @@ type Genesis struct {
 	rootPubKey    string
 	rootBalance   uint
 	prototypeRefs map[string]*core.RecordRef
+
+	ArtifactManager core.ArtifactManager `inject:""`
+	PulseManager    core.PulseManager    `inject:""`
+	JetCoordinator  core.JetCoordinator  `inject:""`
+	Network         core.Network         `inject:""`
 }
 
 // Info returns json with references for info api endpoint
@@ -100,7 +105,7 @@ func buildSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBui
 }
 
 func (g *Genesis) activateRootDomain(
-	ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
+	ctx context.Context, cb *goplugintestutils.ContractsBuilder,
 ) (*core.RecordID, core.ObjectDescriptor, error) {
 	rd, err := rootdomain.NewRootDomain()
 	if err != nil {
@@ -112,16 +117,17 @@ func (g *Genesis) activateRootDomain(
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootDomain"}})
+	contractID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootDomain"}})
+
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	contract := core.NewRecordRef(*contractID, *contractID)
-	desc, err := am.ActivateObject(
+	desc, err := g.ArtifactManager.ActivateObject(
 		ctx,
 		core.RecordRef{},
 		*contract,
-		*am.GenesisRef(),
+		*g.ArtifactManager.GenesisRef(),
 		*cb.Prototypes[rootDomain],
 		false,
 		instanceData,
@@ -135,7 +141,7 @@ func (g *Genesis) activateRootDomain(
 }
 
 func (g *Genesis) activateNodeDomain(
-	ctx context.Context, domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
+	ctx context.Context, domain *core.RecordID, cb *goplugintestutils.ContractsBuilder,
 ) error {
 	nd, err := nodedomain.NewNodeDomain()
 	if err != nil {
@@ -147,12 +153,13 @@ func (g *Genesis) activateNodeDomain(
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "NodeDomain"}})
+	contractID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "NodeDomain"}})
+
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 	contract := core.NewRecordRef(*domain, *contractID)
-	_, err = am.ActivateObject(
+	_, err = g.ArtifactManager.ActivateObject(
 		ctx,
 		core.RecordRef{},
 		*contract,
@@ -171,7 +178,7 @@ func (g *Genesis) activateNodeDomain(
 }
 
 func (g *Genesis) activateRootMember(
-	ctx context.Context, domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
+	ctx context.Context, domain *core.RecordID, cb *goplugintestutils.ContractsBuilder,
 ) error {
 	m, err := member.New("RootMember", g.rootPubKey)
 	if err != nil {
@@ -183,12 +190,13 @@ func (g *Genesis) activateRootMember(
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootMember"}})
+	contractID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootMember"}})
+
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
 	contract := core.NewRecordRef(*domain, *contractID)
-	_, err = am.ActivateObject(
+	_, err = g.ArtifactManager.ActivateObject(
 		ctx,
 		core.RecordRef{},
 		*contract,
@@ -207,13 +215,13 @@ func (g *Genesis) activateRootMember(
 
 // TODO: this is not required since we refer by request id.
 func (g *Genesis) updateRootDomain(
-	ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, domainDesc core.ObjectDescriptor,
+	ctx context.Context, cb *goplugintestutils.ContractsBuilder, domainDesc core.ObjectDescriptor,
 ) error {
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *g.rootMemberRef, NodeDomainRef: *g.nodeDomainRef})
 	if err != nil {
 		return errors.Wrap(err, "[ updateRootDomain ]")
 	}
-	_, err = am.UpdateObject(
+	_, err = g.ArtifactManager.UpdateObject(
 		ctx,
 		core.RecordRef{},
 		core.RecordRef{},
@@ -228,7 +236,7 @@ func (g *Genesis) updateRootDomain(
 }
 
 func (g *Genesis) activateRootMemberWallet(
-	ctx context.Context, domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
+	ctx context.Context, domain *core.RecordID, cb *goplugintestutils.ContractsBuilder,
 ) error {
 	w, err := wallet.New(g.rootBalance)
 	if err != nil {
@@ -240,12 +248,13 @@ func (g *Genesis) activateRootMemberWallet(
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
 
-	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootWallet"}})
+	contractID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootWallet"}})
+
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
 	contract := core.NewRecordRef(*domain, *contractID)
-	_, err = am.ActivateObject(
+	_, err = g.ArtifactManager.ActivateObject(
 		ctx,
 		core.RecordRef{},
 		*contract,
@@ -261,26 +270,26 @@ func (g *Genesis) activateRootMemberWallet(
 	return nil
 }
 
-func (g *Genesis) activateSmartContracts(ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
-	domain, domainDesc, err := g.activateRootDomain(ctx, am, cb)
+func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
+	domain, domainDesc, err := g.activateRootDomain(ctx, cb)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = g.activateNodeDomain(ctx, domain, am, cb)
+	err = g.activateNodeDomain(ctx, domain, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMember(ctx, domain, am, cb)
+	err = g.activateRootMember(ctx, domain, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
 	// TODO: this is not required since we refer by request id.
-	err = g.updateRootDomain(ctx, am, cb, domainDesc)
+	err = g.updateRootDomain(ctx, cb, domainDesc)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMemberWallet(ctx, domain, am, cb)
+	err = g.activateRootMemberWallet(ctx, domain, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
@@ -289,18 +298,18 @@ func (g *Genesis) activateSmartContracts(ctx context.Context, am core.ArtifactMa
 }
 
 // Start creates types and RootDomain instance
-func (g *Genesis) Start(ctx context.Context, c core.Components) error {
+func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Bootstrapper ] Starting Bootstrap ...")
 
-	rootDomainRef, err := getRootDomainRef(ctx, c)
+	rootDomainRef, err := g.getRootDomainRef(ctx)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't get ref of rootDomain")
 	}
 	if rootDomainRef != nil {
 		g.rootDomainRef = rootDomainRef
 
-		rootMemberRef, err := getRootMemberRef(ctx, c, *g.rootDomainRef)
+		rootMemberRef, err := g.getRootMemberRef(ctx, *g.rootDomainRef)
 		if err != nil {
 			return errors.Wrap(err, "[ Bootstrapper ] couldn't get ref of rootMember")
 		}
@@ -315,7 +324,7 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root member keys")
 	}
 
-	isLightExecutor, err := isLightExecutor(ctx, c)
+	isLightExecutor, err := g.isLightExecutor(ctx)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't check if node is light executor")
 	}
@@ -329,8 +338,7 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build insgocc")
 	}
 
-	am := c.Ledger.GetArtifactManager()
-	cb := goplugintestutils.NewContractBuilder(am, insgocc)
+	cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
 	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 
@@ -339,7 +347,7 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build contracts")
 	}
 
-	err = g.activateSmartContracts(ctx, am, cb)
+	err = g.activateSmartContracts(ctx, cb)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ]")
 	}
@@ -347,7 +355,69 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 	return nil
 }
 
-// Stop implements core.Component method
-func (g *Genesis) Stop(ctx context.Context) error {
-	return nil
+func (g *Genesis) isLightExecutor(ctx context.Context) (bool, error) {
+	currentPulse, err := g.PulseManager.Current(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
+	}
+
+	nodeID := g.Network.GetNodeID()
+
+	isLightExecutor, err := g.JetCoordinator.IsAuthorized(
+		ctx,
+		core.RoleLightExecutor,
+		g.ArtifactManager.GenesisRef(),
+		currentPulse.PulseNumber,
+		nodeID,
+	)
+	if err != nil {
+		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
+	}
+	if !isLightExecutor {
+		inslogger.FromContext(ctx).Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
+		return false, nil
+	}
+	return true, nil
+}
+
+func (g *Genesis) getRootDomainRef(ctx context.Context) (*core.RecordRef, error) {
+	genesisRef := g.ArtifactManager.GenesisRef()
+	if genesisRef == nil {
+		return nil, errors.New("[ getRootDomainRef ] Genesis ref is nil")
+	}
+	rootObj, err := g.ArtifactManager.GetObject(ctx, *genesisRef, nil, true)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
+	}
+	rootRefChildren, err := rootObj.Children(nil)
+	if err != nil {
+		return nil, err
+	}
+	if rootRefChildren.HasNext() {
+		rootDomainRef, err := rootRefChildren.Next()
+		if err != nil {
+			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
+		}
+		return rootDomainRef, nil
+	}
+	return nil, nil
+}
+
+func (g *Genesis) getRootMemberRef(ctx context.Context, rootDomainRef core.RecordRef) (*core.RecordRef, error) {
+	rootDomainObj, err := g.ArtifactManager.GetObject(ctx, rootDomainRef, nil, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get children of RootDomain object")
+	}
+	rootDomainRefChildren, err := rootDomainObj.Children(nil)
+	if err != nil {
+		return nil, err
+	}
+	if rootDomainRefChildren.HasNext() {
+		rootMemberRef, err := rootDomainRefChildren.Next()
+		if err != nil {
+			return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get next child of RootDomain object")
+		}
+		return rootMemberRef, nil
+	}
+	return nil, nil
 }

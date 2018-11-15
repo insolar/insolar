@@ -91,7 +91,7 @@ func (ar *Runner) verifySignature(ctx context.Context, params request) error {
 	return nil
 }
 
-func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
+func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
 		params := request{}
@@ -140,13 +140,13 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			return
 		}
 
-		args, err := core.MarshalArgs(*c.Genesis.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
+		args, err := core.MarshalArgs(*ar.Genesis.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
 		if err != nil {
 			resp.Error = err.Error()
 			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't marshal args"))
 			return
 		}
-		res, err := ar.messageBus.Send(
+		res, err := ar.MessageBus.Send(
 			ctx,
 			&message.CallMethod{
 				ObjectRef: core.NewRefFromBase58(params.Reference),
