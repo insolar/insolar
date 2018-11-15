@@ -96,49 +96,46 @@ func (h *MessageHandler) handleGetHistory(ctx context.Context, pulseNumber core.
 
 		switch rec.(type) {
 		case record.ObjectState:
-			{
-				currentState, ok := rec.(record.ObjectState)
-				if !ok {
-					return nil, errors.New("Cannot cast to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
-				}
-				current = currentState.PrevStateID()
-
-				var memory []byte
-				if currentState.GetMemory() != nil {
-					memory, err = h.db.GetBlob(ctx, currentState.GetMemory())
-					if err != nil {
-						return nil, err
-					}
-				}
-
-				parcel, err := h.getParcel(ctx, currentState.GetRequest())
-				if err != nil && err != errors.New("storage object not found") {
-					return nil, err
-				}
-				history = append(history, reply.ExplorerObject{
-					Parcel:    parcel,
-					Memory:    memory,
-					NextState: currentState.PrevStateID(),
-				})
+			currentState, ok := rec.(record.ObjectState)
+			if !ok {
+				return nil, errors.New("Cannot cast to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
 			}
-		case record.Request:
-			{
-				currentState, ok := rec.(record.Request)
-				if !ok {
-					return nil, errors.New("Cannot cast to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
-				}
-				parcel, err := extractParcelFromRecord(currentState)
+			current = currentState.PrevStateID()
+
+			var memory []byte
+			if currentState.GetMemory() != nil {
+				memory, err = h.db.GetBlob(ctx, currentState.GetMemory())
 				if err != nil {
 					return nil, err
 				}
-
-				history = append(history, reply.ExplorerObject{
-					Memory:    nil,
-					Parcel:    parcel,
-					NextState: nil,
-				})
-				current = nil
 			}
+
+			parcel, err := h.getParcel(ctx, currentState.GetRequest())
+			if err != nil && err != errors.New("storage object not found") {
+				return nil, err
+			}
+			history = append(history, reply.ExplorerObject{
+				Parcel:    parcel,
+				Memory:    memory,
+				NextState: currentState.PrevStateID(),
+			})
+
+		case record.Request:
+			currentState, ok := rec.(record.Request)
+			if !ok {
+				return nil, errors.New("Cannot cast to object state: " + strconv.FormatUint(uint64(rec.Type()), 10))
+			}
+			parcel, err := extractParcelFromRecord(currentState)
+			if err != nil {
+				return nil, err
+			}
+			history = append(history, reply.ExplorerObject{
+				Memory:    nil,
+				Parcel:    parcel,
+				NextState: nil,
+			})
+			current = nil
+
 		}
 	}
 	return &reply.ExplorerList{States: history, NextState: nil}, nil
