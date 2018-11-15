@@ -69,6 +69,8 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 	return nil
 }
 
+const INSATTR_Call_API = true
+
 // Call method for authorized calls
 func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
 
