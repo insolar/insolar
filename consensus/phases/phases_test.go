@@ -39,8 +39,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	})
 
 	cm := component.Manager{}
-	cm.Register(nodeNetworkMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
-	cm.Inject(firstPhase)
+	cm.Inject(nodeNetworkMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
 
 	assert.NotNil(t, firstPhase.Calculator)
 	assert.NotNil(t, firstPhase.NodeNetwork)

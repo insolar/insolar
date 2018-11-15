@@ -27,6 +27,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Phase1Result struct {
+	id     core.RecordRef
+	packet *packets.Phase1Packet
+}
+
 // Communicator interface provides methods to exchange data between nodes
 //go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o ../../testutils/network -s _mock.go
 type Communicator interface {
@@ -37,10 +42,9 @@ type Communicator interface {
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
 type NaiveCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
-	FirstPhase       FirstPhase               `inject:""`
 
 	phase1packet *packets.Phase1Packet
-	phase1result map[core.RecordRef]*packets.Phase1Packet
+	phase1result chan Phase1Result
 	currentPulse core.Pulse
 }
 
@@ -58,7 +62,10 @@ func (nc *NaiveCommunicator) Start(ctx context.Context) error {
 
 // ExchangeData used in first consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
-	//futures := make([]network.Future, len(participants))
+	phase1result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
+	nc.phase1result = make(chan Phase1Result, len(participants))
+
+	phase1result[nc.ConsensusNetwork.GetNodeID()] = &packet
 
 	nc.currentPulse = packet.GetPulse() // todo check
 	packetBuffer, err := packet.Serialize()
@@ -77,9 +84,15 @@ func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []co
 		}
 	}
 
-	//TODO: get  results
+	log.Infof("phase1result len %d", len(phase1result))
+	select {
+	case res := <-nc.phase1result:
+		phase1result[res.id] = res.packet
+	case <-ctx.Done():
+		return phase1result, nil
+	}
 
-	return nil, nil
+	return phase1result, nil
 }
 
 func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
@@ -101,11 +114,11 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 
 	//TODO: check current pulse??
 
-	nc.phase1result[request.GetSender()] = p
+	nc.phase1result <- Phase1Result{request.GetSender(), p}
 
 	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
 		nc.currentPulse = newPulse
-		nc.FirstPhase.Execute(context.TODO(), &newPulse)
+		//nc.FirstPhase.Execute(context.TODO(), &newPulse)
 	}
 }
 

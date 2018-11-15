@@ -19,13 +19,16 @@ package phases
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/suite"
 )
@@ -53,27 +56,38 @@ func NewSuite() *communicatorSuite {
 func (s *communicatorSuite) SetupTest() {
 	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
 	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
+	s.originNode = makeRandomNode()
 
 	s.consensusNetworkMock.RegisterRequestHandlerMock.Set(func(p types.PacketType, p1 network.ConsensusRequestHandler) {
-
 	})
 
 	s.consensusNetworkMock.NewRequestBuilderMock.Set(func() (r network.RequestBuilder) {
 		return &hostnetwork.Builder{}
 	})
 
-	s.componentManager.Register(s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
-	err := s.componentManager.Start(nil)
+	s.consensusNetworkMock.GetNodeIDMock.Set(func() (r core.RecordRef) {
+		return s.originNode.ID()
+	})
+
+	s.componentManager.Inject(s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
+	err := s.componentManager.Start(context.TODO())
 	s.NoError(err)
+}
+
+func makeRandomNode() core.Node {
+	return nodenetwork.NewNode(testutils.RandomRef(), nil, nil, 0, "127.0.0.1", "")
 }
 
 func (s *communicatorSuite) TestExchangeData() {
 	s.Assert().NotNil(s.communicator)
-	_, err := s.communicator.ExchangeData(context.Background(), s.participants, packets.Phase1Packet{})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	result, err := s.communicator.ExchangeData(ctx, s.participants, packets.Phase1Packet{})
 	s.Assert().NoError(err)
+	s.NotEqual(0, len(result))
 }
 
 func TestNaiveCommunicator(t *testing.T) {
-	t.Skip("fix test")
 	suite.Run(t, NewSuite())
 }
