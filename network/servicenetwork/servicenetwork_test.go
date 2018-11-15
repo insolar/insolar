@@ -120,11 +120,14 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	cs, _ := cryptography.NewStorageBoundCryptographyService(keysPath)
 	kp := platformpolicy.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
-	network.certificate, _ = certificate.NewCertificatesWithKeys(pk, kp)
+	network.Certificate, _ = certificate.NewCertificatesWithKeys(pk, kp)
 	assert.NoError(t, err)
 
 	ctx := context.TODO()
-	err = network.Start(ctx, initComponents(t, testutils.RandomRef(), "", true))
+	networkComponents := initComponents(t, testutils.RandomRef(), "", true)
+	network.OldComponentManager = &HackComponentManager{networkComponents}
+	network.NodeNetwork, _ = nodenetwork.NewNodeNetwork(cfg)
+	err = network.Init(ctx)
 	assert.NoError(t, err)
 
 	e := &message.CallMethod{
@@ -175,9 +178,14 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		secondNodeId), scheme)
 	assert.NoError(t, err)
 
-	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true))
+	secondNodeComponents := initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
+	secondNode.OldComponentManager = &HackComponentManager{secondNodeComponents}
+	err = secondNode.Init(ctx)
 	assert.NoError(t, err)
-	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false))
+	firstNodeComponents := initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
+	firstNode.OldComponentManager = &HackComponentManager{firstNodeComponents}
+	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
+	err = firstNode.Init(ctx)
 	assert.NoError(t, err)
 
 	defer func() {
@@ -209,6 +217,14 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	assert.True(t, success)
 }
 
+type HackComponentManager struct {
+	components core.Components
+}
+
+func (cm *HackComponentManager) GetAll() core.Components {
+	return cm.components
+}
+
 func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	ctx := context.TODO()
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
@@ -226,10 +242,17 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		secondNodeId), scheme)
 	assert.NoError(t, err)
 
-	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true))
+	secondsNodeComponents := initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
+	secondNode.OldComponentManager = &HackComponentManager{secondsNodeComponents}
+
+	err = secondNode.Init(ctx)
 	assert.NoError(t, err)
 
-	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false))
+	firstNodeComponents := initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
+	firstNode.OldComponentManager = &HackComponentManager{firstNodeComponents}
+	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
+
+	err = firstNode.Init(ctx)
 	assert.NoError(t, err)
 
 	defer func() {
@@ -315,7 +338,8 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
 		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node), scheme)
-		service.Start(ctx, core.Components{})
+		service.OldComponentManager = &HackComponentManager{core.Components{}}
+		service.Init(ctx)
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
 			return nil, nil

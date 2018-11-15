@@ -38,8 +38,13 @@ type Certificate struct {
 	MajorityRule   int             `json:"majority_rule"`
 	PublicKey      string          `json:"public_key"`
 	Reference      string          `json:"reference"`
-	Roles          []string        `json:"roles"`
+	Role           string          `json:"role"`
 	BootstrapNodes []BootstrapNode `json:"bootstrap_nodes"`
+}
+
+// GetBootstrapNodes return bootstrap nodes array
+func (cert *Certificate) GetBootstrapNodes() []BootstrapNode {
+	return cert.BootstrapNodes
 }
 
 // ReadCertificate constructor creates new Certificate component
@@ -71,7 +76,10 @@ func (cert *Certificate) reset() {
 	cert.BootstrapNodes = []BootstrapNode{}
 	cert.Reference = ""
 	cert.MajorityRule = 0
-	cert.Roles = []string{}
+}
+
+func (cert *Certificate) GetRole() core.NodeRole {
+	return core.GetRoleFromString(cert.Role)
 }
 
 // NewCertificatesWithKeys generate certificate from given keys

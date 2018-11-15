@@ -43,10 +43,11 @@ func TestMain(m *testing.M) {
 	genesisCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)
 
-	cs := core.Components{}
 	b, _ := genesis.NewGenesis(genesisCfg.Genesis)
-	cs.Genesis = b
-	api.Start(ctx, cs)
+
+	api.Genesis = b
+
+	api.Start(ctx)
 
 	code := m.Run()
 
