@@ -18,5 +18,5 @@ package core
 
 // APIRunner
 type APIRunner interface {
-	IsApiRunner() bool
+	IsAPIRunner() bool
 }

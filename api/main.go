@@ -191,7 +191,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	return &ar, nil
 }
 
-func (ar *Runner) IsApiRunner() bool {
+func (ar *Runner) IsAPIRunner() bool {
 	return true
 }
 
