@@ -127,7 +127,7 @@ type RequestBuilder interface {
 // PulseHandler interface to process new pulse.
 //go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
 type PulseHandler interface {
-	OnPulse(ctx context.Context, pulse core.Pulse)
+	HandlePulse(ctx context.Context, pulse core.Pulse)
 }
 
 // NodeKeeper manages unsync, sync and active lists.

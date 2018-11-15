@@ -124,7 +124,7 @@ func (n *ServiceNetwork) bootstrap() {
 	}
 }
 
-func (n *ServiceNetwork) OnPulse(ctx context.Context, pulse core.Pulse) {
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	log.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.pulseManager == nil {
 		log.Error("PulseManager is not initialized")
