@@ -509,6 +509,11 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	defer func() {
 		es.Unlock()
 	}()
+
+	if es.callContext.Caller.Equal(Ref{}) {
+		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
+	}
+
 	protoDesc, err := lr.ArtifactManager.GetObject(ctx, m.PrototypeRef, nil, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get prototype")
