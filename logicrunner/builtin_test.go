@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -62,7 +63,7 @@ func TestBareHelloworld(t *testing.T) {
 	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
 		return nil, nil
 	}
-	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
 
 	nk := nodekeeper.GetTestNodekeeper(mock)
@@ -86,7 +87,7 @@ func TestBareHelloworld(t *testing.T) {
 
 	cm := &component.Manager{}
 	cm.Register(scheme)
-	cm.Inject(nk, l, lr, nw, mb, routingTokenFactory, parcelFactory, mock)
+	cm.Inject(nk, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -120,7 +121,8 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
-	parcel, _ := parcelFactory.Create(ctx, msg, testutils.RandomRef(), mb.PulseNumber, nil)
+	parcel, err := parcelFactory.Create(ctx, msg, testutils.RandomRef())
+	assert.NoError(t, err)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
@@ -139,7 +141,8 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
-	parcel, _ = parcelFactory.Create(ctx, msg, testutils.RandomRef(), mb.PulseNumber, nil)
+	parcel, err = parcelFactory.Create(ctx, msg, testutils.RandomRef())
+	assert.NoError(t, err)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(
