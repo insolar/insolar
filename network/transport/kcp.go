@@ -17,9 +17,11 @@
 package transport
 
 import (
+	"context"
 	"net"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
@@ -54,8 +56,8 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 }
 
 // Start starts networking.
-func (t *kcpTransport) Start() error {
-	log.Info("Start KCP transport")
+func (t *kcpTransport) Start(ctx context.Context) error {
+	inslogger.FromContext(ctx).Info("Start KCP transport")
 	for {
 		if session, err := t.listener.AcceptKCP(); err == nil {
 			go t.handleAcceptedConnection(session)

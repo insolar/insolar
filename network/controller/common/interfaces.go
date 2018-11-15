@@ -17,11 +17,13 @@
 package common
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/network/transport/host"
 )
 
 type BootstrapController interface {
 	Start()
-	Bootstrap() error
+	Bootstrap(ctx context.Context) error
 	GetBootstrapHosts() []*host.Host
 }
