@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,8 +33,7 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	ctx, db, _, cleaner := getTestData(t)
 	defer cleaner()
 
-	mh, err := NewMessageHandler(db)
-	require.NoError(t, err)
+	mh := NewMessageHandler(db, storage.NewRecentObjectsIndex(0))
 
 	payload := []core.KV{
 		{K: []byte("ABC"), V: []byte("CDE")},
@@ -45,6 +45,7 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 		Msg: &message.HeavyRecords{Records: payload},
 	}
 
+	var err error
 	_, err = mh.handleHeavyRecords(ctx, parcel)
 	require.NoError(t, err)
 
