@@ -460,18 +460,13 @@ func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.C
 	return codeRec, nil
 }
 
-func getObject(
+func getObjectState(
 	ctx context.Context,
 	s storage.Store,
-	head *core.RecordID,
+	idx *index.ObjectLifeline,
 	state *core.RecordID,
 	approved bool,
-) (*index.ObjectLifeline, *core.RecordID, record.ObjectState, error) {
-	idx, err := s.GetObjectIndex(ctx, head, false)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to fetch object index")
-	}
-
+) (*core.RecordID, record.ObjectState, error) {
 	var stateID *core.RecordID
 	if state != nil {
 		stateID = state
@@ -484,22 +479,22 @@ func getObject(
 	}
 
 	if stateID == nil {
-		return nil, nil, nil, ErrStateNotAvailable
+		return nil, nil, ErrStateNotAvailable
 	}
 
 	rec, err := s.GetRecord(ctx, stateID)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	stateRec, ok := rec.(record.ObjectState)
 	if !ok {
-		return nil, nil, nil, errors.New("invalid object record")
+		return nil, nil, errors.New("invalid object record")
 	}
 	if stateRec.State() == record.StateDeactivation {
-		return nil, nil, nil, ErrObjectDeactivated
+		return nil, nil, ErrObjectDeactivated
 	}
 
-	return idx, stateID, stateRec, nil
+	return stateID, stateRec, nil
 }
 
 func getObjectIndex(ctx context.Context, s storage.Store, head *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
