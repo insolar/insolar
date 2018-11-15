@@ -318,9 +318,9 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 
 	var child *core.RecordID
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(ctx, tx, msg.Parent.Record(), nil, false)
+		idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to fetch object index")
 		}
 		h.recentObjects.AddID(msg.Parent.Record())
 
