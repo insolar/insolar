@@ -138,9 +138,9 @@ process_input_params $param
 
 prepare
 build_binaries
-#generate_bootstrap_keys
-#generate_root_member_keys
-#generate_certificate
+generate_bootstrap_keys
+generate_root_member_keys
+generate_certificate
 
 if [ "$gorund_only" == "1" ]
 then
