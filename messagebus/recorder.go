@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/localstorage"
-	"github.com/insolar/insolar/log"
 )
 
 // Recorder is a MessageBus wrapper that stores received replies to the tape. The tape then can be transferred and
@@ -62,8 +61,6 @@ func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, erro
 	if err != localstorage.ErrNotFound {
 		return nil, err
 	}
-
-	log.Infof("UEUEUEUUEUEUEUEUE")
 
 	// Actually send message.
 	rep, err = r.SendParcel(ctx, parcel)
