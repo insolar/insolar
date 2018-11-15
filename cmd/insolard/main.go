@@ -44,8 +44,12 @@ type ComponentManager struct {
 	components core.Components
 }
 
-// linkAll - link dependency for all components
-func (cm *ComponentManager) linkAll(ctx context.Context) {
+func (cm *ComponentManager) GetAll() core.Components {
+	return cm.components
+}
+
+// LinkAll - link dependency for all components
+func (cm *ComponentManager) LinkAll(ctx context.Context) {
 	inslog := inslogger.FromContext(ctx)
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
@@ -99,7 +103,7 @@ func registerCurrentNode(ctx context.Context, host string, bootstrapCertificateP
 	checkError(ctx, err, "can't write certificate")
 }
 
-func mergeConfigAndCertificate(ctx context.Context, cfg configuration.Configuration, cert *certificate.Certificate) {
+func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration, cert *certificate.Certificate) {
 	inslog := inslogger.FromContext(ctx)
 	if len(cfg.CertificatePath) == 0 {
 		inslog.Info("No certificate path - No merge")
@@ -152,7 +156,7 @@ func main() {
 	)
 
 	if !params.isBootstrap {
-		mergeConfigAndCertificate(ctx, *cfg, cert)
+		mergeConfigAndCertificate(ctx, cfg, cert)
 	}
 	cfg.Metrics.Namespace = "insolard"
 
@@ -180,7 +184,7 @@ func main() {
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	cmOld.linkAll(ctx)
+	cmOld.LinkAll(ctx)
 
 	err = cm.Start(ctx)
 	checkError(ctx, err, "failed to start components")

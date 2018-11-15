@@ -226,8 +226,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
-	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
+func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg, ok := parcel.Message().(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
@@ -294,7 +294,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 		Resp: inslogger.TraceID(ctx),
 	})
 
-	es.request, err = vb.RegisterRequest(msg)
+	es.request, err = vb.RegisterRequest(parcel)
 
 	if err != nil {
 		return nil, es.ErrorWrap(err, "can't create request")

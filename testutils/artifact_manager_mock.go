@@ -70,7 +70,7 @@ type ArtifactManagerMock struct {
 	GetObjectPreCounter uint64
 	GetObjectMock       mArtifactManagerMockGetObject
 
-	RegisterRequestFunc       func(p context.Context, p1 core.Message) (r *core.RecordID, r1 error)
+	RegisterRequestFunc       func(p context.Context, p1 core.Parcel) (r *core.RecordID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
 	RegisterRequestMock       mArtifactManagerMockRegisterRequest
@@ -802,32 +802,32 @@ type mArtifactManagerMockRegisterRequest struct {
 //ArtifactManagerMockRegisterRequestParams represents input parameters of the ArtifactManager.RegisterRequest
 type ArtifactManagerMockRegisterRequestParams struct {
 	p  context.Context
-	p1 core.Message
+	p1 core.Parcel
 }
 
 //Expect sets up expected params for the ArtifactManager.RegisterRequest
-func (m *mArtifactManagerMockRegisterRequest) Expect(p context.Context, p1 core.Message) *mArtifactManagerMockRegisterRequest {
+func (m *mArtifactManagerMockRegisterRequest) Expect(p context.Context, p1 core.Parcel) *mArtifactManagerMockRegisterRequest {
 	m.mockExpectations = &ArtifactManagerMockRegisterRequestParams{p, p1}
 	return m
 }
 
 //Return sets up a mock for ArtifactManager.RegisterRequest to return Return's arguments
 func (m *mArtifactManagerMockRegisterRequest) Return(r *core.RecordID, r1 error) *ArtifactManagerMock {
-	m.mock.RegisterRequestFunc = func(p context.Context, p1 core.Message) (*core.RecordID, error) {
+	m.mock.RegisterRequestFunc = func(p context.Context, p1 core.Parcel) (*core.RecordID, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of ArtifactManager.RegisterRequest method
-func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 core.Message) (r *core.RecordID, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 core.Parcel) (r *core.RecordID, r1 error)) *ArtifactManagerMock {
 	m.mock.RegisterRequestFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //RegisterRequest implements github.com/insolar/insolar/core.ArtifactManager interface
-func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.Message) (r *core.RecordID, r1 error) {
+func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.Parcel) (r *core.RecordID, r1 error) {
 	atomic.AddUint64(&m.RegisterRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterRequestCounter, 1)
 
