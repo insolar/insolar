@@ -28,6 +28,10 @@ type tree interface {
 func treeFromHashList(list [][]byte, hasher core.Hasher) tree {
 	mt := gomerkle.NewTree(hasher)
 	mt.AddHash(list...)
-	mt.Generate()
+
+	if err := mt.Generate(); err != nil {
+		panic(err.Error())
+	}
+
 	return &mt
 }
