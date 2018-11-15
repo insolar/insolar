@@ -40,15 +40,15 @@ func TestRecentObjectsIndex_AddId(t *testing.T) {
 	wg.Add(3)
 
 	go func() {
-		index.AddID(core.NewRecordID(123, []byte{1}))
+		index.AddObject(core.NewRecordID(123, []byte{1}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddID(core.NewRecordID(123, []byte{2}))
+		index.AddObject(core.NewRecordID(123, []byte{2}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddID(core.NewRecordID(123, []byte{3}))
+		index.AddObject(core.NewRecordID(123, []byte{3}))
 		wg.Done()
 	}()
 
@@ -93,15 +93,15 @@ func TestRecentObjectsIndex_ClearObjects(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
-		index.AddID(core.NewRecordID(123, []byte{1}))
+		index.AddObject(core.NewRecordID(123, []byte{1}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddID(core.NewRecordID(123, []byte{2}))
+		index.AddObject(core.NewRecordID(123, []byte{2}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddID(core.NewRecordID(123, []byte{3}))
+		index.AddObject(core.NewRecordID(123, []byte{3}))
 		wg.Done()
 	}()
 	wg.Wait()

@@ -22,8 +22,8 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// RecentObjectsIndex is a base structure
-type RecentObjectsIndex struct {
+// RecentStorage is a base structure
+type RecentStorage struct {
 	recentObjects   map[string]*RecentObjectsIndexMeta
 	objectLock      sync.Mutex
 	pendingRequests map[core.RecordID]struct{}
@@ -36,9 +36,9 @@ type RecentObjectsIndexMeta struct {
 	TTL int
 }
 
-// NewRecentObjectsIndex creates default RecentObjectsIndex object
-func NewRecentObjectsIndex(defaultTTL int) *RecentObjectsIndex {
-	return &RecentObjectsIndex{
+// NewRecentObjectsIndex creates default RecentStorage object
+func NewRecentObjectsIndex(defaultTTL int) *RecentStorage {
+	return &RecentStorage{
 		recentObjects:   map[string]*RecentObjectsIndexMeta{},
 		pendingRequests: map[core.RecordID]struct{}{},
 		DefaultTTL:      defaultTTL,
@@ -46,8 +46,8 @@ func NewRecentObjectsIndex(defaultTTL int) *RecentObjectsIndex {
 	}
 }
 
-// AddID adds object to cache
-func (r *RecentObjectsIndex) AddID(id *core.RecordID) {
+// AddObject adds object to cache
+func (r *RecentStorage) AddObject(id *core.RecordID) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
@@ -64,7 +64,7 @@ func (r *RecentObjectsIndex) AddID(id *core.RecordID) {
 }
 
 // AddPendingRequest adds request to cache.
-func (r *RecentObjectsIndex) AddPendingRequest(id core.RecordID) {
+func (r *RecentStorage) AddPendingRequest(id core.RecordID) {
 	r.requestLock.Lock()
 	defer r.requestLock.Unlock()
 
@@ -75,7 +75,7 @@ func (r *RecentObjectsIndex) AddPendingRequest(id core.RecordID) {
 }
 
 // GetObjects returns object hot-indexes.
-func (r *RecentObjectsIndex) GetObjects() map[string]*RecentObjectsIndexMeta {
+func (r *RecentStorage) GetObjects() map[string]*RecentObjectsIndexMeta {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
@@ -88,7 +88,7 @@ func (r *RecentObjectsIndex) GetObjects() map[string]*RecentObjectsIndexMeta {
 }
 
 // GetRequests returns request hot-indexes.
-func (r *RecentObjectsIndex) GetRequests() []core.RecordID {
+func (r *RecentStorage) GetRequests() []core.RecordID {
 	r.requestLock.Lock()
 	defer r.requestLock.Unlock()
 
@@ -101,7 +101,7 @@ func (r *RecentObjectsIndex) GetRequests() []core.RecordID {
 }
 
 // ClearZeroTTLObjects clears objects with zero TTL
-func (r *RecentObjectsIndex) ClearZeroTTLObjects() {
+func (r *RecentStorage) ClearZeroTTLObjects() {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
@@ -113,7 +113,7 @@ func (r *RecentObjectsIndex) ClearZeroTTLObjects() {
 }
 
 // ClearObjects clears the whole cache
-func (r *RecentObjectsIndex) ClearObjects() {
+func (r *RecentStorage) ClearObjects() {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
