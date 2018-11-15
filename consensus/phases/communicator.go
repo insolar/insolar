@@ -27,11 +27,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Phase1Result struct {
-	id     core.RecordRef
-	packet *packets.Phase1Packet
-}
-
 // Communicator interface provides methods to exchange data between nodes
 //go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o ../../testutils/network -s _mock.go
 type Communicator interface {
@@ -39,13 +34,17 @@ type Communicator interface {
 	ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error)
 }
 
+type phase1Result struct {
+	id     core.RecordRef
+	packet *packets.Phase1Packet
+}
+
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
 type NaiveCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
 	PulseHandler     network.PulseHandler     `inject:""`
 
-	phase1packet *packets.Phase1Packet
-	phase1result chan Phase1Result
+	phase1result chan phase1Result
 	currentPulse core.Pulse
 }
 
@@ -64,7 +63,7 @@ func (nc *NaiveCommunicator) Start(ctx context.Context) error {
 // ExchangeData used in first consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	phase1result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
-	nc.phase1result = make(chan Phase1Result, len(participants))
+	nc.phase1result = make(chan phase1Result, len(participants))
 
 	phase1result[nc.ConsensusNetwork.GetNodeID()] = &packet
 
@@ -80,7 +79,6 @@ func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []co
 	for _, node := range participants {
 		err := nc.ConsensusNetwork.SendRequest(request, node.ID())
 		if err != nil {
-			// TODO: mark participant as unreachable
 			log.Errorln(err.Error())
 		}
 	}
@@ -88,6 +86,13 @@ func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []co
 	log.Infof("phase1result len %d", len(phase1result))
 	select {
 	case res := <-nc.phase1result:
+		if val, ok := phase1result[res.id]; !ok || val == nil {
+			// send response
+			err := nc.ConsensusNetwork.SendRequest(request, res.id)
+			if err != nil {
+				log.Errorln(err.Error())
+			}
+		}
 		phase1result[res.id] = res.packet
 	case <-ctx.Done():
 		return phase1result, nil
@@ -113,10 +118,7 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 		return
 	}
 
-	//TODO: check current pulse??
-
-	nc.phase1result <- Phase1Result{request.GetSender(), p}
-	// TODO send response, check cycle
+	nc.phase1result <- phase1Result{request.GetSender(), p}
 
 	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
 		nc.currentPulse = newPulse

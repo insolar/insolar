@@ -53,7 +53,7 @@ func (pc *PulseController) Start() {
 
 func (pc *PulseController) processPulse(request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestPulse)
-	go pc.pulseHandler.OnPulse(context.TODO(), data.Pulse)
+	go pc.pulseHandler.HandlePulse(context.TODO(), data.Pulse)
 	return pc.hostNetwork.BuildResponse(request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }
 
