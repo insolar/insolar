@@ -41,6 +41,7 @@ import (
 	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
@@ -106,7 +107,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		return nil, nil
 	}
 
-	routingTokenFactory := messagebus.NewRoutingTokenFactory()
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	nk := nodekeeper.GetTestNodekeeper(mock)
 	mb := testmessagebus.NewTestMessageBus(t)
 
@@ -130,7 +131,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
-	cm.Inject(nk, l, lr, nw, mb, routingTokenFactory, parcelFactory, mock)
+	cm.Inject(nk, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -211,10 +212,8 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManage
 		msg.Nonce = nonce
 	}
 
-	pulse, _ := pm.Current(ctx)
-
 	pf := lr.(*LogicRunner).ParcelFactory
-	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef(), pulse.PulseNumber, nil)
+	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef())
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,
@@ -311,7 +310,7 @@ func (r *Two) Hello(s string) (string, error) {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	obj := getRefFromID(objID)
 	_, err = am.ActivateObject(
@@ -429,7 +428,7 @@ func (r *Two) Hello(s string) (string, error) {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	obj := getRefFromID(objID)
 	_, err = am.ActivateObject(
@@ -517,7 +516,7 @@ func (r *Two) Hello() (string, error) {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	obj := getRefFromID(objID)
 	_, err = am.ActivateObject(
@@ -560,7 +559,7 @@ func (r *One) Hello() (string, error) {
 	err := cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	obj := getRefFromID(objID)
 	_, err = am.ActivateObject(
@@ -606,7 +605,7 @@ func (r *One) Kill() error {
 	err := cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	obj := getRefFromID(objID)
 	_, err = am.ActivateObject(
@@ -651,7 +650,7 @@ func (r *One) NotPanic() error {
 	err := cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	obj := getRefFromID(objID)
 	_, err = am.ActivateObject(
@@ -753,7 +752,10 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")})
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")}},
+	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -813,7 +815,10 @@ func (c *Contract) Rand() (int, error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")})
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")}},
+	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -906,7 +911,7 @@ func (r *Two) NoError() error {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -994,7 +999,7 @@ func (r *Two) Hello() (*string, error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -1088,7 +1093,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c1"})
+	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c1"}})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1111,7 +1116,7 @@ func TestRootDomainContract(t *testing.T) {
 	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
+	rootMemberID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c2"}})
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
@@ -1251,7 +1256,10 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")})
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")}},
+	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -1359,7 +1367,7 @@ func New() (*Two, error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -1424,7 +1432,10 @@ func (r *One) Recursive() (error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("recursive")})
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("recursive")}},
+	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -1498,7 +1509,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	kp := platformpolicy.NewKeyProcessor()
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c1"})
+	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c1"}})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1519,7 +1530,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "c2"})
+	rootMemberID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c2"}})
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
@@ -1556,7 +1567,7 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	// Call CreateAllowance method in custom contract
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -1629,7 +1640,7 @@ package main
 	defer cleaner()
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
-	objID, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	obj := getRefFromID(objID)
 	_, err = am.ActivateObject(
@@ -1694,7 +1705,10 @@ func (r *One) ShortSleep() (error) {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("one")})
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("one")}},
+	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(

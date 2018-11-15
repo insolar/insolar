@@ -63,10 +63,10 @@ func (currentPulsar *Pulsar) handleErrorState(ctx context.Context, err error) {
 }
 
 func (currentPulsar *Pulsar) clearState() {
-	currentPulsar.GeneratedEntropy = [core.EntropySize]byte{}
+	currentPulsar.SetGeneratedEntropy(nil)
 	currentPulsar.GeneratedEntropySign = []byte{}
 
-	currentPulsar.CurrentSlotEntropy = core.Entropy{}
+	currentPulsar.SetCurrentSlotEntropy(nil)
 	currentPulsar.CurrentSlotPulseSender = ""
 
 	currentPulsar.currentSlotSenderConfirmationsLock.Lock()
@@ -80,8 +80,9 @@ func (currentPulsar *Pulsar) clearState() {
 }
 
 func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
-	currentPulsar.GeneratedEntropy = currentPulsar.EntropyGenerator.GenerateEntropy()
-	signature, err := signData(currentPulsar.CryptographyService, currentPulsar.GeneratedEntropy)
+	entropy := currentPulsar.EntropyGenerator.GenerateEntropy()
+	currentPulsar.SetGeneratedEntropy(&entropy)
+	signature, err := signData(currentPulsar.CryptographyService, currentPulsar.GetGeneratedEntropy())
 	if err != nil {
 		return err
 	}
@@ -190,5 +191,32 @@ func (currentPulsar *Pulsar) SetLastPulse(newPulse *core.Pulse) {
 	currentPulsar.lastPulseLock.Lock()
 	defer currentPulsar.lastPulseLock.Unlock()
 	currentPulsar.lastPulse = newPulse
+}
 
+// GetCurrentSlotEntropy returns currentSlotEntropy in the thread-safe mode
+func (currentPulsar *Pulsar) GetCurrentSlotEntropy() *core.Entropy {
+	currentPulsar.currentSlotEntropyLock.RLock()
+	defer currentPulsar.currentSlotEntropyLock.RUnlock()
+	return currentPulsar.currentSlotEntropy
+}
+
+// SetCurrentSlotEntropy sets currentSlotEntropy in the thread-safe mode
+func (currentPulsar *Pulsar) SetCurrentSlotEntropy(currentSlotEntropy *core.Entropy) {
+	currentPulsar.currentSlotEntropyLock.Lock()
+	defer currentPulsar.currentSlotEntropyLock.Unlock()
+	currentPulsar.currentSlotEntropy = currentSlotEntropy
+}
+
+// GetGeneratedEntropy returns generatedEntropy in the thread-safe mode
+func (currentPulsar *Pulsar) GetGeneratedEntropy() *core.Entropy {
+	currentPulsar.generatedEntropyLock.RLock()
+	defer currentPulsar.generatedEntropyLock.RUnlock()
+	return currentPulsar.generatedEntropy
+}
+
+// SetGeneratedEntropy sets generatedEntropy in the thread-safe mode
+func (currentPulsar *Pulsar) SetGeneratedEntropy(currentSlotEntropy *core.Entropy) {
+	currentPulsar.generatedEntropyLock.Lock()
+	defer currentPulsar.generatedEntropyLock.Unlock()
+	currentPulsar.generatedEntropy = currentSlotEntropy
 }

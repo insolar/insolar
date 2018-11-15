@@ -17,41 +17,22 @@
 package merkle
 
 import (
-	"bytes"
-
-	"github.com/cbergoon/merkletree"
 	"github.com/insolar/insolar/core"
+	"github.com/onrik/gomerkle"
+	"github.com/pkg/errors"
 )
 
 type tree interface {
-	MerkleRoot() []byte
+	Root() []byte
 }
 
-type treeNode struct {
-	content []byte
-	hasher  core.Hasher
-}
+func treeFromHashList(list [][]byte, hasher core.Hasher) (tree, error) {
+	mt := gomerkle.NewTree(hasher)
+	mt.AddHash(list...)
 
-func (t *treeNode) CalculateHash() ([]byte, error) {
-	return t.hasher.Hash(t.content), nil
-}
-
-func (t *treeNode) Equals(other merkletree.Content) (bool, error) {
-	equal := bytes.Equal(t.content, other.(*treeNode).content)
-	return equal, nil
-}
-
-func fromList(list [][]byte, hasher core.Hasher) tree {
-	var result []merkletree.Content
-
-	for _, content := range list {
-		result = append(result, &treeNode{content: content, hasher: hasher})
+	if err := mt.Generate(); err != nil {
+		return nil, errors.Wrap(err, "[ treeFromHashList ] Failed to generate merkle tree")
 	}
 
-	mt, err := merkletree.NewTree(result)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return mt
+	return &mt, nil
 }

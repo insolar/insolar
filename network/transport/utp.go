@@ -21,6 +21,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
@@ -49,8 +50,8 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 }
 
 // Start starts networking.
-func (t *utpTransport) Start() error {
-	log.Info("Start UTP transport")
+func (t *utpTransport) Start(ctx context.Context) error {
+	inslogger.FromContext(ctx).Info("Start UTP transport")
 	for {
 		conn, err := t.socket.Accept()
 

@@ -182,7 +182,4 @@ func init() {
 	gob.Register(&Parcel{})
 	gob.Register(core.RecordRef{})
 	gob.Register(&GetChildren{})
-
-	// Meta
-	gob.Register(&RoutingToken{})
 }

@@ -68,7 +68,7 @@ func getTestData(t *testing.T) (
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	mb := testmessagebus.NewTestMessageBus(t)
-	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, PlatformCryptographyScheme: scheme}
+	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, PlatformCryptographyScheme: scheme, recent: storage.NewRecentStorage(1)}
 	handler.Bus = mb
 	err := handler.Init(ctx)
 	require.NoError(t, err)
@@ -87,12 +87,12 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
-	msg := message.GenesisRequest{Name: "my little message"}
-	id, err := am.RegisterRequest(ctx, &msg)
+	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "my little message"}}
+	id, err := am.RegisterRequest(ctx, &parcel)
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, id)
 	assert.NoError(t, err)
-	assert.Equal(t, message.MustSerializeBytes(&msg), rec.(*record.CallRequest).Payload)
+	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.CallRequest).Payload)
 }
 
 func TestLedgerArtifactManager_DeclareType(t *testing.T) {
@@ -528,7 +528,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	ctx, _, am, cleaner := getTestData(t)
 	defer cleaner()
 
-	objID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "object"})
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "object"}})
 	objRef := genRefWithID(objID)
 	assert.NoError(t, err)
 

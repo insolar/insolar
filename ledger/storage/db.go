@@ -65,6 +65,12 @@ type DB struct {
 	txretiries int
 
 	idlocker *IDLocker
+
+	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
+	// for past pulses to locate data.
+	// It should only contain previous N pulses. It should be stored on disk.
+	nodeHistory     map[core.PulseNumber][]core.Node
+	nodeHistoryLock sync.Mutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
@@ -100,14 +106,15 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	}
 
 	db := &DB{
-		db:         bdb,
-		txretiries: conf.Storage.TxRetriesOnConflict,
-		idlocker:   NewIDLocker(),
+		db:          bdb,
+		txretiries:  conf.Storage.TxRetriesOnConflict,
+		idlocker:    NewIDLocker(),
+		nodeHistory: map[core.PulseNumber][]core.Node{},
 	}
 	return db, nil
 }
 
-// Bootstrap creates initial records in storage.
+// Init creates initial records in storage.
 func (db *DB) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
@@ -537,6 +544,30 @@ func (db *DB) IterateLocalData(ctx context.Context, pulse core.PulseNumber, pref
 		}
 		return nil
 	})
+}
+
+// SetActiveNodes saves active nodes for pulse in memory.
+func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
+	db.nodeHistoryLock.Lock()
+	defer db.nodeHistoryLock.Unlock()
+
+	if _, ok := db.nodeHistory[pulse]; ok {
+		return errors.New("node history override is forbidden")
+	}
+
+	db.nodeHistory[pulse] = nodes
+
+	return nil
+}
+
+// GetActiveNodes return active nodes for specified pulse.
+func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
+	nodes, ok := db.nodeHistory[pulse]
+	if !ok {
+		return nil, errors.New("no nodes for this pulse")
+	}
+
+	return nodes, nil
 }
 
 // get wraps matching transaction manager method.

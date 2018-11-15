@@ -226,8 +226,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
-	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
+func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg, ok := parcel.Message().(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
@@ -237,12 +237,14 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
 		return nil, es.ErrorWrap(nil, "loop detected")
 	}
+	entryPulse := lr.pulse(ctx).PulseNumber
+
 	fuse := true
 	es.Lock()
 
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
-	if inmsg.Pulse() != lr.pulse(ctx).PulseNumber {
+	if entryPulse != lr.pulse(ctx).PulseNumber {
 		return nil, es.ErrorWrap(nil, "abort execution: new Pulse coming")
 	}
 
@@ -292,7 +294,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 		Resp: inslogger.TraceID(ctx),
 	})
 
-	es.request, err = vb.RegisterRequest(msg)
+	es.request, err = vb.RegisterRequest(parcel)
 
 	if err != nil {
 		return nil, es.ErrorWrap(err, "can't create request")

@@ -84,7 +84,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 
 		msg := start.Resp.(core.Message)
 		parcel, err := lr.ParcelFactory.Create(
-			ctx, msg, ref, lr.execution[ref].callContext.Pulse.PulseNumber, nil,
+			ctx, msg, ref,
 		)
 		if err != nil {
 			return 0, errors.New("failed to create a parcel message")
@@ -179,16 +179,17 @@ type ValidationBehaviour interface {
 	GetRole() core.JetRole
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
-	RegisterRequest(m message.IBaseLogicMessage) (*Ref, error)
+	RegisterRequest(p core.Parcel) (*Ref, error)
 }
 
 type ValidationSaver struct {
 	lr *LogicRunner
 }
 
-func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+func (vb ValidationSaver) RegisterRequest(p core.Parcel) (*Ref, error) {
 	ctx := context.TODO()
-	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
+	m := p.Message().(message.IBaseLogicMessage)
+	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +230,8 @@ type ValidationChecker struct {
 	cb core.CaseBindReplay
 }
 
-func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+func (vb ValidationChecker) RegisterRequest(p core.Parcel) (*Ref, error) {
+	m := p.Message().(message.IBaseLogicMessage)
 	cr, _ := vb.lr.nextValidationStep(m.GetReference())
 	if core.CaseRecordTypeRequest != cr.Type {
 		return nil, errors.New("Wrong validation type on Request")

@@ -71,12 +71,12 @@ func createOrigin(configuration configuration.Configuration) (MutableNode, error
 
 func resolveAddress(configuration configuration.Configuration) (string, error) {
 	conn, address, err := transport.NewConnection(configuration.Host.Transport)
-	err2 := conn.Close()
-	if err2 != nil {
-		log.Warn(err2)
-	}
 	if err != nil {
 		return "", err
+	}
+	err = conn.Close()
+	if err != nil {
+		log.Warn(err)
 	}
 	return address, nil
 }

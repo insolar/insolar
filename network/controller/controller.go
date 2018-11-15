@@ -17,11 +17,11 @@
 package controller
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/auth"
 	"github.com/insolar/insolar/network/controller/common"
@@ -55,22 +55,17 @@ func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg co
 }
 
 // Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
-func (c *Controller) Bootstrap() error {
-	return c.bootstrapController.Bootstrap()
-}
-
-// AnalyzeNetwork legacy method for old DHT network (should be removed in new network).
-func (c *Controller) AnalyzeNetwork() error {
-	log.Warn("this method was created for compatibility with old network, should be deleted")
-	return nil
+func (c *Controller) Bootstrap(ctx context.Context) error {
+	return c.bootstrapController.Bootstrap(ctx)
 }
 
 // Authorize start authorization process on discovery node.
-func (c *Controller) Authorize() error {
-	return c.authController.Authorize()
+func (c *Controller) Authorize(ctx context.Context) error {
+	return c.authController.Authorize(ctx)
 }
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
+// DEPRECATED
 func (c *Controller) ResendPulseToKnownHosts(pulse core.Pulse) {
 	c.pulseController.ResendPulse(pulse)
 }
@@ -113,7 +108,7 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 
 // NewNetworkController create new network controller.
 func NewNetworkController(
-	pulseCallback network.OnPulse,
+	pulseHandler network.PulseHandler,
 	options *common.Options,
 	transport network.InternalTransport,
 	routingTable network.RoutingTable,
@@ -125,7 +120,7 @@ func NewNetworkController(
 	c.options = options
 	c.bootstrapController = NewBootstrapController(c.options, transport)
 	c.authController = auth.NewAuthorizationController(c.options, c.bootstrapController, transport)
-	c.pulseController = NewPulseController(pulseCallback, network, routingTable)
+	c.pulseController = NewPulseController(pulseHandler, network, routingTable)
 	c.rpcController = NewRPCController(c.options, network, scheme)
 
 	return &c
