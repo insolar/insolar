@@ -69,6 +69,10 @@ func (s *communicatorSuite) SetupTest() {
 		return s.originNode.ID()
 	})
 
+	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 core.Pulse) {
+
+	})
+
 	s.componentManager.Inject(s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
 	err := s.componentManager.Start(context.TODO())
 	s.NoError(err)

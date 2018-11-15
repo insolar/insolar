@@ -42,6 +42,7 @@ type Communicator interface {
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
 type NaiveCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
+	PulseHandler     network.PulseHandler     `inject:""`
 
 	phase1packet *packets.Phase1Packet
 	phase1result chan Phase1Result
@@ -115,10 +116,11 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 	//TODO: check current pulse??
 
 	nc.phase1result <- Phase1Result{request.GetSender(), p}
+	// TODO send response, check cycle
 
 	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
 		nc.currentPulse = newPulse
-		//nc.FirstPhase.Execute(context.TODO(), &newPulse)
+		nc.PulseHandler.HandlePulse(context.Background(), newPulse)
 	}
 }
 
