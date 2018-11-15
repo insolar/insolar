@@ -17,7 +17,6 @@
 package storage_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -46,7 +45,10 @@ func Test_StoreKeyValues(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
-	var expected []keySize
+	var (
+		expectedrecs []string
+		expectedidxs []string
+	)
 	var allKVs []core.KV
 	pulsescount := 3
 
@@ -71,22 +73,23 @@ func Test_StoreKeyValues(t *testing.T) {
 				allKVs = append(allKVs, recs...)
 			}
 		}
-		expected = getallkeys(db.GetBadgerDB())
+		expectedrecs, expectedidxs = getallkeys(db.GetBadgerDB())
 	}()
 
-	var got []keySize
+	var (
+		gotrecs []string
+		gotidxs []string
+	)
 	func() {
 		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 		defer cleaner()
 		err := db.StoreKeyValues(ctx, allKVs)
 		require.NoError(t, err)
-		got = getallkeys(db.GetBadgerDB())
+		gotrecs, gotidxs = getallkeys(db.GetBadgerDB())
 	}()
 
-	require.Equal(t, expected, got)
-	// fmt.Println("expect:", outputKeySizes(expected))
-	// fmt.Println("got:", outputKeySizes(got))
-	// fmt.Printf("allKVs: %#v\n", allKVs)
+	require.Equal(t, expectedrecs, gotrecs)
+	require.Equal(t, expectedidxs, gotidxs)
 }
 
 func Test_ReplicaIter(t *testing.T) {
@@ -95,41 +98,30 @@ func Test_ReplicaIter(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer cleaner()
 
-	keysBefore := getallkeys(db.GetBadgerDB())
-	require.Nil(t, keysBefore)
-	// tt is test cases: PulseNumber -> expected records count
-	type assertpulse struct {
-		count int
-		keys  []string
-	}
-	tt := make(map[int]*assertpulse)
+	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
+	require.Nil(t, recsBefore)
+	require.Nil(t, idxBefore)
 
-	var allIndexKeys []string
-	createdCount := 0
-	indexesCount := 0
+	// TODO: remove assertpulse struct
+	// tt represents test case PulseNumber -> expected record keys
+	tt := make(map[int][]string)
+
+	recordsPerPulse := make(map[int][]string)
 	for i := 1; i < 3; i++ {
-		recN, idxN := addRecords(ctx, t, db, core.PulseNumber(i))
-		indexesCount += idxN
-		createdCount += recN + idxN
+		addRecords(ctx, t, db, core.PulseNumber(i))
+		recs, _ := getallkeys(db.GetBadgerDB())
+		recKeys := getdelta(recsBefore, recs)
+		recsBefore = recs
 
-		currentstate := getallkeys(db.GetBadgerDB())
-		recKeys, idxKeys := getdelta(keysBefore, currentstate)
-		// _, _ = recKeySizes, idxKeySizes
-		keysBefore = currentstate
-
-		allIndexKeys = append(allIndexKeys, idxKeys...)
-		tt[i] = &assertpulse{
-			count: recN,
-			keys:  recKeys,
+		recordsPerPulse[i] = recKeys
+	}
+	_, idxsAfter := getallkeys(db.GetBadgerDB())
+	for i := 1; i < 3; i++ {
+		for j := i; j < 3; j++ {
+			tt[i] = append(tt[i], recordsPerPulse[j]...)
 		}
+		tt[i] = append(tt[i], idxsAfter...)
 	}
-	for i := 1; i < 3; i++ {
-		tt[i].count += indexesCount
-		tt[i].keys = append(tt[i].keys, allIndexKeys...)
-	}
-	keysAfter := getallkeys(db.GetBadgerDB())
-	// fmt.Println("keysAfter", outputKeySizes(keysAfter))
-	require.Equal(t, createdCount, len(keysAfter))
 
 	// BEWARE: test expects limit 512 is enougth to have at least `atLeastIterations` iterations
 	// it could be fragile, probably I should figure out how to write this test in more stable way.
@@ -138,7 +130,7 @@ func Test_ReplicaIter(t *testing.T) {
 	atLeastIterations := 2
 
 	for n := 1; n < 3; n++ {
-		// fmt.Println("=================== Pulse:", n, " ====================")
+		fmt.Println("=================== Pulse:", n, " ====================")
 		replicator := storage.NewReplicaIter(ctx, db, core.PulseNumber(n), maxsize)
 		var got []string
 
@@ -162,15 +154,13 @@ func Test_ReplicaIter(t *testing.T) {
 				got = append(got, hex.EncodeToString(rec.K))
 			}
 		}
-		// fmt.Println("pulse:", n, "iterations:", iterations)
 
-		assert.Equal(t, tt[n].count, len(got))
 		assert.Truef(t, iterations >= atLeastIterations,
 			"expect at least %v iterations", atLeastIterations)
 
-		sort.Strings(tt[n].keys)
+		sort.Strings(tt[n])
 		sort.Strings(got)
-		require.Equal(t, tt[n].keys, got)
+		require.Equal(t, tt[n], got)
 	}
 }
 
@@ -222,41 +212,22 @@ func outputKeySizes(ks []keySize) (s string) {
 	return
 }
 
-// func getallindexes(db *badger.DB) (out []keySize) {
-// 	keys := getallkeys(db)
-// 	for _, k := range keys {
-// 		if k.key[0] == scopeIDLifeline {
-// 			out = append(out, k)
-// 		}
-// 	}
-// 	return
-// }
-
-func getdelta(before []keySize, after []keySize) (
-	recs []string,
-	idx []string,
-) {
+func getdelta(before []string, after []string) (delta []string) {
 CHECKIFCONTAINS:
 	for _, k1 := range after {
 		for _, k2 := range before {
-			if bytes.Equal(k1.key, k2.key) {
+			if k1 == k2 {
 				continue CHECKIFCONTAINS
 			}
 		}
 		// not found
-		key := k1.key
-		if key[0] == scopeIDRecord {
-			recs = append(recs, hex.EncodeToString(key))
-		}
-		if key[0] == scopeIDLifeline {
-			idx = append(idx, hex.EncodeToString(key))
-		}
+		delta = append(delta, k1)
 	}
 	return
 }
 
 // strip namesapce
-func getallkeys(db *badger.DB) (keys []keySize) {
+func getallkeys(db *badger.DB) (records []string, indexes []string) {
 	txn := db.NewTransaction(true)
 	defer txn.Discard()
 
@@ -265,14 +236,13 @@ func getallkeys(db *badger.DB) (keys []keySize) {
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		k := item.KeyCopy(nil)
-		val, err := item.Value()
-		if err != nil {
-			panic(err)
+		kstr := hex.EncodeToString(k)
+		switch k[0] {
+		case scopeIDRecord:
+			records = append(records, kstr)
+		case scopeIDLifeline:
+			indexes = append(indexes, kstr)
 		}
-		keys = append(keys, keySize{
-			key:  k,
-			size: len(k) + len(val),
-		})
 	}
 	return
 }
