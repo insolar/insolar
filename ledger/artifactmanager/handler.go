@@ -39,7 +39,7 @@ type MessageHandler struct {
 	jetDropHandlers            map[core.MessageType]internalHandler
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	recentObjects              *storage.RecentStorage
+	recent                     *storage.RecentStorage
 }
 
 // NewMessageHandler creates new handler.
@@ -47,7 +47,7 @@ func NewMessageHandler(db *storage.DB, recentObjects *storage.RecentStorage) *Me
 	return &MessageHandler{
 		db:              db,
 		jetDropHandlers: map[core.MessageType]internalHandler{},
-		recentObjects:   recentObjects,
+		recent:          recentObjects,
 	}
 }
 
@@ -103,7 +103,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 	}
 
 	if _, ok := rec.(record.Request); ok {
-		h.recentObjects.AddPendingRequest(*id)
+		h.recent.AddPendingRequest(*id)
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -163,7 +163,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 			return nil, err
 		}
 	}
-	h.recentObjects.AddObject(msg.Head.Record())
+	h.recent.AddObject(msg.Head.Record())
 
 	var childPointer *core.RecordID
 	if idx.ChildPointer != nil {
@@ -195,7 +195,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	if err != nil {
 		return nil, err
 	}
-	h.recentObjects.AddObject(msg.Head.Record())
+	h.recent.AddObject(msg.Head.Record())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -216,7 +216,7 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 	if err != nil {
 		return nil, err
 	}
-	h.recentObjects.AddObject(msg.Parent.Record())
+	h.recent.AddObject(msg.Parent.Record())
 
 	var (
 		refs         []core.RecordRef
@@ -282,7 +282,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
-		h.recentObjects.AddObject(msg.Object.Record())
+		h.recent.AddObject(msg.Object.Record())
 
 		id, err := tx.SetRecord(ctx, pulseNumber, rec)
 		if err != nil {
@@ -301,7 +301,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		return nil, err
 	}
-	h.recentObjects.AddObject(msg.Object.Record())
+	h.recent.AddObject(msg.Object.Record())
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -329,7 +329,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		if err != nil {
 			return err
 		}
-		h.recentObjects.AddObject(msg.Parent.Record())
+		h.recent.AddObject(msg.Parent.Record())
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -355,7 +355,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	if err != nil {
 		return nil, err
 	}
-	h.recentObjects.AddObject(msg.Parent.Record())
+	h.recent.AddObject(msg.Parent.Record())
 
 	return &reply.ID{ID: *child}, nil
 }
@@ -436,7 +436,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	if err != nil {
 		return nil, err
 	}
-	h.recentObjects.AddObject(msg.Object.Record())
+	h.recent.AddObject(msg.Object.Record())
 
 	return &reply.OK{}, nil
 }

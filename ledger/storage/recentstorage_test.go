@@ -27,37 +27,37 @@ import (
 )
 
 func TestNewRecentObjectsIndex(t *testing.T) {
-	index := NewRecentObjectsIndex(123)
+	index := NewRecentStorage(123)
 	require.NotNil(t, index)
 	require.NotNil(t, index.recentObjects)
 	require.Equal(t, 123, index.DefaultTTL)
 }
 
 func TestRecentObjectsIndex_AddId(t *testing.T) {
-	index := NewRecentObjectsIndex(123)
+	s := NewRecentStorage(123)
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 
 	go func() {
-		index.AddObject(core.NewRecordID(123, []byte{1}))
+		s.AddObject(core.NewRecordID(123, []byte{1}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddObject(core.NewRecordID(123, []byte{2}))
+		s.AddObject(core.NewRecordID(123, []byte{2}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddObject(core.NewRecordID(123, []byte{3}))
+		s.AddObject(core.NewRecordID(123, []byte{3}))
 		wg.Done()
 	}()
 
 	wg.Wait()
-	require.Equal(t, 3, len(index.GetObjects()))
+	require.Equal(t, 3, len(s.GetObjects()))
 }
 
 func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
-	index := NewRecentObjectsIndex(123)
+	s := NewRecentStorage(123)
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
@@ -68,20 +68,62 @@ func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
 		*core.NewRecordID(123, []byte{3}),
 	}
 	go func() {
-		index.AddPendingRequest(expectedIDs[0])
+		s.AddPendingRequest(expectedIDs[0])
 		wg.Done()
 	}()
 	go func() {
-		index.AddPendingRequest(expectedIDs[1])
+		s.AddPendingRequest(expectedIDs[1])
 		wg.Done()
 	}()
 	go func() {
-		index.AddPendingRequest(expectedIDs[2])
+		s.AddPendingRequest(expectedIDs[2])
 		wg.Done()
 	}()
-
 	wg.Wait()
-	actualRequests := index.GetRequests()
+
+	actualRequests := s.GetRequests()
+	sort.Slice(actualRequests, func(i, j int) bool {
+		return bytes.Compare(actualRequests[i][:], actualRequests[j][:]) == -1
+	})
+	require.Equal(t, expectedIDs, actualRequests)
+}
+
+func TestRecentObjectsIndex_RemovePendingRequest(t *testing.T) {
+	s := NewRecentStorage(123)
+
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+
+	expectedIDs := []core.RecordID{
+		*core.NewRecordID(123, []byte{1}),
+	}
+	extraIDs := []core.RecordID{
+		*core.NewRecordID(123, []byte{2}),
+		*core.NewRecordID(123, []byte{3}),
+		*core.NewRecordID(123, []byte{4}),
+	}
+	s.pendingRequests = map[core.RecordID]struct{}{
+		expectedIDs[0]: {},
+		extraIDs[0]:    {},
+		extraIDs[1]:    {},
+		extraIDs[2]:    {},
+	}
+
+	go func() {
+		s.RemovePendingRequest(extraIDs[0])
+		wg.Done()
+	}()
+	go func() {
+		s.RemovePendingRequest(extraIDs[1])
+		wg.Done()
+	}()
+	go func() {
+		s.RemovePendingRequest(extraIDs[2])
+		wg.Done()
+	}()
+	wg.Wait()
+
+	actualRequests := s.GetRequests()
 	sort.Slice(actualRequests, func(i, j int) bool {
 		return bytes.Compare(actualRequests[i][:], actualRequests[j][:]) == -1
 	})
@@ -89,7 +131,7 @@ func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
 }
 
 func TestRecentObjectsIndex_ClearObjects(t *testing.T) {
-	index := NewRecentObjectsIndex(123)
+	index := NewRecentStorage(123)
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
