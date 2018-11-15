@@ -29,8 +29,9 @@ const (
 
 // BlockExplorerManager provides concrete API to block explorer module.
 type ExplorerManager struct {
-	db         *storage.DB
-	DefaultBus core.MessageBus `inject:""`
+	db                         *storage.DB
+	DefaultBus                 core.MessageBus                 `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 
 	getHistoryChunkSize int
 }
@@ -38,6 +39,12 @@ type ExplorerManager struct {
 // NewArtifactManger creates new manager instance.
 func NewExplorerManager(db *storage.DB) *ExplorerManager {
 	return &ExplorerManager{db: db, getHistoryChunkSize: getHistoryChunkSize}
+}
+
+// State returns hash state for block explorer.
+func (m *ExplorerManager) State() ([]byte, error) {
+	// This is a temporary stab to simulate real hash.
+	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
 // GetHistory returns history iterator.

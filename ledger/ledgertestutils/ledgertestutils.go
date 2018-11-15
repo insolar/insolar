@@ -56,6 +56,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm := pulsemanager.NewPulseManager(db)
 	ls := localstorage.NewLocalStorage(db)
 	be := blockexplorer.NewExplorerManager(db)
+	be.PlatformCryptographyScheme = pcs
 
 	// Init components.
 	if c.MessageBus == nil {

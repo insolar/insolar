@@ -69,7 +69,7 @@ func TestLedgerArtifactManager_GetHistory(t *testing.T) {
 	)
 	assert.Nil(t, err)
 	updateRec1, err := db.GetRecord(ctx, obj1.StateID())
-	assert.Equal(t, record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, memory), updateRec1.(record.ObjectState).GetMemory())
+	assert.Equal(t, record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory), updateRec1.(record.ObjectState).GetMemory())
 	assert.Nil(t, err)
 
 	memory = []byte("456")
@@ -96,7 +96,7 @@ func TestLedgerArtifactManager_GetHistory(t *testing.T) {
 
 	updateRec2, err := db.GetRecord(ctx, obj2.StateID())
 	assert.Nil(t, err)
-	assert.Equal(t, record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, memory), updateRec2.(record.ObjectState).GetMemory())
+	assert.Equal(t, record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory), updateRec2.(record.ObjectState).GetMemory())
 
 	iterator, err := be.GetHistory(ctx, *genRefWithID(objID), nil)
 
