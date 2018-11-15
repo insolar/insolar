@@ -76,7 +76,7 @@ type JetCoordinator interface {
 }
 
 // ArtifactManager is a high level storage interface.
-//go:generate minimock -i github.com/insolar/insolar/core.ArtifactManager -o ../testutils/ledger -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/core.ArtifactManager -o ../testutils -s _mock.go
 type ArtifactManager interface {
 	// GenesisRef returns the root record reference.
 	//

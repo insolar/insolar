@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
-	"github.com/insolar/insolar/testutils/ledger"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -134,7 +134,7 @@ func TestCalculator(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
 
-	am := ledger.NewArtifactManagerMock(t)
+	am := testutils.NewArtifactManagerMock(t)
 	am.StateFunc = func() (r []byte, r1 error) {
 		return []byte("state"), nil
 	}

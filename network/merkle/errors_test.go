@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/certificate"
-	"github.com/insolar/insolar/testutils/ledger"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -193,7 +192,7 @@ func TestCalculatorLedgerError(t *testing.T) {
 		return "key", nil
 	}
 
-	am := ledger.NewArtifactManagerMock(t)
+	am := testutils.NewArtifactManagerMock(t)
 	am.StateFunc = func() (r []byte, r1 error) {
 		return nil, errors.New("State error")
 	}
