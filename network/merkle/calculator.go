@@ -71,7 +71,11 @@ func (c *calculator) GetPulseProof(entry *PulseEntry) (OriginHash, *PulseProof, 
 }
 
 func (c *calculator) GetGlobuleProof(entry *GlobuleEntry) (OriginHash, *GlobuleProof, error) {
-	nodeRoot := entry.hash(c.merkleHelper)
+	nodeRoot, err := entry.hash(c.merkleHelper)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ GetGlobuleProof ] Failed to calculate node root")
+	}
+
 	nodeCount := uint32(len(entry.ProofSet))
 	globuleInfoHash := c.merkleHelper.globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
 	globuleHash := c.merkleHelper.globuleHash(globuleInfoHash, nodeRoot)
@@ -93,7 +97,10 @@ func (c *calculator) GetGlobuleProof(entry *GlobuleEntry) (OriginHash, *GlobuleP
 }
 
 func (c *calculator) GetCloudProof(entry *CloudEntry) (OriginHash, *CloudProof, error) {
-	cloudHash := entry.hash(c.merkleHelper)
+	cloudHash, err := entry.hash(c.merkleHelper)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ GetCloudProof ] Failed to calculate cloud hash")
+	}
 
 	signature, err := c.CryptographyService.Sign(cloudHash)
 	if err != nil {

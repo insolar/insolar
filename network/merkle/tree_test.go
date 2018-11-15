@@ -26,10 +26,11 @@ import (
 func TestFromList(t *testing.T) {
 	cs := platformpolicy.NewPlatformCryptographyScheme()
 
-	mt := treeFromHashList([][]byte{
+	mt, err := treeFromHashList([][]byte{
 		cs.IntegrityHasher().Hash([]byte("123")),
 		cs.IntegrityHasher().Hash([]byte("456")),
 	}, cs.IntegrityHasher())
+	assert.NoError(t, err)
 
 	root := mt.Root()
 

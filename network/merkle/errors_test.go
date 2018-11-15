@@ -55,7 +55,7 @@ func (t *calculatorErrorSuite) TestGetNodeProofError() {
 	t.Assert().Nil(ph)
 }
 
-func (t *calculatorErrorSuite) TestGetGlobuleProof() {
+func (t *calculatorErrorSuite) TestGetGlobuleProofCalculateError() {
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
 
 	prevCloudHash, _ := hex.DecodeString(
@@ -65,7 +65,31 @@ func (t *calculatorErrorSuite) TestGetGlobuleProof() {
 	globuleEntry := &GlobuleEntry{
 		PulseEntry:    pulseEntry,
 		PulseHash:     nil,
-		ProofSet:      map[core.Node]*PulseProof{},
+		ProofSet:      nil,
+		PrevCloudHash: prevCloudHash,
+		GlobuleIndex:  0,
+	}
+	gh, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
+
+	t.Assert().Error(err)
+	t.Assert().Contains(err.Error(), "[ GetGlobuleProof ] Failed to calculate node root")
+	t.Assert().Nil(gh)
+	t.Assert().Nil(gp)
+}
+
+func (t *calculatorErrorSuite) TestGetGlobuleProofSignError() {
+	pulseEntry := &PulseEntry{Pulse: t.pulse}
+
+	prevCloudHash, _ := hex.DecodeString(
+		"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+	)
+
+	globuleEntry := &GlobuleEntry{
+		PulseEntry: pulseEntry,
+		PulseHash:  nil,
+		ProofSet: map[core.Node]*PulseProof{
+			t.nodeNetwork.GetOrigin(): {},
+		},
 		PrevCloudHash: prevCloudHash,
 		GlobuleIndex:  0,
 	}
@@ -77,14 +101,28 @@ func (t *calculatorErrorSuite) TestGetGlobuleProof() {
 	t.Assert().Nil(gp)
 }
 
-func (t *calculatorErrorSuite) TestGetCloudProof() {
+func (t *calculatorErrorSuite) TestGetCloudProofSignError() {
 	ch, cp, err := t.calculator.GetCloudProof(&CloudEntry{
-		ProofSet:      []*GlobuleProof{},
+		ProofSet: []*GlobuleProof{
+			{},
+		},
 		PrevCloudHash: nil,
 	})
 
 	t.Assert().Error(err)
 	t.Assert().Contains(err.Error(), "[ GetCloudProof ] Failed to sign cloud hash")
+	t.Assert().Nil(ch)
+	t.Assert().Nil(cp)
+}
+
+func (t *calculatorErrorSuite) TestGetCloudProofCalculateError() {
+	ch, cp, err := t.calculator.GetCloudProof(&CloudEntry{
+		ProofSet:      nil,
+		PrevCloudHash: nil,
+	})
+
+	t.Assert().Error(err)
+	t.Assert().Contains(err.Error(), "[ GetCloudProof ] Failed to calculate cloud hash")
 	t.Assert().Nil(ch)
 	t.Assert().Nil(cp)
 }

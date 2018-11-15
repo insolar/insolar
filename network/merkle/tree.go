@@ -19,19 +19,20 @@ package merkle
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/onrik/gomerkle"
+	"github.com/pkg/errors"
 )
 
 type tree interface {
 	Root() []byte
 }
 
-func treeFromHashList(list [][]byte, hasher core.Hasher) tree {
+func treeFromHashList(list [][]byte, hasher core.Hasher) (tree, error) {
 	mt := gomerkle.NewTree(hasher)
 	mt.AddHash(list...)
 
 	if err := mt.Generate(); err != nil {
-		panic(err.Error())
+		return nil, errors.Wrap(err, "[ treeFromHashList ] Failed to generate merkle tree")
 	}
 
-	return &mt
+	return &mt, nil
 }

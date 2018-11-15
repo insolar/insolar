@@ -68,10 +68,8 @@ func (t *calculatorHashesSuite) TestGetGlobuleHash() {
 	t.Assert().NoError(err)
 
 	expectedHash, _ := hex.DecodeString(
-		"8a2108973560e22eaff46af72216319f0fe73149d4d8d1e992bdf22b9c39b86b6a3538ff6e0717ec54c138149b08d14bfc538589bd233504b4556b563c91cd3b",
+		"68cd36762548acd48795678c2e308978edd1ff74de2f5daf0511c1b52cf7a7bef44e09d5dd5806e99aa4ed4253aca88390e6b376e0c5f5a49ff48a8f9547e5c5",
 	)
-
-	fmt.Println(hex.EncodeToString(gh))
 
 	t.Assert().Equal(OriginHash(expectedHash), gh)
 }
@@ -104,7 +102,7 @@ func (t *calculatorHashesSuite) TestGetCloudHash() {
 	t.Assert().NoError(err)
 
 	expectedHash, _ := hex.DecodeString(
-		"8a2108973560e22eaff46af72216319f0fe73149d4d8d1e992bdf22b9c39b86b6a3538ff6e0717ec54c138149b08d14bfc538589bd233504b4556b563c91cd3b",
+		"68cd36762548acd48795678c2e308978edd1ff74de2f5daf0511c1b52cf7a7bef44e09d5dd5806e99aa4ed4253aca88390e6b376e0c5f5a49ff48a8f9547e5c5",
 	)
 
 	fmt.Println(hex.EncodeToString(ch))

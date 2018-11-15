@@ -21,7 +21,7 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/pkg/errors"
 )
 
 type PulseEntry struct {
@@ -40,29 +40,35 @@ type GlobuleEntry struct {
 	GlobuleIndex  uint32
 }
 
-func (ge *GlobuleEntry) hash(helper *merkleHelper) []byte {
+func (ge *GlobuleEntry) hash(helper *merkleHelper) ([]byte, error) {
 	nodeEntryByRole := nodeEntryByRole(ge.PulseEntry, ge.ProofSet)
 	var bucketHashes [][]byte
 
 	for _, role := range core.AllNodeRoles {
-		var bucketEntryRoot []byte
-
 		roleEntries, ok := nodeEntryByRole[role]
 		if !ok {
-			roleEntries = make([]*nodeEntry, 0)
-			bucketEntryRoot = utils.UInt32ToBytes(reserved)
-		} else {
-			sortEntries(roleEntries)
-			bucketEntryRoot = roleEntryRoot(roleEntries, helper)
+			continue
+		}
+
+		sortEntries(roleEntries)
+		bucketEntryRoot, err := roleEntryRoot(roleEntries, helper)
+
+		if err != nil {
+			return nil, errors.Wrap(err, "[ hash ] Failed to create tree for bucket role entry")
 		}
 
 		bucketInfoHash := helper.bucketInfoHash(role, uint32(len(roleEntries)))
 		bucketHash := helper.bucketHash(bucketInfoHash, bucketEntryRoot)
-
 		bucketHashes = append(bucketHashes, bucketHash)
 	}
 
-	return treeFromHashList(bucketHashes, helper.scheme.IntegrityHasher()).Root()
+	tree, err := treeFromHashList(bucketHashes, helper.scheme.IntegrityHasher())
+
+	if err != nil {
+		return nil, errors.Wrap(err, "[ hash ] Failed to create tree for bucket hashes")
+	}
+
+	return tree.Root(), nil
 }
 
 type CloudEntry struct {
@@ -70,7 +76,7 @@ type CloudEntry struct {
 	PrevCloudHash []byte
 }
 
-func (ce *CloudEntry) hash(helper *merkleHelper) []byte {
+func (ce *CloudEntry) hash(helper *merkleHelper) ([]byte, error) {
 	var result [][]byte
 
 	for _, proof := range ce.ProofSet {
@@ -79,8 +85,12 @@ func (ce *CloudEntry) hash(helper *merkleHelper) []byte {
 		result = append(result, globuleHash)
 	}
 
-	mt := treeFromHashList(result, helper.scheme.IntegrityHasher())
-	return mt.Root()
+	tree, err := treeFromHashList(result, helper.scheme.IntegrityHasher())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ hash ] Failed to create tree")
+	}
+
+	return tree.Root(), nil
 }
 
 type nodeEntry struct {
@@ -116,11 +126,17 @@ func sortEntries(roleEntries []*nodeEntry) {
 	})
 }
 
-func roleEntryRoot(roleEntries []*nodeEntry, helper *merkleHelper) []byte {
+func roleEntryRoot(roleEntries []*nodeEntry, helper *merkleHelper) ([]byte, error) {
 	var roleEntriesHashes [][]byte
 	for index, entry := range roleEntries {
 		bucketEntryHash := helper.bucketEntryHash(uint32(index), entry.hash(helper))
 		roleEntriesHashes = append(roleEntriesHashes, bucketEntryHash)
 	}
-	return treeFromHashList(roleEntriesHashes, helper.scheme.IntegrityHasher()).Root()
+
+	tree, err := treeFromHashList(roleEntriesHashes, helper.scheme.IntegrityHasher())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ hash ] Failed to create tree")
+	}
+
+	return tree.Root(), nil
 }
