@@ -264,10 +264,13 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	var idx *index.ObjectLifeline
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		idx, err = getObjectIndex(ctx, tx, msg.Object.Record(), true)
-		if err != nil {
+		idx, err := tx.GetObjectIndex(ctx, msg.Object.Record(), true)
+		if err == storage.ErrNotFound {
+			idx =  &index.ObjectLifeline{State: record.StateUndefined}
+		}else{
 			return err
 		}
+
 		if err = validateState(idx.State, state.State()); err != nil {
 			return err
 		}
