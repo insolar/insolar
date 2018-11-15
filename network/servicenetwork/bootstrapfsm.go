@@ -14,9 +14,4 @@
  *    limitations under the License.
  */
 
-package core
-
-// Certificate interface provides methods to manage keys
-type Certificate interface {
-	GetRole() NodeRole
-}
+package servicenetwork

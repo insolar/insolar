@@ -22,17 +22,16 @@ import (
 
 	"github.com/insolar/insolar/core/utils"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
-func (ar *Runner) infoHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
+func (ar *Runner) infoHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
 		_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
-		data, err := c.Genesis.Info()
+		data, err := ar.Genesis.Info()
 		if err != nil {
 			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get bootstraper info"))
 		}

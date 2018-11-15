@@ -16,7 +16,7 @@
 
 package core
 
-// Certificate interface provides methods to manage keys
-type Certificate interface {
-	GetRole() NodeRole
+// APIRunner
+type APIRunner interface {
+	IsAPIRunner() bool
 }

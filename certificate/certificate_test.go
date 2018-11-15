@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const TestCert = "testdata/cert.json"
@@ -60,9 +61,28 @@ func TestReadCertificate(t *testing.T) {
 	pk, _ := cs.GetPublicKey()
 
 	cert, err := ReadCertificate(pk, kp, TestCert)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, cert.PublicKey)
-	assert.NotEmpty(t, cert.Reference)
+	require.NoError(t, err)
+	require.NotEmpty(t, cert.PublicKey)
+	require.Equal(t, "virtual", cert.Role)
+	require.Equal(t, "2prKtCG51YhseciDY5EnnHapPskNHvrvhSc3HrCvYLKKxXn4K3kFQtiz3QLVD1acpQmaDBHUG2Q988xjSFhswJLs",
+		cert.Reference)
+	require.Equal(t, 7, cert.MajorityRule)
+
+	bootstrapNodes := []BootstrapNode{
+		BootstrapNode{
+			PublicKey: "PUBKEY_1",
+			Host:      "localhost:22001",
+		},
+		BootstrapNode{
+			PublicKey: "PUBKEY_2",
+			Host:      "localhost:22002",
+		},
+		BootstrapNode{
+			PublicKey: "PUBKEY_3",
+			Host:      "localhost:22003",
+		},
+	}
+	require.Equal(t, bootstrapNodes, cert.BootstrapNodes)
 
 	checkKeys(cert, cs, t)
 }

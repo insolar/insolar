@@ -99,6 +99,14 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	}()
 }
 
+type HackComponentManager struct {
+	components core.Components
+}
+
+func (cm *HackComponentManager) GetAll() core.Components {
+	return cm.components
+}
+
 func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(), *servicenetwork.ServiceNetwork, string) {
 	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
@@ -119,8 +127,10 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	nodeConfig := configuration.NewConfiguration()
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig, scheme)
+	serviceNetwork.OldComponentManager = &HackComponentManager{c}
+	serviceNetwork.PulseManager = tempLedger.GetPulseManager()
 	assert.NoError(t, err)
-	err = serviceNetwork.Start(ctx, c)
+	err = serviceNetwork.Init(ctx)
 	assert.NoError(t, err)
 	address := serviceNetwork.GetAddress()
 	return tempLedger, cleaner, serviceNetwork, address
