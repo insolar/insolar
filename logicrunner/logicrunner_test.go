@@ -207,7 +207,7 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManage
 		Method:    method,
 		Arguments: arguments,
 	}
-
+	msg.Caller = testutils.RandomRef()
 	if nonce != 0 {
 		msg.Nonce = nonce
 	}
