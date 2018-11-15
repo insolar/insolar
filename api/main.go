@@ -191,8 +191,8 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	return &ar, nil
 }
 
-func (ar *Runner) Fake() {
-
+func (ar *Runner) IsApiRunner() bool {
+	return true
 }
 
 // Start runs api server
