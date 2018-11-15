@@ -66,6 +66,11 @@ func (n *ServiceNetwork) GetNodeID() core.RecordRef {
 	return n.nodeNetwork.GetOrigin().ID()
 }
 
+// GetGlobuleID returns current globule id.
+func (n *ServiceNetwork) GetGlobuleID() core.GlobuleID {
+	return 0
+}
+
 // SendParcel sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
 	return n.controller.SendMessage(nodeID, method, msg)
@@ -121,7 +126,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
-	log.Infof("Got new pulse number: %d", pulse.PulseNumber)
+	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.pulseManager == nil {
 		logger.Error("PulseManager is not initialized")
 		return
