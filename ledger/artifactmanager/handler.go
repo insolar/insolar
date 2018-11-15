@@ -37,9 +37,11 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 type MessageHandler struct {
 	db                         *storage.DB
 	jetDropHandlers            map[core.MessageType]internalHandler
+	recentObjects              *storage.RecentObjectsIndex
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	recentObjects              *storage.RecentObjectsIndex
+	KeyStore                   core.KeyStore                   `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
 }
 
 // NewMessageHandler creates new handler.
@@ -142,6 +144,46 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	return &rep, nil
 }
 
+func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetObject, definedState *core.RecordID, pulse core.PulseNumber) (core.Reply, error) {
+	nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleLightExecutor, &msg.Head, pulse)
+	if err != nil {
+		return nil, err
+	}
+	if len(nodes) > 1 {
+		return nil, errors.New("problems with node")
+	}
+
+	var redirect core.Reply
+	if msg.State == nil {
+		msg.State = definedState
+		sign, err := msg.Sign(h.PlatformCryptographyScheme, h.KeyStore)
+		if err != nil {
+			return nil, err
+		}
+
+		redirect = &reply.DefinedStateRedirect{
+			Redirect: reply.Redirect{
+				Sign: *sign,
+				To:   nodes[0],
+			},
+			StateID: *definedState,
+		}
+
+		return redirect, nil
+	}
+
+	sign, err := msg.Sign(h.PlatformCryptographyScheme, h.KeyStore)
+	if err != nil {
+		return nil, err
+	}
+	redirect = &reply.Redirect{
+		Sign: *sign,
+		To:   nodes[0],
+	}
+
+	return redirect, nil
+}
+
 func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetObject)
 
@@ -156,6 +198,11 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 		case ErrStateNotAvailable:
 			return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
+		case ErrNotFound:
+			if stateID == nil {
+				return nil, err
+			}
+			return h.prepareRedirect(ctx, msg, stateID, genericMsg.Pulse())
 		default:
 			return nil, err
 		}
@@ -489,14 +536,13 @@ func getObjectState(
 			stateID = idx.LatestState
 		}
 	}
-
 	if stateID == nil {
 		return nil, nil, ErrStateNotAvailable
 	}
 
 	rec, err := s.GetRecord(ctx, stateID)
 	if err != nil {
-		return nil, nil, err
+		return stateID, nil, err
 	}
 	stateRec, ok := rec.(record.ObjectState)
 	if !ok {
