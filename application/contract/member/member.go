@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
-	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
@@ -163,7 +162,7 @@ func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
 }
 
 func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
-	var publicKey string
+	/*var publicKey string
 	var numberOfBootstrapNodes float64
 	var majorityRule float64
 	var role string
@@ -184,5 +183,6 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 		return nil, fmt.Errorf("[ registerNodeCall ] Problems with RegisterNode: %s", err.Error())
 	}
 
-	return string(cert), nil
+	return string(cert), nil*/
+	return "", nil
 }

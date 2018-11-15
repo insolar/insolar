@@ -80,60 +80,6 @@ func (r *RootDomain) GetPrototype() core.RecordRef {
 	return PrototypeReference
 }
 
-// Authorize is proxy generated method
-func (r *RootDomain) Authorize() (string, core.NodeRole, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := [3]interface{}{}
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 core.NodeRole
-	ret[1] = &ret1
-	var ret2 *foundation.Error
-	ret[2] = &ret2
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Authorize", argsSerialized)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	if ret2 != nil {
-		return ret0, ret1, ret2
-	}
-	return ret0, ret1, nil
-}
-
-// AuthorizeNoWait is proxy generated method
-func (r *RootDomain) AuthorizeNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Authorize", argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CreateMember is proxy generated method
 func (r *RootDomain) CreateMember(name string, key string) (string, error) {
 	var args [2]interface{}

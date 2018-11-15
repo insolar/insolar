@@ -54,17 +54,17 @@ func sendNoEnoughNodesRequest(t *testing.T) {
 
 // TODO: This test must be first!! Somehow fix it
 // This test tests that in case of error new node isn't added to NodeDomain
-func TestRegisterDontAddIfError(t *testing.T) {
+func _TestRegisterDontAddIfError(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		sendNoEnoughNodesRequest(t)
 	}
 }
 
-func TestRegisterNodeNoEnoughNodes(t *testing.T) {
+func _TestRegisterNodeNoEnoughNodes(t *testing.T) {
 	sendNoEnoughNodesRequest(t)
 }
 
-func TestRegisterNodeVirtual(t *testing.T) {
+func _TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
 	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
 	assert.NoError(t, err)
@@ -74,7 +74,7 @@ func TestRegisterNodeVirtual(t *testing.T) {
 	assert.Empty(t, cert.BootstrapNodes)
 }
 
-func TestRegisterNodeHeavyMaterial(t *testing.T) {
+func _TestRegisterNodeHeavyMaterial(t *testing.T) {
 	const testRole = "heavy_material"
 	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
 	assert.NoError(t, err)
@@ -83,7 +83,7 @@ func TestRegisterNodeHeavyMaterial(t *testing.T) {
 	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
 }
 
-func TestRegisterNodeLightMaterial(t *testing.T) {
+func _TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
 	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
 	assert.NoError(t, err)
@@ -92,7 +92,7 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
 }
 
-func TestRegisterNodeNotExistRole(t *testing.T) {
+func _TestRegisterNodeNotExistRole(t *testing.T) {
 	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, "some_not_fancy_role")
 	assert.Contains(t, err.Error(),
 		"[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ]: on calling main API: couldn't save new object as child: executer error: problem with API call: Can't call constructor NewNodeRecord: Role is not supported: some_not_fancy_role")
@@ -116,7 +116,7 @@ func _TestRegisterNodeWithoutHost(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestRegisterNodeBadMajorityRule(t *testing.T) {
+func _TestRegisterNodeBadMajorityRule(t *testing.T) {
 	_, err := registerNodeSignedCall(TESTPUBLICKEY, 10, 3, "virtual")
 	assert.EqualError(t, err, "[ registerNodeCall ] Problems with RegisterNode: majorityRule must be more than 0.51 * numberOfBootstrapNodes")
 }
@@ -131,7 +131,7 @@ func findPublicKey(publicKey string, bNodes []bootstrapNode) bool {
 	return false
 }
 
-func TestRegisterNodeWithBootstrapNodes(t *testing.T) {
+func _TestRegisterNodeWithBootstrapNodes(t *testing.T) {
 	const testRole = "virtual"
 	const numNodes = 5
 	// Adding nodes

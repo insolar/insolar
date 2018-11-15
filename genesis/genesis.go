@@ -19,9 +19,11 @@ package genesis
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
+	"github.com/insolar/insolar/application/contract/noderecord"
 	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/application/contract/wallet"
 	"github.com/insolar/insolar/configuration"
@@ -349,12 +351,42 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 	}
 
 	if g.isBootstrap {
-		for _, nodeInfo := range g.nodesInfo {
+		for i, nodeInfo := range g.nodesInfo {
 			nc := c.NetworkCoordinator
 			_, err := nc.RegisterNode(ctx, nodeInfo["public_key"], 0, 0, nodeInfo["role"], "")
-			if err != nil {
-				return errors.Wrap(err, "can't register node")
+			//if err != nil {
+			//	return errors.Wrap(err, "can't register node")
+			//}
+
+			nodeState := &noderecord.NodeRecord{
+				Record: noderecord.RecordInfo{
+					PublicKey: nodeInfo["public_key"],
+					Role:      core.GetRoleFromString(nodeInfo["role"]),
+				},
 			}
+			nodeData, err := serializeInstance(nodeState)
+			if err != nil {
+				return errors.Wrap(err, "")
+			}
+
+			nodeID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)})
+			if err != nil {
+				return errors.Wrap(err, "")
+			}
+			contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
+			_, err = am.ActivateObject(
+				ctx,
+				core.RecordRef{},
+				*contract,
+				*g.nodeDomainRef,
+				*cb.Prototypes[nodeRecord],
+				false,
+				nodeData,
+			)
+			if err != nil {
+				return errors.Wrap(err, "")
+			}
+
 		}
 	}
 
