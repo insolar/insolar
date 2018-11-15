@@ -128,14 +128,14 @@ func (t *merkleHelperSuite) TestMerkleHelperGlobuleInfoHash() {
 		"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 	)
 
-	globuleIndex := 1
+	globuleID := 1
 	nodeCount := 1337
 
 	expectedHash, _ := hex.DecodeString(
 		"c6e8c3ad6446f235c308425825f130a1840c625618b0bb04682a683fe42a72bd03d5de800a5f0ff0080503e925efd18dd27242a35882acdb7feab7631dd33ba6",
 	)
 
-	actualHash := t.mh.globuleInfoHash(prevCloudHash, uint32(globuleIndex), uint32(nodeCount))
+	actualHash := t.mh.globuleInfoHash(prevCloudHash, uint32(globuleID), uint32(nodeCount))
 
 	t.Assert().Equal(expectedHash, actualHash)
 }
