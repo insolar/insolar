@@ -535,6 +535,7 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 	mockSwitcher.GetStateMock.Return(WaitingForStart)
 	cryptographyServiceMock := mockCryptographyService(t)
 
+	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
 	pulsar := Pulsar{
 		Neighbours: map[string]*Neighbour{
 			"1": {OutgoingClient: mockClientWrapper, ConnectionAddress: "first"},
@@ -544,7 +545,7 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 		OwnedBftRow:          map[string]*BftCell{},
 		StateSwitcher:        mockSwitcher,
 		GeneratedEntropySign: pulsartestutils.MockEntropy[:],
-		GeneratedEntropy:     pulsartestutils.MockEntropy,
+		generatedEntropy:     &generatedEntropy,
 	}
 	mockClientWrapper.On("Go", ReceiveVector.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
 
@@ -591,6 +592,7 @@ func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 
 	cryptographyServiceMock := mockCryptographyService(t)
 
+	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
 	pulsar := Pulsar{
 		Neighbours: map[string]*Neighbour{
 			"1": {OutgoingClient: mockClientWrapper, ConnectionAddress: "first"},
@@ -599,7 +601,7 @@ func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 		CryptographyService:   cryptographyServiceMock,
 		StateSwitcher:         switcherMock,
 		ProcessingPulseNumber: 123,
-		GeneratedEntropy:      pulsartestutils.MockEntropy,
+		generatedEntropy:      &generatedEntropy,
 	}
 
 	mockClientWrapper.On("Go", ReceiveEntropy.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
@@ -658,7 +660,8 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 		bftGrid:             map[string]map[string]*BftCell{},
 	}
 
-	pulsar.GeneratedEntropy = pulsartestutils.MockEntropy
+	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
+	pulsar.generatedEntropy = &generatedEntropy
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
 	mockClientWrapper.On("Go", ReceiveVector.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
 
@@ -698,7 +701,8 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 	cryptographyServiceMock := mockCryptographyService(t)
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, CryptographyService: cryptographyServiceMock, OwnedBftRow: map[string]*BftCell{}}
-	pulsar.GeneratedEntropy = pulsartestutils.MockEntropy
+	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
+	pulsar.generatedEntropy = &generatedEntropy
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
 	mockClientWrapper.On("Go", ReceiveEntropy.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
 
@@ -733,7 +737,8 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 	mockSwitcher.SwitchToStateMock.Expect(ctx, SendingPulse, nil).Return()
 	pulsar := &Pulsar{StateSwitcher: mockSwitcher}
 	pulsar.PublicKeyRaw = "testKey"
-	pulsar.GeneratedEntropy = pulsartestutils.MockEntropy
+	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
+	pulsar.generatedEntropy = &generatedEntropy
 	pulsar.OwnedBftRow = map[string]*BftCell{}
 	pulsar.bftGrid = map[string]map[string]*BftCell{}
 
@@ -741,7 +746,7 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 
 	assert.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
 	assert.Equal(t, "testKey", pulsar.PublicKeyRaw)
-	assert.Equal(t, core.Entropy(pulsartestutils.MockEntropy), pulsar.GeneratedEntropy)
+	assert.Equal(t, core.Entropy(pulsartestutils.MockEntropy), *pulsar.GetGeneratedEntropy())
 }
 
 func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
@@ -853,6 +858,6 @@ func TestPulsar_verify_Success(t *testing.T) {
 	pulsar.verify(ctx)
 
 	assert.NotNil(t, pulsar.CurrentSlotPulseSender)
-	assert.Equal(t, expectedEntropy, pulsar.CurrentSlotEntropy)
+	assert.Equal(t, expectedEntropy, *pulsar.GetCurrentSlotEntropy())
 	assert.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
 }

@@ -115,3 +115,8 @@ func (jc *JetCoordinator) QueryRole(
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
 	return jc.rootJetNode.GetContaining(&objRef)
 }
+
+// GetActiveNodes return active nodes for specified pulse.
+func (jc *JetCoordinator) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
+	return jc.db.GetActiveNodes(pulse)
+}

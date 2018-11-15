@@ -17,6 +17,7 @@
 package transport
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/gob"
 	"testing"
@@ -68,8 +69,9 @@ func (t *transportSuite) SetupTest() {
 }
 
 func (t *transportSuite) BeforeTest(suiteName, testName string) {
-	go t.node1.transport.Start()
-	go t.node2.transport.Start()
+	ctx := context.Background()
+	go t.node1.transport.Start(ctx)
+	go t.node2.transport.Start(ctx)
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {

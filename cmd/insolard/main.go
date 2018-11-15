@@ -138,9 +138,9 @@ func main() {
 	}
 
 	cfg := &cfgHolder.Configuration
+
 	traceid := utils.RandTraceID()
-	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
-	ctx, inslog := initLogger(ctx, cfg.Log)
+	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
 
 	bootstrapComponents := InitBootstrapComponents(ctx, *cfg)
 	cert := InitCertificate(
@@ -224,7 +224,7 @@ func main() {
 	repl.Start(ctx)
 }
 
-func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, core.Logger) {
+func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, core.Logger) {
 	inslog, err := log.NewLog(cfg)
 	if err != nil {
 		panic(err)
@@ -233,8 +233,7 @@ func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, co
 	if err != nil {
 		inslog.Errorln(err.Error())
 	}
-	ctx = inslogger.SetLogger(ctx, inslog)
-	return ctx, inslog
+	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
 }
 
 func checkError(ctx context.Context, err error, message string) {

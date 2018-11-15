@@ -56,11 +56,16 @@ type Pulsar struct {
 	Storage          pulsarstorage.PulsarStorage
 	EntropyGenerator entropygenerator.EntropyGenerator
 
-	StartProcessLock     sync.Mutex
-	GeneratedEntropy     core.Entropy
+	StartProcessLock sync.Mutex
+
+	generatedEntropy     *core.Entropy
+	generatedEntropyLock sync.RWMutex
+
 	GeneratedEntropySign []byte
 
-	CurrentSlotEntropy     core.Entropy
+	currentSlotEntropy     *core.Entropy
+	currentSlotEntropyLock sync.RWMutex
+
 	CurrentSlotPulseSender string
 
 	currentSlotSenderConfirmationsLock sync.RWMutex
@@ -304,11 +309,11 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return err
 	}
-	inslog.Debugf("Entropy generated - %v", currentPulsar.GeneratedEntropy)
+	inslog.Debugf("Entropy generated - %v", currentPulsar.GetGeneratedEntropy())
 	inslog.Debugf("Entropy sign generated - %v", currentPulsar.GeneratedEntropySign)
 
 	currentPulsar.OwnedBftRow[currentPulsar.PublicKeyRaw] = &BftCell{
-		Entropy:           currentPulsar.GeneratedEntropy,
+		Entropy:           *currentPulsar.GetGeneratedEntropy(),
 		IsEntropyReceived: true,
 		Sign:              currentPulsar.GeneratedEntropySign,
 	}

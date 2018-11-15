@@ -17,9 +17,9 @@
 package ledgertestutils
 
 import (
-	"github.com/insolar/insolar/ledger/blockexplorer"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/blockexplorer"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -47,7 +48,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
-	handlerAm := artifactmanager.NewMessageHandler(db)
+	handlerAm := artifactmanager.NewMessageHandler(db, storage.NewRecentObjectsIndex(0))
 	handlerAm.PlatformCryptographyScheme = pcs
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
@@ -55,7 +56,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	jc.PlatformCryptographyScheme = pcs
 	pm := pulsemanager.NewPulseManager(db)
 	ls := localstorage.NewLocalStorage(db)
-	handlerBe := artifactmanager.NewMessageHandler(db)
+	handlerBe := artifactmanager.NewMessageHandler(db, storage.NewRecentObjectsIndex(0))
 	handlerBe.PlatformCryptographyScheme = pcs
 	be := blockexplorer.NewExplorerManager(db)
 	be.PlatformCryptographyScheme = pcs

@@ -73,6 +73,9 @@ type JetCoordinator interface {
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
 	QueryRole(ctx context.Context, role JetRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
+
+	// GetActiveNodes return active nodes for specified pulse.
+	GetActiveNodes(pulse PulseNumber) ([]Node, error)
 }
 
 // ExplorerManager - interface for Block Explorer.

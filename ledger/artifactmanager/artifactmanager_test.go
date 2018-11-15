@@ -70,7 +70,7 @@ func getTestData(t *testing.T) (
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	mb := testmessagebus.NewTestMessageBus(t)
-	handlerAm := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, PlatformCryptographyScheme: scheme}
+	handlerAm := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, PlatformCryptographyScheme: scheme, recentObjects: storage.NewRecentObjectsIndex(1)}
 	handlerAm.Bus = mb
 	err := handlerAm.Init(ctx)
 	handlerBe := blockexplorer.NewMessageHandler(db)
