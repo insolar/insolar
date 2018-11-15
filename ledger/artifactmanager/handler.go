@@ -105,6 +105,9 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 	if _, ok := rec.(record.Request); ok {
 		h.recent.AddPendingRequest(*id)
 	}
+	if result, ok := rec.(*record.ResultRecord); ok {
+		h.recent.RemovePendingRequest(*result.Request.Record())
+	}
 
 	return &reply.ID{ID: *id}, nil
 }
