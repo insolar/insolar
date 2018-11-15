@@ -179,16 +179,17 @@ type ValidationBehaviour interface {
 	GetRole() core.JetRole
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
-	RegisterRequest(m message.IBaseLogicMessage) (*Ref, error)
+	RegisterRequest(p core.Parcel) (*Ref, error)
 }
 
 type ValidationSaver struct {
 	lr *LogicRunner
 }
 
-func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+func (vb ValidationSaver) RegisterRequest(p core.Parcel) (*Ref, error) {
 	ctx := context.TODO()
-	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
+	m := p.Message().(message.IBaseLogicMessage)
+	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +230,8 @@ type ValidationChecker struct {
 	cb core.CaseBindReplay
 }
 
-func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+func (vb ValidationChecker) RegisterRequest(p core.Parcel) (*Ref, error) {
+	m := p.Message().(message.IBaseLogicMessage)
 	cr, _ := vb.lr.nextValidationStep(m.GetReference())
 	if core.CaseRecordTypeRequest != cr.Type {
 		return nil, errors.New("Wrong validation type on Request")

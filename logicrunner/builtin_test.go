@@ -101,7 +101,7 @@ func TestBareHelloworld(t *testing.T) {
 	_, _, protoRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
-	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: byteRecorRef(4)})
+	contract, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: byteRecorRef(4)}})
 	assert.NoError(t, err)
 
 	// TODO: use proper conversion
