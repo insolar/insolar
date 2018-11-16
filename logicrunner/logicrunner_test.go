@@ -136,6 +136,8 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
+	am := l.GetArtifactManager()
+	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cm.Inject(nk, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
@@ -149,7 +151,6 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
 	}
-	am := l.GetArtifactManager()
 	cb := goplugintestutils.NewContractBuilder(am, icc)
 
 	return lr, am, cb, pm, func() {
