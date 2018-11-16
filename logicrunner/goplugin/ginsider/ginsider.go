@@ -178,9 +178,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 
 	client, err := rpc.Dial(gi.upstreamProtocol, gi.upstreamAddress)
 	if err != nil {
-		gi.UpstreamClient = nil
 		os.Exit(0)
-		//return nil, errors.Wrapf(err, "couldn't dial '%s' over %s", gi.upstreamAddress, gi.upstreamAddress)
 	}
 
 	gi.UpstreamClient = client
