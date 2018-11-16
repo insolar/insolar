@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,13 +14,10 @@
  *    limitations under the License.
  */
 
-package configuration
+package core
 
-type Genesis struct {
-	RootKeys    string
-	RootBalance uint
-}
-
-func NewGenesis() Genesis {
-	return Genesis{}
+// Genesis is the global genesis handler. Other system parts communicate with genesis through it.
+type Genesis interface {
+	GetRootDomainRef() *RecordRef
+	Info() ([]byte, error)
 }
