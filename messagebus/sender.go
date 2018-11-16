@@ -28,6 +28,6 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/messagebus.sender -o .
 type sender interface {
 	core.MessageBus
-	CreateParcel(ctx context.Context, pulse core.PulseNumber, msg core.Message, token core.RoutingToken) (core.Parcel, error)
-	SendParcel(ctx context.Context, pulse *core.Pulse, msg core.Parcel) (core.Reply, error)
+	CreateParcel(ctx context.Context, msg core.Message) (core.Parcel, error)
+	SendParcel(ctx context.Context, msg core.Parcel) (core.Reply, error)
 }

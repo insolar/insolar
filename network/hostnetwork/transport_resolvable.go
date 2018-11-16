@@ -17,6 +17,8 @@
 package hostnetwork
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -30,8 +32,8 @@ type TransportResolvable struct {
 }
 
 // Start listening to network requests.
-func (tr *TransportResolvable) Start() {
-	tr.internalTransport.Start()
+func (tr *TransportResolvable) Start(ctx context.Context) {
+	tr.internalTransport.Start(ctx)
 }
 
 // Stop listening to network requests.
@@ -67,7 +69,7 @@ func (tr *TransportResolvable) RegisterRequestHandler(t types.PacketType, handle
 	tr.internalTransport.RegisterPacketHandler(t, f)
 }
 
-// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
+// NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
 func (tr *TransportResolvable) NewRequestBuilder() network.RequestBuilder {
 	return tr.internalTransport.NewRequestBuilder()
 }

@@ -36,7 +36,7 @@ type FirstPhase struct {
 // Execute do first phase
 func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) error {
 	// TODO: do something here
-	_, proof, err := fp.Calculator.GetPulseProof(ctx, &merkle.PulseEntry{Pulse: pulse})
+	_, proof, err := fp.Calculator.GetPulseProof(&merkle.PulseEntry{Pulse: pulse})
 	if err != nil {
 		return errors.Wrap(err, "[Execute] Failed to calculate pulse proof.")
 	}

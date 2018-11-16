@@ -95,6 +95,8 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 	return result, nil
 }
 
+var INSATTR_RegisterNode_API = true
+
 // RegisterNode registers node in system
 func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
 	const majorityPercentage = 0.51
@@ -148,6 +150,8 @@ func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatur
 	ok := foundation.Verify(seed, signatureRaw, publicKey)
 	return ok, nil
 }
+
+var INSATTR_Authorize_API = true
 
 // Authorize checks node and returns node info
 func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {

@@ -92,7 +92,7 @@ func GetLedgerComponents(conf configuration.Ledger) []interface{} {
 		artifactmanager.NewArtifactManger(db),
 		jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator),
 		pulsemanager.NewPulseManager(db),
-		artifactmanager.NewMessageHandler(db, storage.NewRecentObjectsIndex(1)),
+		artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(1)),
 		localstorage.NewLocalStorage(db),
 	}
 }

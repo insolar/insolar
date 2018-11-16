@@ -55,7 +55,7 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 	lr.executionMutex.Lock()
 	defer lr.executionMutex.Unlock()
 	if _, ok := lr.execution[ref]; !ok {
-		lr.execution[ref] = &ExecutionState{Ref: ref}
+		lr.execution[ref] = &ExecutionState{Ref: &ref}
 	}
 	return lr.execution[ref]
 }

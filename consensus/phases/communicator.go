@@ -21,22 +21,121 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/pkg/errors"
 )
 
 // Communicator interface provides methods to exchange data between nodes
 //go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o ../../testutils/network -s _mock.go
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, participants []core.Node, pulseData packets.PulseData, packet packets.Phase1Packet) (map[core.RecordRef]packets.Phase1Packet, error)
+	ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error)
+}
+
+type phase1Result struct {
+	id     core.RecordRef
+	packet *packets.Phase1Packet
 }
 
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
 type NaiveCommunicator struct {
-	HostNetwork network.HostNetwork `inject:""`
+	ConsensusNetwork network.ConsensusNetwork `inject:""`
+	PulseHandler     network.PulseHandler     `inject:""`
+
+	phase1result chan phase1Result
+	currentPulse core.Pulse
+}
+
+// NewNaiveCommunicator constructor creates new NaiveCommunicator
+func NewNaiveCommunicator() *NaiveCommunicator {
+	return &NaiveCommunicator{}
+}
+
+// Start method implements Starter interface
+func (nc *NaiveCommunicator) Start(ctx context.Context) error {
+	nc.phase1result = make(chan phase1Result)
+	nc.ConsensusNetwork.RegisterRequestHandler(types.Phase1, nc.phase1DataHandler)
+	nc.ConsensusNetwork.RegisterRequestHandler(types.Phase2, nc.phase2DataHandler)
+	return nil
 }
 
 // ExchangeData used in first consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, pulseData packets.PulseData, packet packets.Phase1Packet) (map[core.RecordRef]packets.Phase1Packet, error) {
-	panic("implement me")
+func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
+	phase1result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
+
+	phase1result[nc.ConsensusNetwork.GetNodeID()] = &packet
+
+	nc.currentPulse = packet.GetPulse() // todo check
+	packetBuffer, err := packet.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ExchangeData] Failed to serialize Phase1Packet.")
+	}
+
+	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
+	request := requestBuilder.Type(types.Phase1).Data(packetBuffer).Build()
+
+	for _, node := range participants {
+		err := nc.ConsensusNetwork.SendRequest(request, node.ID())
+		if err != nil {
+			log.Errorln(err.Error())
+		}
+	}
+
+	log.Infof("phase1result len %d", len(phase1result))
+	select {
+	case res := <-nc.phase1result:
+		if res.packet.GetPulse().PulseNumber == nc.currentPulse.PulseNumber {
+
+			if val, ok := phase1result[res.id]; !ok || val == nil {
+				// send response
+				err := nc.ConsensusNetwork.SendRequest(request, res.id)
+				if err != nil {
+					log.Errorln(err.Error())
+				}
+			}
+			phase1result[res.id] = res.packet
+
+		}
+		if len(phase1result) == len(participants) {
+			return phase1result, nil
+		}
+	case <-ctx.Done():
+		return phase1result, nil
+	}
+
+	return phase1result, nil
+}
+
+func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
+	if request.GetType() != types.Phase1 {
+		log.Warn("Wrong handler for request type: ", request.GetType().String())
+		return
+	}
+
+	p, ok := request.GetData().(*packets.Phase1Packet)
+	if !ok {
+		log.Errorln("invalid Phase1Packet")
+		return
+	}
+	newPulse := p.GetPulse()
+	if newPulse.PulseNumber < nc.currentPulse.PulseNumber {
+		log.Warnln("ignore old pulse")
+		return
+	}
+
+	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
+		nc.currentPulse = newPulse
+		go nc.PulseHandler.HandlePulse(context.Background(), newPulse)
+	}
+
+	nc.phase1result <- phase1Result{request.GetSender(), p}
+}
+
+func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
+	if request.GetType() != types.Phase2 {
+		log.Warn("Wrong handler for request type: ", request.GetType().String())
+		return
+	}
 }
