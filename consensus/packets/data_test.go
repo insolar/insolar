@@ -467,11 +467,11 @@ func checkExtractPacket(t *testing.T, packet Serializer) {
 }
 
 func TestExtractPacket_Phase1(t *testing.T) {
-	checkExtractPacket(t, makePhase2Packet())
+	checkExtractPacket(t, makePhase1Packet())
 }
 
 func TestExtractPacket_Phase2(t *testing.T) {
-	checkExtractPacket(t, makePhase1Packet())
+	checkExtractPacket(t, makePhase2Packet())
 }
 
 func TestExtractPacket_BadHeader(t *testing.T) {

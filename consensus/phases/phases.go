@@ -41,8 +41,12 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) error {
 		return errors.Wrap(err, "[Execute] Failed to calculate pulse proof.")
 	}
 
+	var claim packets.ReferendumClaim
+	claim.Length()
+
 	p := packets.Phase1Packet{}
-	err = p.SetPulseProof(proof.StateHash, proof.Signature)
+	p.
+		err = p.SetPulseProof(proof.StateHash, proof.Signature)
 	if err != nil {
 		return errors.Wrap(err, "[Execute] Failed to set pulse proof in Phase1Packet.")
 	}

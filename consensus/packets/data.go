@@ -18,6 +18,7 @@ package packets
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
@@ -37,6 +38,14 @@ const (
 	TypeNodeViolationBlame
 	TypeNodeBroadcast
 	TypeNodeLeaveClaim
+)
+
+// phase1PacketMaxSize should be less then MTU
+const phase1PacketMaxSize = 1400
+
+var (
+	phase1PacketSizeWithoutClaims int
+	claimSizeMap                  map[ClaimType]int
 )
 
 // ----------------------------------PHASE 1--------------------------------
@@ -313,4 +322,24 @@ func (phase2Packet *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header.TargetID = phase2Packet.packetHeader.TargetNodeID
 
 	return header, nil
+}
+
+// init packets and claims size variables
+func init() {
+	sizeOf := func(s Serializer) int {
+		data, err := s.Serialize()
+		if err != nil {
+			log.Fatalln("Failed to init packets package: ", err.Error())
+		}
+		return len(data)
+	}
+
+	phase1PacketSizeWithoutClaims = sizeOf(&Phase1Packet{})
+	claimSizeMap = make(map[ClaimType]int, 5)
+
+	claimSizeMap[TypeNodeJoinClaim] = sizeOf(&NodeJoinClaim{})
+	claimSizeMap[TypeCapabilityPollingAndActivation] = sizeOf(&CapabilityPoolingAndActivation{})
+	claimSizeMap[TypeNodeViolationBlame] = sizeOf(&NodeViolationBlame{})
+	claimSizeMap[TypeNodeBroadcast] = sizeOf(&NodeBroadcast{})
+	claimSizeMap[TypeNodeLeaveClaim] = sizeOf(&NodeLeaveClaim{})
 }
