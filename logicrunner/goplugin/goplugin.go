@@ -69,9 +69,10 @@ func NewGoPlugin(conf *configuration.LogicRunner, eb core.MessageBus, am core.Ar
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() error {
-	// WTF??
 	return nil
 }
+
+const timeout = time.Minute * 10
 
 // downstream returns a connection to `ginsider`
 func (gp *GoPlugin) downstream(ctx context.Context) (*rpc.Client, error) {
@@ -123,17 +124,15 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 	return err
 }
 
+type callMethodResult struct {
+	Response rpctypes.DownCallMethodResp
+	Error    error
+}
+
 func (gp *GoPlugin) callMethodRPC(ctx context.Context, req rpctypes.DownCallMethodReq, res rpctypes.DownCallMethodResp, resultChan chan callMethodResult) {
 	method := "RPC.CallMethod"
 	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
 	resultChan <- callMethodResult{Response: res, Error: callClientError}
-}
-
-const timeout = time.Minute * 10
-
-type callMethodResult struct {
-	Response rpctypes.DownCallMethodResp
-	Error    error
 }
 
 // CallMethod runs a method on an object in controlled environment
