@@ -174,33 +174,6 @@ type NodeKeeper interface {
 	MoveSyncToActive(number core.PulseNumber)
 }
 
-type UnsyncList interface {
-	// GetUnsync returns list of local unsync nodes. This list is created.
-	GetUnsync() []core.Node
-	// GetPulse returns actual pulse for current consensus process.
-	GetPulse() core.PulseNumber
-	// SetHash sets hash of unsync lists for each node of consensus.
-	SetHash([]*NodeUnsyncHash)
-	// GetHash get hash of unsync lists for each node of  If hash is not calculated yet, then this call blocks
-	// until the hash is calculated with SetHash() call.
-	GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error)
-	// AddUnsyncList add unsync list for remote ref.
-	AddUnsyncList(ref core.RecordRef, unsync []core.Node)
-	// AddUnsyncHash add unsync hash for remote ref.
-	AddUnsyncHash(ref core.RecordRef, hash []*NodeUnsyncHash)
-	// GetUnsyncList get unsync list for remote ref.
-	GetUnsyncList(ref core.RecordRef) ([]core.Node, bool)
-	// GetUnsyncHash get unsync hash for remote ref.
-	GetUnsyncHash(ref core.RecordRef) ([]*NodeUnsyncHash, bool)
-}
-
-// NodeUnsyncHash data needed for consensus.
-type NodeUnsyncHash struct {
-	NodeID core.RecordRef
-	Hash   []byte
-	// TODO: add signature
-}
-
 // PartitionPolicy contains all rules how to initiate globule resharding.
 type PartitionPolicy interface {
 	ShardsCount() int
