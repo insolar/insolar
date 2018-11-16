@@ -217,7 +217,10 @@ func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 		if err != nil {
 			return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read Section 2")
 		}
-		data.Read(read)
+		_, err = data.Read(read)
+		if err != nil {
+			return errors.Wrap(err, "failed to read raw data")
+		}
 	}
 
 	p1p.Signature = make([]byte, SignatureLength)

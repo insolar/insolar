@@ -98,7 +98,10 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, reques
 // ExchangePhase1 used in first consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
-	nc.signPhase1Packet(&packet)
+	err := nc.signPhase1Packet(&packet)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign phase 1 packet")
+	}
 
 	result[nc.ConsensusNetwork.GetNodeID()] = &packet
 
