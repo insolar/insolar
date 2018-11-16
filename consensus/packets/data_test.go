@@ -254,16 +254,16 @@ func TestPhase1Packet_SetPulseProof(t *testing.T) {
 	err := p.SetPulseProof(proofStateHash, proofSignature)
 	assert.NoError(t, err)
 
-	assert.Equal(t, proofStateHash, p.proofNodePulse.NodeStateHash[:])
-	assert.Equal(t, proofSignature, p.proofNodePulse.NodeSignature[:])
+	assert.Equal(t, proofStateHash, p.ProofNodePulse.NodeStateHash[:])
+	assert.Equal(t, proofSignature, p.ProofNodePulse.NodeSignature[:])
 
 	invalidStateHash := genRandomSlice(32)
 	invalidSignature := genRandomSlice(128)
 	err = p.SetPulseProof(invalidStateHash, invalidSignature)
 	assert.Error(t, err)
 
-	assert.NotEqual(t, invalidStateHash, p.proofNodePulse.NodeStateHash[:])
-	assert.NotEqual(t, invalidSignature, p.proofNodePulse.NodeSignature[:])
+	assert.NotEqual(t, invalidStateHash, p.ProofNodePulse.NodeStateHash[:])
+	assert.NotEqual(t, invalidSignature, p.ProofNodePulse.NodeSignature[:])
 
 }
 
@@ -400,16 +400,16 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 }
 
 func makePhase1Packet() *Phase1Packet {
-	phase1Packet := &Phase1Packet{}
-	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
-	phase1Packet.pulseData = *makeDefaultPulseDataExt()
-	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray64(), NodeStateHash: randomArray64()}
+	phase1Packet := NewPhase1Packet()
+	phase1Packet.PacketHeader = *makeDefaultPacketHeader(Phase1)
+	phase1Packet.PulseData = *makeDefaultPulseDataExt()
+	phase1Packet.ProofNodePulse = NodePulseProof{NodeSignature: randomArray64(), NodeStateHash: randomArray64()}
 
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeJoinClaim())
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeViolationBlame())
 	phase1Packet.claims = append(phase1Packet.claims, &NodeLeaveClaim{length: 22})
 
-	phase1Packet.signature = 987
+	phase1Packet.Signature = genRandomSlice(71)
 
 	return phase1Packet
 }
@@ -427,12 +427,12 @@ func TestPhase1Packet_BadData(t *testing.T) {
 }
 
 func makePhase2Packet() *Phase2Packet {
-	phase2Packet := &Phase2Packet{}
-	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
-	phase2Packet.globuleHashSignature = randomArray64()
-	phase2Packet.deviantBitSet = *makeDeviantBitSet()
-	phase2Packet.signatureHeaderSection1 = randomArray64()
-	phase2Packet.signatureHeaderSection2 = randomArray64()
+	phase2Packet := NewPhase2Packet()
+	phase2Packet.PacketHeader = *makeDefaultPacketHeader(Phase2)
+	phase2Packet.GlobuleHashSignature = genRandomSlice(71)
+	phase2Packet.DeviantBitSet = *makeDeviantBitSet()
+	phase2Packet.SignatureHeaderSection1 = genRandomSlice(71)
+	phase2Packet.SignatureHeaderSection2 = genRandomSlice(71)
 
 	// TODO: uncomment when support ser\deser of ReferendumVote
 	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
@@ -491,12 +491,12 @@ func checkWrongPacket(t *testing.T, packet Serializer) {
 
 func TestExtractPacket_Phase2_BadExtract(t *testing.T) {
 	packet := makePhase2Packet()
-	packet.packetHeader.PacketT = Phase1
+	packet.PacketHeader.PacketT = Phase1
 	checkWrongPacket(t, packet)
 }
 
 func TestExtractPacket_Phase1_BadExtract(t *testing.T) {
 	packet := makePhase1Packet()
-	packet.packetHeader.PacketT = Phase2
+	packet.PacketHeader.PacketT = Phase2
 	checkWrongPacket(t, packet)
 }
