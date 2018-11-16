@@ -27,6 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const TestBadCert = "testdata/bad_keys.json"
+
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhase{}
 	nodeNetworkMock := network.NewNodeNetworkMock(t)

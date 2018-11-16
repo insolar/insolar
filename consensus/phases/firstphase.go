@@ -46,40 +46,6 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) error {
 	if err != nil {
 		return errors.Wrap(err, "[Execute] Failed to set pulse proof in Phase1Packet.")
 	}
-
-	//TODO: fp.Communicator.ExchangeData(ctx, p.,)
-	return nil
-}
-
-// SecondPhase is a second phase.
-type SecondPhase struct {
-	NodeNetwork core.NodeNetwork `inject:""`
-	State       *SecondPhaseState
-}
-
-func (sp *SecondPhase) Execute(state *FirstPhaseState) error {
-	// TODO: do something here
-	return nil
-}
-
-// ThirdPhasePulse.
-type ThirdPhasePulse struct {
-	NodeNetwork core.NodeNetwork `inject:""`
-	State       *ThirdPhasePulseState
-}
-
-func (tpp *ThirdPhasePulse) Execute(state *SecondPhaseState) error {
-	// TODO: do something here
-	return nil
-}
-
-// ThirdPhaseReferendum.
-type ThirdPhaseReferendum struct {
-	NodeNetwork core.NodeNetwork `inject:""`
-	State       *ThirdPhaseReferendumState
-}
-
-func (tpr *ThirdPhaseReferendum) Execute(state *SecondPhaseState) error {
-	// TODO: do something here
+	// TODO: fp.Communicator.ExchangeData(ctx, p.,)
 	return nil
 }
