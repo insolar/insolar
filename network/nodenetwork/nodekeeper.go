@@ -110,6 +110,9 @@ type nodekeeper struct {
 	state  nodekeeperState
 	pulse  core.PulseNumber
 
+	cloudHashLock sync.RWMutex
+	cloudHash     []byte
+
 	activeLock   sync.RWMutex
 	active       map[core.RecordRef]core.Node
 	indexNode    map[core.NodeRole][]core.RecordRef
@@ -136,6 +139,20 @@ func (nk *nodekeeper) GetOrigin() core.Node {
 	defer nk.activeLock.RUnlock()
 
 	return nk.origin
+}
+
+func (nk *nodekeeper) GetCloudHash() []byte {
+	nk.cloudHashLock.RLock()
+	defer nk.cloudHashLock.RUnlock()
+
+	return nk.cloudHash
+}
+
+func (nk *nodekeeper) SetCloudHash(cloudHash []byte) {
+	nk.cloudHashLock.Lock()
+	defer nk.cloudHashLock.Unlock()
+
+	nk.cloudHash = cloudHash
 }
 
 func (nk *nodekeeper) GetActiveNodes() []core.Node {

@@ -21,6 +21,7 @@ import (
 	"context"
 	"net/rpc"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -50,7 +51,9 @@ type GoPlugin struct {
 	MessageBus      core.MessageBus
 	ArtifactManager core.ArtifactManager
 	runner          *exec.Cmd
-	client          *rpc.Client
+
+	clientMutex sync.Mutex
+	client      *rpc.Client
 }
 
 // NewGoPlugin returns a new started GoPlugin
@@ -69,8 +72,13 @@ func (gp *GoPlugin) Stop() error {
 	return nil
 }
 
-// Downstream returns a connection to `ginsider`
-func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
+const timeout = time.Minute * 10
+
+// downstream returns a connection to `ginsider`
+func (gp *GoPlugin) downstream(ctx context.Context) (*rpc.Client, error) {
+	gp.clientMutex.Lock()
+	defer gp.clientMutex.Unlock()
+
 	if gp.client != nil {
 		return gp.client, nil
 	}
@@ -87,7 +95,45 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 	return gp.client, nil
 }
 
-const timeout = time.Minute * 10
+func (gp *GoPlugin) closeDownstream() {
+	gp.clientMutex.Lock()
+	defer gp.clientMutex.Unlock()
+
+	gp.client.Close()
+	gp.client = nil
+}
+
+func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, req interface{}, res interface{}) error {
+	var err error
+	var client *rpc.Client
+
+	for {
+		client, err = gp.downstream(ctx)
+		if err == nil {
+			call := <-client.Go(method, req, res, nil).Done
+			err = call.Error
+
+			if err != rpc.ErrShutdown {
+				break
+			} else {
+				gp.closeDownstream()
+			}
+		}
+	}
+
+	return err
+}
+
+type callMethodResult struct {
+	Response rpctypes.DownCallMethodResp
+	Error    error
+}
+
+func (gp *GoPlugin) callMethodRPC(ctx context.Context, req rpctypes.DownCallMethodReq, res rpctypes.DownCallMethodResp, resultChan chan callMethodResult) {
+	method := "RPC.CallMethod"
+	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
+	resultChan <- callMethodResult{Response: res, Error: callClientError}
+}
 
 // CallMethod runs a method on an object in controlled environment
 func (gp *GoPlugin) CallMethod(
@@ -98,10 +144,6 @@ func (gp *GoPlugin) CallMethod(
 	[]byte, core.Arguments, error,
 ) {
 	start := time.Now()
-	client, err := gp.Downstream()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "problem with rpc connection")
-	}
 
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{
@@ -112,16 +154,30 @@ func (gp *GoPlugin) CallMethod(
 		Arguments: args,
 	}
 
+	resultChan := make(chan callMethodResult)
+	go gp.callMethodRPC(ctx, req, res, resultChan)
+
 	select {
-	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
+	case callResult := <-resultChan:
 		inslogger.FromContext(ctx).Debugf("CallMethod done work, time spend in here - %s", time.Since(start))
-		if call.Error != nil {
-			return nil, nil, errors.Wrap(call.Error, "problem with API call")
+		if callResult.Error != nil {
+			return nil, nil, errors.Wrap(callResult.Error, "problem with API call")
 		}
+		return callResult.Response.Data, callResult.Response.Ret, nil
 	case <-time.After(timeout):
 		return nil, nil, errors.New("logicrunner execution timeout")
 	}
-	return res.Data, res.Ret, nil
+}
+
+type callConstructorResult struct {
+	Response rpctypes.DownCallConstructorResp
+	Error    error
+}
+
+func (gp *GoPlugin) callConstructorRPC(ctx context.Context, req rpctypes.DownCallConstructorReq, res rpctypes.DownCallConstructorResp, resultChan chan callConstructorResult) {
+	method := "RPC.CallConstructor"
+	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
+	resultChan <- callConstructorResult{Response: res, Error: callClientError}
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
@@ -131,10 +187,6 @@ func (gp *GoPlugin) CallConstructor(
 ) (
 	[]byte, error,
 ) {
-	client, err := gp.Downstream()
-	if err != nil {
-		return nil, errors.Wrap(err, "problem with rpc connection")
-	}
 
 	res := rpctypes.DownCallConstructorResp{}
 	req := rpctypes.DownCallConstructorReq{
@@ -144,13 +196,16 @@ func (gp *GoPlugin) CallConstructor(
 		Arguments: args,
 	}
 
+	resultChan := make(chan callConstructorResult)
+	go gp.callConstructorRPC(ctx, req, res, resultChan)
+
 	select {
-	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:
-		if call.Error != nil {
-			return nil, errors.Wrap(call.Error, "problem with API call")
+	case callResult := <-resultChan:
+		if callResult.Error != nil {
+			return nil, errors.Wrap(callResult.Error, "problem with API call")
 		}
+		return callResult.Response.Ret, nil
 	case <-time.After(timeout):
 		return nil, errors.New("logicrunner execution timeout")
 	}
-	return res.Ret, nil
 }

@@ -61,7 +61,7 @@ func (t *calculatorHashesSuite) TestGetGlobuleHash() {
 			t.nodeNetwork.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
-		GlobuleIndex:  0,
+		GlobuleID:     0,
 	}
 	gh, _, err := t.calculator.GetGlobuleProof(globuleEntry)
 	t.Assert().NoError(err)
@@ -89,7 +89,7 @@ func (t *calculatorHashesSuite) TestGetCloudHash() {
 			t.nodeNetwork.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
-		GlobuleIndex:  0,
+		GlobuleID:     0,
 	}
 	_, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
 
