@@ -36,10 +36,7 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-var (
-	scopeIDLifeline = byte(1)
-	scopeIDRecord   = byte(2)
-)
+func pulseDelta(n int) core.PulseNumber { return core.PulseNumber(core.FirstPulseNumber + n) }
 
 func Test_StoreKeyValues(t *testing.T) {
 	t.Parallel()
@@ -55,12 +52,13 @@ func Test_StoreKeyValues(t *testing.T) {
 	func() {
 		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 		defer cleaner()
-		for i := 1; i <= pulsescount; i++ {
-			addRecords(ctx, t, db, core.PulseNumber(i))
+		for n := 0; n < pulsescount; n++ {
+			addRecords(ctx, t, db, core.PulseNumber(pulseDelta(n)))
 		}
 
-		for n := 1; n <= pulsescount; n++ {
-			replicator := storage.NewReplicaIter(ctx, db, core.PulseNumber(n), 99)
+		for n := 0; n < pulsescount; n++ {
+			start, end := pulseDelta(n), pulseDelta(n+1)
+			replicator := storage.NewReplicaIter(ctx, db, start, end, 99)
 
 			for i := 0; ; i++ {
 				recs, err := replicator.NextRecords()
@@ -88,8 +86,8 @@ func Test_StoreKeyValues(t *testing.T) {
 		gotrecs, gotidxs = getallkeys(db.GetBadgerDB())
 	}()
 
-	require.Equal(t, expectedrecs, gotrecs)
-	require.Equal(t, expectedidxs, gotidxs)
+	require.Equal(t, expectedrecs, gotrecs, "records are the same after restore")
+	require.Equal(t, expectedidxs, gotidxs, "indexes are the same after restore")
 }
 
 func Test_ReplicaIter(t *testing.T) {
@@ -97,6 +95,9 @@ func Test_ReplicaIter(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer cleaner()
+
+	var lastPulse core.PulseNumber
+	pulsescount := 2
 
 	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
 	require.Nil(t, recsBefore)
@@ -107,8 +108,9 @@ func Test_ReplicaIter(t *testing.T) {
 	tt := make(map[int][]string)
 
 	recordsPerPulse := make(map[int][]string)
-	for i := 1; i < 3; i++ {
-		addRecords(ctx, t, db, core.PulseNumber(i))
+	for i := 0; i < pulsescount; i++ {
+		lastPulse = pulseDelta(i)
+		addRecords(ctx, t, db, lastPulse)
 		recs, _ := getallkeys(db.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
 		recsBefore = recs
@@ -116,8 +118,8 @@ func Test_ReplicaIter(t *testing.T) {
 		recordsPerPulse[i] = recKeys
 	}
 	_, idxsAfter := getallkeys(db.GetBadgerDB())
-	for i := 1; i < 3; i++ {
-		for j := i; j < 3; j++ {
+	for i := 0; i < pulsescount; i++ {
+		for j := i; j < pulsescount; j++ {
 			tt[i] = append(tt[i], recordsPerPulse[j]...)
 		}
 		tt[i] = append(tt[i], idxsAfter...)
@@ -129,9 +131,11 @@ func Test_ReplicaIter(t *testing.T) {
 	maxsize := 512
 	atLeastIterations := 2
 
-	for n := 1; n < 3; n++ {
-		fmt.Println("=================== Pulse:", n, " ====================")
-		replicator := storage.NewReplicaIter(ctx, db, core.PulseNumber(n), maxsize)
+	lastPulse = lastPulse + 1
+	for n := 0; n < pulsescount; n++ {
+		p := pulseDelta(n)
+		fmt.Println("=================== Pulse:", p, " ====================")
+		replicator := storage.NewReplicaIter(ctx, db, p, lastPulse, maxsize)
 		var got []string
 
 		iterations := 0
@@ -160,7 +164,8 @@ func Test_ReplicaIter(t *testing.T) {
 
 		sort.Strings(tt[n])
 		sort.Strings(got)
-		require.Equal(t, tt[n], got)
+		require.Equalf(t, tt[n], got,
+			"get expected records on pulse diapasone [%v:%v]", p, lastPulse)
 	}
 }
 
@@ -226,7 +231,11 @@ CHECKIFCONTAINS:
 	return
 }
 
-// strip namesapce
+var (
+	scopeIDLifeline = byte(1)
+	scopeIDRecord   = byte(2)
+)
+
 func getallkeys(db *badger.DB) (records []string, indexes []string) {
 	txn := db.NewTransaction(true)
 	defer txn.Discard()

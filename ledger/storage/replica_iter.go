@@ -28,8 +28,9 @@ import (
 
 // iterstate stores iterator state
 type iterstate struct {
-	start  []byte
 	prefix []byte
+	start  []byte
+	end    []byte
 }
 
 // ReplicaIter provides partial iterator over BadgerDB key/value pairs
@@ -48,21 +49,47 @@ type ReplicaIter struct {
 	db         *DB
 	limitBytes int
 	istates    []*iterstate
+	lastpulse  core.PulseNumber
 }
 
-// NewReplicaIter creates ReplicaIter started from provided pulse number with per iteration fetch limit.
-func NewReplicaIter(ctx context.Context, db *DB, pulsenum core.PulseNumber, limit int) *ReplicaIter {
+// NewReplicaIter creates ReplicaIter what iterates over records
+// required for heavy material replication.
+//
+// Params 'start' and 'end' defines pulses from which one scan should happen,
+// and on which one it should be stopped, but indexes scan are always started
+// from core.FirstPulseNumber.
+//
+// Param 'limit' sets per message limit.
+func NewReplicaIter(
+	ctx context.Context,
+	db *DB,
+	start core.PulseNumber,
+	end core.PulseNumber,
+	limit int,
+) *ReplicaIter {
 	recordsPrefix := []byte{scopeIDRecord}
-	recordsStart := bytes.Join([][]byte{recordsPrefix, pulsenum.Bytes()}, nil)
+	recordsIter := &iterstate{
+		prefix: recordsPrefix,
+		start:  bytes.Join([][]byte{recordsPrefix, start.Bytes()}, nil),
+		end:    bytes.Join([][]byte{recordsPrefix, end.Bytes()}, nil),
+	}
+
+	firstpulse := core.PulseNumber(core.FirstPulseNumber)
 	indexesPrefix := []byte{scopeIDLifeline}
+	indexesIter := &iterstate{
+		prefix: indexesPrefix,
+		start:  bytes.Join([][]byte{indexesPrefix, firstpulse.Bytes()}, nil),
+		end:    bytes.Join([][]byte{indexesPrefix, end.Bytes()}, nil),
+	}
+
 	return &ReplicaIter{
 		ctx:        ctx,
 		db:         db,
 		limitBytes: limit,
 
 		istates: []*iterstate{
-			&iterstate{recordsStart, recordsPrefix},
-			&iterstate{indexesPrefix, indexesPrefix},
+			recordsIter,
+			indexesIter,
 		},
 	}
 }
@@ -81,12 +108,21 @@ func (r *ReplicaIter) NextRecords() ([]core.KV, error) {
 			continue
 		}
 		var fetcherr error
-		is.start, fetcherr = fc.fetch(r.ctx, is.prefix, is.start)
+		var lastpulse core.PulseNumber
+		is.start, lastpulse, fetcherr = fc.fetch(r.ctx, is.prefix, is.start, is.end)
 		if fetcherr != nil {
 			return nil, fetcherr
 		}
+		if lastpulse > r.lastpulse {
+			r.lastpulse = lastpulse
+		}
 	}
 	return fc.records, nil
+}
+
+// LastPulse returns maximum pulse number of returned keys after each fetch.
+func (r *ReplicaIter) LastPulse() core.PulseNumber {
+	return r.lastpulse
 }
 
 // ErrReplicatorDone is returned by an Replicator NextRecords method when the iteration is complete.
@@ -108,17 +144,26 @@ type fetchchunk struct {
 	limit   int
 }
 
-func (fc *fetchchunk) fetch(ctx context.Context, prefix []byte, start []byte) ([]byte, error) {
+func (fc *fetchchunk) fetch(
+	ctx context.Context,
+	prefix []byte,
+	start []byte,
+	end []byte,
+) ([]byte, core.PulseNumber, error) {
 	if fc.size > fc.limit {
-		return start, nil
+		return start, 0, nil
 	}
 
 	var nextstart []byte
+	var lastpulse core.PulseNumber
 	err := fc.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 
 		for it.Seek(start); it.ValidForPrefix(prefix); it.Next() {
+			if it.ValidForPrefix(end) {
+				break
+			}
 			item := it.Item()
 			if item == nil {
 				break
@@ -131,6 +176,9 @@ func (fc *fetchchunk) fetch(ctx context.Context, prefix []byte, start []byte) ([
 				return nil
 			}
 
+			lastpulse = core.NewPulseNumber(key[1 : 1+core.PulseNumberSize])
+			// fmt.Printf("key: %v (pulse=%v)\n", hex.EncodeToString(key), lastpulse)
+
 			value, err := it.Item().ValueCopy(nil)
 			if err != nil {
 				return err
@@ -141,5 +189,5 @@ func (fc *fetchchunk) fetch(ctx context.Context, prefix []byte, start []byte) ([
 		nextstart = nil
 		return nil
 	})
-	return nextstart, err
+	return nextstart, lastpulse, err
 }
