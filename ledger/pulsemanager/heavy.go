@@ -9,14 +9,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-var (
-	kb = 1 << 10 // 1024 bytes
-	mb = 1 << 20 // 1 megabyte
-)
-
-// TODO: configure maxsize in PulseManager constructor.
-var maxsize = kb * 512
-
 // HeavySync syncs records from light to heavy node, returns last synced pulse and error.
 //
 // It syncs records from start to end of provided pulse numbers.
@@ -25,7 +17,8 @@ func (m *PulseManager) HeavySync(
 	start core.PulseNumber,
 	end core.PulseNumber,
 ) (core.PulseNumber, error) {
-	replicator := storage.NewReplicaIter(ctx, m.db, start, end, maxsize)
+	replicator := storage.NewReplicaIter(
+		ctx, m.db, start, end, m.options.syncmessagelimit)
 	for i := 0; ; i++ {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {

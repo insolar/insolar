@@ -42,13 +42,43 @@ type PulseManager struct {
 	gotpulse chan struct{}
 	// syncdone closes then sync is over
 	syncdone chan struct{}
+	// stores pulse manager options
+	options pmOptions
+}
+
+type pmOptions struct {
+	enablesync       bool
+	syncmessagelimit int
+}
+
+// Option provides functional option for TmpDB.
+type Option func(*pmOptions)
+
+// EnableSync defines is sync to heavy enabled or not.
+// (suitable for tests)
+func EnableSync(flag bool) Option {
+	return func(opts *pmOptions) {
+		opts.enablesync = flag
+	}
+}
+
+// SyncMessageLimit sets soft limit in bytes for sync message size.
+func SyncMessageLimit(size int) Option {
+	return func(opts *pmOptions) {
+		opts.syncmessagelimit = size
+	}
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB) *PulseManager {
+func NewPulseManager(db *storage.DB, options ...Option) *PulseManager {
+	opts := &pmOptions{}
+	for _, o := range options {
+		o(opts)
+	}
 	return &PulseManager{
 		db:       db,
 		gotpulse: make(chan struct{}, 1),
+		options:  *opts,
 	}
 }
 
@@ -165,7 +195,9 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		return err
 	}
 	m.syncdone = make(chan struct{})
-	go m.syncloop(ctx, startPN, endPN)
+	if m.options.enablesync {
+		go m.syncloop(ctx, startPN, endPN)
+	}
 	return nil
 }
 
@@ -176,9 +208,11 @@ func (m *PulseManager) Stop(ctx context.Context) error {
 	m.stopped = true
 	m.setLock.Unlock()
 
-	close(m.gotpulse)
-	inslogger.FromContext(ctx).Info("waiting finish of replication to heavy node...")
-	<-m.syncdone
+	if m.options.enablesync {
+		close(m.gotpulse)
+		inslogger.FromContext(ctx).Info("waiting finish of replication to heavy node...")
+		<-m.syncdone
+	}
 	return nil
 }
 

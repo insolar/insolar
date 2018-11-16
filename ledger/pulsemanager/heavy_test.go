@@ -79,7 +79,12 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	}
 
 	// build PulseManager
-	pm := pulsemanager.NewPulseManager(db)
+	kb := 1 << 10
+	pm := pulsemanager.NewPulseManager(
+		db,
+		pulsemanager.EnableSync(true),
+		pulsemanager.SyncMessageLimit(2*kb),
+	)
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
 	pm.Bus = busMock
