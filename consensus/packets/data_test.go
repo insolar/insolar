@@ -76,7 +76,7 @@ func TestPacketHeaderReadWrite(t *testing.T) {
 
 func TestPacketHeaderReadWrite_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(Phase1),
-		"[ packetHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
+		"[ PacketHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
 }
 
 func makeDefaultPulseDataExt() *PulseDataExt {
@@ -427,7 +427,7 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 func TestPhase1Packet_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makePhase1Packet(),
 		"[ Phase1Packet.Deserialize ] Can't deserialize body: [ Phase1Packet.DeserializeWithoutHeader ] "+
-			"Can't parseReferendumClaim: [ packetHeader.parseReferendumClaim ] "+
+			"Can't parseReferendumClaim: [ PacketHeader.parseReferendumClaim ] "+
 			"Can't deserialize claim: [ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 
 }

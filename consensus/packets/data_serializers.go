@@ -118,7 +118,7 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 		var claimHeader uint16
 		err := binary.Read(claimsBufReader, defaultByteOrder, &claimHeader)
 		if err != nil {
-			return errors.Wrap(err, "[ packetHeader.parseReferendumClaim ] Can't read claimHeader")
+			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't read claimHeader")
 		}
 
 		claimType := ClaimType(extractClaimTypeFromHeader(claimHeader))
@@ -140,7 +140,7 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 		}
 		err = refClaim.Deserialize(claimsBufReader)
 		if err != nil {
-			return errors.Wrap(err, "[ packetHeader.parseReferendumClaim ] Can't deserialize claim")
+			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't deserialize claim")
 		}
 		p1p.claims = append(p1p.claims, refClaim)
 
@@ -148,7 +148,7 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 	}
 
 	if claimsSize != 0 {
-		return errors.New("[ packetHeader.parseReferendumClaim ] Problem with claims struct")
+		return errors.New("[ PacketHeader.parseReferendumClaim ] Problem with claims struct")
 	}
 
 	return nil
@@ -160,18 +160,18 @@ func (p1p *Phase1Packet) compactReferendumClaim() ([]byte, error) {
 		claimHeader := makeClaimHeader(claim)
 		err := binary.Write(result, defaultByteOrder, claimHeader)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("[ packetHeader.compactReferendumClaim ] "+
+			return nil, errors.Wrap(err, fmt.Sprintf("[ PacketHeader.compactReferendumClaim ] "+
 				"Can't write claim header. Type: %d. Length: %d", claim.Type(), claim.Length()))
 		}
 
 		rawClaim, err := claim.Serialize()
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("[ packetHeader.compactReferendumClaim ] "+
+			return nil, errors.Wrap(err, fmt.Sprintf("[ PacketHeader.compactReferendumClaim ] "+
 				"Can't serialize claim. Type: %d. Length: %d", claim.Type(), claim.Length()))
 		}
 		_, err = result.Write(rawClaim)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("[ packetHeader.compactReferendumClaim ] "+
+			return nil, errors.Wrap(err, fmt.Sprintf("[ PacketHeader.compactReferendumClaim ] "+
 				"Can't append proofNodePulseRaw."+"Type: %d. Length: %d", claim.Type(), claim.Length()))
 		}
 	}
@@ -235,7 +235,7 @@ func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
 	err := p1p.packetHeader.Deserialize(data)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize packetHeader")
+		return errors.Wrap(err, "[ Phase1Packet.Deserialize ] Can't deserialize PacketHeader")
 	}
 
 	err = p1p.DeserializeWithoutHeader(data, &p1p.packetHeader)
@@ -270,11 +270,11 @@ func (p1p *Phase1Packet) RawBytes() ([]byte, error) {
 	// serializing of  packetHeader
 	packetHeaderRaw, err := p1p.packetHeader.Serialize()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't serialize packetHeader")
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't serialize PacketHeader")
 	}
 	_, err = result.Write(packetHeaderRaw)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append packetHeader")
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append PacketHeader")
 	}
 
 	// serializing of  pulseData
@@ -320,25 +320,25 @@ func (ph *PacketHeader) Deserialize(data io.Reader) error {
 	var routInfo uint8
 	err := binary.Read(data, defaultByteOrder, &routInfo)
 	if err != nil {
-		return errors.Wrap(err, "[ packetHeader.Deserialize ] Can't read routInfo")
+		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read routInfo")
 	}
 	ph.parseRouteInfo(routInfo)
 
 	var pulseAndCustomFlags uint32
 	err = binary.Read(data, defaultByteOrder, &pulseAndCustomFlags)
 	if err != nil {
-		return errors.Wrap(err, "[ packetHeader.Deserialize ] Can't read pulseAndCustomFlags")
+		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read pulseAndCustomFlags")
 	}
 	ph.parsePulseAndCustomFlags(pulseAndCustomFlags)
 
 	err = binary.Read(data, defaultByteOrder, &ph.OriginNodeID)
 	if err != nil {
-		return errors.Wrap(err, "[ packetHeader.Deserialize ] Can't read OriginNodeID")
+		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read OriginNodeID")
 	}
 
 	err = binary.Read(data, defaultByteOrder, &ph.TargetNodeID)
 	if err != nil {
-		return errors.Wrap(err, "[ packetHeader.Deserialize ] Can't read TargetNodeID")
+		return errors.Wrap(err, "[ PacketHeader.Deserialize ] Can't read TargetNodeID")
 	}
 
 	return nil
@@ -350,23 +350,23 @@ func (ph *PacketHeader) Serialize() ([]byte, error) {
 	routeInfo := ph.compactRouteInfo()
 	err := binary.Write(result, defaultByteOrder, routeInfo)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ packetHeader.Serialize ] Can't write routeInfo")
+		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't write routeInfo")
 	}
 
 	pulseAndCustomFlags := ph.compactPulseAndCustomFlags()
 	err = binary.Write(result, defaultByteOrder, pulseAndCustomFlags)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ packetHeader.Serialize ] Can't write pulseAndCustomFlags")
+		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't write pulseAndCustomFlags")
 	}
 
 	err = binary.Write(result, defaultByteOrder, ph.OriginNodeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ packetHeader.Serialize ] Can't write OriginNodeID")
+		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't write OriginNodeID")
 	}
 
 	err = binary.Write(result, defaultByteOrder, ph.TargetNodeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ packetHeader.Serialize ] Can't write TargetNodeID")
+		return nil, errors.Wrap(err, "[ PacketHeader.Serialize ] Can't write TargetNodeID")
 	}
 
 	return result.Bytes(), nil
@@ -946,7 +946,7 @@ func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, heade
 func (phase2Packet *Phase2Packet) Deserialize(data io.Reader) error {
 	err := phase2Packet.packetHeader.Deserialize(data)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize packetHeader")
+		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize PacketHeader")
 	}
 
 	err = phase2Packet.DeserializeWithoutHeader(data, &phase2Packet.packetHeader)
@@ -986,12 +986,12 @@ func (phase2Packet *Phase2Packet) RawFirstPart() ([]byte, error) {
 
 	packetHeaderRaw, err := phase2Packet.packetHeader.Serialize()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize packetHeader")
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize PacketHeader")
 	}
 
 	_, err = result.Write(packetHeaderRaw)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append packetHeader")
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append PacketHeader")
 	}
 
 	err = binary.Write(result, defaultByteOrder, phase2Packet.globuleHashSignature)
