@@ -95,7 +95,7 @@ func (gp *GoPlugin) Downstream(ctx context.Context) (*rpc.Client, error) {
 	return gp.client, nil
 }
 
-func (gp *GoPlugin) closeDownstream() {
+func (gp *GoPlugin) CloseDownstream() {
 	gp.clientMutex.Lock()
 	defer gp.clientMutex.Unlock()
 
@@ -116,7 +116,7 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 			if err != rpc.ErrShutdown {
 				break
 			} else {
-				gp.closeDownstream()
+				gp.CloseDownstream()
 			}
 		}
 	}
