@@ -42,7 +42,7 @@ type MessageBus struct {
 	Ledger                     core.Ledger                     `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	KeyStore                   core.KeyStore                   `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
 	RoutingTokenFactory        message.RoutingTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
 
@@ -197,7 +197,7 @@ func (mb *MessageBus) makeRedirect(ctx context.Context, parcel core.Parcel, resp
 	maxCountOfReply := 2
 
 	for maxCountOfReply > 0 {
-		to, parcel, err := mb.parseRedirect(ctx, parcel, response)
+		to, parcel, err := mb.createRedirectParcel(ctx, parcel, response)
 		res, err := mb.Service.SendMessage(*to, deliverRPCMethodName, parcel)
 		if err != nil {
 			return nil, err
@@ -218,14 +218,12 @@ func (mb *MessageBus) makeRedirect(ctx context.Context, parcel core.Parcel, resp
 	return nil, errors.New("object not found")
 }
 
-func (mb *MessageBus) parseRedirect(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
+func (mb *MessageBus) createRedirectParcel(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
 	switch redirect := response.(type) {
-	case *reply.GenericRedirect:
-		return redirect.GetTo(), parcel, nil
 	case *reply.ObjectRedirect:
-		getObjectRequest := parcel.Message().(*message.GetObject)
-		getObjectRequest.State = &redirect.StateID
-		parcel, err := mb.CreateParcel(ctx, parcel.Pulse(), getObjectRequest, nil)
+		newMessage := redirect.RecreateMessage(parcel.Message())
+		parcel, err := mb.CreateParcel(ctx, parcel.Pulse(), newMessage, nil)
+		//TODO here a sign-token shoulb be put to parcel
 		return redirect.GetTo(), parcel, err
 	default:
 		panic("unknown type of redirect")
@@ -233,7 +231,7 @@ func (mb *MessageBus) parseRedirect(ctx context.Context, parcel core.Parcel, res
 }
 
 func isReplyRedirect(response core.Reply) bool {
-	return response.Type() == reply.TypeDefinedStateRedirect || response.Type() == reply.TypeRedirect
+	return response.Type() == reply.TypeGetObjectRedirect
 }
 
 type serializableError struct {
@@ -257,7 +255,20 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 			S: err.Error(),
 		}
 	}
-	return resp, nil
+
+	if !isReplyRedirect(resp) {
+		return resp, nil
+	}
+
+	redirect := resp.(reply.Redirect)
+	newMessage := redirect.RecreateMessage(msg.Message())
+	newParcel, err := mb.CreateParcel(ctx, msg.Pulse(), newMessage, nil)
+	if err != nil {
+		return nil, err
+	}
+	sign, err := mb.CryptographyService.Sign(message.ToBytes(newParcel))
+	redirect.SetSign(sign)
+	return redirect, nil
 }
 
 // Deliver method calls LogicRunner.Execute on local host
