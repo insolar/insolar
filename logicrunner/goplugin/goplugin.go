@@ -74,8 +74,8 @@ func (gp *GoPlugin) Stop() error {
 
 const timeout = time.Minute * 10
 
-// downstream returns a connection to `ginsider`
-func (gp *GoPlugin) downstream(ctx context.Context) (*rpc.Client, error) {
+// Downstream returns a connection to `ginsider`
+func (gp *GoPlugin) Downstream(ctx context.Context) (*rpc.Client, error) {
 	gp.clientMutex.Lock()
 	defer gp.clientMutex.Unlock()
 
@@ -108,7 +108,7 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 	var client *rpc.Client
 
 	for {
-		client, err = gp.downstream(ctx)
+		client, err = gp.Downstream(ctx)
 		if err == nil {
 			call := <-client.Go(method, req, res, nil).Done
 			err = call.Error
