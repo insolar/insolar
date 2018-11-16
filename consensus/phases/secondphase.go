@@ -108,6 +108,9 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 func (sp *SecondPhase) signPhase2Packet(packet *packets.Phase2Packet) error {
 	data, err := packet.RawFirstPart()
+	if err != nil {
+		return errors.Wrap(err, "failed to get raw bytes")
+	}
 	sign, err := sp.Cryptography.Sign(data)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign a phase 2 packet")
