@@ -1765,3 +1765,64 @@ func getLogicRunnerWithoutValidation(lr core.LogicRunner) *LogicRunner {
 
 	return rlr
 }
+
+func TestGinsiderMustDieAfterInsolard(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+
+	var emptyMethodContract = `
+package main
+
+import (
+	"time" // TODO remove
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	
+)
+type One struct {
+   foundation.BaseContract
+}
+
+func New() (*One, error){
+   return nil, nil
+}
+
+func (r *One) EmptyMethod() (error) {
+	time.Sleep(1 * time.Second) // TODO remove
+	return nil
+}
+
+`
+	ctx := inslogger.ContextWithTrace(context.Background(), utils.RandTraceID())
+	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{
+		"one": emptyMethodContract,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("one")}},
+	)
+	assert.NoError(t, err)
+	contract := getRefFromID(contractID)
+	object, err := am.ActivateObject(
+		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	_, err = executeMethod(ctx, lr, pm, *contract, 0, "EmptyMethod", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	assert.NoError(t, err, "create contract")
+	//assert.Error(t, err, "contract call")
+	//assert.Contains(t, err.Error(), "abort execution: new Pulse coming")
+
+	rlr := lr.(*LogicRunner)
+	executor, err := rlr.GetExecutor(core.MachineTypeGoPlugin)
+	code, _ := object.Code()
+	executor.CallMethod(ctx, nil, *code, []byte, "EmptyMethod", goplugintestutils.CBORMarshal(t, []interface{}{}))
+}
