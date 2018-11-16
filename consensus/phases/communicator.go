@@ -98,10 +98,6 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, reques
 // ExchangePhase1 used in first consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
-	err := nc.signPhase1Packet(&packet)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign phase 1 packet")
-	}
 
 	result[nc.ConsensusNetwork.GetNodeID()] = &packet
 
@@ -192,15 +188,6 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 		return
 	}
 
-	signIsCorrect, err := nc.isSignPhase1PacketRight(p, request.GetSender())
-	if err != nil {
-		log.Warn(err)
-		return
-	} else if !signIsCorrect {
-		log.Warn("bad sign in phase 1 packet")
-		return
-	}
-
 	newPulse := p.GetPulse()
 
 	if newPulse.PulseNumber < nc.getPulseNumber() {
@@ -220,62 +207,4 @@ func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
 		log.Warn("Wrong handler for request type: ", request.GetType().String())
 		return
 	}
-	p, ok := request.GetData().(*packets.Phase2Packet)
-	if !ok {
-		log.Errorln("invalid Phase2Packet")
-		return
-	}
-	signIsCorrect, err := nc.isSignPhase2PacketRight(p, request.GetSender())
-	if err != nil {
-		log.Warn(err)
-		return
-	} else if !signIsCorrect {
-		log.Warn("bad sign in phase 2 packet")
-		return
-	}
-}
-
-func (nc *NaiveCommunicator) signPhase1Packet(packet *packets.Phase1Packet) error {
-	data, err := packet.RawBytes()
-	if err != nil {
-		return errors.Wrap(err, "failed to get raw bytes")
-	}
-	sign, err := nc.Cryptography.Sign(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a phase 2 packet")
-	}
-	packet.Signature = sign.Bytes()
-	return nil
-}
-
-func (nc *NaiveCommunicator) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
-	key := nc.NodeNetwork.GetActiveNode(recordRef).PublicKey()
-	raw, err := packet.RawBytes()
-
-	if err != nil {
-		return false, errors.Wrap(err, "failed to serialize packet")
-	}
-	return nc.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
-}
-
-func (nc *NaiveCommunicator) signPhase2Packet(packet *packets.Phase2Packet) error {
-	data, err := packet.RawFirstPart()
-	sign, err := nc.Cryptography.Sign(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a phase 2 packet")
-	}
-	packet.SignatureHeaderSection1 = sign.Bytes()
-	// TODO: sign a second part after claim addition
-	return nil
-}
-
-func (nc *NaiveCommunicator) isSignPhase2PacketRight(packet *packets.Phase2Packet, recordRef core.RecordRef) (bool, error) {
-	key := nc.NodeNetwork.GetActiveNode(recordRef).PublicKey()
-
-	raw, err := packet.RawFirstPart()
-	if err != nil {
-		return false, errors.Wrap(err, "failed to serialize")
-	}
-
-	return nc.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }

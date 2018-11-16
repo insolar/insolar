@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
@@ -36,9 +37,10 @@ func consensusReached(resultLen, participanstLen int) bool {
 
 // FirstPhase is a first phase.
 type FirstPhase struct {
-	NodeNetwork  core.NodeNetwork  `inject:""`
-	Calculator   merkle.Calculator `inject:""`
-	Communicator Communicator      `inject:""`
+	NodeNetwork  core.NodeNetwork         `inject:""`
+	Calculator   merkle.Calculator        `inject:""`
+	Communicator Communicator             `inject:""`
+	Cryptography core.CryptographyService `inject:""`
 	State        *FirstPhaseState
 }
 
@@ -58,12 +60,22 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	activeNodes := fp.NodeNetwork.GetActiveNodes()
+	err = fp.signPhase1Packet(&packet)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign a packet")
+	}
 	proofSet, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
 	nodeProofs := make(map[core.Node]*merkle.PulseProof)
 	for ref, packet := range proofSet {
+		signIsCorrect, err := fp.isSignPhase1PacketRight(packet, ref)
+		if err != nil {
+			log.Warn("failed to check a sign: ", err.Error())
+		} else if !signIsCorrect {
+			log.Warn("recieved a bad sign packet: ", err.Error())
+		}
 		node := fp.NodeNetwork.GetActiveNode(ref)
 		rawProof := packet.GetPulseProof()
 		proof := &merkle.PulseProof{
@@ -88,4 +100,27 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		PulseProof:    pulseProof,
 		PulseProofSet: nodeProofs,
 	}, nil
+}
+
+func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
+	data, err := packet.RawBytes()
+	if err != nil {
+		return errors.Wrap(err, "failed to get raw bytes")
+	}
+	sign, err := fp.Cryptography.Sign(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a phase 2 packet")
+	}
+	packet.Signature = sign.Bytes()
+	return nil
+}
+
+func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
+	key := fp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+	raw, err := packet.RawBytes()
+
+	if err != nil {
+		return false, errors.Wrap(err, "failed to serialize packet")
+	}
+	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }

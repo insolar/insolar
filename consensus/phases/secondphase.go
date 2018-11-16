@@ -21,16 +21,18 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
 
 // SecondPhase is a second phase.
 type SecondPhase struct {
-	NodeNetwork  core.NodeNetwork  `inject:""`
-	Network      core.Network      `inject:""`
-	Calculator   merkle.Calculator `inject:""`
-	Communicator Communicator      `inject:""`
+	NodeNetwork  core.NodeNetwork         `inject:""`
+	Network      core.Network             `inject:""`
+	Calculator   merkle.Calculator        `inject:""`
+	Communicator Communicator             `inject:""`
+	Cryptography core.CryptographyService `inject:""`
 }
 
 func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
@@ -57,6 +59,10 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}
 
 	activeNodes := sp.NodeNetwork.GetActiveNodes()
+	err = sp.signPhase2Packet(&packet)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign a packet")
+	}
 	proofSet, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
@@ -64,6 +70,12 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
 	for ref, packet := range proofSet {
+		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
+		if err != nil {
+			log.Warn("failed to check a sign: ", err.Error())
+		} else if !signIsCorrect {
+			log.Warn("recieved a bad sign packet: ", err.Error())
+		}
 		node := sp.NodeNetwork.GetActiveNode(ref)
 		proof := &merkle.GlobuleProof{
 			BaseProof: merkle.BaseProof{
@@ -92,4 +104,26 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		GlobuleProof:    globuleProof,
 		GlobuleProofSet: nodeProofs,
 	}, nil
+}
+
+func (sp *SecondPhase) signPhase2Packet(packet *packets.Phase2Packet) error {
+	data, err := packet.RawFirstPart()
+	sign, err := sp.Cryptography.Sign(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a phase 2 packet")
+	}
+	packet.SignatureHeaderSection1 = sign.Bytes()
+	// TODO: sign a second part after claim addition
+	return nil
+}
+
+func (sp *SecondPhase) isSignPhase2PacketRight(packet *packets.Phase2Packet, recordRef core.RecordRef) (bool, error) {
+	key := sp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+
+	raw, err := packet.RawFirstPart()
+	if err != nil {
+		return false, errors.Wrap(err, "failed to serialize")
+	}
+
+	return sp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }
