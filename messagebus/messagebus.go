@@ -42,6 +42,7 @@ type MessageBus struct {
 	Ledger                     core.Ledger                     `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	KeyStore                   core.KeyStore                   `inject:""`
 	RoutingTokenFactory        message.RoutingTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
 
@@ -179,7 +180,18 @@ func (mb *MessageBus) SendParcel(ctx context.Context, pulse *core.Pulse, msg cor
 		return nil, err
 	}
 
-	return reply.Deserialize(bytes.NewBuffer(res))
+	response, err := reply.Deserialize(bytes.NewBuffer(res))
+	if err != nil {
+		return response, err
+	}
+
+	if !isReplyRedirect(response) {
+		return response, err
+	}
+
+	return mb.makeRedirect(ctx, msg, response)
+}
+
 func (mb *MessageBus) makeRedirect(ctx context.Context, parcel core.Parcel, response core.Reply) (core.Reply, error) {
 	// TODO Need to be replaced with constant
 	maxCountOfReply := 2
@@ -205,6 +217,7 @@ func (mb *MessageBus) makeRedirect(ctx context.Context, parcel core.Parcel, resp
 
 	return nil, errors.New("object not found")
 }
+
 func (mb *MessageBus) parseRedirect(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
 	switch redirect := response.(type) {
 	case *reply.GenericRedirect:
