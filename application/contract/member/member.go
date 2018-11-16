@@ -36,6 +36,9 @@ type Member struct {
 func (m *Member) GetName() (string, error) {
 	return m.Name, nil
 }
+
+var INSATTR_GetPublicKey_API = true
+
 func (m *Member) GetPublicKey() (string, error) {
 	return m.PublicKey, nil
 }
@@ -68,6 +71,8 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 	}
 	return nil
 }
+
+var INSATTR_Call_API = true
 
 // Call method for authorized calls
 func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
