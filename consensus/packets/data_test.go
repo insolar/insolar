@@ -127,6 +127,12 @@ func genRandomSlice(n int) []byte {
 	return buf[:]
 }
 
+func randomArray71() [SignatureLength]byte {
+	var buf [SignatureLength]byte
+	copy(buf[:], genRandomSlice(SignatureLength))
+	return buf
+}
+
 func randomArray64() [64]byte {
 	var buf [64]byte
 	copy(buf[:], genRandomSlice(64))
@@ -142,7 +148,7 @@ func randomArray32() [32]byte {
 
 func makeNodePulseProof() *NodePulseProof {
 	nodePulseProof := &NodePulseProof{}
-	nodePulseProof.NodeSignature = randomArray64()
+	nodePulseProof.NodeSignature = randomArray71()
 	nodePulseProof.NodeStateHash = randomArray64()
 
 	return nodePulseProof
@@ -249,7 +255,7 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
 	p := Phase1Packet{}
 	proofStateHash := genRandomSlice(64)
-	proofSignature := genRandomSlice(64)
+	proofSignature := genRandomSlice(SignatureLength)
 
 	err := p.SetPulseProof(proofStateHash, proofSignature)
 	assert.NoError(t, err)
@@ -403,7 +409,7 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet := &Phase1Packet{}
 	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
 	phase1Packet.pulseData = *makeDefaultPulseDataExt()
-	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray64(), NodeStateHash: randomArray64()}
+	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray71(), NodeStateHash: randomArray64()}
 
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeJoinClaim())
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeViolationBlame())
@@ -431,8 +437,8 @@ func makePhase2Packet() *Phase2Packet {
 	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
 	phase2Packet.globuleHashSignature = randomArray64()
 	phase2Packet.deviantBitSet = *makeDeviantBitSet()
-	phase2Packet.signatureHeaderSection1 = randomArray64()
-	phase2Packet.signatureHeaderSection2 = randomArray64()
+	phase2Packet.signatureHeaderSection1 = randomArray71()
+	phase2Packet.signatureHeaderSection2 = randomArray71()
 
 	// TODO: uncomment when support ser\deser of ReferendumVote
 	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())

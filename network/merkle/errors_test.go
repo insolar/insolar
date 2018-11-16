@@ -66,7 +66,7 @@ func (t *calculatorErrorSuite) TestGetGlobuleProofCalculateError() {
 		PulseHash:     nil,
 		ProofSet:      nil,
 		PrevCloudHash: prevCloudHash,
-		GlobuleIndex:  0,
+		GlobuleID:     0,
 	}
 	gh, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
 
@@ -90,7 +90,7 @@ func (t *calculatorErrorSuite) TestGetGlobuleProofSignError() {
 			t.nodeNetwork.GetOrigin(): {},
 		},
 		PrevCloudHash: prevCloudHash,
-		GlobuleIndex:  0,
+		GlobuleID:     0,
 	}
 	gh, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
 

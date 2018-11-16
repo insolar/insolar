@@ -84,14 +84,14 @@ func (mh *merkleHelper) bucketHash(bucketInfoHash, bucketEntryHash []byte) []byt
 	return mh.doubleSliceHash(bucketInfoHash, bucketEntryHash)
 }
 
-func (mh *merkleHelper) globuleInfoHash(prevCloudHash []byte, globuleIndex, nodeCount uint32) []byte {
+func (mh *merkleHelper) globuleInfoHash(prevCloudHash []byte, globuleID, nodeCount uint32) []byte {
 	reservedHash := mh.leafHasher.Hash(utils.UInt32ToBytes(reserved))
-	globuleIndexHash := mh.leafHasher.Hash(utils.UInt32ToBytes(globuleIndex))
+	globuleIDHash := mh.leafHasher.Hash(utils.UInt32ToBytes(globuleID))
 	nodeCountHash := mh.leafHasher.Hash(utils.UInt32ToBytes(nodeCount))
 
 	return mh.doubleSliceHash(
 		mh.doubleSliceHash(reservedHash, prevCloudHash),
-		mh.doubleSliceHash(globuleIndexHash, nodeCountHash),
+		mh.doubleSliceHash(globuleIDHash, nodeCountHash),
 	)
 }
 
