@@ -19,15 +19,15 @@ package platformpolicy
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewPlatformPolicy(t *testing.T) {
 	pcs := NewPlatformCryptographyScheme()
 
-	assert.NotNil(t, pcs)
+	require.NotNil(t, pcs)
 
 	pcsImpl := pcs.(*platformCryptographyScheme)
-	assert.NotNil(t, pcsImpl.HashProvider)
-	assert.NotNil(t, pcsImpl.SignProvider)
+	require.NotNil(t, pcsImpl.HashProvider)
+	require.NotNil(t, pcsImpl.SignProvider)
 }

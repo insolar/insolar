@@ -19,7 +19,7 @@ package functest
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func _TestIsAuthorized(t *testing.T) {
@@ -30,7 +30,7 @@ func _TestIsAuthorized(t *testing.T) {
 	isAuthResponse := &isAuthorized{}
 	unmarshalResponse(t, body, isAuthResponse)
 
-	assert.Equal(t, 1, isAuthResponse.Role)
-	assert.NotEmpty(t, isAuthResponse.PublicKey)
-	assert.Equal(t, true, isAuthResponse.NetCoordCheck)
+	require.Equal(t, 1, isAuthResponse.Role)
+	require.NotEmpty(t, isAuthResponse.PublicKey)
+	require.Equal(t, true, isAuthResponse.NetCoordCheck)
 }

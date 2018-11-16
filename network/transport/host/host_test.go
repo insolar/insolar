@@ -21,14 +21,14 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewHost(t *testing.T) {
 	actualHost, _ := NewHost("127.0.0.1:31337")
 	expectedHost, _ := NewHost("127.0.0.1:31337")
 
-	assert.Equal(t, expectedHost, actualHost)
+	require.Equal(t, expectedHost, actualHost)
 }
 
 func TestHost_String(t *testing.T) {
@@ -36,7 +36,7 @@ func TestHost_String(t *testing.T) {
 	nd.NodeID = testutils.RandomRef()
 	string := nd.NodeID.String() + " (" + nd.Address.String() + ")"
 
-	assert.Equal(t, string, nd.String())
+	require.Equal(t, string, nd.String())
 }
 
 func TestHost_Equal(t *testing.T) {
@@ -64,7 +64,7 @@ func TestHost_Equal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.equal, Host{NodeID: test.id1, Address: test.addr1}.Equal(Host{NodeID: test.id2, Address: test.addr2}))
+			require.Equal(t, test.equal, Host{NodeID: test.id1, Address: test.addr1}.Equal(Host{NodeID: test.id2, Address: test.addr2}))
 		})
 	}
 }

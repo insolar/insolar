@@ -24,7 +24,7 @@ import (
 
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -39,7 +39,7 @@ func TestSerializePacket(t *testing.T) {
 
 	_, err := SerializePacket(msg)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestDeserializePacket(t *testing.T) {
@@ -56,8 +56,8 @@ func TestDeserializePacket(t *testing.T) {
 
 	deserialized, err := DeserializePacket(&buffer)
 
-	assert.NoError(t, err)
-	assert.Equal(t, deserialized, msg)
+	require.NoError(t, err)
+	require.Equal(t, deserialized, msg)
 }
 
 func TestDeserializeBigPacket(t *testing.T) {
@@ -70,14 +70,14 @@ func TestDeserializeBigPacket(t *testing.T) {
 	msg := builder.Receiver(hostOne).Type(TestPacket).Request(&RequestTest{data}).Build()
 
 	serialized, err := SerializePacket(msg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var buffer bytes.Buffer
 	buffer.Write(serialized)
 
 	deserializedMsg, err := DeserializePacket(&buffer)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	deserializedData := deserializedMsg.Data.(*RequestTest).Data
-	assert.Equal(t, data, deserializedData)
+	require.Equal(t, data, deserializedData)
 }
