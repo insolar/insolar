@@ -403,7 +403,7 @@ func (m *StateSwitcherMock) MinimockWait(timeout time.Duration) {
 }
 
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//it can be used with assert/require, i.e. require.True(mock.AllMocksCalled())
 func (m *StateSwitcherMock) AllMocksCalled() bool {
 
 	if m.GetStateFunc != nil && atomic.LoadUint64(&m.GetStateCounter) == 0 {
