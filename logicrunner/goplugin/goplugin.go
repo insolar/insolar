@@ -162,9 +162,8 @@ func (gp *GoPlugin) CallMethod(
 		inslogger.FromContext(ctx).Debugf("CallMethod done work, time spend in here - %s", time.Since(start))
 		if callResult.Error != nil {
 			return nil, nil, errors.Wrap(callResult.Error, "problem with API call")
-		} else {
-			return callResult.Response.Data, callResult.Response.Ret, nil
 		}
+		return callResult.Response.Data, callResult.Response.Ret, nil
 	case <-time.After(timeout):
 		return nil, nil, errors.New("logicrunner execution timeout")
 	}
@@ -204,9 +203,8 @@ func (gp *GoPlugin) CallConstructor(
 	case callResult := <-resultChan:
 		if callResult.Error != nil {
 			return nil, errors.Wrap(callResult.Error, "problem with API call")
-		} else {
-			return callResult.Response.Ret, nil
 		}
+		return callResult.Response.Ret, nil
 	case <-time.After(timeout):
 		return nil, errors.New("logicrunner execution timeout")
 	}
