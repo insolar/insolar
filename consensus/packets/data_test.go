@@ -255,7 +255,7 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
 	p := Phase1Packet{}
 	proofStateHash := genRandomSlice(64)
-	proofSignature := genRandomSlice(64)
+	proofSignature := genRandomSlice(SignatureLength)
 
 	err := p.SetPulseProof(proofStateHash, proofSignature)
 	assert.NoError(t, err)

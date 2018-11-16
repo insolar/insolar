@@ -84,12 +84,12 @@ func (nc *NaiveCommunicator) setPulseNumber(new core.PulseNumber) bool {
 
 func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, request network.Request) {
 	for _, node := range participants {
-		go func() {
-			err := nc.ConsensusNetwork.SendRequest(request, node.ID())
+		go func(n core.Node) {
+			err := nc.ConsensusNetwork.SendRequest(request, n.ID())
 			if err != nil {
 				log.Errorln(err.Error())
 			}
-		}()
+		}(node)
 	}
 }
 

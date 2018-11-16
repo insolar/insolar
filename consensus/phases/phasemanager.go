@@ -70,7 +70,7 @@ func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
 	defer cancel()
 
-	secondPhaseState, err := pm.SecondPhase.Execute(ctx, firstPhaseState)
+	secondPhaseState, err := pm.SecondPhase.Execute(tctx, firstPhaseState)
 	checkError(err)
 
 	fmt.Println(secondPhaseState) // TODO: remove after use

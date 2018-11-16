@@ -31,11 +31,7 @@ const ConsensusAtPercents = 0.66
 func consensusReached(resultLen, participanstLen int) bool {
 	minParticipants := int(math.Floor(ConsensusAtPercents*float64(participanstLen))) + 1
 
-	if resultLen < minParticipants {
-		return false
-	}
-
-	return true
+	return resultLen >= minParticipants
 }
 
 // FirstPhase is a first phase.
