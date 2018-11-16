@@ -131,6 +131,8 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
+	cm.Register(l.GetArtifactManager())
+	cm.Register(l.GetPulseManager())
 	cm.Inject(nk, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)

@@ -119,8 +119,8 @@ type LogicRunner struct {
 	Network                    core.Network                    `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
-
-	ArtifactManager core.ArtifactManager
+	PulseManager               core.PulseManager               `inject:""`
+	ArtifactManager            core.ArtifactManager            `inject:""`
 
 	Executors      [core.MachineTypesLastID]core.MachineLogicExecutor
 	machinePrefs   []core.MachineType
@@ -145,8 +145,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		ArtifactManager: nil,
-		Ledger:          nil,
 		Cfg:             cfg,
 		execution:       make(map[Ref]*ExecutionState),
 		caseBind:        core.CaseBind{Records: make(map[Ref][]core.CaseRecord)},
@@ -157,8 +155,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
-	lr.ArtifactManager = lr.Ledger.GetArtifactManager()
-
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
