@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -128,6 +129,17 @@ type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse core.Pulse)
 }
 
+type NodeKeeperState uint8
+
+const (
+	// Undefined is state of NodeKeeper while it is not valid
+	Undefined NodeKeeperState = iota + 1
+	// Waiting is state of NodeKeeper while it is not part of consensus yet (waits for his join claim to pass)
+	Waiting
+	// Ready is state of NodeKeeper when it is ready for consensus
+	Ready
+)
+
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
 	core.NodeNetwork
@@ -135,12 +147,33 @@ type NodeKeeper interface {
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
+
+	// SetState set state of the NodeKeeper
+	SetState(NodeKeeperState)
+	// GetState get state of the NodeKeeper
+	GetState() NodeKeeperState
+	// SetOriginClaim set origin NodeJoinClaim. It is needed to join to discovery node or (sometimes) in consensus
+	SetOriginClaim(*packets.NodeJoinClaim)
+	// GetOriginClaim get origin NodeJoinClaim
+	GetOriginClaim() *packets.NodeJoinClaim
+	// IsNodeJoinedOnPreviousPulse returns true if the last Sync call contained approved Join claims
+	IsNodeJoinedOnPreviousPulse() bool
+	// AddClaim add claim to the internal queue of claims
+	AddClaim(packets.ReferendumClaim) bool
+	// GetClaimQueue get the internal queue of claims
+	GetClaimQueue() ClaimQueue
+	// Sync move approved claims to sync list
+	Sync(approvedClaims []packets.ReferendumClaim, nodesLost []core.RecordRef)
+	// MoveSyncToActive merge sync list with active nodes
+	MoveSyncToActive(number core.PulseNumber)
+
+	// FIXME: DEPRECATED METHODS
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
 	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list.
 	SetPulse(number core.PulseNumber) (bool, UnsyncList)
-	// Sync initiates transferring syncCandidates -> sync, sync -> active.
-	// If number is less than internal PulseNumber then ignore Sync.
-	Sync(syncCandidates []core.Node, number core.PulseNumber)
+	// SyncOld initiates transferring syncCandidates -> sync, sync -> active.
+	// If number is less than internal PulseNumber then ignore SyncOld.
+	SyncOld(syncCandidates []core.Node, number core.PulseNumber)
 	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
 	// Channel will return nil node if added node has not passed the consensus.
 	// Returns error if current node is not active and cannot participate in consensus.
@@ -222,4 +255,14 @@ type InternalTransport interface {
 	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
 	BuildResponse(request Request, responseData interface{}) Response
+}
+
+// ClaimQueue is the queue that contains consensus claims.
+type ClaimQueue interface {
+	// Pop takes claim from the queue.
+	Pop() packets.ReferendumClaim
+	// Front returns claim from the queue without removing it from the queue.
+	Front() packets.ReferendumClaim
+	// Length returns the length of the queue
+	Length() int
 }

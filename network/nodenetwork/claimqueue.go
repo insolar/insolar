@@ -22,16 +22,6 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 )
 
-// ClaimQueue is the queue that contains consensus claims.
-type ClaimQueue interface {
-	// Pop takes claim from the queue.
-	Pop() packets.ReferendumClaim
-	// Front returns claim from the queue without removing it from the queue.
-	Front() packets.ReferendumClaim
-	// Length returns the length of the queue
-	Length() int
-}
-
 type claimQueue struct {
 	data []packets.ReferendumClaim
 	lock sync.RWMutex

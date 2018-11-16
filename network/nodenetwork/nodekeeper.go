@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -216,7 +217,7 @@ func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, network.UnsyncLis
 	return true, nk.collectUnsync(number)
 }
 
-func (nk *nodekeeper) Sync(syncCandidates []core.Node, number core.PulseNumber) {
+func (nk *nodekeeper) SyncOld(syncCandidates []core.Node, number core.PulseNumber) {
 	nk.unsyncLock.Lock()
 	nk.activeLock.Lock()
 
@@ -368,6 +369,47 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) network.UnsyncList 
 	}
 	nk.listWaiters = make([]chan *UnsyncList, 0)
 	return nk.unsyncList
+}
+
+func (nk *nodekeeper) SetState(network.NodeKeeperState) {
+	log.Error("implement me!")
+}
+
+func (nk *nodekeeper) GetState() network.NodeKeeperState {
+	log.Error("implement me!")
+	return network.Undefined
+}
+
+func (nk *nodekeeper) SetOriginClaim(*packets.NodeJoinClaim) {
+	log.Error("implement me!")
+}
+
+func (nk *nodekeeper) GetOriginClaim() *packets.NodeJoinClaim {
+	log.Error("implement me!")
+	return nil
+}
+
+func (nk *nodekeeper) AddClaim(packets.ReferendumClaim) bool {
+	log.Error("implement me!")
+	return false
+}
+
+func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
+	log.Error("implement me!")
+	return nil
+}
+
+func (nk *nodekeeper) Sync(approvedClaims []packets.ReferendumClaim, nodesLost []core.RecordRef) {
+	log.Error("implement me!")
+}
+
+func (nk *nodekeeper) MoveSyncToActive(number core.PulseNumber) {
+	log.Error("implement me!")
+}
+
+func (nk *nodekeeper) IsNodeJoinedOnPreviousPulse() bool {
+	log.Error("implement me!")
+	return false
 }
 
 func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
