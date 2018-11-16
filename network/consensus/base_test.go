@@ -22,7 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBaseConsensus_exchangeDataWithOtherParticipants(t *testing.T) {
@@ -48,10 +48,10 @@ func TestBaseConsensus_exchangeDataWithOtherParticipants(t *testing.T) {
 	ctx := context.Background()
 	c.exchangeDataWithOtherParticipants(ctx)
 
-	assert.Equal(t, 1, len(c.results.data[participant2.GetID()]))
-	assert.Equal(t, newActiveNode(12, 0), c.results.data[participant2.GetID()][0])
+	require.Equal(t, 1, len(c.results.data[participant2.GetID()]))
+	require.Equal(t, newActiveNode(12, 0), c.results.data[participant2.GetID()][0])
 
-	assert.Equal(t, 2, len(c.results.data[participant5.GetID()]))
-	assert.Equal(t, newActiveNode(15, 0), c.results.data[participant5.GetID()][0])
-	assert.Equal(t, newActiveNode(25, 0), c.results.data[participant5.GetID()][1])
+	require.Equal(t, 2, len(c.results.data[participant5.GetID()]))
+	require.Equal(t, newActiveNode(15, 0), c.results.data[participant5.GetID()][0])
+	require.Equal(t, newActiveNode(25, 0), c.results.data[participant5.GetID()][1])
 }
