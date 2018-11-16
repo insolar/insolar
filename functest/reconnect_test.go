@@ -3,17 +3,17 @@ package functest
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInsgorundReload(t *testing.T) {
 	_, err := signedRequest(&root, "DumpAllUsers")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stopInsgorund()
 	err = startInsgorund()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = signedRequest(&root, "DumpAllUsers")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

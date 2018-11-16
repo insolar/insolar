@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransferMoney(t *testing.T) {
@@ -32,12 +32,12 @@ func TestTransferMoney(t *testing.T) {
 	amount := 111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
-	assert.Equal(t, oldFirstBalance-amount, newFirstBalance)
-	assert.Equal(t, oldSecondBalance+amount, newSecondBalance)
+	require.Equal(t, oldFirstBalance-amount, newFirstBalance)
+	require.Equal(t, oldSecondBalance+amount, newSecondBalance)
 }
 
 func TestTransferMoneyFromNotExist(t *testing.T) {
@@ -50,10 +50,10 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 	amount := 111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.EqualError(t, err, "Can't get public key: couldn't get object message: couldn't get object: failed to fetch object index: storage object not found")
+	require.EqualError(t, err, "Can't get public key: couldn't get object message: couldn't get object: failed to fetch object index: storage object not found")
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
-	assert.Equal(t, oldSecondBalance, newSecondBalance)
+	require.Equal(t, oldSecondBalance, newSecondBalance)
 }
 
 func TestTransferMoneyToNotExist(t *testing.T) {
@@ -63,10 +63,10 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	amount := 111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, testutils.RandomRef())
-	assert.EqualError(t, err, "[ Transfer ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
+	require.EqualError(t, err, "[ Transfer ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, oldFirstBalance, newFirstBalance)
+	require.Equal(t, oldFirstBalance, newFirstBalance)
 }
 
 func TestTransferNegativeAmount(t *testing.T) {
@@ -78,12 +78,12 @@ func TestTransferNegativeAmount(t *testing.T) {
 	amount := -111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.EqualError(t, err, "[ transferCall ] Amount must be positive")
+	require.EqualError(t, err, "[ transferCall ] Amount must be positive")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
-	assert.Equal(t, oldFirstBalance, newFirstBalance)
-	assert.Equal(t, oldSecondBalance, newSecondBalance)
+	require.Equal(t, oldFirstBalance, newFirstBalance)
+	require.Equal(t, oldSecondBalance, newSecondBalance)
 }
 
 func TestTransferAllAmount(t *testing.T) {
@@ -95,12 +95,12 @@ func TestTransferAllAmount(t *testing.T) {
 	amount := oldFirstBalance
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
-	assert.Equal(t, 0, newFirstBalance)
-	assert.Equal(t, oldSecondBalance+oldFirstBalance, newSecondBalance)
+	require.Equal(t, 0, newFirstBalance)
+	require.Equal(t, oldSecondBalance+oldFirstBalance, newSecondBalance)
 }
 
 func TestTransferMoreThanAvailableAmount(t *testing.T) {
@@ -112,12 +112,12 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 	amount := oldFirstBalance + 100
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.EqualError(t, err, "[ Transfer ] Not enough balance for transfer: subtrahend must be smaller than minuend")
+	require.EqualError(t, err, "[ Transfer ] Not enough balance for transfer: subtrahend must be smaller than minuend")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
-	assert.Equal(t, oldFirstBalance, newFirstBalance)
-	assert.Equal(t, oldSecondBalance, newSecondBalance)
+	require.Equal(t, oldFirstBalance, newFirstBalance)
+	require.Equal(t, oldSecondBalance, newSecondBalance)
 }
 
 func TestTransferToMyself(t *testing.T) {
@@ -127,10 +127,10 @@ func TestTransferToMyself(t *testing.T) {
 	amount := 100
 
 	_, err := signedRequest(member, "Transfer", amount, member.ref)
-	assert.EqualError(t, err, "[ transferCall ] Recipient must be different from the sender")
+	require.EqualError(t, err, "[ transferCall ] Recipient must be different from the sender")
 
 	newMemberBalance := getBalanceNoErr(t, member, member.ref)
-	assert.Equal(t, oldMemberBalance, newMemberBalance)
+	require.Equal(t, oldMemberBalance, newMemberBalance)
 }
 
 // TODO: test to check overflow of balance
@@ -145,12 +145,12 @@ func TestTransferTwoTimes(t *testing.T) {
 	amount := 100
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
-	assert.Equal(t, oldFirstBalance-2*amount, newFirstBalance)
-	assert.Equal(t, oldSecondBalance+2*amount, newSecondBalance)
+	require.Equal(t, oldFirstBalance-2*amount, newFirstBalance)
+	require.Equal(t, oldSecondBalance+2*amount, newSecondBalance)
 }
