@@ -180,6 +180,31 @@ func (mb *MessageBus) SendParcel(ctx context.Context, pulse *core.Pulse, msg cor
 	}
 
 	return reply.Deserialize(bytes.NewBuffer(res))
+func (mb *MessageBus) makeRedirect(ctx context.Context, parcel core.Parcel, response core.Reply) (core.Reply, error) {
+	// TODO Need to be replaced with constant
+	maxCountOfReply := 2
+
+	for maxCountOfReply > 0 {
+		to, parcel, err := mb.parseRedirect(ctx, parcel, response)
+		res, err := mb.Service.SendMessage(*to, deliverRPCMethodName, parcel)
+		if err != nil {
+			return nil, err
+		}
+
+		response, err := reply.Deserialize(bytes.NewBuffer(res))
+		if err != nil {
+			return response, err
+		}
+
+		if !isReplyRedirect(response) {
+			return response, err
+		}
+
+		maxCountOfReply--
+	}
+
+	return nil, errors.New("object not found")
+}
 func (mb *MessageBus) parseRedirect(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
 	switch redirect := response.(type) {
 	case *reply.GenericRedirect:
