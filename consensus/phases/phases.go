@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
@@ -36,9 +37,9 @@ func consensusReached(resultLen, participanstLen int) bool {
 
 // FirstPhase is a first phase.
 type FirstPhase struct {
-	NodeNetwork  core.NodeNetwork  `inject:""`
-	Calculator   merkle.Calculator `inject:""`
-	Communicator Communicator      `inject:""`
+	NodeKeeper   network.NodeKeeper `inject:""`
+	Calculator   merkle.Calculator  `inject:""`
+	Communicator Communicator       `inject:""`
 }
 
 // Execute do first phase
@@ -56,50 +57,96 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase1Packet.")
 	}
 
-	activeNodes := fp.NodeNetwork.GetActiveNodes()
-	proofSet, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
+	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
+		err = packet.AddClaim(fp.NodeKeeper.GetOriginClaim())
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Execute ] Failed to add origin claim in Phase1Packet.")
+		}
+	}
+	// TODO: add other claims
+
+	activeNodes := fp.NodeKeeper.GetActiveNodes()
+	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
 
-	nodeProofs := make(map[core.Node]*merkle.PulseProof)
-	for ref, packet := range proofSet {
-		node := fp.NodeNetwork.GetActiveNode(ref)
+	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
+	claimSet := make([]packets.ReferendumClaim, 0)
+	for ref, packet := range resultPackets {
 		rawProof := packet.GetPulseProof()
-		proof := &merkle.PulseProof{
+		proofSet[ref] = &merkle.PulseProof{
 			BaseProof: merkle.BaseProof{
 				Signature: core.SignatureFromBytes(rawProof.Signature()),
 			},
 			StateHash: rawProof.StateHash(),
 		}
-
-		if !fp.Calculator.IsValid(proof, pulseHash, node.PublicKey()) {
-			nodeProofs[node] = proof
-		}
+		claims := packet.GetClaims() // TODO: build set of claims
+		claimSet = append(claimSet, claims...)
 	}
 
-	if !consensusReached(len(nodeProofs), len(activeNodes)) {
-		return nil, errors.New("[ Execute ] Consensus not reached")
+	fp.processClaims(ctx, claimSet)
+
+	// Get active nodes again for case when current node just joined to network and don't have full active list
+	activeNodes = fp.NodeKeeper.GetActiveNodes()
+	deviantsNodes := make([]core.Node, 0)
+	timedOutNodes := make([]core.Node, 0)
+	validProofs := make(map[core.Node]*merkle.PulseProof)
+
+	for _, node := range activeNodes {
+		proof, ok := proofSet[node.ID()]
+		if !ok {
+			timedOutNodes = append(timedOutNodes, node)
+		}
+
+		if !fp.Calculator.IsValid(proof, pulseHash, node.PublicKey()) {
+			validProofs[node] = proof
+		} else {
+			deviantsNodes = append(deviantsNodes, node)
+		}
 	}
 
 	return &FirstPhaseState{
 		PulseEntry:    entry,
 		PulseHash:     pulseHash,
 		PulseProof:    pulseProof,
-		PulseProofSet: nodeProofs,
+		PulseProofSet: validProofs,
+		TimedOutNodes: timedOutNodes,
+		DeviantNodes:  deviantsNodes,
 	}, nil
+}
+
+func (fp *FirstPhase) processClaims(ctx context.Context, claims []packets.ReferendumClaim) {
+	var nodes []core.Node
+	var unsyncClaims []packets.ReferendumClaim
+
+	for _, genericClaim := range claims {
+		switch claim := genericClaim.(type) {
+		case *packets.NodeAnnounceClaim:
+			nodes = append(nodes, claim.Node())
+		case *packets.NodeJoinClaim:
+			panic("Not implemented yet") // TODO: authorize node here
+		case *packets.NodeLeaveClaim:
+			unsyncClaims = append(unsyncClaims, claim)
+		default:
+			panic("Not implemented yet")
+		}
+	}
+
+	fp.NodeKeeper.AddActiveNodes(nodes)
+	fp.NodeKeeper.AddUnsyncClaims(unsyncClaims)
 }
 
 // SecondPhase is a second phase.
 type SecondPhase struct {
-	NodeNetwork  core.NodeNetwork  `inject:""`
-	Network      core.Network      `inject:""`
-	Calculator   merkle.Calculator `inject:""`
-	Communicator Communicator      `inject:""`
+	NodeKeeper   network.NodeKeeper `inject:""`
+	Network      core.Network       `inject:""`
+	Calculator   merkle.Calculator  `inject:""`
+	Communicator Communicator       `inject:""`
 }
 
 func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
-	prevCloudHash := sp.NodeNetwork.GetCloudHash()
+	prevCloudHash := sp.NodeKeeper.GetCloudHash()
 	globuleID := sp.Network.GetGlobuleID()
 
 	entry := &merkle.GlobuleEntry{
@@ -121,15 +168,20 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase2Packet.")
 	}
 
-	activeNodes := sp.NodeNetwork.GetActiveNodes()
+	activeNodes := sp.NodeKeeper.GetActiveNodes()
 	proofSet, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
+
+	var deviants []core.Node
+	deviants = append(deviants, state.TimedOutNodes...)
+	deviants = append(deviants, state.DeviantNodes...)
+
 	for ref, packet := range proofSet {
-		node := sp.NodeNetwork.GetActiveNode(ref)
+		node := sp.NodeKeeper.GetActiveNode(ref)
 		proof := &merkle.GlobuleProof{
 			BaseProof: merkle.BaseProof{
 				Signature: core.SignatureFromBytes(packet.GetGlobuleHashSignature()),
@@ -145,9 +197,12 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		}
 	}
 
+	// TODO: check
 	if !consensusReached(len(nodeProofs), len(activeNodes)) {
 		return nil, errors.New("[ Execute ] Consensus not reached")
 	}
+
+	sp.NodeKeeper.Sync(deviants)
 
 	return &SecondPhaseState{
 		FirstPhaseState: state,
@@ -157,6 +212,15 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		GlobuleProof:    globuleProof,
 		GlobuleProofSet: nodeProofs,
 	}, nil
+}
+
+func (sp *SecondPhase) processTimedOutNodes(timedOutNodes []core.Node) {
+	// TODO: process
+}
+
+func (sp *SecondPhase) calculateListForNextPulse() (uint16, []byte) {
+	// TODO: calculate
+	return 1337, []byte("1337")
 }
 
 // ThirdPhasePulse.

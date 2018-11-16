@@ -23,7 +23,8 @@ import (
 type ClaimType uint8
 
 const (
-	TypeNodeJoinClaim = ClaimType(iota + 1)
+	TypeNodeJoinClaim     = ClaimType(iota + 1)
+	TypeNodeAnnounceClaim = ClaimType(iota + 1)
 	TypeCapabilityPollingAndActivation
 	TypeNodeViolationBlame
 	TypeNodeBroadcast
@@ -103,6 +104,20 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 
 func (njc *NodeJoinClaim) Length() uint16 {
 	return 0
+}
+
+// NodeJoinClaim is a type 5, len == 272.
+type NodeAnnounceClaim struct {
+	NodeJoinClaim
+}
+
+func (nac *NodeAnnounceClaim) Type() ClaimType {
+	return TypeNodeAnnounceClaim
+}
+
+func (nac *NodeAnnounceClaim) Node() core.Node {
+	// TODO: convert claim to node
+	return nil
 }
 
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
