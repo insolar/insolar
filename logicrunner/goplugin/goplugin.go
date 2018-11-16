@@ -188,10 +188,6 @@ func (gp *GoPlugin) CallConstructor(
 ) (
 	[]byte, error,
 ) {
-	client, err := gp.downstream(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem with rpc connection")
-	}
 
 	res := rpctypes.DownCallConstructorResp{}
 	req := rpctypes.DownCallConstructorReq{
@@ -201,13 +197,17 @@ func (gp *GoPlugin) CallConstructor(
 		Arguments: args,
 	}
 
+	resultChan := make(chan callConstructorResult)
+	go gp.callConstructorRPC(ctx, req, res, resultChan)
+
 	select {
-	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:
-		if call.Error != nil {
-			return nil, errors.Wrap(call.Error, "problem with API call")
+	case callResult := <-resultChan:
+		if callResult.Error != nil {
+			return nil, errors.Wrap(callResult.Error, "problem with API call")
+		} else {
+			return callResult.Response.Ret, nil
 		}
 	case <-time.After(timeout):
 		return nil, errors.New("logicrunner execution timeout")
 	}
-	return res.Ret, nil
 }
