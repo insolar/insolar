@@ -34,7 +34,7 @@ type Node interface {
 	Roles() []NodeRole
 	// Role is the candidate Role for the node
 	Role() NodeRole
-	// GetPublicKey is the public key of the node
+	// PublicKey is the public key of the node
 	PublicKey() crypto.PublicKey
 	// PhysicalAddress is the network address of the node
 	PhysicalAddress() string
@@ -42,7 +42,7 @@ type Node interface {
 	Version() string
 }
 
-// TODO: fix issue with go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o github.com/insolar/insolar/testutils/network/node_network_mock.go
+// go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o github.com/insolar/insolar/testutils/network/node_network_mock.go
 type NodeNetwork interface {
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
 	GetOrigin() Node

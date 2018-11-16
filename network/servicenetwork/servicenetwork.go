@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -46,6 +47,7 @@ type ServiceNetwork struct {
 	PulseManager        core.PulseManager       `inject:""`
 	Coordinator         core.NetworkCoordinator `inject:""`
 	OldComponentManager OldComponentManager     `inject:""`
+	PhaseManager        phases.PhaseManager     `inject:""`
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -71,7 +73,7 @@ func (n *ServiceNetwork) GetNodeID() core.RecordRef {
 	return n.NodeNetwork.GetOrigin().ID()
 }
 
-// SendParcel sends a message from MessageBus.
+// SendMessage sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
 	return n.controller.SendMessage(nodeID, method, msg)
 }
@@ -149,6 +151,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
+			n.PhaseManager.OnPulse(ctx, &pulse)
 		}(logger, n)
 
 		// TODO: PLACE NEW CONSENSUS HERE
