@@ -94,7 +94,7 @@ func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 }
 
 func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {
-	pulse, err := lr.Ledger.GetPulseManager().Current(ctx)
+	pulse, err := lr.PulseManager.Current(ctx)
 	if err != nil {
 		panic(err)
 	}
