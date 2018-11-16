@@ -25,7 +25,6 @@ import (
 	"runtime"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
@@ -75,75 +74,6 @@ func getContractsMap() (map[string]string, error) {
 		contracts[name] = string(code)
 	}
 	return contracts, nil
-}
-
-func isLightExecutor(ctx context.Context, c core.Components) (bool, error) {
-	am := c.Ledger.GetArtifactManager()
-	jc := c.Ledger.GetJetCoordinator()
-	pm := c.Ledger.GetPulseManager()
-	currentPulse, err := pm.Current(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
-	}
-
-	network := c.Network
-	nodeID := network.GetNodeID()
-
-	isLightExecutor, err := jc.IsAuthorized(
-		ctx,
-		core.RoleLightExecutor,
-		am.GenesisRef(),
-		currentPulse.PulseNumber,
-		nodeID,
-	)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
-	}
-	if !isLightExecutor {
-		inslogger.FromContext(ctx).Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
-		return false, nil
-	}
-	return true, nil
-}
-
-func getRootDomainRef(ctx context.Context, c core.Components) (*core.RecordRef, error) {
-	am := c.Ledger.GetArtifactManager()
-	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil, true)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
-	}
-	rootRefChildren, err := rootObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootRefChildren.HasNext() {
-		rootDomainRef, err := rootRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
-		}
-		return rootDomainRef, nil
-	}
-	return nil, nil
-}
-
-func getRootMemberRef(ctx context.Context, c core.Components, rootDomainRef core.RecordRef) (*core.RecordRef, error) {
-	am := c.Ledger.GetArtifactManager()
-	rootDomainObj, err := am.GetObject(ctx, rootDomainRef, nil, false)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get children of RootDomain object")
-	}
-	rootDomainRefChildren, err := rootDomainObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootDomainRefChildren.HasNext() {
-		rootMemberRef, err := rootDomainRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get next child of RootDomain object")
-		}
-		return rootMemberRef, nil
-	}
-	return nil, nil
 }
 
 func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, string, error) {
