@@ -170,6 +170,17 @@ func (gp *GoPlugin) CallMethod(
 	}
 }
 
+type callConstructorResult struct {
+	Response rpctypes.DownCallConstructorResp
+	Error    error
+}
+
+func (gp *GoPlugin) callCunstructorRPC(ctx context.Context, req rpctypes.DownCallConstructorReq, res rpctypes.DownCallConstructorResp, resultChan chan callConstructorResult) {
+	method := "RPC.CallMethod"
+	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
+	resultChan <- callConstructorResult{Response: res, Error: callClientError}
+}
+
 // CallConstructor runs a constructor of a contract in controlled environment
 func (gp *GoPlugin) CallConstructor(
 	ctx context.Context, callContext *core.LogicCallContext,
