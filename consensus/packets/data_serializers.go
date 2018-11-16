@@ -105,7 +105,7 @@ func extractClaimTypeFromHeader(claimHeader uint16) uint8 {
 func makeClaimHeader(claim ReferendumClaim) uint16 {
 	// TODO: we don't need length
 	var result = claim.Length()
-	result |= (uint16(claim.Type()) << claimTypeShift)
+	result |= uint16(claim.Type()) << claimTypeShift
 
 	return result
 }
@@ -123,7 +123,7 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 
 		claimType := ClaimType(extractClaimTypeFromHeader(claimHeader))
 		// TODO: Do we need claimLength?
-		//claimLength := extractClaimLengthFromHeader(claimHeader)
+		// claimLength := extractClaimLengthFromHeader(claimHeader)
 		var refClaim ReferendumClaim
 
 		switch claimType {
@@ -204,7 +204,7 @@ func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 		if err != nil {
 			return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read Section 2")
 		}
-		claimsSize := len(read) - signSize
+		claimsSize := len(read) - SignatureLength
 
 		err = p1p.parseReferendumClaim(read[:claimsSize])
 		if err != nil {
@@ -220,7 +220,7 @@ func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 		data.Read(read)
 	}
 
-	p1p.Signature = make([]byte, signSize)
+	p1p.Signature = make([]byte, SignatureLength)
 	err = binary.Read(data, defaultByteOrder, p1p.Signature)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read signature")
@@ -912,7 +912,7 @@ func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, heade
 
 	phase2Packet.PacketHeader = *header
 
-	phase2Packet.GlobuleHashSignature = make([]byte, signSize)
+	phase2Packet.GlobuleHashSignature = make([]byte, SignatureLength)
 	err := binary.Read(data, defaultByteOrder, phase2Packet.GlobuleHashSignature)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read globuleHashSignature")
@@ -923,7 +923,7 @@ func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, heade
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize deviantBitSet")
 	}
 
-	phase2Packet.SignatureHeaderSection1 = make([]byte, signSize)
+	phase2Packet.SignatureHeaderSection1 = make([]byte, SignatureLength)
 	err = binary.Read(data, defaultByteOrder, phase2Packet.SignatureHeaderSection1)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read signatureHeaderSection1")
@@ -931,7 +931,7 @@ func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, heade
 
 	// TODO: add reading Referendum vote
 
-	phase2Packet.SignatureHeaderSection2 = make([]byte, signSize)
+	phase2Packet.SignatureHeaderSection2 = make([]byte, SignatureLength)
 	err = binary.Read(data, defaultByteOrder, phase2Packet.SignatureHeaderSection2)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read signatureHeaderSection2")

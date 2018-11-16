@@ -17,16 +17,79 @@
 package phases
 
 import (
+	"context"
+
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/merkle"
+	"github.com/pkg/errors"
 )
 
 // SecondPhase is a second phase.
 type SecondPhase struct {
-	NodeNetwork core.NodeNetwork `inject:""`
-	State       *SecondPhaseState
+	NodeNetwork  core.NodeNetwork  `inject:""`
+	Network      core.Network      `inject:""`
+	Calculator   merkle.Calculator `inject:""`
+	Communicator Communicator      `inject:""`
 }
 
-func (sp *SecondPhase) Execute(state *FirstPhaseState) error {
-	// TODO: do something here
-	return nil
+func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
+	prevCloudHash := sp.NodeNetwork.GetCloudHash()
+	globuleID := sp.Network.GetGlobuleID()
+
+	entry := &merkle.GlobuleEntry{
+		PulseEntry:    state.PulseEntry,
+		ProofSet:      state.PulseProofSet,
+		PulseHash:     state.PulseHash,
+		PrevCloudHash: prevCloudHash,
+		GlobuleID:     globuleID,
+	}
+	globuleHash, globuleProof, err := sp.Calculator.GetGlobuleProof(entry)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Execute ] Failed to calculate pulse proof.")
+	}
+
+	packet := packets.Phase2Packet{}
+	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase2Packet.")
+	}
+
+	activeNodes := sp.NodeNetwork.GetActiveNodes()
+	proofSet, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, packet)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
+	}
+
+	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
+	for ref, packet := range proofSet {
+		node := sp.NodeNetwork.GetActiveNode(ref)
+		proof := &merkle.GlobuleProof{
+			BaseProof: merkle.BaseProof{
+				Signature: core.SignatureFromBytes(packet.GetGlobuleHashSignature()),
+			},
+			PrevCloudHash: prevCloudHash,
+			GlobuleID:     globuleProof.GlobuleID,
+			NodeCount:     globuleProof.NodeCount,
+			NodeRoot:      globuleProof.NodeRoot,
+		}
+
+		if !sp.Calculator.IsValid(proof, globuleHash, node.PublicKey()) {
+			nodeProofs[node] = proof
+		}
+	}
+
+	if !consensusReached(len(nodeProofs), len(activeNodes)) {
+		return nil, errors.New("[ Execute ] Consensus not reached")
+	}
+
+	return &SecondPhaseState{
+		FirstPhaseState: state,
+
+		GlobuleEntry:    entry,
+		GlobuleHash:     globuleHash,
+		GlobuleProof:    globuleProof,
+		GlobuleProofSet: nodeProofs,
+	}, nil
 }

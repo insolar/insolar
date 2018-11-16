@@ -18,9 +18,11 @@ package phases
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -28,15 +30,22 @@ import (
 )
 
 // Communicator interface provides methods to exchange data between nodes
-//go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o . -s _mock.go
 type Communicator interface {
-	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error)
+	// ExchangePhase1 used in first consensus step to exchange data between participants
+	ExchangePhase1(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error)
+	// ExchangePhase1 used in second consensus step to exchange data between participants
+	ExchangePhase2(ctx context.Context, participants []core.Node, packet packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
 }
 
 type phase1Result struct {
 	id     core.RecordRef
 	packet *packets.Phase1Packet
+}
+
+type phase2Result struct {
+	id     core.RecordRef
+	packet *packets.Phase2Packet
 }
 
 // NaiveCommunicator is simple Communicator implementation which communicates with each participants
@@ -47,7 +56,9 @@ type NaiveCommunicator struct {
 	NodeNetwork      core.NodeNetwork         `inject:""`
 
 	phase1result chan phase1Result
-	currentPulse core.Pulse
+	phase2result chan phase2Result
+
+	currentPulseNumber uint32
 }
 
 // NewNaiveCommunicator constructor creates new NaiveCommunicator
@@ -63,52 +74,107 @@ func (nc *NaiveCommunicator) Start(ctx context.Context) error {
 	return nil
 }
 
-// ExchangeData used in first consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangeData(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
-	phase1result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
+func (nc *NaiveCommunicator) getPulseNumber() core.PulseNumber {
+	pulseNumber := atomic.LoadUint32(&nc.currentPulseNumber)
+	return core.PulseNumber(pulseNumber)
+}
+
+func (nc *NaiveCommunicator) setPulseNumber(new core.PulseNumber) bool {
+	old := nc.getPulseNumber()
+	return old < new && atomic.CompareAndSwapUint32(&nc.currentPulseNumber, uint32(old), uint32(new))
+}
+
+func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, request network.Request) {
+	for _, node := range participants {
+		go func(n core.Node) {
+			err := nc.ConsensusNetwork.SendRequest(request, n.ID())
+			if err != nil {
+				log.Errorln(err.Error())
+			}
+		}(node)
+	}
+}
+
+// ExchangePhase1 used in first consensus phase to exchange data between participants
+func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
+	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
 	nc.signPhase1Packet(&packet)
 
-	phase1result[nc.ConsensusNetwork.GetNodeID()] = &packet
+	result[nc.ConsensusNetwork.GetNodeID()] = &packet
 
-	nc.currentPulse = packet.GetPulse() // todo check
+	nc.setPulseNumber(packet.GetPulse().PulseNumber)
+
 	packetBuffer, err := packet.Serialize()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ExchangeData] Failed to serialize Phase1Packet.")
+		return nil, errors.Wrap(err, "[ExchangePhase1] Failed to serialize Phase1Packet.")
 	}
 
 	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
 	request := requestBuilder.Type(types.Phase1).Data(packetBuffer).Build()
 
-	for _, node := range participants {
-		err := nc.ConsensusNetwork.SendRequest(request, node.ID())
-		if err != nil {
-			log.Errorln(err.Error())
-		}
-	}
+	nc.sendRequestToNodes(participants, request)
 
-	log.Infof("phase1result len %d", len(phase1result))
+	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	select {
 	case res := <-nc.phase1result:
-		if res.packet.GetPulse().PulseNumber == nc.currentPulse.PulseNumber {
+		if res.packet.GetPulse().PulseNumber == core.PulseNumber(nc.currentPulseNumber) {
 
-			if val, ok := phase1result[res.id]; !ok || val == nil {
+			if val, ok := result[res.id]; !ok || val == nil {
 				// send response
 				err := nc.ConsensusNetwork.SendRequest(request, res.id)
 				if err != nil {
 					log.Errorln(err.Error())
 				}
 			}
-			phase1result[res.id] = res.packet
+			result[res.id] = res.packet
 
 		}
-		if len(phase1result) == len(participants) {
-			return phase1result, nil
+		if len(result) == len(participants) {
+			return result, nil
 		}
 	case <-ctx.Done():
-		return phase1result, nil
+		return result, nil
 	}
 
-	return phase1result, nil
+	return result, nil
+}
+
+// ExchangePhase2 used in second consensus phase to exchange data between participants
+func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []core.Node, packet packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+	result := make(map[core.RecordRef]*packets.Phase2Packet, len(participants))
+
+	result[nc.ConsensusNetwork.GetNodeID()] = &packet
+
+	packetBuffer, err := packet.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ExchangePhase2] Failed to serialize Phase2Packet.")
+	}
+
+	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
+	request := requestBuilder.Type(types.Phase2).Data(packetBuffer).Build()
+
+	nc.sendRequestToNodes(participants, request)
+
+	inslogger.FromContext(ctx).Infof("result len %d", len(result))
+	select {
+	case res := <-nc.phase2result:
+		if val, ok := result[res.id]; !ok || val == nil {
+			// send response
+			err := nc.ConsensusNetwork.SendRequest(request, res.id)
+			if err != nil {
+				log.Errorln(err.Error())
+			}
+		}
+		result[res.id] = res.packet
+
+		if len(result) == len(participants) {
+			return result, nil
+		}
+	case <-ctx.Done():
+		return result, nil
+	}
+
+	return result, nil
 }
 
 func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
@@ -133,13 +199,13 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 	}
 
 	newPulse := p.GetPulse()
-	if newPulse.PulseNumber < nc.currentPulse.PulseNumber {
+
+	if newPulse.PulseNumber < nc.getPulseNumber() {
 		log.Warnln("ignore old pulse")
 		return
 	}
 
-	if nc.currentPulse.PulseNumber < newPulse.PulseNumber {
-		nc.currentPulse = newPulse
+	if nc.setPulseNumber(newPulse.PulseNumber) {
 		go nc.PulseHandler.HandlePulse(context.Background(), newPulse)
 	}
 

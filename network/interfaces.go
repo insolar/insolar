@@ -131,6 +131,8 @@ type PulseHandler interface {
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
 	core.NodeNetwork
+	// SetCloudHash set new cloud hash
+	SetCloudHash([]byte)
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.

@@ -127,6 +127,12 @@ func genRandomSlice(n int) []byte {
 	return buf[:]
 }
 
+func randomArray71() [SignatureLength]byte {
+	var buf [SignatureLength]byte
+	copy(buf[:], genRandomSlice(SignatureLength))
+	return buf
+}
+
 func randomArray64() [64]byte {
 	var buf [64]byte
 	copy(buf[:], genRandomSlice(64))
@@ -142,7 +148,7 @@ func randomArray32() [32]byte {
 
 func makeNodePulseProof() *NodePulseProof {
 	nodePulseProof := &NodePulseProof{}
-	nodePulseProof.NodeSignature = randomArray64()
+	nodePulseProof.NodeSignature = randomArray71()
 	nodePulseProof.NodeStateHash = randomArray64()
 
 	return nodePulseProof
@@ -247,9 +253,9 @@ func TestNodeLeaveClaim_BadData(t *testing.T) {
 }
 
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
-	p := Phase1Packet{}
-	proofStateHash := genRandomSlice(64)
-	proofSignature := genRandomSlice(64)
+	p := NewPhase1Packet()
+	proofStateHash := genRandomSlice(HashLength)
+	proofSignature := genRandomSlice(SignatureLength)
 
 	err := p.SetPulseProof(proofStateHash, proofSignature)
 	assert.NoError(t, err)
@@ -403,13 +409,13 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet := NewPhase1Packet()
 	phase1Packet.PacketHeader = *makeDefaultPacketHeader(Phase1)
 	phase1Packet.PulseData = *makeDefaultPulseDataExt()
-	phase1Packet.ProofNodePulse = NodePulseProof{NodeSignature: randomArray64(), NodeStateHash: randomArray64()}
+	phase1Packet.ProofNodePulse = NodePulseProof{NodeSignature: randomArray71(), NodeStateHash: randomArray64()}
 
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeJoinClaim())
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeViolationBlame())
 	phase1Packet.claims = append(phase1Packet.claims, &NodeLeaveClaim{length: 22})
 
-	phase1Packet.Signature = genRandomSlice(71)
+	phase1Packet.Signature = genRandomSlice(SignatureLength)
 
 	return phase1Packet
 }
@@ -429,10 +435,10 @@ func TestPhase1Packet_BadData(t *testing.T) {
 func makePhase2Packet() *Phase2Packet {
 	phase2Packet := NewPhase2Packet()
 	phase2Packet.PacketHeader = *makeDefaultPacketHeader(Phase2)
-	phase2Packet.GlobuleHashSignature = genRandomSlice(71)
+	phase2Packet.GlobuleHashSignature = genRandomSlice(SignatureLength)
 	phase2Packet.DeviantBitSet = *makeDeviantBitSet()
-	phase2Packet.SignatureHeaderSection1 = genRandomSlice(71)
-	phase2Packet.SignatureHeaderSection2 = genRandomSlice(71)
+	phase2Packet.SignatureHeaderSection1 = genRandomSlice(SignatureLength)
+	phase2Packet.SignatureHeaderSection2 = genRandomSlice(SignatureLength)
 
 	// TODO: uncomment when support ser\deser of ReferendumVote
 	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())

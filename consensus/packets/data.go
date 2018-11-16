@@ -26,8 +26,6 @@ type PacketType uint8
 type ClaimType uint8
 type ReferendumType uint8
 
-const signSize = 71
-
 const (
 	Phase1 = PacketType(iota + 1)
 	Phase2
@@ -40,6 +38,10 @@ const (
 	TypeNodeBroadcast
 	TypeNodeLeaveClaim
 )
+
+const HashLength = 64
+const SignatureLength = 71
+const ReferenceLength = 64
 
 // ----------------------------------PHASE 1--------------------------------
 
@@ -61,7 +63,7 @@ type Phase1Packet struct {
 
 func NewPhase1Packet() *Phase1Packet {
 	return &Phase1Packet{
-		Signature: make([]byte, signSize),
+		Signature: make([]byte, SignatureLength),
 	}
 }
 
@@ -90,6 +92,10 @@ func (p1p *Phase1Packet) GetPulse() core.Pulse {
 	}
 }
 
+func (p1p *Phase1Packet) GetPulseProof() *NodePulseProof {
+	return &p1p.ProofNodePulse
+}
+
 func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
@@ -106,9 +112,9 @@ func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 
 // SetPulseProof sets PulseProof and check struct fields len, returns error if invalid len
 func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) error {
-	if len(proofStateHash) == 64 || len(proofSignature) == 64 {
-		copy(p1p.ProofNodePulse.NodeStateHash[:], proofStateHash[:64])
-		copy(p1p.ProofNodePulse.NodeSignature[:], proofSignature[:64])
+	if len(proofStateHash) == HashLength && len(proofSignature) == SignatureLength {
+		copy(p1p.ProofNodePulse.NodeStateHash[:], proofStateHash[:HashLength])
+		copy(p1p.ProofNodePulse.NodeSignature[:], proofSignature[:SignatureLength])
 		return nil
 	}
 
@@ -151,8 +157,16 @@ type PulseData struct {
 }
 
 type NodePulseProof struct {
-	NodeStateHash [64]byte
-	NodeSignature [64]byte
+	NodeStateHash [HashLength]byte
+	NodeSignature [SignatureLength]byte
+}
+
+func (npp *NodePulseProof) StateHash() []byte {
+	return npp.NodeStateHash[:]
+}
+
+func (npp *NodePulseProof) Signature() []byte {
+	return npp.NodeSignature[:]
 }
 
 // --------------REFERENDUM--------------
@@ -182,7 +196,7 @@ func (nb *NodeBroadcast) Length() uint16 {
 type CapabilityPoolingAndActivation struct {
 	PollingFlags   uint16
 	CapabilityType uint16
-	CapabilityRef  [64]byte
+	CapabilityRef  [ReferenceLength]byte
 	length         uint16
 }
 
@@ -293,8 +307,8 @@ type Phase2Packet struct {
 
 func NewPhase2Packet() *Phase2Packet {
 	return &Phase2Packet{
-		SignatureHeaderSection1: make([]byte, signSize),
-		SignatureHeaderSection2: make([]byte, signSize),
+		SignatureHeaderSection1: make([]byte, SignatureLength),
+		SignatureHeaderSection2: make([]byte, SignatureLength),
 	}
 }
 
@@ -328,4 +342,17 @@ func (phase2Packet *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header.TargetID = phase2Packet.PacketHeader.TargetNodeID
 
 	return header, nil
+}
+
+func (phase2Packet *Phase2Packet) GetGlobuleHashSignature() []byte {
+	return phase2Packet.GlobuleHashSignature[:]
+}
+
+func (phase2Packet *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {
+	if len(globuleHashSignature) == SignatureLength {
+		copy(phase2Packet.GlobuleHashSignature[:], globuleHashSignature[:SignatureLength])
+		return nil
+	}
+
+	return errors.New("invalid proof fields len")
 }

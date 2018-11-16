@@ -17,6 +17,8 @@
 package phases
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -26,7 +28,7 @@ type ThirdPhasePulse struct {
 	State       *ThirdPhasePulseState
 }
 
-func (tpp *ThirdPhasePulse) Execute(state *SecondPhaseState) error {
+func (tpp *ThirdPhasePulse) Execute(ctx context.Context, state *SecondPhaseState) error {
 	// TODO: do something here
 	return nil
 }
@@ -37,7 +39,7 @@ type ThirdPhaseReferendum struct {
 	State       *ThirdPhaseReferendumState
 }
 
-func (tpr *ThirdPhaseReferendum) Execute(state *SecondPhaseState) error {
+func (tpr *ThirdPhaseReferendum) Execute(ctx context.Context, state *SecondPhaseState) error {
 	// TODO: do something here
 	return nil
 }

@@ -18,6 +18,8 @@ package merkle
 
 import (
 	"crypto"
+
+	"github.com/insolar/insolar/core"
 )
 
 type OriginHash []byte
@@ -33,5 +35,5 @@ type Calculator interface {
 
 type Proof interface {
 	hash([]byte, *merkleHelper) []byte
-	signature() []byte
+	signature() core.Signature
 }

@@ -33,7 +33,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhase{}
 	nodeNetworkMock := network.NewNodeNetworkMock(t)
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
-	communicatorMock := network.NewCommunicatorMock(t)
+	communicatorMock := NewCommunicatorMock(t)
 	consensusNetworkMock := network.NewConsensusNetworkMock(t)
 
 	nodeNetworkMock.GetActiveNodesMock.Set(func() (r []core.Node) {
