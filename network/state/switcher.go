@@ -16,7 +16,9 @@
 
 package state
 
-type State int
+import (
+	"github.com/insolar/insolar/network"
+)
 
 const (
 	// NoNetwork state means that nodes doesn`t match majority_rule
@@ -31,10 +33,6 @@ const (
 	CompleteNetwork
 )
 
-type NetworkSwitcher interface {
-	GetState() State
-}
-
 type NetworkSwitcherImpl struct {
 }
 
@@ -42,6 +40,6 @@ func NewNetworkSwitcherImpl() *NetworkSwitcherImpl {
 	return &NetworkSwitcherImpl{}
 }
 
-func (ns *NetworkSwitcherImpl) GetState() State {
+func (ns *NetworkSwitcherImpl) GetState() network.State {
 	return CompleteNetwork
 }
