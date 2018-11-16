@@ -175,8 +175,8 @@ type callConstructorResult struct {
 	Error    error
 }
 
-func (gp *GoPlugin) callCunstructorRPC(ctx context.Context, req rpctypes.DownCallConstructorReq, res rpctypes.DownCallConstructorResp, resultChan chan callConstructorResult) {
-	method := "RPC.CallMethod"
+func (gp *GoPlugin) callConstructorRPC(ctx context.Context, req rpctypes.DownCallConstructorReq, res rpctypes.DownCallConstructorResp, resultChan chan callConstructorResult) {
+	method := "RPC.CallConstructor"
 	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
 	resultChan <- callConstructorResult{Response: res, Error: callClientError}
 }
