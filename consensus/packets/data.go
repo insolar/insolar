@@ -23,20 +23,11 @@ import (
 )
 
 type PacketType uint8
-type ClaimType uint8
 type ReferendumType uint8
 
 const (
 	Phase1 = PacketType(iota + 1)
 	Phase2
-)
-
-const (
-	TypeNodeJoinClaim = ClaimType(iota + 1)
-	TypeCapabilityPollingAndActivation
-	TypeNodeViolationBlame
-	TypeNodeBroadcast
-	TypeNodeLeaveClaim
 )
 
 const HashLength = 64
@@ -161,107 +152,6 @@ func (npp *NodePulseProof) StateHash() []byte {
 
 func (npp *NodePulseProof) Signature() []byte {
 	return npp.NodeSignature[:]
-}
-
-// --------------REFERENDUM--------------
-
-type ReferendumClaim interface {
-	Serializer
-	Type() ClaimType
-	Length() uint16
-}
-
-// NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
-// Type 4.
-type NodeBroadcast struct {
-	EmergencyLevel uint8
-	length         uint16
-}
-
-func (nb *NodeBroadcast) Type() ClaimType {
-	return TypeNodeBroadcast
-}
-
-func (nb *NodeBroadcast) Length() uint16 {
-	return nb.length
-}
-
-// CapabilityPoolingAndActivation is a type 3.
-type CapabilityPoolingAndActivation struct {
-	PollingFlags   uint16
-	CapabilityType uint16
-	CapabilityRef  [ReferenceLength]byte
-	length         uint16
-}
-
-func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
-	return TypeCapabilityPollingAndActivation
-}
-
-func (cpa *CapabilityPoolingAndActivation) Length() uint16 {
-	return cpa.length
-}
-
-// NodeViolationBlame is a type 2.
-type NodeViolationBlame struct {
-	BlameNodeID   uint32
-	TypeViolation uint8
-	claimType     ClaimType
-	length        uint16
-}
-
-func (nvb *NodeViolationBlame) Type() ClaimType {
-	return TypeNodeViolationBlame
-}
-
-func (nvb *NodeViolationBlame) Length() uint16 {
-	return nvb.length
-}
-
-// NodeJoinClaim is a type 1, len == 272.
-type NodeJoinClaim struct {
-	NodeID                  uint32
-	RelayNodeID             uint32
-	ProtocolVersionAndFlags uint32
-	JoinsAfter              uint32
-	NodeRoleRecID           uint32
-	NodeRef                 core.RecordRef
-	NodePK                  [64]byte
-	//length uint16
-}
-
-func (njc *NodeJoinClaim) Type() ClaimType {
-	return TypeNodeJoinClaim
-}
-
-func (njc *NodeJoinClaim) Length() uint16 {
-	return 0
-}
-
-// NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
-// Should be executed with the next pulse. Type 1, len == 0.
-type NodeLeaveClaim struct {
-	length uint16
-}
-
-func (nlc *NodeLeaveClaim) Type() ClaimType {
-	return TypeNodeLeaveClaim
-}
-
-func (nlc *NodeLeaveClaim) Length() uint16 {
-	return nlc.length
-}
-
-func NewNodeJoinClaim() *NodeJoinClaim {
-	return &NodeJoinClaim{
-		//length: 272,
-	}
-}
-
-func NewNodViolationBlame() *NodeViolationBlame {
-	return &NodeViolationBlame{
-		claimType: TypeNodeViolationBlame,
-	}
 }
 
 // ----------------------------------PHASE 2--------------------------------
