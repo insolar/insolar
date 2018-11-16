@@ -180,6 +180,19 @@ func (mb *MessageBus) SendParcel(ctx context.Context, pulse *core.Pulse, msg cor
 	}
 
 	return reply.Deserialize(bytes.NewBuffer(res))
+func (mb *MessageBus) parseRedirect(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
+	switch redirect := response.(type) {
+	case *reply.GenericRedirect:
+		return redirect.GetTo(), parcel, nil
+	case *reply.DefinedStateRedirect:
+		getObjectRequest := parcel.Message().(*message.GetObject)
+		getObjectRequest.State = &redirect.StateID
+		parcel, err := mb.CreateParcel(ctx, parcel.Pulse(), getObjectRequest, nil)
+		return redirect.GetTo(), parcel, err
+	default:
+		panic("unknown type of redirect")
+	}
+}
 }
 
 type serializableError struct {
