@@ -161,7 +161,7 @@ func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetOb
 			return nil, err
 		}
 
-		redirect = &reply.DefinedStateRedirect{
+		redirect = &reply.ObjectRedirect{
 			GenericRedirect: reply.GenericRedirect{
 				Sign: sign,
 				To:   &nodes[0],

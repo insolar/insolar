@@ -27,11 +27,11 @@ func (r *GenericRedirect) Type() core.ReplyType {
 	return TypeRedirect
 }
 
-type DefinedStateRedirect struct {
+type ObjectRedirect struct {
 	GenericRedirect
 	StateID core.RecordID
 }
 
-func (r *DefinedStateRedirect) Type() core.ReplyType {
+func (r *ObjectRedirect) Type() core.ReplyType {
 	return TypeDefinedStateRedirect
 }

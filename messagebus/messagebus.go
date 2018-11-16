@@ -222,7 +222,7 @@ func (mb *MessageBus) parseRedirect(ctx context.Context, parcel core.Parcel, res
 	switch redirect := response.(type) {
 	case *reply.GenericRedirect:
 		return redirect.GetTo(), parcel, nil
-	case *reply.DefinedStateRedirect:
+	case *reply.ObjectRedirect:
 		getObjectRequest := parcel.Message().(*message.GetObject)
 		getObjectRequest.State = &redirect.StateID
 		parcel, err := mb.CreateParcel(ctx, parcel.Pulse(), getObjectRequest, nil)
