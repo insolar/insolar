@@ -27,7 +27,6 @@ import (
 func TestInitComponents(t *testing.T) {
 	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
-	//cfg.Genesis.RootKeys = "testdata/root_member_keys.json"
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 

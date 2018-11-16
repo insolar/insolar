@@ -207,7 +207,7 @@ func waitForLaunch() error {
 
 func startInsolard() error {
 	cmd = exec.Command(
-		insolardPath, "--genesis", filepath.Join(functestPath(), "bootstrap.yaml"),
+		insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
 	)
 	var err error
 

@@ -78,7 +78,7 @@ func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 }
 
 // NewGenesis creates new Genesis
-func NewGenesis(isGenesis bool, genesisConfigPath string) /*nodesInfo []map[string]string)*/ (*Genesis, error) {
+func NewGenesis(isGenesis bool, genesisConfigPath string) (*Genesis, error) {
 	var err error
 	genesis := &Genesis{}
 	genesis.rootDomainRef = &core.RecordRef{}
@@ -182,7 +182,6 @@ func (g *Genesis) activateNodeDomain(
 
 func (g *Genesis) activateRootMember(
 	ctx context.Context, domain *core.RecordID, cb *goplugintestutils.ContractsBuilder, rootPubKey string,
-	//ctx context.Context, domain *core.RecordID, cb *goplugintestutils.ContractsBuilder,
 ) error {
 
 	m, err := member.New("RootMember", rootPubKey)
@@ -277,8 +276,6 @@ func (g *Genesis) activateRootMemberWallet(
 
 func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBuilder, rootPubKey string) error {
 	domain, domainDesc, err := g.activateRootDomain(ctx, cb)
-	//func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
-	//	domain, domainDesc, err := g.activateRootDomain(ctx, cb)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, errMsg)
@@ -324,11 +321,6 @@ func (g *Genesis) Start(ctx context.Context) error {
 		g.rootMemberRef = rootMemberRef
 		inslog.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
 		return nil
-	}
-
-	//g.rootPubKey, err = getRootMemberPubKey(ctx, g.rootKeysFile)
-	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root member keys")
 	}
 
 	isLightExecutor, err := g.isLightExecutor(ctx)

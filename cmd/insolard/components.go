@@ -124,10 +124,10 @@ func InitComponents(
 
 	var gen core.Genesis
 	if isGenesis {
-		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath) //bootstrapNodesInfo(ctx, nodeKeysPath))
+		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
 	} else {
-		gen, err = genesis.NewGenesis(isGenesis, "") //[]map[string]string{})
+		gen, err = genesis.NewGenesis(isGenesis, "")
 		checkError(ctx, err, "failed to start Bootstrapper")
 	}
 

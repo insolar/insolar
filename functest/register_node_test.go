@@ -85,7 +85,7 @@ func _TestRegisterNodeHeavyMaterial(t *testing.T) {
 
 func _TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
-	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
 	assert.NoError(t, err)
 
 	assert.Equal(t, testRole, cert.Role)
