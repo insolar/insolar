@@ -121,6 +121,7 @@ type LogicRunner struct {
 	ParcelFactory              message.ParcelFactory           `inject:""`
 	PulseManager               core.PulseManager               `inject:""`
 	ArtifactManager            core.ArtifactManager            `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
 
 	Executors      [core.MachineTypesLastID]core.MachineLogicExecutor
 	machinePrefs   []core.MachineType
@@ -265,7 +266,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := message.ExtractTarget(msg)
-	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
 		ctx,
 		vb.GetRole(),
 		&target,
