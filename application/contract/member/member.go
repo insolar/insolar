@@ -187,5 +187,4 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	return string(cert), nil
-	return "", nil
 }

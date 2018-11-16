@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 )
@@ -301,6 +300,47 @@ func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestut
 	return nil
 }
 
+func (g *Genesis) registerDiscoverNodes(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
+
+	for i, discoverNode := range g.config.DiscoveryNodes {
+		/*_, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
+		if err != nil {
+			log.Fatal(err)
+		}*/
+		nodePubKey := ""
+
+		nodeState := &noderecord.NodeRecord{
+			Record: noderecord.RecordInfo{
+				PublicKey: nodePubKey,
+				Role:      core.GetRoleFromString(discoverNode.Role),
+			},
+		}
+		nodeData, err := serializeInstance(nodeState)
+		if err != nil {
+			return errors.Wrap(err, "")
+		}
+
+		nodeID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)}})
+		if err != nil {
+			return errors.Wrap(err, "")
+		}
+		contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
+		_, err = g.ArtifactManager.ActivateObject(
+			ctx,
+			core.RecordRef{},
+			*contract,
+			*g.nodeDomainRef,
+			*cb.Prototypes[nodeRecord],
+			false,
+			nodeData,
+		)
+		if err != nil {
+			return errors.Wrap(err, "")
+		}
+	}
+	return nil
+}
+
 // Start creates types and RootDomain instance
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
@@ -357,42 +397,9 @@ func (g *Genesis) Start(ctx context.Context) error {
 			return errors.Wrap(err, "[ Bootstrapper ]")
 		}
 
-		for i, discoverNode := range g.config.DiscoveryNodes {
-			//_, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
-			nodePubKey := ""
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			nodeState := &noderecord.NodeRecord{
-				Record: noderecord.RecordInfo{
-					PublicKey: nodePubKey,
-					Role:      core.GetRoleFromString(discoverNode.Role),
-				},
-			}
-			nodeData, err := serializeInstance(nodeState)
-			if err != nil {
-				return errors.Wrap(err, "")
-			}
-
-			nodeID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)}})
-			if err != nil {
-				return errors.Wrap(err, "")
-			}
-			contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
-			_, err = g.ArtifactManager.ActivateObject(
-				ctx,
-				core.RecordRef{},
-				*contract,
-				*g.nodeDomainRef,
-				*cb.Prototypes[nodeRecord],
-				false,
-				nodeData,
-			)
-			if err != nil {
-				return errors.Wrap(err, "")
-			}
-
+		err = g.registerDiscoverNodes(ctx, cb)
+		if err != nil {
+			return errors.Wrap(err, "[ Bootstrapper ]")
 		}
 	}
 
