@@ -1837,7 +1837,7 @@ func (r *One) EmptyMethod() (error) {
 		Caller:          nil,
 		Callee:          nil,
 		Request:         nil,
-		Time:            time.Now(), // TODO: probably we should take it from e
+		Time:            time.Now(),
 		Pulse:           *rlr.pulse(ctx),
 		TraceID:         inslogger.TraceID(ctx),
 		CallerPrototype: nil,
