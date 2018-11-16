@@ -193,6 +193,9 @@ func (mb *MessageBus) parseRedirect(ctx context.Context, parcel core.Parcel, res
 		panic("unknown type of redirect")
 	}
 }
+
+func isReplyRedirect(response core.Reply) bool {
+	return response.Type() == reply.TypeDefinedStateRedirect || response.Type() == reply.TypeRedirect
 }
 
 type serializableError struct {
