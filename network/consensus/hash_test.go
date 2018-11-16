@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -37,9 +37,9 @@ func TestNodeConsensus_calculateNodeHash(t *testing.T) {
 	hash1, _ := CalculateNodeUnsyncHash(scheme, nodeID, nil)
 	hash2, _ := CalculateNodeUnsyncHash(scheme, nodeID, []core.Node{})
 
-	assert.Equal(t, nullHash, hex.EncodeToString(hash1.Hash))
-	assert.Equal(t, hash1, hash2)
-	assert.Equal(t, nodeID, hash1.NodeID)
+	require.Equal(t, nullHash, hex.EncodeToString(hash1.Hash))
+	require.Equal(t, hash1, hash2)
+	require.Equal(t, nodeID, hash1.NodeID)
 
 	activeNode1 := newActiveNode(0, 0)
 	activeNode2 := newActiveNode(0, 0)
@@ -49,18 +49,18 @@ func TestNodeConsensus_calculateNodeHash(t *testing.T) {
 
 	hash1, _ = CalculateNodeUnsyncHash(scheme, nodeID, activeNode1Slice)
 	hash2, _ = CalculateNodeUnsyncHash(scheme, nodeID, activeNode2Slice)
-	assert.Equal(t, hash1, hash2)
+	require.Equal(t, hash1, hash2)
 
 	activeNode3 := newActiveNode(1, 0)
 	activeNode3Slice := []core.Node{activeNode3}
 	hash3, _ := CalculateNodeUnsyncHash(scheme, nodeID, activeNode3Slice)
-	assert.NotEqual(t, hash1, hash3)
+	require.NotEqual(t, hash1, hash3)
 
 	// nodes order in slice should not affect hash calculating
 	slice1 := []core.Node{activeNode1, activeNode2}
 	slice2 := []core.Node{activeNode2, activeNode1}
 	hash1, _ = CalculateNodeUnsyncHash(scheme, nodeID, slice1)
 	hash2, _ = CalculateNodeUnsyncHash(scheme, nodeID, slice2)
-	assert.Equal(t, hash1, hash2)
-	assert.Equal(t, nodeID, hash1.NodeID)
+	require.Equal(t, hash1, hash2)
+	require.Equal(t, nodeID, hash1.NodeID)
 }

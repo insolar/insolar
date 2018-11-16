@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newActiveNode(ref byte) (core.RecordRef, core.NodeRole, string, string) {
@@ -51,7 +51,7 @@ func TestNodekeeper_GetOrigin(t *testing.T) {
 	id := core.RecordRef{255}
 	n := testNode(id)
 	keeper := NewNodeKeeper(n)
-	assert.Equal(t, n, keeper.GetOrigin())
+	require.Equal(t, n, keeper.GetOrigin())
 }
 
 func TestNodekeeper_AddUnsync(t *testing.T) {
@@ -60,19 +60,19 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 	keeper := NewNodeKeeper(n)
 
 	_, err := keeper.AddUnsync(newActiveNode(0))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	success, list := keeper.SetPulse(core.PulseNumber(0))
-	assert.True(t, success)
-	assert.Equal(t, 1, len(list.GetUnsync()))
+	require.True(t, success)
+	require.Equal(t, 1, len(list.GetUnsync()))
 }
 
 func TestNodekeeper_AddUnsync2(t *testing.T) {
 	keeper := newNodeKeeper()
 	success, list := keeper.SetPulse(core.PulseNumber(0))
 	_, err := keeper.AddUnsync(newActiveNode(0))
-	assert.NoError(t, err)
-	assert.True(t, success)
-	assert.Equal(t, 0, len(list.GetUnsync()))
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, 0, len(list.GetUnsync()))
 }
 
 func TestNodekeeper_AddUnsync3(t *testing.T) {
@@ -80,59 +80,59 @@ func TestNodekeeper_AddUnsync3(t *testing.T) {
 	_, err := keeper.AddUnsync(newActiveNode(0))
 	success, list := keeper.SetPulse(core.PulseNumber(0))
 	_, err = keeper.AddUnsync(newActiveNode(1))
-	assert.NoError(t, err)
-	assert.True(t, success)
-	assert.Equal(t, 1, len(list.GetUnsync()))
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, 1, len(list.GetUnsync()))
 }
 
 func TestNodekeeper_pipeline(t *testing.T) {
 	keeper := newNodeKeeper()
 	for i := 0; i < 4; i++ {
 		_, err := keeper.AddUnsync(newActiveNode(byte(2 * i)))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		pulse := core.PulseNumber(i)
 		success, list := keeper.SetPulse(pulse)
-		assert.True(t, success)
+		require.True(t, success)
 		_, err = keeper.AddUnsync(newActiveNode(byte(2*i + 1)))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		keeper.Sync(list.GetUnsync(), pulse)
 	}
 	// 3 nodes should not advance to join active list
 	// 5 nodes should advance + 1 origin node
-	assert.Equal(t, 6, len(keeper.GetActiveNodes()))
+	require.Equal(t, 6, len(keeper.GetActiveNodes()))
 	for i := 0; i < 5; i++ {
-		assert.NotNil(t, keeper.GetActiveNode(core.RecordRef{byte(i)}))
+		require.NotNil(t, keeper.GetActiveNode(core.RecordRef{byte(i)}))
 	}
 }
 
 func TestNodekeeper_doubleSync(t *testing.T) {
 	keeper := newNodeKeeper()
 	_, err := keeper.AddUnsync(newActiveNode(0))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pulse := core.PulseNumber(0)
 	success, list := keeper.SetPulse(pulse)
-	assert.True(t, success)
-	assert.Equal(t, 1, len(list.GetUnsync()))
+	require.True(t, success)
+	require.Equal(t, 1, len(list.GetUnsync()))
 	keeper.Sync(list.GetUnsync(), pulse)
 	// second sync should be ignored because pulse has not changed
 	keeper.Sync(list.GetUnsync(), pulse)
 	// and added unsync node should not advance to active list (only one origin node would be in the list)
-	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
-	assert.Equal(t, keeper.GetOrigin().ID(), keeper.GetActiveNodes()[0].ID())
+	require.Equal(t, 1, len(keeper.GetActiveNodes()))
+	require.Equal(t, keeper.GetOrigin().ID(), keeper.GetActiveNodes()[0].ID())
 }
 
 func TestNodekeeper_doubleSetPulse(t *testing.T) {
 	keeper := newNodeKeeper()
 	_, err := keeper.AddUnsync(newActiveNode(0))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pulse := core.PulseNumber(0)
 	_, list := keeper.SetPulse(pulse)
 	keeper.Sync(list.GetUnsync(), pulse)
 	_, _ = keeper.SetPulse(core.PulseNumber(1))
 	_, _ = keeper.SetPulse(core.PulseNumber(2))
 	// node with ref 0 advanced to active list
-	assert.Equal(t, 2, len(keeper.GetActiveNodes()))
-	assert.NotNil(t, keeper.GetActiveNode(core.RecordRef{0}))
+	require.Equal(t, 2, len(keeper.GetActiveNodes()))
+	require.NotNil(t, keeper.GetActiveNode(core.RecordRef{0}))
 }
 
 func TestNodekeeper_outdatedSync(t *testing.T) {
@@ -147,7 +147,7 @@ func TestNodekeeper_outdatedSync(t *testing.T) {
 			_, _ = k.AddUnsync(newActiveNode(byte(2*i + 1)))
 			pulse := core.PulseNumber(i)
 			success, list := k.SetPulse(pulse)
-			assert.True(t, success)
+			require.True(t, success)
 			// imitate long consensus process
 			time.Sleep(200 * time.Millisecond)
 			k.Sync(list.GetUnsync(), pulse)
@@ -157,16 +157,16 @@ func TestNodekeeper_outdatedSync(t *testing.T) {
 	wg.Wait()
 	// All Syncs calls are executed out of date
 	// So, no nodes should advance to active list (we should have only 1 origin node in active)
-	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
+	require.Equal(t, 1, len(keeper.GetActiveNodes()))
 }
 
 func TestNodekeeper_SetPulse(t *testing.T) {
 	keeper := newNodeKeeper()
 	success, _ := keeper.SetPulse(core.PulseNumber(10))
-	assert.True(t, success)
+	require.True(t, success)
 	// Pulses should pass in ascending order
 	success, _ = keeper.SetPulse(core.PulseNumber(9))
-	assert.False(t, success)
+	require.False(t, success)
 }
 
 func TestNodekeeper_GetUnsyncHolder(t *testing.T) {
@@ -176,7 +176,7 @@ func TestNodekeeper_GetUnsyncHolder(t *testing.T) {
 	nextPulse := core.PulseNumber(12)
 	requestedPulseGreater := core.PulseNumber(13)
 	success, _ := keeper.SetPulse(pulse)
-	assert.True(t, success)
+	require.True(t, success)
 
 	wg := sync.WaitGroup{}
 	waitersNext := 10
@@ -187,12 +187,12 @@ func TestNodekeeper_GetUnsyncHolder(t *testing.T) {
 	f := func(t *testing.T, requestedPulse core.PulseNumber, nextPulse core.PulseNumber, wg *sync.WaitGroup) {
 		holder, err := keeper.GetUnsyncHolder(requestedPulse, 10*time.Millisecond)
 		if requestedPulse == nextPulse {
-			assert.NoError(t, err)
-			assert.NotNil(t, holder)
-			assert.Equal(t, nextPulse, holder.GetPulse())
+			require.NoError(t, err)
+			require.NotNil(t, holder)
+			require.Equal(t, nextPulse, holder.GetPulse())
 		} else {
-			assert.Error(t, err)
-			assert.Nil(t, holder)
+			require.Error(t, err)
+			require.Nil(t, holder)
 		}
 		wg.Done()
 	}
@@ -211,7 +211,7 @@ func TestNodekeeper_GetUnsyncHolder(t *testing.T) {
 
 	time.Sleep(time.Millisecond)
 	success, _ = keeper.SetPulse(nextPulse)
-	assert.True(t, success)
+	require.True(t, success)
 	wg.Wait()
 }
 
@@ -220,15 +220,15 @@ func TestNodekeeper_GetUnsyncHolder2(t *testing.T) {
 	prevPulse := core.PulseNumber(9)
 	pulse := core.PulseNumber(10)
 	success, _ := keeper.SetPulse(pulse)
-	assert.True(t, success)
+	require.True(t, success)
 	holder, err := keeper.GetUnsyncHolder(pulse, 0)
-	assert.NoError(t, err)
-	assert.NotNil(t, holder)
-	assert.Equal(t, pulse, holder.GetPulse())
+	require.NoError(t, err)
+	require.NotNil(t, holder)
+	require.Equal(t, pulse, holder.GetPulse())
 
 	holder, err = keeper.GetUnsyncHolder(prevPulse, 0)
-	assert.Error(t, err)
-	assert.Nil(t, holder)
+	require.Error(t, err)
+	require.Nil(t, holder)
 }
 
 func TestNodekeeper_GetUnsyncHolder3(t *testing.T) {
@@ -236,13 +236,13 @@ func TestNodekeeper_GetUnsyncHolder3(t *testing.T) {
 	pulse := core.PulseNumber(10)
 	nextPulse := core.PulseNumber(11)
 	success, _ := keeper.SetPulse(pulse)
-	assert.True(t, success)
+	require.True(t, success)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func(keeper network.NodeKeeper, wg *sync.WaitGroup) {
 		_, err := keeper.GetUnsyncHolder(nextPulse, time.Millisecond)
-		assert.Error(t, err)
+		require.Error(t, err)
 		wg.Done()
 	}(keeper, &wg)
 	time.Sleep(10 * time.Millisecond)
@@ -263,24 +263,24 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 	for i := 0; i < refsCount; i++ {
 		ref := core.RecordRef{byte(i)}
 		ch, err := keeper.AddUnsync(newActiveNode(byte(i)))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		go func(t *testing.T, ch chan core.Node, ref core.RecordRef, wg *sync.WaitGroup) {
 			node := <-ch
 			if nodePassesConsensus(ref) {
-				assert.NotNil(t, node)
-				assert.Equal(t, ref, node.ID())
+				require.NotNil(t, node)
+				require.Equal(t, ref, node.ID())
 			} else {
-				assert.Nil(t, node)
+				require.Nil(t, node)
 			}
 			wg.Done()
 		}(t, ch, ref, &wg)
 	}
 
 	success, list := keeper.SetPulse(core.PulseNumber(133))
-	assert.True(t, success)
-	assert.NotNil(t, list)
-	assert.Equal(t, refsCount, len(list.GetUnsync()))
+	require.True(t, success)
+	require.NotNil(t, list)
+	require.Equal(t, refsCount, len(list.GetUnsync()))
 
 	syncCandidates := make([]core.Node, 0)
 	for _, node := range list.GetUnsync() {
@@ -295,8 +295,8 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 func TestUnsyncList_GetUnsync(t *testing.T) {
 	unsyncNodes := []core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
-	assert.Empty(t, unsyncList.GetUnsync())
-	assert.Equal(t, core.PulseNumber(10), unsyncList.GetPulse())
+	require.Empty(t, unsyncList.GetUnsync())
+	require.Equal(t, core.PulseNumber(10), unsyncList.GetPulse())
 }
 
 func TestUnsyncList_GetHash(t *testing.T) {
@@ -307,8 +307,8 @@ func TestUnsyncList_GetHash(t *testing.T) {
 	h = append(h, &network.NodeUnsyncHash{core.RecordRef{1}, hash})
 	unsyncList.SetHash(h)
 	h2, err := unsyncList.GetHash(0)
-	assert.NoError(t, err)
-	assert.Equal(t, hash, h2[0].Hash)
+	require.NoError(t, err)
+	require.Equal(t, hash, h2[0].Hash)
 }
 
 func TestUnsyncList_GetHash2(t *testing.T) {
@@ -325,9 +325,9 @@ func TestUnsyncList_GetHash2(t *testing.T) {
 	for i := 0; i < waiters; i++ {
 		go func(list consensus.UnsyncHolder) {
 			h, err := list.GetHash(time.Millisecond * 10)
-			assert.NoError(t, err)
-			assert.NotNil(t, h)
-			assert.Equal(t, hash, h[0].Hash)
+			require.NoError(t, err)
+			require.NotNil(t, h)
+			require.Equal(t, hash, h[0].Hash)
 			wg.Done()
 		}(unsyncList)
 	}
@@ -350,8 +350,8 @@ func TestUnsyncList_GetHash3(t *testing.T) {
 	for i := 0; i < waiters; i++ {
 		go func(list consensus.UnsyncHolder) {
 			h, err := list.GetHash(time.Millisecond * 1)
-			assert.Error(t, err)
-			assert.Nil(t, h)
+			require.Error(t, err)
+			require.Nil(t, h)
 			wg.Done()
 		}(unsyncList)
 	}
@@ -364,14 +364,14 @@ func TestUnsyncList_AddUnsyncList(t *testing.T) {
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), nil)
 	unsyncList.AddUnsyncList(core.RecordRef{1}, []core.Node{})
 	_, exists := unsyncList.GetUnsyncList(core.RecordRef{1})
-	assert.True(t, exists)
+	require.True(t, exists)
 }
 
 func TestUnsyncList_AddUnsyncHash(t *testing.T) {
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), nil)
 	unsyncList.AddUnsyncHash(core.RecordRef{1}, []*network.NodeUnsyncHash{})
 	_, exists := unsyncList.GetUnsyncHash(core.RecordRef{1})
-	assert.True(t, exists)
+	require.True(t, exists)
 }
 
 func TestNodekeeper_GetActiveNodesByRole(t *testing.T) {
@@ -382,17 +382,17 @@ func TestNodekeeper_GetActiveNodesByRole(t *testing.T) {
 	node2.NodeRole = core.RoleLightMaterial
 	keeper.AddActiveNodes([]core.Node{node1, node2})
 
-	assert.Equal(t, node1.NodeID, keeper.GetActiveNodesByRole(core.RoleVirtualExecutor)[0])
-	assert.Equal(t, node1.NodeID, keeper.GetActiveNodesByRole(core.RoleVirtualValidator)[0])
-	assert.Equal(t, node2.NodeID, keeper.GetActiveNodesByRole(core.RoleLightValidator)[0])
-	assert.Equal(t, node2.NodeID, keeper.GetActiveNodesByRole(core.RoleLightExecutor)[0])
-	assert.Empty(t, keeper.GetActiveNodesByRole(core.RoleHeavyExecutor))
+	require.Equal(t, node1.NodeID, keeper.GetActiveNodesByRole(core.RoleVirtualExecutor)[0])
+	require.Equal(t, node1.NodeID, keeper.GetActiveNodesByRole(core.RoleVirtualValidator)[0])
+	require.Equal(t, node2.NodeID, keeper.GetActiveNodesByRole(core.RoleLightValidator)[0])
+	require.Equal(t, node2.NodeID, keeper.GetActiveNodesByRole(core.RoleLightExecutor)[0])
+	require.Empty(t, keeper.GetActiveNodesByRole(core.RoleHeavyExecutor))
 }
 
 func TestNodekeeper_GetActiveNodeByShortID(t *testing.T) {
 	keeper := newNodeKeeper()
 	node1 := testNode(testutils.RandomRef())
 	keeper.AddActiveNodes([]core.Node{node1})
-	assert.NotNil(t, keeper.GetActiveNodeByShortID(node1.ShortID()))
-	assert.Nil(t, keeper.GetActiveNodeByShortID(node1.ShortID()+1))
+	require.NotNil(t, keeper.GetActiveNodeByShortID(node1.ShortID()))
+	require.Nil(t, keeper.GetActiveNodeByShortID(node1.ShortID()+1))
 }

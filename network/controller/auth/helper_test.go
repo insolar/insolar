@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestNode() core.Node {
@@ -46,23 +46,23 @@ func TestCorrectShortIDCollision(t *testing.T) {
 		newTestNodeWithShortID(64),
 	})
 
-	assert.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(0)))
-	assert.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(31)))
-	assert.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(35)))
-	assert.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(65)))
+	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(0)))
+	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(31)))
+	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(35)))
+	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(65)))
 
-	assert.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(30)))
+	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(30)))
 	node := newTestNodeWithShortID(30)
 	CorrectShortIDCollision(keeper, node)
-	assert.Equal(t, core.ShortNodeID(31), node.ShortID())
+	require.Equal(t, core.ShortNodeID(31), node.ShortID())
 
-	assert.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(32)))
+	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(32)))
 	node = newTestNodeWithShortID(32)
 	CorrectShortIDCollision(keeper, node)
-	assert.Equal(t, core.ShortNodeID(35), node.ShortID())
+	require.Equal(t, core.ShortNodeID(35), node.ShortID())
 
-	assert.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(64)))
+	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(64)))
 	node = newTestNodeWithShortID(64)
 	CorrectShortIDCollision(keeper, node)
-	assert.Equal(t, core.ShortNodeID(65), node.ShortID())
+	require.Equal(t, core.ShortNodeID(65), node.ShortID())
 }

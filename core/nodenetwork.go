@@ -40,7 +40,7 @@ type Node interface {
 	Version() string
 }
 
-// TODO: fix issue with go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o github.com/insolar/insolar/testutils/network/node_network_mock.go
+//go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o ../testutils/network -s _mock.go
 type NodeNetwork interface {
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
 	GetOrigin() Node
@@ -50,4 +50,6 @@ type NodeNetwork interface {
 	GetActiveNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
 	GetActiveNodesByRole(role JetRole) []RecordRef
+	// GetCloudHash returns current cloud hash
+	GetCloudHash() []byte
 }

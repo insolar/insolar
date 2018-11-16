@@ -37,7 +37,7 @@ type GlobuleEntry struct {
 	ProofSet      map[core.Node]*PulseProof
 	PulseHash     []byte
 	PrevCloudHash []byte
-	GlobuleIndex  uint32
+	GlobuleID     core.GlobuleID
 }
 
 func (ge *GlobuleEntry) hash(helper *merkleHelper) ([]byte, error) {
@@ -80,7 +80,7 @@ func (ce *CloudEntry) hash(helper *merkleHelper) ([]byte, error) {
 	var result [][]byte
 
 	for _, proof := range ce.ProofSet {
-		globuleInfoHash := helper.globuleInfoHash(ce.PrevCloudHash, proof.GlobuleIndex, proof.NodeCount)
+		globuleInfoHash := helper.globuleInfoHash(ce.PrevCloudHash, uint32(proof.GlobuleID), proof.NodeCount)
 		globuleHash := helper.globuleHash(globuleInfoHash, proof.NodeRoot)
 		result = append(result, globuleHash)
 	}
@@ -102,7 +102,7 @@ type nodeEntry struct {
 func (ne *nodeEntry) hash(helper *merkleHelper) []byte {
 	pulseHash := ne.PulseEntry.hash(helper)
 	nodeInfoHash := helper.nodeInfoHash(pulseHash, ne.PulseProof.StateHash)
-	return helper.nodeHash(ne.PulseProof.Signature, nodeInfoHash)
+	return helper.nodeHash(ne.PulseProof.Signature.Bytes(), nodeInfoHash)
 }
 
 func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[core.Node]*PulseProof) map[core.NodeRole][]*nodeEntry {

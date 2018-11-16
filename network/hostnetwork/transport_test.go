@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -102,24 +102,24 @@ func mockConfiguration(nodeID string, address string) configuration.Configuratio
 func TestNewInternalTransport(t *testing.T) {
 	// broken address
 	_, err := NewInternalTransport(mockConfiguration(ID1, "abirvalg"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	address := "127.0.0.1:0"
 	tp, err := NewInternalTransport(mockConfiguration(ID1, address))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer tp.Stop()
-	// assert that new address with correct port has been assigned
-	assert.NotEqual(t, address, tp.PublicAddress())
-	assert.Equal(t, core.NewRefFromBase58(ID1), tp.GetNodeID())
+	// require that new address with correct port has been assigned
+	require.NotEqual(t, address, tp.PublicAddress())
+	require.Equal(t, core.NewRefFromBase58(ID1), tp.GetNodeID())
 }
 
 func TestNewInternalTransport2(t *testing.T) {
 	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	go tp.Start(testContext)
 	// no assertion, check that Stop does not block
 	defer func(t *testing.T) {
 		tp.Stop()
-		assert.True(t, true)
+		require.True(t, true)
 	}(t)
 }
 
@@ -151,14 +151,14 @@ func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err err
 
 func TestNewInternalTransport3(t *testing.T) {
 	_, err := NewInternalTransport(mockConfiguration("", "127.0.0.1:0"))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestNewHostTransport(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	assert.Equal(t, core.NewRefFromBase58(ID1), t1.GetNodeID())
-	assert.Equal(t, core.NewRefFromBase58(ID2), t2.GetNodeID())
-	assert.NoError(t, err)
+	require.Equal(t, core.NewRefFromBase58(ID1), t1.GetNodeID())
+	require.Equal(t, core.NewRefFromBase58(ID2), t2.GetNodeID())
+	require.NoError(t, err)
 
 	count := 10
 	wg := sync.WaitGroup{}
@@ -182,17 +182,17 @@ func TestNewHostTransport(t *testing.T) {
 	for i := 0; i < count; i++ {
 		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 		_, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	success := network.WaitTimeout(&wg, time.Second)
-	assert.True(t, success)
+	require.True(t, success)
 }
 
 func TestHostTransport_SendRequestPacket(t *testing.T) {
 	m := newMockResolver()
 
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	t1 := NewHostTransport(i1, m)
 	t1.Start(testContext)
 	defer t1.Stop()
@@ -202,29 +202,29 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	// should return error because cannot resolve NodeID -> Address
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	_, err = t1.SendRequest(request, unknownID)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	err = m.addMapping(ID2, "abirvalg")
-	assert.Error(t, err)
+	require.Error(t, err)
 	err = m.addMapping(ID3, "127.0.0.1:9090")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// should return error because resolved address is invalid
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
 	handler := func(r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
-		assert.Equal(t, core.NewRefFromBase58(ID1), r.GetSender())
-		assert.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
+		require.Equal(t, core.NewRefFromBase58(ID1), r.GetSender())
+		require.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
 		wg.Done()
 		return t2.BuildResponse(r, nil), nil
 	}
@@ -239,18 +239,18 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	assert.Equal(t, core.NewRefFromBase58(ID1), request.GetSender())
-	assert.Equal(t, t1.PublicAddress(), request.GetSenderHost().Address.String())
+	require.Equal(t, core.NewRefFromBase58(ID1), request.GetSender())
+	require.Equal(t, t1.PublicAddress(), request.GetSenderHost().Address.String())
 
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	success := network.WaitTimeout(&wg, time.Second)
-	assert.True(t, success)
+	require.True(t, success)
 }
 
 func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	type Data struct {
 		Number int
@@ -274,28 +274,28 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	magicNumber := 42
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
 	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
-	assert.Equal(t, f.GetRequest().GetSender(), request.GetSender())
+	require.NoError(t, err)
+	require.Equal(t, f.GetRequest().GetSender(), request.GetSender())
 
 	r, err := f.GetResponse(time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	d := r.GetData().(*Data)
-	assert.Equal(t, magicNumber+1, d.Number)
+	require.Equal(t, magicNumber+1, d.Number)
 
 	magicNumber = 666
 	request = t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
 	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	r = <-f.Response()
 	d = r.GetData().(*Data)
-	assert.Equal(t, magicNumber+1, d.Number)
+	require.Equal(t, magicNumber+1, d.Number)
 }
 
 func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handler := func(r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
@@ -310,22 +310,22 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = f.GetResponse(time.Millisecond)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	t1.Stop()
 
 	_, err = f.GetResponse(time.Second)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestHostTransport_WrongHandler(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -346,16 +346,16 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Build()
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
 	result := network.WaitTimeout(&wg, time.Millisecond*10)
-	assert.False(t, result)
+	require.False(t, result)
 }
 
 func TestDoubleStart(t *testing.T) {
 	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
@@ -373,7 +373,7 @@ func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	m := newMockResolver()
 
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tr1 := NewHostTransport(i1, m)
 	defer tr1.Stop()
 	handler := func(request network.Request) (network.Response, error) {
@@ -382,6 +382,6 @@ func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	f := func() {
 		tr1.RegisterRequestHandler(types.Ping, handler)
 	}
-	assert.NotPanics(t, f, "first request handler register should not panic")
-	assert.Panics(t, f, "second request handler register should panic because it is already registered")
+	require.NotPanics(t, f, "first request handler register should not panic")
+	require.Panics(t, f, "second request handler register should panic because it is already registered")
 }

@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFromList(t *testing.T) {
@@ -30,9 +30,9 @@ func TestFromList(t *testing.T) {
 		cs.IntegrityHasher().Hash([]byte("123")),
 		cs.IntegrityHasher().Hash([]byte("456")),
 	}, cs.IntegrityHasher())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	root := mt.Root()
 
-	assert.NotNil(t, root)
+	require.NotNil(t, root)
 }

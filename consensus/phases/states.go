@@ -16,10 +16,29 @@
 
 package phases
 
+import (
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/merkle"
+)
+
 type FirstPhaseState struct {
+	PulseEntry *merkle.PulseEntry
+
+	PulseHash  merkle.OriginHash
+	PulseProof *merkle.PulseProof
+
+	PulseProofSet map[core.Node]*merkle.PulseProof
 }
 
 type SecondPhaseState struct {
+	*FirstPhaseState
+
+	GlobuleEntry *merkle.GlobuleEntry
+
+	GlobuleHash  merkle.OriginHash
+	GlobuleProof *merkle.GlobuleProof
+
+	GlobuleProofSet map[core.Node]*merkle.GlobuleProof
 }
 
 type ThirdPhasePulseState struct {

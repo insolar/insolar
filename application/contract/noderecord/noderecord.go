@@ -27,7 +27,6 @@ import (
 type RecordInfo struct {
 	PublicKey string
 	Role      core.NodeRole
-	IP        string
 }
 
 // NodeRecord contains info about node
@@ -38,15 +37,13 @@ type NodeRecord struct {
 }
 
 // NewNodeRecord creates new NodeRecord
-func NewNodeRecord(publicKey string, roleStr string, ip string) (*NodeRecord, error) {
+
+func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 	if len(publicKey) == 0 {
 		return nil, fmt.Errorf("[ NewNodeRecord ] public key is required")
 	}
 	if len(roleStr) == 0 {
 		return nil, fmt.Errorf("[ NewNodeRecord ] role is required")
-	}
-	if len(ip) == 0 {
-		return nil, fmt.Errorf("[ NewNodeRecord ] ip is required")
 	}
 
 	role := core.GetRoleFromString(roleStr)
@@ -58,7 +55,6 @@ func NewNodeRecord(publicKey string, roleStr string, ip string) (*NodeRecord, er
 		Record: RecordInfo{
 			PublicKey: publicKey,
 			Role:      role,
-			IP:        ip,
 		},
 	}, nil
 }
@@ -67,6 +63,8 @@ func NewNodeRecord(publicKey string, roleStr string, ip string) (*NodeRecord, er
 func (nr *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	return nr.Record, nil
 }
+
+var INSATTR_GetPublicKey_API = true
 
 // GetPublicKey returns public key
 func (nr *NodeRecord) GetPublicKey() (string, error) {

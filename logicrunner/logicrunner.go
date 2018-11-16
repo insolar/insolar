@@ -41,7 +41,7 @@ type Ref = core.RecordRef
 // Context of one contract execution
 type ExecutionState struct {
 	sync.Mutex
-	Ref    Ref
+	Ref    *Ref
 	Method string
 
 	noWait      bool
@@ -58,8 +58,8 @@ type ExecutionState struct {
 
 type Error struct {
 	Err      error
-	Request  Ref
-	Contract Ref
+	Request  *Ref
+	Contract *Ref
 	Method   string
 }
 
@@ -67,13 +67,13 @@ func (lre Error) Error() string {
 	var buffer bytes.Buffer
 
 	buffer.WriteString(lre.Err.Error())
-	if lre.Contract.String() != "" {
+	if lre.Contract != nil {
 		buffer.WriteString(" Contract=" + lre.Contract.String())
 	}
 	if lre.Method != "" {
 		buffer.WriteString(" Method=" + lre.Method)
 	}
-	if lre.Request.String() != "" {
+	if lre.Request != nil {
 		buffer.WriteString(" Request=" + lre.Request.String())
 	}
 
@@ -88,7 +88,7 @@ func (es *ExecutionState) ErrorWrap(err error, message string) error {
 	}
 	return Error{
 		Err:      err,
-		Request:  *es.request,
+		Request:  es.request,
 		Contract: es.Ref,
 		Method:   es.Method,
 	}
@@ -119,8 +119,9 @@ type LogicRunner struct {
 	Network                    core.Network                    `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
-
-	ArtifactManager core.ArtifactManager
+	PulseManager               core.PulseManager               `inject:""`
+	ArtifactManager            core.ArtifactManager            `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
 
 	Executors      [core.MachineTypesLastID]core.MachineLogicExecutor
 	machinePrefs   []core.MachineType
@@ -145,8 +146,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		ArtifactManager: nil,
-		Ledger:          nil,
 		Cfg:             cfg,
 		execution:       make(map[Ref]*ExecutionState),
 		caseBind:        core.CaseBind{Records: make(map[Ref][]core.CaseRecord)},
@@ -157,8 +156,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
-	lr.ArtifactManager = lr.Ledger.GetArtifactManager()
-
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
@@ -234,7 +231,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	ref := msg.GetReference()
 
 	es := lr.UpsertExecution(ref)
-	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
+	if es.traceID == inslogger.TraceID(ctx) {
 		return nil, es.ErrorWrap(nil, "loop detected")
 	}
 	entryPulse := lr.pulse(ctx).PulseNumber
@@ -253,7 +250,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 			es.Unlock()
 		}
 	}()
-	lr.execution[ref].traceID = inslogger.TraceID(ctx)
+	es.traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
 
 	lr.caseBindReplaysMutex.Lock()
@@ -269,7 +266,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := message.ExtractTarget(msg)
-	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
 		ctx,
 		vb.GetRole(),
 		&target,
@@ -509,6 +506,11 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	defer func() {
 		es.Unlock()
 	}()
+
+	if es.callContext.Caller.Equal(Ref{}) {
+		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
+	}
+
 	protoDesc, err := lr.ArtifactManager.GetObject(ctx, m.PrototypeRef, nil, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get prototype")

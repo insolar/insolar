@@ -27,7 +27,6 @@ import (
 func TestInitComponents(t *testing.T) {
 	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
-	cfg.Genesis.RootKeys = "testdata/root_member_keys.json"
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 
@@ -47,6 +46,8 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
+		false,
+		"",
 	)
 	require.NoError(t, err)
 	require.NotNil(t, cm)

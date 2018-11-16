@@ -36,6 +36,9 @@ type Member struct {
 func (m *Member) GetName() (string, error) {
 	return m.Name, nil
 }
+
+var INSATTR_GetPublicKey_API = true
+
 func (m *Member) GetPublicKey() (string, error) {
 	return m.PublicKey, nil
 }
@@ -68,6 +71,8 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 	}
 	return nil
 }
+
+var INSATTR_Call_API = true
 
 // Call method for authorized calls
 func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
@@ -164,11 +169,8 @@ func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
 
 func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
 	var publicKey string
-	var numberOfBootstrapNodes float64
-	var majorityRule float64
 	var role string
-	var ip string
-	if err := signer.UnmarshalParams(params, &publicKey, &numberOfBootstrapNodes, &majorityRule, &role, &ip); err != nil {
+	if err := signer.UnmarshalParams(params, &publicKey, &role); err != nil {
 		return nil, fmt.Errorf("[ registerNodeCall ] Can't unmarshal params: %s", err.Error())
 	}
 
@@ -179,7 +181,7 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	cert, err := nd.RegisterNode(publicKey, int(numberOfBootstrapNodes), int(majorityRule), role, ip)
+	cert, err := nd.RegisterNode(publicKey, role)
 	if err != nil {
 		return nil, fmt.Errorf("[ registerNodeCall ] Problems with RegisterNode: %s", err.Error())
 	}

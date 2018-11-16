@@ -64,7 +64,7 @@ func (c *calculator) GetPulseProof(entry *PulseEntry) (OriginHash, *PulseProof, 
 
 	return pulseHash, &PulseProof{
 		BaseProof: BaseProof{
-			Signature: signature.Bytes(),
+			Signature: *signature,
 		},
 		StateHash: stateHash,
 	}, nil
@@ -77,7 +77,7 @@ func (c *calculator) GetGlobuleProof(entry *GlobuleEntry) (OriginHash, *GlobuleP
 	}
 
 	nodeCount := uint32(len(entry.ProofSet))
-	globuleInfoHash := c.merkleHelper.globuleInfoHash(entry.PrevCloudHash, entry.GlobuleIndex, nodeCount)
+	globuleInfoHash := c.merkleHelper.globuleInfoHash(entry.PrevCloudHash, uint32(entry.GlobuleID), nodeCount)
 	globuleHash := c.merkleHelper.globuleHash(globuleInfoHash, nodeRoot)
 
 	signature, err := c.CryptographyService.Sign(globuleHash)
@@ -87,10 +87,10 @@ func (c *calculator) GetGlobuleProof(entry *GlobuleEntry) (OriginHash, *GlobuleP
 
 	return globuleHash, &GlobuleProof{
 		BaseProof: BaseProof{
-			Signature: signature.Bytes(),
+			Signature: *signature,
 		},
 		PrevCloudHash: entry.PrevCloudHash,
-		GlobuleIndex:  entry.GlobuleIndex,
+		GlobuleID:     entry.GlobuleID,
 		NodeCount:     nodeCount,
 		NodeRoot:      nodeRoot,
 	}, nil
@@ -109,12 +109,11 @@ func (c *calculator) GetCloudProof(entry *CloudEntry) (OriginHash, *CloudProof, 
 
 	return cloudHash, &CloudProof{
 		BaseProof: BaseProof{
-			Signature: signature.Bytes(),
+			Signature: *signature,
 		},
 	}, nil
 }
 
 func (c *calculator) IsValid(proof Proof, hash OriginHash, publicKey crypto.PublicKey) bool {
-	signature := core.SignatureFromBytes(proof.signature())
-	return c.CryptographyService.Verify(publicKey, signature, proof.hash(hash, c.merkleHelper))
+	return c.CryptographyService.Verify(publicKey, proof.signature(), proof.hash(hash, c.merkleHelper))
 }

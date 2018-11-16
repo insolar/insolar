@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -66,7 +66,7 @@ func (t *calculatorErrorSuite) TestGetGlobuleProofCalculateError() {
 		PulseHash:     nil,
 		ProofSet:      nil,
 		PrevCloudHash: prevCloudHash,
-		GlobuleIndex:  0,
+		GlobuleID:     0,
 	}
 	gh, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
 
@@ -90,7 +90,7 @@ func (t *calculatorErrorSuite) TestGetGlobuleProofSignError() {
 			t.nodeNetwork.GetOrigin(): {},
 		},
 		PrevCloudHash: prevCloudHash,
-		GlobuleIndex:  0,
+		GlobuleID:     0,
 	}
 	gh, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
 
@@ -136,7 +136,7 @@ func TestCalculatorError(t *testing.T) {
 	cm := component.Manager{}
 
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	assert.NotNil(t, key)
+	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
 	service.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
@@ -150,13 +150,13 @@ func TestCalculatorError(t *testing.T) {
 	nk := nodekeeper.GetTestNodekeeper(service)
 	cm.Inject(nk, l.ArtifactManager, c, calculator, service, scheme)
 
-	assert.NotNil(t, calculator.ArtifactManager)
-	assert.NotNil(t, calculator.NodeNetwork)
-	assert.NotNil(t, calculator.CryptographyService)
-	assert.NotNil(t, calculator.PlatformCryptographyScheme)
+	require.NotNil(t, calculator.ArtifactManager)
+	require.NotNil(t, calculator.NodeNetwork)
+	require.NotNil(t, calculator.CryptographyService)
+	require.NotNil(t, calculator.PlatformCryptographyScheme)
 
 	err := cm.Init(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pulse := &core.Pulse{
 		PulseNumber:     core.PulseNumber(1337),
@@ -182,7 +182,7 @@ func TestCalculatorLedgerError(t *testing.T) {
 	cm := component.Manager{}
 
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	assert.NotNil(t, key)
+	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
 	service.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
@@ -201,13 +201,13 @@ func TestCalculatorLedgerError(t *testing.T) {
 	nk := nodekeeper.GetTestNodekeeper(service)
 	cm.Inject(nk, am, calculator, service, scheme)
 
-	assert.NotNil(t, calculator.ArtifactManager)
-	assert.NotNil(t, calculator.NodeNetwork)
-	assert.NotNil(t, calculator.CryptographyService)
-	assert.NotNil(t, calculator.PlatformCryptographyScheme)
+	require.NotNil(t, calculator.ArtifactManager)
+	require.NotNil(t, calculator.NodeNetwork)
+	require.NotNil(t, calculator.CryptographyService)
+	require.NotNil(t, calculator.PlatformCryptographyScheme)
 
 	err := cm.Init(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pulse := &core.Pulse{
 		PulseNumber:     core.PulseNumber(1337),
@@ -217,8 +217,8 @@ func TestCalculatorLedgerError(t *testing.T) {
 
 	ph, np, err := calculator.GetPulseProof(&PulseEntry{Pulse: pulse})
 
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "[ GetPulseProof ] Failed to get node stateHash")
-	assert.Nil(t, np)
-	assert.Nil(t, ph)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "[ GetPulseProof ] Failed to get node stateHash")
+	require.Nil(t, np)
+	require.Nil(t, ph)
 }
