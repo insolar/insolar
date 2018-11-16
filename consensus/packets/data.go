@@ -44,8 +44,8 @@ const (
 const phase1PacketMaxSize = 1400
 
 var (
-	phase1PacketSizeWithoutClaims int
-	claimSizeMap                  map[ClaimType]int
+	phase1PacketSizeForClaims int
+	claimSizeMap              map[ClaimType]int
 )
 
 // ----------------------------------PHASE 1--------------------------------
@@ -116,6 +116,16 @@ func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) er
 	return errors.New("invalid proof fields len")
 }
 
+// TODO this
+func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) error {
+
+	if phase1PacketSizeForClaims-getClaimSize(claim) < 0 {
+		return errors.New("No space for claim")
+	}
+	p1p.claims = append(p1p.claims, claim)
+	return nil
+}
+
 type PacketHeader struct {
 	PacketT    PacketType
 	HasRouting bool
@@ -161,22 +171,16 @@ type NodePulseProof struct {
 type ReferendumClaim interface {
 	Serializer
 	Type() ClaimType
-	Length() uint16
 }
 
 // NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
 // Type 4.
 type NodeBroadcast struct {
 	EmergencyLevel uint8
-	length         uint16
 }
 
 func (nb *NodeBroadcast) Type() ClaimType {
 	return TypeNodeBroadcast
-}
-
-func (nb *NodeBroadcast) Length() uint16 {
-	return nb.length
 }
 
 // CapabilityPoolingAndActivation is a type 3.
@@ -184,34 +188,23 @@ type CapabilityPoolingAndActivation struct {
 	PollingFlags   uint16
 	CapabilityType uint16
 	CapabilityRef  [64]byte
-	length         uint16
 }
 
 func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
 	return TypeCapabilityPollingAndActivation
 }
 
-func (cpa *CapabilityPoolingAndActivation) Length() uint16 {
-	return cpa.length
-}
-
 // NodeViolationBlame is a type 2.
 type NodeViolationBlame struct {
 	BlameNodeID   uint32
 	TypeViolation uint8
-	claimType     ClaimType
-	length        uint16
 }
 
 func (nvb *NodeViolationBlame) Type() ClaimType {
 	return TypeNodeViolationBlame
 }
 
-func (nvb *NodeViolationBlame) Length() uint16 {
-	return nvb.length
-}
-
-// NodeJoinClaim is a type 1, len == 272.
+// NodeJoinClaim is a type 1.
 type NodeJoinClaim struct {
 	NodeID                  uint32
 	RelayNodeID             uint32
@@ -220,41 +213,23 @@ type NodeJoinClaim struct {
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
 	NodePK                  [64]byte
-	//length uint16
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
 	return TypeNodeJoinClaim
 }
 
-func (njc *NodeJoinClaim) Length() uint16 {
-	return 0
-}
-
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
-	length uint16
 }
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {
 	return TypeNodeLeaveClaim
 }
 
-func (nlc *NodeLeaveClaim) Length() uint16 {
-	return nlc.length
-}
-
-func NewNodeJoinClaim() *NodeJoinClaim {
-	return &NodeJoinClaim{
-		//length: 272,
-	}
-}
-
-func NewNodViolationBlame() *NodeViolationBlame {
-	return &NodeViolationBlame{
-		claimType: TypeNodeViolationBlame,
-	}
+func getClaimSize(claim ReferendumClaim) int {
+	return claimSizeMap[claim.Type()]
 }
 
 // ----------------------------------PHASE 2--------------------------------
@@ -334,9 +309,9 @@ func init() {
 		return len(data)
 	}
 
-	phase1PacketSizeWithoutClaims = sizeOf(&Phase1Packet{})
-	claimSizeMap = make(map[ClaimType]int, 5)
+	phase1PacketSizeForClaims = phase1PacketMaxSize - sizeOf(&Phase1Packet{})
 
+	claimSizeMap = make(map[ClaimType]int, 5)
 	claimSizeMap[TypeNodeJoinClaim] = sizeOf(&NodeJoinClaim{})
 	claimSizeMap[TypeCapabilityPollingAndActivation] = sizeOf(&CapabilityPoolingAndActivation{})
 	claimSizeMap[TypeNodeViolationBlame] = sizeOf(&NodeViolationBlame{})
