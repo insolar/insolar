@@ -150,7 +150,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			inslog.Errorf("[ wrapAPIV1Handler ] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, runner.seedmanager)
+		rh := NewRequestHandler(params, runner.MessageBus, runner.NetworkCoordinator, rootDomainReference, runner.seedmanager)
 
 		answer = processQueryType(ctx, rh, params.QueryType)
 	}
@@ -158,13 +158,14 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 
 // Runner implements Component for API
 type Runner struct {
-	messageBus     core.MessageBus
-	server         *http.Server
-	cfg            *configuration.APIRunner
-	netCoordinator core.NetworkCoordinator
-	keyCache       map[string]crypto.PublicKey
-	cacheLock      *sync.RWMutex
-	seedmanager    *seedmanager.SeedManager
+	MessageBus         core.MessageBus         `inject:""`
+	Genesis            core.Genesis            `inject:""`
+	NetworkCoordinator core.NetworkCoordinator `inject:""`
+	server             *http.Server
+	cfg                *configuration.APIRunner
+	keyCache           map[string]crypto.PublicKey
+	cacheLock          *sync.RWMutex
+	seedmanager        *seedmanager.SeedManager
 }
 
 // NewRunner is C-tor for API Runner
@@ -190,27 +191,20 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	return &ar, nil
 }
 
-func (ar *Runner) reloadMessageBus(ctx context.Context, c core.Components) {
-	if c.MessageBus == nil {
-		inslogger.FromContext(ctx).Warn("Working in demo mode: without MessageBus")
-	} else {
-		ar.messageBus = c.MessageBus
-	}
+func (ar *Runner) IsAPIRunner() bool {
+	return true
 }
 
 // Start runs api server
-func (ar *Runner) Start(ctx context.Context, c core.Components) error {
-	ar.reloadMessageBus(ctx, c)
-
-	rootDomainReference := c.Genesis.GetRootDomainRef()
-	ar.netCoordinator = c.NetworkCoordinator
+func (ar *Runner) Start(ctx context.Context) error {
+	rootDomainReference := ar.Genesis.GetRootDomainRef()
 
 	ar.seedmanager = seedmanager.New()
 
 	fw := wrapAPIV1Handler(ar, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
-	http.HandleFunc(ar.cfg.Info, ar.infoHandler(c))
-	http.HandleFunc(ar.cfg.Call, ar.callHandler(c))
+	http.HandleFunc(ar.cfg.Info, ar.infoHandler())
+	http.HandleFunc(ar.cfg.Call, ar.callHandler())
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")
 	inslog.Info("Config: ", ar.cfg)
@@ -248,7 +242,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't marshal empty args")
 	}
-	res, err := ar.messageBus.Send(
+	res, err := ar.MessageBus.Send(
 		ctx,
 		&message.CallMethod{
 			ObjectRef: core.NewRefFromBase58(ref),

@@ -90,6 +90,23 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
 	}
 
+	if args.Context.Caller.Equal(core.RecordRef{}) {
+		attr, err := p.Lookup("INSATTR_" + args.Method + "_API")
+		if err != nil {
+			return errors.Wrapf(
+				err, "Calling non INSATTRAPI method %s (code ref: %s)",
+				args.Method, args.Code.String(),
+			)
+		}
+		api, ok := attr.(*bool)
+		if !ok {
+			return errors.Errorf("INSATTRAPI attribute for method %s is not boolean", args.Method)
+		}
+		if !*api {
+			return errors.Errorf("Calling non INSATTRAPI method ")
+		}
+	}
+
 	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
 	if err != nil {
 		return errors.Wrapf(

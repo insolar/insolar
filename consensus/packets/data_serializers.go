@@ -105,7 +105,7 @@ func extractClaimTypeFromHeader(claimHeader uint16) uint8 {
 func makeClaimHeader(claim ReferendumClaim) uint16 {
 	// TODO: we don't need length
 	var result = claim.Length()
-	result |= (uint16(claim.Type()) << claimTypeShift)
+	result |= uint16(claim.Type()) << claimTypeShift
 
 	return result
 }
@@ -123,7 +123,7 @@ func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
 
 		claimType := ClaimType(extractClaimTypeFromHeader(claimHeader))
 		// TODO: Do we need claimLength?
-		//claimLength := extractClaimLengthFromHeader(claimHeader)
+		// claimLength := extractClaimLengthFromHeader(claimHeader)
 		var refClaim ReferendumClaim
 
 		switch claimType {

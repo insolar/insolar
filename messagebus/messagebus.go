@@ -91,7 +91,7 @@ func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) 
 }
 
 // Start initializes message bus
-func (mb *MessageBus) Start(ctx context.Context) error {
+func (mb *MessageBus) Init(ctx context.Context) error {
 	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 
 	return nil
@@ -216,6 +216,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	}
 
 	sender := parcel.GetSender()
+
 	senderKey := mb.ActiveNodes.GetActiveNode(sender).PublicKey()
 	if mb.signmessages {
 		err := mb.ParcelFactory.Validate(senderKey, parcel)

@@ -76,15 +76,15 @@ type JetCoordinator interface {
 }
 
 // ArtifactManager is a high level storage interface.
+//go:generate minimock -i github.com/insolar/insolar/core.ArtifactManager -o ../testutils -s _mock.go
 type ArtifactManager interface {
 	// GenesisRef returns the root record reference.
 	//
 	// Root record is the parent for all top-level records.
 	GenesisRef() *RecordRef
 
-	// RegisterRequest creates or check call request record and returns it RecordRef.
-	// (used by VM on executing side)
-	RegisterRequest(ctx context.Context, message Message) (*RecordID, error)
+	// RegisterRequest creates request record in storage.
+	RegisterRequest(ctx context.Context, parcel Parcel) (*RecordID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//

@@ -26,6 +26,12 @@ const (
 	RoleLightMaterial
 )
 
+var AllNodeRoles = []NodeRole{
+	RoleVirtual,
+	RoleLightMaterial,
+	RoleHeavyMaterial,
+}
+
 // GetRoleFromString converts role from string to NodeRole
 func GetRoleFromString(role string) NodeRole {
 	switch role {

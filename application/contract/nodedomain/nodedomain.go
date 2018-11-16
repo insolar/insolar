@@ -38,6 +38,8 @@ func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
+var INSATTR_RegisterNode_API = true
+
 // RegisterNode registers node in system
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
 
@@ -70,4 +72,30 @@ func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 
 	ok := foundation.Verify(seed, signatureRaw, publicKey)
 	return ok, nil
+}*/
+
+//var INSATTR_Authorize_API = true
+
+// Authorize checks node and returns node info
+/*func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
+	nodeR := nd.getNodeRecord(nodeRef)
+	nodeInfo, err := nodeR.GetNodeInfo()
+	if err != nil {
+		return "", core.RoleUnknown, fmt.Errorf("[ Authorize ] Problem with Getting info: %s", err.Error())
+	}
+
+	pubKey := nodeInfo.PublicKey
+	role := nodeInfo.Role
+
+	publicKey, err := foundation.ImportPublicKey(pubKey)
+	if err != nil {
+		return "", core.RoleUnknown, fmt.Errorf("[ verifySig ] Invalid public key")
+	}
+
+	ok := foundation.Verify(seed, signatureRaw, publicKey)
+	if !ok {
+		return "", core.RoleUnknown, fmt.Errorf("[ Authorize ] Can't verify signature")
+	}
+
+	return pubKey, role, nil
 }*/

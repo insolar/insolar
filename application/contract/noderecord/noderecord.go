@@ -64,6 +64,8 @@ func (nr *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	return nr.Record, nil
 }
 
+var INSATTR_GetPublicKey_API = true
+
 // GetPublicKey returns public key
 func (nr *NodeRecord) GetPublicKey() (string, error) {
 	return nr.Record.PublicKey, nil

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
+
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -33,6 +34,11 @@ type NodeNetworkMock struct {
 	GetActiveNodesByRolePreCounter uint64
 	GetActiveNodesByRoleMock       mNodeNetworkMockGetActiveNodesByRole
 
+	GetCloudHashFunc       func() (r []byte)
+	GetCloudHashCounter    uint64
+	GetCloudHashPreCounter uint64
+	GetCloudHashMock       mNodeNetworkMockGetCloudHash
+
 	GetOriginFunc       func() (r core.Node)
 	GetOriginCounter    uint64
 	GetOriginPreCounter uint64
@@ -50,6 +56,7 @@ func NewNodeNetworkMock(t minimock.Tester) *NodeNetworkMock {
 	m.GetActiveNodeMock = mNodeNetworkMockGetActiveNode{mock: m}
 	m.GetActiveNodesMock = mNodeNetworkMockGetActiveNodes{mock: m}
 	m.GetActiveNodesByRoleMock = mNodeNetworkMockGetActiveNodesByRole{mock: m}
+	m.GetCloudHashMock = mNodeNetworkMockGetCloudHash{mock: m}
 	m.GetOriginMock = mNodeNetworkMockGetOrigin{mock: m}
 
 	return m
@@ -229,6 +236,48 @@ func (m *NodeNetworkMock) GetActiveNodesByRoleMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetActiveNodesByRolePreCounter)
 }
 
+type mNodeNetworkMockGetCloudHash struct {
+	mock *NodeNetworkMock
+}
+
+//Return sets up a mock for NodeNetwork.GetCloudHash to return Return's arguments
+func (m *mNodeNetworkMockGetCloudHash) Return(r []byte) *NodeNetworkMock {
+	m.mock.GetCloudHashFunc = func() []byte {
+		return r
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of NodeNetwork.GetCloudHash method
+func (m *mNodeNetworkMockGetCloudHash) Set(f func() (r []byte)) *NodeNetworkMock {
+	m.mock.GetCloudHashFunc = f
+
+	return m.mock
+}
+
+//GetCloudHash implements github.com/insolar/insolar/core.NodeNetwork interface
+func (m *NodeNetworkMock) GetCloudHash() (r []byte) {
+	atomic.AddUint64(&m.GetCloudHashPreCounter, 1)
+	defer atomic.AddUint64(&m.GetCloudHashCounter, 1)
+
+	if m.GetCloudHashFunc == nil {
+		m.t.Fatal("Unexpected call to NodeNetworkMock.GetCloudHash")
+		return
+	}
+
+	return m.GetCloudHashFunc()
+}
+
+//GetCloudHashMinimockCounter returns a count of NodeNetworkMock.GetCloudHashFunc invocations
+func (m *NodeNetworkMock) GetCloudHashMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetCloudHashCounter)
+}
+
+//GetCloudHashMinimockPreCounter returns the value of NodeNetworkMock.GetCloudHash invocations
+func (m *NodeNetworkMock) GetCloudHashMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetCloudHashPreCounter)
+}
+
 type mNodeNetworkMockGetOrigin struct {
 	mock *NodeNetworkMock
 }
@@ -287,6 +336,10 @@ func (m *NodeNetworkMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetActiveNodesByRole")
 	}
 
+	if m.GetCloudHashFunc != nil && atomic.LoadUint64(&m.GetCloudHashCounter) == 0 {
+		m.t.Fatal("Expected call to NodeNetworkMock.GetCloudHash")
+	}
+
 	if m.GetOriginFunc != nil && atomic.LoadUint64(&m.GetOriginCounter) == 0 {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetOrigin")
 	}
@@ -320,6 +373,10 @@ func (m *NodeNetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetActiveNodesByRole")
 	}
 
+	if m.GetCloudHashFunc != nil && atomic.LoadUint64(&m.GetCloudHashCounter) == 0 {
+		m.t.Fatal("Expected call to NodeNetworkMock.GetCloudHash")
+	}
+
 	if m.GetOriginFunc != nil && atomic.LoadUint64(&m.GetOriginCounter) == 0 {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetOrigin")
 	}
@@ -341,6 +398,7 @@ func (m *NodeNetworkMock) MinimockWait(timeout time.Duration) {
 		ok = ok && (m.GetActiveNodeFunc == nil || atomic.LoadUint64(&m.GetActiveNodeCounter) > 0)
 		ok = ok && (m.GetActiveNodesFunc == nil || atomic.LoadUint64(&m.GetActiveNodesCounter) > 0)
 		ok = ok && (m.GetActiveNodesByRoleFunc == nil || atomic.LoadUint64(&m.GetActiveNodesByRoleCounter) > 0)
+		ok = ok && (m.GetCloudHashFunc == nil || atomic.LoadUint64(&m.GetCloudHashCounter) > 0)
 		ok = ok && (m.GetOriginFunc == nil || atomic.LoadUint64(&m.GetOriginCounter) > 0)
 
 		if ok {
@@ -360,6 +418,10 @@ func (m *NodeNetworkMock) MinimockWait(timeout time.Duration) {
 
 			if m.GetActiveNodesByRoleFunc != nil && atomic.LoadUint64(&m.GetActiveNodesByRoleCounter) == 0 {
 				m.t.Error("Expected call to NodeNetworkMock.GetActiveNodesByRole")
+			}
+
+			if m.GetCloudHashFunc != nil && atomic.LoadUint64(&m.GetCloudHashCounter) == 0 {
+				m.t.Error("Expected call to NodeNetworkMock.GetCloudHash")
 			}
 
 			if m.GetOriginFunc != nil && atomic.LoadUint64(&m.GetOriginCounter) == 0 {
@@ -387,6 +449,10 @@ func (m *NodeNetworkMock) AllMocksCalled() bool {
 	}
 
 	if m.GetActiveNodesByRoleFunc != nil && atomic.LoadUint64(&m.GetActiveNodesByRoleCounter) == 0 {
+		return false
+	}
+
+	if m.GetCloudHashFunc != nil && atomic.LoadUint64(&m.GetCloudHashCounter) == 0 {
 		return false
 	}
 

@@ -40,13 +40,11 @@ const TestUrl = HOST + "/api/v1?query_type=LOL"
 func TestMain(m *testing.M) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
-	//genesisCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)
 
-	cs := core.Components{}
 	b, _ := genesis.NewGenesis(false, "") ///[]map[string]string{})
-	cs.Genesis = b
-	api.Start(ctx, cs)
+	api.Genesis = b
+	api.Start(ctx)
 
 	code := m.Run()
 

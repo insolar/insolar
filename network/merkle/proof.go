@@ -16,11 +16,15 @@
 
 package merkle
 
+import (
+	"github.com/insolar/insolar/core"
+)
+
 type BaseProof struct {
-	Signature []byte
+	Signature core.Signature
 }
 
-func (bp *BaseProof) signature() []byte {
+func (bp *BaseProof) signature() core.Signature {
 	return bp.Signature
 }
 
@@ -38,7 +42,7 @@ type GlobuleProof struct {
 	BaseProof
 
 	PrevCloudHash []byte
-	GlobuleIndex  uint32
+	GlobuleID     core.GlobuleID
 	NodeCount     uint32
 	NodeRoot      []byte
 }

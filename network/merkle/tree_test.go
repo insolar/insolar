@@ -17,23 +17,22 @@
 package merkle
 
 import (
-	"crypto"
+	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/assert"
 )
 
-type OriginHash []byte
+func TestFromList(t *testing.T) {
+	cs := platformpolicy.NewPlatformCryptographyScheme()
 
-//go:generate minimock -i github.com/insolar/insolar/network/merkle.Calculator -o ../../testutils/merkle -s _mock.go
-type Calculator interface {
-	GetPulseProof(*PulseEntry) (OriginHash, *PulseProof, error)
-	GetGlobuleProof(*GlobuleEntry) (OriginHash, *GlobuleProof, error)
-	GetCloudProof(*CloudEntry) (OriginHash, *CloudProof, error)
+	mt, err := treeFromHashList([][]byte{
+		cs.IntegrityHasher().Hash([]byte("123")),
+		cs.IntegrityHasher().Hash([]byte("456")),
+	}, cs.IntegrityHasher())
+	assert.NoError(t, err)
 
-	IsValid(Proof, OriginHash, crypto.PublicKey) bool
-}
+	root := mt.Root()
 
-type Proof interface {
-	hash([]byte, *merkleHelper) []byte
-	signature() core.Signature
+	assert.NotNil(t, root)
 }

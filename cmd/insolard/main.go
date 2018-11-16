@@ -43,8 +43,12 @@ type ComponentManager struct {
 	components core.Components
 }
 
-// linkAll - link dependency for all components
-func (cm *ComponentManager) linkAll(ctx context.Context) {
+func (cm *ComponentManager) GetAll() core.Components {
+	return cm.components
+}
+
+// LinkAll - link dependency for all components
+func (cm *ComponentManager) LinkAll(ctx context.Context) {
 	inslog := inslogger.FromContext(ctx)
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
@@ -65,9 +69,7 @@ type inputParams struct {
 	configPath        string
 	isGenesis         bool
 	genesisConfigPath string
-	//bootstrapCertificatePath string
-	traceEnabled bool
-	//nodeKeysPath             string
+	traceEnabled      bool
 }
 
 func parseInputParams() inputParams {
@@ -75,10 +77,7 @@ func parseInputParams() inputParams {
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
 	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "genesis", "g", "", "path to genesis config file")
-	//rootCmd.Flags().BoolVarP(&result.isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
-	//rootCmd.Flags().StringVarP(&result.bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
 	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
-	//rootCmd.Flags().StringVarP(&result.nodeKeysPath, "nodeskeys", "k", "", "path to dir with node keys files for bootstrap")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
@@ -88,76 +87,10 @@ func parseInputParams() inputParams {
 		result.isGenesis = true
 	}
 
-	/*if result.isBootstrap && len(result.bootstrapCertificatePath) == 0 {
-		log.Fatal("flag '--cert_out|-r' must not be empty, if '--bootstrap|-b' exists")
-	}
-	if result.isBootstrap && len(result.nodeKeysPath) == 0 {
-		log.Fatal("flag '--nodeskeys|-k' must not be empty, if '--bootstrap|-b' exists")
-	}*/
 	return result
 }
 
-/*func keysFiles(ctx context.Context, nodeKeysPath string) []string {
-	var keysFiles []string
-	files, err := ioutil.ReadDir(nodeKeysPath)
-	checkError(ctx, err, "failed to read dir for nodes keys")
-	for _, f := range files {
-		if !f.IsDir() {
-			keysFiles = append(keysFiles, filepath.Join(nodeKeysPath, f.Name()))
-		}
-	}
-	return keysFiles
-}
-
-var roles = []string{"virtual", "virtual", "heavy_material", "light_material"}
-
-func readPublicKey(keysPath string) (string, error) {
-	data, err := ioutil.ReadFile(keysPath)
-	if err != nil {
-		return "", errors.Wrap(err, "[ readPublicKey ] couldn't read keys from: "+keysPath)
-	}
-	var keys map[string]string
-	err = json.Unmarshal(data, &keys)
-	if err != nil {
-		return "", errors.Wrap(err, "[ readPublicKey ] failed to parse json.")
-	}
-	publicKey := keys["public_key"]
-	if publicKey == "" {
-		return "", errors.Wrap(err, "[ readPublicKey ] public key is empty.")
-	}
-	return publicKey, nil
-}
-func bootstrapNodesInfo(ctx context.Context, nodeKeysPath string) []map[string]string {
-	files := keysFiles(ctx, nodeKeysPath)
-	if len(roles) < len(files) {
-		checkError(ctx, errors.New("not enough roles"), "there more files with nodes keys than roles for them")
-	}
-	info := []map[string]string{}
-	for i, f := range files {
-		publicKey, err := readPublicKey(f)
-		checkError(ctx, err, "can't read public key from file: "+f)
-		nodeInfo := map[string]string{
-			"public_key": publicKey,
-			"role":       roles[i],
-		}
-		info = append(info, nodeInfo)
-	}
-	return info
-}*/
-
-/*func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, service core.CryptographyService, nc core.NetworkCoordinator) {
-	role := "virtual"
-	publicKey, err := service.GetPublicKey()
-	checkError(ctx, err, "failed to get public key")
-
-	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, role, host)
-	checkError(ctx, err, "can't register node")
-
-	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)
-	checkError(ctx, err, "can't write certificate")
-}*/
-
-func mergeConfigAndCertificate(ctx context.Context, cfg configuration.Configuration, cert *certificate.Certificate) {
+func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration, cert *certificate.Certificate) {
 	inslog := inslogger.FromContext(ctx)
 	if len(cfg.CertificatePath) == 0 {
 		inslog.Info("No certificate path - No merge")
@@ -210,7 +143,7 @@ func main() {
 	)
 
 	if !params.isGenesis {
-		mergeConfigAndCertificate(ctx, *cfg, cert)
+		mergeConfigAndCertificate(ctx, cfg, cert)
 	}
 	cfg.Metrics.Namespace = "insolard"
 
@@ -240,7 +173,7 @@ func main() {
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	cmOld.linkAll(ctx)
+	cmOld.LinkAll(ctx)
 
 	err = cm.Start(ctx)
 	checkError(ctx, err, "failed to start components")
@@ -265,19 +198,6 @@ func main() {
 		checkError(ctx, err, "failed to graceful stop components")
 		os.Exit(0)
 	}()
-
-	// move to bootstrap component
-	/*if params.isBootstrap {
-		registerCurrentNode(
-			ctx,
-			cfg.Host.Transport.Address,
-			params.bootstrapCertificatePath,
-			cmOld.components.CryptographyService,
-			cmOld.components.NetworkCoordinator,
-		)
-		inslog.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
-		gracefulStop <- syscall.SIGINT
-	}*/
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")

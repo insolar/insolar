@@ -140,7 +140,7 @@ func InitComponents(
 	networkCoordinator, err := networkcoordinator.New()
 	checkError(ctx, err, "failed to start NetworkCoordinator")
 
-	versionManager, err := manager.NewVersionManager(cfg.VersionManager)
+	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
 	// move to logic runner ??
@@ -163,21 +163,8 @@ func InitComponents(
 		logicRunner,
 	}
 	components = append(components, ledger.GetLedgerComponents(cfg.Ledger)...)
-	components = append(components, &ld) // TODO: remove me with cmOld
-	components = append(components, []interface{}{
-		nw,
-		delegationTokenFactory,
-		parcelFactory,
-		messageBus,
-		gen,
-		apiRunner,
-		metricsHandler,
-		networkCoordinator,
-		versionManager,
-	}...)
-	cm.Inject(components...)
 
-	cmOld := ComponentManager{components: core.Components{
+	cmOld := &ComponentManager{components: core.Components{
 		Certificate:                cert,
 		NodeNetwork:                nodeNetwork,
 		LogicRunner:                logicRunner,
@@ -187,10 +174,23 @@ func InitComponents(
 		Genesis:                    gen,
 		APIRunner:                  apiRunner,
 		NetworkCoordinator:         networkCoordinator,
-		VersionManager:             versionManager,
 		PlatformCryptographyScheme: platformCryptographyScheme,
 		CryptographyService:        cryptographyService,
 	}}
+	components = append(components, &ld, cmOld) // TODO: remove me with cmOld
 
-	return &cm, &cmOld, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
+	components = append(components, []interface{}{
+		nw,
+		messageBus,
+		delegationTokenFactory,
+		parcelFactory,
+		gen,
+		apiRunner,
+		metricsHandler,
+		networkCoordinator,
+	}...)
+
+	cm.Inject(components...)
+
+	return &cm, cmOld, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }

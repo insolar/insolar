@@ -17,4 +17,6 @@
 package core
 
 // Certificate interface provides methods to manage keys
-type Certificate interface{}
+type Certificate interface {
+	GetRole() NodeRole
+}
