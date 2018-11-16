@@ -29,6 +29,9 @@ type Cascade struct {
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(args [][]byte) ([]byte, error)
 
+// GlobuleID is the ID of the globe
+type GlobuleID uint32
+
 // Network is interface for network modules facade.
 type Network interface {
 	// SendParcel sends a message.
@@ -41,4 +44,6 @@ type Network interface {
 	RemoteProcedureRegister(name string, method RemoteProcedure)
 	// GetNodeID returns current node id.
 	GetNodeID() RecordRef
+	// GetGlobuleID returns current globule id.
+	GetGlobuleID() GlobuleID
 }
