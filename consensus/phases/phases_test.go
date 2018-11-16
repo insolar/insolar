@@ -31,15 +31,15 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhase{}
 	nodeNetworkMock := network.NewNodeNetworkMock(t)
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
-	communicatorMock := network.NewCommunicatorMock(t)
+	communicatorMock := NewCommunicatorMock(t)
+	consensusNetworkMock := network.NewConsensusNetworkMock(t)
 
 	nodeNetworkMock.GetActiveNodesMock.Set(func() (r []core.Node) {
 		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", "")}
 	})
 
 	cm := component.Manager{}
-	cm.Register(nodeNetworkMock, firstPhase, pulseCalculatorMock, communicatorMock)
-	cm.Inject(firstPhase)
+	cm.Inject(nodeNetworkMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
 
 	assert.NotNil(t, firstPhase.Calculator)
 	assert.NotNil(t, firstPhase.NodeNetwork)

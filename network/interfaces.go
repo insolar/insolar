@@ -38,6 +38,7 @@ type Controller interface {
 	// Authorize start authorization process on discovery node.
 	Authorize(ctx context.Context) error
 	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
+	// DEPRECATED
 	ResendPulseToKnownHosts(pulse core.Pulse)
 
 	// GetNodeID get self node id (should be removed in far future).
@@ -51,6 +52,7 @@ type Controller interface {
 type RequestHandler func(Request) (Response, error)
 
 // HostNetwork simple interface to send network requests and process network responses.
+//go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 type HostNetwork interface {
 	// Start listening to network requests.
 	Start(ctx context.Context)
@@ -73,6 +75,7 @@ type HostNetwork interface {
 
 type ConsensusRequestHandler func(Request)
 
+//go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
 type ConsensusNetwork interface {
 	// Start listening to network requests.
 	Start(ctx context.Context)
@@ -119,12 +122,17 @@ type RequestBuilder interface {
 	Build() Request
 }
 
-// OnPulse callback function to process new pulse from pulsar.
-type OnPulse func(pulse core.Pulse)
+// PulseHandler interface to process new pulse.
+//go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
+type PulseHandler interface {
+	HandlePulse(ctx context.Context, pulse core.Pulse)
+}
 
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
 	core.NodeNetwork
+	// SetCloudHash set new cloud hash
+	SetCloudHash([]byte)
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.

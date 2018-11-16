@@ -65,14 +65,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:79efb3c233322835594954b38c6878ed3778396ba55f7c3e5a24dd38c4170ecd"
-  name = "github.com/cbergoon/merkletree"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "05d5987faac48c14315189ed9c817cd312c5964f"
-
-[[projects]]
-  branch = "master"
   digest = "1:183d68d69d8681294f0b128de41c0defd54777f620cc4d1e88013136306a44d5"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
@@ -238,6 +230,14 @@
   pruneopts = "UT"
   revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
   version = "v1.1.2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:cade3da7b9e04ef34e9ece52d91a0b76e08f478f55ecfe217854edb4603eb1f8"
+  name = "github.com/onrik/gomerkle"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ae4e74c60b38b413037256369800ddf7579a009a"
 
 [[projects]]
   digest = "1:95741de3af260a92cc5c7f3f3061e85273f5a81b5db20d4bd68da74bd521675e"
@@ -583,12 +583,12 @@
   input-imports = [
     "github.com/anacrolix/utp",
     "github.com/blang/semver",
-    "github.com/cbergoon/merkletree",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
     "github.com/jbenet/go-base58",
+    "github.com/onrik/gomerkle",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",

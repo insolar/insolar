@@ -63,19 +63,19 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *LedgerArtifactManager) RegisterRequest(
-	ctx context.Context, msg core.Message,
+	ctx context.Context, parcel core.Parcel,
 ) (*core.RecordID, error) {
 	var err error
 	defer instrument(ctx, "RegisterRequest").err(&err).end()
 
-	recid, err := m.setRecord(
+	id, err := m.setRecord(
 		ctx,
 		&record.CallRequest{
-			Payload: message.MustSerializeBytes(msg),
+			Payload: message.ParcelToBytes(parcel),
 		},
-		message.ExtractTarget(msg),
+		message.ExtractTarget(parcel.Message()),
 	)
-	return recid, err
+	return id, err
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.

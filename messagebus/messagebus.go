@@ -43,7 +43,7 @@ type MessageBus struct {
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
-	RoutingTokenFactory        message.RoutingTokenFactory     `inject:""`
+	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
 
 	handlers     map[core.MessageType]core.MessageHandler
@@ -92,7 +92,7 @@ func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) 
 }
 
 // Start initializes message bus
-func (mb *MessageBus) Start(ctx context.Context) error {
+func (mb *MessageBus) Init(ctx context.Context) error {
 	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 
 	return nil
@@ -128,34 +128,32 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
+	parcel, err := mb.CreateParcel(ctx, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return mb.SendParcel(ctx, parcel)
+}
+
+// CreateParcel creates signed message from provided message.
+func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message) (core.Parcel, error) {
+	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID())
+}
+
+// SendParcel sends provided message via network.
+func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+	mb.queue.Push(msg)
+
 	pulse, err := mb.Ledger.GetPulseManager().Current(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	parcel, err := mb.CreateParcel(ctx, pulse.PulseNumber, msg, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return mb.SendParcel(ctx, pulse, parcel)
-}
-
-// CreateParcel creates signed message from provided message.
-func (mb *MessageBus) CreateParcel(
-	ctx context.Context, pulse core.PulseNumber, msg core.Message, token core.RoutingToken,
-) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), pulse, token)
-}
-
-// SendParcel sends provided message via network.
-func (mb *MessageBus) SendParcel(ctx context.Context, pulse *core.Pulse, msg core.Parcel) (core.Reply, error) {
-	mb.queue.Push(msg)
-
 	jc := mb.Ledger.GetJetCoordinator()
 	// TODO: send to all actors of the role if nil Target
 	target := message.ExtractTarget(msg)
-	nodes, err := jc.QueryRole(ctx, message.ExtractRole(msg), &target, msg.Pulse())
+	nodes, err := jc.QueryRole(ctx, message.ExtractRole(msg), &target, pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -283,6 +281,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	}
 
 	sender := parcel.GetSender()
+
 	senderKey := mb.ActiveNodes.GetActiveNode(sender).PublicKey()
 	if mb.signmessages {
 		err := mb.ParcelFactory.Validate(senderKey, parcel)
@@ -293,31 +292,33 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 
 	ctx := parcel.Context(context.Background())
 
-	sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
-	if sendingObject != nil {
-		currentPulse, err := mb.Ledger.GetPulseManager().Current(ctx)
+	if len(parcel.DelegationToken()) != 0 {
+		valid, err := mb.DelegationTokenFactory.Verify(parcel.DelegationToken(), parcel.Message())
 		if err != nil {
 			return nil, err
 		}
-
-		jc := mb.Ledger.GetJetCoordinator()
-		validSender, err := jc.IsAuthorized(
-			ctx, allowedSenderRole, sendingObject, currentPulse.PulseNumber, sender,
-		)
-		if err != nil {
-			return nil, err
+		if !valid {
+			return nil, errors.New("delegation token is not valid")
 		}
-		if !validSender {
-			return nil, errors.New("sender is not allowed to act on behalve of that object")
+	} else {
+		sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
+		if sendingObject != nil {
+			currentPulse, err := mb.Ledger.GetPulseManager().Current(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			jc := mb.Ledger.GetJetCoordinator()
+			validSender, err := jc.IsAuthorized(
+				ctx, allowedSenderRole, sendingObject, currentPulse.PulseNumber, sender,
+			)
+			if err != nil {
+				return nil, err
+			}
+			if !validSender {
+				return nil, errors.New("sender is not allowed to act on behalve of that object")
+			}
 		}
-	}
-
-	serialized := message.ToBytes(parcel)
-	parcelHash := mb.PlatformCryptographyScheme.IntegrityHasher().Hash(serialized)
-
-	err = mb.RoutingTokenFactory.Validate(senderKey, parcel.GetToken(), parcelHash)
-	if err != nil {
-		return nil, errors.New("failed to check a token sign")
 	}
 
 	resp, err := mb.doDeliver(ctx, parcel)

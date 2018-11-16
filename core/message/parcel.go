@@ -26,7 +26,7 @@ import (
 )
 
 type ParcelFactory interface {
-	Create(context.Context, core.Message, core.RecordRef, core.PulseNumber, core.RoutingToken) (core.Parcel, error)
+	Create(context.Context, core.Message, core.RecordRef) (core.Parcel, error)
 	Validate(crypto.PublicKey, core.Parcel) error
 }
 
@@ -37,17 +37,7 @@ type Parcel struct {
 	Signature     []byte
 	LogTraceID    string
 	TraceSpanData []byte
-	Token         core.RoutingToken
-}
-
-// GetToken return current message token
-func (sm *Parcel) GetToken() core.RoutingToken {
-	return sm.Token
-}
-
-// Pulse returns pulse when message was sent.
-func (sm *Parcel) Pulse() core.PulseNumber {
-	return sm.Token.GetPulse()
+	Token         []byte
 }
 
 // Message returns current instance's message
@@ -60,6 +50,10 @@ func (sm *Parcel) Context(ctx context.Context) context.Context {
 	ctx = inslogger.ContextWithTrace(ctx, sm.LogTraceID)
 	parentspan := instracer.MustDeserialize(sm.TraceSpanData)
 	return instracer.WithParentSpan(ctx, parentspan)
+}
+
+func (sm *Parcel) DelegationToken() []byte {
+	return sm.Token
 }
 
 // Type returns message type.
@@ -78,4 +72,8 @@ func (sm *Parcel) GetSign() []byte {
 
 func (sm *Parcel) GetSender() core.RecordRef {
 	return sm.Sender
+}
+
+func (sm *Parcel) AddDelegationToken(token []byte) {
+	sm.Token = token
 }

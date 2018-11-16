@@ -39,6 +39,10 @@ const (
 	TypeNodeLeaveClaim
 )
 
+const HashLength = 64
+const SignatureLength = 71
+const ReferenceLength = 64
+
 // ----------------------------------PHASE 1--------------------------------
 
 type Phase1Packet struct {
@@ -74,6 +78,18 @@ func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 	return nil
 }
 
+func (p1p *Phase1Packet) GetPulse() core.Pulse {
+	//TODO: need convert method with pulse signature check
+	return core.Pulse{
+		PulseNumber: core.PulseNumber(p1p.packetHeader.Pulse),
+		Entropy:     p1p.pulseData.Entropy,
+	}
+}
+
+func (p1p *Phase1Packet) GetPulseProof() *NodePulseProof {
+	return &p1p.proofNodePulse
+}
+
 func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
@@ -90,9 +106,9 @@ func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 
 // SetPulseProof sets PulseProof and check struct fields len, returns error if invalid len
 func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) error {
-	if len(proofStateHash) == 64 || len(proofSignature) == 64 {
-		copy(p1p.proofNodePulse.NodeStateHash[:], proofStateHash[:64])
-		copy(p1p.proofNodePulse.NodeSignature[:], proofSignature[:64])
+	if len(proofStateHash) == HashLength && len(proofSignature) == SignatureLength {
+		copy(p1p.proofNodePulse.NodeStateHash[:], proofStateHash[:HashLength])
+		copy(p1p.proofNodePulse.NodeSignature[:], proofSignature[:SignatureLength])
 		return nil
 	}
 
@@ -135,8 +151,16 @@ type PulseData struct {
 }
 
 type NodePulseProof struct {
-	NodeStateHash [64]byte
-	NodeSignature [64]byte
+	NodeStateHash [HashLength]byte
+	NodeSignature [SignatureLength]byte
+}
+
+func (npp *NodePulseProof) StateHash() []byte {
+	return npp.NodeStateHash[:]
+}
+
+func (npp *NodePulseProof) Signature() []byte {
+	return npp.NodeSignature[:]
 }
 
 // --------------REFERENDUM--------------
@@ -166,7 +190,7 @@ func (nb *NodeBroadcast) Length() uint16 {
 type CapabilityPoolingAndActivation struct {
 	PollingFlags   uint16
 	CapabilityType uint16
-	CapabilityRef  [64]byte
+	CapabilityRef  [ReferenceLength]byte
 	length         uint16
 }
 
@@ -266,13 +290,13 @@ type Phase2Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    [64]byte
+	globuleHashSignature    [HashLength]byte
 	deviantBitSet           DeviantBitSet
-	signatureHeaderSection1 [64]byte
+	signatureHeaderSection1 [SignatureLength]byte
 
 	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
-	signatureHeaderSection2 [64]byte
+	signatureHeaderSection2 [SignatureLength]byte
 }
 
 func (phase2Packet *Phase2Packet) isPhase3Needed() bool {
@@ -305,4 +329,17 @@ func (phase2Packet *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header.TargetID = phase2Packet.packetHeader.TargetNodeID
 
 	return header, nil
+}
+
+func (phase2Packet *Phase2Packet) GetGlobuleHashSignature() []byte {
+	return phase2Packet.globuleHashSignature[:]
+}
+
+func (phase2Packet *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {
+	if len(globuleHashSignature) == SignatureLength {
+		copy(phase2Packet.globuleHashSignature[:], globuleHashSignature[:SignatureLength])
+		return nil
+	}
+
+	return errors.New("invalid proof fields len")
 }

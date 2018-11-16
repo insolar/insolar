@@ -25,17 +25,16 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
-	logicRunner   core.LogicRunner
-	messageBus    core.MessageBus
+	MessageBus    core.MessageBus   `inject:""`
+	KeyProcessor  core.KeyProcessor `inject:""`
+	Genesis       core.Genesis      `inject:""`
 	nodeDomainRef *core.RecordRef
 	rootDomainRef *core.RecordRef
-	KeyProcessor  core.KeyProcessor
 }
 
 // New creates new NetworkCoordinator
@@ -44,17 +43,9 @@ func New() (*NetworkCoordinator, error) {
 }
 
 // Start implements interface of Component
-func (nc *NetworkCoordinator) Start(ctx context.Context, c core.Components) error {
-	nc.logicRunner = c.LogicRunner
-	nc.messageBus = c.MessageBus
-	nc.rootDomainRef = c.Genesis.GetRootDomainRef()
-	nc.KeyProcessor = platformpolicy.NewKeyProcessor()
+func (nc *NetworkCoordinator) Start(ctx context.Context) error {
+	nc.rootDomainRef = nc.Genesis.GetRootDomainRef()
 
-	return nil
-}
-
-// Stop implements interface of Component
-func (nc *NetworkCoordinator) Stop(ctx context.Context) error {
 	return nil
 }
 
@@ -70,7 +61,7 @@ func RandomUint64() uint64 {
 }
 
 func (nc *NetworkCoordinator) routeCall(ctx context.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
-	if nc.messageBus == nil {
+	if nc.MessageBus == nil {
 		return nil, errors.New("[ NetworkCoordinator::routeCall ] message bus was not set during initialization")
 	}
 
@@ -81,7 +72,7 @@ func (nc *NetworkCoordinator) routeCall(ctx context.Context, ref core.RecordRef,
 		Arguments:        args,
 	}
 
-	res, err := nc.messageBus.Send(ctx, e)
+	res, err := nc.MessageBus.Send(ctx, e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NetworkCoordinator::routeCall ] couldn't send message: "+ref.String())
 	}

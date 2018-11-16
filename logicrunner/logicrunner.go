@@ -41,7 +41,7 @@ type Ref = core.RecordRef
 // Context of one contract execution
 type ExecutionState struct {
 	sync.Mutex
-	Ref    Ref
+	Ref    *Ref
 	Method string
 
 	noWait      bool
@@ -58,8 +58,8 @@ type ExecutionState struct {
 
 type Error struct {
 	Err      error
-	Request  Ref
-	Contract Ref
+	Request  *Ref
+	Contract *Ref
 	Method   string
 }
 
@@ -67,13 +67,13 @@ func (lre Error) Error() string {
 	var buffer bytes.Buffer
 
 	buffer.WriteString(lre.Err.Error())
-	if lre.Contract.String() != "" {
+	if lre.Contract != nil {
 		buffer.WriteString(" Contract=" + lre.Contract.String())
 	}
 	if lre.Method != "" {
 		buffer.WriteString(" Method=" + lre.Method)
 	}
-	if lre.Request.String() != "" {
+	if lre.Request != nil {
 		buffer.WriteString(" Request=" + lre.Request.String())
 	}
 
@@ -88,7 +88,7 @@ func (es *ExecutionState) ErrorWrap(err error, message string) error {
 	}
 	return Error{
 		Err:      err,
-		Request:  *es.request,
+		Request:  es.request,
 		Contract: es.Ref,
 		Method:   es.Method,
 	}
@@ -226,8 +226,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
-	msg, ok := inmsg.Message().(message.IBaseLogicMessage)
+func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg, ok := parcel.Message().(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
@@ -237,12 +237,14 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
 		return nil, es.ErrorWrap(nil, "loop detected")
 	}
+	entryPulse := lr.pulse(ctx).PulseNumber
+
 	fuse := true
 	es.Lock()
 
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
-	if inmsg.Pulse() != lr.pulse(ctx).PulseNumber {
+	if entryPulse != lr.pulse(ctx).PulseNumber {
 		return nil, es.ErrorWrap(nil, "abort execution: new Pulse coming")
 	}
 
@@ -292,7 +294,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Parcel) (core.Rep
 		Resp: inslogger.TraceID(ctx),
 	})
 
-	es.request, err = vb.RegisterRequest(msg)
+	es.request, err = vb.RegisterRequest(parcel)
 
 	if err != nil {
 		return nil, es.ErrorWrap(err, "can't create request")
@@ -507,6 +509,11 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	defer func() {
 		es.Unlock()
 	}()
+
+	if es.callContext.Caller.Equal(Ref{}) {
+		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
+	}
+
 	protoDesc, err := lr.ArtifactManager.GetObject(ctx, m.PrototypeRef, nil, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get prototype")
