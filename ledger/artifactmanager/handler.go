@@ -153,35 +153,7 @@ func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetOb
 		return nil, errors.New("problems with node")
 	}
 
-	var redirect core.Reply
-	if msg.State == nil {
-		msg.State = definedState
-		sign, err := msg.Sign(h.PlatformCryptographyScheme, h.KeyStore)
-		if err != nil {
-			return nil, err
-		}
-
-		redirect = &reply.ObjectRedirect{
-			GenericRedirect: reply.GenericRedirect{
-				Sign: sign,
-				To:   &nodes[0],
-			},
-			StateID: *definedState,
-		}
-
-		return redirect, nil
-	}
-
-	sign, err := msg.Sign(h.PlatformCryptographyScheme, h.KeyStore)
-	if err != nil {
-		return nil, err
-	}
-	redirect = &reply.GenericRedirect{
-		Sign: sign,
-		To:   &nodes[0],
-	}
-
-	return redirect, nil
+	return reply.NewObjectRedirect(&nodes[0], definedState), nil
 }
 
 func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
