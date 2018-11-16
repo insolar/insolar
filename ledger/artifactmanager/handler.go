@@ -162,9 +162,9 @@ func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetOb
 		}
 
 		redirect = &reply.DefinedStateRedirect{
-			Redirect: reply.Redirect{
-				Sign: *sign,
-				To:   nodes[0],
+			GenericRedirect: reply.GenericRedirect{
+				Sign: sign,
+				To:   &nodes[0],
 			},
 			StateID: *definedState,
 		}
@@ -176,9 +176,9 @@ func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetOb
 	if err != nil {
 		return nil, err
 	}
-	redirect = &reply.Redirect{
-		Sign: *sign,
-		To:   nodes[0],
+	redirect = &reply.GenericRedirect{
+		Sign: sign,
+		To:   &nodes[0],
 	}
 
 	return redirect, nil
