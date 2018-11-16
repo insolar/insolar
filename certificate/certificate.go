@@ -35,11 +35,12 @@ type BootstrapNode struct {
 
 // Certificate holds info about certificate
 type Certificate struct {
-	MajorityRule   int             `json:"majority_rule"`
-	PublicKey      string          `json:"public_key"`
-	Reference      string          `json:"reference"`
-	Role           string          `json:"role"`
-	BootstrapNodes []BootstrapNode `json:"bootstrap_nodes"`
+	MajorityRule        int             `json:"majority_rule"`
+	PublicKey           string          `json:"public_key"`
+	Reference           string          `json:"reference"`
+	Role                string          `json:"role"`
+	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
+	RootDomainReference string          `json:"root_domain_ref"`
 }
 
 // GetBootstrapNodes return bootstrap nodes array

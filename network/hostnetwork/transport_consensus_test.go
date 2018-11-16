@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func createTwoConsensusNetworks(id1, id2 core.ShortNodeID) (t1, t2 network.ConsensusNetwork, err error) {
@@ -58,7 +58,7 @@ func createTwoConsensusNetworks(id1, id2 core.ShortNodeID) (t1, t2 network.Conse
 
 func TestTransportConsensus_SendRequest(t *testing.T) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -78,16 +78,16 @@ func TestTransportConsensus_SendRequest(t *testing.T) {
 
 	request := cn1.NewRequestBuilder().Type(types.Phase1).Data(&packets.Phase1Packet{}).Build()
 	err = cn1.SendRequest(request, cn2.GetNodeID())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	success := network.WaitTimeout(&wg, time.Second)
-	assert.True(t, success)
+	require.True(t, success)
 }
 
 func TestTransportConsensus_RegisterPacketHandler(t *testing.T) {
 	m := newMockResolver()
 
 	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1, 0, m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer cn.Stop()
 	handler := func(request network.Request) {
 		// do nothing
@@ -95,6 +95,6 @@ func TestTransportConsensus_RegisterPacketHandler(t *testing.T) {
 	f := func() {
 		cn.RegisterRequestHandler(types.Phase1, handler)
 	}
-	assert.NotPanics(t, f, "first request handler register should not panic")
-	assert.Panics(t, f, "second request handler register should panic because it is already registered")
+	require.NotPanics(t, f, "first request handler register should not panic")
+	require.Panics(t, f, "second request handler register should panic because it is already registered")
 }

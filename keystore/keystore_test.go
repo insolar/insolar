@@ -20,7 +20,7 @@ import (
 	"crypto/ecdsa"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -30,34 +30,34 @@ const (
 
 func TestNewKeyStore(t *testing.T) {
 	ks, err := NewKeyStore(testKeys)
-	assert.NoError(t, err)
-	assert.NotNil(t, ks)
+	require.NoError(t, err)
+	require.NotNil(t, ks)
 }
 
 func TestNewKeyStore_Fails(t *testing.T) {
 	ks, err := NewKeyStore(testBadKeys)
-	assert.Error(t, err)
-	assert.Nil(t, ks)
+	require.Error(t, err)
+	require.Nil(t, ks)
 }
 
 func TestKeyStore_GetPrivateKey(t *testing.T) {
 	ks, err := NewKeyStore(testKeys)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pk, err := ks.GetPrivateKey("")
-	assert.NotNil(t, pk)
-	assert.NoError(t, err)
+	require.NotNil(t, pk)
+	require.NoError(t, err)
 }
 
 func TestKeyStore_GetPrivateKeyReturnsECDSA(t *testing.T) {
 	ks, err := NewKeyStore(testKeys)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pk, err := ks.GetPrivateKey("")
-	assert.NotNil(t, pk)
-	assert.NoError(t, err)
+	require.NotNil(t, pk)
+	require.NoError(t, err)
 
 	ecdsaPK, ok := pk.(*ecdsa.PrivateKey)
-	assert.NotNil(t, ecdsaPK)
-	assert.True(t, ok)
+	require.NotNil(t, ecdsaPK)
+	require.True(t, ok)
 }

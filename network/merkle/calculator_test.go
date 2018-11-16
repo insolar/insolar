@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -121,14 +121,14 @@ func (t *calculatorSuite) TestGetCloudProof() {
 
 func TestNewCalculator(t *testing.T) {
 	c := NewCalculator()
-	assert.NotNil(t, c)
+	require.NotNil(t, c)
 }
 
 func TestCalculator(t *testing.T) {
 	calculator := &calculator{}
 
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	assert.NotNil(t, key)
+	require.NotNil(t, key)
 
 	service := cryptography.NewKeyBoundCryptographyService(key)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -142,13 +142,13 @@ func TestCalculator(t *testing.T) {
 	cm := component.Manager{}
 	cm.Inject(nk, am, calculator, service, scheme)
 
-	assert.NotNil(t, calculator.ArtifactManager)
-	assert.NotNil(t, calculator.NodeNetwork)
-	assert.NotNil(t, calculator.CryptographyService)
-	assert.NotNil(t, calculator.PlatformCryptographyScheme)
+	require.NotNil(t, calculator.ArtifactManager)
+	require.NotNil(t, calculator.NodeNetwork)
+	require.NotNil(t, calculator.CryptographyService)
+	require.NotNil(t, calculator.PlatformCryptographyScheme)
 
 	err := cm.Init(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pulse := &core.Pulse{
 		PulseNumber:     core.PulseNumber(1337),

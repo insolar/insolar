@@ -20,16 +20,16 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetBalance(t *testing.T) {
 	firstMember := createMember(t, "Member1")
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, 1000, firstBalance)
+	require.Equal(t, 1000, firstBalance)
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
+	require.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
 }

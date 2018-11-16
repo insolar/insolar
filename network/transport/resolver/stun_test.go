@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type MocktConn struct {
@@ -69,13 +69,13 @@ func TestNewStunResolver(t *testing.T) {
 	stunAddr := "127.0.0.1:31337"
 	resolver := NewStunResolver(stunAddr)
 
-	assert.IsType(t, &stunResolver{}, resolver)
+	require.IsType(t, &stunResolver{}, resolver)
 }
 
 func TestStunResolver_Resolve(t *testing.T) {
 	stunAddr := "127.0.0.1:31337"
 	resolver := NewStunResolver(stunAddr)
-	assert.IsType(t, &stunResolver{}, resolver)
+	require.IsType(t, &stunResolver{}, resolver)
 
 	conn := &MocktConn{}
 	conn.On("LocalAddr").Return(net.ResolveUDPAddr("udp", stunAddr))
