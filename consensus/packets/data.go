@@ -106,6 +106,16 @@ func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) er
 	return errors.New("invalid proof fields len")
 }
 
+// TODO this
+func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) error {
+
+	if phase1PacketSizeForClaims-int(getClaimWithHeaderSize(claim)) < 0 {
+		return errors.New("No space for claim")
+	}
+	p1p.claims = append(p1p.claims, claim)
+	return nil
+}
+
 type PacketHeader struct {
 	PacketT    PacketType
 	HasRouting bool

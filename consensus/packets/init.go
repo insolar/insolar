@@ -15,3 +15,35 @@
  */
 
 package packets
+
+import (
+	"github.com/insolar/insolar/log"
+)
+
+// phase1PacketMaxSize should be less then MTU
+const phase1PacketMaxSize = 1400
+
+var (
+	phase1PacketSizeForClaims int
+	claimSizeMap              map[ClaimType]uint16
+)
+
+// init packets and claims size variables
+func init() {
+	sizeOf := func(s Serializer) uint16 {
+		data, err := s.Serialize()
+		if err != nil {
+			log.Fatalln("Failed to init packets package: ", err.Error())
+		}
+		return uint16(len(data))
+	}
+
+	phase1PacketSizeForClaims = phase1PacketMaxSize - int(sizeOf(&Phase1Packet{}))
+
+	claimSizeMap = make(map[ClaimType]uint16, 5)
+	claimSizeMap[TypeNodeJoinClaim] = sizeOf(&NodeJoinClaim{})
+	claimSizeMap[TypeCapabilityPollingAndActivation] = sizeOf(&CapabilityPoolingAndActivation{})
+	claimSizeMap[TypeNodeViolationBlame] = sizeOf(&NodeViolationBlame{})
+	claimSizeMap[TypeNodeBroadcast] = sizeOf(&NodeBroadcast{})
+	claimSizeMap[TypeNodeLeaveClaim] = sizeOf(&NodeLeaveClaim{})
+}

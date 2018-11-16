@@ -30,6 +30,8 @@ const (
 	TypeNodeLeaveClaim
 )
 
+const ClaimHeaderSize = 2
+
 type ReferendumClaim interface {
 	Serializer
 	Type() ClaimType
@@ -127,4 +129,12 @@ func NewNodViolationBlame() *NodeViolationBlame {
 	return &NodeViolationBlame{
 		claimType: TypeNodeViolationBlame,
 	}
+}
+
+func getClaimSize(claim ReferendumClaim) uint16 {
+	return claimSizeMap[claim.Type()]
+}
+
+func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
+	return getClaimSize(claim) + ClaimHeaderSize
 }
