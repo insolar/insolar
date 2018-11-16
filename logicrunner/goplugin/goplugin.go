@@ -124,15 +124,15 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 	return err
 }
 
-type callMethodResult struct {
+type CallMethodResult struct {
 	Response rpctypes.DownCallMethodResp
 	Error    error
 }
 
-func (gp *GoPlugin) callMethodRPC(ctx context.Context, req rpctypes.DownCallMethodReq, res rpctypes.DownCallMethodResp, resultChan chan callMethodResult) {
+func (gp *GoPlugin) CallMethodRPC(ctx context.Context, req rpctypes.DownCallMethodReq, res rpctypes.DownCallMethodResp, resultChan chan CallMethodResult) {
 	method := "RPC.CallMethod"
 	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
-	resultChan <- callMethodResult{Response: res, Error: callClientError}
+	resultChan <- CallMethodResult{Response: res, Error: callClientError}
 }
 
 // CallMethod runs a method on an object in controlled environment
@@ -154,8 +154,8 @@ func (gp *GoPlugin) CallMethod(
 		Arguments: args,
 	}
 
-	resultChan := make(chan callMethodResult)
-	go gp.callMethodRPC(ctx, req, res, resultChan)
+	resultChan := make(chan CallMethodResult)
+	go gp.CallMethodRPC(ctx, req, res, resultChan)
 
 	select {
 	case callResult := <-resultChan:
