@@ -220,8 +220,8 @@ func (mb *MessageBus) createRedirectParcel(ctx context.Context, parcel core.Parc
 	switch redirect := response.(type) {
 	case *reply.ObjectRedirect:
 		newMessage := redirect.RecreateMessage(parcel.Message())
-		parcel, err := mb.CreateParcel(ctx, parcel.Pulse(), newMessage, nil)
-		//TODO here a sign-token shoulb be put to parcel
+		parcel, err := mb.CreateParcel(ctx, newMessage)
+		// TODO here a sign-token shoulb be put to parcel
 		return redirect.GetTo(), parcel, err
 	default:
 		panic("unknown type of redirect")
@@ -260,12 +260,13 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 
 	redirect := resp.(reply.Redirect)
 	newMessage := redirect.RecreateMessage(msg.Message())
-	newParcel, err := mb.CreateParcel(ctx, msg.Pulse(), newMessage, nil)
+	newParcel, err := mb.CreateParcel(ctx, newMessage)
 	if err != nil {
 		return nil, err
 	}
 	sign, err := mb.CryptographyService.Sign(message.ToBytes(newParcel))
 	redirect.SetSign(sign)
+
 	return redirect, nil
 }
 

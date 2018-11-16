@@ -183,7 +183,8 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 			if stateID == nil {
 				return nil, err
 			}
-			return h.prepareRedirect(ctx, msg, stateID, genericMsg.Pulse())
+			// here we need find node by pulse
+			return h.prepareRedirect(ctx, msg, stateID, stateID.Pulse())
 		default:
 			return nil, err
 		}
