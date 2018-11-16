@@ -21,6 +21,7 @@ import (
 	"context"
 	"net/rpc"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -50,7 +51,9 @@ type GoPlugin struct {
 	MessageBus      core.MessageBus
 	ArtifactManager core.ArtifactManager
 	runner          *exec.Cmd
-	client          *rpc.Client
+
+	clientMutex sync.Mutex
+	client      *rpc.Client
 }
 
 // NewGoPlugin returns a new started GoPlugin
@@ -69,8 +72,11 @@ func (gp *GoPlugin) Stop() error {
 	return nil
 }
 
-// Downstream returns a connection to `ginsider`
-func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
+// downstream returns a connection to `ginsider`
+func (gp *GoPlugin) downstream(ctx context.Context) (*rpc.Client, error) {
+	gp.clientMutex.Lock()
+	defer gp.clientMutex.Unlock()
+
 	if gp.client != nil {
 		return gp.client, nil
 	}
