@@ -231,7 +231,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	ref := msg.GetReference()
 
 	es := lr.UpsertExecution(ref)
-	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
+	if es.traceID == inslogger.TraceID(ctx) {
 		return nil, es.ErrorWrap(nil, "loop detected")
 	}
 	entryPulse := lr.pulse(ctx).PulseNumber
@@ -250,7 +250,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 			es.Unlock()
 		}
 	}()
-	lr.execution[ref].traceID = inslogger.TraceID(ctx)
+	es.traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
 
 	lr.caseBindReplaysMutex.Lock()
