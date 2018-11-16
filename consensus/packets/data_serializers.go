@@ -181,7 +181,7 @@ func (p1p *Phase1Packet) compactReferendumClaim() ([]byte, error) {
 
 func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
 	if header == nil {
-		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
+		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize PulseData")
 	}
 	if header.PacketT != Phase1 {
 		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Wrong packet type")
@@ -191,7 +191,7 @@ func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 
 	err := p1p.pulseData.Deserialize(data)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
+		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize PulseData")
 	}
 
 	err = p1p.proofNodePulse.Deserialize(data)
@@ -447,14 +447,14 @@ func (pde *PulseDataExt) Serialize() ([]byte, error) {
 func (pd *PulseData) Deserialize(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &pd.PulseNumber)
 	if err != nil {
-		return errors.Wrap(err, "[ pulseData.Deserialize ] Can't read PulseNumer")
+		return errors.Wrap(err, "[ PulseData.Deserialize ] Can't read PulseNumer")
 	}
 
 	pd.Data = &PulseDataExt{}
 
 	err = pd.Data.Deserialize(data)
 	if err != nil {
-		return errors.Wrap(err, "[ pulseData.Deserialize ] Can't read PulseDataExt")
+		return errors.Wrap(err, "[ PulseData.Deserialize ] Can't read PulseDataExt")
 	}
 
 	return nil
@@ -465,17 +465,17 @@ func (pd *PulseData) Serialize() ([]byte, error) {
 	result := allocateBuffer(64)
 	err := binary.Write(result, defaultByteOrder, pd.PulseNumber)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ pulseData.Serialize ] Can't write PulseNumer")
+		return nil, errors.Wrap(err, "[ PulseData.Serialize ] Can't write PulseNumer")
 	}
 
 	pulseDataExtRaw, err := pd.Data.Serialize()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ pulseData.Serialize ] Can't write PulseDataExt")
+		return nil, errors.Wrap(err, "[ PulseData.Serialize ] Can't write PulseDataExt")
 	}
 
 	_, err = result.Write(pulseDataExtRaw)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ pulseData.Serialize ] Can't append PulseDataExt")
+		return nil, errors.Wrap(err, "[ PulseData.Serialize ] Can't append PulseDataExt")
 	}
 
 	return result.Bytes(), nil
@@ -858,14 +858,14 @@ func (dbs *DeviantBitSet) Deserialize(data io.Reader) error {
 	var packedData uint8
 	err := binary.Read(data, defaultByteOrder, &packedData)
 	if err != nil {
-		return errors.Wrap(err, "[ deviantBitSet.Deserialize ] Can't read packedData")
+		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read packedData")
 	}
 	dbs.parsePackedData(packedData)
 
 	// TODO: these fields are optional
 	err = binary.Read(data, defaultByteOrder, &dbs.HighBitLength)
 	if err != nil {
-		return errors.Wrap(err, "[ deviantBitSet.Deserialize ] Can't read HighBitLength")
+		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read HighBitLength")
 	}
 
 	return nil
@@ -887,13 +887,13 @@ func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
 	packedData := dbs.compactPacketData()
 	err := binary.Write(result, defaultByteOrder, packedData)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ deviantBitSet.Serialize ] Can't write packedData")
+		return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write packedData")
 	}
 
 	// TODO: these fields are optional
 	err = binary.Write(result, defaultByteOrder, dbs.HighBitLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ deviantBitSet.Serialize ] Can't write HighBitLength")
+		return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write HighBitLength")
 	}
 
 	return result.Bytes(), nil
@@ -907,7 +907,7 @@ func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
 
 func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
 	if header == nil {
-		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
+		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize PulseData")
 	}
 	if header.PacketT != Phase2 {
 		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Wrong packet type")
@@ -923,7 +923,7 @@ func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, heade
 
 	err = phase2Packet.deviantBitSet.Deserialize(data)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize deviantBitSet")
+		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize DeviantBitSet")
 	}
 
 	phase2Packet.SignatureHeaderSection1 = make([]byte, SignatureLength)
@@ -1002,12 +1002,12 @@ func (phase2Packet *Phase2Packet) RawFirstPart() ([]byte, error) {
 	// serializing of deviantBitSet
 	deviantBitSetRaw, err := phase2Packet.deviantBitSet.Serialize()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize deviantBitSet")
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize DeviantBitSet")
 	}
 
 	_, err = result.Write(deviantBitSetRaw)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append deviantBitSet")
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append DeviantBitSet")
 	}
 
 	return result.Bytes(), nil

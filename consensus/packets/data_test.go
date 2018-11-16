@@ -114,7 +114,7 @@ func TestPulseDataReadWrite_BadData(t *testing.T) {
 	pulseData.PulseNumber = uint32(32)
 	pulseData.Data = makeDefaultPulseDataExt()
 	checkBadDataSerializationDeserialization(t, pulseData,
-		"[ pulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+		"[ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
 }
 
 func genRandomSlice(n int) []byte {
@@ -318,7 +318,7 @@ func makeDeviantBitSet() *DeviantBitSet {
 	deviantBitSet.HighBitLength = uint8(9)
 
 	// TODO: uncomment it when we support reading payload
-	//deviantBitSet.Payload = []byte("Hello, World!")
+	// DeviantBitSet.Payload = []byte("Hello, World!")
 
 	return deviantBitSet
 }
