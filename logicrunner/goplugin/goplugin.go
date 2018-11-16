@@ -69,6 +69,7 @@ func NewGoPlugin(conf *configuration.LogicRunner, eb core.MessageBus, am core.Ar
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() error {
+	// WTF??
 	return nil
 }
 
@@ -101,14 +102,14 @@ func (gp *GoPlugin) closeDownstream() {
 	gp.client = nil
 }
 
-func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, req interface{}, res rpctypes.DownCallMethodResp, resultChan chan callResult) {
+func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, req interface{}, res interface{}) error {
 	var err error
 	var client *rpc.Client
-	// TODO check type of Req and Res
+
 	for {
 		client, err = gp.downstream(ctx)
 		if err == nil {
-			call := <-client.Go("RPC.CallMethod", req, &res, nil).Done
+			call := <-client.Go(method, req, res, nil).Done
 			err = call.Error
 
 			if err != rpc.ErrShutdown {
@@ -119,12 +120,18 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, req interface{}
 		}
 	}
 
-	resultChan <- callResult{Response: res, Error: err}
+	return err
+}
+
+func (gp *GoPlugin) callMethodRPC(ctx context.Context, req rpctypes.DownCallMethodReq, res rpctypes.DownCallMethodResp, resultChan chan callMethodResult) {
+	method := "RPC.CallMethod"
+	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
+	resultChan <- callMethodResult{Response: res, Error: callClientError}
 }
 
 const timeout = time.Minute * 10
 
-type callResult struct {
+type callMethodResult struct {
 	Response rpctypes.DownCallMethodResp
 	Error    error
 }
@@ -148,8 +155,8 @@ func (gp *GoPlugin) CallMethod(
 		Arguments: args,
 	}
 
-	resultChan := make(chan callResult)
-	go gp.callClientWithReconnect(ctx, req, res, resultChan)
+	resultChan := make(chan callMethodResult)
+	go gp.callMethodRPC(ctx, req, res, resultChan)
 
 	select {
 	case callResult := <-resultChan:
