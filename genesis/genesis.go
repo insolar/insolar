@@ -300,7 +300,7 @@ func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestut
 	return nil
 }
 
-func (g *Genesis) registerDiscoverNodes(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
+func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
 
 	for i, discoverNode := range g.config.DiscoveryNodes {
 		/*_, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
@@ -317,12 +317,12 @@ func (g *Genesis) registerDiscoverNodes(ctx context.Context, cb *goplugintestuti
 		}
 		nodeData, err := serializeInstance(nodeState)
 		if err != nil {
-			return errors.Wrap(err, "")
+			return errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't serialize discovery node instance")
 		}
 
 		nodeID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)}})
 		if err != nil {
-			return errors.Wrap(err, "")
+			return errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't register request to artifact manager")
 		}
 		contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
 		_, err = g.ArtifactManager.ActivateObject(
@@ -335,7 +335,7 @@ func (g *Genesis) registerDiscoverNodes(ctx context.Context, cb *goplugintestuti
 			nodeData,
 		)
 		if err != nil {
-			return errors.Wrap(err, "")
+			return errors.Wrap(err, "[ registerDiscoveryNodes ] Could'n activate discovery node object")
 		}
 	}
 	return nil
@@ -344,37 +344,37 @@ func (g *Genesis) registerDiscoverNodes(ctx context.Context, cb *goplugintestuti
 // Start creates types and RootDomain instance
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
-	inslog.Info("[ Bootstrapper ] Starting Bootstrap ...")
+	inslog.Info("[ Genesis ] Starting Genesis ...")
 
 	rootDomainRef, err := g.getRootDomainRef(ctx)
 	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't get ref of rootDomain")
+		return errors.Wrap(err, "[ Genesis ] couldn't get ref of rootDomain")
 	}
 	if rootDomainRef != nil {
 		g.rootDomainRef = rootDomainRef
 
 		rootMemberRef, err := g.getRootMemberRef(ctx, *g.rootDomainRef)
 		if err != nil {
-			return errors.Wrap(err, "[ Bootstrapper ] couldn't get ref of rootMember")
+			return errors.Wrap(err, "[ Genesis ] couldn't get ref of rootMember")
 		}
 
 		g.rootMemberRef = rootMemberRef
-		inslog.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
+		inslog.Info("[ Genesis ] RootDomain was found in ledger. Don't run genesis")
 		return nil
 	}
 
 	isLightExecutor, err := g.isLightExecutor(ctx)
 	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't check if node is light executor")
+		return errors.Wrap(err, "[ Genesis ] couldn't check if node is light executor")
 	}
 	if !isLightExecutor {
-		inslog.Info("[ Bootstrapper ] Node is not light executor. Don't do bootstrap")
+		inslog.Info("[ Genesis ] Node is not light executor. Don't run genesis")
 		return nil
 	}
 
 	_, insgocc, err := goplugintestutils.Build()
 	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't build insgocc")
+		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
 	}
 
 	cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
@@ -383,23 +383,23 @@ func (g *Genesis) Start(ctx context.Context) error {
 
 	err = buildSmartContracts(ctx, cb)
 	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't build contracts")
+		return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
 	}
 
 	if g.isGenesis {
 		_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
 		if err != nil {
-			return errors.Wrap(err, "[ Bootstrapper ] couldn't get root keys")
+			return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 		}
 
 		err = g.activateSmartContracts(ctx, cb, rootPubKey)
 		if err != nil {
-			return errors.Wrap(err, "[ Bootstrapper ]")
+			return errors.Wrap(err, "[ Genesis ]")
 		}
 
-		err = g.registerDiscoverNodes(ctx, cb)
+		err = g.registerDiscoveryNodes(ctx, cb)
 		if err != nil {
-			return errors.Wrap(err, "[ Bootstrapper ]")
+			return errors.Wrap(err, "[ Genesis ]")
 		}
 	}
 
