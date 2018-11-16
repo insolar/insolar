@@ -34,9 +34,8 @@ const (
 	TypeError = core.ReplyType(iota + 1)
 	// TypeOK is a generic reply for success calls without returned value.
 	TypeOK
-
-	TypeRedirect
-	TypeDefinedStateRedirect
+	
+	TypeGetObjectRedirect
 
 	// Logicrunner
 
