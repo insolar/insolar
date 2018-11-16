@@ -33,7 +33,7 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	ctx, db, _, cleaner := getTestData(t)
 	defer cleaner()
 
-	mh := NewMessageHandler(db, storage.NewRecentObjectsIndex(0))
+	mh := NewMessageHandler(db, storage.NewRecentStorage(0))
 
 	payload := []core.KV{
 		{K: []byte("ABC"), V: []byte("CDE")},
