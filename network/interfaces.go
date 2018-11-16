@@ -158,34 +158,20 @@ type NodeKeeper interface {
 	SetOriginClaim(*packets.NodeJoinClaim)
 	// GetOriginClaim get origin NodeJoinClaim
 	GetOriginClaim() *packets.NodeJoinClaim
-	// IsNodeJoinedOnPreviousPulse returns true if the last Sync call contained approved Join claims
-	IsNodeJoinedOnPreviousPulse() bool
-	// AddClaim add claim to the internal queue of claims
-	AddClaim(packets.ReferendumClaim) bool
+	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
+	NodesJoinedDuringPreviousPulse() bool
+	// AddPendingClaim add pending claim to the internal queue of claims
+	AddPendingClaim(packets.ReferendumClaim) bool
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
-	// Sync move approved claims to sync list
-	Sync(approvedClaims []packets.ReferendumClaim, nodesLost []core.RecordRef)
+	// AddUnsyncClaims add claims to unsync list
+	AddUnsyncClaims([]packets.ReferendumClaim)
+	// CalculateUnsyncMergedHash calculate node list hash based on active node list and claims
+	CalculateUnsyncMergedHash() []byte
+	// Sync move unsync -> sync
+	Sync(deviant []core.RecordRef)
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(number core.PulseNumber)
-
-	// FIXME: DEPRECATED METHODS
-	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
-	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list.
-	SetPulse(number core.PulseNumber) (bool, UnsyncList)
-	// SyncOld initiates transferring syncCandidates -> sync, sync -> active.
-	// If number is less than internal PulseNumber then ignore SyncOld.
-	SyncOld(syncCandidates []core.Node, number core.PulseNumber)
-	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
-	// Channel will return nil node if added node has not passed the consensus.
-	// Returns error if current node is not active and cannot participate in consensus.
-	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-		version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error)
-	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
-	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
-	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
-	// 3. If pulse is more than internal NodeKeeper pulse, blocks till next SetPulse or duration timeout and then acts like in par. 2.
-	GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (UnsyncList, error)
 }
 
 type UnsyncList interface {
