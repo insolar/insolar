@@ -236,20 +236,10 @@ func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
 }
 
 func (nc *NaiveCommunicator) signPhase1Packet(packet *packets.Phase1Packet) error {
-	header, err := packet.PacketHeader.Serialize()
+	data, err := packet.RawBytes()
 	if err != nil {
-		return errors.Wrap(err, "failed to serialize header")
+		return errors.Wrap(err, "failed to get raw bytes")
 	}
-	pulseData, err := packet.PulseData.Serialize()
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize pulse data")
-	}
-	proofData, err := packet.ProofNodePulse.Serialize()
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize proof node pulse")
-	}
-	data := append(header, pulseData...)
-	data = append(data, proofData...)
 	sign, err := nc.Cryptography.Sign(data)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign a phase 2 packet")
@@ -269,21 +259,13 @@ func (nc *NaiveCommunicator) isSignPhase1PacketRight(packet *packets.Phase1Packe
 }
 
 func (nc *NaiveCommunicator) signPhase2Packet(packet *packets.Phase2Packet) error {
-	header, err := packet.PacketHeader.Serialize()
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize header")
-	}
-	bitSet, err := packet.DeviantBitSet.Serialize()
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize devianbitset")
-	}
-	data := append(header, bitSet...)
-	data = append(data, packet.GlobuleHashSignature...)
+	data, err := packet.RawFirstPart()
 	sign, err := nc.Cryptography.Sign(data)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign a phase 2 packet")
 	}
 	packet.SignatureHeaderSection1 = sign.Bytes()
+	// TODO: sign a second part after claim addition
 	return nil
 }
 

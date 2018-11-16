@@ -76,7 +76,7 @@ func TestPacketHeaderReadWrite(t *testing.T) {
 
 func TestPacketHeaderReadWrite_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(Phase1),
-		"[ PacketHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
+		"[ packetHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
 }
 
 func makeDefaultPulseDataExt() *PulseDataExt {
@@ -114,7 +114,7 @@ func TestPulseDataReadWrite_BadData(t *testing.T) {
 	pulseData.PulseNumber = uint32(32)
 	pulseData.Data = makeDefaultPulseDataExt()
 	checkBadDataSerializationDeserialization(t, pulseData,
-		"[ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+		"[ pulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
 }
 
 func genRandomSlice(n int) []byte {
@@ -260,16 +260,16 @@ func TestPhase1Packet_SetPulseProof(t *testing.T) {
 	err := p.SetPulseProof(proofStateHash, proofSignature)
 	assert.NoError(t, err)
 
-	assert.Equal(t, proofStateHash, p.ProofNodePulse.NodeStateHash[:])
-	assert.Equal(t, proofSignature, p.ProofNodePulse.NodeSignature[:])
+	assert.Equal(t, proofStateHash, p.proofNodePulse.NodeStateHash[:])
+	assert.Equal(t, proofSignature, p.proofNodePulse.NodeSignature[:])
 
 	invalidStateHash := genRandomSlice(32)
 	invalidSignature := genRandomSlice(128)
 	err = p.SetPulseProof(invalidStateHash, invalidSignature)
 	assert.Error(t, err)
 
-	assert.NotEqual(t, invalidStateHash, p.ProofNodePulse.NodeStateHash[:])
-	assert.NotEqual(t, invalidSignature, p.ProofNodePulse.NodeSignature[:])
+	assert.NotEqual(t, invalidStateHash, p.proofNodePulse.NodeStateHash[:])
+	assert.NotEqual(t, invalidSignature, p.proofNodePulse.NodeSignature[:])
 
 }
 
@@ -407,9 +407,9 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 
 func makePhase1Packet() *Phase1Packet {
 	phase1Packet := NewPhase1Packet()
-	phase1Packet.PacketHeader = *makeDefaultPacketHeader(Phase1)
-	phase1Packet.PulseData = *makeDefaultPulseDataExt()
-	phase1Packet.ProofNodePulse = NodePulseProof{NodeSignature: randomArray71(), NodeStateHash: randomArray64()}
+	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
+	phase1Packet.pulseData = *makeDefaultPulseDataExt()
+	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray71(), NodeStateHash: randomArray64()}
 
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeJoinClaim())
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeViolationBlame())
@@ -427,16 +427,16 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 func TestPhase1Packet_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makePhase1Packet(),
 		"[ Phase1Packet.Deserialize ] Can't deserialize body: [ Phase1Packet.DeserializeWithoutHeader ] "+
-			"Can't parseReferendumClaim: [ PacketHeader.parseReferendumClaim ] "+
+			"Can't parseReferendumClaim: [ packetHeader.parseReferendumClaim ] "+
 			"Can't deserialize claim: [ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
 
 }
 
 func makePhase2Packet() *Phase2Packet {
 	phase2Packet := NewPhase2Packet()
-	phase2Packet.PacketHeader = *makeDefaultPacketHeader(Phase2)
-	phase2Packet.GlobuleHashSignature = genRandomSlice(SignatureLength)
-	phase2Packet.DeviantBitSet = *makeDeviantBitSet()
+	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
+	phase2Packet.globuleHashSignature = genRandomSlice(SignatureLength)
+	phase2Packet.deviantBitSet = *makeDeviantBitSet()
 	phase2Packet.SignatureHeaderSection1 = genRandomSlice(SignatureLength)
 	phase2Packet.SignatureHeaderSection2 = genRandomSlice(SignatureLength)
 
@@ -497,12 +497,12 @@ func checkWrongPacket(t *testing.T, packet Serializer) {
 
 func TestExtractPacket_Phase2_BadExtract(t *testing.T) {
 	packet := makePhase2Packet()
-	packet.PacketHeader.PacketT = Phase1
+	packet.packetHeader.PacketT = Phase1
 	checkWrongPacket(t, packet)
 }
 
 func TestExtractPacket_Phase1_BadExtract(t *testing.T) {
 	packet := makePhase1Packet()
-	packet.PacketHeader.PacketT = Phase2
+	packet.packetHeader.PacketT = Phase2
 	checkWrongPacket(t, packet)
 }

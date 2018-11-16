@@ -47,11 +47,11 @@ const ReferenceLength = 64
 
 type Phase1Packet struct {
 	// -------------------- Header
-	PacketHeader PacketHeader
+	packetHeader PacketHeader
 
 	// -------------------- Section 1 ( Pulse )
-	PulseData      PulseDataExt // optional
-	ProofNodePulse NodePulseProof
+	pulseData      PulseDataExt // optional
+	proofNodePulse NodePulseProof
 
 	// -------------------- Section 2 ( Claims ) ( optional )
 	claims []ReferendumClaim
@@ -68,18 +68,18 @@ func NewPhase1Packet() *Phase1Packet {
 }
 
 func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
-	return p1p.PacketHeader.f00
+	return p1p.packetHeader.f00
 }
 
 func (p1p *Phase1Packet) hasSection2() bool {
-	return p1p.PacketHeader.f01
+	return p1p.packetHeader.f01
 }
 
 func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 	if header.PacketType != types.Phase1 {
 		return errors.New("Phase1Packet.SetPacketHeader: wrong packet type")
 	}
-	p1p.PacketHeader.setRoutingFields(header, Phase1)
+	p1p.packetHeader.setRoutingFields(header, Phase1)
 
 	return nil
 }
@@ -87,25 +87,25 @@ func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 func (p1p *Phase1Packet) GetPulse() core.Pulse {
 	//TODO: need convert method with pulse signature check
 	return core.Pulse{
-		PulseNumber: core.PulseNumber(p1p.PacketHeader.Pulse),
-		Entropy:     p1p.PulseData.Entropy,
+		PulseNumber: core.PulseNumber(p1p.packetHeader.Pulse),
+		Entropy:     p1p.pulseData.Entropy,
 	}
 }
 
 func (p1p *Phase1Packet) GetPulseProof() *NodePulseProof {
-	return &p1p.ProofNodePulse
+	return &p1p.proofNodePulse
 }
 
 func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
-	if p1p.PacketHeader.PacketT != Phase1 {
+	if p1p.packetHeader.PacketT != Phase1 {
 		return nil, errors.New("Phase1Packet.GetPacketHeader: wrong packet type")
 	}
 
 	header.PacketType = types.Phase1
-	header.OriginID = p1p.PacketHeader.OriginNodeID
-	header.TargetID = p1p.PacketHeader.TargetNodeID
+	header.OriginID = p1p.packetHeader.OriginNodeID
+	header.TargetID = p1p.packetHeader.TargetNodeID
 
 	return header, nil
 }
@@ -113,8 +113,8 @@ func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 // SetPulseProof sets PulseProof and check struct fields len, returns error if invalid len
 func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) error {
 	if len(proofStateHash) == HashLength && len(proofSignature) == SignatureLength {
-		copy(p1p.ProofNodePulse.NodeStateHash[:], proofStateHash[:HashLength])
-		copy(p1p.ProofNodePulse.NodeSignature[:], proofSignature[:SignatureLength])
+		copy(p1p.proofNodePulse.NodeStateHash[:], proofStateHash[:HashLength])
+		copy(p1p.proofNodePulse.NodeSignature[:], proofSignature[:SignatureLength])
 		return nil
 	}
 
@@ -150,7 +150,7 @@ type PulseDataExt struct {
 	Entropy        core.Entropy
 }
 
-// PulseData is a pulse data.
+// pulseData is a pulse data.
 type PulseData struct {
 	PulseNumber uint32
 	Data        *PulseDataExt
@@ -293,11 +293,11 @@ type DeviantBitSet struct {
 
 type Phase2Packet struct {
 	// -------------------- Header
-	PacketHeader PacketHeader
+	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	GlobuleHashSignature    []byte
-	DeviantBitSet           DeviantBitSet
+	globuleHashSignature    []byte
+	deviantBitSet           DeviantBitSet
 	SignatureHeaderSection1 []byte
 
 	// -------------------- Section 2 (optional)
@@ -313,11 +313,11 @@ func NewPhase2Packet() *Phase2Packet {
 }
 
 func (phase2Packet *Phase2Packet) isPhase3Needed() bool {
-	return phase2Packet.PacketHeader.f00
+	return phase2Packet.packetHeader.f00
 }
 
 func (phase2Packet *Phase2Packet) hasSection2() bool {
-	return phase2Packet.PacketHeader.f01
+	return phase2Packet.packetHeader.f01
 }
 
 func (phase2Packet *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
@@ -325,7 +325,7 @@ func (phase2Packet *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
 		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
 	}
 
-	phase2Packet.PacketHeader.setRoutingFields(header, Phase2)
+	phase2Packet.packetHeader.setRoutingFields(header, Phase2)
 
 	return nil
 }
@@ -333,24 +333,24 @@ func (phase2Packet *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
 func (phase2Packet *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
-	if phase2Packet.PacketHeader.PacketT != Phase2 {
+	if phase2Packet.packetHeader.PacketT != Phase2 {
 		return nil, errors.New("Phase2Packet.GetPacketHeader: wrong packet type")
 	}
 
 	header.PacketType = types.Phase2
-	header.OriginID = phase2Packet.PacketHeader.OriginNodeID
-	header.TargetID = phase2Packet.PacketHeader.TargetNodeID
+	header.OriginID = phase2Packet.packetHeader.OriginNodeID
+	header.TargetID = phase2Packet.packetHeader.TargetNodeID
 
 	return header, nil
 }
 
 func (phase2Packet *Phase2Packet) GetGlobuleHashSignature() []byte {
-	return phase2Packet.GlobuleHashSignature[:]
+	return phase2Packet.globuleHashSignature[:]
 }
 
 func (phase2Packet *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {
 	if len(globuleHashSignature) == SignatureLength {
-		copy(phase2Packet.GlobuleHashSignature[:], globuleHashSignature[:SignatureLength])
+		copy(phase2Packet.globuleHashSignature[:], globuleHashSignature[:SignatureLength])
 		return nil
 	}
 
