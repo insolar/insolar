@@ -79,7 +79,9 @@ func NewGenesis(isGenesis bool, genesisConfigPath string) /*nodesInfo []map[stri
 	genesis := &Genesis{}
 	genesis.rootDomainRef = &core.RecordRef{}
 	genesis.isGenesis = isGenesis
-	genesis.config, err = parseGenesisConfig(genesisConfigPath)
+	if isGenesis {
+		genesis.config, err = parseGenesisConfig(genesisConfigPath)
+	}
 	return genesis, err
 }
 
@@ -313,11 +315,6 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 		return nil
 	}
 
-	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
-	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root keys")
-	}
-
 	isLightExecutor, err := isLightExecutor(ctx, c)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't check if node is light executor")
@@ -342,12 +339,17 @@ func (g *Genesis) Start(ctx context.Context, c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build contracts")
 	}
 
-	err = g.activateSmartContracts(ctx, am, cb, rootPubKey)
-	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ]")
-	}
-
 	if g.isGenesis {
+		_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
+		if err != nil {
+			return errors.Wrap(err, "[ Bootstrapper ] couldn't get root keys")
+		}
+
+		err = g.activateSmartContracts(ctx, am, cb, rootPubKey)
+		if err != nil {
+			return errors.Wrap(err, "[ Bootstrapper ]")
+		}
+
 		for i, discoverNode := range g.config.DiscoveryNodes {
 			//_, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
 			nodePubKey := ""
