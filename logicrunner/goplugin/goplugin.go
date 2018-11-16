@@ -169,15 +169,15 @@ func (gp *GoPlugin) CallMethod(
 	}
 }
 
-type callConstructorResult struct {
+type CallConstructorResult struct {
 	Response rpctypes.DownCallConstructorResp
 	Error    error
 }
 
-func (gp *GoPlugin) callConstructorRPC(ctx context.Context, req rpctypes.DownCallConstructorReq, res rpctypes.DownCallConstructorResp, resultChan chan callConstructorResult) {
+func (gp *GoPlugin) CallConstructorRPC(ctx context.Context, req rpctypes.DownCallConstructorReq, res rpctypes.DownCallConstructorResp, resultChan chan CallConstructorResult) {
 	method := "RPC.CallConstructor"
 	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
-	resultChan <- callConstructorResult{Response: res, Error: callClientError}
+	resultChan <- CallConstructorResult{Response: res, Error: callClientError}
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
@@ -196,8 +196,8 @@ func (gp *GoPlugin) CallConstructor(
 		Arguments: args,
 	}
 
-	resultChan := make(chan callConstructorResult)
-	go gp.callConstructorRPC(ctx, req, res, resultChan)
+	resultChan := make(chan CallConstructorResult)
+	go gp.CallConstructorRPC(ctx, req, res, resultChan)
 
 	select {
 	case callResult := <-resultChan:
