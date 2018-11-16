@@ -44,6 +44,14 @@ type PulseManager struct {
 	syncdone chan struct{}
 }
 
+// NewPulseManager creates PulseManager instance.
+func NewPulseManager(db *storage.DB) *PulseManager {
+	return &PulseManager{
+		db:       db,
+		gotpulse: make(chan struct{}, 1),
+	}
+}
+
 // Current returns current pulse structure.
 func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	latestPulse, err := m.db.GetLatestPulseNumber(ctx)
@@ -138,14 +146,6 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	return m.LR.OnPulse(ctx, pulse)
-}
-
-// NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB) *PulseManager {
-	return &PulseManager{
-		db:       db,
-		gotpulse: make(chan struct{}, 1),
-	}
 }
 
 // SyncToHeavy signals to sync loop there is something to sync.
