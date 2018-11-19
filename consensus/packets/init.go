@@ -25,7 +25,8 @@ const phase1PacketMaxSize = 1400
 
 var (
 	phase1PacketSizeForClaims int
-	claimSizeMap              map[ClaimType]uint16
+	// claimSizeMap contains serialized size of each claim type without header(2 bytes)
+	claimSizeMap map[ClaimType]uint16
 )
 
 // init packets and claims size variables

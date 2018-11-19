@@ -408,3 +408,15 @@ func TestExtractPacket_Phase1_BadExtract(t *testing.T) {
 	packet.packetHeader.PacketT = Phase2
 	checkWrongPacket(t, packet)
 }
+
+func TestPhase1Packet_AddClaim(t *testing.T) {
+	packet := makePhase1Packet()
+
+	err := packet.AddClaim(makeNodeJoinClaim())
+	assert.NoError(t, err)
+
+	for err == nil {
+		err = packet.AddClaim(&NodeLeaveClaim{})
+	}
+	assert.EqualError(t, err, "No space for claim")
+}

@@ -106,10 +106,21 @@ func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) er
 	return errors.New("invalid proof fields len")
 }
 
-// TODO this
+// AddClaim adds claim if phase1Packet has space for it, otherwise returns error
 func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) error {
 
-	if phase1PacketSizeForClaims-int(getClaimWithHeaderSize(claim)) < 0 {
+	getClaimSize := func(claims ...ReferendumClaim) int {
+		result := 0
+		for _, cl := range claims {
+			result += int(getClaimWithHeaderSize(cl))
+			result += claimHeaderSize
+		}
+		return result
+	}
+
+	claimSize := getClaimSize(append(p1p.claims, claim)...)
+
+	if claimSize > phase1PacketSizeForClaims {
 		return errors.New("No space for claim")
 	}
 

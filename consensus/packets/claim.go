@@ -30,7 +30,7 @@ const (
 	TypeNodeLeaveClaim
 )
 
-const ClaimHeaderSize = 2
+const claimHeaderSize = 2
 
 type ReferendumClaim interface {
 	Serializer
@@ -97,5 +97,5 @@ func getClaimSize(claim ReferendumClaim) uint16 {
 }
 
 func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
-	return getClaimSize(claim) + ClaimHeaderSize
+	return getClaimSize(claim) + claimHeaderSize
 }
