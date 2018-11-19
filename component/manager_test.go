@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Interface1 interface {
@@ -74,6 +74,6 @@ func TestComponentManager_Register(t *testing.T) {
 	cm := Manager{}
 	cm.Inject(&Component1{}, &Component2{})
 
-	assert.NoError(t, cm.Start(nil))
-	assert.NoError(t, cm.Stop(nil))
+	require.NoError(t, cm.Start(nil))
+	require.NoError(t, cm.Stop(nil))
 }

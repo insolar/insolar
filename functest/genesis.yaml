@@ -1,0 +1,28 @@
+root_keys_file: "../testdata/functional/root_member_keys.json"
+root_balance: 10000
+majority_rule: 4
+min_roles:
+  virtual:  1
+  heavy_material: 2
+  light_material: 4
+discovery_nodes:
+  -
+    host: "HOST1"
+    role: ""
+    keys_file: ""
+  -
+    host: "HOST2"
+    role: ""
+    keys_file: ""
+  -
+    host: "HOST3"
+    role: ""
+    keys_file: ""
+  -
+    host: "HOST4"
+    role: ""
+    keys_file: ""
+  -
+    host: "HOST5"
+    role: ""
+    keys_file: ""

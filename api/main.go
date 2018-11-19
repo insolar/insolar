@@ -74,8 +74,6 @@ func processQueryType(ctx context.Context, rh *RequestHandler, qTypeStr string) 
 
 	var hError error
 	switch qtype {
-	case IsAuth:
-		answer, hError = rh.ProcessIsAuthorized(ctx)
 	case GetSeed:
 		answer, hError = rh.ProcessGetSeed(ctx)
 	default:

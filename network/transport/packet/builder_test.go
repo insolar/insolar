@@ -22,13 +22,13 @@ import (
 
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBuilder_Build_EmptyPacket(t *testing.T) {
 	builder := NewBuilder(nil)
 
-	assert.Equal(t, builder.Build(), &Packet{})
+	require.Equal(t, builder.Build(), &Packet{})
 }
 
 func TestBuilder_Build_RequestPacket(t *testing.T) {
@@ -45,7 +45,7 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 		IsResponse: false,
 		Error:      nil,
 	}
-	assert.Equal(t, expectedPacket, m)
+	require.Equal(t, expectedPacket, m)
 }
 
 func TestBuilder_Build_ResponsePacket(t *testing.T) {
@@ -62,7 +62,7 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 		IsResponse: true,
 		Error:      nil,
 	}
-	assert.Equal(t, expectedPacket, m)
+	require.Equal(t, expectedPacket, m)
 }
 
 func TestBuilder_Build_ErrorPacket(t *testing.T) {
@@ -79,5 +79,5 @@ func TestBuilder_Build_ErrorPacket(t *testing.T) {
 		IsResponse: true,
 		Error:      errors.New("test error"),
 	}
-	assert.Equal(t, expectedPacket, m)
+	require.Equal(t, expectedPacket, m)
 }

@@ -34,8 +34,8 @@ import (
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func capture(f func()) string {
@@ -110,16 +110,16 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		mockListener,
 	)
 
-	assert.NoError(t, err)
-	assert.Equal(t, "testType", actualConnectionType)
-	assert.Equal(t, "listedAddress", actualAddress)
-	assert.IsType(t, result.Sock, &pulsartestutils.MockListener{})
+	require.NoError(t, err)
+	require.Equal(t, "testType", actualConnectionType)
+	require.Equal(t, "listedAddress", actualAddress)
+	require.IsType(t, result.Sock, &pulsartestutils.MockListener{})
 
-	assert.Equal(t, uint64(0), factoryMock.CreateWrapperCounter)
+	require.Equal(t, uint64(0), factoryMock.CreateWrapperCounter)
 }
 
 func TestNewPulsar_WithNeighbours(t *testing.T) {
-	assertObj := assert.New(t)
+	requireObj := require.New(t)
 
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	keyProcessormock := mockKeyProcessor(t)
@@ -159,11 +159,11 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 			return &pulsartestutils.MockListener{}, nil
 		})
 
-	assertObj.NoError(err)
-	assertObj.Equal(2, len(result.Neighbours))
-	assertObj.Equal("tcp", result.Neighbours[string(firstExpectedKey)].ConnectionType.String())
-	assertObj.Equal("pct", result.Neighbours[string(secondExpectedKey)].ConnectionType.String())
-	assert.Equal(t, uint64(2), factoryMock.CreateWrapperCounter)
+	requireObj.NoError(err)
+	requireObj.Equal(2, len(result.Neighbours))
+	requireObj.Equal("tcp", result.Neighbours[string(firstExpectedKey)].ConnectionType.String())
+	requireObj.Equal("pct", result.Neighbours[string(secondExpectedKey)].ConnectionType.String())
+	require.Equal(t, uint64(2), factoryMock.CreateWrapperCounter)
 }
 
 func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
@@ -184,7 +184,7 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 
 	err := pulsar.EstablishConnectionToPulsar(ctx, string(expectedNeighbourKey))
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mockClientWrapper.AssertNumberOfCalls(t, "Lock", 1)
 	mockClientWrapper.AssertNumberOfCalls(t, "Unlock", 1)
 	mockClientWrapper.AssertNotCalled(t, "CreateConnection")
@@ -210,9 +210,9 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t 
 
 	err := pulsar.EstablishConnectionToPulsar(ctx, string(expectedNeighbourKey))
 
-	assert.Error(t, err, "test reasons")
-	assert.Equal(t, clientMock.LockCounter, uint64(1))
-	assert.Equal(t, clientMock.UnlockCounter, uint64(1))
+	require.Error(t, err, "test reasons")
+	require.Equal(t, clientMock.LockCounter, uint64(1))
+	require.Equal(t, clientMock.UnlockCounter, uint64(1))
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *testing.T) {
@@ -240,7 +240,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 
 	err := pulsar.EstablishConnectionToPulsar(ctx, string(expectedNeighbourKey))
 
-	assert.Error(t, err, "oops, request is broken")
+	require.Error(t, err, "oops, request is broken")
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.T) {
@@ -270,7 +270,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 
 	err := pulsar.EstablishConnectionToPulsar(ctx, string(expectedNeighbourKey))
 
-	assert.Error(t, err, "Signature check Failed")
+	require.Error(t, err, "Signature check Failed")
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
@@ -304,7 +304,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 
 	err = pulsar.EstablishConnectionToPulsar(ctx, string(expectedNeighbourKey))
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
@@ -332,8 +332,8 @@ func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
 
 	pulsar.CheckConnectionsToPulsars(ctx)
 
-	assert.Equal(t, uint64(1), clientMock.IsInitialisedCounter)
-	assert.Equal(t, uint64(1), clientMock.GoCounter)
+	require.Equal(t, uint64(1), clientMock.IsInitialisedCounter)
+	require.Equal(t, uint64(1), clientMock.GoCounter)
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *testing.T) {
@@ -361,7 +361,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *tes
 		pulsar.CheckConnectionsToPulsars(ctx)
 	})
 
-	assert.Contains(t, resultLog, "this will have to fall")
+	require.Contains(t, resultLog, "this will have to fall")
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *testing.T) {
@@ -400,9 +400,9 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 		pulsar.CheckConnectionsToPulsars(ctx)
 	})
 
-	assert.Contains(t, resultLog, "Problems with connection to TestConnectionAddress, with error - test error")
-	assert.Contains(t, resultLog, "Attempt of connection to TestConnectionAddress Failed with error - this should Failed")
-	assert.Equal(t, 2, isInitTimeCalled)
+	require.Contains(t, resultLog, "Problems with connection to TestConnectionAddress, with error - test error")
+	require.Contains(t, resultLog, "Attempt of connection to TestConnectionAddress Failed with error - this should Failed")
+	require.Equal(t, 2, isInitTimeCalled)
 }
 
 func TestPulsar_StartConsensusProcess_WithWrongPulseNumber(t *testing.T) {
@@ -417,7 +417,7 @@ func TestPulsar_StartConsensusProcess_WithWrongPulseNumber(t *testing.T) {
 	}
 	err := pulsar.StartConsensusProcess(ctx, core.PulseNumber(121))
 
-	assert.Error(t, err, "wrong state status or pulse number, state - WaitingForStart, received pulse - 121, last pulse - 122, processing pulse - 123")
+	require.Error(t, err, "wrong state status or pulse number, state - WaitingForStart, received pulse - 121, last pulse - 122, processing pulse - 123")
 }
 
 func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
@@ -445,9 +445,9 @@ func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 
 	err := pulsar.StartConsensusProcess(ctx, expectedPulse)
 
-	assert.NoError(t, err)
-	assert.Equal(t, pulsar.ProcessingPulseNumber, expectedPulse)
-	assert.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
+	require.NoError(t, err)
+	require.Equal(t, pulsar.ProcessingPulseNumber, expectedPulse)
+	require.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
 }
 
 func TestPulsar_broadcastSignatureOfEntropy_StateFailed(t *testing.T) {
@@ -498,8 +498,8 @@ func TestPulsar_broadcastSignatureOfEntropy_SendToNeighbours(t *testing.T) {
 
 	mockClientWrapper.AssertCalled(t, "Go", ReceiveSignatureForEntropy.String(), mock.Anything, mock.Anything, mock.Anything)
 	mockClientWrapper.AssertNumberOfCalls(t, "Go", 2)
-	assert.Equal(t, 0, len(done))
-	assert.Contains(t, resultLog, "finished with error - Failed")
+	require.Equal(t, 0, len(done))
+	require.Contains(t, resultLog, "finished with error - Failed")
 }
 
 func TestPulsar_broadcastVector_StateFailed(t *testing.T) {
@@ -555,8 +555,8 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 
 	mockClientWrapper.AssertCalled(t, "Go", ReceiveVector.String(), mock.Anything, mock.Anything, mock.Anything)
 	mockClientWrapper.AssertNumberOfCalls(t, "Go", 2)
-	assert.Equal(t, 0, len(done))
-	assert.Contains(t, resultLog, "finished with error - Failed")
+	require.Equal(t, 0, len(done))
+	require.Contains(t, resultLog, "finished with error - Failed")
 }
 
 func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
@@ -612,8 +612,8 @@ func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 
 	mockClientWrapper.AssertCalled(t, "Go", ReceiveEntropy.String(), mock.Anything, mock.Anything, mock.Anything)
 	mockClientWrapper.AssertNumberOfCalls(t, "Go", 2)
-	assert.Equal(t, 0, len(done))
-	assert.Contains(t, resultLog, "finished with error - Failed")
+	require.Equal(t, 0, len(done))
+	require.Contains(t, resultLog, "finished with error - Failed")
 }
 
 func TestPulsar_sendVector_StateFailed(t *testing.T) {
@@ -625,7 +625,7 @@ func TestPulsar_sendVector_StateFailed(t *testing.T) {
 
 	pulsar.sendVector(ctx)
 
-	assert.Equal(t, uint64(0), switcher.SwitchToStateCounter)
+	require.Equal(t, uint64(0), switcher.SwitchToStateCounter)
 }
 
 func TestPulsar_sendVector_OnePulsar(t *testing.T) {
@@ -634,13 +634,13 @@ func TestPulsar_sendVector_OnePulsar(t *testing.T) {
 	switcher := NewStateSwitcherMock(t)
 	switcher.GetStateMock.Return(WaitingForStart)
 	switcher.SwitchToStateFunc = func(ctx context.Context, p State, p1 interface{}) {
-		assert.Equal(t, p, Verifying)
+		require.Equal(t, p, Verifying)
 	}
 	pulsar.StateSwitcher = switcher
 
 	pulsar.sendVector(ctx)
 
-	assert.Equal(t, switcher.SwitchToStateCounter, uint64(1))
+	require.Equal(t, switcher.SwitchToStateCounter, uint64(1))
 }
 
 func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
@@ -674,7 +674,7 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 	pulsar.sendVector(ctx)
 
 	// Assert
-	assert.Equal(t, uint64(1), switcher.SwitchToStateCounter)
+	require.Equal(t, uint64(1), switcher.SwitchToStateCounter)
 }
 
 func TestPulsar_sendEntropy_OnePulsar(t *testing.T) {
@@ -687,7 +687,7 @@ func TestPulsar_sendEntropy_OnePulsar(t *testing.T) {
 
 	pulsar.sendEntropy(ctx)
 
-	assert.Equal(t, uint64(1), switcher.SwitchToStateCounter)
+	require.Equal(t, uint64(1), switcher.SwitchToStateCounter)
 }
 
 func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
@@ -715,7 +715,7 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 	pulsar.sendEntropy(ctx)
 
 	// Assert
-	assert.Equal(t, uint64(1), switcher.SwitchToStateCounter)
+	require.Equal(t, uint64(1), switcher.SwitchToStateCounter)
 }
 
 func TestPulsar_verify_failedState(t *testing.T) {
@@ -744,9 +744,9 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 
 	pulsar.verify(ctx)
 
-	assert.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
-	assert.Equal(t, "testKey", pulsar.PublicKeyRaw)
-	assert.Equal(t, core.Entropy(pulsartestutils.MockEntropy), *pulsar.GetGeneratedEntropy())
+	require.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
+	require.Equal(t, "testKey", pulsar.PublicKeyRaw)
+	require.Equal(t, core.Entropy(pulsartestutils.MockEntropy), *pulsar.GetGeneratedEntropy())
 }
 
 func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
@@ -754,7 +754,7 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 
 	mockSwitcher := NewStateSwitcherMock(t)
 	mockSwitcher.SwitchToStateMock.Set(func(ctx context.Context, p State, p1 interface{}) {
-		assert.Equal(t, Failed, p)
+		require.Equal(t, Failed, p)
 	})
 	mockSwitcher.GetStateMock.Return(Verifying)
 	cryptographyServiceMock := mockCryptographyService(t)
@@ -770,13 +770,13 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 
 	pulsar.verify(ctx)
 
-	assert.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
+	require.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
 }
 
 func prepareEntropy(t *testing.T, service core.CryptographyService) (entropy core.Entropy, sign []byte) {
 	entropy = (&entropygenerator.StandardEntropyGenerator{}).GenerateEntropy()
 	sign, err := signData(service, entropy)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return
 }
 
@@ -814,13 +814,13 @@ func TestPulsar_verify_Success(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	pulsar := &Pulsar{
-		KeyProcessor:                   processor,
-		StateSwitcher:                  mockSwitcher,
-		CryptographyService:            cryptographyServiceMock,
-		PlatformCryptographyScheme:     scheme,
-		PublicKeyRaw:                   currentPulsarPublicKey,
-		OwnedBftRow:                    map[string]*BftCell{},
-		bftGrid:                        map[string]map[string]*BftCell{},
+		KeyProcessor:               processor,
+		StateSwitcher:              mockSwitcher,
+		CryptographyService:        cryptographyServiceMock,
+		PlatformCryptographyScheme: scheme,
+		PublicKeyRaw:               currentPulsarPublicKey,
+		OwnedBftRow:                map[string]*BftCell{},
+		bftGrid:                    map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: pub2, OutgoingClient: &clientMock},
@@ -857,7 +857,7 @@ func TestPulsar_verify_Success(t *testing.T) {
 
 	pulsar.verify(ctx)
 
-	assert.NotNil(t, pulsar.CurrentSlotPulseSender)
-	assert.Equal(t, expectedEntropy, *pulsar.GetCurrentSlotEntropy())
-	assert.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
+	require.NotNil(t, pulsar.CurrentSlotPulseSender)
+	require.Equal(t, expectedEntropy, *pulsar.GetCurrentSlotEntropy())
+	require.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
 }

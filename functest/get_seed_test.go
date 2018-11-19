@@ -19,13 +19,13 @@ package functest
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetSeed(t *testing.T) {
 	seed1 := getSeed(t)
 	seed2 := getSeed(t)
 
-	assert.NotEqual(t, seed1, seed2)
+	require.NotEqual(t, seed1, seed2)
 
 }

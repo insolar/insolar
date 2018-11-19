@@ -22,7 +22,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -53,7 +53,7 @@ func TestPlayer_Send(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(nil, ErrNoReply)
 
 		_, err := player.Send(ctx, &msg)
-		assert.Equal(t, ErrNoReply, err)
+		require.Equal(t, ErrNoReply, err)
 	})
 
 	t.Run("with reply on the storageTape doesn't send the message and returns reply from the storageTape", func(t *testing.T) {
@@ -61,7 +61,7 @@ func TestPlayer_Send(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
 		rep, err := player.Send(ctx, &msg)
 
-		assert.NoError(t, err)
-		assert.Equal(t, &expectedRep, rep)
+		require.NoError(t, err)
+		require.Equal(t, &expectedRep, rep)
 	})
 }

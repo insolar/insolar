@@ -21,7 +21,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -37,10 +37,10 @@ func TestSerializeSigned(t *testing.T) {
 	}
 
 	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Equal(t, signMsgIn, signMsgOut)
-	assert.Equal(t, signMsgIn.Message(), signMsgOut.Message())
+	require.Equal(t, signMsgIn, signMsgOut)
+	require.Equal(t, signMsgIn.Message(), signMsgOut.Message())
 }
 
 func TestSerializeSignedFail(t *testing.T) {
@@ -54,8 +54,8 @@ func TestSerializeSignedFail(t *testing.T) {
 	}
 
 	signMsgOut, err := Deserialize(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
-	assert.Error(t, err)
-	assert.Nil(t, signMsgOut)
+	require.Error(t, err)
+	require.Nil(t, signMsgOut)
 }
 
 func TestSerializeSignedWithContext(t *testing.T) {
@@ -75,10 +75,10 @@ func TestSerializeSignedWithContext(t *testing.T) {
 	}
 
 	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctxOut := signMsgOut.Context(context.Background())
-	assert.Equal(t, traceid, inslogger.TraceID(ctxIn))
-	assert.Equal(t, inslogger.TraceID(ctxIn), inslogger.TraceID(ctxOut))
-	assert.Equal(t, instracer.GetBaggage(ctxIn), instracer.GetBaggage(ctxOut))
+	require.Equal(t, traceid, inslogger.TraceID(ctxIn))
+	require.Equal(t, inslogger.TraceID(ctxIn), inslogger.TraceID(ctxOut))
+	require.Equal(t, instracer.GetBaggage(ctxIn), instracer.GetBaggage(ctxOut))
 }
