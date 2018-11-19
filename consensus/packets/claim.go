@@ -35,7 +35,6 @@ const ClaimHeaderSize = 2
 type ReferendumClaim interface {
 	Serializer
 	Type() ClaimType
-	Length() uint16
 }
 
 // NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
@@ -46,10 +45,6 @@ type NodeBroadcast struct {
 
 func (nb *NodeBroadcast) Type() ClaimType {
 	return TypeNodeBroadcast
-}
-
-func (nb *NodeBroadcast) Length() uint16 {
-	return 1
 }
 
 // CapabilityPoolingAndActivation is a type 3.
@@ -63,10 +58,6 @@ func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
 	return TypeCapabilityPollingAndActivation
 }
 
-func (cpa *CapabilityPoolingAndActivation) Length() uint16 {
-	return 4 + 64
-}
-
 // NodeViolationBlame is a type 2.
 type NodeViolationBlame struct {
 	BlameNodeID   uint32
@@ -75,10 +66,6 @@ type NodeViolationBlame struct {
 
 func (nvb *NodeViolationBlame) Type() ClaimType {
 	return TypeNodeViolationBlame
-}
-
-func (nvb *NodeViolationBlame) Length() uint16 {
-	return 5
 }
 
 // NodeJoinClaim is a type 1, len == 272.
@@ -96,10 +83,6 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 	return TypeNodeJoinClaim
 }
 
-func (njc *NodeJoinClaim) Length() uint16 {
-	return 0 // todo 20 + 64 + core.RecordRef
-}
-
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
@@ -107,10 +90,6 @@ type NodeLeaveClaim struct {
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {
 	return TypeNodeLeaveClaim
-}
-
-func (nlc *NodeLeaveClaim) Length() uint16 {
-	return 0
 }
 
 func getClaimSize(claim ReferendumClaim) uint16 {

@@ -43,9 +43,9 @@ func extractClaimTypeFromHeader(claimHeader uint16) uint8 {
 
 func makeClaimHeader(claim ReferendumClaim) uint16 {
 	if claim == nil {
-		panic("123123123")
+		panic("invalid claim")
 	}
-	var result = claim.Length()
+	var result = getClaimSize(claim)
 	result |= uint16(claim.Type()) << claimTypeShift
 
 	return result
@@ -246,18 +246,18 @@ func serializeClaims(claims []ReferendumClaim) ([]byte, error) {
 		err := binary.Write(result, defaultByteOrder, claimHeader)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("[ serializeClaims ] "+
-				"Can't write claim header. Type: %d. Length: %d", claim.Type(), claim.Length()))
+				"Can't write claim header. Type: %d. Length: %d", claim.Type(), getClaimSize(claim)))
 		}
 
 		rawClaim, err := claim.Serialize()
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("[ serializeClaims ] "+
-				"Can't serialize claim. Type: %d. Length: %d", claim.Type(), claim.Length()))
+				"Can't serialize claim. Type: %d. Length: %d", claim.Type(), getClaimSize(claim)))
 		}
 		_, err = result.Write(rawClaim)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("[ serializeClaims ] "+
-				"Can't append proofNodePulseRaw."+"Type: %d. Length: %d", claim.Type(), claim.Length()))
+				"Can't append proofNodePulseRaw."+"Type: %d. Length: %d", claim.Type(), getClaimSize(claim)))
 		}
 	}
 
