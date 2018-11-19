@@ -228,10 +228,6 @@ func (mb *MessageBus) createRedirectParcel(ctx context.Context, parcel core.Parc
 	}
 }
 
-func isReplyRedirect(response core.Reply) bool {
-	return response.Type() == reply.TypeGetObjectRedirect
-}
-
 type serializableError struct {
 	S string
 }
