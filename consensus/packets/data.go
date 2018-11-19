@@ -49,7 +49,13 @@ type Phase1Packet struct {
 
 	// --------------------
 	// signature contains signature of Header + Section 1 + Section 2
-	signature uint64
+	Signature []byte
+}
+
+func NewPhase1Packet() *Phase1Packet {
+	return &Phase1Packet{
+		Signature: make([]byte, SignatureLength),
+	}
 }
 
 func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
@@ -198,13 +204,20 @@ type Phase2Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    [HashLength]byte
+	globuleHashSignature    []byte
 	deviantBitSet           DeviantBitSet
-	signatureHeaderSection1 [SignatureLength]byte
+	SignatureHeaderSection1 []byte
 
 	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
-	signatureHeaderSection2 [SignatureLength]byte
+	SignatureHeaderSection2 []byte
+}
+
+func NewPhase2Packet() *Phase2Packet {
+	return &Phase2Packet{
+		SignatureHeaderSection1: make([]byte, SignatureLength),
+		SignatureHeaderSection2: make([]byte, SignatureLength),
+	}
 }
 
 func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {

@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -47,6 +48,7 @@ type ServiceNetwork struct {
 	PulseManager        core.PulseManager       `inject:""`
 	Coordinator         core.NetworkCoordinator `inject:""`
 	OldComponentManager OldComponentManager     `inject:""`
+	PhaseManager        phases.PhaseManager     `inject:""`
 
 	fakePulsar *fakepulsar.FakePulsar
 }
@@ -161,6 +163,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			err := network.Coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
+			}
+			err = n.PhaseManager.OnPulse(ctx, &pulse)
+			if err != nil {
+				logger.Warn("phase manager fail: " + err.Error())
 			}
 		}(logger, n)
 

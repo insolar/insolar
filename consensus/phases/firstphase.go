@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
@@ -37,9 +38,12 @@ func consensusReached(resultLen, participanstLen int) bool {
 
 // FirstPhase is a first phase.
 type FirstPhase struct {
-	NodeKeeper   network.NodeKeeper `inject:""`
-	Calculator   merkle.Calculator  `inject:""`
-	Communicator Communicator       `inject:""`
+	NodeNetwork  core.NodeNetwork         `inject:""`
+	Calculator   merkle.Calculator        `inject:""`
+	Communicator Communicator             `inject:""`
+	Cryptography core.CryptographyService `inject:""`
+	NodeKeeper   network.NodeKeeper       `inject:""`
+	State        *FirstPhaseState
 }
 
 // Execute do first phase
@@ -66,6 +70,10 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	// TODO: add other claims
 
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
+	err = fp.signPhase1Packet(&packet)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign a packet")
+	}
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
@@ -74,6 +82,12 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
 	claimSet := make([]packets.ReferendumClaim, 0)
 	for ref, packet := range resultPackets {
+		signIsCorrect, err := fp.isSignPhase1PacketRight(packet, ref)
+		if err != nil {
+			log.Warn("failed to check a sign: ", err.Error())
+		} else if !signIsCorrect {
+			log.Warn("recieved a bad sign packet: ", err.Error())
+		}
 		rawProof := packet.GetPulseProof()
 		proofSet[ref] = &merkle.PulseProof{
 			BaseProof: merkle.BaseProof{
@@ -116,6 +130,29 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}, nil
 }
 
+func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
+	data, err := packet.RawBytes()
+	if err != nil {
+		return errors.Wrap(err, "failed to get raw bytes")
+	}
+	sign, err := fp.Cryptography.Sign(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a phase 2 packet")
+	}
+	packet.Signature = sign.Bytes()
+	return nil
+}
+
+func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
+	key := fp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+	raw, err := packet.RawBytes()
+
+	if err != nil {
+		return false, errors.Wrap(err, "failed to serialize packet")
+	}
+	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+}
+
 func (fp *FirstPhase) processClaims(ctx context.Context, claims []packets.ReferendumClaim) {
 	var nodes []core.Node
 	var unsyncClaims []packets.ReferendumClaim
@@ -135,112 +172,4 @@ func (fp *FirstPhase) processClaims(ctx context.Context, claims []packets.Refere
 
 	fp.NodeKeeper.AddActiveNodes(nodes)
 	fp.NodeKeeper.AddUnsyncClaims(unsyncClaims)
-}
-
-// SecondPhase is a second phase.
-type SecondPhase struct {
-	NodeKeeper   network.NodeKeeper `inject:""`
-	Network      core.Network       `inject:""`
-	Calculator   merkle.Calculator  `inject:""`
-	Communicator Communicator       `inject:""`
-}
-
-func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
-	prevCloudHash := sp.NodeKeeper.GetCloudHash()
-	globuleID := sp.Network.GetGlobuleID()
-
-	entry := &merkle.GlobuleEntry{
-		PulseEntry:    state.PulseEntry,
-		ProofSet:      state.PulseProofSet,
-		PulseHash:     state.PulseHash,
-		PrevCloudHash: prevCloudHash,
-		GlobuleID:     globuleID,
-	}
-	globuleHash, globuleProof, err := sp.Calculator.GetGlobuleProof(entry)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to calculate pulse proof.")
-	}
-
-	packet := packets.Phase2Packet{}
-	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase2Packet.")
-	}
-
-	activeNodes := sp.NodeKeeper.GetActiveNodes()
-	proofSet, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, packet)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
-	}
-
-	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
-
-	var deviants []core.Node
-	deviants = append(deviants, state.TimedOutNodes...)
-	deviants = append(deviants, state.DeviantNodes...)
-
-	for ref, packet := range proofSet {
-		node := sp.NodeKeeper.GetActiveNode(ref)
-		proof := &merkle.GlobuleProof{
-			BaseProof: merkle.BaseProof{
-				Signature: core.SignatureFromBytes(packet.GetGlobuleHashSignature()),
-			},
-			PrevCloudHash: prevCloudHash,
-			GlobuleID:     globuleProof.GlobuleID,
-			NodeCount:     globuleProof.NodeCount,
-			NodeRoot:      globuleProof.NodeRoot,
-		}
-
-		if !sp.Calculator.IsValid(proof, globuleHash, node.PublicKey()) {
-			nodeProofs[node] = proof
-		}
-	}
-
-	// TODO: check
-	if !consensusReached(len(nodeProofs), len(activeNodes)) {
-		return nil, errors.New("[ Execute ] Consensus not reached")
-	}
-
-	sp.NodeKeeper.Sync(deviants)
-
-	return &SecondPhaseState{
-		FirstPhaseState: state,
-
-		GlobuleEntry:    entry,
-		GlobuleHash:     globuleHash,
-		GlobuleProof:    globuleProof,
-		GlobuleProofSet: nodeProofs,
-	}, nil
-}
-
-func (sp *SecondPhase) processTimedOutNodes(timedOutNodes []core.Node) {
-	// TODO: process
-}
-
-func (sp *SecondPhase) calculateListForNextPulse() (uint16, []byte) {
-	// TODO: calculate
-	return 1337, []byte("1337")
-}
-
-// ThirdPhasePulse.
-type ThirdPhasePulse struct {
-	NodeNetwork core.NodeNetwork `inject:""`
-	State       *ThirdPhasePulseState
-}
-
-func (tpp *ThirdPhasePulse) Execute(ctx context.Context, state *SecondPhaseState) error {
-	// TODO: do something here
-	return nil
-}
-
-// ThirdPhaseReferendum.
-type ThirdPhaseReferendum struct {
-	NodeNetwork core.NodeNetwork `inject:""`
-	State       *ThirdPhaseReferendumState
-}
-
-func (tpr *ThirdPhaseReferendum) Execute(ctx context.Context, state *SecondPhaseState) error {
-	// TODO: do something here
-	return nil
 }

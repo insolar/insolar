@@ -163,8 +163,8 @@ func TestNodePulseProofReadWrite_BadData(t *testing.T) {
 }
 
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
-	p := Phase1Packet{}
-	proofStateHash := genRandomSlice(64)
+	p := NewPhase1Packet()
+	proofStateHash := genRandomSlice(HashLength)
 	proofSignature := genRandomSlice(SignatureLength)
 
 	err := p.SetPulseProof(proofStateHash, proofSignature)
@@ -228,7 +228,7 @@ func makeDeviantBitSet() *DeviantBitSet {
 	deviantBitSet.HighBitLength = uint8(9)
 
 	// TODO: uncomment it when we support reading payload
-	//deviantBitSet.Payload = []byte("Hello, World!")
+	// DeviantBitSet.Payload = []byte("Hello, World!")
 
 	return deviantBitSet
 }
@@ -316,7 +316,7 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 }
 
 func makePhase1Packet() *Phase1Packet {
-	phase1Packet := &Phase1Packet{}
+	phase1Packet := NewPhase1Packet()
 	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
 	phase1Packet.pulseData = *makeDefaultPulseDataExt()
 	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray71(), NodeStateHash: randomArray64()}
@@ -325,7 +325,7 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeViolationBlame())
 	phase1Packet.claims = append(phase1Packet.claims, &NodeLeaveClaim{length: 22})
 
-	phase1Packet.signature = 987
+	phase1Packet.Signature = genRandomSlice(SignatureLength)
 
 	return phase1Packet
 }
@@ -343,12 +343,12 @@ func TestPhase1Packet_BadData(t *testing.T) {
 }
 
 func makePhase2Packet() *Phase2Packet {
-	phase2Packet := &Phase2Packet{}
+	phase2Packet := NewPhase2Packet()
 	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
-	phase2Packet.globuleHashSignature = randomArray64()
+	phase2Packet.globuleHashSignature = genRandomSlice(SignatureLength)
 	phase2Packet.deviantBitSet = *makeDeviantBitSet()
-	phase2Packet.signatureHeaderSection1 = randomArray71()
-	phase2Packet.signatureHeaderSection2 = randomArray71()
+	phase2Packet.SignatureHeaderSection1 = genRandomSlice(SignatureLength)
+	phase2Packet.SignatureHeaderSection2 = genRandomSlice(SignatureLength)
 
 	// TODO: uncomment when support ser\deser of ReferendumVote
 	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())

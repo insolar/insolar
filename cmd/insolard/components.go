@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
@@ -147,6 +148,8 @@ func InitComponents(
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
+	phases := phases.NewPhaseManager()
+
 	cm := component.Manager{}
 	cm.Register(
 		platformCryptographyScheme,
@@ -188,6 +191,8 @@ func InitComponents(
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
+		phases,
+		cryptographyService,
 	}...)
 
 	cm.Inject(components...)
