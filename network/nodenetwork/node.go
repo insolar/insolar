@@ -92,7 +92,6 @@ func (n *node) Role() core.NodeRole {
 }
 
 func (n *node) PublicKey() crypto.PublicKey {
-	// TODO: make a copy of pk
 	return n.NodePublicKey
 }
 

@@ -28,6 +28,9 @@ type FirstPhaseState struct {
 	PulseProof *merkle.PulseProof
 
 	PulseProofSet map[core.Node]*merkle.PulseProof
+
+	TimedOutNodes []core.Node
+	DeviantNodes  []core.Node
 }
 
 type SecondPhaseState struct {
@@ -39,6 +42,9 @@ type SecondPhaseState struct {
 	GlobuleProof *merkle.GlobuleProof
 
 	GlobuleProofSet map[core.Node]*merkle.GlobuleProof
+
+	NodeListCount uint16
+	NodeListHash  []byte
 }
 
 type ThirdPhasePulseState struct {

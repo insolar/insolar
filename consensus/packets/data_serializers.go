@@ -110,7 +110,7 @@ func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 		if err != nil {
 			return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read Section 2")
 		}
-		claimsSize := len(claimsBuf) - 8
+		claimsSize := len(claimsBuf) - SignatureLength
 
 		p1p.claims, err = parseReferendumClaim(claimsBuf[:claimsSize])
 		if err != nil {
@@ -120,7 +120,8 @@ func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 		data = bytes.NewReader(claimsBuf[claimsSize:])
 	}
 
-	err = binary.Read(data, defaultByteOrder, &p1p.signature)
+	p1p.Signature = make([]byte, SignatureLength)
+	err = binary.Read(data, defaultByteOrder, p1p.Signature)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read signature")
 	}
@@ -149,7 +150,25 @@ func (p1p *Phase1Packet) Serialize() ([]byte, error) {
 		return nil, errors.New("invalid Phase1Packet")
 	}
 
-	// serializing of  PacketHeader
+	raw, err := p1p.RawBytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get raw bytes")
+	}
+	result.Write(raw)
+
+	// serializing of signature
+	err = binary.Write(result, defaultByteOrder, p1p.Signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't write signature")
+	}
+
+	return result.Bytes(), nil
+}
+
+func (p1p *Phase1Packet) RawBytes() ([]byte, error) {
+	result := allocateBuffer(2048)
+
+	// serializing of  packetHeader
 	packetHeaderRaw, err := p1p.packetHeader.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't serialize packetHeader")
@@ -188,15 +207,7 @@ func (p1p *Phase1Packet) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
 	}
-
-	// serializing of signature
-	err = binary.Write(result, defaultByteOrder, p1p.signature)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't write signature")
-	}
-
 	return result.Bytes(), nil
-
 }
 
 func allocateBuffer(n int) *bytes.Buffer {
@@ -550,7 +561,7 @@ func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
 	// return result.Bytes(), nil
 }
 
-func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+func (p2p *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
 	if header == nil {
 		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
 	}
@@ -558,26 +569,29 @@ func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, heade
 		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Wrong packet type")
 	}
 
-	phase2Packet.packetHeader = *header
+	p2p.packetHeader = *header
 
-	err := binary.Read(data, defaultByteOrder, &phase2Packet.globuleHashSignature)
+	p2p.globuleHashSignature = make([]byte, SignatureLength)
+	err := binary.Read(data, defaultByteOrder, p2p.globuleHashSignature)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read globuleHashSignature")
 	}
 
-	err = phase2Packet.deviantBitSet.Deserialize(data)
+	err = p2p.deviantBitSet.Deserialize(data)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize deviantBitSet")
 	}
 
-	err = binary.Read(data, defaultByteOrder, &phase2Packet.signatureHeaderSection1)
+	p2p.SignatureHeaderSection1 = make([]byte, SignatureLength)
+	err = binary.Read(data, defaultByteOrder, p2p.SignatureHeaderSection1)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read signatureHeaderSection1")
 	}
 
 	// TODO: add reading Referendum vote
 
-	err = binary.Read(data, defaultByteOrder, &phase2Packet.signatureHeaderSection2)
+	p2p.SignatureHeaderSection2 = make([]byte, SignatureLength)
+	err = binary.Read(data, defaultByteOrder, p2p.SignatureHeaderSection2)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read signatureHeaderSection2")
 	}
@@ -585,13 +599,13 @@ func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, heade
 	return nil
 }
 
-func (phase2Packet *Phase2Packet) Deserialize(data io.Reader) error {
-	err := phase2Packet.packetHeader.Deserialize(data)
+func (p2p *Phase2Packet) Deserialize(data io.Reader) error {
+	err := p2p.packetHeader.Deserialize(data)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize packetHeader")
 	}
 
-	err = phase2Packet.DeserializeWithoutHeader(data, &phase2Packet.packetHeader)
+	err = p2p.DeserializeWithoutHeader(data, &p2p.packetHeader)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize body")
 	}
@@ -600,46 +614,61 @@ func (phase2Packet *Phase2Packet) Deserialize(data io.Reader) error {
 
 }
 
-func (phase2Packet *Phase2Packet) Serialize() ([]byte, error) {
+func (p2p *Phase2Packet) Serialize() ([]byte, error) {
 	result := allocateBuffer(2048)
 
-	// serializing of  PacketHeader
-	packetHeaderRaw, err := phase2Packet.packetHeader.Serialize()
+	raw1, err := p2p.RawFirstPart()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize packetHeader")
-	}
-	_, err = result.Write(packetHeaderRaw)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append packetHeader")
+		return nil, errors.Wrap(err, "failed to serialize")
 	}
 
-	err = binary.Write(result, defaultByteOrder, phase2Packet.globuleHashSignature)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't write globuleHashSignature")
-	}
+	result.Write(raw1)
 
-	// serializing of deviantBitSet
-	deviantBitSetRaw, err := phase2Packet.deviantBitSet.Serialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize deviantBitSet")
-	}
-	_, err = result.Write(deviantBitSetRaw)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append deviantBitSet")
-	}
-
-	err = binary.Write(result, defaultByteOrder, phase2Packet.signatureHeaderSection1)
+	err = binary.Write(result, defaultByteOrder, p2p.SignatureHeaderSection1)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't write signatureHeaderSection1")
 	}
 
-	// TODO: add serialising Referendum vote
-
-	err = binary.Write(result, defaultByteOrder, phase2Packet.signatureHeaderSection2)
+	err = binary.Write(result, defaultByteOrder, p2p.SignatureHeaderSection2)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't write signatureHeaderSection2")
 	}
 
 	return result.Bytes(), nil
+}
 
+func (p2p *Phase2Packet) RawFirstPart() ([]byte, error) {
+	result := allocateBuffer(2048)
+
+	packetHeaderRaw, err := p2p.packetHeader.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize PacketHeader")
+	}
+	_, err = result.Write(packetHeaderRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append PacketHeader")
+	}
+
+	err = binary.Write(result, defaultByteOrder, p2p.globuleHashSignature)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't write globuleHashSignature")
+	}
+
+	// serializing of deviantBitSet
+	deviantBitSetRaw, err := p2p.deviantBitSet.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize deviantBitSet")
+	}
+
+	_, err = result.Write(deviantBitSetRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append deviantBitSet")
+	}
+
+	return result.Bytes(), nil
+}
+
+func (phase2Packet *Phase2Packet) RawSecondPart() ([]byte, error) {
+	// TODO: add serialising Referendum vote
+	return nil, nil
 }

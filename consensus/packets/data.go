@@ -49,7 +49,13 @@ type Phase1Packet struct {
 
 	// --------------------
 	// signature contains signature of Header + Section 1 + Section 2
-	signature uint64
+	Signature []byte
+}
+
+func NewPhase1Packet() *Phase1Packet {
+	return &Phase1Packet{
+		Signature: make([]byte, SignatureLength),
+	}
 }
 
 func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
@@ -67,6 +73,10 @@ func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 	p1p.packetHeader.setRoutingFields(header, Phase1)
 
 	return nil
+}
+
+func (p1p *Phase1Packet) GetPulseNumber() core.PulseNumber {
+	return core.PulseNumber(p1p.packetHeader.Pulse)
 }
 
 func (p1p *Phase1Packet) GetPulse() core.Pulse {
@@ -127,6 +137,10 @@ func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) error {
 	p1p.claims = append(p1p.claims, claim)
 	p1p.packetHeader.f01 = true
 	return nil
+}
+
+func (p1p *Phase1Packet) GetClaims() []ReferendumClaim {
+	return p1p.claims
 }
 
 type PacketHeader struct {
@@ -203,54 +217,65 @@ type Phase2Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    [HashLength]byte
+	globuleHashSignature    []byte
 	deviantBitSet           DeviantBitSet
-	signatureHeaderSection1 [SignatureLength]byte
+	SignatureHeaderSection1 []byte
 
 	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
-	signatureHeaderSection2 [SignatureLength]byte
+	SignatureHeaderSection2 []byte
 }
 
-func (phase2Packet *Phase2Packet) isPhase3Needed() bool {
-	return phase2Packet.packetHeader.f00
+func NewPhase2Packet() *Phase2Packet {
+	return &Phase2Packet{
+		SignatureHeaderSection1: make([]byte, SignatureLength),
+		SignatureHeaderSection2: make([]byte, SignatureLength),
+	}
 }
 
-func (phase2Packet *Phase2Packet) hasSection2() bool {
-	return phase2Packet.packetHeader.f01
+func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {
+	return core.PulseNumber(p2p.packetHeader.Pulse)
 }
 
-func (phase2Packet *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
+func (p2p *Phase2Packet) isPhase3Needed() bool {
+	return p2p.packetHeader.f00
+}
+
+func (p2p *Phase2Packet) hasSection2() bool {
+	return p2p.packetHeader.f01
+}
+
+func (p2p *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
 	if header.PacketType != types.Phase2 {
 		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
 	}
 
-	phase2Packet.packetHeader.setRoutingFields(header, Phase2)
+	p2p.packetHeader.setRoutingFields(header, Phase2)
 
 	return nil
 }
 
-func (phase2Packet *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
+func (p2p *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
-	if phase2Packet.packetHeader.PacketT != Phase2 {
+	if p2p.packetHeader.PacketT != Phase2 {
 		return nil, errors.New("Phase2Packet.GetPacketHeader: wrong packet type")
 	}
 
 	header.PacketType = types.Phase2
-	header.OriginID = phase2Packet.packetHeader.OriginNodeID
-	header.TargetID = phase2Packet.packetHeader.TargetNodeID
+	header.OriginID = p2p.packetHeader.OriginNodeID
+	header.TargetID = p2p.packetHeader.TargetNodeID
 
 	return header, nil
 }
 
-func (phase2Packet *Phase2Packet) GetGlobuleHashSignature() []byte {
-	return phase2Packet.globuleHashSignature[:]
+func (p2p *Phase2Packet) GetGlobuleHashSignature() []byte {
+	return p2p.globuleHashSignature[:]
 }
 
-func (phase2Packet *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {
+func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {
 	if len(globuleHashSignature) == SignatureLength {
-		copy(phase2Packet.globuleHashSignature[:], globuleHashSignature[:SignatureLength])
+		copy(p2p.globuleHashSignature[:], globuleHashSignature[:SignatureLength])
 		return nil
 	}
 

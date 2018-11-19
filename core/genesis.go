@@ -14,4 +14,10 @@
  *    limitations under the License.
  */
 
-package nodedomain
+package core
+
+// Genesis is the global genesis handler. Other system parts communicate with genesis through it.
+type Genesis interface {
+	GetRootDomainRef() *RecordRef
+	Info() ([]byte, error)
+}

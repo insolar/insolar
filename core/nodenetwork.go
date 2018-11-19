@@ -34,7 +34,7 @@ type Node interface {
 	Roles() []NodeRole
 	// Role is the candidate Role for the node
 	Role() NodeRole
-	// GetPublicKey is the public key of the node
+	// PublicKey is the public key of the node
 	PublicKey() crypto.PublicKey
 	// PhysicalAddress is the network address of the node
 	PhysicalAddress() string

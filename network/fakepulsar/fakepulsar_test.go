@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,13 +14,30 @@
  *    limitations under the License.
  */
 
-package configuration
+package fakepulsar
 
-type Genesis struct {
-	RootKeys    string
-	RootBalance uint
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/insolar/insolar/core"
+	"github.com/stretchr/testify/assert"
+)
+
+func onPulse(ctx context.Context, pulse core.Pulse) {
 }
 
-func NewGenesis() Genesis {
-	return Genesis{}
+func TestGetFakePulse(t *testing.T) {
+	pulsar := NewFakePulsar(onPulse, 1000)
+	pulse := pulsar.GetFakePulse()
+	assert.NotNil(t, pulse)
+}
+
+func TestFakePulsar_Start(t *testing.T) {
+	pulsar := NewFakePulsar(onPulse, 1000)
+	ctx := context.TODO()
+	pulsar.Start(ctx)
+	time.Sleep(time.Millisecond * 1100)
+	pulsar.Stop(ctx)
 }

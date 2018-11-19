@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
@@ -103,6 +104,8 @@ func InitComponents(
 	keyStore core.KeyStore,
 	keyProcessor core.KeyProcessor,
 	cert core.Certificate,
+	isGenesis bool,
+	genesisConfigPath string,
 
 ) (*component.Manager, *ComponentManager, *Repl, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
@@ -120,8 +123,14 @@ func InitComponents(
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	gen, err := genesis.NewGenesis(cfg.Genesis)
-	checkError(ctx, err, "failed to start Bootstrapper")
+	var gen core.Genesis
+	if isGenesis {
+		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath)
+		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
+	} else {
+		gen, err = genesis.NewGenesis(isGenesis, "")
+		checkError(ctx, err, "failed to start Bootstrapper")
+	}
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
@@ -138,6 +147,8 @@ func InitComponents(
 	// move to logic runner ??
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
+
+	phases := phases.NewPhaseManager()
 
 	cm := component.Manager{}
 	cm.Register(
@@ -180,6 +191,8 @@ func InitComponents(
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
+		phases,
+		cryptographyService,
 	}...)
 
 	cm.Inject(components...)

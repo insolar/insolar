@@ -14,31 +14,32 @@
  *    limitations under the License.
  */
 
-package resolver
+package phases
 
 import (
-	"net"
-	"testing"
+	"context"
 
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/core"
 )
 
-func TestNewExactResolver(t *testing.T) {
-	resolver := NewExactResolver()
-
-	require.IsType(t, &exactResolver{}, resolver)
+// ThirdPhasePulse.
+type ThirdPhasePulse struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *ThirdPhasePulseState
 }
 
-func TestExactResolver_Resolve(t *testing.T) {
-	strAddr := "127.0.0.1:31337"
-	resolver := NewExactResolver()
+func (tpp *ThirdPhasePulse) Execute(ctx context.Context, state *SecondPhaseState) error {
+	// TODO: do something here
+	return nil
+}
 
-	conn := &MockPacketConn{}
-	conn.On("LocalAddr").Return(net.ResolveUDPAddr("udp", strAddr))
+// ThirdPhaseReferendum.
+type ThirdPhaseReferendum struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *ThirdPhaseReferendumState
+}
 
-	addr, err := resolver.Resolve(conn)
-
-	conn.AssertExpectations(t)
-	require.NoError(t, err)
-	require.Equal(t, strAddr, addr)
+func (tpr *ThirdPhaseReferendum) Execute(ctx context.Context, state *SecondPhaseState) error {
+	// TODO: do something here
+	return nil
 }

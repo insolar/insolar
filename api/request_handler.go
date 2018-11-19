@@ -18,17 +18,13 @@ package api
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/networkcoordinator"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -124,74 +120,6 @@ func (rh *RequestHandler) routeCall(ctx context.Context, ref core.RecordRef, met
 	}
 
 	return res, nil
-}
-
-// ProcessIsAuthorized processes is_auth query type
-func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]interface{}, error) {
-
-	// Check calling smart contract
-	result := make(map[string]interface{})
-	routResult, err := rh.sendRequest(ctx, "Authorize", []interface{}{})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
-	}
-
-	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
-	}
-	result["public_key"] = pubKey
-	result["role"] = role
-
-	// Check calling via networkcoordinator
-	keyService := platformpolicy.NewKeyProcessor()
-	privKey, err := keyService.GeneratePrivateKey()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with key generating")
-	}
-
-	seed := make([]byte, 4)
-	_, err = rand.Read(seed)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with generating seed")
-	}
-
-	cs := cryptography.NewKeyBoundCryptographyService(privKey)
-	signature, err := cs.Sign(seed)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with signing")
-	}
-	publicKey := keyService.ExtractPublicKey(privKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
-	}
-
-	rawCertificate, err := rh.netCoordinator.RegisterNode(ctx, publicKey, 0, 0, "virtual", "127.0.0.1")
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
-	}
-
-	nodeRef, err := networkcoordinator.ExtractNodeRef(rawCertificate)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
-	}
-
-	regPubKey, _, err := rh.netCoordinator.Authorize(ctx, core.NewRefFromBase58(nodeRef), seed, signature.Bytes())
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::Authorize")
-	}
-
-	pubKeyBytes, err := keyService.ExportPublicKey(publicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with ExportPublicKey")
-	}
-	if regPubKey != string(pubKeyBytes) {
-		return nil, errors.New("[ ProcessIsAuthorized ] PubKeys are not the same. " + regPubKey + ". Orig: " + pubKey)
-	}
-
-	result["netcoord_auth_success"] = true
-
-	return result, nil
 }
 
 // ProcessGetSeed processes get seed request

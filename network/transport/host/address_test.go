@@ -20,7 +20,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewAddress(t *testing.T) {
@@ -29,9 +29,9 @@ func TestNewAddress(t *testing.T) {
 	expectedAddr := &Address{*udpAddr}
 	actualAddr, err := NewAddress(addrStr)
 
-	assert.NoError(t, err)
-	assert.Equal(t, expectedAddr, actualAddr)
-	assert.True(t, actualAddr.Equal(*expectedAddr))
+	require.NoError(t, err)
+	require.Equal(t, expectedAddr, actualAddr)
+	require.True(t, actualAddr.Equal(*expectedAddr))
 }
 
 func TestAddress_Equal(t *testing.T) {
@@ -39,8 +39,8 @@ func TestAddress_Equal(t *testing.T) {
 	addr2, _ := NewAddress("127.0.0.1:31337")
 	addr3, _ := NewAddress("10.10.11.11:12345")
 
-	assert.True(t, addr1.Equal(*addr2))
-	assert.True(t, addr2.Equal(*addr1))
-	assert.False(t, addr1.Equal(*addr3))
-	assert.False(t, addr3.Equal(*addr1))
+	require.True(t, addr1.Equal(*addr2))
+	require.True(t, addr2.Equal(*addr1))
+	require.False(t, addr1.Equal(*addr3))
+	require.False(t, addr3.Equal(*addr1))
 }

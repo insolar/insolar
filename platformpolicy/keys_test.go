@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExportImportPrivateKey(t *testing.T) {
@@ -28,9 +29,9 @@ func TestExportImportPrivateKey(t *testing.T) {
 	privateKey, _ := ks.GeneratePrivateKey()
 
 	encoded, err := ks.ExportPrivateKey(privateKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	decoded, err := ks.ImportPrivateKey(encoded)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.ObjectsAreEqual(decoded, privateKey)
 }
@@ -42,9 +43,9 @@ func TestExportImportPublicKey(t *testing.T) {
 	publicKey := ks.ExtractPublicKey(privateKey)
 
 	encoded, err := ks.ExportPublicKey(publicKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	decoded, err := ks.ImportPublicKey(encoded)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.ObjectsAreEqual(decoded, privateKey)
 }

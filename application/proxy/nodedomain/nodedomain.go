@@ -81,18 +81,15 @@ func (r *NodeDomain) GetPrototype() core.RecordRef {
 }
 
 // RegisterNode is proxy generated method
-func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
-	var args [5]interface{}
+func (r *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
+	var args [2]interface{}
 	args[0] = publicKey
-	args[1] = numberOfBootstrapNodes
-	args[2] = majorityRule
-	args[3] = role
-	args[4] = ip
+	args[1] = role
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 []byte
+	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -119,13 +116,10 @@ func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, 
 }
 
 // RegisterNodeNoWait is proxy generated method
-func (r *NodeDomain) RegisterNodeNoWait(publicKey string, numberOfBootstrapNodes int, majorityRule int, role string, ip string) error {
-	var args [5]interface{}
+func (r *NodeDomain) RegisterNodeNoWait(publicKey string, role string) error {
+	var args [2]interface{}
 	args[0] = publicKey
-	args[1] = numberOfBootstrapNodes
-	args[2] = majorityRule
-	args[3] = role
-	args[4] = ip
+	args[1] = role
 
 	var argsSerialized []byte
 
@@ -187,124 +181,6 @@ func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) error {
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RemoveNode", argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// IsAuthorized is proxy generated method
-func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (bool, error) {
-	var args [3]interface{}
-	args[0] = nodeRef
-	args[1] = seed
-	args[2] = signatureRaw
-
-	var argsSerialized []byte
-
-	ret := [2]interface{}{}
-	var ret0 bool
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsAuthorized", argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, err
-	}
-
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// IsAuthorizedNoWait is proxy generated method
-func (r *NodeDomain) IsAuthorizedNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) error {
-	var args [3]interface{}
-	args[0] = nodeRef
-	args[1] = seed
-	args[2] = signatureRaw
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "IsAuthorized", argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Authorize is proxy generated method
-func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
-	var args [3]interface{}
-	args[0] = nodeRef
-	args[1] = seed
-	args[2] = signatureRaw
-
-	var argsSerialized []byte
-
-	ret := [3]interface{}{}
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 core.NodeRole
-	ret[1] = &ret1
-	var ret2 *foundation.Error
-	ret[2] = &ret2
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Authorize", argsSerialized)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	if ret2 != nil {
-		return ret0, ret1, ret2
-	}
-	return ret0, ret1, nil
-}
-
-// AuthorizeNoWait is proxy generated method
-func (r *NodeDomain) AuthorizeNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) error {
-	var args [3]interface{}
-	args[0] = nodeRef
-	args[1] = seed
-	args[2] = signatureRaw
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Authorize", argsSerialized)
 	if err != nil {
 		return err
 	}

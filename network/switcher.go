@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2018 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,10 +14,12 @@
  *    limitations under the License.
  */
 
-package core
+package network
 
-// Bootstrapper is the global bootstrapper handler. Other system parts communicate with bootstrapper through it.
-type Genesis interface {
-	GetRootDomainRef() *RecordRef
-	Info() ([]byte, error)
+// State type for bootstrapping process
+type State int
+
+// Switcher is a network FSM
+type Switcher interface {
+	GetState() State
 }
