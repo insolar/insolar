@@ -218,7 +218,7 @@ func (mb *MessageBus) makeRedirect(ctx context.Context, parcel core.Parcel, resp
 
 func (mb *MessageBus) createRedirectParcel(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
 	switch redirect := response.(type) {
-	case *reply.ObjectRedirectReply:
+	case *reply.GetObjectRedirectReply:
 		newMessage := redirect.RecreateMessage(parcel.Message())
 		parcel, err := mb.CreateParcel(ctx, newMessage)
 		// TODO here a sign-token shoulb be put to parcel
