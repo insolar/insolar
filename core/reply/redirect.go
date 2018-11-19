@@ -5,21 +5,21 @@ import (
 	"github.com/insolar/insolar/core/message"
 )
 
-type ObjectRedirect struct {
+type ObjectRedirectReply struct {
 	core.Reply
 
 	To *core.RecordRef
 	StateID *core.RecordID
 }
 
-func (r *ObjectRedirect) RecreateMessage(genericMessage core.Message) core.Message {
+func (r *ObjectRedirectReply) RecreateMessage(genericMessage core.Message) core.Message {
 	getObjectRequest := genericMessage.(*message.GetObject)
 	getObjectRequest.State = r.StateID
 	return getObjectRequest
 }
 
-func NewObjectRedirect(to *core.RecordRef, state *core.RecordID) *ObjectRedirect {
-	return &ObjectRedirect{
+func NewObjectRedirect(to *core.RecordRef, state *core.RecordID) *ObjectRedirectReply {
+	return &ObjectRedirectReply{
 		To: to,
 		StateID: state,
 	}
