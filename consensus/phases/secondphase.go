@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
@@ -29,6 +30,7 @@ import (
 // SecondPhase is a second phase.
 type SecondPhase struct {
 	NodeNetwork  core.NodeNetwork         `inject:""`
+	NodeKeeper   network.NodeKeeper       `inject:""`
 	Network      core.Network             `inject:""`
 	Calculator   merkle.Calculator        `inject:""`
 	Communicator Communicator             `inject:""`
@@ -36,7 +38,7 @@ type SecondPhase struct {
 }
 
 func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
-	prevCloudHash := sp.NodeNetwork.GetCloudHash()
+	prevCloudHash := sp.NodeKeeper.GetCloudHash()
 	globuleID := sp.Network.GetGlobuleID()
 
 	entry := &merkle.GlobuleEntry{
@@ -58,7 +60,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase2Packet.")
 	}
 
-	activeNodes := sp.NodeNetwork.GetActiveNodes()
+	activeNodes := sp.NodeKeeper.GetActiveNodes()
 	err = sp.signPhase2Packet(&packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a packet")
@@ -69,6 +71,11 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
+
+	var deviants []core.Node
+	deviants = append(deviants, state.TimedOutNodes...)
+	deviants = append(deviants, state.DeviantNodes...)
+
 	for ref, packet := range proofSet {
 		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
 		if err != nil {
@@ -76,7 +83,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		} else if !signIsCorrect {
 			log.Warn("recieved a bad sign packet: ", err.Error())
 		}
-		node := sp.NodeNetwork.GetActiveNode(ref)
+		node := sp.NodeKeeper.GetActiveNode(ref)
 		proof := &merkle.GlobuleProof{
 			BaseProof: merkle.BaseProof{
 				Signature: core.SignatureFromBytes(packet.GetGlobuleHashSignature()),
@@ -92,9 +99,12 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		}
 	}
 
+	// TODO: check
 	if !consensusReached(len(nodeProofs), len(activeNodes)) {
 		return nil, errors.New("[ Execute ] Consensus not reached")
 	}
+
+	sp.NodeKeeper.Sync(deviants)
 
 	return &SecondPhaseState{
 		FirstPhaseState: state,
@@ -129,4 +139,13 @@ func (sp *SecondPhase) isSignPhase2PacketRight(packet *packets.Phase2Packet, rec
 	}
 
 	return sp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+}
+
+func (sp *SecondPhase) processTimedOutNodes(timedOutNodes []core.Node) {
+	// TODO: process
+}
+
+func (sp *SecondPhase) calculateListForNextPulse() (uint16, []byte) {
+	// TODO: calculate
+	return 1337, []byte("1337")
 }

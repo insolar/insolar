@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
@@ -41,6 +42,7 @@ type FirstPhase struct {
 	Calculator   merkle.Calculator        `inject:""`
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
+	NodeKeeper   network.NodeKeeper       `inject:""`
 	State        *FirstPhaseState
 }
 
@@ -59,46 +61,72 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase1Packet.")
 	}
 
-	activeNodes := fp.NodeNetwork.GetActiveNodes()
+	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
+		err = packet.AddClaim(fp.NodeKeeper.GetOriginClaim())
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Execute ] Failed to add origin claim in Phase1Packet.")
+		}
+	}
+	// TODO: add other claims
+
+	activeNodes := fp.NodeKeeper.GetActiveNodes()
 	err = fp.signPhase1Packet(&packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a packet")
 	}
-	proofSet, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
+	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
-	nodeProofs := make(map[core.Node]*merkle.PulseProof)
-	for ref, packet := range proofSet {
+
+	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
+	claimSet := make([]packets.ReferendumClaim, 0)
+	for ref, packet := range resultPackets {
 		signIsCorrect, err := fp.isSignPhase1PacketRight(packet, ref)
 		if err != nil {
 			log.Warn("failed to check a sign: ", err.Error())
 		} else if !signIsCorrect {
 			log.Warn("recieved a bad sign packet: ", err.Error())
 		}
-		node := fp.NodeNetwork.GetActiveNode(ref)
 		rawProof := packet.GetPulseProof()
-		proof := &merkle.PulseProof{
+		proofSet[ref] = &merkle.PulseProof{
 			BaseProof: merkle.BaseProof{
 				Signature: core.SignatureFromBytes(rawProof.Signature()),
 			},
 			StateHash: rawProof.StateHash(),
 		}
-
-		if !fp.Calculator.IsValid(proof, pulseHash, node.PublicKey()) {
-			nodeProofs[node] = proof
-		}
+		claims := packet.GetClaims() // TODO: build set of claims
+		claimSet = append(claimSet, claims...)
 	}
 
-	if !consensusReached(len(nodeProofs), len(activeNodes)) {
-		return nil, errors.New("[ Execute ] Consensus not reached")
+	fp.processClaims(ctx, claimSet)
+
+	// Get active nodes again for case when current node just joined to network and don't have full active list
+	activeNodes = fp.NodeKeeper.GetActiveNodes()
+	deviantsNodes := make([]core.Node, 0)
+	timedOutNodes := make([]core.Node, 0)
+	validProofs := make(map[core.Node]*merkle.PulseProof)
+
+	for _, node := range activeNodes {
+		proof, ok := proofSet[node.ID()]
+		if !ok {
+			timedOutNodes = append(timedOutNodes, node)
+		}
+
+		if !fp.Calculator.IsValid(proof, pulseHash, node.PublicKey()) {
+			validProofs[node] = proof
+		} else {
+			deviantsNodes = append(deviantsNodes, node)
+		}
 	}
 
 	return &FirstPhaseState{
 		PulseEntry:    entry,
 		PulseHash:     pulseHash,
 		PulseProof:    pulseProof,
-		PulseProofSet: nodeProofs,
+		PulseProofSet: validProofs,
+		TimedOutNodes: timedOutNodes,
+		DeviantNodes:  deviantsNodes,
 	}, nil
 }
 
@@ -123,4 +151,25 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 		return false, errors.Wrap(err, "failed to serialize packet")
 	}
 	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+}
+
+func (fp *FirstPhase) processClaims(ctx context.Context, claims []packets.ReferendumClaim) {
+	var nodes []core.Node
+	var unsyncClaims []packets.ReferendumClaim
+
+	for _, genericClaim := range claims {
+		switch claim := genericClaim.(type) {
+		case *packets.NodeAnnounceClaim:
+			nodes = append(nodes, claim.Node())
+		case *packets.NodeJoinClaim:
+			panic("Not implemented yet") // TODO: authorize node here
+		case *packets.NodeLeaveClaim:
+			unsyncClaims = append(unsyncClaims, claim)
+		default:
+			panic("Not implemented yet")
+		}
+	}
+
+	fp.NodeKeeper.AddActiveNodes(nodes)
+	fp.NodeKeeper.AddUnsyncClaims(unsyncClaims)
 }

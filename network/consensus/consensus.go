@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network"
 )
 
 // Participant describes one consensus participant
@@ -36,10 +35,10 @@ type UnsyncHolder interface {
 	// GetPulse returns actual pulse for current consensus process.
 	GetPulse() core.PulseNumber
 	// SetHash sets hash of unsync lists for each node of consensus.
-	SetHash([]*network.NodeUnsyncHash)
+	SetHash([]*NodeUnsyncHash)
 	// GetHash get hash of unsync lists for each node of  If hash is not calculated yet, then this call blocks
 	// until the hash is calculated with SetHash() call.
-	GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyncHash, error)
+	GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error)
 }
 
 // Consensus interface provides method to make consensus between participants
@@ -55,10 +54,17 @@ type Communicator interface {
 	ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []core.Node) ([]core.Node, error)
 
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
-	ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*network.NodeUnsyncHash) ([]*network.NodeUnsyncHash, error)
+	ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*NodeUnsyncHash) ([]*NodeUnsyncHash, error)
 }
 
 // NewConsensus creates consensus
 func NewConsensus(communicator Communicator, scheme core.PlatformCryptographyScheme) Consensus {
 	return &baseConsensus{communicator: communicator, scheme: scheme}
+}
+
+// NodeUnsyncHash data needed for consensus.
+type NodeUnsyncHash struct {
+	NodeID core.RecordRef
+	Hash   []byte
+	// TODO: add signature
 }

@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -128,7 +129,19 @@ type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse core.Pulse)
 }
 
+type NodeKeeperState uint8
+
+const (
+	// Undefined is state of NodeKeeper while it is not valid
+	Undefined NodeKeeperState = iota + 1
+	// Waiting is state of NodeKeeper while it is not part of consensus yet (waits for his join claim to pass)
+	Waiting
+	// Ready is state of NodeKeeper when it is ready for consensus
+	Ready
+)
+
 // NodeKeeper manages unsync, sync and active lists.
+//go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
 type NodeKeeper interface {
 	core.NodeNetwork
 	// SetCloudHash set new cloud hash
@@ -137,49 +150,29 @@ type NodeKeeper interface {
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
-	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
-	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list.
-	SetPulse(number core.PulseNumber) (bool, UnsyncList)
-	// Sync initiates transferring syncCandidates -> sync, sync -> active.
-	// If number is less than internal PulseNumber then ignore Sync.
-	Sync(syncCandidates []core.Node, number core.PulseNumber)
-	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
-	// Channel will return nil node if added node has not passed the consensus.
-	// Returns error if current node is not active and cannot participate in consensus.
-	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-		version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error)
-	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
-	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
-	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
-	// 3. If pulse is more than internal NodeKeeper pulse, blocks till next SetPulse or duration timeout and then acts like in par. 2.
-	GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (UnsyncList, error)
-}
 
-type UnsyncList interface {
-	// GetUnsync returns list of local unsync nodes. This list is created.
-	GetUnsync() []core.Node
-	// GetPulse returns actual pulse for current consensus process.
-	GetPulse() core.PulseNumber
-	// SetHash sets hash of unsync lists for each node of consensus.
-	SetHash([]*NodeUnsyncHash)
-	// GetHash get hash of unsync lists for each node of  If hash is not calculated yet, then this call blocks
-	// until the hash is calculated with SetHash() call.
-	GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error)
-	// AddUnsyncList add unsync list for remote ref.
-	AddUnsyncList(ref core.RecordRef, unsync []core.Node)
-	// AddUnsyncHash add unsync hash for remote ref.
-	AddUnsyncHash(ref core.RecordRef, hash []*NodeUnsyncHash)
-	// GetUnsyncList get unsync list for remote ref.
-	GetUnsyncList(ref core.RecordRef) ([]core.Node, bool)
-	// GetUnsyncHash get unsync hash for remote ref.
-	GetUnsyncHash(ref core.RecordRef) ([]*NodeUnsyncHash, bool)
-}
-
-// NodeUnsyncHash data needed for consensus.
-type NodeUnsyncHash struct {
-	NodeID core.RecordRef
-	Hash   []byte
-	// TODO: add signature
+	// SetState set state of the NodeKeeper
+	SetState(NodeKeeperState)
+	// GetState get state of the NodeKeeper
+	GetState() NodeKeeperState
+	// SetOriginClaim set origin NodeJoinClaim. It is needed to join to discovery node or (sometimes) in consensus
+	SetOriginClaim(*packets.NodeJoinClaim)
+	// GetOriginClaim get origin NodeJoinClaim
+	GetOriginClaim() *packets.NodeJoinClaim
+	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
+	NodesJoinedDuringPreviousPulse() bool
+	// AddPendingClaim add pending claim to the internal queue of claims
+	AddPendingClaim(packets.ReferendumClaim) bool
+	// GetClaimQueue get the internal queue of claims
+	GetClaimQueue() ClaimQueue
+	// AddUnsyncClaims add claims to unsync list
+	AddUnsyncClaims([]packets.ReferendumClaim)
+	// CalculateUnsyncMergedHash calculate node list hash based on active node list and claims
+	CalculateUnsyncMergedHash() []byte
+	// Sync move unsync -> sync
+	Sync(deviant []core.Node)
+	// MoveSyncToActive merge sync list with active nodes
+	MoveSyncToActive()
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -224,4 +217,14 @@ type InternalTransport interface {
 	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
 	BuildResponse(request Request, responseData interface{}) Response
+}
+
+// ClaimQueue is the queue that contains consensus claims.
+type ClaimQueue interface {
+	// Pop takes claim from the queue.
+	Pop() packets.ReferendumClaim
+	// Front returns claim from the queue without removing it from the queue.
+	Front() packets.ReferendumClaim
+	// Length returns the length of the queue
+	Length() int
 }

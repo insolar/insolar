@@ -29,11 +29,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const TestBadCert = "testdata/bad_keys.json"
-
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhase{}
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeKeeperMock := network.NewNodeKeeperMock(t)
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := NewCommunicatorMock(t)
 	consensusNetworkMock := network.NewConsensusNetworkMock(t)
@@ -47,15 +45,15 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 		return true
 	}
 
-	nodeNetworkMock.GetActiveNodesMock.Set(func() (r []core.Node) {
+	nodeKeeperMock.GetActiveNodesMock.Set(func() (r []core.Node) {
 		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", "")}
 	})
 
 	cm := component.Manager{}
-	cm.Inject(cryptoServ, nodeNetworkMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
+	cm.Inject(cryptoServ, nodeKeeperMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
 
 	assert.NotNil(t, firstPhase.Calculator)
-	assert.NotNil(t, firstPhase.NodeNetwork)
-	activeNodes := firstPhase.NodeNetwork.GetActiveNodes()
+	assert.NotNil(t, firstPhase.NodeKeeper)
+	activeNodes := firstPhase.NodeKeeper.GetActiveNodes()
 	assert.Equal(t, 1, len(activeNodes))
 }
