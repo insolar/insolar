@@ -159,7 +159,7 @@ type PulseDataExt struct {
 	Entropy        core.Entropy
 }
 
-// pulseData is a pulse data.
+// PulseData is a pulse data.
 type PulseData struct {
 	PulseNumber uint32
 	Data        *PulseDataExt
