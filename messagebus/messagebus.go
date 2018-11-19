@@ -178,16 +178,16 @@ func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel) (core.Rep
 		return nil, err
 	}
 
-	response, err := reply.Deserialize(bytes.NewBuffer(res))
-	if err != nil {
-		return response, err
-	}
-
-	if !isReplyRedirect(response) {
-		return response, err
-	}
-
-	return mb.makeRedirect(ctx, msg, response)
+	return  reply.Deserialize(bytes.NewBuffer(res))
+	// if err != nil {
+	// 	return response, err
+	// }
+	//
+	// if !isReplyRedirect(response) {
+	// 	return response, err
+	// }
+	//
+	// return mb.makeRedirect(ctx, msg, response)
 }
 
 func (mb *MessageBus) makeRedirect(ctx context.Context, parcel core.Parcel, response core.Reply) (core.Reply, error) {
