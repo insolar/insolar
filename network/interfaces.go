@@ -140,6 +140,11 @@ const (
 	Ready
 )
 
+type NodeClaim struct {
+	Claim     packets.ReferendumClaim
+	Initiator core.RecordRef
+}
+
 // NodeKeeper manages unsync, sync and active lists.
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
 type NodeKeeper interface {
@@ -166,7 +171,7 @@ type NodeKeeper interface {
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
 	// AddUnsyncClaims add claims to unsync list
-	AddUnsyncClaims([]packets.ReferendumClaim)
+	AddUnsyncClaims([]*NodeClaim)
 	// CalculateUnsyncMergedHash calculate node list hash based on active node list and claims
 	CalculateUnsyncMergedHash() []byte
 	// Sync move unsync -> sync

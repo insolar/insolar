@@ -31,7 +31,7 @@ type NodeKeeperMock struct {
 	AddPendingClaimPreCounter uint64
 	AddPendingClaimMock       mNodeKeeperMockAddPendingClaim
 
-	AddUnsyncClaimsFunc       func(p []packets.ReferendumClaim)
+	AddUnsyncClaimsFunc       func(p []*network.NodeClaim)
 	AddUnsyncClaimsCounter    uint64
 	AddUnsyncClaimsPreCounter uint64
 	AddUnsyncClaimsMock       mNodeKeeperMockAddUnsyncClaims
@@ -287,32 +287,32 @@ type mNodeKeeperMockAddUnsyncClaims struct {
 
 //NodeKeeperMockAddUnsyncClaimsParams represents input parameters of the NodeKeeper.AddUnsyncClaims
 type NodeKeeperMockAddUnsyncClaimsParams struct {
-	p []packets.ReferendumClaim
+	p []*network.NodeClaim
 }
 
 //Expect sets up expected params for the NodeKeeper.AddUnsyncClaims
-func (m *mNodeKeeperMockAddUnsyncClaims) Expect(p []packets.ReferendumClaim) *mNodeKeeperMockAddUnsyncClaims {
+func (m *mNodeKeeperMockAddUnsyncClaims) Expect(p []*network.NodeClaim) *mNodeKeeperMockAddUnsyncClaims {
 	m.mockExpectations = &NodeKeeperMockAddUnsyncClaimsParams{p}
 	return m
 }
 
 //Return sets up a mock for NodeKeeper.AddUnsyncClaims to return Return's arguments
 func (m *mNodeKeeperMockAddUnsyncClaims) Return() *NodeKeeperMock {
-	m.mock.AddUnsyncClaimsFunc = func(p []packets.ReferendumClaim) {
+	m.mock.AddUnsyncClaimsFunc = func(p []*network.NodeClaim) {
 		return
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of NodeKeeper.AddUnsyncClaims method
-func (m *mNodeKeeperMockAddUnsyncClaims) Set(f func(p []packets.ReferendumClaim)) *NodeKeeperMock {
+func (m *mNodeKeeperMockAddUnsyncClaims) Set(f func(p []*network.NodeClaim)) *NodeKeeperMock {
 	m.mock.AddUnsyncClaimsFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //AddUnsyncClaims implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) AddUnsyncClaims(p []packets.ReferendumClaim) {
+func (m *NodeKeeperMock) AddUnsyncClaims(p []*network.NodeClaim) {
 	atomic.AddUint64(&m.AddUnsyncClaimsPreCounter, 1)
 	defer atomic.AddUint64(&m.AddUnsyncClaimsCounter, 1)
 

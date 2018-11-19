@@ -106,6 +106,11 @@ func (njc *NodeJoinClaim) Length() uint16 {
 	return 0
 }
 
+func (nac *NodeJoinClaim) Node() core.Node {
+	// TODO: convert claim to node
+	return nil
+}
+
 // NodeJoinClaim is a type 5, len == 272.
 type NodeAnnounceClaim struct {
 	NodeJoinClaim
@@ -113,11 +118,6 @@ type NodeAnnounceClaim struct {
 
 func (nac *NodeAnnounceClaim) Type() ClaimType {
 	return TypeNodeAnnounceClaim
-}
-
-func (nac *NodeAnnounceClaim) Node() core.Node {
-	// TODO: convert claim to node
-	return nil
 }
 
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.

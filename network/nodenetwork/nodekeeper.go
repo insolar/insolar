@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/consensus/packets"
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -85,25 +85,22 @@ func resolveAddress(configuration configuration.Configuration) (string, error) {
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 	return &nodekeeper{
 		origin:       origin,
-		state:        undefined,
+		state:        network.Undefined,
+		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
 		indexNode:    make(map[core.NodeRole][]core.RecordRef),
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 	}
 }
 
-type nodekeeperState uint8
-
-const (
-	undefined = nodekeeperState(iota + 1)
-	pulseSet
-	synced
-)
-
 type nodekeeper struct {
-	origin core.Node
-	state  nodekeeperState
-	pulse  core.PulseNumber
+	origin      core.Node
+	originClaim *consensus.NodeJoinClaim
+	originLock  sync.RWMutex
+	state       network.NodeKeeperState
+	claimQueue  *claimQueue
+
+	nodesJoinedDuringPrevPulse bool
 
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
@@ -112,6 +109,10 @@ type nodekeeper struct {
 	active       map[core.RecordRef]core.Node
 	indexNode    map[core.NodeRole][]core.RecordRef
 	indexShortID map[core.ShortNodeID]core.Node
+
+	lock   sync.Mutex
+	unsync []network.NodeClaim
+	sync   []network.NodeClaim
 }
 
 func (nk *nodekeeper) Start(ctx context.Context, components core.Components) error {
@@ -216,40 +217,58 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 	nk.indexShortID[node.ShortID()] = node
 }
 
-func (nk *nodekeeper) SetState(network.NodeKeeperState) {
-	log.Error("implement me!")
+func (nk *nodekeeper) delActiveNode(ref core.RecordRef) {
+	if ref.Equal(nk.origin.ID()) {
+		// we received acknowledge to leave, can gracefully stop
+		// TODO: graceful stop instead of panic
+		panic("Node leave acknowledged by network. Goodbye!")
+	}
+	active, ok := nk.active[ref]
+	if !ok {
+		return
+	}
+	delete(nk.active, ref)
+	delete(nk.indexShortID, active.ShortID())
+	// we should have one role in Node structure in future
+	delete(nk.indexNode, active.Roles()[0])
+}
+
+func (nk *nodekeeper) SetState(state network.NodeKeeperState) {
+	nk.state = state
 }
 
 func (nk *nodekeeper) GetState() network.NodeKeeperState {
-	log.Error("implement me!")
-	return network.Undefined
+	return nk.state
 }
 
-func (nk *nodekeeper) SetOriginClaim(*packets.NodeJoinClaim) {
-	log.Error("implement me!")
+func (nk *nodekeeper) SetOriginClaim(claim *consensus.NodeJoinClaim) {
+	nk.originLock.Lock()
+	defer nk.originLock.Unlock()
+
+	nk.originClaim = claim
 }
 
-func (nk *nodekeeper) GetOriginClaim() *packets.NodeJoinClaim {
-	log.Error("implement me!")
-	return nil
+func (nk *nodekeeper) GetOriginClaim() *consensus.NodeJoinClaim {
+	nk.originLock.RLock()
+	defer nk.originLock.RUnlock()
+
+	return nk.originClaim
 }
 
-func (nk *nodekeeper) AddPendingClaim(packets.ReferendumClaim) bool {
-	log.Error("implement me!")
-	return false
+func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
+	nk.claimQueue.Push(claim)
+	return true
 }
 
 func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
-	log.Error("implement me!")
-	return nil
+	return nk.claimQueue
 }
 
 func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
-	log.Error("implement me!")
-	return false
+	return nk.nodesJoinedDuringPrevPulse
 }
 
-func (nk *nodekeeper) AddUnsyncClaims([]packets.ReferendumClaim) {
+func (nk *nodekeeper) AddUnsyncClaims([]*network.NodeClaim) {
 	log.Error("implement me!")
 }
 
@@ -259,11 +278,49 @@ func (nk *nodekeeper) CalculateUnsyncMergedHash() []byte {
 }
 
 func (nk *nodekeeper) Sync(deviant []core.Node) {
-	log.Error("implement me!")
+	nk.lock.Lock()
+	defer nk.lock.Unlock()
+
+	nk.sync = make([]network.NodeClaim, 0)
+	for _, claim := range nk.unsync {
+		isDeviant := false
+		for _, d := range deviant {
+			if d.ID().Equal(claim.Initiator) {
+				isDeviant = true
+				break
+			}
+
+			if !isDeviant {
+				nk.sync = append(nk.sync, claim)
+			}
+		}
+	}
+	nk.unsync = make([]network.NodeClaim, 0)
 }
 
 func (nk *nodekeeper) MoveSyncToActive() {
-	log.Error("implement me!")
+	nk.lock.Lock()
+	nk.activeLock.Lock()
+	defer func() {
+		nk.activeLock.Unlock()
+		nk.lock.Unlock()
+	}()
+
+	nk.nodesJoinedDuringPrevPulse = false
+	for _, nodeClaim := range nk.sync {
+		switch nodeClaim.Claim.Type() {
+		case consensus.TypeNodeJoinClaim:
+			claim := nodeClaim.Claim.(*consensus.NodeJoinClaim)
+			nk.addActiveNode(claim.Node())
+			nk.nodesJoinedDuringPrevPulse = true
+		case consensus.TypeNodeLeaveClaim:
+			nk.delActiveNode(nodeClaim.Initiator)
+		default:
+			log.Error("unknown claim type: %d", nodeClaim.Claim.Type())
+		}
+	}
+
+	nk.sync = make([]network.NodeClaim, 0)
 }
 
 func jetRoleToNodeRole(role core.JetRole) core.NodeRole {

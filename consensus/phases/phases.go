@@ -72,7 +72,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
-	claimSet := make([]packets.ReferendumClaim, 0)
+	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for ref, packet := range resultPackets {
 		rawProof := packet.GetPulseProof()
 		proofSet[ref] = &merkle.PulseProof{
@@ -81,11 +81,10 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 			},
 			StateHash: rawProof.StateHash(),
 		}
-		claims := packet.GetClaims() // TODO: build set of claims
-		claimSet = append(claimSet, claims...)
+		claimMap[ref] = packet.GetClaims() // TODO: build set of claims
 	}
 
-	fp.processClaims(ctx, claimSet)
+	fp.processClaims(ctx, claimMap)
 
 	// Get active nodes again for case when current node just joined to network and don't have full active list
 	activeNodes = fp.NodeKeeper.GetActiveNodes()
@@ -116,21 +115,30 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}, nil
 }
 
-func (fp *FirstPhase) processClaims(ctx context.Context, claims []packets.ReferendumClaim) {
+func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim) {
 	var nodes []core.Node
-	var unsyncClaims []packets.ReferendumClaim
+	// join claims deduplication
+	joinClaims := make(map[core.RecordRef]*packets.NodeJoinClaim)
+	unsyncClaims := make([]*network.NodeClaim, 0)
 
-	for _, genericClaim := range claims {
-		switch claim := genericClaim.(type) {
-		case *packets.NodeAnnounceClaim:
-			nodes = append(nodes, claim.Node())
-		case *packets.NodeJoinClaim:
-			panic("Not implemented yet") // TODO: authorize node here
-		case *packets.NodeLeaveClaim:
-			unsyncClaims = append(unsyncClaims, claim)
-		default:
-			panic("Not implemented yet")
+	for ref, claimsList := range claims {
+		for _, genericClaim := range claimsList {
+			switch claim := genericClaim.(type) {
+			case *packets.NodeAnnounceClaim:
+				nodes = append(nodes, claim.Node())
+			case *packets.NodeJoinClaim:
+				// TODO: authorize node here
+				joinClaims[claim.NodeRef] = claim
+			case *packets.NodeLeaveClaim:
+				unsyncClaims = append(unsyncClaims, &network.NodeClaim{Claim: claim, Initiator: ref})
+			default:
+				panic("Not implemented yet")
+			}
 		}
+	}
+
+	for _, claim := range joinClaims {
+		unsyncClaims = append(unsyncClaims, &network.NodeClaim{Claim: claim, Initiator: claim.NodeRef})
 	}
 
 	fp.NodeKeeper.AddActiveNodes(nodes)
