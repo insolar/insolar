@@ -254,20 +254,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 		}
 	}
 
-	if !isReplyRedirect(resp) {
-		return resp, nil
-	}
-
-	redirect := resp.(reply.Redirect)
-	newMessage := redirect.RecreateMessage(msg.Message())
-	newParcel, err := mb.CreateParcel(ctx, newMessage)
-	if err != nil {
-		return nil, err
-	}
-	sign, err := mb.CryptographyService.Sign(message.ToBytes(newParcel))
-	redirect.SetSign(sign)
-
-	return redirect, nil
+	return resp, nil
 }
 
 // Deliver method calls LogicRunner.Execute on local host

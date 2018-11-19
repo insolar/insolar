@@ -41,6 +41,7 @@ type MessageHandler struct {
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
 }
 
 // NewMessageHandler creates new handler.
@@ -153,7 +154,21 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	return &rep, nil
 }
 
-func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetObject, definedState *core.RecordID, pulse core.PulseNumber) (core.Reply, error) {
+func (h *MessageHandler) createRedirect(ctx context.Context, genericMsg core.Parcel, msg *message.GetObject, definedState *core.RecordID, pulse core.PulseNumber) (*reply.GetObjectRedirectReply, error) {
+	// here we need find node by pulse
+	redirect, err := h.prepareRedirect(ctx, msg, definedState, definedState.Pulse())
+	if err != nil{
+		return nil, err
+	}
+
+	dataForSign := redirect.CreateToken(genericMsg);
+	sign, err := h.CryptographyService.Sign(dataForSign)
+	redirect.Sign = sign
+
+	return redirect, nil
+}
+
+func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetObject, definedState *core.RecordID, pulse core.PulseNumber) (*reply.GetObjectRedirectReply, error) {
 	nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleLightExecutor, &msg.Head, pulse)
 	if err != nil {
 		return nil, err
@@ -162,8 +177,10 @@ func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetOb
 		return nil, errors.New("problems with node")
 	}
 
-	return reply.NewObjectRedirect(&nodes[0], definedState), nil
+	return reply.NewGetObjectRedirectReply(&nodes[0], definedState), nil
 }
+
+
 
 func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetObject)
@@ -183,8 +200,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 			if stateID == nil {
 				return nil, err
 			}
-			// here we need find node by pulse
-			return h.prepareRedirect(ctx, msg, stateID, stateID.Pulse())
+			return h.createRedirect(ctx, msg, stateID, stateID.Pulse())
 		default:
 			return nil, err
 		}

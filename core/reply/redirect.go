@@ -10,6 +10,16 @@ type GetObjectRedirectReply struct {
 
 	To *core.RecordRef
 	StateID *core.RecordID
+
+	Sign *core.Signature
+}
+
+
+func NewGetObjectRedirectReply(to *core.RecordRef, state *core.RecordID) *GetObjectRedirectReply {
+	return &GetObjectRedirectReply{
+		To: to,
+		StateID: state,
+	}
 }
 
 func (r *GetObjectRedirectReply) RecreateMessage(genericMessage core.Message) core.Message {
@@ -18,9 +28,9 @@ func (r *GetObjectRedirectReply) RecreateMessage(genericMessage core.Message) co
 	return getObjectRequest
 }
 
-func NewObjectRedirect(to *core.RecordRef, state *core.RecordID) *GetObjectRedirectReply {
-	return &GetObjectRedirectReply{
-		To: to,
-		StateID: state,
-	}
+func (r *GetObjectRedirectReply) CreateToken(genericMessage core.Parcel) []byte {
+	newMessage := r.RecreateMessage(genericMessage.Message())
+	dataForSign := append(genericMessage.GetSender().Bytes(), message.ToBytes(newMessage)...)
+	return dataForSign
 }
+
