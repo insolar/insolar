@@ -258,11 +258,11 @@ func (nk *nodekeeper) CalculateUnsyncMergedHash() []byte {
 	return nil
 }
 
-func (nk *nodekeeper) Sync(deviant []core.RecordRef) {
+func (nk *nodekeeper) Sync(deviant []core.Node) {
 	log.Error("implement me!")
 }
 
-func (nk *nodekeeper) MoveSyncToActive(number core.PulseNumber) {
+func (nk *nodekeeper) MoveSyncToActive() {
 	log.Error("implement me!")
 }
 

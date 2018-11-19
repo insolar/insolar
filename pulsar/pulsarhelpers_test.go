@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSingAndVerify(t *testing.T) {
@@ -33,7 +34,7 @@ func TestSingAndVerify(t *testing.T) {
 		return &signature, nil
 	}
 	cs.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
-		assert.Equal(t, p, "publicKey")
+		require.Equal(t, p, "publicKey")
 		return true
 	}
 
@@ -43,15 +44,15 @@ func TestSingAndVerify(t *testing.T) {
 		testData := (&entropygenerator.StandardEntropyGenerator{}).GenerateEntropy()
 
 		signature, err := signData(cs, testData)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.ObjectsAreEqual([]byte("signature"), signature)
 
 		// Act
 		checkSignature, err := checkPayloadSignature(cs, kp, &Payload{PublicKey: "publicKey", Signature: signature, Body: testData})
 
 		// Assert
-		assert.NoError(t, err)
-		assert.Equal(t, true, checkSignature)
+		require.NoError(t, err)
+		require.Equal(t, true, checkSignature)
 	}
 
 }

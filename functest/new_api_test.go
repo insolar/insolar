@@ -27,7 +27,7 @@ import (
 
 	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const TestCallUrl = TestURL + "/call"
@@ -49,25 +49,25 @@ func contractError(body []byte) error {
 func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requesters.CreateUserConfig(root.ref, root.privKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	res, err := requesters.SendWithSeed(ctx, TestCallUrl, rootCfg, &requesters.RequestConfigJSON{
 		Method: "CreateMember",
 		Params: nil,
 	}, []byte("111"))
-	assert.NoError(t, err)
-	assert.EqualError(t, contractError(res), "[ CallHandler ] Bad seed param")
+	require.NoError(t, err)
+	require.EqualError(t, contractError(res), "[ CallHandler ] Bad seed param")
 }
 
 func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requesters.CreateUserConfig(root.ref, root.privKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	res, err := requesters.SendWithSeed(ctx, TestCallUrl, rootCfg, &requesters.RequestConfigJSON{
 		Method: "CreateMember",
 		Params: nil,
 	}, []byte("12345678901234567890123456789012"))
-	assert.NoError(t, err)
-	assert.EqualError(t, contractError(res), "[ CallHandler ] Incorrect seed")
+	require.NoError(t, err)
+	require.EqualError(t, contractError(res), "[ CallHandler ] Incorrect seed")
 }
 
 func customSend(data string) (map[string]interface{}, error) {
@@ -93,21 +93,21 @@ func customSend(data string) (map[string]interface{}, error) {
 
 func TestEmptyBody(t *testing.T) {
 	res, err := customSend("")
-	assert.NoError(t, err)
-	assert.Equal(t, "[ UnmarshalRequest ] Empty body", res["error"])
+	require.NoError(t, err)
+	require.Equal(t, "[ UnmarshalRequest ] Empty body", res["error"])
 }
 
 func TestCrazyJSON(t *testing.T) {
 	res, err := customSend("[dh")
-	assert.NoError(t, err)
-	assert.Contains(t, res["error"], "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
+	require.NoError(t, err)
+	require.Contains(t, res["error"], "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
 }
 
 func TestIncorrectSign(t *testing.T) {
 	args, err := core.MarshalArgs(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	seed, err := requesters.GetSeed(TestURL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	body, err := requesters.GetResponseBody(TestCallUrl, requesters.PostParams{
 		"params":    args,
 		"method":    "SomeMethod",
@@ -115,9 +115,9 @@ func TestIncorrectSign(t *testing.T) {
 		"seed":      seed,
 		"signature": []byte("1234567890"),
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var res map[string]interface{}
 	err = json.Unmarshal(body, &res)
-	assert.NoError(t, err)
-	assert.Contains(t, res["error"], "[ VerifySignature ] Incorrect signature")
+	require.NoError(t, err)
+	require.Contains(t, res["error"], "[ VerifySignature ] Incorrect signature")
 }

@@ -141,6 +141,7 @@ const (
 )
 
 // NodeKeeper manages unsync, sync and active lists.
+//go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
 type NodeKeeper interface {
 	core.NodeNetwork
 	// SetCloudHash set new cloud hash
@@ -169,9 +170,9 @@ type NodeKeeper interface {
 	// CalculateUnsyncMergedHash calculate node list hash based on active node list and claims
 	CalculateUnsyncMergedHash() []byte
 	// Sync move unsync -> sync
-	Sync(deviant []core.RecordRef)
+	Sync(deviant []core.Node)
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive(number core.PulseNumber)
+	MoveSyncToActive()
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.

@@ -20,13 +20,13 @@ import (
 	"net"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewExactResolver(t *testing.T) {
 	resolver := NewExactResolver()
 
-	assert.IsType(t, &exactResolver{}, resolver)
+	require.IsType(t, &exactResolver{}, resolver)
 }
 
 func TestExactResolver_Resolve(t *testing.T) {
@@ -39,6 +39,6 @@ func TestExactResolver_Resolve(t *testing.T) {
 	addr, err := resolver.Resolve(conn)
 
 	conn.AssertExpectations(t)
-	assert.NoError(t, err)
-	assert.Equal(t, strAddr, addr)
+	require.NoError(t, err)
+	require.Equal(t, strAddr, addr)
 }

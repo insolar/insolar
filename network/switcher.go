@@ -14,13 +14,12 @@
  *    limitations under the License.
  */
 
-package configuration
+package network
 
-type Genesis struct {
-	RootKeys    string
-	RootBalance uint
-}
+// State type for bootstrapping process
+type State int
 
-func NewGenesis() Genesis {
-	return Genesis{}
+// Switcher is a network FSM
+type Switcher interface {
+	GetState() State
 }

@@ -94,7 +94,7 @@ func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 }
 
 func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {
-	pulse, err := lr.Ledger.GetPulseManager().Current(ctx)
+	pulse, err := lr.PulseManager.Current(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -106,7 +106,7 @@ func (lr *LogicRunner) GetConsensus(ctx context.Context, r Ref) (*Consensus, boo
 	defer lr.consensusMutex.Unlock()
 	c, ok := lr.consensus[r]
 	if !ok {
-		validators, err := lr.Ledger.GetJetCoordinator().QueryRole(
+		validators, err := lr.JetCoordinator.QueryRole(
 			ctx,
 			core.RoleVirtualValidator,
 			&r,
