@@ -189,44 +189,44 @@ func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel) (core.Rep
 	//
 	// return mb.makeRedirect(ctx, msg, response)
 }
-
-func (mb *MessageBus) makeRedirect(ctx context.Context, parcel core.Parcel, response core.Reply) (core.Reply, error) {
-	// TODO Need to be replaced with constant
-	maxCountOfReply := 2
-
-	for maxCountOfReply > 0 {
-		to, parcel, err := mb.createRedirectParcel(ctx, parcel, response)
-		res, err := mb.Service.SendMessage(*to, deliverRPCMethodName, parcel)
-		if err != nil {
-			return nil, err
-		}
-
-		response, err := reply.Deserialize(bytes.NewBuffer(res))
-		if err != nil {
-			return response, err
-		}
-
-		if !isReplyRedirect(response) {
-			return response, err
-		}
-
-		maxCountOfReply--
-	}
-
-	return nil, errors.New("object not found")
-}
-
-func (mb *MessageBus) createRedirectParcel(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
-	switch redirect := response.(type) {
-	case *reply.GetObjectRedirectReply:
-		newMessage := redirect.RecreateMessage(parcel.Message())
-		parcel, err := mb.CreateParcel(ctx, newMessage)
-		// TODO here a sign-token shoulb be put to parcel
-		return redirect.GetTo(), parcel, err
-	default:
-		panic("unknown type of redirect")
-	}
-}
+//
+// func (mb *MessageBus) makeRedirect(ctx context.Context, parcel core.Parcel, response core.Reply) (core.Reply, error) {
+// 	// TODO Need to be replaced with constant
+// 	maxCountOfReply := 2
+//
+// 	for maxCountOfReply > 0 {
+// 		to, parcel, err := mb.createRedirectParcel(ctx, parcel, response)
+// 		res, err := mb.Service.SendMessage(*to, deliverRPCMethodName, parcel)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+//
+// 		response, err := reply.Deserialize(bytes.NewBuffer(res))
+// 		if err != nil {
+// 			return response, err
+// 		}
+//
+// 		if !isReplyRedirect(response) {
+// 			return response, err
+// 		}
+//
+// 		maxCountOfReply--
+// 	}
+//
+// 	return nil, errors.New("object not found")
+// }
+//
+// func (mb *MessageBus) createRedirectParcel(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
+// 	switch redirect := response.(type) {
+// 	case *reply.GetObjectRedirectReply:
+// 		newMessage := redirect.RecreateMessage(parcel.Message())
+// 		parcel, err := mb.CreateParcel(ctx, newMessage)
+// 		// TODO here a sign-token shoulb be put to parcel
+// 		return redirect.GetTo(), parcel, err
+// 	default:
+// 		panic("unknown type of redirect")
+// 	}
+// }
 
 type serializableError struct {
 	S string
