@@ -28,13 +28,14 @@ import (
 // used by Player to replay those replies.
 type recorder struct {
 	sender
-	tape tape
-	pm   core.PulseManager
+	tape   tape
+	pm     core.PulseManager
+	scheme core.PlatformCryptographyScheme
 }
 
-// NewRecorder create new recorder instance.
-func NewRecorder(s sender, tape tape, pm core.PulseManager) *recorder {
-	return &recorder{sender: s, tape: tape, pm: pm}
+// newRecorder create new recorder instance.
+func newRecorder(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *recorder {
+	return &recorder{sender: s, tape: tape, pm: pm, scheme: scheme}
 }
 
 // WriteTape writes recorder's tape to the provided writer.
@@ -49,12 +50,8 @@ func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, erro
 		rep core.Reply
 		err error
 	)
-	pulse, err := r.pm.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-	signedMessage, err := r.CreateSignedMessage(ctx, pulse.PulseNumber, msg)
-	id := GetMessageHash(signedMessage)
+	parcel, err := r.CreateParcel(ctx, msg)
+	id := GetMessageHash(r.scheme, parcel)
 
 	// Check if Value for this message is already stored.
 	rep, err = r.tape.GetReply(ctx, id)
@@ -66,7 +63,7 @@ func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, erro
 	}
 
 	// Actually send message.
-	rep, err = r.SendMessage(ctx, pulse, signedMessage)
+	rep, err = r.SendParcel(ctx, parcel)
 	if err != nil {
 		return nil, err
 	}

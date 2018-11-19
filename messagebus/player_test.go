@@ -21,7 +21,8 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -31,27 +32,28 @@ import (
 )
 
 func TestPlayer_Send(t *testing.T) {
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
 	ctx := inslogger.TestContext(t)
 	msg := message.GenesisRequest{Name: "test"}
-	signedMessage := message.SignedMessage{Msg: &msg}
-	msgHash := GetMessageHash(&signedMessage)
+	parcel := message.Parcel{Msg: &msg}
+	msgHash := GetMessageHash(pcs, &parcel)
 	pm := testutils.NewPulseManagerMock(mc)
-	pm.CurrentMock.Return(&core.Pulse{PulseNumber: 42}, nil)
 	s := NewsenderMock(mc)
-	s.CreateSignedMessageFunc = func(c context.Context, p core.PulseNumber, m core.Message) (core.SignedMessage, error) {
-		return &signedMessage, nil
+	s.CreateParcelFunc = func(p context.Context, p2 core.Message) (r core.Parcel, r1 error) {
+		return &parcel, nil
 	}
 	tape := NewtapeMock(mc)
-	player := NewPlayer(s, tape, pm)
+	player := newPlayer(s, tape, pm, pcs)
 
 	t.Run("with no reply on the storageTape doesn't send the message and returns an error", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(nil, ErrNoReply)
 
 		_, err := player.Send(ctx, &msg)
-		assert.Equal(t, ErrNoReply, err)
+		require.Equal(t, ErrNoReply, err)
 	})
 
 	t.Run("with reply on the storageTape doesn't send the message and returns reply from the storageTape", func(t *testing.T) {
@@ -59,7 +61,7 @@ func TestPlayer_Send(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
 		rep, err := player.Send(ctx, &msg)
 
-		assert.NoError(t, err)
-		assert.Equal(t, &expectedRep, rep)
+		require.NoError(t, err)
+		require.Equal(t, &expectedRep, rep)
 	})
 }

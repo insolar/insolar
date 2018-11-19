@@ -55,7 +55,7 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 	lr.executionMutex.Lock()
 	defer lr.executionMutex.Unlock()
 	if _, ok := lr.execution[ref]; !ok {
-		lr.execution[ref] = &ExecutionState{}
+		lr.execution[ref] = &ExecutionState{Ref: &ref}
 	}
 	return lr.execution[ref]
 }
@@ -93,24 +93,24 @@ func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 	return &ret, r.Step
 }
 
-func (lr *LogicRunner) pulse() *core.Pulse {
-	pulse, err := lr.Ledger.GetPulseManager().Current(context.TODO())
+func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {
+	pulse, err := lr.PulseManager.Current(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return pulse
 }
 
-func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
+func (lr *LogicRunner) GetConsensus(ctx context.Context, r Ref) (*Consensus, bool) {
 	lr.consensusMutex.Lock()
 	defer lr.consensusMutex.Unlock()
 	c, ok := lr.consensus[r]
 	if !ok {
-		validators, err := lr.Ledger.GetJetCoordinator().QueryRole(
-			context.TODO(),
+		validators, err := lr.JetCoordinator.QueryRole(
+			ctx,
 			core.RoleVirtualValidator,
 			&r,
-			lr.pulse().PulseNumber,
+			lr.pulse(ctx).PulseNumber,
 		)
 		if err != nil {
 			panic("cannot QueryRole")

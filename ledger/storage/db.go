@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -52,6 +51,8 @@ const (
 
 // DB represents BadgerDB storage implementation.
 type DB struct {
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+
 	db         *badger.DB
 	genesisRef *core.RecordRef
 
@@ -64,6 +65,12 @@ type DB struct {
 	txretiries int
 
 	idlocker *IDLocker
+
+	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
+	// for past pulses to locate data.
+	// It should only contain previous N pulses. It should be stored on disk.
+	nodeHistory     map[core.PulseNumber][]core.Node
+	nodeHistoryLock sync.Mutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
@@ -99,15 +106,16 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	}
 
 	db := &DB{
-		db:         bdb,
-		txretiries: conf.Storage.TxRetriesOnConflict,
-		idlocker:   NewIDLocker(),
+		db:          bdb,
+		txretiries:  conf.Storage.TxRetriesOnConflict,
+		idlocker:    NewIDLocker(),
+		nodeHistory: map[core.PulseNumber][]core.Node{},
 	}
 	return db, nil
 }
 
-// Bootstrap creates initial records in storage.
-func (db *DB) Bootstrap(ctx context.Context) error {
+// Init creates initial records in storage.
+func (db *DB) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
 	getGenesisRef := func() (*core.RecordRef, error) {
@@ -184,6 +192,11 @@ func (db *DB) GenesisRef() *core.RecordRef {
 func (db *DB) Close() error {
 	// TODO: add close flag and mutex guard on Close method
 	return db.db.Close()
+}
+
+// Stop stops DB component.
+func (db *DB) Stop(ctx context.Context) error {
+	return db.Close()
 }
 
 // GetBlob returns binary value stored by record ID.
@@ -308,7 +321,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 	var err error
 	db.waitinflight()
 
-	hw := hash.NewIDHash()
+	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err = hw.Write(prevHash)
 	if err != nil {
 		return nil, nil, err
@@ -477,7 +490,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 // SetMessage persists message to the database
 func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, genericMessage core.Message) error {
 	messageBytes := message.ToBytes(genericMessage)
-	hw := hash.NewIDHash()
+	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
 	if err != nil {
 		return err
@@ -531,6 +544,30 @@ func (db *DB) IterateLocalData(ctx context.Context, pulse core.PulseNumber, pref
 		}
 		return nil
 	})
+}
+
+// SetActiveNodes saves active nodes for pulse in memory.
+func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
+	db.nodeHistoryLock.Lock()
+	defer db.nodeHistoryLock.Unlock()
+
+	if _, ok := db.nodeHistory[pulse]; ok {
+		return errors.New("node history override is forbidden")
+	}
+
+	db.nodeHistory[pulse] = nodes
+
+	return nil
+}
+
+// GetActiveNodes return active nodes for specified pulse.
+func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
+	nodes, ok := db.nodeHistory[pulse]
+	if !ok {
+		return nil, errors.New("no nodes for this pulse")
+	}
+
+	return nodes, nil
 }
 
 // get wraps matching transaction manager method.

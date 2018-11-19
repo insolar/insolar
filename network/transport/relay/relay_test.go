@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRelay_ClientsCount(t *testing.T) {
@@ -35,17 +35,17 @@ func TestRelay_ClientsCount(t *testing.T) {
 		relay.AddClient(hosts[i])
 	}
 
-	assert.Equal(t, count, relay.ClientsCount())
+	require.Equal(t, count, relay.ClientsCount())
 }
 
 func TestNewProxy(t *testing.T) {
 	proxy := NewProxy()
-	assert.NotNil(t, proxy)
+	require.NotNil(t, proxy)
 }
 
 func TestNewRelay(t *testing.T) {
 	relay := NewRelay()
-	assert.NotNil(t, relay)
+	require.NotNil(t, relay)
 }
 
 func makeAddresses(count int, t *testing.T) []*host.Address {
@@ -55,7 +55,7 @@ func makeAddresses(count int, t *testing.T) []*host.Address {
 	for i := 0; i < count; i++ {
 		address, err := host.NewAddress(ip + strconv.Itoa(i+20000))
 		if err != nil {
-			assert.Errorf(t, nil, "error: %s", err.Error())
+			require.Errorf(t, nil, "error: %s", err.Error())
 			continue
 		}
 		addresses = append(addresses, address)
@@ -69,14 +69,8 @@ func makeHosts(count int, t *testing.T) []*host.Host {
 	addresses := makeAddresses(count, t)
 
 	for i := 0; i < count; i++ {
-		id, err := id.NewID()
-
-		if err != nil {
-			assert.Errorf(t, nil, "error: %s", err.Error())
-			continue
-		}
-
-		result = append(result, &host.Host{ID: id, Address: addresses[i]})
+		id := testutils.RandomRef()
+		result = append(result, &host.Host{NodeID: id, Address: addresses[i]})
 	}
 
 	return result
@@ -90,12 +84,12 @@ func TestRelay_AddClient(t *testing.T) {
 
 	for i := range hosts {
 		err := relay.AddClient(hosts[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		err = relay.AddClient(hosts[i]) // adding existing host
-		assert.EqualError(t, err, "client exists already")
+		require.EqualError(t, err, "client exists already")
 	}
 
-	assert.Equal(t, count, relay.ClientsCount())
+	require.Equal(t, count, relay.ClientsCount())
 }
 
 func TestRelay_RemoveClient(t *testing.T) {
@@ -107,19 +101,19 @@ func TestRelay_RemoveClient(t *testing.T) {
 	for i := range hosts {
 		err := relay.AddClient(hosts[i])
 		if err != nil {
-			assert.Errorf(t, nil, "error: %s", err.Error())
+			require.Errorf(t, nil, "error: %s", err.Error())
 		}
 	}
-	assert.Equal(t, count, relay.ClientsCount())
+	require.Equal(t, count, relay.ClientsCount())
 
 	for i := range hosts {
 		err := relay.RemoveClient(hosts[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		err = relay.RemoveClient(hosts[i])
-		assert.EqualError(t, err, "client not found")
+		require.EqualError(t, err, "client not found")
 	}
 
-	assert.Equal(t, 0, relay.ClientsCount())
+	require.Equal(t, 0, relay.ClientsCount())
 }
 
 func TestRelay_NeedToRelay(t *testing.T) {
@@ -133,22 +127,22 @@ func TestRelay_NeedToRelay(t *testing.T) {
 		relay.AddClient(hosts[i])
 	}
 
-	assert.Equal(t, count, relay.ClientsCount())
+	require.Equal(t, count, relay.ClientsCount())
 
 	for i := range hosts {
 		res := relay.NeedToRelay(hosts[i].Address.String())
-		assert.Equal(t, true, res)
+		require.Equal(t, true, res)
 	}
 
 	for i := 0; i < count; i++ {
 		address, err := host.NewAddress(ip + strconv.Itoa(i+20000))
 
 		if err != nil {
-			assert.Errorf(t, nil, "error: %s", err.Error())
+			require.Errorf(t, nil, "error: %s", err.Error())
 			continue
 		}
 		res := relay.NeedToRelay(address.String())
-		assert.Equal(t, false, res)
+		require.Equal(t, false, res)
 	}
 }
 
@@ -162,7 +156,7 @@ func TestRelay_Count(t *testing.T) {
 		relay.AddClient(hosts[i])
 	}
 
-	assert.Equal(t, count, relay.ClientsCount())
+	require.Equal(t, count, relay.ClientsCount())
 }
 
 func TestProxy_AddProxyHost(t *testing.T) {
@@ -175,7 +169,7 @@ func TestProxy_AddProxyHost(t *testing.T) {
 		proxy.AddProxyHost(addresses[i].String()) // adding existed host
 	}
 
-	assert.Equal(t, count, proxy.ProxyHostsCount())
+	require.Equal(t, count, proxy.ProxyHostsCount())
 }
 
 func TestProxy_RemoveProxyHost(t *testing.T) {
@@ -187,14 +181,14 @@ func TestProxy_RemoveProxyHost(t *testing.T) {
 		proxy.AddProxyHost(addresses[i].String())
 	}
 
-	assert.Equal(t, count, proxy.ProxyHostsCount())
+	require.Equal(t, count, proxy.ProxyHostsCount())
 
 	for i := range addresses {
 		proxy.RemoveProxyHost(addresses[i].String())
 		proxy.RemoveProxyHost(addresses[i].String()) // remove removed host
 	}
 
-	assert.Equal(t, 0, proxy.ProxyHostsCount())
+	require.Equal(t, 0, proxy.ProxyHostsCount())
 }
 
 func TestProxy_GetNextProxyAddress(t *testing.T) {
@@ -203,21 +197,21 @@ func TestProxy_GetNextProxyAddress(t *testing.T) {
 	proxy := NewProxy()
 	idx := make(map[int]string, count)
 
-	assert.Equal(t, "", proxy.GetNextProxyAddress())
+	require.Equal(t, "", proxy.GetNextProxyAddress())
 
 	for i := range addresses {
 		proxy.AddProxyHost(addresses[i].String())
 		idx[i] = addresses[i].String()
 	}
 
-	assert.Equal(t, count, proxy.ProxyHostsCount())
-	assert.Equal(t, count, len(idx))
+	require.Equal(t, count, proxy.ProxyHostsCount())
+	require.Equal(t, count, len(idx))
 
 	for i := 0; i < proxy.ProxyHostsCount(); i++ {
-		assert.Equal(t, idx[i], proxy.GetNextProxyAddress())
+		require.Equal(t, idx[i], proxy.GetNextProxyAddress())
 	}
 	for i := 0; i < proxy.ProxyHostsCount(); i++ {
-		assert.Equal(t, idx[i], proxy.GetNextProxyAddress())
+		require.Equal(t, idx[i], proxy.GetNextProxyAddress())
 	}
 }
 
@@ -230,7 +224,7 @@ func TestProxy_Count(t *testing.T) {
 		proxy.AddProxyHost(addresses[i].String())
 	}
 
-	assert.Equal(t, count, proxy.ProxyHostsCount())
+	require.Equal(t, count, proxy.ProxyHostsCount())
 }
 
 func TestCreateProxy(t *testing.T) {
@@ -242,5 +236,5 @@ func TestCreateProxy(t *testing.T) {
 		check = false
 	}
 
-	assert.Equal(t, true, check)
+	require.Equal(t, true, check)
 }

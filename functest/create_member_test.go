@@ -19,49 +19,49 @@ package functest
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCreateMember(t *testing.T) {
 	result, err := signedRequest(&root, "CreateMember", "Member", "000")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ref, ok := result.(string)
-	assert.True(t, ok)
-	assert.NotEqual(t, "", ref)
+	require.True(t, ok)
+	require.NotEqual(t, "", ref)
 }
 
 func TestCreateMemberWrongNameType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", 111, "000")
-	assert.EqualError(t, err, "[ createMemberCall ]: unexpected EOF")
+	require.EqualError(t, err, "[ createMemberCall ]: [ Deserialize ]: unexpected EOF")
 }
 
 func TestCreateMemberWrongKeyType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", "Member", 111)
-	assert.EqualError(t, err, "[ createMemberCall ]: EOF")
+	require.EqualError(t, err, "[ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
 // no error
 func _TestCreateMemberOneParameter(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", "text")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestCreateMemberOneParameterOtherType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", 111)
-	assert.EqualError(t, err, "[ createMemberCall ]: EOF")
+	require.EqualError(t, err, "[ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
 func TestCreateMembersWithSameName(t *testing.T) {
 	firstMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	secondMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.NotEqual(t, firstMemberRef, secondMemberRef)
+	require.NotEqual(t, firstMemberRef, secondMemberRef)
 }
 
 func TestCreateMemberByNoRoot(t *testing.T) {
 	member := createMember(t, "Member1")
 	_, err := signedRequest(member, "CreateMember", "Member2", "000")
-	assert.EqualError(t, err, "[ CreateMember ] Only Root member can create members")
+	require.EqualError(t, err, "[ CreateMember ] Only Root member can create members")
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -36,8 +35,9 @@ const (
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
-	db         *storage.DB
-	messageBus core.MessageBus
+	db                         *storage.DB
+	DefaultBus                 core.MessageBus                 `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 
 	getChildrenChunkSize int
 }
@@ -45,19 +45,12 @@ type LedgerArtifactManager struct {
 // State returns hash state for artifact manager.
 func (m *LedgerArtifactManager) State() ([]byte, error) {
 	// This is a temporary stab to simulate real hash.
-	return hash.SHA3Bytes256([]byte{1, 2, 3}), nil
+	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
-	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}, nil
-}
-
-// Link links external components.
-func (m *LedgerArtifactManager) Link(components core.Components) error {
-	m.messageBus = components.MessageBus
-
-	return nil
+func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
+	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}
 }
 
 // GenesisRef returns the root record reference.
@@ -70,19 +63,19 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *LedgerArtifactManager) RegisterRequest(
-	ctx context.Context, msg core.Message,
+	ctx context.Context, parcel core.Parcel,
 ) (*core.RecordID, error) {
 	var err error
 	defer instrument(ctx, "RegisterRequest").err(&err).end()
 
-	recid, err := m.setRecord(
+	id, err := m.setRecord(
 		ctx,
 		&record.CallRequest{
-			Payload: message.MustSerializeBytes(msg),
+			Payload: message.ParcelToBytes(parcel),
 		},
-		*msg.Target(),
+		message.ExtractTarget(parcel.Message()),
 	)
-	return recid, err
+	return id, err
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -94,7 +87,7 @@ func (m *LedgerArtifactManager) GetCode(
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
 
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetCode{Code: code},
 	)
@@ -133,7 +126,7 @@ func (m *LedgerArtifactManager) GetObject(
 	)
 	defer instrument(ctx, "GetObject").err(&err).end()
 
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetObject{
 			Head:     head,
@@ -176,7 +169,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 	var err error
 	defer instrument(ctx, "GetDelegate").err(&err).end()
 
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetDelegate{
 			Head:   head,
@@ -203,7 +196,7 @@ func (m *LedgerArtifactManager) GetChildren(
 ) (core.RefIterator, error) {
 	var err error
 	defer instrument(ctx, "GetChildren").err(&err).end()
-	iter, err := NewChildIterator(ctx, m.messageBus, parent, pulse, m.getChildrenChunkSize)
+	iter, err := NewChildIterator(ctx, m.bus(ctx), parent, pulse, m.getChildrenChunkSize)
 	return iter, err
 }
 
@@ -260,7 +253,7 @@ func (m *LedgerArtifactManager) DeployCode(
 					Domain:  domain,
 					Request: request,
 				},
-				Code:        record.CalculateIDForBlob(pulseNumber, code),
+				Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, code),
 				MachineType: machineType,
 			},
 			request,
@@ -406,7 +399,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		IsValid:            isValid,
 		ValidationMessages: validationMessages,
 	}
-	_, err = m.messageBus.Send(ctx, &msg)
+	_, err = m.bus(ctx).Send(ctx, &msg)
 	return err
 }
 
@@ -455,7 +448,7 @@ func (m *LedgerArtifactManager) activateObject(
 				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(pulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, memory),
 				Image:       prototype,
 				IsPrototype: isPrototype,
 			},
@@ -545,7 +538,7 @@ func (m *LedgerArtifactManager) updateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(pulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, memory),
 				Image:       *image,
 				IsPrototype: object.IsPrototype(),
 			},
@@ -571,7 +564,7 @@ func (m *LedgerArtifactManager) updateObject(
 }
 
 func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record, target core.RecordRef) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.SetRecord{
 			Record:    record.SerializeRecord(rec),
@@ -592,7 +585,7 @@ func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record
 }
 
 func (m *LedgerArtifactManager) setBlob(ctx context.Context, blob []byte, target core.RecordRef) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.SetBlob{
 			Memory:    blob,
@@ -624,7 +617,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	var genericReact core.Reply
 	var genericError error
 	go func() {
-		genericReact, genericError = m.messageBus.Send(
+		genericReact, genericError = m.bus(ctx).Send(
 			ctx,
 			&message.UpdateObject{
 				Record: record.SerializeRecord(rec),
@@ -637,7 +630,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	var blobReact core.Reply
 	var blobError error
 	go func() {
-		blobReact, blobError = m.messageBus.Send(
+		blobReact, blobError = m.bus(ctx).Send(
 			ctx,
 			&message.SetBlob{
 				TargetRef: object,
@@ -675,7 +668,7 @@ func (m *LedgerArtifactManager) registerChild(
 	child core.RecordRef,
 	asType *core.RecordRef,
 ) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(
+	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.RegisterChild{
 			Record: record.SerializeRecord(rec),
@@ -695,4 +688,8 @@ func (m *LedgerArtifactManager) registerChild(
 	}
 
 	return &react.ID, nil
+}
+
+func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
+	return core.MessageBusFromContext(ctx, m.DefaultBus)
 }

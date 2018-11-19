@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
@@ -43,70 +42,6 @@ type Packet struct {
 	Data       interface{}
 	Error      error
 	IsResponse bool
-}
-
-// NewPingPacket can be used as a shortcut for creating ping packets instead of packet Builder.
-func NewPingPacket(sender, receiver *host.Host) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     types.TypePing,
-	}
-}
-
-// IsValid checks if packet data is a valid structure for current packet type.
-func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
-	switch m.Type {
-	case types.TypePing:
-		valid = true
-	case types.TypeFindHost:
-		_, valid = m.Data.(*RequestDataFindHost)
-	case types.TypeFindValue:
-		_, valid = m.Data.(*RequestDataFindValue)
-	case types.TypeStore:
-		_, valid = m.Data.(*RequestDataStore)
-	case types.TypeRPC:
-		_, valid = m.Data.(*RequestDataRPC)
-	case types.TypeRelay:
-		_, valid = m.Data.(*RequestRelay)
-	case types.TypeAuthentication:
-		_, valid = m.Data.(*RequestAuthentication)
-	case types.TypeCheckOrigin:
-		_, valid = m.Data.(*RequestCheckOrigin)
-	case types.TypeObtainIP:
-		_, valid = m.Data.(*RequestObtainIP)
-	case types.TypeRelayOwnership:
-		_, valid = m.Data.(*RequestRelayOwnership)
-	case types.TypeKnownOuterHosts:
-		_, valid = m.Data.(*RequestKnownOuterHosts)
-	case types.TypeCheckNodePriv:
-		_, valid = m.Data.(*RequestCheckNodePriv)
-	case types.TypeCascadeSend:
-		_, valid = m.Data.(*RequestCascadeSend)
-	case types.TypePulse:
-		_, valid = m.Data.(*RequestPulse)
-	case types.TypeGetRandomHosts:
-		_, valid = m.Data.(*RequestGetRandomHosts)
-	case types.TypeGetNonce:
-		_, valid = m.Data.(*RequestGetNonce)
-	case types.TypeCheckSignedNonce:
-		_, valid = m.Data.(*RequestCheckSignedNonce)
-	case types.TypeExchangeUnsyncLists:
-		_, valid = m.Data.(*RequestExchangeUnsyncLists)
-	case types.TypeExchangeUnsyncHash:
-		_, valid = m.Data.(*RequestExchangeUnsyncHash)
-	case types.TypeDisconnect:
-		_, valid = m.Data.(*RequestDisconnect)
-	default:
-		valid = false
-	}
-
-	return valid
-}
-
-// IsForMe checks if packet is addressed to our host.
-func (m *Packet) IsForMe(origin host.Origin) bool {
-	return origin.Contains(m.Receiver) || m.Type == types.TypePing
 }
 
 // SerializePacket converts packet to byte slice.
@@ -165,45 +100,9 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 }
 
 func init() {
-	gob.Register(&RequestDataFindHost{})
-	gob.Register(&RequestDataFindValue{})
-	gob.Register(&RequestDataStore{})
-	gob.Register(&RequestDataRPC{})
-	gob.Register(&RequestRelay{})
-	gob.Register(&RequestAuthentication{})
-	gob.Register(&RequestCheckOrigin{})
-	gob.Register(&RequestObtainIP{})
-	gob.Register(&RequestRelayOwnership{})
-	gob.Register(&RequestKnownOuterHosts{})
-	gob.Register(&RequestCheckNodePriv{})
-	gob.Register(&RequestCascadeSend{})
 	gob.Register(&RequestPulse{})
 	gob.Register(&RequestGetRandomHosts{})
-	gob.Register(&RequestGetNonce{})
-	gob.Register(&RequestCheckSignedNonce{})
-	gob.Register(&RequestExchangeUnsyncLists{})
-	gob.Register(&RequestExchangeUnsyncHash{})
-	gob.Register(&RequestDisconnect{})
 
-	gob.Register(&ResponseDataFindHost{})
-	gob.Register(&ResponseDataFindValue{})
-	gob.Register(&ResponseDataStore{})
-	gob.Register(&ResponseDataRPC{})
-	gob.Register(&ResponseRelay{})
-	gob.Register(&ResponseAuthentication{})
-	gob.Register(&ResponseCheckOrigin{})
-	gob.Register(&ResponseObtainIP{})
-	gob.Register(&ResponseRelayOwnership{})
-	gob.Register(&ResponseKnownOuterHosts{})
-	gob.Register(&ResponseCheckNodePriv{})
-	gob.Register(&ResponseCascadeSend{})
 	gob.Register(&ResponsePulse{})
 	gob.Register(&ResponseGetRandomHosts{})
-	gob.Register(&ResponseGetNonce{})
-	gob.Register(&ResponseExchangeUnsyncLists{})
-	gob.Register(&ResponseExchangeUnsyncHash{})
-	gob.Register(&ResponseDisconnect{})
-	gob.Register(&ResponseCheckSignedNonce{})
-
-	gob.Register(&id.ID{})
 }

@@ -42,17 +42,20 @@ import (
 // GoInsider is an RPC interface to run code of plugins
 type GoInsider struct {
 	dir              string
-	UpstreamProtocol string
-	UpstreamAddress  string
-	UpstreamClient   *rpc.Client
-	plugins          map[string]*plugin.Plugin
-	pluginsMutex     sync.Mutex
+	upstreamProtocol string
+	upstreamAddress  string
+
+	upstreamMutex  sync.Mutex // lock UpstreamClient change
+	UpstreamClient *rpc.Client
+
+	plugins      map[string]*plugin.Plugin
+	pluginsMutex sync.Mutex
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
 func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	res := GoInsider{dir: path, UpstreamProtocol: network, UpstreamAddress: address}
+	res := GoInsider{dir: path, upstreamProtocol: network, upstreamAddress: address}
 	res.plugins = make(map[string]*plugin.Plugin)
 	return &res
 }
@@ -88,6 +91,23 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
 		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
+	}
+
+	if args.Context.Caller.Equal(core.RecordRef{}) {
+		attr, err := p.Lookup("INSATTR_" + args.Method + "_API")
+		if err != nil {
+			return errors.Wrapf(
+				err, "Calling non INSATTRAPI method %s (code ref: %s)",
+				args.Method, args.Code.String(),
+			)
+		}
+		api, ok := attr.(*bool)
+		if !ok {
+			return errors.Errorf("INSATTRAPI attribute for method %s is not boolean", args.Method)
+		}
+		if !*api {
+			return errors.Errorf("Calling non INSATTRAPI method ")
+		}
 	}
 
 	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
@@ -150,13 +170,15 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 
 // Upstream returns RPC client connected to upstream server (goplugin)
 func (gi *GoInsider) Upstream() (*rpc.Client, error) {
+	gi.upstreamMutex.Lock()
+	defer gi.upstreamMutex.Unlock()
 	if gi.UpstreamClient != nil {
 		return gi.UpstreamClient, nil
 	}
 
-	client, err := rpc.Dial(gi.UpstreamProtocol, gi.UpstreamAddress)
+	client, err := rpc.Dial(gi.upstreamProtocol, gi.upstreamAddress)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't dial '%s' over %s", gi.UpstreamAddress, gi.UpstreamProtocol)
+		return nil, errors.Wrapf(err, "couldn't dial '%s' over %s", gi.upstreamAddress, gi.upstreamProtocol)
 	}
 
 	gi.UpstreamClient = client

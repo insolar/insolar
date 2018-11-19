@@ -18,6 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 // MethodReturnMode ENUM to set when method returns its result
@@ -55,11 +56,6 @@ func (m *BaseLogicMessage) GetCallerPrototype() *core.RecordRef {
 	return &m.CallerPrototype
 }
 
-// TargetRole returns RoleVirtualExecutor as routing target role.
-func (m *BaseLogicMessage) TargetRole() core.JetRole {
-	return core.RoleVirtualExecutor
-}
-
 // GetRequest returns RoleVirtualExecutor as routing target role.
 func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 	return m.Request
@@ -83,11 +79,6 @@ func (m *CallMethod) Type() core.MessageType {
 	return core.TypeCallMethod
 }
 
-// Target returns ObjectRef as routing target.
-func (m *CallMethod) Target() *core.RecordRef {
-	return &m.ObjectRef
-}
-
 type SaveAs int
 
 const (
@@ -107,20 +98,12 @@ type CallConstructor struct {
 }
 
 func (m *CallConstructor) GetReference() core.RecordRef {
-	return *core.GenRequest(m.PulseNum, MustSerializeBytes(m))
+	return *genRequest(m.PulseNum, MustSerializeBytes(m))
 }
 
 // Type returns TypeCallConstructor.
 func (m *CallConstructor) Type() core.MessageType {
 	return core.TypeCallConstructor
-}
-
-// Target returns request ref as routing target.
-func (m *CallConstructor) Target() *core.RecordRef {
-	if m.SaveAs == Delegate {
-		return &m.ParentRef
-	}
-	return core.GenRequest(m.PulseNum, MustSerializeBytes(m))
 }
 
 type ExecutorResults struct {
@@ -131,14 +114,6 @@ type ExecutorResults struct {
 
 func (m *ExecutorResults) Type() core.MessageType {
 	return core.TypeExecutorResults
-}
-
-func (m *ExecutorResults) TargetRole() core.JetRole {
-	return core.RoleVirtualExecutor
-}
-
-func (m *ExecutorResults) Target() *core.RecordRef {
-	return &m.RecordRef
 }
 
 // TODO change after changing pulsar
@@ -159,14 +134,6 @@ type ValidateCaseBind struct {
 
 func (m *ValidateCaseBind) Type() core.MessageType {
 	return core.TypeValidateCaseBind
-}
-
-func (m *ValidateCaseBind) TargetRole() core.JetRole {
-	return core.RoleVirtualValidator
-}
-
-func (m *ValidateCaseBind) Target() *core.RecordRef {
-	return &m.RecordRef
 }
 
 // TODO change after changing pulsar
@@ -197,14 +164,6 @@ func (m *ValidationResults) Type() core.MessageType {
 	return core.TypeValidationResults
 }
 
-func (m ValidationResults) TargetRole() core.JetRole {
-	return core.RoleVirtualExecutor
-}
-
-func (m *ValidationResults) Target() *core.RecordRef {
-	return &m.RecordRef
-}
-
 // TODO change after changing pulsar
 func (m *ValidationResults) GetCaller() *core.RecordRef {
 	return &m.Caller // TODO actually it's not right. There is no caller.
@@ -212,4 +171,15 @@ func (m *ValidationResults) GetCaller() *core.RecordRef {
 
 func (m *ValidationResults) GetReference() core.RecordRef {
 	return m.RecordRef
+}
+
+var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
+
+// GenRequest calculates RecordRef for request message from pulse number and request's payload.
+func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
+	ref := core.NewRecordRef(
+		core.RecordID{},
+		*core.NewRecordID(pn, hasher.Hash(payload)),
+	)
+	return ref
 }

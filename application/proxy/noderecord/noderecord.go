@@ -8,8 +8,7 @@ import (
 
 type RecordInfo struct {
 	PublicKey string
-	Roles     []core.NodeRole
-	IP        string
+	Role      core.NodeRole
 }
 
 // PrototypeReference to prototype of this contract
@@ -64,11 +63,10 @@ func GetImplementationFrom(object core.RecordRef) (*NodeRecord, error) {
 }
 
 // NewNodeRecord is constructor
-func NewNodeRecord(publicKey string, roles []string, ip string) *ContractConstructorHolder {
-	var args [3]interface{}
+func NewNodeRecord(publicKey string, roleStr string) *ContractConstructorHolder {
+	var args [2]interface{}
 	args[0] = publicKey
-	args[1] = roles
-	args[2] = ip
+	args[1] = roleStr
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -194,13 +192,13 @@ func (r *NodeRecord) GetPublicKeyNoWait() error {
 }
 
 // GetRole is proxy generated method
-func (r *NodeRecord) GetRole() ([]core.NodeRole, error) {
+func (r *NodeRecord) GetRole() (core.NodeRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 []core.NodeRole
+	var ret0 core.NodeRole
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

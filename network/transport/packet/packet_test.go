@@ -19,139 +19,34 @@ package packet
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/gob"
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNewPingPacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
-
-	m := NewPingPacket(sender, receiver)
-
-	expectedPacket := &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     types.TypePing,
-	}
-	assert.Equal(t, expectedPacket, m)
-}
-
-func TestPacket_IsValid(t *testing.T) {
-	builder := NewBuilder(nil)
-	ref := testutils.RandomRef()
-
-	correctPacket := builder.Type(types.TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
-	assert.True(t, correctPacket.IsValid())
-
-	badtPacket := builder.Type(types.TypeStore).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
-	assert.False(t, badtPacket.IsValid())
-}
-
-func TestPacket_IsValid_Ok(t *testing.T) {
-	cascade := core.Cascade{}
-	rpcData := RequestDataRPC{}
-	ref := testutils.RandomRef()
-	tests := []struct {
-		name       string
-		packetType types.PacketType
-		data       interface{}
-	}{
-		{"TypePing", types.TypePing, nil},
-		{"TypeFindHost", types.TypeFindHost, &RequestDataFindHost{}},
-		{"TypeFindValue", types.TypeFindValue, &RequestDataFindValue{}},
-		{"TypeStore", types.TypeStore, &RequestDataStore{}},
-		{"TypeRPC", types.TypeRPC, &RequestDataRPC{ref, "test", [][]byte{}}},
-		{"TypeRelay", types.TypeRelay, &RequestRelay{Unknown}},
-		{"TypeAuthentication", types.TypeAuthentication, &RequestAuthentication{Unknown}},
-		{"TypeCheckOrigin", types.TypeCheckOrigin, &RequestCheckOrigin{}},
-		{"TypeObtainIP", types.TypeObtainIP, &RequestObtainIP{}},
-		{"TypeRelayOwnership", types.TypeRelayOwnership, &RequestRelayOwnership{true}},
-		{"TypeKnownOuterHosts", types.TypeKnownOuterHosts, &RequestKnownOuterHosts{"test", 1}},
-		{"TypeCheckNodePriv", types.TypeCheckNodePriv, &RequestCheckNodePriv{"test"}},
-		{"TypeCascadeSend", types.TypeCascadeSend, &RequestCascadeSend{rpcData, cascade}},
-		{"TypePulse", types.TypePulse, &RequestPulse{Pulse: core.Pulse{}}},
-		{"TypeGetRandomHosts", types.TypeGetRandomHosts, &RequestGetRandomHosts{HostsNumber: 2}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			builder := NewBuilder(nil)
-			packet := builder.Type(test.packetType).Request(test.data).Build()
-			assert.True(t, packet.IsValid())
-		})
-	}
-}
-
-func TestPacket_IsValid_Fail(t *testing.T) {
-	ref := testutils.RandomRef()
-	tests := []struct {
-		name       string
-		packetType types.PacketType
-		data       interface{}
-	}{
-		{"incorrect request", types.TypeStore, &RequestDataRPC{ref, "test", [][]byte{}}},
-		{"incorrect type", types.PacketType(1337), &RequestDataFindHost{}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			builder := NewBuilder(nil)
-			packet := builder.Type(test.packetType).Request(test.data).Build()
-			assert.False(t, packet.IsValid())
-		})
-	}
-}
-
-func TestPacket_IsForMe(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
-	builder := NewBuilder(nil)
-	origin, _ := host.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
-
-	myPacket := builder.Receiver(receiver).Build()
-	notMyPacket := builder.Receiver(sender).Build()
-
-	assert.True(t, myPacket.IsForMe(*origin))
-	assert.False(t, notMyPacket.IsForMe(*origin))
+func init() {
+	gob.Register(&RequestTest{})
 }
 
 func TestSerializePacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	msg := builder.Receiver(receiver).Type(types.TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
+	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
 
 	_, err := SerializePacket(msg)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestDeserializePacket(t *testing.T) {
-	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
-	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID()
-	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
-	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	msg := builder.Receiver(receiver).Type(types.TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
+	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
 
 	serialized, _ := SerializePacket(msg)
 
@@ -161,30 +56,28 @@ func TestDeserializePacket(t *testing.T) {
 
 	deserialized, err := DeserializePacket(&buffer)
 
-	assert.NoError(t, err)
-	assert.Equal(t, deserialized, msg)
+	require.NoError(t, err)
+	require.Equal(t, deserialized, msg)
 }
 
 func TestDeserializeBigPacket(t *testing.T) {
-	address, _ := host.NewAddress("127.0.0.1:31337")
-	hostOne := host.NewHost(address)
+	hostOne, _ := host.NewHost("127.0.0.1:31337")
 
 	data := make([]byte, 1024*1024*10)
 	rand.Read(data)
 
 	builder := NewBuilder(hostOne)
-	msg := builder.Receiver(hostOne).Type(types.TypeStore).Request(&RequestDataStore{data, true}).Build()
-	assert.True(t, msg.IsValid())
+	msg := builder.Receiver(hostOne).Type(TestPacket).Request(&RequestTest{data}).Build()
 
 	serialized, err := SerializePacket(msg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var buffer bytes.Buffer
 	buffer.Write(serialized)
 
 	deserializedMsg, err := DeserializePacket(&buffer)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	deserializedData := deserializedMsg.Data.(*RequestDataStore).Data
-	assert.Equal(t, data, deserializedData)
+	deserializedData := deserializedMsg.Data.(*RequestTest).Data
+	require.Equal(t, data, deserializedData)
 }

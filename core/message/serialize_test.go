@@ -21,7 +21,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -31,16 +31,16 @@ func TestSerializeSigned(t *testing.T) {
 	msg := &SetRecord{
 		Record: []byte{0x0A},
 	}
-	signMsgIn := &SignedMessage{
+	signMsgIn := &Parcel{
 		Msg:       msg,
 		Signature: nil,
 	}
 
-	signMsgOut, err := DeserializeSigned(bytes.NewBuffer(SignedToBytes(signMsgIn)))
-	assert.NoError(t, err)
+	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
+	require.NoError(t, err)
 
-	assert.Equal(t, signMsgIn, signMsgOut)
-	assert.Equal(t, signMsgIn.Message(), signMsgOut.Message())
+	require.Equal(t, signMsgIn, signMsgOut)
+	require.Equal(t, signMsgIn.Message(), signMsgOut.Message())
 }
 
 func TestSerializeSignedFail(t *testing.T) {
@@ -48,14 +48,14 @@ func TestSerializeSignedFail(t *testing.T) {
 		Record: []byte{0x0A},
 	}
 
-	signMsgIn := &SignedMessage{
+	signMsgIn := &Parcel{
 		Msg:       msg,
 		Signature: nil,
 	}
 
-	signMsgOut, err := Deserialize(bytes.NewBuffer(SignedToBytes(signMsgIn)))
-	assert.Error(t, err)
-	assert.Nil(t, signMsgOut)
+	signMsgOut, err := Deserialize(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
+	require.Error(t, err)
+	require.Nil(t, signMsgOut)
 }
 
 func TestSerializeSignedWithContext(t *testing.T) {
@@ -67,18 +67,18 @@ func TestSerializeSignedWithContext(t *testing.T) {
 	ctxIn = inslogger.ContextWithTrace(context.Background(), traceid)
 	ctxIn = instracer.SetBaggage(ctxIn, instracer.Entry{Key: "traceid", Value: traceid})
 
-	signMsgIn := &SignedMessage{
+	signMsgIn := &Parcel{
 		Msg:           msg,
 		Signature:     nil,
 		TraceSpanData: instracer.MustSerialize(ctxIn),
 		LogTraceID:    inslogger.TraceID(ctxIn),
 	}
 
-	signMsgOut, err := DeserializeSigned(bytes.NewBuffer(SignedToBytes(signMsgIn)))
-	assert.NoError(t, err)
+	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
+	require.NoError(t, err)
 
 	ctxOut := signMsgOut.Context(context.Background())
-	assert.Equal(t, traceid, inslogger.TraceID(ctxIn))
-	assert.Equal(t, inslogger.TraceID(ctxIn), inslogger.TraceID(ctxOut))
-	assert.Equal(t, instracer.GetBaggage(ctxIn), instracer.GetBaggage(ctxOut))
+	require.Equal(t, traceid, inslogger.TraceID(ctxIn))
+	require.Equal(t, inslogger.TraceID(ctxIn), inslogger.TraceID(ctxOut))
+	require.Equal(t, instracer.GetBaggage(ctxIn), instracer.GetBaggage(ctxOut))
 }

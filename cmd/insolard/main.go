@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"reflect"
@@ -44,8 +43,12 @@ type ComponentManager struct {
 	components core.Components
 }
 
-// linkAll - link dependency for all components
-func (cm *ComponentManager) linkAll(ctx context.Context) {
+func (cm *ComponentManager) GetAll() core.Components {
+	return cm.components
+}
+
+// LinkAll - link dependency for all components
+func (cm *ComponentManager) LinkAll(ctx context.Context) {
 	inslog := inslogger.FromContext(ctx)
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
@@ -63,50 +66,36 @@ func (cm *ComponentManager) linkAll(ctx context.Context) {
 }
 
 type inputParams struct {
-	configPath               string
-	isBootstrap              bool
-	bootstrapCertificatePath string
-	traceEnabled             bool
+	configPath        string
+	isGenesis         bool
+	genesisConfigPath string
+	traceEnabled      bool
 }
 
 func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
-	rootCmd.Flags().BoolVarP(&result.isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
-	rootCmd.Flags().StringVarP(&result.bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
+	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "genesis", "g", "", "path to genesis config file")
 	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
 	}
 
-	if result.isBootstrap && len(result.bootstrapCertificatePath) == 0 {
-		log.Fatal("flag '--cert_out|-r' must not be empty, if '--bootstrap|-b' exists")
+	if result.genesisConfigPath != "" {
+		result.isGenesis = true
 	}
+
 	return result
 }
 
-func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, cert core.Certificate, nc core.NetworkCoordinator) {
-	roles := []string{"virtual", "heavy_material", "light_material"}
-	publicKey, err := cert.GetPublicKey()
-	checkError(ctx, err, "failed to get public key")
-
-	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, roles, host)
-	checkError(ctx, err, "can't register node")
-
-	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)
-	checkError(ctx, err, "can't write certificate")
-}
-
-func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration) {
+func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration, cert *certificate.Certificate) {
 	inslog := inslogger.FromContext(ctx)
 	if len(cfg.CertificatePath) == 0 {
 		inslog.Info("No certificate path - No merge")
 		return
 	}
-	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
-	checkError(ctx, err, "can't create certificate")
 
 	cfg.Host.BootstrapHosts = []string{}
 	for _, bn := range cert.BootstrapNodes {
@@ -140,12 +129,21 @@ func main() {
 	}
 
 	cfg := &cfgHolder.Configuration
-	traceid := utils.RandTraceID()
-	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
-	ctx, inslog := initLogger(ctx, cfg.Log)
 
-	if !params.isBootstrap {
-		mergeConfigAndCertificate(ctx, cfg)
+	traceid := utils.RandTraceID()
+	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
+
+	bootstrapComponents := InitBootstrapComponents(ctx, *cfg)
+	cert := InitCertificate(
+		ctx,
+		*cfg,
+		params.isGenesis,
+		bootstrapComponents.CryptographyService,
+		bootstrapComponents.KeyProcessor,
+	)
+
+	if !params.isGenesis {
+		mergeConfigAndCertificate(ctx, cfg, cert)
 	}
 	cfg.Metrics.Namespace = "insolard"
 
@@ -159,10 +157,23 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, cmOld, repl, err := InitComponents(ctx, *cfg, params.isBootstrap)
+	cm, cmOld, repl, err := InitComponents(
+		ctx,
+		*cfg,
+		bootstrapComponents.CryptographyService,
+		bootstrapComponents.PlatformCryptographyScheme,
+		bootstrapComponents.KeyStore,
+		bootstrapComponents.KeyProcessor,
+		cert,
+		params.isGenesis,
+		params.genesisConfigPath,
+	)
 	checkError(ctx, err, "failed to init components")
 
-	cmOld.linkAll(ctx)
+	err = cm.Init(ctx)
+	checkError(ctx, err, "failed to init components")
+
+	cmOld.LinkAll(ctx)
 
 	err = cm.Start(ctx)
 	checkError(ctx, err, "failed to start components")
@@ -188,25 +199,12 @@ func main() {
 		os.Exit(0)
 	}()
 
-	// move to bootstrap component
-	if params.isBootstrap {
-		registerCurrentNode(
-			ctx,
-			cfg.Host.Transport.Address,
-			params.bootstrapCertificatePath,
-			cmOld.components.Certificate,
-			cmOld.components.NetworkCoordinator,
-		)
-		inslog.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
-		gracefulStop <- syscall.SIGINT
-	}
-
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")
 	repl.Start(ctx)
 }
 
-func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, core.Logger) {
+func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, core.Logger) {
 	inslog, err := log.NewLog(cfg)
 	if err != nil {
 		panic(err)
@@ -215,8 +213,7 @@ func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, co
 	if err != nil {
 		inslog.Errorln(err.Error())
 	}
-	ctx = inslogger.SetLogger(ctx, inslog)
-	return ctx, inslog
+	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
 }
 
 func checkError(ctx context.Context, err error, message string) {

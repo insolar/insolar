@@ -22,21 +22,26 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/testutils/merkle"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhase{}
-	nodeNetwork := network.NewNodeNetworkMock(t)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	pulseCalculatorMock := merkle.NewCalculatorMock(t)
+	communicatorMock := NewCommunicatorMock(t)
+	consensusNetworkMock := network.NewConsensusNetworkMock(t)
 
-	nodeNetwork.GetActiveNodesMock.Set(func() (r []core.Node) {
+	nodeNetworkMock.GetActiveNodesMock.Set(func() (r []core.Node) {
 		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", "")}
 	})
 
 	cm := component.Manager{}
-	cm.Register(nodeNetwork, firstPhase)
+	cm.Inject(nodeNetworkMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
 
+	assert.NotNil(t, firstPhase.Calculator)
 	assert.NotNil(t, firstPhase.NodeNetwork)
 	activeNodes := firstPhase.NodeNetwork.GetActiveNodes()
 	assert.Equal(t, 1, len(activeNodes))

@@ -31,17 +31,6 @@ func (*GenesisRequest) Type() core.MessageType {
 	return core.TypeBootstrapRequest
 }
 
-// Target implementation for genesis request.
-func (g *GenesisRequest) Target() *core.RecordRef {
-	ref := core.NewRefFromBase58(g.Name)
-	return &ref
-}
-
-// TargetRole implementation for genesis request.
-func (*GenesisRequest) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
 // GetCaller implementation for genesis request.
 func (*GenesisRequest) GetCaller() *core.RecordRef {
 	return nil

@@ -18,6 +18,7 @@ package servicenetwork
 
 import (
 	"context"
+	"crypto"
 	"os"
 	"path"
 	"strconv"
@@ -27,14 +28,18 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var keysPath = path.Join("..", "..", "testdata", "functional", "bootstrap_keys.json")
@@ -48,46 +53,82 @@ func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) 
 	return keeper
 }
 
-func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) core.Components {
-	pwd, _ := os.Getwd()
-	cert, err := certificate.NewCertificatesWithKeys(path.Join(pwd, keysPath))
-	assert.NoError(t, err)
-	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
-	return core.Components{Certificate: cert, NodeNetwork: keeper, Ledger: &network.MockLedger{}}
+func mockCryptographyService(t *testing.T) core.CryptographyService {
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+		return true
+	}
+	return mock
 }
 
-/*
-func getPrivateKeyString() string {
-	key, _ := ecdsa.GeneratePrivateKey()
-	keyStr, _ := ecdsa.ExportPrivateKey(key)
-	return keyStr
+func mockParcelFactory(t *testing.T) message.ParcelFactory {
+	mock := mockCryptographyService(t)
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
+	cm := &component.Manager{}
+	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
+	cm.Inject(delegationTokenFactory, parcelFactory, mock)
+	return parcelFactory
 }
-*/
+
+func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) core.Components {
+	pwd, _ := os.Getwd()
+	cs, _ := cryptography.NewStorageBoundCryptographyService(path.Join(pwd, keysPath))
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
+	cert, err := certificate.NewCertificatesWithKeys(pk, kp)
+
+	require.NoError(t, err)
+	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
+
+	mock := mockCryptographyService(t)
+
+	return core.Components{
+		Certificate:         cert,
+		NodeNetwork:         keeper,
+		Ledger:              &network.MockLedger{},
+		CryptographyService: mock,
+	}
+}
 
 func TestNewServiceNetwork(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	sn, err := NewServiceNetwork(cfg)
-	assert.NoError(t, err)
-	assert.NotNil(t, sn)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
+	sn, err := NewServiceNetwork(cfg, scheme)
+	require.NoError(t, err)
+	require.NotNil(t, sn)
 }
 
 func TestServiceNetwork_GetAddress(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	network, err := NewServiceNetwork(cfg)
-	assert.NoError(t, err)
-	assert.True(t, strings.Contains(network.GetAddress(), strings.Split(cfg.Host.Transport.Address, ":")[0]))
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	network, err := NewServiceNetwork(cfg, scheme)
+	require.NoError(t, err)
+	require.True(t, strings.Contains(network.GetAddress(), strings.Split(cfg.Host.Transport.Address, ":")[0]))
 }
 
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	network, err := NewServiceNetwork(cfg)
-	key, _ := ecdsa.GeneratePrivateKey()
-	network.certificate, _ = certificate.NewCertificatesWithKeys(keysPath)
-	assert.NoError(t, err)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	network, err := NewServiceNetwork(cfg, scheme)
+
+	cs, _ := cryptography.NewStorageBoundCryptographyService(keysPath)
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
+	network.Certificate, _ = certificate.NewCertificatesWithKeys(pk, kp)
+	require.NoError(t, err)
 
 	ctx := context.TODO()
-	err = network.Start(ctx, initComponents(t, testutils.RandomRef(), "", true))
-	assert.NoError(t, err)
+	networkComponents := initComponents(t, testutils.RandomRef(), "", true)
+	network.OldComponentManager = &HackComponentManager{networkComponents}
+	network.NodeNetwork, _ = nodenetwork.NewNodeNetwork(cfg)
+	err = network.Init(ctx)
+	require.NoError(t, err)
 
 	e := &message.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
@@ -95,10 +136,12 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	signed, _ := message.NewSignedMessage(ctx, e, network.GetNodeID(), key, 0)
+	pf := mockParcelFactory(t)
+	parcel, err := pf.Create(ctx, e, network.GetNodeID())
+	require.NoError(t, err)
 
 	ref := testutils.RandomRef()
-	network.SendMessage(ref, "test", signed)
+	network.SendMessage(ref, "test", parcel)
 }
 
 func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID string) configuration.Configuration {
@@ -118,60 +161,32 @@ func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID strin
 	return cfg
 }
 
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return true // completed normally
-	case <-time.After(timeout):
-		return false // timed out
-	}
-}
-
-type mockLedger struct {
-	PM core.PulseManager
-}
-
-func (l *mockLedger) GetLocalStorage() core.LocalStorage {
-	panic("implement me")
-}
-
-func (l *mockLedger) GetArtifactManager() core.ArtifactManager {
-	return nil
-}
-
-func (l *mockLedger) GetJetCoordinator() core.JetCoordinator {
-	return nil
-}
-
-func (l *mockLedger) GetPulseManager() core.PulseManager {
-	return l.PM
-}
-
 func TestServiceNetwork_SendMessage2(t *testing.T) {
 	ctx := context.TODO()
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	firstNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10000",
 		[]string{"127.0.0.1:10001"},
-		firstNodeId))
-	assert.NoError(t, err)
+		firstNodeId), scheme)
+	require.NoError(t, err)
 	secondNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10001",
 		nil,
-		secondNodeId))
-	assert.NoError(t, err)
+		secondNodeId), scheme)
+	require.NoError(t, err)
 
-	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true))
-	assert.NoError(t, err)
-	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false))
-	assert.NoError(t, err)
+	secondNodeComponents := initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
+	secondNode.OldComponentManager = &HackComponentManager{secondNodeComponents}
+	err = secondNode.Init(ctx)
+	require.NoError(t, err)
+	firstNodeComponents := initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
+	firstNode.OldComponentManager = &HackComponentManager{firstNodeComponents}
+	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
+	err = firstNode.Init(ctx)
+	require.NoError(t, err)
 
 	defer func() {
 		firstNode.Stop(ctx)
@@ -192,35 +207,53 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	signed, _ := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0)
+	pf := mockParcelFactory(t)
+	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID())
+	require.NoError(t, err)
 
-	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", signed)
-	success := waitTimeout(&wg, 100*time.Millisecond)
+	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", parcel)
+	success := network.WaitTimeout(&wg, 100*time.Millisecond)
 
-	assert.True(t, success)
+	require.True(t, success)
+}
+
+type HackComponentManager struct {
+	components core.Components
+}
+
+func (cm *HackComponentManager) GetAll() core.Components {
+	return cm.components
 }
 
 func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	ctx := context.TODO()
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	firstNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10100",
 		[]string{"127.0.0.1:10101"},
-		firstNodeId))
-	assert.NoError(t, err)
+		firstNodeId), scheme)
+	require.NoError(t, err)
 	secondNode, err := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10101",
 		nil,
-		secondNodeId))
-	assert.NoError(t, err)
+		secondNodeId), scheme)
+	require.NoError(t, err)
 
-	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true))
-	assert.NoError(t, err)
+	secondsNodeComponents := initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
+	secondNode.OldComponentManager = &HackComponentManager{secondsNodeComponents}
 
-	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false))
-	assert.NoError(t, err)
+	err = secondNode.Init(ctx)
+	require.NoError(t, err)
+
+	firstNodeComponents := initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
+	firstNode.OldComponentManager = &HackComponentManager{firstNodeComponents}
+	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
+
+	err = firstNode.Init(ctx)
+	require.NoError(t, err)
 
 	defer func() {
 		firstNode.Stop(ctx)
@@ -247,22 +280,25 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	signed, err := message.NewSignedMessage(ctx, e, firstNode.GetNodeID(), firstNode.GetPrivateKey(), 0)
+	pf := mockParcelFactory(t)
+	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID())
+	require.NoError(t, err)
 
-	firstNode.SendCascadeMessage(c, "test", signed)
-	success := waitTimeout(&wg, 100*time.Millisecond)
+	err = firstNode.SendCascadeMessage(c, "test", parcel)
+	success := network.WaitTimeout(&wg, 100*time.Millisecond)
 
-	assert.True(t, success)
+	require.NoError(t, err)
+	require.True(t, success)
 
 	err = firstNode.SendCascadeMessage(c, "test", nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	c.ReplicationFactor = 0
-	err = firstNode.SendCascadeMessage(c, "test", signed)
-	assert.Error(t, err)
+	err = firstNode.SendCascadeMessage(c, "test", parcel)
+	require.Error(t, err)
 	c.ReplicationFactor = 2
 	c.NodeIds = nil
-	err = firstNode.SendCascadeMessage(c, "test", signed)
-	assert.Error(t, err)
+	err = firstNode.SendCascadeMessage(c, "test", parcel)
+	require.Error(t, err)
 }
 
 func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
@@ -297,11 +333,13 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		}
 	}()
 
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	// init node and register test function
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
-		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
-		service.Start(ctx, core.Components{})
+		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node), scheme)
+		service.OldComponentManager = &HackComponentManager{core.Components{}}
+		service.Init(ctx)
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
 			return nil, nil
@@ -337,12 +375,14 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	signed, _ := message.NewSignedMessage(ctx, e, firstService.GetNodeID(), firstService.GetPrivateKey(), 0)
+	pf := mockParcelFactory(t)
+	parcel, err := pf.Create(ctx, e, firstService.GetNodeID())
+	require.NoError(t, err)
 
-	firstService.SendCascadeMessage(c, "test", signed)
-	success := waitTimeout(&wg, 100*time.Millisecond)
+	firstService.SendCascadeMessage(c, "test", parcel)
+	success := network.WaitTimeout(&wg, 100*time.Millisecond)
 
-	assert.True(t, success)
+	require.True(t, success)
 }
 
 // func Test_processPulse(t *testing.T) {
@@ -380,7 +420,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 //
 // 	// pulse number is zero in MockPulseManager before receiving any pulses (default)
 // 	firstStoredPulse, _ := firstLedger.GetPulseManager().Current(ctx)
-// 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
+// 	require.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
 //
 // 	hh := firstNode.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
 // 	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
@@ -392,13 +432,13 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 //
 // 	// pulse is stored on the first node
 // 	firstStoredPulse, _ = firstLedger.GetPulseManager().Current(ctx)
-// 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
+// 	require.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 //
 // 	// pulse is passed to the second node and stored there, too
-// 	success := waitTimeout(&wg, time.Millisecond*100)
-// 	assert.True(t, success)
+// 	success := WaitTimeout(&wg, time.Millisecond*100)
+// 	require.True(t, success)
 // 	secondStoredPulse, _ := secondLedger.GetPulseManager().Current(ctx)
-// 	assert.Equal(t, core.PulseNumber(1), secondStoredPulse.PulseNumber)
+// 	require.Equal(t, core.PulseNumber(1), secondStoredPulse.PulseNumber)
 // }
 //
 // func Test_processPulse2(t *testing.T) {
@@ -468,7 +508,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 // 	// pulse number is zero in MockPulseManager before receiving any pulses (default)
 // 	ll := ledgers[lastIndex]
 // 	firstStoredPulse, _ := ll.GetPulseManager().Current(ctx)
-// 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
+// 	require.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
 //
 // 	// time.Sleep(time.Millisecond * 100)
 //
@@ -482,14 +522,14 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 //
 // 	// pulse is stored on the first node
 // 	firstStoredPulse, _ = ll.GetPulseManager().Current(ctx)
-// 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
+// 	require.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 //
 // 	// pulse is passed to the other 4 nodes and stored there, too
-// 	success := waitTimeout(&wg, time.Second)
-// 	assert.True(t, success)
+// 	success := WaitTimeout(&wg, time.Second)
+// 	require.True(t, success)
 //
 // 	for _, ldgr := range ledgers {
 // 		pulse, _ := ldgr.GetPulseManager().Current(ctx)
-// 		assert.Equal(t, core.PulseNumber(1), pulse.PulseNumber)
+// 		require.Equal(t, core.PulseNumber(1), pulse.PulseNumber)
 // 	}
 // }

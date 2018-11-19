@@ -17,6 +17,7 @@
 package network
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -26,19 +27,18 @@ import (
 
 // Controller contains network logic.
 type Controller interface {
-	// SendMessage send message to nodeID.
-	SendMessage(nodeID core.RecordRef, name string, msg core.SignedMessage) ([]byte, error)
+	// SendParcel send message to nodeID.
+	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
-	SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error
+	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
 	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
-	Bootstrap() error
-	// AnalyzeNetwork legacy method for old DHT network (should be removed in new network).
-	AnalyzeNetwork() error
+	Bootstrap(ctx context.Context) error
 	// Authorize start authorization process on discovery node.
-	Authorize() error
+	Authorize(ctx context.Context) error
 	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
+	// DEPRECATED
 	ResendPulseToKnownHosts(pulse core.Pulse)
 
 	// GetNodeID get self node id (should be removed in far future).
@@ -52,9 +52,10 @@ type Controller interface {
 type RequestHandler func(Request) (Response, error)
 
 // HostNetwork simple interface to send network requests and process network responses.
+//go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 type HostNetwork interface {
 	// Start listening to network requests.
-	Start()
+	Start(ctx context.Context)
 	// Stop listening to network requests.
 	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
@@ -70,6 +71,27 @@ type HostNetwork interface {
 	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
 	BuildResponse(request Request, responseData interface{}) Response
+}
+
+type ConsensusRequestHandler func(Request)
+
+//go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
+type ConsensusNetwork interface {
+	// Start listening to network requests.
+	Start(ctx context.Context)
+	// Stop listening to network requests.
+	Stop()
+	// PublicAddress returns public address that can be published for all nodes.
+	PublicAddress() string
+	// GetNodeID get current node ID.
+	GetNodeID() core.RecordRef
+
+	// SendRequest send request to a remote node.
+	SendRequest(request Request, receiver core.RecordRef) error
+	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
+	RegisterRequestHandler(t types.PacketType, handler ConsensusRequestHandler)
+	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
+	NewRequestBuilder() RequestBuilder
 }
 
 // Packet is a packet that is transported via network by HostNetwork.
@@ -100,12 +122,17 @@ type RequestBuilder interface {
 	Build() Request
 }
 
-// OnPulse callback function to process new pulse from pulsar.
-type OnPulse func(pulse core.Pulse)
+// PulseHandler interface to process new pulse.
+//go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
+type PulseHandler interface {
+	HandlePulse(ctx context.Context, pulse core.Pulse)
+}
 
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
 	core.NodeNetwork
+	// SetCloudHash set new cloud hash
+	SetCloudHash([]byte)
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
@@ -164,8 +191,10 @@ type PartitionPolicy interface {
 type RoutingTable interface {
 	// Start inject dependencies from components
 	Start(components core.Components)
-	// Resolve NodeID -> Address. Can initiate network requests.
-	Resolve(core.RecordRef) (string, error)
+	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
+	Resolve(core.RecordRef) (*host.Host, error)
+	// ResolveS ShortID -> NodeID, Address for node inside current globe.
+	ResolveS(core.ShortNodeID) (*host.Host, error)
 	// AddToKnownHosts add host to routing table.
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
@@ -174,4 +203,25 @@ type RoutingTable interface {
 	GetLocalNodes() []core.RecordRef
 	// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
 	GetRandomNodes(count int) []host.Host
+}
+
+// InternalTransport simple interface to send network requests and process network responses.
+type InternalTransport interface {
+	// Start listening to network requests, should be started in goroutine.
+	Start(ctx context.Context)
+	// Stop listening to network requests.
+	Stop()
+	// PublicAddress returns public address that can be published for all nodes.
+	PublicAddress() string
+	// GetNodeID get current node ID.
+	GetNodeID() core.RecordRef
+
+	// SendRequestPacket send request packet to a remote node.
+	SendRequestPacket(request Request, receiver *host.Host) (Future, error)
+	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
+	RegisterPacketHandler(t types.PacketType, handler RequestHandler)
+	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
+	NewRequestBuilder() RequestBuilder
+	// BuildResponse create response to an incoming request with Data set to responseData.
+	BuildResponse(request Request, responseData interface{}) Response
 }

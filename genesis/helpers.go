@@ -18,15 +18,15 @@ package genesis
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 var pathToContracts = "application/contract/"
@@ -34,10 +34,7 @@ var pathToContracts = "application/contract/"
 func serializeInstance(contractInstance interface{}) ([]byte, error) {
 	var instanceData []byte
 
-	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&instanceData, ch).Encode(
-		contractInstance,
-	)
+	instanceData, err := core.Serialize(contractInstance)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ serializeInstance ] Problem with CBORing")
 	}
@@ -79,71 +76,30 @@ func getContractsMap() (map[string]string, error) {
 	return contracts, nil
 }
 
-func isLightExecutor(ctx context.Context, c core.Components) (bool, error) {
-	am := c.Ledger.GetArtifactManager()
-	jc := c.Ledger.GetJetCoordinator()
-	pm := c.Ledger.GetPulseManager()
-	currentPulse, err := pm.Current(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
-	}
-
-	network := c.Network
-	nodeID := network.GetNodeID()
-
-	isLightExecutor, err := jc.IsAuthorized(
-		ctx,
-		core.RoleLightExecutor,
-		am.GenesisRef(),
-		currentPulse.PulseNumber,
-		nodeID,
-	)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
-	}
-	if !isLightExecutor {
-		inslogger.FromContext(ctx).Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
-		return false, nil
-	}
-	return true, nil
-}
-
-func getRootDomainRef(ctx context.Context, c core.Components) (*core.RecordRef, error) {
-	am := c.Ledger.GetArtifactManager()
-	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil, true)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
-	}
-	rootRefChildren, err := rootObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootRefChildren.HasNext() {
-		rootDomainRef, err := rootRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
-		}
-		return rootDomainRef, nil
-	}
-	return nil, nil
-}
-
-func getRootMemberPubKey(ctx context.Context, file string) (string, error) {
+func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, string, error) {
 	absPath, err := filepath.Abs(file)
 	if err != nil {
-		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't get abs path")
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't get abs path")
 	}
 	data, err := ioutil.ReadFile(absPath)
 	if err != nil {
-		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't read rootkeys file "+absPath)
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
 	}
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)
 	if err != nil {
-		return "", errors.Wrapf(err, "[ getRootMemberPubKey ] couldn't unmarshal data from %s", absPath)
+		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't unmarshal data from %s", absPath)
+	}
+	if keys["private_key"] == "" {
+		return nil, "", errors.New("[ getKeyFromFile ] empty private key")
 	}
 	if keys["public_key"] == "" {
-		return "", errors.New("empty root public key")
+		return nil, "", errors.New("[ getKeyFromFile ] empty public key")
 	}
-	return keys["public_key"], nil
+	kp := platformpolicy.NewKeyProcessor()
+	key, err := kp.ImportPrivateKey([]byte(keys["private_key"]))
+	if err != nil {
+		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't import private key")
+	}
+	return key, keys["public_key"], nil
 }

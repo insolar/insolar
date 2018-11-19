@@ -23,7 +23,6 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	"github.com/spf13/viper"
 )
 
@@ -135,11 +134,7 @@ func (vm *VersionManager) Remove(key string) {
 	}
 }
 
-func (vm *VersionManager) Start(ctx context.Context, components core.Components) error {
+func (vm *VersionManager) Start(ctx context.Context) error {
 	vm.loadVersionTable()
-	return nil
-}
-
-func (vm *VersionManager) Stop(ctx context.Context) error {
 	return nil
 }

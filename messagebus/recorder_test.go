@@ -25,42 +25,44 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRecorder_Send(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	ctx := inslogger.TestContext(t)
 	msg := message.GenesisRequest{Name: "test"}
-	signedMessage := message.SignedMessage{Msg: &msg}
-	msgHash := GetMessageHash(&signedMessage)
+	parcel := message.Parcel{Msg: &msg}
+	msgHash := GetMessageHash(pcs, &parcel)
 	expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
-	pulse := core.Pulse{PulseNumber: 42}
 	pm := testutils.NewPulseManagerMock(mc)
-	pm.CurrentMock.Return(&pulse, nil)
 	s := NewsenderMock(mc)
-	s.CreateSignedMessageFunc = func(c context.Context, p core.PulseNumber, m core.Message) (core.SignedMessage, error) {
-		return &message.SignedMessage{Msg: m}, nil
+	s.CreateParcelFunc = func(p context.Context, p2 core.Message) (r core.Parcel, r1 error) {
+		return &message.Parcel{Msg: p2}, nil
 	}
+
 	tape := NewtapeMock(mc)
-	recorder := NewRecorder(s, tape, pm)
+	recorder := newRecorder(s, tape, pm, pcs)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		s.SendMessageMock.Expect(ctx, &pulse, &signedMessage)
+		s.SendParcelMock.Expect(ctx, &parcel)
 
 		_, err := recorder.Send(ctx, &msg)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("with reply on the tape doesn't send the message and returns reply from the tape", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		s.SendMessageMock.Set(nil)
+		s.SendParcelMock.Set(nil)
 
 		_, err := recorder.Send(ctx, &msg)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }

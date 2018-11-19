@@ -21,8 +21,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
 
@@ -50,8 +50,8 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 }
 
 // Start starts networking.
-func (t *utpTransport) Start() error {
-	log.Info("Start UTP transport")
+func (t *utpTransport) Start(ctx context.Context) error {
+	inslogger.FromContext(ctx).Info("Start UTP transport")
 	for {
 		conn, err := t.socket.Accept()
 
@@ -99,7 +99,7 @@ func (t *utpTransport) socketDialTimeout(addr string, timeout time.Duration) (ne
 func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 	for {
 		// Wait for Packets
-		msg, err := packet.DeserializePacket(conn)
+		msg, err := t.serializer.DeserializePacket(conn)
 		if err != nil {
 			// TODO should we penalize this Host somehow ? Ban it ?
 			// if err.Error() != "EOF" {

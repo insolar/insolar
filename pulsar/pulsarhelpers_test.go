@@ -17,31 +17,42 @@
 package pulsar
 
 import (
+	"crypto"
 	"testing"
 
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSingAndVerify(t *testing.T) {
+	cs := testutils.NewCryptographyServiceMock(t)
+	cs.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes([]byte("signature"))
+		return &signature, nil
+	}
+	cs.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+		require.Equal(t, p, "publicKey")
+		return true
+	}
+
+	kp := mockKeyProcessor(t)
+
 	for i := 0; i < 20; i++ {
-		// Arrange
-		privateKey, err := ecdsahelper.GeneratePrivateKey()
-		assert.NoError(t, err)
-		publicKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-		assert.NoError(t, err)
 		testData := (&entropygenerator.StandardEntropyGenerator{}).GenerateEntropy()
 
-		signature, err := signData(privateKey, testData)
-		assert.NoError(t, err)
+		signature, err := signData(cs, testData)
+		require.NoError(t, err)
+		assert.ObjectsAreEqual([]byte("signature"), signature)
 
 		// Act
-		checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: testData})
+		checkSignature, err := checkPayloadSignature(cs, kp, &Payload{PublicKey: "publicKey", Signature: signature, Body: testData})
 
 		// Assert
-		assert.NoError(t, err)
-		assert.Equal(t, true, checkSignature)
+		require.NoError(t, err)
+		require.Equal(t, true, checkSignature)
 	}
 
 }

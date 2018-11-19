@@ -21,8 +21,9 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCalculateNextNodes(t *testing.T) {
@@ -46,23 +47,27 @@ func TestCalculateNextNodes(t *testing.T) {
 		Entropy:           core.Entropy{0},
 		ReplicationFactor: 2,
 	}
-	r, _ := CalculateNextNodes(c, nil)
-	assert.Equal(t, []core.RecordRef{nodeIds[5], nodeIds[8]}, r)
-	r, _ = CalculateNextNodes(c, &nodeIds[5])
-	assert.Equal(t, []core.RecordRef{nodeIds[10], nodeIds[6]}, r)
-	r, _ = CalculateNextNodes(c, &nodeIds[10])
-	assert.Equal(t, []core.RecordRef{nodeIds[0], nodeIds[4]}, r)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
+	r, _ := CalculateNextNodes(pcs, c, nil)
+	require.Equal(t, []core.RecordRef{nodeIds[8], nodeIds[5]}, r)
+	r, _ = CalculateNextNodes(pcs, c, &nodeIds[8])
+	require.Equal(t, []core.RecordRef{nodeIds[2], nodeIds[0]}, r)
+	r, _ = CalculateNextNodes(pcs, c, &nodeIds[2])
+	require.Equal(t, []core.RecordRef{nodeIds[11], nodeIds[10]}, r)
 }
 
 func Test_geometricProgressionSum(t *testing.T) {
-	assert.Equal(t, 1022, geometricProgressionSum(2, 2, 9))
-	assert.Equal(t, 39, geometricProgressionSum(3, 3, 3))
+	require.Equal(t, 1022, geometricProgressionSum(2, 2, 9))
+	require.Equal(t, 39, geometricProgressionSum(3, 3, 3))
 }
 
 func Test_calcHash(t *testing.T) {
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
 	ref := core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")
-	c, _ := hex.DecodeString("65e64988fde08c6dc587f30bbe4a6881e94b7e07ec7c152cfc1aa764")
-	assert.Equal(t, c, calcHash(ref, core.Entropy{0}))
+	c, _ := hex.DecodeString("39e1040cc17bd51bb59803edece23a82a7d8fe01394c337c74c003852f1683e5cba9a396556b6e737e15b54950efb46228cbd1a745c85016b9b3b8fbbe0d94d3")
+	require.Equal(t, c, calcHash(pcs, ref, core.Entropy{0}))
 }
 
 func Test_getNextCascadeLayerIndexes(t *testing.T) {
@@ -72,15 +77,15 @@ func Test_getNextCascadeLayerIndexes(t *testing.T) {
 		nodeIds = append(nodeIds, testutils.RandomRef())
 	}
 	startIndex, endIndex := getNextCascadeLayerIndexes(nodeIds, nodeIds[4], 2)
-	assert.Equal(t, 10, startIndex)
-	assert.Equal(t, 12, endIndex)
+	require.Equal(t, 10, startIndex)
+	require.Equal(t, 12, endIndex)
 	startIndex, endIndex = getNextCascadeLayerIndexes(nodeIds, nodeIds[1], 2)
-	assert.Equal(t, 4, startIndex)
-	assert.Equal(t, 6, endIndex)
+	require.Equal(t, 4, startIndex)
+	require.Equal(t, 6, endIndex)
 	startIndex, endIndex = getNextCascadeLayerIndexes(nodeIds, nodeIds[2], 3)
-	assert.Equal(t, 9, startIndex)
-	assert.Equal(t, 12, endIndex)
+	require.Equal(t, 9, startIndex)
+	require.Equal(t, 12, endIndex)
 	startIndex, endIndex = getNextCascadeLayerIndexes(nodeIds, testutils.RandomRef(), 2)
-	assert.Equal(t, len(nodeIds), startIndex)
-	assert.Equal(t, len(nodeIds), endIndex)
+	require.Equal(t, len(nodeIds), startIndex)
+	require.Equal(t, len(nodeIds), endIndex)
 }

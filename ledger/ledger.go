@@ -26,82 +26,41 @@ import (
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	db      *storage.DB
-	am      *artifactmanager.LedgerArtifactManager
-	pm      *pulsemanager.PulseManager
-	jc      *jetcoordinator.JetCoordinator
-	handler *artifactmanager.MessageHandler
-	ls      *localstorage.LocalStorage
+	db              *storage.DB
+	ArtifactManager core.ArtifactManager `inject:""`
+	PulseManager    core.PulseManager    `inject:""`
+	JetCoordinator  core.JetCoordinator  `inject:""`
+	LocalStorage    core.LocalStorage    `inject:""`
 }
 
 // GetPulseManager returns PulseManager.
 func (l *Ledger) GetPulseManager() core.PulseManager {
-	return l.pm
+	log.Warn("GetPulseManager is deprecated. Use component injection.")
+	return l.PulseManager
 }
 
 // GetJetCoordinator returns JetCoordinator.
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
-	return l.jc
+	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
+	return l.JetCoordinator
 }
 
 // GetArtifactManager returns artifact manager to work with.
 func (l *Ledger) GetArtifactManager() core.ArtifactManager {
-	return l.am
+	log.Warn("GetArtifactManager is deprecated. Use component injection.")
+	return l.ArtifactManager
 }
 
 // GetLocalStorage returns local storage to work with.
 func (l *Ledger) GetLocalStorage() core.LocalStorage {
-	return l.ls
-}
-
-// NewLedger creates new ledger instance.
-func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) {
-	var err error
-	db, err := storage.NewDB(conf, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "DB creation failed")
-	}
-	am, err := artifactmanager.NewArtifactManger(db)
-	if err != nil {
-		return nil, errors.Wrap(err, "artifact manager creation failed")
-	}
-	jc, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
-	if err != nil {
-		return nil, errors.Wrap(err, "jet coordinator creation failed")
-	}
-	pm, err := pulsemanager.NewPulseManager(db)
-	if err != nil {
-		return nil, errors.Wrap(err, "pulse manager creation failed")
-	}
-	handler, err := artifactmanager.NewMessageHandler(db)
-	if err != nil {
-		return nil, err
-	}
-	ls, err := localstorage.NewLocalStorage(db)
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.Bootstrap(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	ledger := Ledger{
-		db:      db,
-		am:      am,
-		pm:      pm,
-		jc:      jc,
-		handler: handler,
-		ls:      ls,
-	}
-
-	return &ledger, nil
+	log.Warn("GetLocalStorage is deprecated. Use component injection.")
+	return l.LocalStorage
 }
 
 // NewTestLedger is the util function for creation of Ledger with provided
@@ -111,39 +70,39 @@ func NewTestLedger(
 	am *artifactmanager.LedgerArtifactManager,
 	pm *pulsemanager.PulseManager,
 	jc *jetcoordinator.JetCoordinator,
-	amh *artifactmanager.MessageHandler,
 	ls *localstorage.LocalStorage,
 ) *Ledger {
 	return &Ledger{
-		db:      db,
-		am:      am,
-		pm:      pm,
-		jc:      jc,
-		handler: amh,
-		ls:      ls,
+		db:              db,
+		ArtifactManager: am,
+		PulseManager:    pm,
+		JetCoordinator:  jc,
+		LocalStorage:    ls,
 	}
 }
 
-// Start initializes external ledger dependencies.
-func (l *Ledger) Start(ctx context.Context, c core.Components) error {
-	var err error
-	if err = l.am.Link(c); err != nil {
-		return err
+// GetLedgerComponents returns ledger components.
+func GetLedgerComponents(conf configuration.Ledger) []interface{} {
+	db, err := storage.NewDB(conf, nil)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
-	if err = l.pm.Link(c); err != nil {
-		return err
+	return []interface{}{
+		db,
+		artifactmanager.NewArtifactManger(db),
+		jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator),
+		pulsemanager.NewPulseManager(db),
+		artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(1)),
+		localstorage.NewLocalStorage(db),
 	}
-	if err = l.handler.Link(c); err != nil {
-		return err
-	}
-	if err = l.jc.Link(c); err != nil {
-		return err
-	}
+}
 
+// Start stub.
+func (l *Ledger) Start(ctx context.Context) error {
 	return nil
 }
 
 // Stop stops Ledger gracefully.
 func (l *Ledger) Stop(ctx context.Context) error {
-	return l.db.Close()
+	return nil
 }

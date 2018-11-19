@@ -21,24 +21,45 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInitComponents(t *testing.T) {
 	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
-	cfg.Genesis.RootKeys = "testdata/root_member_keys.json"
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 
-	cm, _, repl, err := InitComponents(ctx, cfg, false)
-	assert.NoError(t, err)
-	assert.NotNil(t, cm)
-	assert.NotNil(t, repl)
+	bootstrapComponents := InitBootstrapComponents(ctx, cfg)
+	cert := InitCertificate(
+		ctx,
+		cfg,
+		false,
+		bootstrapComponents.CryptographyService,
+		bootstrapComponents.KeyProcessor,
+	)
+	cm, _, repl, err := InitComponents(
+		ctx,
+		cfg,
+		bootstrapComponents.CryptographyService,
+		bootstrapComponents.PlatformCryptographyScheme,
+		bootstrapComponents.KeyStore,
+		bootstrapComponents.KeyProcessor,
+		cert,
+		false,
+		"",
+	)
+	require.NoError(t, err)
+	require.NotNil(t, cm)
+	require.NotNil(t, repl)
 
+	err = cm.Init(ctx)
+	require.NoError(t, err)
+
+	// TODO: return it, when go to one role one node
 	err = cm.Start(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = cm.Stop(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

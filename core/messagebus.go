@@ -18,7 +18,6 @@ package core
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"io"
 )
 
@@ -35,30 +34,24 @@ type ReplyType byte
 type Message interface {
 	// Type returns message type.
 	Type() MessageType
-	// Target returns target for this message. If nil, Message will be sent for all actors for the role returned by
-	// Role method.
-	Target() *RecordRef
-	// TargetRole returns jet role to actors of which Message should be sent.
-	TargetRole() JetRole
+
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
 }
 
-type Signature interface {
+type MessageSignature interface {
 	GetSign() []byte
 	GetSender() RecordRef
-	IsValid(key *ecdsa.PublicKey) bool
 }
 
-// SignedMessage by senders private key.
-type SignedMessage interface {
+// Parcel by senders private key.
+type Parcel interface {
 	Message
-	Signature
+	MessageSignature
 
 	Message() Message
 	Context(context.Context) context.Context
-	// Pulse returns pulse when message was sent.
-	Pulse() PulseNumber
+	DelegationToken() []byte
 }
 
 // Reply for an `Message`
@@ -68,6 +61,7 @@ type Reply interface {
 }
 
 // MessageBus interface
+//go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
 	Send(context.Context, Message) (Reply, error)
@@ -90,8 +84,29 @@ type MessageBus interface {
 	WriteTape(ctx context.Context, writer io.Writer) error
 }
 
+type messageBusKey struct{}
+
+// MessageBusFromContext returns MessageBus from context. If provided context does not have MessageBus, fallback will
+// be returned.
+func MessageBusFromContext(ctx context.Context, fallback MessageBus) MessageBus {
+	mb := fallback
+	ctxValue := ctx.Value(messageBusKey{})
+	if ctxValue != nil {
+		ctxBus, ok := ctxValue.(MessageBus)
+		if ok {
+			mb = ctxBus
+		}
+	}
+	return mb
+}
+
+// ContextWithMessageBus returns new context with provided message bus.
+func ContextWithMessageBus(ctx context.Context, bus MessageBus) context.Context {
+	return context.WithValue(ctx, messageBusKey{}, bus)
+}
+
 // MessageHandler is a function for message handling. It should be registered via Register method.
-type MessageHandler func(context.Context, SignedMessage) (Reply, error)
+type MessageHandler func(context.Context, Parcel) (Reply, error)
 
 //go:generate stringer -type=MessageType
 const (
@@ -110,8 +125,6 @@ const (
 
 	// Ledger
 
-	// TypeRequestCall registers call on storage.
-	TypeRequestCall
 	// TypeGetCode retrieves code from storage.
 	TypeGetCode
 	// TypeGetObject retrieves object from storage.
@@ -137,4 +150,13 @@ const (
 
 	// TypeBootstrapRequest used for bootstrap object generation.
 	TypeBootstrapRequest
+)
+
+// DelegationTokenType is an enum type of delegation token
+type DelegationTokenType byte
+
+//go:generate stringer -type=DelegationTokenType
+const (
+	// DTTypePendingExecution allows to continue method calls
+	DTTypePendingExecution DelegationTokenType = iota
 )

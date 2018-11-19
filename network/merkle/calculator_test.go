@@ -18,86 +18,150 @@ package merkle
 
 import (
 	"context"
+	"encoding/hex"
 	"testing"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
-	"github.com/insolar/insolar/testutils/certificate"
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulsar/pulsartestutils"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 type calculatorSuite struct {
 	suite.Suite
 
-	pulseManager core.PulseManager
-	nodeNetwork  core.NodeNetwork
+	pulse       *core.Pulse
+	nodeNetwork core.NodeNetwork
+	service     core.CryptographyService
 
 	calculator Calculator
 }
 
 func (t *calculatorSuite) TestGetNodeProof() {
-	pulse, err := t.pulseManager.Current(context.Background())
-	t.Assert().NoError(err)
-
-	ph, np, err := t.calculator.GetPulseProof(context.Background(), &PulseEntry{Pulse: pulse})
+	ph, np, err := t.calculator.GetPulseProof(&PulseEntry{Pulse: t.pulse})
 
 	t.Assert().NoError(err)
 	t.Assert().NotNil(np)
 
-	valid := np.IsValid(context.Background(), t.nodeNetwork.GetOrigin(), ph)
-	t.Assert().True(valid)
+	key, err := t.service.GetPublicKey()
+	t.Assert().NoError(err)
+
+	t.Assert().True(t.calculator.IsValid(np, ph, key))
 }
 
 func (t *calculatorSuite) TestGetGlobuleProof() {
-	// gp, err := t.calculator.GetGlobuleProof(context.Background())
-	//
-	// t.Assert().NoError(err)
-	// t.Assert().NotNil(gp)
-	//
-	// globuleHash, err := t.calculator.GetGlobuleHash(context.Background(), t.nodeNetwork.GetActiveNodes())
-	// t.Assert().NoError(err)
-	//
-	// valid := gp.IsValid(context.Background(), t.nodeNetwork.GetOrigin(), globuleHash)
-	// t.Assert().True(valid)
+	pulseEntry := &PulseEntry{Pulse: t.pulse}
+	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
+	t.Assert().NoError(err)
+
+	prevCloudHash, _ := hex.DecodeString(
+		"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+	)
+
+	globuleEntry := &GlobuleEntry{
+		PulseEntry: pulseEntry,
+		PulseHash:  ph,
+		ProofSet: map[core.Node]*PulseProof{
+			t.nodeNetwork.GetOrigin(): pp,
+		},
+		PrevCloudHash: prevCloudHash,
+		GlobuleID:     0,
+	}
+	gh, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
+
+	t.Assert().NoError(err)
+	t.Assert().NotNil(gp)
+
+	key, err := t.service.GetPublicKey()
+	t.Assert().NoError(err)
+
+	valid := t.calculator.IsValid(gp, gh, key)
+	t.Assert().True(valid)
 }
 
 func (t *calculatorSuite) TestGetCloudProof() {
-	// cp, err := t.calculator.GetCloudProof(context.Background())
-	//
-	// t.Assert().NoError(err)
-	// t.Assert().NotNil(cp)
-	//
-	// cloudHash, err := t.calculator.GetCloudHash(context.Background())
-	// t.Assert().NoError(err)
-	//
-	// valid := cp.IsValid(context.Background(), t.nodeNetwork.GetOrigin(), cloudHash)
-	// t.Assert().True(valid)
+	pulseEntry := &PulseEntry{Pulse: t.pulse}
+	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
+	t.Assert().NoError(err)
+
+	prevCloudHash, _ := hex.DecodeString(
+		"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+	)
+
+	globuleEntry := &GlobuleEntry{
+		PulseEntry: pulseEntry,
+		PulseHash:  ph,
+		ProofSet: map[core.Node]*PulseProof{
+			t.nodeNetwork.GetOrigin(): pp,
+		},
+		PrevCloudHash: prevCloudHash,
+		GlobuleID:     0,
+	}
+	_, gp, err := t.calculator.GetGlobuleProof(globuleEntry)
+
+	ch, cp, err := t.calculator.GetCloudProof(&CloudEntry{
+		ProofSet:      []*GlobuleProof{gp},
+		PrevCloudHash: prevCloudHash,
+	})
+
+	t.Assert().NoError(err)
+	t.Assert().NotNil(gp)
+
+	key, err := t.service.GetPublicKey()
+	t.Assert().NoError(err)
+
+	valid := t.calculator.IsValid(cp, ch, key)
+	t.Assert().True(valid)
+}
+
+func TestNewCalculator(t *testing.T) {
+	c := NewCalculator()
+	require.NotNil(t, c)
 }
 
 func TestCalculator(t *testing.T) {
-	c := certificate.GetTestCertificate()
-	nk := nodekeeper.GetTestNodekeeper(c)
-	l, clean := ledgertestutils.TmpLedger(t, "", core.Components{})
-
 	calculator := &calculator{}
 
-	cm := component.Manager{}
-	cm.Register(nk, l, c, calculator)
+	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	require.NotNil(t, key)
 
-	assert.NotNil(t, calculator.Ledger)
-	assert.NotNil(t, calculator.NodeNetwork)
-	assert.NotNil(t, calculator.Certificate)
+	service := cryptography.NewKeyBoundCryptographyService(key)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	nk := nodekeeper.GetTestNodekeeper(service)
+
+	am := testutils.NewArtifactManagerMock(t)
+	am.StateFunc = func() (r []byte, r1 error) {
+		return []byte("state"), nil
+	}
+
+	cm := component.Manager{}
+	cm.Inject(nk, am, calculator, service, scheme)
+
+	require.NotNil(t, calculator.ArtifactManager)
+	require.NotNil(t, calculator.NodeNetwork)
+	require.NotNil(t, calculator.CryptographyService)
+	require.NotNil(t, calculator.PlatformCryptographyScheme)
+
+	err := cm.Init(context.Background())
+	require.NoError(t, err)
+
+	pulse := &core.Pulse{
+		PulseNumber:     core.PulseNumber(1337),
+		NextPulseNumber: core.PulseNumber(1347),
+		Entropy:         pulsartestutils.MockEntropyGenerator{}.GenerateEntropy(),
+	}
 
 	s := &calculatorSuite{
-		Suite:        suite.Suite{},
-		calculator:   calculator,
-		pulseManager: l.GetPulseManager(),
-		nodeNetwork:  nk,
+		Suite:       suite.Suite{},
+		calculator:  calculator,
+		pulse:       pulse,
+		nodeNetwork: nk,
+		service:     service,
 	}
 	suite.Run(t, s)
-
-	clean()
 }

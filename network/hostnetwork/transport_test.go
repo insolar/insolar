@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"context"
 	"encoding/gob"
 	"sync"
 	"testing"
@@ -29,7 +30,7 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -40,24 +41,55 @@ const (
 	ID3 string = "345"
 )
 
+var testContext = context.Background()
+
 type MockResolver struct {
-	mapping map[core.RecordRef]string
+	mapping  map[core.RecordRef]*host.Host
+	smapping map[core.ShortNodeID]*host.Host
 }
 
-func (m *MockResolver) Resolve(nodeID core.RecordRef) (string, error) {
+func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
 	result, exist := m.mapping[nodeID]
 	if !exist {
-		return "", errors.New("failed to resolve")
+		return nil, errors.New("failed to resolve")
 	}
 	return result, nil
 }
 
-func (m *MockResolver) AddToKnownHosts(h *host.Host) {
+func (m *MockResolver) ResolveS(id core.ShortNodeID) (*host.Host, error) {
+	result, exist := m.smapping[id]
+	if !exist {
+		return nil, errors.New("failed to resolve")
+	}
+	return result, nil
 }
 
-func (m *MockResolver) addMapping(key, value string) {
+func (m *MockResolver) Start(components core.Components)  {}
+func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
+func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
+func (m *MockResolver) GetLocalNodes() []core.RecordRef   { return nil }
+func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
+
+func (m *MockResolver) addMapping(key, value string) error {
 	k := core.NewRefFromBase58(key)
-	m.mapping[k] = value
+	h, err := host.NewHostN(value, k)
+	if err != nil {
+		return err
+	}
+	m.mapping[k] = h
+	return nil
+}
+
+func (m *MockResolver) addMappingHost(h *host.Host) {
+	m.mapping[h.NodeID] = h
+	m.smapping[h.ShortID] = h
+}
+
+func newMockResolver() *MockResolver {
+	return &MockResolver{
+		mapping:  make(map[core.RecordRef]*host.Host),
+		smapping: make(map[core.ShortNodeID]*host.Host),
+	}
 }
 
 func mockConfiguration(nodeID string, address string) configuration.Configuration {
@@ -70,59 +102,63 @@ func mockConfiguration(nodeID string, address string) configuration.Configuratio
 func TestNewInternalTransport(t *testing.T) {
 	// broken address
 	_, err := NewInternalTransport(mockConfiguration(ID1, "abirvalg"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	address := "127.0.0.1:0"
 	tp, err := NewInternalTransport(mockConfiguration(ID1, address))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer tp.Stop()
-	// assert that new address with correct port has been assigned
-	assert.NotEqual(t, address, tp.PublicAddress())
-	assert.Equal(t, core.NewRefFromBase58(ID1), tp.GetNodeID())
+	// require that new address with correct port has been assigned
+	require.NotEqual(t, address, tp.PublicAddress())
+	require.Equal(t, core.NewRefFromBase58(ID1), tp.GetNodeID())
 }
 
 func TestNewInternalTransport2(t *testing.T) {
 	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
-	assert.NoError(t, err)
-	go tp.Start()
+	require.NoError(t, err)
+	go tp.Start(testContext)
 	// no assertion, check that Stop does not block
 	defer func(t *testing.T) {
 		tp.Stop()
-		assert.True(t, true)
+		require.True(t, true)
 	}(t)
 }
 
 func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err error) {
-	m := MockResolver{
-		mapping: make(map[core.RecordRef]string),
-	}
+	m := newMockResolver()
 
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
 	if err != nil {
 		return nil, nil, err
 	}
-	tr1 := NewHostTransport(i1, &m)
+	tr1 := NewHostTransport(i1, m)
 	i2, err := NewInternalTransport(mockConfiguration(ID2, "127.0.0.1:0"))
 	if err != nil {
 		return nil, nil, err
 	}
-	tr2 := NewHostTransport(i2, &m)
+	tr2 := NewHostTransport(i2, m)
 
-	m.addMapping(id1, tr1.PublicAddress())
-	m.addMapping(id2, tr2.PublicAddress())
+	err = m.addMapping(id1, tr1.PublicAddress())
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id1, tr1.PublicAddress())
+	}
+	err = m.addMapping(id2, tr2.PublicAddress())
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id2, tr2.PublicAddress())
+	}
 
 	return tr1, tr2, nil
 }
 
 func TestNewInternalTransport3(t *testing.T) {
 	_, err := NewInternalTransport(mockConfiguration("", "127.0.0.1:0"))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestNewHostTransport(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	assert.Equal(t, core.NewRefFromBase58(ID1), t1.GetNodeID())
-	assert.Equal(t, core.NewRefFromBase58(ID2), t2.GetNodeID())
-	assert.NoError(t, err)
+	require.Equal(t, core.NewRefFromBase58(ID1), t1.GetNodeID())
+	require.Equal(t, core.NewRefFromBase58(ID2), t2.GetNodeID())
+	require.NoError(t, err)
 
 	count := 10
 	wg := sync.WaitGroup{}
@@ -133,10 +169,10 @@ func TestNewHostTransport(t *testing.T) {
 		wg.Done()
 		return t2.BuildResponse(request, nil), nil
 	}
-	t2.RegisterRequestHandler(types.TypePing, handler)
+	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start()
-	t1.Start()
+	t2.Start(testContext)
+	t1.Start(testContext)
 
 	defer func() {
 		t1.Stop()
@@ -144,81 +180,77 @@ func TestNewHostTransport(t *testing.T) {
 	}()
 
 	for i := 0; i < count; i++ {
-		request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
+		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 		_, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
-	wg.Wait()
+	success := network.WaitTimeout(&wg, time.Second)
+	require.True(t, success)
 }
 
 func TestHostTransport_SendRequestPacket(t *testing.T) {
-	m := MockResolver{
-		mapping: make(map[core.RecordRef]string),
-	}
+	m := newMockResolver()
 
 	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
-	assert.NoError(t, err)
-	t1 := NewHostTransport(i1, &m)
-	t1.Start()
+	require.NoError(t, err)
+	t1 := NewHostTransport(i1, m)
+	t1.Start(testContext)
 	defer t1.Stop()
 
 	unknownID := core.NewRefFromBase58("unknown")
 
 	// should return error because cannot resolve NodeID -> Address
-	request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
+	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	_, err = t1.SendRequest(request, unknownID)
-	assert.Error(t, err)
+	require.Error(t, err)
 
-	m.addMapping(ID2, "abirvalg")
-	m.addMapping(ID3, "127.0.0.1:9090")
+	err = m.addMapping(ID2, "abirvalg")
+	require.Error(t, err)
+	err = m.addMapping(ID3, "127.0.0.1:9090")
+	require.NoError(t, err)
 
 	// should return error because resolved address is invalid
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.Error(t, err)
-
-	// request = t1.NewRequestBuilder().Type(InvalidPacket).Data(nil).Build()
-	// should return error because packet type is invalid
-	// _, err = t1.SendRequest(request, core.NewRefFromBase58(ID3))
-	// assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
 	handler := func(r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
-		assert.Equal(t, core.NewRefFromBase58(ID1), r.GetSender())
-		assert.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
+		require.Equal(t, core.NewRefFromBase58(ID1), r.GetSender())
+		require.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
 		wg.Done()
 		return t2.BuildResponse(r, nil), nil
 	}
 
-	t2.RegisterRequestHandler(types.TypePing, handler)
+	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start()
-	t1.Start()
+	t2.Start(testContext)
+	t1.Start(testContext)
 	defer func() {
 		t1.Stop()
 		t2.Stop()
 	}()
 
-	request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
-	assert.Equal(t, core.NewRefFromBase58(ID1), request.GetSender())
-	assert.Equal(t, t1.PublicAddress(), request.GetSenderHost().Address.String())
+	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
+	require.Equal(t, core.NewRefFromBase58(ID1), request.GetSender())
+	require.Equal(t, t1.PublicAddress(), request.GetSenderHost().Address.String())
 
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
-	wg.Wait()
-	assert.True(t, true)
+	require.NoError(t, err)
+	success := network.WaitTimeout(&wg, time.Second)
+	require.True(t, success)
 }
 
 func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	type Data struct {
 		Number int
@@ -230,63 +262,126 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 		d := r.GetData().(*Data)
 		return t2.BuildResponse(r, &Data{Number: d.Number + 1}), nil
 	}
-	t2.RegisterRequestHandler(types.TypePing, handler)
+	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start()
-	t1.Start()
+	t2.Start(testContext)
+	t1.Start(testContext)
 	defer func() {
 		t1.Stop()
 		t2.Stop()
 	}()
 
 	magicNumber := 42
-	request := t1.NewRequestBuilder().Type(types.TypePing).Data(&Data{Number: magicNumber}).Build()
+	request := t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
 	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
-	assert.Equal(t, f.GetRequest().GetSender(), request.GetSender())
+	require.NoError(t, err)
+	require.Equal(t, f.GetRequest().GetSender(), request.GetSender())
 
 	r, err := f.GetResponse(time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	d := r.GetData().(*Data)
-	assert.Equal(t, magicNumber+1, d.Number)
+	require.Equal(t, magicNumber+1, d.Number)
 
 	magicNumber = 666
-	request = t1.NewRequestBuilder().Type(types.TypePing).Data(&Data{Number: magicNumber}).Build()
+	request = t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
 	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	r = <-f.Response()
 	d = r.GetData().(*Data)
-	assert.Equal(t, magicNumber+1, d.Number)
+	require.Equal(t, magicNumber+1, d.Number)
 }
 
 func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handler := func(r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		time.Sleep(time.Second)
 		return t2.BuildResponse(r, nil), nil
 	}
-	t2.RegisterRequestHandler(types.TypePing, handler)
+	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start()
+	t2.Start(testContext)
 	defer t2.Stop()
-	t1.Start()
+	t1.Start(testContext)
 
-	request := t1.NewRequestBuilder().Type(types.TypePing).Data(nil).Build()
+	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = f.GetResponse(time.Millisecond)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	t1.Stop()
 
 	_, err = f.GetResponse(time.Second)
-	assert.Error(t, err)
+	require.Error(t, err)
+}
+
+func TestHostTransport_WrongHandler(t *testing.T) {
+	t1, t2, err := createTwoHostNetworks(ID1, ID2)
+	require.NoError(t, err)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	handler := func(r network.Request) (network.Response, error) {
+		log.Info("handler triggered")
+		wg.Done()
+		return t2.BuildResponse(r, nil), nil
+	}
+	t2.RegisterRequestHandler(InvalidPacket, handler)
+
+	t2.Start(testContext)
+	t1.Start(testContext)
+	defer func() {
+		t1.Stop()
+		t2.Stop()
+	}()
+
+	request := t1.NewRequestBuilder().Type(types.Ping).Build()
+	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	require.NoError(t, err)
+
+	// should timeout because there is no handler set for Ping packet
+	result := network.WaitTimeout(&wg, time.Millisecond*10)
+	require.False(t, result)
+}
+
+func TestDoubleStart(t *testing.T) {
+	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	require.NoError(t, err)
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	f := func(group *sync.WaitGroup, t network.InternalTransport) {
+		wg.Done()
+		t.Start(testContext)
+	}
+	go f(&wg, tp)
+	go f(&wg, tp)
+	wg.Wait()
+	defer tp.Stop()
+}
+
+func TestHostTransport_RegisterPacketHandler(t *testing.T) {
+	m := newMockResolver()
+
+	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	require.NoError(t, err)
+	tr1 := NewHostTransport(i1, m)
+	defer tr1.Stop()
+	handler := func(request network.Request) (network.Response, error) {
+		return tr1.BuildResponse(request, nil), nil
+	}
+	f := func() {
+		tr1.RegisterRequestHandler(types.Ping, handler)
+	}
+	require.NotPanics(t, f, "first request handler register should not panic")
+	require.Panics(t, f, "second request handler register should panic because it is already registered")
 }

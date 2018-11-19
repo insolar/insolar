@@ -26,8 +26,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/api/requesters"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/require"
 )
 
 type postParams map[string]interface{}
@@ -74,7 +74,7 @@ type getSeedResponse struct {
 type isAuthorized struct {
 	baseResponse
 	PublicKey     string `json:"public_key"`
-	Roles         []int  `json:"roles"`
+	Role          int    `json:"role"`
 	NetCoordCheck bool   `json:"netcoord_auth_success"`
 }
 
@@ -95,7 +95,6 @@ type dumpAllUsersResponse struct {
 
 type bootstrapNode struct {
 	PublicKey string `json:"public_key"`
-	Host      string `json:"host"`
 }
 
 type certificate struct {
@@ -120,18 +119,18 @@ type infoResponse struct {
 
 func createMember(t *testing.T, name string) *user {
 	member, err := newUserWithKeys()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	result, err := signedRequest(&root, "CreateMember", name, member.pubKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ref, ok := result.(string)
-	assert.True(t, ok)
+	require.True(t, ok)
 	member.ref = ref
 	return member
 }
 
 func getBalanceNoErr(t *testing.T, caller *user, reference string) int {
 	balance, err := getBalance(caller, reference)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return balance
 }
 
@@ -150,10 +149,10 @@ func getBalance(caller *user, reference string) (int, error) {
 func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, postResp.StatusCode)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return body
 }
 
@@ -170,24 +169,24 @@ func getSeed(t *testing.T) string {
 
 func getInfo(t *testing.T) infoResponse {
 	resp, err := http.Get(TestURL + "/info")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = json.Unmarshal(body, &info)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return info
 }
 
 func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
 	err := json.Unmarshal(body, &response)
-	assert.NoError(t, err)
-	assert.Nil(t, response.getError())
+	require.NoError(t, err)
+	require.Nil(t, response.getError())
 }
 
 func unmarshalResponseWithError(t *testing.T, body []byte, response responseInterface) {
 	err := json.Unmarshal(body, &response)
-	assert.NoError(t, err)
-	assert.NotNil(t, response.getError())
+	require.NoError(t, err)
+	require.NotNil(t, response.getError())
 }
 
 type response struct {
@@ -221,20 +220,24 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 }
 
 func newUserWithKeys() (*user, error) {
-	key, err := ecdsa.GeneratePrivateKey()
+	ks := platformpolicy.NewKeyProcessor()
+
+	privateKey, err := ks.GeneratePrivateKey()
 	if err != nil {
 		return nil, err
 	}
-	privKeyStr, err := ecdsa.ExportPrivateKey(key)
+
+	privKeyStr, err := ks.ExportPrivateKey(privateKey)
 	if err != nil {
 		return nil, err
 	}
-	pubKeyStr, err := ecdsa.ExportPublicKey(&key.PublicKey)
+	publicKey := ks.ExtractPublicKey(privateKey)
+	pubKeyStr, err := ks.ExportPublicKey(publicKey)
 	if err != nil {
 		return nil, err
 	}
 	return &user{
-		privKey: privKeyStr,
-		pubKey:  pubKeyStr,
+		privKey: string(privKeyStr),
+		pubKey:  string(pubKeyStr),
 	}, nil
 }

@@ -17,10 +17,7 @@
 package network
 
 import (
-	"crypto/ecdsa"
-
 	"github.com/insolar/insolar/core"
-	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 type testNetwork struct {
@@ -30,10 +27,14 @@ func (n *testNetwork) GetNodeID() core.RecordRef {
 	return core.NewRefFromBase58("v1")
 }
 
-func (n *testNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.SignedMessage) ([]byte, error) {
+func (n *testNetwork) GetGlobuleID() core.GlobuleID {
+	return 0
+}
+
+func (n *testNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
 	return make([]byte, 0), nil
 }
-func (n *testNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error {
+func (n *testNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
 	return nil
 }
 func (n *testNetwork) GetAddress() string {
@@ -41,10 +42,6 @@ func (n *testNetwork) GetAddress() string {
 }
 func (n *testNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 
-}
-func (n *testNetwork) GetPrivateKey() *ecdsa.PrivateKey {
-	key, _ := ecdsa2.GeneratePrivateKey()
-	return key
 }
 
 func GetTestNetwork() core.Network {

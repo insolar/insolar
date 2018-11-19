@@ -20,63 +20,51 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const TestPubKey = "test"
-const TestIP = "127.0.0.1"
 
-var TestRoles = []string{"virtual"}
-
-func rolesToStrings(roles []string) []core.NodeRole {
-	var result []core.NodeRole
-	for _, role := range roles {
-		result = append(result, core.GetRoleFromString(role))
-	}
-
-	return result
-}
+var TestRole = "virtual"
 
 func TestNewNodeRecord(t *testing.T) {
 
-	r := rolesToStrings(TestRoles)
-	assert.NotEqual(t, core.RoleUnknown, r)
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
-	assert.NoError(t, err)
-	assert.Len(t, record.Record.Roles, 1)
-	assert.Equal(t, r, record.Record.Roles)
-	assert.Equal(t, TestPubKey, record.Record.PublicKey)
+	r := core.GetRoleFromString(TestRole)
+	require.NotEqual(t, core.RoleUnknown, r)
+	record, err := NewNodeRecord(TestPubKey, TestRole)
+	require.NoError(t, err)
+	require.Equal(t, r, record.Record.Role)
+	require.Equal(t, TestPubKey, record.Record.PublicKey)
 }
 
 func TestFromString(t *testing.T) {
 	role := core.GetRoleFromString("ZZZ")
-	assert.Equal(t, core.RoleUnknown, role)
+	require.Equal(t, core.RoleUnknown, role)
 }
 
 func TestNodeRecord_GetPublicKey(t *testing.T) {
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
-	assert.NoError(t, err)
+	record, err := NewNodeRecord(TestPubKey, TestRole)
+	require.NoError(t, err)
 	pk, err := record.GetPublicKey()
-	assert.NoError(t, err)
-	assert.Equal(t, TestPubKey, pk)
+	require.NoError(t, err)
+	require.Equal(t, TestPubKey, pk)
 }
 
 func TestNodeRecord_GetNodeInfo(t *testing.T) {
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
-	assert.NoError(t, err)
+	record, err := NewNodeRecord(TestPubKey, TestRole)
+	require.NoError(t, err)
 	info, err := record.GetNodeInfo()
-	assert.NoError(t, err)
-	assert.Equal(t, TestPubKey, info.PublicKey)
-	r := rolesToStrings(TestRoles)
-	assert.Equal(t, r, info.Roles)
-	assert.Equal(t, TestIP, info.IP)
+	require.NoError(t, err)
+	require.Equal(t, TestPubKey, info.PublicKey)
+	r := core.GetRoleFromString(TestRole)
+	require.Equal(t, r, info.Role)
 }
 
 func TestNodeRecord_GetRole(t *testing.T) {
-	record, err := NewNodeRecord(TestPubKey, TestRoles, TestIP)
-	assert.NoError(t, err)
+	record, err := NewNodeRecord(TestPubKey, TestRole)
+	require.NoError(t, err)
 	role, err := record.GetRole()
-	assert.NoError(t, err)
-	r := rolesToStrings(TestRoles)
-	assert.Equal(t, r, role)
+	require.NoError(t, err)
+	r := core.GetRoleFromString(TestRole)
+	require.Equal(t, r, role)
 }
