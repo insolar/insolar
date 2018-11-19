@@ -19,7 +19,6 @@ package packets
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -86,75 +85,6 @@ func (ph *PacketHeader) compactPulseAndCustomFlags() uint32 {
 	return result
 }
 
-func (p1p *Phase1Packet) parseReferendumClaim(data []byte) error {
-	claimsSize := len(data)
-	claimsBufReader := bytes.NewReader(data)
-	for claimsSize > 0 {
-		startSize := claimsBufReader.Len()
-		var claimHeader uint16
-		err := binary.Read(claimsBufReader, defaultByteOrder, &claimHeader)
-		if err != nil {
-			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't read claimHeader")
-		}
-
-		claimType := ClaimType(extractClaimTypeFromHeader(claimHeader))
-		// TODO: Do we need claimLength?
-		// claimLength := extractClaimLengthFromHeader(claimHeader)
-		var refClaim ReferendumClaim
-
-		switch claimType {
-		case TypeNodeJoinClaim:
-			refClaim = &NodeJoinClaim{}
-		case TypeCapabilityPollingAndActivation:
-			refClaim = &CapabilityPoolingAndActivation{}
-		case TypeNodeViolationBlame:
-			refClaim = &NodeViolationBlame{}
-		case TypeNodeBroadcast:
-			refClaim = &NodeBroadcast{}
-		case TypeNodeLeaveClaim:
-			refClaim = &NodeLeaveClaim{}
-		}
-		err = refClaim.Deserialize(claimsBufReader)
-		if err != nil {
-			return errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't deserialize claim")
-		}
-		p1p.claims = append(p1p.claims, refClaim)
-
-		claimsSize -= startSize - claimsBufReader.Len()
-	}
-
-	if claimsSize != 0 {
-		return errors.New("[ PacketHeader.parseReferendumClaim ] Problem with claims struct")
-	}
-
-	return nil
-}
-
-func (p1p *Phase1Packet) compactReferendumClaim() ([]byte, error) {
-	result := allocateBuffer(2048)
-	for _, claim := range p1p.claims {
-		claimHeader := makeClaimHeader(claim)
-		err := binary.Write(result, defaultByteOrder, claimHeader)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("[ PacketHeader.compactReferendumClaim ] "+
-				"Can't write claim header. Type: %d. Length: %d", claim.Type(), claim.Length()))
-		}
-
-		rawClaim, err := claim.Serialize()
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("[ PacketHeader.compactReferendumClaim ] "+
-				"Can't serialize claim. Type: %d. Length: %d", claim.Type(), claim.Length()))
-		}
-		_, err = result.Write(rawClaim)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("[ PacketHeader.compactReferendumClaim ] "+
-				"Can't append proofNodePulseRaw."+"Type: %d. Length: %d", claim.Type(), claim.Length()))
-		}
-	}
-
-	return result.Bytes(), nil
-}
-
 func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
 	if header == nil {
 		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
@@ -182,7 +112,7 @@ func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 		}
 		claimsSize := len(claimsBuf) - 8
 
-		err = p1p.parseReferendumClaim(claimsBuf[:claimsSize])
+		p1p.claims, err = parseReferendumClaim(claimsBuf[:claimsSize])
 		if err != nil {
 			return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't parseReferendumClaim")
 		}
@@ -213,7 +143,11 @@ func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
 }
 
 func (p1p *Phase1Packet) Serialize() ([]byte, error) {
-	result := allocateBuffer(2048)
+	result := allocateBuffer(phase1PacketMaxSize)
+
+	if !p1p.hasSection2() && len(p1p.claims) > 0 {
+		return nil, errors.New("invalid Phase1Packet")
+	}
 
 	// serializing of  PacketHeader
 	packetHeaderRaw, err := p1p.packetHeader.Serialize()
@@ -246,7 +180,7 @@ func (p1p *Phase1Packet) Serialize() ([]byte, error) {
 	}
 
 	// serializing of ReferendumClaim
-	claimRaw, err := p1p.compactReferendumClaim()
+	claimRaw, err := serializeClaims(p1p.claims)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
 	}

@@ -112,7 +112,9 @@ func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) error {
 	if phase1PacketSizeForClaims-int(getClaimWithHeaderSize(claim)) < 0 {
 		return errors.New("No space for claim")
 	}
+
 	p1p.claims = append(p1p.claims, claim)
+	p1p.packetHeader.f01 = true
 	return nil
 }
 

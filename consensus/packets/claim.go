@@ -42,7 +42,6 @@ type ReferendumClaim interface {
 // Type 4.
 type NodeBroadcast struct {
 	EmergencyLevel uint8
-	length         uint16
 }
 
 func (nb *NodeBroadcast) Type() ClaimType {
@@ -50,7 +49,7 @@ func (nb *NodeBroadcast) Type() ClaimType {
 }
 
 func (nb *NodeBroadcast) Length() uint16 {
-	return nb.length
+	return 1
 }
 
 // CapabilityPoolingAndActivation is a type 3.
@@ -58,7 +57,6 @@ type CapabilityPoolingAndActivation struct {
 	PollingFlags   uint16
 	CapabilityType uint16
 	CapabilityRef  [ReferenceLength]byte
-	length         uint16
 }
 
 func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
@@ -66,15 +64,13 @@ func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
 }
 
 func (cpa *CapabilityPoolingAndActivation) Length() uint16 {
-	return cpa.length
+	return 4 + 64
 }
 
 // NodeViolationBlame is a type 2.
 type NodeViolationBlame struct {
 	BlameNodeID   uint32
 	TypeViolation uint8
-	claimType     ClaimType
-	length        uint16
 }
 
 func (nvb *NodeViolationBlame) Type() ClaimType {
@@ -82,7 +78,7 @@ func (nvb *NodeViolationBlame) Type() ClaimType {
 }
 
 func (nvb *NodeViolationBlame) Length() uint16 {
-	return nvb.length
+	return 5
 }
 
 // NodeJoinClaim is a type 1, len == 272.
@@ -94,7 +90,6 @@ type NodeJoinClaim struct {
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
 	NodePK                  [64]byte
-	//length uint16
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
@@ -102,13 +97,12 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 }
 
 func (njc *NodeJoinClaim) Length() uint16 {
-	return 0
+	return 0 // todo 20 + 64 + core.RecordRef
 }
 
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
-	length uint16
 }
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {
@@ -116,19 +110,7 @@ func (nlc *NodeLeaveClaim) Type() ClaimType {
 }
 
 func (nlc *NodeLeaveClaim) Length() uint16 {
-	return nlc.length
-}
-
-func NewNodeJoinClaim() *NodeJoinClaim {
-	return &NodeJoinClaim{
-		//length: 272,
-	}
-}
-
-func NewNodViolationBlame() *NodeViolationBlame {
-	return &NodeViolationBlame{
-		claimType: TypeNodeViolationBlame,
-	}
+	return 0
 }
 
 func getClaimSize(claim ReferendumClaim) uint16 {

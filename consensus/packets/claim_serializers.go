@@ -17,7 +17,9 @@
 package packets
 
 import (
+	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
@@ -40,7 +42,9 @@ func extractClaimTypeFromHeader(claimHeader uint16) uint8 {
 // }
 
 func makeClaimHeader(claim ReferendumClaim) uint16 {
-	// TODO: we don't need length
+	if claim == nil {
+		panic("123123123")
+	}
 	var result = claim.Length()
 	result |= uint16(claim.Type()) << claimTypeShift
 
@@ -54,11 +58,6 @@ func (nb *NodeBroadcast) Deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read EmergencyLevel")
 	}
 
-	err = binary.Read(data, defaultByteOrder, &nb.length)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read length")
-	}
-
 	return nil
 }
 
@@ -68,11 +67,6 @@ func (nb *NodeBroadcast) Serialize() ([]byte, error) {
 	err := binary.Write(result, defaultByteOrder, nb.EmergencyLevel)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeBroadcast.Serialize ] Can't write EmergencyLevel")
-	}
-
-	err = binary.Write(result, defaultByteOrder, nb.length)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeBroadcast.Serialize ] Can't write length")
 	}
 
 	return result.Bytes(), nil
@@ -93,11 +87,6 @@ func (cpa *CapabilityPoolingAndActivation) Deserialize(data io.Reader) error {
 	err = binary.Read(data, defaultByteOrder, &cpa.CapabilityRef)
 	if err != nil {
 		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read CapabilityRef")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &cpa.length)
-	if err != nil {
-		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read length")
 	}
 
 	return nil
@@ -121,11 +110,6 @@ func (cpa *CapabilityPoolingAndActivation) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write CapabilityRef")
 	}
 
-	err = binary.Write(result, defaultByteOrder, cpa.length)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write length")
-	}
-
 	return result.Bytes(), nil
 }
 
@@ -139,16 +123,6 @@ func (nvb *NodeViolationBlame) Deserialize(data io.Reader) error {
 	err = binary.Read(data, defaultByteOrder, &nvb.TypeViolation)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeViolationBlame.Deserialize ] Can't read TypeViolation")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &nvb.claimType)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeViolationBlame.Deserialize ] Can't read claimType")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &nvb.length)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeViolationBlame.Deserialize ] Can't read length")
 	}
 
 	return nil
@@ -165,16 +139,6 @@ func (nvb *NodeViolationBlame) Serialize() ([]byte, error) {
 	err = binary.Write(result, defaultByteOrder, nvb.TypeViolation)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeViolationBlame.Serialize ] Can't write TypeViolation")
-	}
-
-	err = binary.Write(result, defaultByteOrder, nvb.claimType)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeViolationBlame.Serialize ] Can't write claimType")
-	}
-
-	err = binary.Write(result, defaultByteOrder, nvb.length)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeViolationBlame.Serialize ] Can't write length")
 	}
 
 	return result.Bytes(), nil
@@ -217,11 +181,6 @@ func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodePK")
 	}
 
-	// err = binary.Read(data, defaultByteOrder, &njc.length)
-	// if err != nil {
-	// 	return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read length")
-	// }
-
 	return nil
 }
 
@@ -263,20 +222,11 @@ func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodePK")
 	}
 
-	// err = binary.Write(result, defaultByteOrder, njc.length)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write length")
-	// }
-
 	return result.Bytes(), nil
 }
 
 // Deserialize implements interface method
 func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &nlc.length)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeLeaveClaim.Deserialize ] Can't read length")
-	}
 
 	return nil
 }
@@ -284,10 +234,81 @@ func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
 // Serialize implements interface method
 func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
 	result := allocateBuffer(64)
-	err := binary.Write(result, defaultByteOrder, nlc.length)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeLeaveClaim.Serialize ] Can't write length")
+	// todo
+
+	return result.Bytes(), nil
+}
+
+func serializeClaims(claims []ReferendumClaim) ([]byte, error) {
+	result := allocateBuffer(2048)
+	for _, claim := range claims {
+		claimHeader := makeClaimHeader(claim)
+		err := binary.Write(result, defaultByteOrder, claimHeader)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("[ serializeClaims ] "+
+				"Can't write claim header. Type: %d. Length: %d", claim.Type(), claim.Length()))
+		}
+
+		rawClaim, err := claim.Serialize()
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("[ serializeClaims ] "+
+				"Can't serialize claim. Type: %d. Length: %d", claim.Type(), claim.Length()))
+		}
+		_, err = result.Write(rawClaim)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("[ serializeClaims ] "+
+				"Can't append proofNodePulseRaw."+"Type: %d. Length: %d", claim.Type(), claim.Length()))
+		}
 	}
 
 	return result.Bytes(), nil
+}
+
+func parseReferendumClaim(data []byte) ([]ReferendumClaim, error) {
+	claimsSize := len(data)
+	claimsBufReader := bytes.NewReader(data)
+	result := make([]ReferendumClaim, 0)
+
+	// get claim header
+	for claimsSize > 0 {
+		startSize := claimsBufReader.Len()
+		var claimHeader uint16
+		err := binary.Read(claimsBufReader, defaultByteOrder, &claimHeader)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't read claimHeader")
+		}
+
+		claimType := ClaimType(extractClaimTypeFromHeader(claimHeader))
+		// TODO: Do we need claimLength?
+		// claimLength := extractClaimLengthFromHeader(claimHeader)
+		var refClaim ReferendumClaim
+
+		switch claimType {
+		case TypeNodeJoinClaim:
+			refClaim = &NodeJoinClaim{}
+		case TypeCapabilityPollingAndActivation:
+			refClaim = &CapabilityPoolingAndActivation{}
+		case TypeNodeViolationBlame:
+			refClaim = &NodeViolationBlame{}
+		case TypeNodeBroadcast:
+			refClaim = &NodeBroadcast{}
+		case TypeNodeLeaveClaim:
+			refClaim = &NodeLeaveClaim{}
+		default:
+			return nil, errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Unsupported claim type.")
+		}
+		err = refClaim.Deserialize(claimsBufReader)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't deserialize claim")
+		}
+		result = append(result, refClaim)
+
+		claimsSize -= startSize - claimsBufReader.Len()
+	}
+
+	if claimsSize != 0 {
+		return nil, errors.New("[ PacketHeader.parseReferendumClaim ] Problem with claims struct")
+	}
+
+	return result, nil
 }
