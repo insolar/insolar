@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRecorder_Send(t *testing.T) {
@@ -55,7 +55,7 @@ func TestRecorder_Send(t *testing.T) {
 		s.SendParcelMock.Expect(ctx, &parcel)
 
 		_, err := recorder.Send(ctx, &msg)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("with reply on the tape doesn't send the message and returns reply from the tape", func(t *testing.T) {
@@ -63,6 +63,6 @@ func TestRecorder_Send(t *testing.T) {
 		s.SendParcelMock.Set(nil)
 
 		_, err := recorder.Send(ctx, &msg)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }

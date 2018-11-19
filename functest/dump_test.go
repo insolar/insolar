@@ -22,46 +22,46 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDumpAllUsers(t *testing.T) {
 	_ = createMember(t, "Member")
 
 	result, err := signedRequest(&root, "DumpAllUsers")
-	assert.NoError(t, err)
-	assert.NotNil(t, result)
+	require.NoError(t, err)
+	require.NotNil(t, result)
 }
 
 func TestDumpUser(t *testing.T) {
 	member := createMember(t, "Member")
 
 	resp, err := signedRequest(&root, "DumpUserInfo", member.ref)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	data, err := base64.StdEncoding.DecodeString(resp.(string))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	result := struct {
 		Member string
 		Wallet int
 	}{}
 	err = json.Unmarshal(data, &result)
-	assert.NoError(t, err)
-	assert.Equal(t, "Member", result.Member)
-	assert.Equal(t, 1000, result.Wallet)
+	require.NoError(t, err)
+	require.Equal(t, "Member", result.Member)
+	require.Equal(t, 1000, result.Wallet)
 }
 
 func TestDumpUserWrongRef(t *testing.T) {
 	_, err := signedRequest(&root, "DumpUserInfo", testutils.RandomRef())
-	assert.EqualError(t, err, "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
+	require.EqualError(t, err, "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
 }
 
 func TestDumpAllUsersNoRoot(t *testing.T) {
 	member := createMember(t, "Member")
 
 	_, err := signedRequest(member, "DumpAllUsers")
-	assert.EqualError(t, err, "[ DumpUserInfo ] Only root can call this method")
+	require.EqualError(t, err, "[ DumpUserInfo ] Only root can call this method")
 }
 
 // todo fix this deadlock
@@ -69,7 +69,7 @@ func _TestDumpUserYourself(t *testing.T) {
 	member := createMember(t, "Member")
 
 	_, err := signedRequest(member, "DumpUserInfo", member.ref)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestDumpUserOther(t *testing.T) {
@@ -77,5 +77,5 @@ func TestDumpUserOther(t *testing.T) {
 	member2 := createMember(t, "Member2")
 
 	_, err := signedRequest(member1, "DumpUserInfo", member2.ref)
-	assert.EqualError(t, err, "[ DumpUserInfo ] You can dump only yourself")
+	require.EqualError(t, err, "[ DumpUserInfo ] You can dump only yourself")
 }

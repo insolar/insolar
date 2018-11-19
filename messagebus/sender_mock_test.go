@@ -13,7 +13,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -773,7 +772,7 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 }
 
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//it can be used with require/require, i.e. require.True(mock.AllMocksCalled())
 func (m *senderMock) AllMocksCalled() bool {
 
 	if m.CreateParcelFunc != nil && atomic.LoadUint64(&m.CreateParcelCounter) == 0 {

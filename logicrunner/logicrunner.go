@@ -119,8 +119,9 @@ type LogicRunner struct {
 	Network                    core.Network                    `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
-
-	ArtifactManager core.ArtifactManager
+	PulseManager               core.PulseManager               `inject:""`
+	ArtifactManager            core.ArtifactManager            `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
 
 	Executors      [core.MachineTypesLastID]core.MachineLogicExecutor
 	machinePrefs   []core.MachineType
@@ -145,8 +146,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		ArtifactManager: nil,
-		Ledger:          nil,
 		Cfg:             cfg,
 		execution:       make(map[Ref]*ExecutionState),
 		caseBind:        core.CaseBind{Records: make(map[Ref][]core.CaseRecord)},
@@ -157,8 +156,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
-	lr.ArtifactManager = lr.Ledger.GetArtifactManager()
-
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
@@ -234,7 +231,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	ref := msg.GetReference()
 
 	es := lr.UpsertExecution(ref)
-	if lr.execution[ref].traceID == inslogger.TraceID(ctx) {
+	if es.traceID == inslogger.TraceID(ctx) {
 		return nil, es.ErrorWrap(nil, "loop detected")
 	}
 	entryPulse := lr.pulse(ctx).PulseNumber
@@ -253,7 +250,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 			es.Unlock()
 		}
 	}()
-	lr.execution[ref].traceID = inslogger.TraceID(ctx)
+	es.traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
 
 	lr.caseBindReplaysMutex.Lock()
@@ -269,7 +266,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := message.ExtractTarget(msg)
-	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
 		ctx,
 		vb.GetRole(),
 		&target,
@@ -444,7 +441,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, es.ErrorWrap(err, "no executor registered")
 	}
 
-	executer := func() (*reply.CallMethod, error) {
+	executeFunction := func() (*reply.CallMethod, error) {
 		defer func() {
 			if es.noWait {
 				es.Unlock()
@@ -490,11 +487,11 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 
 	switch m.ReturnMode {
 	case message.ReturnResult:
-		return executer()
+		return executeFunction()
 	case message.ReturnNoWait:
 		es.noWait = true
 		go func() {
-			_, err := executer()
+			_, err := executeFunction()
 			if err != nil {
 				inslogger.FromContext(ctx).Error(err)
 			}

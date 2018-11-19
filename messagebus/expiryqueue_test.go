@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestQueue(t *testing.T) {
@@ -28,15 +28,15 @@ func TestQueue(t *testing.T) {
 	queue.Push("a")
 	queue.Push("b")
 	queue.Push("c")
-	assert.NotNil(t, queue)
-	assert.Equal(t, queue.items.Len(), 3)
-	assert.Equal(t, queue.Pop(), "a")
-	assert.Equal(t, queue.items.Len(), 2)
-	assert.Equal(t, queue.Pop(), "b")
-	assert.Equal(t, queue.items.Len(), 1)
-	assert.Equal(t, queue.Pop(), "c")
-	assert.Equal(t, queue.items.Len(), 0)
-	assert.Nil(t, queue.Pop())
+	require.NotNil(t, queue)
+	require.Equal(t, queue.items.Len(), 3)
+	require.Equal(t, queue.Pop(), "a")
+	require.Equal(t, queue.items.Len(), 2)
+	require.Equal(t, queue.Pop(), "b")
+	require.Equal(t, queue.items.Len(), 1)
+	require.Equal(t, queue.Pop(), "c")
+	require.Equal(t, queue.items.Len(), 0)
+	require.Nil(t, queue.Pop())
 	queue.Push("a")
 	queue.Push("b")
 	queue.Push("c")
@@ -44,7 +44,7 @@ func TestQueue(t *testing.T) {
 	for _, v := range queue.PopValues() {
 		values = append(values, v.(string))
 	}
-	assert.Equal(t, values, []string{"a", "b", "c"})
+	require.Equal(t, values, []string{"a", "b", "c"})
 }
 
 func TestExpiryQueue(t *testing.T) {
@@ -53,6 +53,6 @@ func TestExpiryQueue(t *testing.T) {
 	queue.Push("b")
 	queue.Push("c")
 	time.Sleep(40 * time.Millisecond)
-	assert.Equal(t, 0, queue.items.Len())
+	require.Equal(t, 0, queue.items.Len())
 
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/satori/go.uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
@@ -37,7 +36,7 @@ import (
 
 func TestGetMessageHash(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
-	assert.Equal(t, 64, len(GetMessageHash(pcs, &message.Parcel{Msg: &message.GenesisRequest{}})))
+	require.Equal(t, 64, len(GetMessageHash(pcs, &message.Parcel{Msg: &message.GenesisRequest{}})))
 }
 
 func TestTape_SetReply(t *testing.T) {
@@ -78,7 +77,7 @@ func TestTape_GetReply(t *testing.T) {
 	tp := storageTape{ls: ls, pulse: 1, id: id}
 	rep, err := tp.GetReply(ctx, []byte{4, 5, 6})
 	require.NoError(t, err)
-	assert.Equal(t, expectedRep, *rep.(*reply.Object))
+	require.Equal(t, expectedRep, *rep.(*reply.Object))
 }
 
 func TestTape_Write(t *testing.T) {
@@ -101,7 +100,7 @@ func TestTape_Write(t *testing.T) {
 	// Write buffer from storageTape.
 	buff := bytes.NewBuffer(nil)
 	err = tp.Write(ctx, buff)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Write expected buffer.
 	expectedBuff := bytes.NewBuffer(nil)
@@ -111,7 +110,7 @@ func TestTape_Write(t *testing.T) {
 	enc.Encode(couple{Key: []byte{1}, Value: []byte{2}})
 	enc.Encode(couple{Key: []byte{3}, Value: []byte{4}})
 
-	assert.Equal(t, expectedBuff.Bytes(), buff.Bytes())
+	require.Equal(t, expectedBuff.Bytes(), buff.Bytes())
 }
 
 func TestNewTapeFromReader(t *testing.T) {
@@ -141,5 +140,5 @@ func TestNewTapeFromReader(t *testing.T) {
 
 	_, err := NewTapeFromReader(ctx, ls, bytes.NewBuffer(buff.Bytes()))
 	require.NoError(t, err)
-	assert.Equal(t, expectedValues, values)
+	require.Equal(t, expectedValues, values)
 }

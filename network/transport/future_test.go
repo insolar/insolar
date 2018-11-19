@@ -23,7 +23,7 @@ import (
 
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewFuture(t *testing.T) {
@@ -32,7 +32,7 @@ func TestNewFuture(t *testing.T) {
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
 
-	assert.Implements(t, (*Future)(nil), f)
+	require.Implements(t, (*Future)(nil), f)
 }
 
 func TestFuture_ID(t *testing.T) {
@@ -41,7 +41,7 @@ func TestFuture_ID(t *testing.T) {
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
 
-	assert.Equal(t, f.ID(), packet.RequestID(1))
+	require.Equal(t, f.ID(), packet.RequestID(1))
 }
 
 func TestFuture_Actor(t *testing.T) {
@@ -50,7 +50,7 @@ func TestFuture_Actor(t *testing.T) {
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
 
-	assert.Equal(t, f.Actor(), n)
+	require.Equal(t, f.Actor(), n)
 }
 
 func TestFuture_Result(t *testing.T) {
@@ -59,7 +59,7 @@ func TestFuture_Result(t *testing.T) {
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
 
-	assert.Empty(t, f.Result())
+	require.Empty(t, f.Result())
 }
 
 func TestFuture_Request(t *testing.T) {
@@ -68,7 +68,7 @@ func TestFuture_Request(t *testing.T) {
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
 
-	assert.Equal(t, f.Request(), m)
+	require.Equal(t, f.Request(), m)
 }
 
 func TestFuture_SetResult(t *testing.T) {
@@ -77,23 +77,23 @@ func TestFuture_SetResult(t *testing.T) {
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
 
-	assert.Empty(t, f.Result())
+	require.Empty(t, f.Result())
 
 	go f.SetResult(m)
 
 	m2 := <-f.Result()
 
-	assert.Equal(t, m, m2)
+	require.Equal(t, m, m2)
 
 	go f.SetResult(m)
 
 	m3, err := f.GetResult(10 * time.Millisecond)
-	assert.NoError(t, err)
-	assert.Equal(t, m, m3)
+	require.NoError(t, err)
+	require.Equal(t, m, m3)
 
 	// no result, timeout
 	_, err = f.GetResult(10 * time.Millisecond)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestFuture_Cancel(t *testing.T) {
@@ -110,8 +110,8 @@ func TestFuture_Cancel(t *testing.T) {
 
 	_, closed := <-f.Result()
 
-	assert.False(t, closed)
-	assert.True(t, cbCalled)
+	require.False(t, closed)
+	require.True(t, cbCalled)
 }
 
 func TestFuture_GetResult(t *testing.T) {
@@ -128,8 +128,8 @@ func TestFuture_GetResult(t *testing.T) {
 	}()
 
 	_, err := f.GetResult(10 * time.Millisecond)
-	assert.Error(t, err)
-	assert.Equal(t, uint32(1), atomic.LoadUint32(&cancelled))
+	require.Error(t, err)
+	require.Equal(t, uint32(1), atomic.LoadUint32(&cancelled))
 }
 
 func TestFuture_GetResult2(t *testing.T) {
@@ -147,5 +147,5 @@ func TestFuture_GetResult2(t *testing.T) {
 		close(c)
 	}()
 	_, err := f.GetResult(10 * time.Millisecond)
-	assert.Error(t, err)
+	require.Error(t, err)
 }

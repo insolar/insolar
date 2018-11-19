@@ -23,7 +23,7 @@ import (
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func initNodes(count int) []TestNode {
@@ -63,8 +63,8 @@ func TestNodeConsensus_DoConsensus(t *testing.T) {
 			log.Info("Do consensus for ", p.self.GetActiveNode().ID().String())
 			result, err := p.consensus.DoConsensus(p.ctx, &mockUnsyncHolder{}, p.self, p.allParticipants)
 			//consensusResult, err := p.consensus.DoConsensus(p.ctx, p.self, p.allParticipants)
-			assert.NoError(t, err)
-			assert.Equal(t, 0, len(result))
+			require.NoError(t, err)
+			require.Equal(t, 0, len(result))
 			//log.Infof("%s consensus result %b", p.self.GetActiveNode().ID().String(), consensusResult)
 		}(n, wg)
 	}

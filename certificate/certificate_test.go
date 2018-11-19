@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,24 +34,24 @@ const TestDifferentKeys = "testdata/different_keys.json"
 
 func TestNewCertificate_NoCert(t *testing.T) {
 	_, err := ReadCertificate(nil, nil, TestInvalidFileCert)
-	assert.EqualError(t, err, "[ ReadCertificate ] failed to read certificate from: "+TestInvalidFileCert)
+	require.EqualError(t, err, "[ ReadCertificate ] failed to read certificate from: "+TestInvalidFileCert)
 }
 
 func TestNewCertificate_BadCert(t *testing.T) {
 	_, err := ReadCertificate(nil, nil, TestBadCert)
-	assert.Contains(t, err.Error(), "failed to parse certificate json")
+	require.Contains(t, err.Error(), "failed to parse certificate json")
 }
 
 func checkKeys(cert *Certificate, cs core.CryptographyService, t *testing.T) {
 	kp := platformpolicy.NewKeyProcessor()
 
 	pubKey, err := cs.GetPublicKey()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pubKeyString, err := kp.ExportPublicKey(pubKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Equal(t, string(pubKeyString), cert.PublicKey)
+	require.Equal(t, string(pubKeyString), cert.PublicKey)
 }
 
 func TestReadCertificate(t *testing.T) {
@@ -67,6 +66,7 @@ func TestReadCertificate(t *testing.T) {
 	require.Equal(t, "2prKtCG51YhseciDY5EnnHapPskNHvrvhSc3HrCvYLKKxXn4K3kFQtiz3QLVD1acpQmaDBHUG2Q988xjSFhswJLs",
 		cert.Reference)
 	require.Equal(t, 7, cert.MajorityRule)
+	require.Equal(t, "0987654321", cert.RootDomainReference)
 
 	bootstrapNodes := []BootstrapNode{
 		BootstrapNode{
@@ -90,7 +90,7 @@ func TestReadCertificate(t *testing.T) {
 func TestReadPrivateKey_BadJson(t *testing.T) {
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	_, err := ReadCertificate(nil, keyProcessor, TestBadCert)
-	assert.Contains(t, err.Error(), "failed to parse certificate json")
+	require.Contains(t, err.Error(), "failed to parse certificate json")
 }
 
 func TestReadPrivateKey_BadKeyPair(t *testing.T) {
@@ -99,5 +99,5 @@ func TestReadPrivateKey_BadKeyPair(t *testing.T) {
 	pk, _ := cs.GetPublicKey()
 
 	_, err := ReadCertificate(pk, kp, TestCert)
-	assert.Contains(t, err.Error(), "Different public keys")
+	require.Contains(t, err.Error(), "Different public keys")
 }

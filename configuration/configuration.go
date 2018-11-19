@@ -37,7 +37,6 @@ type Configuration struct {
 	LogicRunner     LogicRunner
 	APIRunner       APIRunner
 	Pulsar          Pulsar
-	Genesis         Genesis
 	VersionManager  VersionManager
 	KeysPath        string
 	CertificatePath string
@@ -62,7 +61,6 @@ func NewConfiguration() Configuration {
 		LogicRunner:     NewLogicRunner(),
 		APIRunner:       NewAPIRunner(),
 		Pulsar:          NewPulsar(),
-		Genesis:         NewGenesis(),
 		VersionManager:  NewVersionManager(),
 		KeysPath:        "./",
 		CertificatePath: "",

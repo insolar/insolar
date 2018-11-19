@@ -17,15 +17,11 @@
 package rootdomain
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/member"
-	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/networkcoordinator"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -35,53 +31,6 @@ type RootDomain struct {
 	foundation.BaseContract
 	RootMember    core.RecordRef
 	NodeDomainRef core.RecordRef
-}
-
-func makeSeed() []byte {
-	seed := make([]byte, 32)
-	_, err := rand.Read(seed)
-	if err != nil {
-		panic(err)
-	}
-
-	return seed
-}
-
-var INSATTR_Authorize_API = true
-
-// Authorize checks is node authorized ( It's temporary method. Remove it when we have good tests )
-func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
-	privateKey, err := foundation.GeneratePrivateKey()
-	if err != nil {
-		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't generate private key: %s", err.Error())
-	}
-
-	// Make signature
-	seed := makeSeed()
-	signature, err := foundation.Sign(seed, privateKey)
-	if err != nil {
-		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't sign: %s", err.Error())
-	}
-
-	// Register node
-	serPubKey, err := foundation.ExportPublicKey(foundation.ExtractPublicKey(privateKey))
-	if err != nil {
-		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't export public key: %s", err.Error())
-	}
-
-	nd := nodedomain.GetObject(rd.NodeDomainRef)
-	rawJSON, err := nd.RegisterNode(serPubKey, 0, 0, "virtual", "127.0.0.1")
-	if err != nil {
-		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't register node: %s", err.Error())
-	}
-
-	nodeRef, err := networkcoordinator.ExtractNodeRef(rawJSON)
-	if err != nil {
-		return "", core.RoleUnknown, fmt.Errorf("[ RootDomain::Authorize ] Can't extract node ref: %s", err.Error())
-	}
-
-	// Validate
-	return nd.Authorize(core.NewRefFromBase58(nodeRef), seed, signature)
 }
 
 // CreateMember processes create member request

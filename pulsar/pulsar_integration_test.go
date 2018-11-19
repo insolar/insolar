@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTwoPulsars_Handshake(t *testing.T) {
@@ -64,7 +64,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		nil,
 		net.Listen,
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	secondPulsar, err := NewPulsar(
 		configuration.Pulsar{
@@ -83,15 +83,15 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		nil,
 		net.Listen,
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	go firstPulsar.StartServer(ctx)
 	go secondPulsar.StartServer(ctx)
 	err = secondPulsar.EstablishConnectionToPulsar(ctx, "publicKey")
 
-	assert.NoError(t, err)
-	assert.Equal(t, true, firstPulsar.Neighbours["publicKey"].OutgoingClient.IsInitialised())
-	assert.Equal(t, true, secondPulsar.Neighbours["publicKey"].OutgoingClient.IsInitialised())
+	require.NoError(t, err)
+	require.Equal(t, true, firstPulsar.Neighbours["publicKey"].OutgoingClient.IsInitialised())
+	require.Equal(t, true, secondPulsar.Neighbours["publicKey"].OutgoingClient.IsInitialised())
 
 	defer func() {
 		firstPulsar.StopServer(ctx)
@@ -111,7 +111,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	c := core.Components{LogicRunner: lr}
 	c.MessageBus = testmessagebus.NewTestMessageBus(t)
@@ -129,9 +129,9 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig, scheme)
 	serviceNetwork.OldComponentManager = &HackComponentManager{c}
 	serviceNetwork.PulseManager = tempLedger.GetPulseManager()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = serviceNetwork.Init(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	address := serviceNetwork.GetAddress()
 	return tempLedger, cleaner, serviceNetwork, address
 }
@@ -173,27 +173,27 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	// Act
 	go func() {
 		err := newPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}()
 
 	currentPulse, err := bootstrapLedger.GetPulseManager().Current(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
 		time.Sleep(50 * time.Millisecond)
 		currentPulse, err = bootstrapLedger.GetPulseManager().Current(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		count--
 	}
 	time.Sleep(100 * time.Millisecond)
 
 	// Assert
-	assert.NoError(t, err)
-	assert.Equal(t, currentPulse.PulseNumber, core.GenesisPulse.PulseNumber+1)
+	require.NoError(t, err)
+	require.Equal(t, currentPulse.PulseNumber, core.GenesisPulse.PulseNumber+1)
 
 	defer func() {
 		err = bootstrapNodeNetwork.Stop(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		newPulsar.StopServer(ctx)
 
@@ -274,34 +274,34 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	go firstPulsar.StartServer(ctx)
 	go secondPulsar.StartServer(ctx)
 	err = firstPulsar.EstablishConnectionToPulsar(ctx, "publicKey")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Act
 	go func() {
 		err := firstPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}()
 
 	currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
 		time.Sleep(50 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		count--
 	}
 	time.Sleep(200 * time.Millisecond)
 
 	// Assert
-	assert.NoError(t, err)
-	assert.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
-	assert.Equal(t, WaitingForStart, firstPulsar.StateSwitcher.GetState())
-	assert.Equal(t, WaitingForStart, secondPulsar.StateSwitcher.GetState())
-	assert.Equal(t, core.GenesisPulse.PulseNumber+1, firstPulsar.GetLastPulse().PulseNumber)
-	assert.Equal(t, core.GenesisPulse.PulseNumber+1, secondPulsar.GetLastPulse().PulseNumber)
-	assert.Equal(t, 2, len(firstPulsar.GetLastPulse().Signs))
-	assert.Equal(t, 2, len(secondPulsar.GetLastPulse().Signs))
+	require.NoError(t, err)
+	require.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
+	require.Equal(t, WaitingForStart, firstPulsar.StateSwitcher.GetState())
+	require.Equal(t, WaitingForStart, secondPulsar.StateSwitcher.GetState())
+	require.Equal(t, core.GenesisPulse.PulseNumber+1, firstPulsar.GetLastPulse().PulseNumber)
+	require.Equal(t, core.GenesisPulse.PulseNumber+1, secondPulsar.GetLastPulse().PulseNumber)
+	require.Equal(t, 2, len(firstPulsar.GetLastPulse().Signs))
+	require.Equal(t, 2, len(secondPulsar.GetLastPulse().Signs))
 
 	defer func() {
 		usualNodeNetwork.Stop(ctx)
@@ -383,7 +383,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		)
 		switcher.setState(WaitingForStart)
 		switcher.SetPulsar(pulsar)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		pulsars[pulsarIndex] = pulsar
 		go pulsar.StartServer(ctx)
 	}
@@ -391,7 +391,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 		for neighbourIndex := pulsarIndex + 1; neighbourIndex < 7; neighbourIndex++ {
 			err := pulsars[pulsarIndex].EstablishConnectionToPulsar(ctx, "publicKey")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 	}
 
@@ -403,7 +403,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 				connectedNeighbours++
 			}
 		}
-		assert.Equal(t, 6, connectedNeighbours)
+		require.Equal(t, 6, connectedNeighbours)
 	}
 
 	// Main act
@@ -411,28 +411,28 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 	// Need to wait for the moment of brodcasting pulse in the network
 	currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
 		time.Sleep(50 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		count--
 	}
 	// Final sleep for 100% receiving of pulse by all nodes (pulsars and nodes)
 	time.Sleep(200 * time.Millisecond)
 
 	// Assert
-	assert.NoError(t, err)
-	assert.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
+	require.NoError(t, err)
+	require.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
 
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
 	for _, pulsar := range pulsars {
-		assert.Equal(t, WaitingForStart, pulsar.StateSwitcher.GetState())
+		require.Equal(t, WaitingForStart, pulsar.StateSwitcher.GetState())
 		pulsar.lastPulseLock.RLock()
-		assert.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.GetLastPulse().PulseNumber)
-		assert.Equal(t, 7, len(pulsar.GetLastPulse().Signs))
+		require.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.GetLastPulse().PulseNumber)
+		require.Equal(t, 7, len(pulsar.GetLastPulse().Signs))
 
 		for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 			sign := pulsar.GetLastPulse().Signs["publicKey"]
@@ -441,8 +441,8 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 				ChosenPublicKey: sign.ChosenPublicKey,
 				Entropy:         sign.Entropy,
 			}, "publicKey", sign.Signature)
-			assert.Equal(t, true, isOk)
-			assert.NoError(t, err)
+			require.Equal(t, true, isOk)
+			require.NoError(t, err)
 		}
 		pulsar.lastPulseLock.RUnlock()
 	}

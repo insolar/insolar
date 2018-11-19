@@ -20,13 +20,13 @@ import (
 	"net"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewConnectionFactory(t *testing.T) {
 	pool := NewConnectionFactory()
 
-	assert.IsType(t, &udpConnectionFactory{}, pool)
+	require.IsType(t, &udpConnectionFactory{}, pool)
 }
 
 func TestUdpConnectionFactory_Create(t *testing.T) {
@@ -35,9 +35,9 @@ func TestUdpConnectionFactory_Create(t *testing.T) {
 
 	conn, err := pool.Create(addrStr)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.IsType(t, &net.UDPConn{}, conn)
-	assert.Equal(t, addrStr, conn.LocalAddr().String())
+	require.IsType(t, &net.UDPConn{}, conn)
+	require.Equal(t, addrStr, conn.LocalAddr().String())
 
 }
