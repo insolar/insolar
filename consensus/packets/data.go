@@ -23,21 +23,11 @@ import (
 )
 
 type PacketType uint8
-type ClaimType uint8
 type ReferendumType uint8
 
 const (
 	Phase1 = PacketType(iota + 1)
 	Phase2
-)
-
-const (
-	TypeNodeJoinClaim = ClaimType(iota + 1)
-	TypeCapabilityPollingAndActivation
-	TypeNodeViolationBlame
-	TypeNodeBroadcast
-	TypeNodeLeaveClaim
-	TypeChangeNetworkClaim
 )
 
 const HashLength = 64
@@ -79,6 +69,10 @@ func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
 	return nil
 }
 
+func (p1p *Phase1Packet) GetPulseNumber() core.PulseNumber {
+	return core.PulseNumber(p1p.packetHeader.Pulse)
+}
+
 func (p1p *Phase1Packet) GetPulse() core.Pulse {
 	//TODO: need convert method with pulse signature check
 	return core.Pulse{
@@ -114,6 +108,20 @@ func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) er
 	}
 
 	return errors.New("invalid proof fields len")
+}
+
+// TODO this
+func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) error {
+
+	if phase1PacketSizeForClaims-int(getClaimWithHeaderSize(claim)) < 0 {
+		return errors.New("No space for claim")
+	}
+	p1p.claims = append(p1p.claims, claim)
+	return nil
+}
+
+func (p1p *Phase1Packet) GetClaims() []ReferendumClaim {
+	return p1p.claims
 }
 
 type PacketHeader struct {
@@ -164,120 +172,6 @@ func (npp *NodePulseProof) Signature() []byte {
 	return npp.NodeSignature[:]
 }
 
-// --------------REFERENDUM--------------
-
-type ReferendumClaim interface {
-	Serializer
-	Type() ClaimType
-	Length() uint16
-}
-
-// ChangeNetworkClaim uses to change network state.
-type ChangeNetworkClaim struct {
-	length uint16
-}
-
-func (cnc *ChangeNetworkClaim) Type() ClaimType {
-	return TypeChangeNetworkClaim
-}
-
-func (cnc *ChangeNetworkClaim) Length() uint16 {
-	return cnc.length
-}
-
-// NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
-// Type 4.
-type NodeBroadcast struct {
-	EmergencyLevel uint8
-	length         uint16
-}
-
-func (nb *NodeBroadcast) Type() ClaimType {
-	return TypeNodeBroadcast
-}
-
-func (nb *NodeBroadcast) Length() uint16 {
-	return nb.length
-}
-
-// CapabilityPoolingAndActivation is a type 3.
-type CapabilityPoolingAndActivation struct {
-	PollingFlags   uint16
-	CapabilityType uint16
-	CapabilityRef  [ReferenceLength]byte
-	length         uint16
-}
-
-func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
-	return TypeCapabilityPollingAndActivation
-}
-
-func (cpa *CapabilityPoolingAndActivation) Length() uint16 {
-	return cpa.length
-}
-
-// NodeViolationBlame is a type 2.
-type NodeViolationBlame struct {
-	BlameNodeID   uint32
-	TypeViolation uint8
-	claimType     ClaimType
-	length        uint16
-}
-
-func (nvb *NodeViolationBlame) Type() ClaimType {
-	return TypeNodeViolationBlame
-}
-
-func (nvb *NodeViolationBlame) Length() uint16 {
-	return nvb.length
-}
-
-// NodeJoinClaim is a type 1, len == 272.
-type NodeJoinClaim struct {
-	NodeID                  uint32
-	RelayNodeID             uint32
-	ProtocolVersionAndFlags uint32
-	JoinsAfter              uint32
-	NodeRoleRecID           uint32
-	NodeRef                 core.RecordRef
-	NodePK                  [64]byte
-	//length uint16
-}
-
-func (njc *NodeJoinClaim) Type() ClaimType {
-	return TypeNodeJoinClaim
-}
-
-func (njc *NodeJoinClaim) Length() uint16 {
-	return 0
-}
-
-// NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
-// Should be executed with the next pulse. Type 1, len == 0.
-type NodeLeaveClaim struct {
-	length uint16
-}
-
-func (nlc *NodeLeaveClaim) Type() ClaimType {
-	return TypeNodeLeaveClaim
-}
-
-func (nlc *NodeLeaveClaim) Length() uint16 {
-	return nlc.length
-}
-
-func NewNodeJoinClaim() *NodeJoinClaim {
-	return &NodeJoinClaim{
-		//length: 272,
-	}
-}
-
-func NewNodViolationBlame() *NodeViolationBlame {
-	return &NodeViolationBlame{
-		claimType: TypeNodeViolationBlame,
-	}
-}
-
 // ----------------------------------PHASE 2--------------------------------
 
 type ReferendumVote struct {
@@ -313,45 +207,49 @@ type Phase2Packet struct {
 	signatureHeaderSection2 [SignatureLength]byte
 }
 
-func (phase2Packet *Phase2Packet) isPhase3Needed() bool {
-	return phase2Packet.packetHeader.f00
+func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {
+	return core.PulseNumber(p2p.packetHeader.Pulse)
 }
 
-func (phase2Packet *Phase2Packet) hasSection2() bool {
-	return phase2Packet.packetHeader.f01
+func (p2p *Phase2Packet) isPhase3Needed() bool {
+	return p2p.packetHeader.f00
 }
 
-func (phase2Packet *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
+func (p2p *Phase2Packet) hasSection2() bool {
+	return p2p.packetHeader.f01
+}
+
+func (p2p *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
 	if header.PacketType != types.Phase2 {
 		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
 	}
 
-	phase2Packet.packetHeader.setRoutingFields(header, Phase2)
+	p2p.packetHeader.setRoutingFields(header, Phase2)
 
 	return nil
 }
 
-func (phase2Packet *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
+func (p2p *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
-	if phase2Packet.packetHeader.PacketT != Phase2 {
+	if p2p.packetHeader.PacketT != Phase2 {
 		return nil, errors.New("Phase2Packet.GetPacketHeader: wrong packet type")
 	}
 
 	header.PacketType = types.Phase2
-	header.OriginID = phase2Packet.packetHeader.OriginNodeID
-	header.TargetID = phase2Packet.packetHeader.TargetNodeID
+	header.OriginID = p2p.packetHeader.OriginNodeID
+	header.TargetID = p2p.packetHeader.TargetNodeID
 
 	return header, nil
 }
 
-func (phase2Packet *Phase2Packet) GetGlobuleHashSignature() []byte {
-	return phase2Packet.globuleHashSignature[:]
+func (p2p *Phase2Packet) GetGlobuleHashSignature() []byte {
+	return p2p.globuleHashSignature[:]
 }
 
-func (phase2Packet *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {
+func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {
 	if len(globuleHashSignature) == SignatureLength {
-		copy(phase2Packet.globuleHashSignature[:], globuleHashSignature[:SignatureLength])
+		copy(p2p.globuleHashSignature[:], globuleHashSignature[:SignatureLength])
 		return nil
 	}
 

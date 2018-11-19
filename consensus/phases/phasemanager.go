@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
 
@@ -32,7 +33,8 @@ type PhaseManager struct {
 	ThirdPhasePulse      *ThirdPhasePulse      `inject:""`
 	ThirdPhaseReferendum *ThirdPhaseReferendum `inject:""`
 
-	PulseManager core.PulseManager `inject:""`
+	PulseManager core.PulseManager  `inject:""`
+	NodeKeeper   network.NodeKeeper `inject:""`
 }
 
 // NewPhaseManager creates and returns a new phase manager.
@@ -44,16 +46,7 @@ func NewPhaseManager() *PhaseManager {
 func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	var err error
 
-	currentPulse, err := pm.PulseManager.Current(ctx)
-	if err != nil {
-		return errors.Wrap(err, " [ OnPulse ] Failed to get current pulse")
-	}
-
-	if pulse.PulseNumber <= currentPulse.PulseNumber {
-		return errors.Wrap(err, " [ OnPulse ] New pulse number equal or less current")
-	}
-
-	pulseDuration, err := getPulseDuration(currentPulse)
+	pulseDuration, err := getPulseDuration(pulse)
 	if err != nil {
 		return errors.Wrap(err, "[ OnPulse ] Failed to get pulse duration")
 	}

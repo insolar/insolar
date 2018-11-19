@@ -23,14 +23,13 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
 )
 
 // exchangeResults is thread safe results struct
 type exchangeResults struct {
 	mutex  *sync.Mutex
 	data   map[core.RecordRef][]core.Node
-	hash   []*network.NodeUnsyncHash
+	hash   []*NodeUnsyncHash
 	scheme core.PlatformCryptographyScheme
 }
 
@@ -40,7 +39,7 @@ func (r *exchangeResults) writeResultData(id core.RecordRef, data []core.Node) {
 	r.data[id] = data
 }
 
-func (r *exchangeResults) calculateResultHash() []*network.NodeUnsyncHash {
+func (r *exchangeResults) calculateResultHash() []*NodeUnsyncHash {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -70,7 +69,7 @@ func newExchangeResults(scheme core.PlatformCryptographyScheme, participantsCoun
 	return &exchangeResults{
 		mutex:  &sync.Mutex{},
 		data:   make(map[core.RecordRef][]core.Node, participantsCount),
-		hash:   make([]*network.NodeUnsyncHash, 0),
+		hash:   make([]*NodeUnsyncHash, 0),
 		scheme: scheme,
 	}
 }

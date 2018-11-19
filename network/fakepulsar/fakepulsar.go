@@ -27,13 +27,14 @@ import (
 // Fakepulsar needed when the network starts and can't receive a real pulse.
 
 // onPulse is a callbaback for pulse recv.
-type callbackOnPulse func(pulse core.Pulse)
+type callbackOnPulse func(ctx context.Context, pulse core.Pulse)
 
 // FakePulsar is a struct which uses at void network state.
 type FakePulsar struct {
 	onPulse   callbackOnPulse
 	stop      chan bool
 	timeoutMs int32 // ms
+	running   bool
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
@@ -42,6 +43,7 @@ func NewFakePulsar(callback callbackOnPulse, timeoutMs int32) *FakePulsar {
 		onPulse:   callback,
 		timeoutMs: timeoutMs,
 		stop:      make(chan bool),
+		running:   false,
 	}
 }
 
@@ -52,12 +54,13 @@ func (fp *FakePulsar) GetFakePulse() *core.Pulse {
 
 // Start starts sending a fake pulse.
 func (fp *FakePulsar) Start(ctx context.Context) {
+	fp.running = true
 	go func(fp *FakePulsar) {
 		for {
 			select {
 			case <-time.After(time.Millisecond * time.Duration(fp.timeoutMs)):
 				{
-					fp.onPulse(*fp.GetFakePulse())
+					fp.onPulse(ctx, *fp.GetFakePulse())
 				}
 			case <-fp.stop:
 				return
@@ -69,7 +72,11 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 
 // Stop sending a fake pulse.
 func (fp *FakePulsar) Stop(ctx context.Context) {
-	fp.stop <- true
+	if fp.running {
+		fp.stop <- true
+		close(fp.stop)
+		fp.running = false
+	}
 }
 
 func (fp *FakePulsar) newPulse() *core.Pulse {

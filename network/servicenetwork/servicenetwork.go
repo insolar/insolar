@@ -47,7 +47,8 @@ type ServiceNetwork struct {
 	PulseManager        core.PulseManager       `inject:""`
 	Coordinator         core.NetworkCoordinator `inject:""`
 	OldComponentManager OldComponentManager     `inject:""`
-	FakePulsar          *fakepulsar.FakePulsar  `inject:""`
+
+	fakePulsar *fakepulsar.FakePulsar
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -57,6 +58,7 @@ func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCry
 	if err != nil {
 		log.Error("failed to create network components: %s", err.Error())
 	}
+	serviceNetwork.fakePulsar = fakepulsar.NewFakePulsar(serviceNetwork.HandlePulse, conf.Pulsar.PulseTime)
 	serviceNetwork.routingTable = routingTable
 	serviceNetwork.hostNetwork = hostnetwork
 	serviceNetwork.controller = controller
@@ -115,6 +117,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to authorize network")
 	}
 
+	n.fakePulsar.Start(ctx)
+
 	return nil
 }
 
@@ -126,7 +130,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	if !n.isFakePulse(&pulse) {
-		n.FakePulsar.Stop(ctx)
+		n.fakePulsar.Stop(ctx)
 	}
 	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)

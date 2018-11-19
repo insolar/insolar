@@ -17,6 +17,7 @@
 package fakepulsar
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -24,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func onPulse(pulse core.Pulse) {
+func onPulse(ctx context.Context, pulse core.Pulse) {
 }
 
 func TestGetFakePulse(t *testing.T) {
@@ -35,7 +36,8 @@ func TestGetFakePulse(t *testing.T) {
 
 func TestFakePulsar_Start(t *testing.T) {
 	pulsar := NewFakePulsar(onPulse, 1000)
-	pulsar.Start()
+	ctx := context.TODO()
+	pulsar.Start(ctx)
 	time.Sleep(time.Millisecond * 1100)
-	pulsar.Stop()
+	pulsar.Stop(ctx)
 }
