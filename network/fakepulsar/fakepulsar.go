@@ -17,6 +17,7 @@
 package fakepulsar
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -50,7 +51,7 @@ func (fp *FakePulsar) GetFakePulse() *core.Pulse {
 }
 
 // Start starts sending a fake pulse.
-func (fp *FakePulsar) Start() {
+func (fp *FakePulsar) Start(ctx context.Context) {
 	go func(fp *FakePulsar) {
 		for {
 			select {
@@ -67,7 +68,7 @@ func (fp *FakePulsar) Start() {
 }
 
 // Stop sending a fake pulse.
-func (fp *FakePulsar) Stop() {
+func (fp *FakePulsar) Stop(ctx context.Context) {
 	fp.stop <- true
 }
 
