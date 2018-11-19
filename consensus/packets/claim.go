@@ -23,8 +23,8 @@ import (
 type ClaimType uint8
 
 const (
-	TypeNodeJoinClaim     = ClaimType(iota + 1)
-	TypeNodeAnnounceClaim = ClaimType(iota + 1)
+	TypeNodeJoinClaim = ClaimType(iota + 1)
+	TypeNodeAnnounceClaim
 	TypeCapabilityPollingAndActivation
 	TypeNodeViolationBlame
 	TypeNodeBroadcast
@@ -32,11 +32,10 @@ const (
 	TypeChangeNetworkClaim
 )
 
-const ClaimHeaderSize = 2
+const claimHeaderSize = 2
 
 // ChangeNetworkClaim uses to change network state.
 type ChangeNetworkClaim struct {
-	length uint16
 }
 
 func (cnc *ChangeNetworkClaim) Type() ClaimType {
@@ -94,10 +93,6 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 	return TypeNodeJoinClaim
 }
 
-func (njc *NodeJoinClaim) Length() uint16 {
-	return 0
-}
-
 // NodeJoinClaim is a type 5, len == 272.
 type NodeAnnounceClaim struct {
 	NodeJoinClaim
@@ -115,7 +110,6 @@ func (nac *NodeAnnounceClaim) Node() core.Node {
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
-	length uint16
 }
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {
