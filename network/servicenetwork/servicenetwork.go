@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
+	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/pkg/errors"
@@ -48,6 +49,8 @@ type ServiceNetwork struct {
 	Coordinator         core.NetworkCoordinator `inject:""`
 	OldComponentManager OldComponentManager     `inject:""`
 	PhaseManager        phases.PhaseManager     `inject:""`
+
+	fakePulsar *fakepulsar.FakePulsar
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -57,6 +60,7 @@ func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCry
 	if err != nil {
 		log.Error("failed to create network components: %s", err.Error())
 	}
+	serviceNetwork.fakePulsar = fakepulsar.NewFakePulsar(serviceNetwork.HandlePulse, conf.Pulsar.PulseTime)
 	serviceNetwork.routingTable = routingTable
 	serviceNetwork.hostNetwork = hostnetwork
 	serviceNetwork.controller = controller
@@ -115,6 +119,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to authorize network")
 	}
 
+	n.fakePulsar.Start(ctx)
+
 	return nil
 }
 
@@ -125,6 +131,9 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
+	if !n.isFakePulse(&pulse) {
+		n.fakePulsar.Stop(ctx)
+	}
 	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
@@ -165,6 +174,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
 	}
+}
+
+func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
+	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
 }
 
 // NewNetworkComponents create network.HostNetwork and network.Controller for new network
