@@ -45,3 +45,16 @@ func (t *PendingExecution) Verify(msg core.Message) (bool, error) {
 		return false, errors.Errorf("Message of type %s can't be delegated with %s token", t.Type(), mt)
 	}
 }
+
+
+type GetObjectRedirect struct {
+	BaseDelegationToken
+}
+
+func (t *GetObjectRedirect) Type() core.DelegationTokenType {
+	return core.DTTypeGetObjectRedirect
+}
+
+func (t *GetObjectRedirect) Verify(parcel core.Parcel) (bool, error) {
+	panic("")
+}
