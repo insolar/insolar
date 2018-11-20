@@ -79,7 +79,8 @@ func TestTransportConsensus_SendRequest(t *testing.T) {
 		cn2.Stop()
 	}()
 
-	request := cn1.NewRequestBuilder().Type(types.Phase1).Data(&packets.Phase1Packet{}).Build()
+	packet := packets.NewPhase1Packet()
+	request := cn1.NewRequestBuilder().Type(types.Phase1).Data(packet).Build()
 	err = cn1.SendRequest(request, cn2.GetNodeID())
 	require.NoError(t, err)
 	success := network.WaitTimeout(&wg, time.Second)
