@@ -42,6 +42,7 @@ type MessageHandler struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
+	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 }
 
 // NewMessageHandler creates new handler.
