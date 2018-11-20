@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -229,5 +230,8 @@ func (rpc *RPCController) Start() {
 }
 
 func NewRPCController(options *common.Options, hostNetwork network.HostNetwork, scheme core.PlatformCryptographyScheme) *RPCController {
-	return &RPCController{options: options, hostNetwork: hostNetwork, methodTable: make(map[string]core.RemoteProcedure)}
+	return &RPCController{options: options,
+		hostNetwork: hostNetwork,
+		methodTable: make(map[string]core.RemoteProcedure),
+		scheme:      platformpolicy.NewPlatformCryptographyScheme()}
 }

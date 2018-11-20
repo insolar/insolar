@@ -66,9 +66,10 @@ func getTestData(t *testing.T) (
 ) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	mb := testmessagebus.NewTestMessageBus(t)
 	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, PlatformCryptographyScheme: scheme, recent: storage.NewRecentStorage(1)}
+
 	handler.Bus = mb
 	err := handler.Init(ctx)
 	require.NoError(t, err)

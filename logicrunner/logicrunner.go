@@ -442,7 +442,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, es.ErrorWrap(err, "no executor registered")
 	}
 
-	executer := func() (*reply.CallMethod, error) {
+	executeFunction := func() (*reply.CallMethod, error) {
 		defer func() {
 			if es.noWait {
 				es.Unlock()
@@ -488,11 +488,11 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 
 	switch m.ReturnMode {
 	case message.ReturnResult:
-		return executer()
+		return executeFunction()
 	case message.ReturnNoWait:
 		es.noWait = true
 		go func() {
-			_, err := executer()
+			_, err := executeFunction()
 			if err != nil {
 				inslogger.FromContext(ctx).Error(err)
 			}

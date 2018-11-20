@@ -138,16 +138,20 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	errstr := ""
+	if validationError != nil {
+		errstr = validationError.Error()
+	}
 	_, err := lr.MessageBus.Send(
 		ctx,
 		&message.ValidationResults{
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
-			Error:            validationError.Error(),
+			Error:            errstr,
 		},
 	)
 
-	return nil, err
+	return &reply.OK{}, err
 }
 
 func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
@@ -159,7 +163,7 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return &reply.OK{}, nil
 }
 
 func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
@@ -169,7 +173,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 	}
 	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
 	c.AddExecutor(ctx, inmsg, msg)
-	return nil, nil
+	return &reply.OK{}, nil
 }
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
