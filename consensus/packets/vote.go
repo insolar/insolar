@@ -23,6 +23,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const NodeListHashLength = 32
+
 type VoteType uint8
 
 const (
@@ -37,10 +39,22 @@ type ReferendumVote interface {
 	Type() VoteType
 }
 
-// todo: unused, remove
 type NodeJoinSupplementaryVote struct {
+}
+
+type StateFraudNodeSupplementaryVote struct {
+	Node1PulseProof NodePulseProof
+	Node2PulseProof NodePulseProof
+	PulseData       PulseData // optional
+}
+
+type NodeListSupplementaryVote struct {
 	NodeListCount uint16
 	NodeListHash  [32]byte
+}
+
+type MissingNodeSupplementaryVote struct {
+	NodePulseProof NodePulseProof
 }
 
 func (nlv *NodeJoinSupplementaryVote) Type() VoteType {
@@ -48,13 +62,13 @@ func (nlv *NodeJoinSupplementaryVote) Type() VoteType {
 }
 
 // Deserialize implements interface method
-func (v *NodeJoinSupplementaryVote) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, v.NodeListCount)
+func (v *NodeListSupplementaryVote) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &v.NodeListCount)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeListVote.Deserialize ] Can't read NodeListCount")
 	}
 
-	err = binary.Read(data, defaultByteOrder, v.NodeListHash)
+	err = binary.Read(data, defaultByteOrder, &v.NodeListHash)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeListVote.Deserialize ] Can't read NodeListHash")
 	}
@@ -63,8 +77,8 @@ func (v *NodeJoinSupplementaryVote) Deserialize(data io.Reader) error {
 }
 
 // Serialize implements interface method
-func (nlv *NodeJoinSupplementaryVote) Serialize() ([]byte, error) {
-	result := allocateBuffer(64)
+func (nlv *NodeListSupplementaryVote) Serialize() ([]byte, error) {
+	result := allocateBuffer(34)
 	err := binary.Write(result, defaultByteOrder, nlv.NodeListCount)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeListVote.Serialize ] Can't write NodeListCount")
