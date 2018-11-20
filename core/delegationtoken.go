@@ -27,5 +27,5 @@ type DelegationToken interface {
 	Type() DelegationTokenType
 
 	// Verify checks against the token. See also delegationtoken.Verify(...)
-	Verify(msg Message) (bool, error)
+	Verify(parcel Parcel) (bool, error)
 }
