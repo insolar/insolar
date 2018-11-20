@@ -227,16 +227,12 @@ func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
 
 // Deserialize implements interface method
 func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
-
 	return nil
 }
 
 // Serialize implements interface method
 func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
-	result := allocateBuffer(64)
-	// todo
-
-	return result.Bytes(), nil
+	return nil, nil
 }
 
 func serializeClaims(claims []ReferendumClaim) ([]byte, error) {
