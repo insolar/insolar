@@ -182,8 +182,8 @@ func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetOb
 
 
 
-func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.GetObject)
+func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.GetObject)
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
 	if err != nil {
