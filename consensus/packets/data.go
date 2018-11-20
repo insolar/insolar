@@ -49,7 +49,13 @@ type Phase1Packet struct {
 
 	// --------------------
 	// signature contains signature of Header + Section 1 + Section 2
-	signature uint64
+	Signature []byte
+}
+
+func NewPhase1Packet() *Phase1Packet {
+	return &Phase1Packet{
+		Signature: make([]byte, SignatureLength),
+	}
 }
 
 func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
@@ -110,13 +116,26 @@ func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) er
 	return errors.New("invalid proof fields len")
 }
 
-// TODO this
+// AddClaim adds claim if phase1Packet has space for it, otherwise returns error
 func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) error {
 
-	if phase1PacketSizeForClaims-int(getClaimWithHeaderSize(claim)) < 0 {
+	getClaimSize := func(claims ...ReferendumClaim) int {
+		result := 0
+		for _, cl := range claims {
+			result += int(getClaimWithHeaderSize(cl))
+			result += claimHeaderSize
+		}
+		return result
+	}
+
+	claimSize := getClaimSize(append(p1p.claims, claim)...)
+
+	if claimSize > phase1PacketSizeForClaims {
 		return errors.New("No space for claim")
 	}
+
 	p1p.claims = append(p1p.claims, claim)
+	p1p.packetHeader.f01 = true
 	return nil
 }
 
@@ -198,13 +217,20 @@ type Phase2Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    [HashLength]byte
+	globuleHashSignature    []byte
 	deviantBitSet           DeviantBitSet
-	signatureHeaderSection1 [SignatureLength]byte
+	SignatureHeaderSection1 []byte
 
 	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
-	signatureHeaderSection2 [SignatureLength]byte
+	SignatureHeaderSection2 []byte
+}
+
+func NewPhase2Packet() *Phase2Packet {
+	return &Phase2Packet{
+		SignatureHeaderSection1: make([]byte, SignatureLength),
+		SignatureHeaderSection2: make([]byte, SignatureLength),
+	}
 }
 
 func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {

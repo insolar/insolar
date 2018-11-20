@@ -24,7 +24,6 @@ import (
 
 func makeNodeBroadCast() *NodeBroadcast {
 	nodeBroadcast := &NodeBroadcast{}
-	nodeBroadcast.length = uint16(3)
 	nodeBroadcast.EmergencyLevel = uint8(4)
 
 	return nodeBroadcast
@@ -34,15 +33,9 @@ func TestNodeBroadcast(t *testing.T) {
 	checkSerializationDeserialization(t, makeNodeBroadCast())
 }
 
-func TestNodeBroadcast_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeNodeBroadCast(),
-		"[ NodeBroadcast.Deserialize ] Can't read length: unexpected EOF")
-}
-
 func makeCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
 	capabilityPoolingAndActivation := &CapabilityPoolingAndActivation{}
 	capabilityPoolingAndActivation.PollingFlags = uint16(10)
-	capabilityPoolingAndActivation.length = uint16(7)
 	capabilityPoolingAndActivation.CapabilityType = uint16(7)
 	capabilityPoolingAndActivation.CapabilityRef = randomArray64()
 
@@ -53,15 +46,8 @@ func TestCapabilityPoolingAndActivation(t *testing.T) {
 	checkSerializationDeserialization(t, makeCapabilityPoolingAndActivation())
 }
 
-func TestCapabilityPoolingAndActivation_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeCapabilityPoolingAndActivation(),
-		"[ CapabilityPoolingAndActivation.Deserialize ] Can't read length: unexpected EOF")
-}
-
 func makeNodeViolationBlame() *NodeViolationBlame {
 	nodeViolationBlame := &NodeViolationBlame{}
-	nodeViolationBlame.length = uint16(2)
-	nodeViolationBlame.claimType = TypeNodeViolationBlame
 	nodeViolationBlame.TypeViolation = uint8(4)
 
 	return nodeViolationBlame
@@ -69,11 +55,6 @@ func makeNodeViolationBlame() *NodeViolationBlame {
 
 func TestNodeViolationBlame(t *testing.T) {
 	checkSerializationDeserialization(t, makeNodeViolationBlame())
-}
-
-func TestNodeViolationBlame_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeNodeViolationBlame(),
-		"[ NodeViolationBlame.Deserialize ] Can't read length: unexpected EOF")
 }
 
 func makeNodeJoinClaim() *NodeJoinClaim {
@@ -100,13 +81,9 @@ func TestNodeJoinClaim_BadData(t *testing.T) {
 
 func TestNodeLeaveClaim(t *testing.T) {
 	nodeLeaveClaim := &NodeLeaveClaim{}
-	nodeLeaveClaim.length = uint16(333)
 	checkSerializationDeserialization(t, nodeLeaveClaim)
 }
 
-func TestNodeLeaveClaim_BadData(t *testing.T) {
-	nodeLeaveClaim := &NodeLeaveClaim{}
-	nodeLeaveClaim.length = uint16(333)
-	checkBadDataSerializationDeserialization(t, nodeLeaveClaim,
-		"[ NodeLeaveClaim.Deserialize ] Can't read length: unexpected EOF")
+func TestMakeClaimHeader(t *testing.T) {
+
 }

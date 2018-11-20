@@ -25,7 +25,8 @@ const phase1PacketMaxSize = 1400
 
 var (
 	phase1PacketSizeForClaims int
-	claimSizeMap              map[ClaimType]uint16
+	// claimSizeMap contains serialized size of each claim type without header(2 bytes)
+	claimSizeMap map[ClaimType]uint16
 )
 
 // init packets and claims size variables
@@ -42,8 +43,10 @@ func init() {
 
 	claimSizeMap = make(map[ClaimType]uint16, 5)
 	claimSizeMap[TypeNodeJoinClaim] = sizeOf(&NodeJoinClaim{})
+	claimSizeMap[TypeNodeAnnounceClaim] = sizeOf(&NodeJoinClaim{})
 	claimSizeMap[TypeCapabilityPollingAndActivation] = sizeOf(&CapabilityPoolingAndActivation{})
 	claimSizeMap[TypeNodeViolationBlame] = sizeOf(&NodeViolationBlame{})
 	claimSizeMap[TypeNodeBroadcast] = sizeOf(&NodeBroadcast{})
 	claimSizeMap[TypeNodeLeaveClaim] = sizeOf(&NodeLeaveClaim{})
+	claimSizeMap[TypeChangeNetworkClaim] = sizeOf(&NodeLeaveClaim{})
 }

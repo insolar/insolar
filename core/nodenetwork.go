@@ -23,6 +23,7 @@ import (
 // ShortNodeID is the shortened ID of node that is unique inside the globe
 type ShortNodeID uint32
 
+//go:generate minimock -i github.com/insolar/insolar/core.Node -o ../testutils/network -s _mock.go
 type Node interface {
 	// ID is the unique identifier of the node
 	ID() RecordRef
@@ -34,7 +35,7 @@ type Node interface {
 	Roles() []NodeRole
 	// Role is the candidate Role for the node
 	Role() NodeRole
-	// GetPublicKey is the public key of the node
+	// PublicKey is the public key of the node
 	PublicKey() crypto.PublicKey
 	// PhysicalAddress is the network address of the node
 	PhysicalAddress() string

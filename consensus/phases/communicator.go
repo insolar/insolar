@@ -52,6 +52,8 @@ type phase2Result struct {
 type NaiveCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
 	PulseHandler     network.PulseHandler     `inject:""`
+	Cryptography     core.CryptographyService `inject:""`
+	NodeNetwork      core.NodeNetwork         `inject:""`
 
 	phase1result chan phase1Result
 	phase2result chan phase2Result
@@ -195,6 +197,7 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 		log.Errorln("invalid Phase1Packet")
 		return
 	}
+
 	newPulse := p.GetPulse()
 
 	if newPulse.PulseNumber < nc.getPulseNumber() {

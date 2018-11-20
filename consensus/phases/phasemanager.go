@@ -27,23 +27,27 @@ import (
 	"github.com/pkg/errors"
 )
 
-type PhaseManager struct {
-	FirstPhase           *FirstPhase           `inject:""`
-	SecondPhase          *SecondPhase          `inject:""`
-	ThirdPhasePulse      *ThirdPhasePulse      `inject:""`
-	ThirdPhaseReferendum *ThirdPhaseReferendum `inject:""`
+type PhaseManager interface {
+	OnPulse(ctx context.Context, pulse *core.Pulse) error
+}
+
+type Phases struct {
+	FirstPhase           *FirstPhase
+	SecondPhase          *SecondPhase
+	ThirdPhasePulse      *ThirdPhasePulse
+	ThirdPhaseReferendum *ThirdPhaseReferendum
 
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`
 }
 
 // NewPhaseManager creates and returns a new phase manager.
-func NewPhaseManager() *PhaseManager {
-	return &PhaseManager{}
+func NewPhaseManager() PhaseManager {
+	return &Phases{}
 }
 
 // Start starts calculate args on phases.
-func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	var err error
 
 	pulseDuration, err := getPulseDuration(pulse)
