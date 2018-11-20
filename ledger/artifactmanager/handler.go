@@ -200,7 +200,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 			if stateID == nil {
 				return nil, err
 			}
-			return h.createRedirect(ctx, msg, stateID, stateID.Pulse())
+			return h.createRedirect(ctx, parcel, msg, stateID, stateID.Pulse())
 		default:
 			return nil, err
 		}
