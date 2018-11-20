@@ -24,7 +24,6 @@ import (
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
@@ -117,8 +116,6 @@ func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) 
 // GetBlob returns binary value stored by record ID.
 func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 	k := prefixkey(scopeIDBlob, id[:])
-	inslogger.FromContext(ctx).Debugf(
-		"GetRecord by id %v (prefix=%v)", id, byte2hex(scopeIDBlob))
 	return m.get(ctx, k)
 }
 
@@ -149,8 +146,6 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, id[:])
-	inslogger.FromContext(ctx).Debugf(
-		"GetRecord by id %v (prefix=%v)", id, byte2hex(scopeIDRecord))
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -233,7 +228,7 @@ func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.Pul
 
 // set stores value by key.
 func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
-	inslogger.FromContext(ctx).Debugf("set key %v", bytes2hex(key))
+	debugf(ctx, "set key %v", bytes2hex(key))
 
 	m.txupdates[string(key)] = keyval{k: key, v: value}
 	return nil
@@ -241,7 +236,7 @@ func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
 
 // get returns value by key.
 func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error) {
-	inslogger.FromContext(ctx).Debugf("get key %v", bytes2hex(key))
+	debugf(ctx, "get key %v", bytes2hex(key))
 
 	if kv, ok := m.txupdates[string(key)]; ok {
 		return kv.v, nil
