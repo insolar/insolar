@@ -1941,7 +1941,5 @@ package main
 	assert.NoError(t, err, "contract call")
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	refFromMethod = r.([]interface{})[0].([]byte)
-	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(refFromMethod))
-
-	ValidateAllResults(t, ctx, lr)
+	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(refFromMethod), "Compare Code Prototypes")
 }
