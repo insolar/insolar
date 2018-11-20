@@ -1938,6 +1938,7 @@ package main
 	assert.Equal(t, *cb.Codes["two"], Ref{}.FromSlice(refFromMethod), "Compare Code Refs")
 
 	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetChildPrototype", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	assert.NoError(t, err, "contract call")
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	refFromMethod = r.([]interface{})[0].([]byte)
 	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(refFromMethod))
