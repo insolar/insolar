@@ -51,7 +51,7 @@ type Parcel interface {
 
 	Message() Message
 	Context(context.Context) context.Context
-	DelegationToken() []byte
+	DelegationToken() DelegationToken
 }
 
 // Reply for an `Message`
