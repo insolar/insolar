@@ -2,7 +2,6 @@ package reply
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 )
 
 type GetObjectRedirectReply struct {
