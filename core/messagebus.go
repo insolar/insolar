@@ -151,12 +151,3 @@ const (
 	// TypeBootstrapRequest used for bootstrap object generation.
 	TypeBootstrapRequest
 )
-
-// DelegationTokenType is an enum type of delegation token
-type DelegationTokenType byte
-
-//go:generate stringer -type=DelegationTokenType
-const (
-	// DTTypePendingExecution allows to continue method calls
-	DTTypePendingExecution DelegationTokenType = iota
-)
