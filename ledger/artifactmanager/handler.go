@@ -161,9 +161,12 @@ func (h *MessageHandler) createRedirect(ctx context.Context, genericMsg core.Par
 		return nil, err
 	}
 
-	dataForSign := redirect.CreateToken(genericMsg);
-	sign, err := h.CryptographyService.Sign(dataForSign)
-	redirect.Sign = sign
+	token, err := h.DelegationTokenFactory.IssueGetObjectRedirect(genericMsg, redirect.StateID)
+	if err != nil{
+		return nil, err
+	}
+
+	redirect.Token = &token
 
 	return redirect, nil
 }
