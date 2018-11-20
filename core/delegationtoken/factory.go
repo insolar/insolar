@@ -34,7 +34,7 @@ func NewDelegationTokenFactory() core.DelegationTokenFactory {
 
 func (f *delegationTokenFactory) IssuePendingExecution(
 	msg core.Message, pulse core.PulseNumber,
-) ([]byte, error) {
+) (core.DelegationToken, error) {
 	var buff bytes.Buffer
 	enc := gob.NewEncoder(&buff)
 	err := enc.Encode(msg)
@@ -50,7 +50,7 @@ func (f *delegationTokenFactory) IssuePendingExecution(
 	return append([]byte{byte(core.DTTypePendingExecution)}, sign.Bytes()...), nil
 }
 
-func (f *delegationTokenFactory) Verify(data []byte, msg core.Message) (bool, error) {
+func (f *delegationTokenFactory) Verify(token core.DelegationToken, msg core.Message) (bool, error) {
 	token, err := f.newFromBytes(data)
 	if err != nil {
 		return false, err
