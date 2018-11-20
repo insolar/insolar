@@ -40,6 +40,13 @@ type Ledger struct {
 	Storage Storage
 	// JetCoordinator defines jet coordinator configuration.
 	JetCoordinator JetCoordinator
+	// HeavyReplication defines replication to heavy storage node.
+	HeavyReplication HeavyReplication
+}
+
+// HeavyReplication configures replication to heavy node
+type HeavyReplication struct {
+	SyncMessageLimit int
 }
 
 // NewLedger creates new default Ledger configuration.

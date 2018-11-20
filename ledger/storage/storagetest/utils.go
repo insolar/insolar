@@ -28,11 +28,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type tmpDBOptions struct {
+	dir         string
+	nobootstrap bool
+}
+
+// Option provides functional option for TmpDB.
+type Option func(*tmpDBOptions)
+
+// Dir defines temporary directory for database.
+func Dir(dir string) Option {
+	return func(opts *tmpDBOptions) {
+		opts.dir = dir
+	}
+}
+
+// DisableBootstrap skip bootstrap records creation.
+func DisableBootstrap() Option {
+	return func(opts *tmpDBOptions) {
+		opts.nobootstrap = true
+	}
+}
+
 // TmpDB returns BadgerDB's storage implementation and cleanup function.
 //
 // Creates BadgerDB in temporary directory and uses t for errors reporting.
-func TmpDB(ctx context.Context, t testing.TB, dir string) (*storage.DB, func()) {
-	tmpdir, err := ioutil.TempDir(dir, "bdb-test-")
+func TmpDB(ctx context.Context, t testing.TB, options ...Option) (*storage.DB, func()) {
+	opts := &tmpDBOptions{}
+	for _, o := range options {
+		o(opts)
+	}
+	tmpdir, err := ioutil.TempDir(opts.dir, "bdb-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,8 +72,10 @@ func TmpDB(ctx context.Context, t testing.TB, dir string) (*storage.DB, func()) 
 		t.Fatal(err)
 	}
 	// Bootstrap
-	err = db.Init(ctx)
-	assert.NoError(t, err)
+	if !opts.nobootstrap {
+		err = db.Init(ctx)
+		assert.NoError(t, err)
+	}
 
 	return db, func() {
 		closeErr := db.Close()

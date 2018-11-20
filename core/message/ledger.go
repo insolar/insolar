@@ -17,6 +17,8 @@
 package message
 
 import (
+	"encoding/gob"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -153,6 +155,11 @@ type SetBlob struct {
 
 	TargetRef core.RecordRef
 	Memory    []byte
+}
+
+func init() {
+	gob.Register(&SetBlob{})
+	gob.Register(&ValidateRecord{})
 }
 
 // Type implementation of Message interface.
