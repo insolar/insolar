@@ -19,7 +19,7 @@ func (m *PulseManager) HeavySync(
 ) (core.PulseNumber, error) {
 	replicator := storage.NewReplicaIter(
 		ctx, m.db, start, end, m.options.syncmessagelimit)
-	for i := 0; ; i++ {
+	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
 			break
@@ -41,7 +41,7 @@ func (m *PulseManager) HeavySync(
 	return replicator.LastPulse(), nil
 }
 
-// NextSyncPulses returns pulse numbers diapasone for syncing to heavy node.
+// NextSyncPulses returns pulse numbers range for syncing to heavy node.
 // If nothing to sync it returns 0, 0, nil.
 func (m *PulseManager) NextSyncPulses(ctx context.Context) (start, end core.PulseNumber, err error) {
 	var (
@@ -54,8 +54,8 @@ func (m *PulseManager) NextSyncPulses(ctx context.Context) (start, end core.Puls
 	if last, err = m.db.GetLastPulseAsLightMaterial(ctx); err != nil {
 		return
 	}
-	// if replicated pulse is not less than "last light material pulse", return zero
-	if !(replicated < last) {
+	// if replicated pulse is not less than "last light material pulse", nothing to sync
+	if replicated >= last {
 		return
 	}
 

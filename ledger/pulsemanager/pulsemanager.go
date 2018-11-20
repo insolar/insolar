@@ -38,9 +38,9 @@ type PulseManager struct {
 	// setLock locks Set method call.
 	setLock sync.Mutex
 	stopped bool
-	// gotpulse signals is there something to sync to Heavy
+	// gotpulse signals if there is something to sync to Heavy
 	gotpulse chan struct{}
-	// syncdone closes then sync is over
+	// syncdone closes when sync is over
 	syncdone chan struct{}
 	// stores pulse manager options
 	options pmOptions

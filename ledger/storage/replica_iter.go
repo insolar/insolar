@@ -34,15 +34,15 @@ type iterstate struct {
 }
 
 // ReplicaIter provides partial iterator over BadgerDB key/value pairs
-// required for replication to Heavy Material node in provided pulse.
+// required for replication to Heavy Material node in provided pulses range.
 //
-// Required kv-pairs are all records into and after provided pulse
-// and all indexes available in database.
+// "Required KV pairs" are all keys with namespace 'scopeIDRecord' (TODO: 'add scopeIDBlob')
+// in provided pulses range and all indexes from zero pulse to the end of provided range.
 //
 // "Partial" means it fetches data in chunks of the specified size.
-// After a chunk has been fetched, it saves the current position.
-// This is not an "honest" alogrithm, because the last record size can exceed the limit.
+// After a chunk has been fetched, an iterator saves current position.
 //
+// NOTE: This is not an "honest" alogrithm, because the last record size can exceed the limit.
 // Better implementation is for the future work.
 type ReplicaIter struct {
 	ctx        context.Context
@@ -55,8 +55,8 @@ type ReplicaIter struct {
 // NewReplicaIter creates ReplicaIter what iterates over records
 // required for heavy material replication.
 //
-// Params 'start' and 'end' defines pulses from which one scan should happen,
-// and on which one it should be stopped, but indexes scan are always started
+// Params 'start' and 'end' defines pulses from which scan should happen,
+// and on which it should be stopped, but indexes scan are always started
 // from core.FirstPulseNumber.
 //
 // Param 'limit' sets per message limit.
