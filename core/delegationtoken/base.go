@@ -35,8 +35,8 @@ func (t *PendingExecution) Type() core.DelegationTokenType {
 	return core.DTTypePendingExecution
 }
 
-func (t *PendingExecution) Verify(msg core.Message) (bool, error) {
-	switch mt := msg.Type(); mt {
+func (t *PendingExecution) Verify(parcel core.Parcel) (bool, error) {
+	switch mt := parcel.Message().Type(); mt {
 
 	//TODO: stab should start verification
 	case core.TypeCallMethod:
