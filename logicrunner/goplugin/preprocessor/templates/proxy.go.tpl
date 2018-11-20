@@ -16,6 +16,8 @@ var PrototypeReference = core.NewRefFromBase58("{{ .ClassReference }}")
 // {{ .ContractType }} holds proxy type
 type {{ .ContractType }} struct {
 	Reference core.RecordRef
+	Prototype core.RecordRef
+	Code core.RecordRef
 }
 
 // ContractConstructorHolder holds logic with object construction
