@@ -123,7 +123,7 @@ func (c *Consensus) GetValidatorSignatures() (messages []core.Message) {
 // FindRequestBefore returns request placed before step (last valid request)
 func (c *Consensus) FindRequestBefore(steps int) *core.RecordID {
 	cr := c.CaseRecords
-	for i := steps; i > 0; i-- {
+	for i := steps - 1; i > 0; i-- {
 		if cr[i].Type == core.CaseRecordTypeRequest {
 			if req, ok := cr[i].Resp.(Ref); ok {
 				return req.Record()
