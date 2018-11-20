@@ -84,6 +84,11 @@ type MessageBus interface {
 	WriteTape(ctx context.Context, writer io.Writer) error
 }
 
+type GlobalInsolarLock interface {
+	Acquire(context.Context)
+	Release(context.Context)
+}
+
 type messageBusKey struct{}
 
 // MessageBusFromContext returns MessageBus from context. If provided context does not have MessageBus, fallback will
