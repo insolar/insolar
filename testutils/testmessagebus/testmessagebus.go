@@ -96,7 +96,7 @@ func (mb *TestMessageBus) Stop() error {
 	panic("implement me")
 }
 
-func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
+func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, setters ...core.Option) (core.Reply, error) {
 	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef())
 	if err != nil {
 		return nil, err
