@@ -57,9 +57,15 @@ func (f *delegationTokenFactory) Verify(token core.DelegationToken, msg core.Mes
 	}
 	if token == nil {
 		return false, nil
+func (f *delegationTokenFactory) IssueGetObjectRedirect(parcel core.Parcel, definedState *core.RecordID) (core.DelegationToken, error) {
+	getObjectRequest := parcel.Message().(*message.GetObject)
+	getObjectRequest.State = definedState
+	dataForSign := append(parcel.GetSender().Bytes(), message.ToBytes(getObjectRequest)...)
+	sign, err := f.Cryptography.Sign(dataForSign)
+	if err != nil{
+		return nil, err
 	}
-
-	return token.Verify(msg)
+	return &GetObjectRedirect{BaseDelegationToken{Signature:sign.Bytes()}}, nil
 }
 
 func (f *delegationTokenFactory) newFromBytes(data []byte) (core.DelegationToken, error) {
