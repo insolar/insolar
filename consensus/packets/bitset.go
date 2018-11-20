@@ -18,6 +18,7 @@ package packets
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
 // TriState is state of the communicating node
@@ -38,10 +39,20 @@ type BitSetBucket struct {
 	State  TriState
 }
 
+// Possible errors in BitSetMapper
+var (
+	// BitSetOutOfRange is returned when index passed to IndexToRef function is out of range (ERROR)
+	BitSetOutOfRange = errors.New("index out of range")
+	// BitSetNodeIsMissing is returned in IndexToRef when we have no information about the node on specified index (SPECIAL CASE)
+	BitSetNodeIsMissing = errors.New("no information about node on specified index")
+	// BitSetIncorrectNode is returned when an incorrect node is passed to RefToIndex (ERROR)
+	BitSetIncorrectNode = errors.New("incorrect node ID")
+)
+
 // BitSetMapper contains the mapping from bitset index to node ID (and vice versa)
 type BitSetMapper interface {
 	// IndexToRef get ID of the node that is stored on the specified internal index
-	IndexToRef(int) (core.RecordRef, error)
+	IndexToRef(index int) (core.RecordRef, error)
 	// RefToIndex get bitset internal index where the specified node state is stored
 	RefToIndex(nodeID core.RecordRef) (int, error)
 	// Length returns required length of the bitset
