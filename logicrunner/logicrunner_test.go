@@ -22,9 +22,14 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
+	"net/rpc"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/logicrunner/goplugin"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 
 	"github.com/insolar/insolar/cryptography"
 	"github.com/stretchr/testify/require"
@@ -1765,4 +1770,100 @@ func getLogicRunnerWithoutValidation(lr core.LogicRunner) *LogicRunner {
 	rlr.MessageBus = newmb
 
 	return rlr
+}
+
+func TestGinsiderMustDieAfterInsolard(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+
+	var emptyMethodContract = `
+package main
+
+import (
+	"time"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	
+)
+type One struct {
+   foundation.BaseContract
+}
+
+func New() (*One, error){
+   return nil, nil
+}
+
+func (r *One) EmptyMethod() (error) {
+	time.Sleep(200 * time.Millisecond)
+	return nil
+}
+
+`
+	ctx := inslogger.ContextWithTrace(context.Background(), utils.RandTraceID())
+	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{
+		"one": emptyMethodContract,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	protoRef := core.NewRefFromBase58("one")
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: protoRef}},
+	)
+	assert.NoError(t, err)
+	contract := getRefFromID(contractID)
+	object, err := am.ActivateObject(
+		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	//prototype = *cb.Prototypes["one"]
+	prototypeRef, err := object.Prototype()
+	prototype, err := am.GetObject(ctx, *prototypeRef, nil, false)
+	codeRef, err := prototype.Code()
+
+	assert.NoError(t, err, "get contract code")
+
+	rlr := lr.(*LogicRunner)
+	gp, err := goplugin.NewGoPlugin(rlr.Cfg, rlr.MessageBus, rlr.ArtifactManager)
+
+	callContext := &core.LogicCallContext{
+		Caller:          nil,
+		Callee:          nil,
+		Request:         nil,
+		Time:            time.Now(),
+		Pulse:           *rlr.pulse(ctx),
+		TraceID:         inslogger.TraceID(ctx),
+		CallerPrototype: nil,
+	}
+	res := rpctypes.DownCallMethodResp{}
+	req := rpctypes.DownCallMethodReq{
+		Context:   callContext,
+		Code:      *codeRef,
+		Data:      object.Memory(),
+		Method:    "EmptyMethod",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	}
+
+	client, err := gp.Downstream(ctx)
+
+	// call method without waiting of it execution
+	client.Go("RPC.CallMethod", req, res, nil)
+
+	// emulate death
+	rlr.sock.Close()
+
+	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
+	time.Sleep(300 * time.Millisecond)
+
+	// ping to goPlugin, it has to be dead
+	_, err = rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
+	assert.Error(t, err, "rpc Dial")
+	assert.Contains(t, err.Error(), "connect: connection refused")
 }
