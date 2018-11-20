@@ -277,7 +277,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	ctx := parcel.Context(context.Background())
 
 	if parcel.DelegationToken() != nil {
-		valid, err := mb.DelegationTokenFactory.Verify(parcel.DelegationToken(), parcel.Message())
+		valid, err := mb.DelegationTokenFactory.Verify(parcel)
 		if err != nil {
 			return nil, err
 		}
