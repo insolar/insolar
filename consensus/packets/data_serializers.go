@@ -668,7 +668,7 @@ func (p2p *Phase2Packet) RawFirstPart() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (phase2Packet *Phase2Packet) RawSecondPart() ([]byte, error) {
+func (p2p *Phase2Packet) RawSecondPart() ([]byte, error) {
 	// TODO: add serialising Referendum vote
 	return nil, nil
 }
