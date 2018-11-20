@@ -316,6 +316,6 @@ func (rs *readerScope) Lock() {
 func (rs *readerScope) Unlock() {
 	if rs.locked {
 		rs.locked = false
-		rs.mutex.Unlock()
+		rs.mutex.RUnlock()
 	}
 }
