@@ -44,6 +44,8 @@ type BitSetMapper interface {
 	IndexToRef(int) (core.RecordRef, error)
 	// RefToIndex get bitset internal index where the specified node state is stored
 	RefToIndex(nodeID core.RecordRef) (int, error)
+	// Length returns required length of the bitset
+	Length() int
 }
 
 // BitSet is interface
