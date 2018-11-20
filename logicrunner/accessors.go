@@ -55,42 +55,67 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 	lr.executionMutex.Lock()
 	defer lr.executionMutex.Unlock()
 	if _, ok := lr.execution[ref]; !ok {
-		lr.execution[ref] = &ExecutionState{Ref: &ref}
+		lr.execution[ref] = &ExecutionState{
+			Ref: &ref,
+			caseBind: core.CaseBind{
+				Requests: make([]core.CaseRequest, 0),
+			},
+		}
 	}
 	return lr.execution[ref]
 }
 
-// refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
-func (lr *LogicRunner) refreshCaseBind() map[Ref][]core.CaseRecord {
-	lr.caseBindMutex.Lock()
-	defer lr.caseBindMutex.Unlock()
-
-	oldObjectsRecords := lr.caseBind.Records
-
-	lr.caseBind = core.CaseBind{Records: make(map[Ref][]core.CaseRecord)}
-
-	return oldObjectsRecords
+func (lr *LogicRunner) MustExecutionState(ref Ref) *ExecutionState {
+	lr.executionMutex.Lock()
+	defer lr.executionMutex.Unlock()
+	res, ok := lr.execution[ref]
+	if !ok {
+		panic("No requested execution state")
+	}
+	return res
 }
 
 func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
-	lr.caseBindMutex.Lock()
-	lr.caseBind.Records[ref] = append(lr.caseBind.Records[ref], cr)
-	lr.caseBindMutex.Unlock()
+	lr.MustExecutionState(ref).AddCaseRecord(cr)
 }
 
 func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 	lr.caseBindReplaysMutex.Lock()
 	defer lr.caseBindReplaysMutex.Unlock()
+
 	r, ok := lr.caseBindReplays[ref]
 	if !ok {
 		return nil, -1
-	} else if r.RecordsLen <= r.Step {
-		return nil, r.Step
 	}
-	ret := r.Records[r.Step]
-	r.Step++
+	if r.Request >= len(r.CaseBind.Requests) {
+		return nil, r.Steps
+	}
+
+	request := r.CaseBind.Requests[r.Request]
+
+	if r.Record < 0 {
+		r.Record = 0
+		r.Steps++
+		res := request.Request.(core.CaseRecord)
+		return &res, r.Steps
+	}
+
+	if r.Record >= len(request.Records) {
+		r.Record = -1
+		r.Request++
+		if r.Request >= len(r.CaseBind.Requests) {
+			return nil, r.Steps
+		}
+		r.Record = 0
+		r.Steps++
+		res := r.CaseBind.Requests[r.Request].Request.(core.CaseRecord)
+		return &res, 1
+	}
+	res := request.Records[r.Request]
+	r.Request++
+	r.Steps++
 	lr.caseBindReplays[ref] = r
-	return &ret, r.Step
+	return &res, r.Steps
 }
 
 func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {

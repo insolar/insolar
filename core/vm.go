@@ -18,6 +18,7 @@ package core
 
 import (
 	"context"
+	"encoding/gob"
 	"time"
 )
 
@@ -58,7 +59,7 @@ type LogicRunner interface {
 	ValidateCaseBind(context.Context, Parcel) (res Reply, err error)
 	ProcessValidationResults(context.Context, Parcel) (res Reply, err error)
 	ExecutorResults(context.Context, Parcel) (res Reply, err error)
-	Validate(ctx context.Context, ref RecordRef, p Pulse, cr []CaseRecord) (int, error) // TODO hide?
+	Validate(ctx context.Context, ref RecordRef, p Pulse, cb CaseBind) (int, error) // TODO hide?
 	OnPulse(context.Context, Pulse) error
 }
 
@@ -103,15 +104,27 @@ type CaseRecord struct {
 	Resp   interface{}
 }
 
+type CaseRequest struct {
+	Request interface{}
+	Records []CaseRecord
+}
+
 // CaseBinder is a whole result of executor efforts on every object it seen on this pulse
 type CaseBind struct {
-	Records map[RecordRef][]CaseRecord // ordered cases for each object
+	Requests []CaseRequest
 }
 
 type CaseBindReplay struct {
-	Pulse      Pulse
-	Records    []CaseRecord
-	RecordsLen int
-	Step       int
-	Fail       int
+	Pulse    Pulse
+	CaseBind CaseBind
+	Request  int
+	Record   int
+	Steps    int
+	Fail     int
+}
+
+func init() {
+	gob.Register(&CaseRecord{})
+	gob.Register(&CaseRequest{})
+	gob.Register(&CaseBind{})
 }

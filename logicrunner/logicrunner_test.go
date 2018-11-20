@@ -189,20 +189,17 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 	for _, r := range mustfail {
 		failmap[r] = struct{}{}
 	}
+
 	rlr := lr.(*LogicRunner)
-	rlr.caseBindMutex.Lock()
-	rlrcbr := rlr.caseBind.Records
-	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
-	rlr.caseBindMutex.Unlock()
-	for ref, cr := range rlrcbr {
+
+	for ref, state := range rlr.execution {
 		log.Debugf("TEST validating: %s", ref)
-		vstep, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), cr)
+
+		_, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), state.caseBind)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation %s", ref)
-			assert.True(t, len(cr) > vstep, "Validation failed before end %s", ref)
 		} else {
 			assert.NoError(t, err, "validation %s", ref)
-			assert.Equal(t, len(cr), vstep, "Validation passed to the end %s", ref)
 		}
 	}
 }
