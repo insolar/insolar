@@ -321,9 +321,6 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 			log.Fatal(err)
 		}
 
-		//var privKey crypto.PrivateKey
-		//nodePubKey := ""
-
 		nodeState := &noderecord.NodeRecord{
 			Record: noderecord.RecordInfo{
 				PublicKey: nodePubKey,
