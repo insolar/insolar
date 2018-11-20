@@ -240,3 +240,9 @@ type LocalStorage interface {
 	// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
 	Iterate(ctx context.Context, pulse PulseNumber, prefix []byte, handler func(k, v []byte) error) error
 }
+
+// KV is a generic key/value struct.
+type KV struct {
+	K []byte
+	V []byte
+}
