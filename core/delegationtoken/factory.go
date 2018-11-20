@@ -85,6 +85,22 @@ func (f *delegationTokenFactory) newFromBytes(data []byte) (core.DelegationToken
 	return res, nil
 }
 
+// func (f *delegationTokenFactory) newFromBytes(data []byte) (core.DelegationToken, error) {
+// 	if len(data) == 0 {
+// 		return nil, nil
+// 	}
+//
+// 	res, err := empty(core.DelegationTokenType(data[0]))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	err = gob.NewDecoder(bytes.NewReader(data[1:])).Decode(res)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return res, nil
+// }
 func empty(t core.DelegationTokenType) (core.DelegationToken, error) {
 	switch t {
 
