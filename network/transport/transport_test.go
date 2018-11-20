@@ -141,7 +141,7 @@ func (t *transportSuite) TestSendPacketConsensus() {
 	}
 
 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.Phase1)
-	requestMsg := builder.Request(&consensus.Phase1Packet{}).Build()
+	requestMsg := builder.Request(consensus.NewPhase1Packet()).Build()
 	_, err := t.node1.transport.SendRequest(requestMsg)
 	t.Assert().NoError(err)
 
