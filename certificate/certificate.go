@@ -46,7 +46,7 @@ type Certificate struct {
 		Virtual       uint `json:"virtual"`
 		HeavyMaterial uint `json:"heavy_material"`
 		LightMaterial uint `json:"light_material"`
-	} `json: "min_roles"`
+	} `json:"min_roles"`
 	PublicKey           string          `json:"public_key"`
 	Reference           string          `json:"reference"`
 	Role                string          `json:"role"`

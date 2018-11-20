@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"path"
 	"strconv"
 
 	"github.com/insolar/insolar/application/contract/member"
@@ -56,6 +57,7 @@ type Genesis struct {
 	prototypeRefs   map[string]*core.RecordRef
 	isGenesis       bool
 	config          *genesisConfig
+	keyOut          string
 	ArtifactManager core.ArtifactManager `inject:""`
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
@@ -81,13 +83,14 @@ func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 }
 
 // NewGenesis creates new Genesis
-func NewGenesis(isGenesis bool, genesisConfigPath string) (*Genesis, error) {
+func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) (*Genesis, error) {
 	var err error
 	genesis := &Genesis{}
 	genesis.rootDomainRef = &core.RecordRef{}
 	genesis.isGenesis = isGenesis
 	if isGenesis {
 		genesis.config, err = parseGenesisConfig(genesisConfigPath)
+		genesis.keyOut = genesisKeyOut
 	}
 	return genesis, err
 }
@@ -425,6 +428,9 @@ func (g *Genesis) Start(ctx context.Context) error {
 		}
 
 		err = g.makeCertificates(nodes)
+		if err != nil {
+			return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
+		}
 	}
 
 	return nil
@@ -465,7 +471,7 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile("discovery_cert_"+strconv.Itoa(i+1)+".json", cert, 0644)
+		err = ioutil.WriteFile(path.Join(g.keyOut, "discovery_cert_"+strconv.Itoa(i+1)+".json"), cert, 0644)
 		if err != nil {
 			return err
 		}
