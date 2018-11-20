@@ -174,7 +174,7 @@ func addRecords(
 	t *testing.T,
 	db *storage.DB,
 	pulsenum core.PulseNumber,
-) (records, indexes int) {
+) {
 	// set record
 	parentID, err := db.SetRecord(
 		ctx,
@@ -185,14 +185,12 @@ func addRecords(
 			},
 		},
 	)
-	records++
 
 	// set index of record
 	err = db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)
-	indexes++
 
 	return
 }
