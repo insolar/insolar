@@ -185,6 +185,12 @@ func addRecords(
 			},
 		},
 	)
+	require.NoError(t, err)
+
+	// set blob
+	blobID, err := db.SetBlob(ctx, pulsenum, []byte("100500"))
+	_ = blobID
+	require.NoError(t, err)
 
 	// set index of record
 	err = db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
@@ -232,6 +238,7 @@ CHECKIFCONTAINS:
 var (
 	scopeIDLifeline = byte(1)
 	scopeIDRecord   = byte(2)
+	scopeIDBlob     = byte(7)
 )
 
 func getallkeys(db *badger.DB) (records []string, indexes []string) {
@@ -246,6 +253,8 @@ func getallkeys(db *badger.DB) (records []string, indexes []string) {
 		kstr := hex.EncodeToString(k)
 		switch k[0] {
 		case scopeIDRecord:
+			records = append(records, kstr)
+		case scopeIDBlob:
 			records = append(records, kstr)
 		case scopeIDLifeline:
 			indexes = append(indexes, kstr)
