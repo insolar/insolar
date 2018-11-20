@@ -1867,3 +1867,78 @@ func (r *One) EmptyMethod() (error) {
 	assert.Error(t, err, "rpc Dial")
 	assert.Contains(t, err.Error(), "connect: connection refused")
 }
+
+func TestGetRemoteData(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+ import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ import "github.com/insolar/insolar/application/proxy/two"
+ import "github.com/insolar/insolar/core"
+ type One struct {
+	foundation.BaseContract
+ }
+ func (r *One) GetChildCode() (core.RecordRef, error) {
+	holder := two.New()
+	child, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return core.RecordRef{}, err
+	}
+
+ 	return child.GetCode()
+ }
+
+ func (r *One) GetChildPrototype() (core.RecordRef, error) {
+	holder := two.New()
+	child, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return core.RecordRef{}, err
+	}
+
+ 	return child.GetPrototype()
+ }
+`
+	var contractTwoCode = `
+ package main
+ import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ )
+ type Two struct {
+	foundation.BaseContract
+ }
+ func New() (*Two, error) {
+	return &Two{}, nil
+ }
+ `
+	ctx := context.Background()
+	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
+	assert.NoError(t, err)
+	obj := getRefFromID(objID)
+	_, err = am.ActivateObject(
+		ctx,
+		core.RecordRef{},
+		*obj,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
+		goplugintestutils.CBORMarshal(t, &struct{}{}),
+	)
+	assert.NoError(t, err)
+	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "GetChildCode", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	refFromMethod := r.([]interface{})[0].([]byte)
+	assert.Equal(t, *cb.Codes["two"], Ref{}.FromSlice(refFromMethod))
+
+	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetChildPrototype", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	refFromMethod = r.([]interface{})[0].([]byte)
+	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(refFromMethod))
+
+	ValidateAllResults(t, ctx, lr)
+}
