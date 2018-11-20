@@ -66,6 +66,7 @@ type LogicCallContext struct {
 	Callee          *RecordRef // Contract that was called
 	Request         *RecordRef // ref of request
 	Prototype       *RecordRef // Image of the callee
+	Code            *RecordRef // ref of contract code
 	CallerPrototype *RecordRef // Image of the caller
 	Parent          *RecordRef // Parent of the callee
 	Caller          *RecordRef // Contract that made the call

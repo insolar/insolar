@@ -432,6 +432,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	}
 
 	es.callContext.Prototype = es.objectbody.ClassHeadRef
+	es.callContext.Code = es.objectbody.CodeRef
 	es.callContext.Parent = es.objectbody.Parent
 
 	vb.ModifyContext(es.callContext)
@@ -525,6 +526,8 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	if err != nil {
 		return nil, es.ErrorWrap(err, "couldn't code")
 	}
+	es.callContext.Code = codeDesc.Ref()
+
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, es.ErrorWrap(err, "no executer registered")
