@@ -138,6 +138,14 @@ func (m *LedgerArtifactManager) GetObject(
 		return nil, err
 	}
 
+	if genericReact.Type() == reply.TypeGetObjectRedirect {
+		genericReact, err = m.makeRedirect(ctx, genericReact, head, approved)
+		if err != nil{
+			return nil, err
+		}
+	}
+
+
 	switch r := genericReact.(type) {
 	case *reply.Object:
 		desc = &ObjectDescriptor{
