@@ -51,6 +51,7 @@ type Parcel interface {
 
 	Message() Message
 	Context(context.Context) context.Context
+
 	DelegationToken() DelegationToken
 }
 
@@ -158,5 +159,6 @@ type DelegationTokenType byte
 //go:generate stringer -type=DelegationTokenType
 const (
 	// DTTypePendingExecution allows to continue method calls
-	DTTypePendingExecution DelegationTokenType = iota
+	DTTypePendingExecution DelegationTokenType = iota + 1
+	DTTypeGetObjectRedirect
 )
