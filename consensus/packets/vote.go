@@ -57,37 +57,55 @@ type MissingNodeSupplementaryVote struct {
 	NodePulseProof NodePulseProof
 }
 
-func (nlv *NodeJoinSupplementaryVote) Type() VoteType {
-	return TypeNodeJoinSupplementaryVote
+func (v *NodeListSupplementaryVote) Type() VoteType {
+	return TypeNodeListSupplementaryVote
 }
 
 // Deserialize implements interface method
 func (v *NodeListSupplementaryVote) Deserialize(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &v.NodeListCount)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeListVote.Deserialize ] Can't read NodeListCount")
+		return errors.Wrap(err, "[ NodeListSupplementaryVote.Deserialize ] Can't read NodeListCount")
 	}
 
 	err = binary.Read(data, defaultByteOrder, &v.NodeListHash)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeListVote.Deserialize ] Can't read NodeListHash")
+		return errors.Wrap(err, "[ NodeListSupplementaryVote.Deserialize ] Can't read NodeListHash")
 	}
 
 	return nil
 }
 
 // Serialize implements interface method
-func (nlv *NodeListSupplementaryVote) Serialize() ([]byte, error) {
+func (v *NodeListSupplementaryVote) Serialize() ([]byte, error) {
 	result := allocateBuffer(34)
-	err := binary.Write(result, defaultByteOrder, nlv.NodeListCount)
+	err := binary.Write(result, defaultByteOrder, v.NodeListCount)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeListVote.Serialize ] Can't write NodeListCount")
+		return nil, errors.Wrap(err, "[ NodeListSupplementaryVote.Serialize ] Can't write NodeListCount")
 	}
 
-	err = binary.Write(result, defaultByteOrder, nlv.NodeListHash)
+	err = binary.Write(result, defaultByteOrder, v.NodeListHash)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeListVote.Serialize ] Can't write NodeListHash")
+		return nil, errors.Wrap(err, "[ NodeListSupplementaryVote.Serialize ] Can't write NodeListHash")
 	}
 
 	return result.Bytes(), nil
+}
+
+func (nlv *NodeJoinSupplementaryVote) Type() VoteType {
+	return TypeNodeJoinSupplementaryVote
+}
+
+// Deserialize implements interface method
+func (v *NodeJoinSupplementaryVote) Deserialize(data io.Reader) error {
+	return nil
+}
+
+// Serialize implements interface method
+func (v *NodeJoinSupplementaryVote) Serialize() ([]byte, error) {
+	return nil, nil
+}
+
+func (nlv *StateFraudNodeSupplementaryVote) Type() VoteType {
+	return TypeStateFraudNodeSupplementaryVote
 }
