@@ -111,8 +111,8 @@ type nodekeeper struct {
 	indexShortID map[core.ShortNodeID]core.Node
 
 	lock   sync.Mutex
-	unsync []network.NodeClaim
-	sync   []network.NodeClaim
+	unsync []*network.NodeClaim
+	sync   []*network.NodeClaim
 }
 
 func (nk *nodekeeper) Start(ctx context.Context, components core.Components) error {
@@ -268,12 +268,14 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 	return nk.nodesJoinedDuringPrevPulse
 }
 
-func (nk *nodekeeper) AddUnsyncClaims([]*network.NodeClaim) {
-	log.Error("implement me!")
+func (nk *nodekeeper) AddUnsyncClaims(claims []*network.NodeClaim) {
+	nk.lock.Lock()
+	defer nk.lock.Unlock()
+
+	nk.unsync = append(nk.unsync, claims...)
 }
 
 func (nk *nodekeeper) CalculateUnsyncMergedHash() []byte {
-	log.Error("implement me!")
 	return nil
 }
 
@@ -281,7 +283,7 @@ func (nk *nodekeeper) Sync(deviant []core.Node) {
 	nk.lock.Lock()
 	defer nk.lock.Unlock()
 
-	nk.sync = make([]network.NodeClaim, 0)
+	nk.sync = make([]*network.NodeClaim, 0)
 	for _, claim := range nk.unsync {
 		isDeviant := false
 		for _, d := range deviant {
@@ -295,7 +297,7 @@ func (nk *nodekeeper) Sync(deviant []core.Node) {
 			}
 		}
 	}
-	nk.unsync = make([]network.NodeClaim, 0)
+	nk.unsync = make([]*network.NodeClaim, 0)
 }
 
 func (nk *nodekeeper) MoveSyncToActive() {
@@ -320,7 +322,7 @@ func (nk *nodekeeper) MoveSyncToActive() {
 		}
 	}
 
-	nk.sync = make([]network.NodeClaim, 0)
+	nk.sync = make([]*network.NodeClaim, 0)
 }
 
 func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
