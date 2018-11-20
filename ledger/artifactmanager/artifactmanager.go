@@ -167,6 +167,44 @@ func (m *LedgerArtifactManager) GetObject(
 	return desc, err
 }
 
+func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.Reply, head core.RecordRef, approved bool) (core.Reply, error) {
+	// TODO Need to be replaced with constant
+	maxCountOfReply := 2
+
+	for maxCountOfReply > 0 {
+		redirectResponse := response.(*reply.GetObjectRedirectReply)
+		panic("need to insert token from response")
+		genericReact, err := m.bus(ctx).Send(
+			ctx,
+			&message.GetObject{
+				Head:     head,
+				State:    redirectResponse.StateID,
+				Approved: approved,
+			},
+		)
+
+		if genericReact.Type() != reply.TypeGetObjectRedirect {
+			return response, err
+		}
+
+		maxCountOfReply--
+	}
+
+	return nil, errors.New("object not found")
+}
+
+// func (m *LedgerArtifactManager) createRedirectParcel(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
+// 	switch redirect := response.(type) {
+// 	case *reply.GetObjectRedirectReply:
+// 		newMessage := redirect.RecreateMessage(parcel.Message())
+// 		parcel, err := mb.CreateParcel(ctx, newMessage)
+// 		// TODO here a sign-token shoulb be put to parcel
+// 		return redirect.GetTo(), parcel, err
+// 	default:
+// 		panic("unknown type of redirect")
+// 	}
+// }
+
 // GetDelegate returns provided object's delegate reference for provided prototype.
 //
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
