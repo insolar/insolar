@@ -17,7 +17,7 @@
 package core
 
 type DelegationTokenFactory interface {
-	IssuePendingExecution(msg Message, pulse PulseNumber) ([]byte, error)
+	IssuePendingExecution(msg Message, pulse PulseNumber) (DelegationToken, error)
 	Verify(token []byte, msg Message) (bool, error)
 }
 
