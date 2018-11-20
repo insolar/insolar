@@ -138,12 +138,16 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	errstr := ""
+	if validationError != nil {
+		errstr = validationError.Error()
+	}
 	_, err := lr.MessageBus.Send(
 		ctx,
 		&message.ValidationResults{
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
-			Error:            validationError.Error(),
+			Error:            errstr,
 		},
 	)
 
