@@ -415,68 +415,6 @@ func (npp *NodePulseProof) Serialize() ([]byte, error) {
 
 // ----------------------------------PHASE 2--------------------------------
 
-// Deserialize implements interface method
-func (rv *ReferendumVote) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &rv.Type)
-	if err != nil {
-		return errors.Wrap(err, "[ ReferendumVote.Deserialize ] Can't read Type")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &rv.Length)
-	if err != nil {
-		return errors.Wrap(err, "[ ReferendumVote.Deserialize ] Can't read Length")
-	}
-
-	return nil
-}
-
-// Serialize implements interface method
-func (rv *ReferendumVote) Serialize() ([]byte, error) {
-	result := allocateBuffer(64)
-	err := binary.Write(result, defaultByteOrder, rv.Type)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ReferendumVote.Serialize ] Can't write Type")
-	}
-
-	err = binary.Write(result, defaultByteOrder, rv.Length)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ReferendumVote.Serialize ] Can't write Length")
-	}
-
-	return result.Bytes(), nil
-}
-
-// Deserialize implements interface method
-func (nlv *NodeListVote) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &nlv.NodeListCount)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeListVote.Deserialize ] Can't read NodeListCount")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &nlv.NodeListHash)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeListVote.Deserialize ] Can't read NodeListHash")
-	}
-
-	return nil
-}
-
-// Serialize implements interface method
-func (nlv *NodeListVote) Serialize() ([]byte, error) {
-	result := allocateBuffer(64)
-	err := binary.Write(result, defaultByteOrder, nlv.NodeListCount)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeListVote.Serialize ] Can't write NodeListCount")
-	}
-
-	err = binary.Write(result, defaultByteOrder, nlv.NodeListHash)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeListVote.Serialize ] Can't write NodeListHash")
-	}
-
-	return result.Bytes(), nil
-}
-
 // DeviantBitSet auxiliar constants
 const (
 	// take high bit

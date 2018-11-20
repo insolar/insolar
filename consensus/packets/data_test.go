@@ -185,40 +185,6 @@ func TestPhase1Packet_SetPulseProof(t *testing.T) {
 
 // ----------------------------------PHASE 2--------------------------------
 
-func makeReferendumVote() *ReferendumVote {
-	referendumVote := &ReferendumVote{}
-	referendumVote.Length = uint16(44)
-	referendumVote.Type = ReferendumType(23)
-
-	return referendumVote
-}
-
-func TestReferendumVote(t *testing.T) {
-	checkSerializationDeserialization(t, makeReferendumVote())
-}
-
-func TestReferendumVote_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeReferendumVote(),
-		"[ ReferendumVote.Deserialize ] Can't read Length: unexpected EOF")
-}
-
-func makeNodeListVote() *NodeListVote {
-	nodeListVote := &NodeListVote{}
-	nodeListVote.NodeListHash = randomArray32()
-	nodeListVote.NodeListCount = uint16(77)
-
-	return nodeListVote
-}
-
-func TestNodeListVote(t *testing.T) {
-	checkSerializationDeserialization(t, makeNodeListVote())
-}
-
-func TestNodeListVote_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeNodeListVote(),
-		"[ NodeListVote.Deserialize ] Can't read NodeListHash: unexpected EOF")
-}
-
 func makeDeviantBitSet() *DeviantBitSet {
 	deviantBitSet := &DeviantBitSet{}
 	deviantBitSet.CompressedSet = true
