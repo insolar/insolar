@@ -21,6 +21,11 @@ func NewGetObjectRedirectReply(to *core.RecordRef, state *core.RecordID) *GetObj
 	}
 }
 
+// Type returns type of the reply
+func (r *GetObjectRedirectReply) Type() core.ReplyType {
+	return TypeGetObjectRedirect
+}
+
 // func (r *GetObjectRedirectReply) RecreateMessage(genericMessage core.Message) core.Message {
 // 	getObjectRequest := genericMessage.(*message.GetObject)
 // 	getObjectRequest.State = r.StateID
