@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/consensus/packets"
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -134,14 +134,14 @@ type NodeKeeperState uint8
 const (
 	// Undefined is state of NodeKeeper while it is not valid
 	Undefined NodeKeeperState = iota + 1
-	// Waiting is state of NodeKeeper while it is not part of consensus yet (waits for his join claim to pass)
+	// Waiting is state of NodeKeeper while it is not part of consensus yet (waits for its join claim to pass)
 	Waiting
 	// Ready is state of NodeKeeper when it is ready for consensus
 	Ready
 )
 
 type NodeClaim struct {
-	Claim     packets.ReferendumClaim
+	Claim     consensus.ReferendumClaim
 	Initiator core.RecordRef
 }
 
@@ -161,23 +161,38 @@ type NodeKeeper interface {
 	// GetState get state of the NodeKeeper
 	GetState() NodeKeeperState
 	// SetOriginClaim set origin NodeJoinClaim. It is needed to join to discovery node or (sometimes) in consensus
-	SetOriginClaim(*packets.NodeJoinClaim)
+	SetOriginClaim(*consensus.NodeJoinClaim)
 	// GetOriginClaim get origin NodeJoinClaim
-	GetOriginClaim() *packets.NodeJoinClaim
+	GetOriginClaim() *consensus.NodeJoinClaim
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
 	// AddPendingClaim add pending claim to the internal queue of claims
-	AddPendingClaim(packets.ReferendumClaim) bool
+	AddPendingClaim(consensus.ReferendumClaim) bool
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
-	// AddUnsyncClaims add claims to unsync list
-	AddUnsyncClaims([]*NodeClaim)
-	// CalculateUnsyncMergedHash calculate node list hash based on active node list and claims
-	CalculateUnsyncMergedHash() []byte
+	// GetUnsyncList get unsync list for current pulse. Has copy of active node list from nodekeeper as internal state.
+	// Should be called when nodekeeper state is Ready.
+	GetUnsyncList() UnsyncList
+	// GetSparseUnsyncList get sparse unsync list for current pulse with predefined length of active node list.
+	// Does not contain active list, should collect active list during its lifetime via AddClaims.
+	// Should be called when nodekeeper state is Waiting.
+	GetSparseUnsyncList(length int) UnsyncList
 	// Sync move unsync -> sync
-	Sync(deviant []core.Node)
+	Sync(list UnsyncList)
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive()
+}
+
+// UnsyncList is interface to manage unsync list
+//go:generate minimock -i github.com/insolar/insolar/network.UnsyncList -o ../testutils/network -s _mock.go
+type UnsyncList interface {
+	consensus.BitSetMapper
+	// RemoveClaims
+	RemoveClaims(from core.RecordRef)
+	// AddClaims
+	AddClaims(from core.RecordRef, claims []consensus.ReferendumClaim)
+	// CalculateHash calculate node list hash based on active node list and claims
+	CalculateHash() []byte
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -227,9 +242,9 @@ type InternalTransport interface {
 // ClaimQueue is the queue that contains consensus claims.
 type ClaimQueue interface {
 	// Pop takes claim from the queue.
-	Pop() packets.ReferendumClaim
+	Pop() consensus.ReferendumClaim
 	// Front returns claim from the queue without removing it from the queue.
-	Front() packets.ReferendumClaim
+	Front() consensus.ReferendumClaim
 	// Length returns the length of the queue
 	Length() int
 }

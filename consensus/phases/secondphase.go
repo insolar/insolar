@@ -104,7 +104,8 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.New("[ Execute ] Consensus not reached")
 	}
 
-	sp.NodeKeeper.Sync(deviants)
+	// TODO: timeouts, deviants, etc.
+	sp.NodeKeeper.Sync(state.UnsyncList)
 
 	return &SecondPhaseState{
 		FirstPhaseState: state,

@@ -18,6 +18,7 @@ package phases
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 )
 
@@ -31,6 +32,8 @@ type FirstPhaseState struct {
 
 	TimedOutNodes []core.Node
 	DeviantNodes  []core.Node
+
+	UnsyncList network.UnsyncList
 }
 
 type SecondPhaseState struct {

@@ -265,36 +265,19 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 	return nk.nodesJoinedDuringPrevPulse
 }
 
-func (nk *nodekeeper) AddUnsyncClaims(claims []*network.NodeClaim) {
-	nk.lock.Lock()
-	defer nk.lock.Unlock()
-
-	nk.unsync = append(nk.unsync, claims...)
-}
-
-func (nk *nodekeeper) CalculateUnsyncMergedHash() []byte {
+func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
 	return nil
 }
 
-func (nk *nodekeeper) Sync(deviant []core.Node) {
+func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
+	return nil
+}
+
+func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	nk.lock.Lock()
 	defer nk.lock.Unlock()
 
-	nk.sync = make([]*network.NodeClaim, 0)
-	for _, claim := range nk.unsync {
-		isDeviant := false
-		for _, d := range deviant {
-			if d.ID().Equal(claim.Initiator) {
-				isDeviant = true
-				break
-			}
-
-			if !isDeviant {
-				nk.sync = append(nk.sync, claim)
-			}
-		}
-	}
-	nk.unsync = make([]*network.NodeClaim, 0)
+	log.Error("not implemented")
 }
 
 func (nk *nodekeeper) MoveSyncToActive() {

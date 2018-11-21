@@ -44,12 +44,16 @@ type FirstPhase struct {
 	Cryptography core.CryptographyService `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
 	State        *FirstPhaseState
+	UnsyncList   network.UnsyncList
 }
 
 // Execute do first phase
 func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
+	if fp.NodeKeeper.GetState() == network.Ready {
+		fp.UnsyncList = fp.NodeKeeper.GetUnsyncList()
+	}
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to calculate pulse proof.")
@@ -95,7 +99,15 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 			},
 			StateHash: rawProof.StateHash(),
 		}
-		claimMap[ref] = packet.GetClaims() // TODO: build set of claims
+		claimMap[ref] = packet.GetClaims()
+	}
+
+	if fp.NodeKeeper.GetState() == network.Waiting {
+		length, err := detectSparseBitsetLength(claimMap)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to detect bitset length")
+		}
+		fp.UnsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
 	fp.processClaims(ctx, claimMap)
@@ -126,6 +138,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		PulseProofSet: validProofs,
 		TimedOutNodes: timedOutNodes,
 		DeviantNodes:  deviantsNodes,
+		UnsyncList:    fp.UnsyncList,
 	}, nil
 }
 
@@ -152,32 +165,12 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }
 
+func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
 func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim) {
-	var nodes []core.Node
-	// join claims deduplication
-	joinClaims := make(map[core.RecordRef]*packets.NodeJoinClaim)
-	unsyncClaims := make([]*network.NodeClaim, 0)
-
-	for ref, claimsList := range claims {
-		for _, genericClaim := range claimsList {
-			switch claim := genericClaim.(type) {
-			case *packets.NodeAnnounceClaim:
-				nodes = append(nodes, claim.Node())
-			case *packets.NodeJoinClaim:
-				// TODO: authorize node here
-				joinClaims[claim.NodeRef] = claim
-			case *packets.NodeLeaveClaim:
-				unsyncClaims = append(unsyncClaims, &network.NodeClaim{Claim: claim, Initiator: ref})
-			default:
-				panic("Not implemented yet")
-			}
-		}
+	for ref, claimList := range claims {
+		fp.UnsyncList.AddClaims(ref, claimList)
 	}
-
-	for _, claim := range joinClaims {
-		unsyncClaims = append(unsyncClaims, &network.NodeClaim{Claim: claim, Initiator: claim.NodeRef})
-	}
-
-	fp.NodeKeeper.AddActiveNodes(nodes)
-	fp.NodeKeeper.AddUnsyncClaims(unsyncClaims)
 }
