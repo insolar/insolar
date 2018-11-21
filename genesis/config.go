@@ -12,9 +12,9 @@ type discovery struct {
 }
 
 type genesisConfig struct {
-	RootKeysFile string  `mapstructure:"root_keys_file"`
-	RootBalance  uint    `mapstructure:"root_balance"`
-	MajorityRule float32 `mapstructure:"majority_rule"`
+	RootKeysFile string `mapstructure:"root_keys_file"`
+	RootBalance  uint   `mapstructure:"root_balance"`
+	MajorityRule int    `mapstructure:"majority_rule"`
 	MinRoles     struct {
 		Virtual       uint `mapstructure:"virtual"`
 		HeavyMaterial uint `mapstructure:"heavy_material"`
