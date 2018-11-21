@@ -785,6 +785,8 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err, "contract call")
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{uint64(45), nil}, r)
+
+	ValidateAllResults(t, ctx, lr)
 }
 
 func TestFailValidate(t *testing.T) {
