@@ -65,11 +65,6 @@ type Genesis struct {
 	Certificate     core.Certificate     `inject:""`
 }
 
-// GetRootDomainRef returns reference to RootDomain instance
-func (g *Genesis) GetRootDomainRef() *core.RecordRef {
-	return g.rootDomainRef
-}
-
 // NewGenesis creates new Genesis
 func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) (*Genesis, error) {
 	var err error
