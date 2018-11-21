@@ -227,8 +227,7 @@ func (nk *nodekeeper) delActiveNode(ref core.RecordRef) {
 	}
 	delete(nk.active, ref)
 	delete(nk.indexShortID, active.ShortID())
-	// we should have one role in Node structure in future
-	delete(nk.indexNode, active.Roles()[0])
+	nk.indexNode[active.Role()].Remove(ref)
 }
 
 func (nk *nodekeeper) SetState(state network.NodeKeeperState) {
