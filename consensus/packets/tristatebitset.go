@@ -17,21 +17,17 @@
 package packets
 
 import (
-	"errors"
 	"io"
 
 	"github.com/damnever/bitarray"
+	"github.com/pkg/errors"
 )
 
 const lastBitMask = 0x00000001
 
 // TriStateBitSet bitset implementation.
 type TriStateBitSet struct {
-	CompressedSet     bool
-	HighBitLengthFlag bool
-	LowBitLength      uint8
-	HighBitLength     uint8
-	Payload           []byte
+	CompressedSet bool
 
 	cells  []*BitSetCell
 	mapper BitSetMapper
@@ -43,13 +39,10 @@ func NewTriStateBitSet(cells []*BitSetCell, mapper BitSetMapper) (*TriStateBitSe
 		return nil, errors.New("failed to create tristatebitset")
 	}
 	bitset := &TriStateBitSet{
-		cells:  cells,
+		cells:  make([]*BitSetCell, mapper.Length()),
 		mapper: mapper,
 	}
-	err := bitset.bucketToArray(cells)
-	if err != nil {
-		return nil, err
-	}
+	bitset.ApplyChanges(cells)
 	return bitset, nil
 }
 
@@ -57,11 +50,13 @@ func (dbs *TriStateBitSet) GetBuckets(mapper BitSetMapper) []*BitSetCell {
 	return dbs.cells
 }
 
-func (dbs *TriStateBitSet) ApplyChanges(changes []*BitSetCell) (BitSet, error) {
+func (dbs *TriStateBitSet) ApplyChanges(changes []*BitSetCell) {
 	for _, cell := range changes {
-		dbs.changeBucketState(cell)
+		err := dbs.changeBucketState(cell)
+		if err != nil {
+			panic(err)
+		}
 	}
-	return dbs, nil
 }
 
 func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
@@ -75,41 +70,41 @@ func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
 func (dbs *TriStateBitSet) changeBucketState(cell *BitSetCell) error {
 	n, err := dbs.mapper.RefToIndex(cell.NodeID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get index from ref")
 	}
 	dbs.cells[n] = cell
 	return nil
 }
 
-func (dbs *TriStateBitSet) changeBitState(array *bitarray.BitArray, n int, state TriState) error {
-	err := dbs.putLastBit(state, array, 2*n)
-	if err != nil {
-		return err
-	}
-	err = dbs.putLastBit(state>>1, array, 2*n+1)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (dbs *TriStateBitSet) putLastBit(state TriState, array *bitarray.BitArray, i int) error {
+func putLastBit(array *bitarray.BitArray, state TriState, i int) error {
 	bit := int(state & lastBitMask)
 	_, err := array.Put(i, bit)
-	return err
+	return errors.Wrap(err, "failed to put a bit ti bitset")
 }
 
-func (dbs *TriStateBitSet) bucketToArray(buckets []*BitSetCell) error {
-	array := bitarray.New(dbs.mapper.Length() * 2) // cuz stores 2 bits for 1 id
-	for _, bucket := range buckets {
-		n, err := dbs.mapper.RefToIndex(bucket.NodeID)
-		if err != nil {
-			return err
-		}
-		err = dbs.changeBitState(array, n, bucket.State)
-		if err != nil {
-			return err
-		}
+func changeBitState(array *bitarray.BitArray, i int, state TriState) error {
+	err := putLastBit(array, state, 2*i)
+	if err != nil {
+		return errors.Wrap(err, "failed to put last bit")
+	}
+	err = putLastBit(array, state>>1, 2*i+1)
+	if err != nil {
+		return errors.Wrap(err, "failed to put last bit")
 	}
 	return nil
+}
+
+func (dbs *TriStateBitSet) bucketToArray() (*bitarray.BitArray, error) {
+	array := bitarray.New(dbs.mapper.Length() * 2) // cuz stores 2 bits for 1 id
+	for _, bucket := range dbs.cells {
+		n, err := dbs.mapper.RefToIndex(bucket.NodeID)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get index from ref")
+		}
+		err = changeBitState(array, n, bucket.State)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to change bit state")
+		}
+	}
+	return array, nil
 }
