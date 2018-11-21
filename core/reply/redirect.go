@@ -29,7 +29,7 @@ func (r *GetObjectRedirectReply) Type() core.ReplyType {
 }
 
 // RecreateMessage recreates the message on the base of token
-func (r *GetObjectRedirectReply) RecreateMessage(msg message.GetObject) *message.GetObject {
+func (r *GetObjectRedirectReply) RecreateMessage(msg *message.GetObject) *message.GetObject {
 	return &message.GetObject{
 		State:    r.StateID,
 		Head:     msg.Head,

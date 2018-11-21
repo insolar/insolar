@@ -163,7 +163,9 @@ func (h *MessageHandler) createRedirect(ctx context.Context, genericMsg core.Par
 		return nil, err
 	}
 
-	token, err := h.DelegationTokenFactory.IssueGetObjectRedirect(genericMsg, redirect.StateID)
+	sender := genericMsg.GetSender()
+	redirectedMessage := redirect.RecreateMessage(msg)
+	token, err := h.DelegationTokenFactory.IssueGetObjectRedirect(&sender, redirectedMessage)
 	if err != nil {
 		return nil, err
 	}

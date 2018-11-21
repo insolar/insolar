@@ -18,7 +18,7 @@ package core
 
 type DelegationTokenFactory interface {
 	IssuePendingExecution(msg Message, pulse PulseNumber) (DelegationToken, error)
-	IssueGetObjectRedirect(parcel Parcel, definedState *RecordID) (DelegationToken, error)
+	IssueGetObjectRedirect(sender *RecordRef, redirectedMessage Message) (DelegationToken, error)
 	Verify(parcel Parcel) (bool, error)
 }
 

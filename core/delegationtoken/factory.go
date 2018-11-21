@@ -52,10 +52,9 @@ func (f *delegationTokenFactory) IssuePendingExecution(
 	return token, nil
 }
 
-func (f *delegationTokenFactory) IssueGetObjectRedirect(parcel core.Parcel, definedState *core.RecordID) (core.DelegationToken, error) {
-	getObjectRequest := parcel.Message().(*message.GetObject)
-	getObjectRequest.State = definedState
-	dataForSign := append(parcel.GetSender().Bytes(), message.ToBytes(getObjectRequest)...)
+func (f *delegationTokenFactory) IssueGetObjectRedirect(sender *core.RecordRef, redirectedMessage core.Message) (core.DelegationToken, error) {
+	parsedMessage := redirectedMessage.(*message.GetObject)
+	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
 	sign, err := f.Cryptography.Sign(dataForSign)
 	if err != nil {
 		return nil, err
