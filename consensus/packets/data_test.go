@@ -309,36 +309,6 @@ func TestNodeListVote_BadData(t *testing.T) {
 		"[ NodeListVote.Deserialize ] Can't read NodeListHash: unexpected EOF")
 }
 
-func makeDeviantBitSet() *DeviantBitSet {
-	deviantBitSet := &DeviantBitSet{}
-	deviantBitSet.CompressedSet = true
-	deviantBitSet.HighBitLengthFlag = true
-	deviantBitSet.LowBitLength = uint8(3)
-	//-----------------
-	deviantBitSet.HighBitLength = uint8(9)
-
-	// TODO: uncomment it when we support reading payload
-	//deviantBitSet.Payload = []byte("Hello, World!")
-
-	return deviantBitSet
-}
-
-func TestDeviantBitSet(t *testing.T) {
-	checkSerializationDeserialization(t, makeDeviantBitSet())
-}
-
-func _TestDeviantBitSet_BadData(t *testing.T) {
-	deviantBitSet := makeDeviantBitSet()
-	newDeviantBitSet := &DeviantBitSet{}
-
-	data := serializeData(t, deviantBitSet)
-	r := bytes.NewReader(data[:len(data)-2])
-	err := newDeviantBitSet.Deserialize(r)
-	assert.NoError(t, err)
-
-	require.NotEqual(t, deviantBitSet.Payload, newDeviantBitSet.Payload)
-}
-
 func TestParseAndCompactRouteInfo(t *testing.T) {
 	var routInfoTests = []PacketHeader{
 		PacketHeader{
@@ -415,7 +385,7 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet.claims = append(phase1Packet.claims, makeNodeViolationBlame())
 	phase1Packet.claims = append(phase1Packet.claims, &NodeLeaveClaim{length: 22})
 
-	phase1Packet.signature = 987
+	phase1Packet.signature = randomArray71()
 
 	return phase1Packet
 }
@@ -434,9 +404,14 @@ func TestPhase1Packet_BadData(t *testing.T) {
 
 func makePhase2Packet() *Phase2Packet {
 	phase2Packet := &Phase2Packet{}
+	// TODO: implement mapper and create bitset
+	// bitset, err := NewBitSet(nil, nil)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// phase2Packet.deviantBitSet = bitset
 	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
 	phase2Packet.globuleHashSignature = randomArray64()
-	phase2Packet.deviantBitSet = *makeDeviantBitSet()
 	phase2Packet.signatureHeaderSection1 = randomArray71()
 	phase2Packet.signatureHeaderSection2 = randomArray71()
 

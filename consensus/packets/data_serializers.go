@@ -204,7 +204,7 @@ func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 		if err != nil {
 			return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't read Section 2")
 		}
-		claimsSize := len(claimsBuf) - 8
+		claimsSize := len(claimsBuf) - SignatureLength
 
 		err = p1p.parseReferendumClaim(claimsBuf[:claimsSize])
 		if err != nil {
@@ -801,7 +801,7 @@ func (nlv *NodeListVote) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-// DeviantBitSet auxiliar constants
+// TriStateBitSet auxiliar constants
 const (
 	// take high bit
 	compressedSetMask   = 0x80
@@ -811,79 +811,6 @@ const (
 	highBitLengthFlagOffset = 6
 	lowBitLengthMask        = 0x3f
 )
-
-func (dbs *DeviantBitSet) parsePackedData(packedData uint8) {
-	dbs.CompressedSet = (packedData >> compressedSetOffset) == 1
-	dbs.HighBitLengthFlag = ((packedData & highBitLengthFlagMask) >> highBitLengthFlagOffset) == 1
-	dbs.LowBitLength = packedData & lowBitLengthMask
-}
-
-func (dbs *DeviantBitSet) compactPacketData() uint8 {
-	var result uint8
-
-	if dbs.CompressedSet {
-		result |= compressedSetMask
-	}
-	if dbs.HighBitLengthFlag {
-		result |= highBitLengthFlagMask
-	}
-
-	result |= dbs.LowBitLength & lowBitLengthMask
-
-	return result
-}
-
-// Deserialize implements interface method
-func (dbs *DeviantBitSet) Deserialize(data io.Reader) error {
-	var packedData uint8
-	err := binary.Read(data, defaultByteOrder, &packedData)
-	if err != nil {
-		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read packedData")
-	}
-	dbs.parsePackedData(packedData)
-
-	// TODO: these fields are optional
-	err = binary.Read(data, defaultByteOrder, &dbs.HighBitLength)
-	if err != nil {
-		return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read HighBitLength")
-	}
-
-	return nil
-	// // TODO: calc correct size
-	// dbs.Payload = make([]byte, transport.GetUDPMaxPacketSize())
-	// n, err := data.Read(dbs.Payload)
-	// if err != nil {
-	// 	return errors.Wrap(err, "[ DeviantBitSet.Deserialize ] Can't read Payload")
-	// }
-	// dbs.Payload = dbs.Payload[:n]
-	//
-	// return nil
-}
-
-// Serialize implements interface method
-func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
-	result := allocateBuffer(2048)
-
-	packedData := dbs.compactPacketData()
-	err := binary.Write(result, defaultByteOrder, packedData)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write packedData")
-	}
-
-	// TODO: these fields are optional
-	err = binary.Write(result, defaultByteOrder, dbs.HighBitLength)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write HighBitLength")
-	}
-
-	return result.Bytes(), nil
-	// _, err = result.Write(dbs.Payload)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "[ DeviantBitSet.Serialize ] Can't write Payload")
-	// }
-	//
-	// return result.Bytes(), nil
-}
 
 func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
 	if header == nil {
@@ -900,10 +827,10 @@ func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, heade
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read globuleHashSignature")
 	}
 
-	err = phase2Packet.deviantBitSet.Deserialize(data)
-	if err != nil {
-		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize deviantBitSet")
-	}
+	// err = phase2Packet.deviantBitSet.Deserialize(data)
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize deviantBitSet")
+	// }
 
 	err = binary.Read(data, defaultByteOrder, &phase2Packet.signatureHeaderSection1)
 	if err != nil {
@@ -954,14 +881,14 @@ func (phase2Packet *Phase2Packet) Serialize() ([]byte, error) {
 	}
 
 	// serializing of deviantBitSet
-	deviantBitSetRaw, err := phase2Packet.deviantBitSet.Serialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize deviantBitSet")
-	}
-	_, err = result.Write(deviantBitSetRaw)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append deviantBitSet")
-	}
+	// deviantBitSetRaw, err := phase2Packet.deviantBitSet.Serialize()
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize deviantBitSet")
+	// }
+	// _, err = result.Write(deviantBitSetRaw)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append deviantBitSet")
+	// }
 
 	err = binary.Write(result, defaultByteOrder, phase2Packet.signatureHeaderSection1)
 	if err != nil {
