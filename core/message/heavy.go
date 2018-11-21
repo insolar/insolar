@@ -34,3 +34,19 @@ func (HeavyPayload) GetCaller() *core.RecordRef {
 func (e *HeavyPayload) Type() core.MessageType {
 	return core.TypeHeavyPayload
 }
+
+// HeavyStart carries replication pulse range.
+type HeavyStart struct {
+	Start core.PulseNumber
+	End   core.PulseNumber
+}
+
+// GetCaller implementation of Message interface.
+func (HeavyStart) GetCaller() *core.RecordRef {
+	return nil
+}
+
+// Type implementation of Message interface.
+func (e *HeavyStart) Type() core.MessageType {
+	return core.TypeHeavyStart
+}
