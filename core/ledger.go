@@ -247,12 +247,15 @@ type KV struct {
 	V []byte
 }
 
+// ExportResult represents storage data view.
 type ExportResult struct {
 	Data     map[string]interface{}
 	NextFrom *PulseNumber
 	Size     int
 }
 
+// Exporter provides methods for fetching data view from storage.
 type Exporter interface {
+	// Export returns data from storage.
 	Export(ctx context.Context, fromPulse PulseNumber, size int) (*ExportResult, error)
 }
