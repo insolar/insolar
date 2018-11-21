@@ -20,13 +20,14 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/insolar/insolar/instrumentation/hack"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/hack"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -67,6 +68,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeSetBlob, h.messagePersistingWrapper(h.handleSetBlob))
 	h.Bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
 
+	h.Bus.MustRegister(core.TypeHeavyStart, h.handleHeavyStart)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
@@ -581,13 +583,26 @@ func validateState(old record.State, new record.State) error {
 }
 
 func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
 	if hack.SkipValidation(ctx) {
 		return &reply.OK{}, nil
 	}
 	msg := genericMsg.Message().(*message.HeavyPayload)
+	inslog.Debugf("Heavy sync: get start payload message with %v records", len(msg.Records))
 	err := h.db.StoreKeyValues(ctx, msg.Records)
 	if err != nil {
 		return nil, err
 	}
+	return &reply.OK{}, nil
+}
+
+func (h *MessageHandler) handleHeavyStart(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
+	msg := genericMsg.Message().(*message.HeavyStart)
+	inslog.Debugf("Heavy sync: get start message [%v,%v]", msg.Start, msg.End)
+	// TODO: handle start message (i.e. add lock)
 	return &reply.OK{}, nil
 }
