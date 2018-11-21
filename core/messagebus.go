@@ -61,12 +61,7 @@ type Reply interface {
 	Type() ReplyType
 }
 
-type Options struct {
-	Receiver *RecordRef
-	Token    DelegationToken
-}
 
-type Option func(*Options)
 
 // MessageBus interface
 //go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
