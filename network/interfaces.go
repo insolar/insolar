@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/insolar/insolar/testutils/network"
 )
 
 // Controller contains network logic.
