@@ -80,6 +80,14 @@
   revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
 
 [[projects]]
+  digest = "1:5a2b13a339956ea88b7ebe692dc61115b4a1db9a862a345d82bbd43f915192d8"
+  name = "github.com/damnever/bitarray"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "194ec7c5a6fa9fea20be8fa959640749eaca6bff"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -585,6 +593,7 @@
     "github.com/blang/semver",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
+    "github.com/damnever/bitarray",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
     "github.com/jbenet/go-base58",
