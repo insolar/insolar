@@ -190,7 +190,6 @@ func (npp *NodePulseProof) Signature() []byte {
 
 // ----------------------------------PHASE 2--------------------------------
 
-
 type Phase2Packet struct {
 	// -------------------- Header
 	packetHeader PacketHeader
@@ -204,13 +203,6 @@ type Phase2Packet struct {
 	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
 	signatureHeaderSection2 [SignatureLength]byte
-}
-
-func NewPhase2Packet() *Phase2Packet {
-	return &Phase2Packet{
-		SignatureHeaderSection1: make([]byte, SignatureLength),
-		SignatureHeaderSection2: make([]byte, SignatureLength),
-	}
 }
 
 func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {

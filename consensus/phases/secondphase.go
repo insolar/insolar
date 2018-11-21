@@ -126,7 +126,7 @@ func (sp *SecondPhase) signPhase2Packet(packet *packets.Phase2Packet) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to sign a phase 2 packet")
 	}
-	packet.SignatureHeaderSection1 = sign.Bytes()
+	packet.signatureHeaderSection1 = sign.Bytes()
 	// TODO: sign a second part after claim addition
 	return nil
 }

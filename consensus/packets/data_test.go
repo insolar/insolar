@@ -184,7 +184,6 @@ func TestPhase1Packet_SetPulseProof(t *testing.T) {
 }
 
 // ----------------------------------PHASE 2--------------------------------
-}
 
 func TestParseAndCompactRouteInfo(t *testing.T) {
 	var routInfoTests = []PacketHeader{
@@ -262,7 +261,7 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet.AddClaim(makeNodeViolationBlame())
 	phase1Packet.AddClaim(&NodeLeaveClaim{})
 
-	phase1Packet.Signature = genRandomSlice(SignatureLength)
+	phase1Packet.Signature = randomArray71()
 
 	return phase1Packet
 }
@@ -272,12 +271,11 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 }
 
 func makePhase2Packet() *Phase2Packet {
-	phase2Packet := NewPhase2Packet()
+	phase2Packet := &Phase2Packet{}
 	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
-	phase2Packet.globuleHashSignature = genRandomSlice(SignatureLength)
-	phase2Packet.deviantBitSet = *makeDeviantBitSet()
-	phase2Packet.SignatureHeaderSection1 = genRandomSlice(SignatureLength)
-	phase2Packet.SignatureHeaderSection2 = genRandomSlice(SignatureLength)
+	phase2Packet.globuleHashSignature = randomArray64()
+	phase2Packet.signatureHeaderSection1 = randomArray71()
+	phase2Packet.signatureHeaderSection2 = randomArray71()
 
 	// TODO: uncomment when support ser\deser of ReferendumVote
 	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
