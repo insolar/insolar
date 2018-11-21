@@ -14,6 +14,48 @@ func ( e *ExtendableError ) Error() string{
     return e.S
 }
 
+func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
+    ph := proxyctx.Current
+    self := new({{ $.ContractType }})
+    err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{ S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
+		return nil, nil, e
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+    ret := []byte{}
+	err = ph.Serialize([]interface{} { self.GetCode().Bytes() }, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
+    ph := proxyctx.Current
+    self := new({{ $.ContractType }})
+    err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{ S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
+		return nil, nil, e
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+    ret := []byte{}
+	err = ph.Serialize([]interface{} { self.GetPrototype().Bytes() }, &ret)
+
+	return state, ret, err
+}
+
 {{ range $method := .Methods }}
 func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, error) {
     ph := proxyctx.Current
