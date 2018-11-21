@@ -493,22 +493,3 @@ func (g *Genesis) getRootDomainRef(ctx context.Context) (*core.RecordRef, error)
 	}
 	return nil, nil
 }
-
-func (g *Genesis) getRootMemberRef(ctx context.Context, rootDomainRef core.RecordRef) (*core.RecordRef, error) {
-	rootDomainObj, err := g.ArtifactManager.GetObject(ctx, rootDomainRef, nil, false)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get children of RootDomain object")
-	}
-	rootDomainRefChildren, err := rootDomainObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootDomainRefChildren.HasNext() {
-		rootMemberRef, err := rootDomainRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get next child of RootDomain object")
-		}
-		return rootMemberRef, nil
-	}
-	return nil, nil
-}
