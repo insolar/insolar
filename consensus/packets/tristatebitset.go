@@ -34,7 +34,7 @@ type TriStateBitSet struct {
 }
 
 // NewTriStateBitSet creates and returns a tristatebitset.
-func NewTriStateBitSet(cells []*BitSetCell, mapper BitSetMapper) (*TriStateBitSet, error) {
+func NewTriStateBitSet(cells []BitSetCell, mapper BitSetMapper) (*TriStateBitSet, error) {
 	if (mapper == nil) || (cells == nil) {
 		return nil, errors.New("[ NewTriStateBitSet ] failed to create tristatebitset")
 	}
@@ -50,9 +50,9 @@ func (dbs *TriStateBitSet) GetCells() []BitSetCell {
 	return dbs.cells
 }
 
-func (dbs *TriStateBitSet) ApplyChanges(changes []*BitSetCell) {
+func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell) {
 	for _, cell := range changes {
-		err := dbs.changeBucketState(cell)
+		err := dbs.changeBucketState(&cell)
 		if err != nil {
 			panic(err)
 		}
@@ -94,16 +94,17 @@ func changeBitState(array *bitarray.BitArray, i int, state TriState) error {
 	return nil
 }
 
-func (dbs *TriStateBitSet) bucketToArray() (*bitarray.BitArray, error) {
+func (dbs *TriStateBitSet) cellsToBitArray() (*bitarray.BitArray, error) {
 	array := bitarray.New(dbs.mapper.Length() * 2) // cuz stores 2 bits for 1 id
-	for _, bucket := range dbs.cells {
-		n, err := dbs.mapper.RefToIndex(bucket.NodeID)
+	for i := 0; i < len(dbs.cells); i++ {
+		cell := dbs.cells[i]
+		n, err := dbs.mapper.RefToIndex(cell.NodeID)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ bucketToArray ] failed to get index from ref")
+			return nil, errors.Wrap(err, "[ cellsToBitArray ] failed to get index from ref")
 		}
-		err = changeBitState(array, n, bucket.State)
+		err = changeBitState(array, n, cell.State)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ bucketToArray ] failed to change bit state")
+			return nil, errors.Wrap(err, "[ cellsToBitArray ] failed to change bit state")
 		}
 	}
 	return array, nil

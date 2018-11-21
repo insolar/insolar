@@ -34,10 +34,10 @@ func initRefs() []core.RecordRef {
 	return result
 }
 
-func initBitCells(refs []core.RecordRef) []*BitSetCell {
-	result := make([]*BitSetCell, refsCount)
+func initBitCells(refs []core.RecordRef) []BitSetCell {
+	result := make([]BitSetCell, refsCount)
 	for i, ref := range refs {
-		result[i] = &BitSetCell{NodeID: ref, State: TimedOut}
+		result[i] = BitSetCell{NodeID: ref, State: TimedOut}
 	}
 	return result
 }
@@ -91,6 +91,8 @@ func TestTriStateBitSet_ApplyChanges(t *testing.T) {
 	cells[refsCount-3].State = Fraud
 	bitset.ApplyChanges(cells)
 	assert.Equal(t, cells, bitset.GetCells())
+	cells[refsCount-4].State = Legit
+	assert.NotEqual(t, cells, bitset.GetCells())
 }
 
 func TestBitArray(t *testing.T) {
@@ -99,12 +101,12 @@ func TestBitArray(t *testing.T) {
 
 	bitset, _ := NewTriStateBitSet(cells, &BitSetMapperMock{refs: refs})
 
-	array1, err := bitset.bucketToArray()
+	array1, err := bitset.cellsToBitArray()
 	assert.NoError(t, err)
 
 	cells[refsCount-3].State = Fraud
 	bitset.ApplyChanges(cells)
-	array2, err := bitset.bucketToArray()
+	array2, err := bitset.cellsToBitArray()
 	assert.NoError(t, err)
 	err = changeBitState(array1, refsCount-3, Fraud)
 	assert.NoError(t, err)

@@ -65,10 +65,10 @@ type BitSet interface {
 	// GetCells get buckets of bitset
 	GetCells() []BitSetCell
 	// ApplyChanges returns copy of the current bitset with changes applied
-	ApplyChanges(changes []*BitSetCell)
+	ApplyChanges(changes []BitSetCell)
 }
 
 // NewBitSet creates bitset from a set of buckets and the mapper
-func NewBitSet(cells []*BitSetCell, mapper BitSetMapper) (BitSet, error) {
+func NewBitSet(cells []BitSetCell, mapper BitSetMapper) (BitSet, error) {
 	return NewTriStateBitSet(cells, mapper)
 }
