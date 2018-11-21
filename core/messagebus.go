@@ -61,8 +61,6 @@ type Reply interface {
 	Type() ReplyType
 }
 
-
-
 // MessageBus interface
 //go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
@@ -153,8 +151,8 @@ const (
 	TypeValidateRecord
 	// TypeSetBlob saves blob in storage.
 	TypeSetBlob
-	// TypeHeavySyncRecords carries Key/Value records for replication on Heavy Material node.
-	TypeHeavySyncRecords
+	// TypeHeavyPayload carries Key/Value records for replication to Heavy Material node.
+	TypeHeavyPayload
 
 	// Bootstrap
 

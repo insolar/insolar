@@ -43,7 +43,7 @@ func (m *PulseManager) HeavySync(
 		if err != nil {
 			panic(err)
 		}
-		msg := &message.HeavyRecords{Records: recs}
+		msg := &message.HeavyPayload{Records: recs}
 		reply, senderr := m.Bus.Send(ctx, msg)
 		if senderr != nil {
 			return core.PulseNumber(0), senderr

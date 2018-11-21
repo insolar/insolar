@@ -71,7 +71,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	}
 	syncmessagesPerMessage := map[int]*messageStat{}
 	busMock.SendFunc = func(ctx context.Context, msg core.Message, op ...core.SendOption) (core.Reply, error) {
-		heavymsg, ok := msg.(*message.HeavyRecords)
+		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			syncsended++
 			var size int
