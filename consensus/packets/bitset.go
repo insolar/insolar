@@ -65,7 +65,7 @@ type BitSet interface {
 	// GetBuckets get buckets of bitset
 	GetBuckets(mapper BitSetMapper) []*BitSetCell
 	// ApplyChanges returns copy of the current bitset with changes applied
-	ApplyChanges(changes []*BitSetCell) (BitSet, error)
+	ApplyChanges(changes []*BitSetCell)
 }
 
 // NewBitSet creates bitset from a set of buckets and the mapper
