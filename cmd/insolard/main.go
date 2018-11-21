@@ -69,6 +69,7 @@ type inputParams struct {
 	configPath        string
 	isGenesis         bool
 	genesisConfigPath string
+	genesisKeyOut     string
 	traceEnabled      bool
 }
 
@@ -77,6 +78,7 @@ func parseInputParams() inputParams {
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
 	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "genesis", "g", "", "path to genesis config file")
+	rootCmd.Flags().StringVarP(&result.genesisKeyOut, "keyout", "", ".", "genesis certificates path")
 	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
@@ -167,6 +169,7 @@ func main() {
 		cert,
 		params.isGenesis,
 		params.genesisConfigPath,
+		params.genesisKeyOut,
 	)
 	checkError(ctx, err, "failed to init components")
 

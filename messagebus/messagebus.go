@@ -21,8 +21,9 @@ import (
 	"context"
 	"encoding/gob"
 	"io"
-	"time"
+	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -46,8 +47,9 @@ type MessageBus struct {
 	ParcelFactory              message.ParcelFactory           `inject:""`
 
 	handlers     map[core.MessageType]core.MessageHandler
-	queue        *ExpiryQueue
 	signmessages bool
+
+	globalLock sync.RWMutex
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
@@ -56,8 +58,6 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	return &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
 		signmessages: config.Host.SignMessages,
-		// TODO: pass value from config
-		queue: NewExpiryQueue(10 * time.Second),
 	}, nil
 }
 
@@ -105,6 +105,16 @@ func (mb *MessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
 	panic("this is not a recorder")
 }
 
+func (mb *MessageBus) Acquire(ctx context.Context) {
+	inslogger.FromContext(ctx).Info("Acquire GIL")
+	mb.globalLock.Lock()
+}
+
+func (mb *MessageBus) Release(ctx context.Context) {
+	inslogger.FromContext(ctx).Info("Release GIL")
+	mb.globalLock.Unlock()
+}
+
 // Register sets a function as a handler for particular message type,
 // only one handler per type is allowed
 func (mb *MessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
@@ -142,7 +152,9 @@ func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message) (core.
 
 // SendParcel sends provided message via network.
 func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel) (core.Reply, error) {
-	mb.queue.Push(msg)
+	scope := newReaderScope(&mb.globalLock)
+	scope.Lock()
+	defer scope.Unlock()
 
 	pulse, err := mb.Ledger.GetPulseManager().Current(ctx)
 	if err != nil {
@@ -176,6 +188,8 @@ func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel) (core.Rep
 	if err != nil {
 		return nil, err
 	}
+
+	scope.Unlock()
 
 	return reply.Deserialize(bytes.NewBuffer(res))
 }
@@ -216,6 +230,10 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	}
 
 	sender := parcel.GetSender()
+
+	scope := newReaderScope(&mb.globalLock)
+	scope.Lock()
+	defer scope.Unlock()
 
 	senderKey := mb.ActiveNodes.GetActiveNode(sender).PublicKey()
 	if mb.signmessages {
@@ -261,6 +279,8 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
+	scope.Unlock()
+
 	rd, err := reply.Serialize(resp)
 	if err != nil {
 		return nil, err
@@ -275,4 +295,27 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 
 func init() {
 	gob.Register(&serializableError{})
+}
+
+type readerScope struct {
+	mutex  *sync.RWMutex
+	locked bool
+}
+
+func newReaderScope(mutex *sync.RWMutex) *readerScope {
+	return &readerScope{
+		mutex: mutex,
+	}
+}
+
+func (rs *readerScope) Lock() {
+	rs.mutex.RLock()
+	rs.locked = true
+}
+
+func (rs *readerScope) Unlock() {
+	if rs.locked {
+		rs.locked = false
+		rs.mutex.RUnlock()
+	}
 }

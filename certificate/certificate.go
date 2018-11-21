@@ -21,26 +21,77 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
-	PublicKey string `json:"public_key"`
-	Host      string `json:"host"`
+	PublicKey   string `json:"public_key"`
+	Host        string `json:"host"`
+	NetworkSign []byte `json:"network_sign"`
+	NodeSign    []byte `json:"node_sign"`
 }
 
 // Certificate holds info about certificate
-type aaaa struct {
-	MajorityRule        int             `json:"majority_rule"`
+type Certificate struct {
+	MajorityRule int `json:"majority_rule"`
+	MinRoles     struct {
+		Virtual       uint `json:"virtual"`
+		HeavyMaterial uint `json:"heavy_material"`
+		LightMaterial uint `json:"light_material"`
+	} `json:"min_roles"`
 	PublicKey           string          `json:"public_key"`
 	Reference           string          `json:"reference"`
 	Role                string          `json:"role"`
 	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
 	RootDomainReference string          `json:"root_domain_ref"`
+}
+
+func (cert *Certificate) serializeNetworkPart() []byte {
+	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
+		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +
+		cert.RootDomainReference
+
+	sort.Slice(cert.BootstrapNodes, func(i, j int) bool {
+		return strings.Compare(cert.BootstrapNodes[i].PublicKey, cert.BootstrapNodes[j].PublicKey) == -1
+	})
+
+	for _, node := range cert.BootstrapNodes {
+		out += node.PublicKey + node.Host
+	}
+
+	return []byte(out)
+}
+
+// SignNetworkPart signs network part in certificate
+func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) {
+	signer := platformpolicy.NewPlatformCryptographyScheme().Signer(key)
+	sign, err := signer.Sign(cert.serializeNetworkPart())
+	if err != nil {
+		return nil, err
+	}
+	return sign.Bytes(), nil
+}
+
+func (cert *Certificate) serializeNodePart() []byte {
+	return []byte(cert.PublicKey + cert.Reference + cert.Role)
+}
+
+// SignNodePart signs node part in certificate
+func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
+	signer := platformpolicy.NewPlatformCryptographyScheme().Signer(key)
+	sign, err := signer.Sign(cert.serializeNodePart())
+	if err != nil {
+		return nil, err
+	}
+	return sign.Bytes(), nil
 }
 
 // GetBootstrapNodes return bootstrap nodes array
@@ -97,22 +148,6 @@ func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyPr
 
 	cert.PublicKey = string(keyBytes)
 	return &cert, nil
-}
-
-// GenerateKeys generates certificate keys
-func (cert *Certificate) GenerateKeys() error {
-	// keyProcessor := platformpolicy.NewKeyProcessor()
-	// privateKey, err := keyProcessor.GeneratePrivateKey()
-	// if err != nil {
-	// 	return errors.Wrap(err, "[ GenerateKeys ] Failed to generate private key.")
-	// }
-	//
-	// err = cert.setKeys(privateKey)
-	// if err != nil {
-	// 	return errors.Wrap(err, "[ GenerateKeys ] Problem with setting keys.")
-	// }
-
-	return nil
 }
 
 func (cert *Certificate) Dump() (string, error) {

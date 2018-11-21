@@ -234,7 +234,7 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
 		"Functions":      pf.functionInfoForWrapper(pf.constructors[pf.contract]),
 		"ParsedCode":     pf.code,
 		"FoundationPath": foundationPath,
-		"Imports":        pf.generateImports(true, false),
+		"Imports":        pf.generateImports(true),
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -274,12 +274,6 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	methodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
 
-	removeFoundation := false
-	if len(methodsProxies) == 0 {
-		removeFoundation = true
-		fmt.Println("WARNING: build proxy without methods")
-	}
-
 	data := map[string]interface{}{
 		"PackageName":         proxyPackageName,
 		"Types":               generateTypes(pf),
@@ -287,7 +281,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		"MethodsProxies":      methodsProxies,
 		"ConstructorsProxies": constructorProxies,
 		"ClassReference":      classReference,
-		"Imports":             pf.generateImports(false, removeFoundation),
+		"Imports":             pf.generateImports(false),
 	}
 
 	var buff bytes.Buffer
@@ -352,7 +346,7 @@ func (pf *ParsedFile) typeName(t ast.Expr) string {
 	return pf.codeOfNode(t)
 }
 
-func (pf *ParsedFile) generateImports(wrapper bool, removeFoundation bool) map[string]bool {
+func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
 	if !wrapper {
@@ -369,10 +363,6 @@ func (pf *ParsedFile) generateImports(wrapper bool, removeFoundation bool) map[s
 		if !wrapper {
 			extendImportsMap(pf, fun.Type.Results, imports)
 		}
-	}
-
-	if imports[fmt.Sprintf(`"%s"`, foundationPath)] && removeFoundation {
-		delete(imports, fmt.Sprintf(`"%s"`, foundationPath))
 	}
 
 	return imports

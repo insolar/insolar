@@ -105,6 +105,7 @@ func InitComponents(
 	cert core.Certificate,
 	isGenesis bool,
 	genesisConfigPath string,
+	genesisKeyOut string,
 
 ) (*component.Manager, *ComponentManager, *Repl, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
@@ -124,10 +125,10 @@ func InitComponents(
 
 	var gen core.Genesis
 	if isGenesis {
-		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath)
+		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
 	} else {
-		gen, err = genesis.NewGenesis(isGenesis, "")
+		gen, err = genesis.NewGenesis(isGenesis, "", "")
 		checkError(ctx, err, "failed to start Bootstrapper")
 	}
 
