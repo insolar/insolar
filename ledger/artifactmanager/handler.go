@@ -159,12 +159,12 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 func (h *MessageHandler) createRedirect(ctx context.Context, genericMsg core.Parcel, msg *message.GetObject, definedState *core.RecordID, pulse core.PulseNumber) (*reply.GetObjectRedirectReply, error) {
 	// here we need find node by pulse
 	redirect, err := h.prepareRedirect(ctx, msg, definedState, definedState.Pulse())
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
 	token, err := h.DelegationTokenFactory.IssueGetObjectRedirect(genericMsg, redirect.StateID)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -179,13 +179,11 @@ func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetOb
 		return nil, err
 	}
 	if len(nodes) > 1 {
-		return nil, errors.New("problems with node")
+		return nil, errors.New("found more than one executer")
 	}
 
 	return reply.NewGetObjectRedirectReply(&nodes[0], definedState), nil
 }
-
-
 
 func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetObject)
