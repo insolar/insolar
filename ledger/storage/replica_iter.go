@@ -89,6 +89,13 @@ func NewReplicaIter(
 		end:    bytes.Join([][]byte{indexesPrefix, end.Bytes()}, nil),
 	}
 
+	jetPrefix := []byte{scopeIDJetDrop}
+	jetsIter := &iterstate{
+		prefix: jetPrefix,
+		start:  bytes.Join([][]byte{jetPrefix, start.Bytes()}, nil),
+		end:    bytes.Join([][]byte{jetPrefix, end.Bytes()}, nil),
+	}
+
 	return &ReplicaIter{
 		ctx:        ctx,
 		db:         db,
@@ -99,6 +106,7 @@ func NewReplicaIter(
 			recordsIter,
 			blobsIter,
 			indexesIter,
+			jetsIter,
 		},
 	}
 }

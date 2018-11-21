@@ -114,6 +114,7 @@ func Test_ReplicaIter(t *testing.T) {
 		lastPulse = pulseDelta(i)
 
 		addRecords(ctx, t, db, lastPulse)
+		setDrop(ctx, t, db, lastPulse)
 
 		recs, _ := getallkeys(db.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
@@ -202,6 +203,27 @@ func Test_ReplicaIter(t *testing.T) {
 	}
 }
 
+func setDrop(
+	ctx context.Context,
+	t *testing.T,
+	db *storage.DB,
+	pulsenum core.PulseNumber,
+) {
+	prevDrop, err := db.GetDrop(ctx, pulsenum-1)
+	var prevhash []byte
+	if err == nil {
+		prevhash = prevDrop.Hash
+	} else if err != storage.ErrNotFound {
+		require.NoError(t, err)
+	}
+	drop, _, err := db.CreateDrop(ctx, pulsenum, prevhash)
+	if err != nil {
+		require.NoError(t, err)
+	}
+	err = db.SetDrop(ctx, drop)
+	require.NoError(t, err)
+}
+
 func addRecords(
 	ctx context.Context,
 	t *testing.T,
@@ -269,8 +291,8 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 			records = append(records, k)
 		case scopeIDBlob:
 			records = append(records, k)
-		// case scopeIDJetDrop:
-		// 	records = append(records, kstr)
+		case scopeIDJetDrop:
+			records = append(records, k)
 		case scopeIDLifeline:
 			indexes = append(indexes, k)
 		}
