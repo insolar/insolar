@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-// DelegationToken is an authorization token that allows a node to perform
+// Package delegationtoken is about an authorization token that allows a node to perform
 // actions it can not normally perform during this pulse
 package delegationtoken
 
@@ -23,12 +23,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-type BaseDelegationToken struct {
-	Signature []byte
-}
-
 type PendingExecution struct {
-	BaseDelegationToken
+	Signature []byte
 }
 
 func (t *PendingExecution) Type() core.DelegationTokenType {
@@ -46,9 +42,9 @@ func (t *PendingExecution) Verify(parcel core.Parcel) (bool, error) {
 	}
 }
 
-
+// GetObjectRedirect is a redirect token for the GetObject method
 type GetObjectRedirect struct {
-	BaseDelegationToken
+	Signature []byte
 }
 
 func (t *GetObjectRedirect) Type() core.DelegationTokenType {
