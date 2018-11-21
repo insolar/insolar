@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/pkg/errors"
 )
 
 type delegationTokenFactory struct {
@@ -70,14 +69,4 @@ func (f *delegationTokenFactory) Verify(parcel core.Parcel) (bool, error) {
 	}
 
 	return parcel.DelegationToken().Verify(parcel)
-}
-
-func empty(t core.DelegationTokenType) (core.DelegationToken, error) {
-	switch t {
-
-	case core.DTTypePendingExecution:
-		return &PendingExecution{}, nil
-	default:
-		return nil, errors.Errorf("unimplemented delegation token type %d", t)
-	}
 }
