@@ -36,7 +36,7 @@ type TriStateBitSet struct {
 // NewTriStateBitSet creates and returns a tristatebitset.
 func NewTriStateBitSet(cells []*BitSetCell, mapper BitSetMapper) (*TriStateBitSet, error) {
 	if (mapper == nil) || (cells == nil) {
-		return nil, errors.New("failed to create tristatebitset")
+		return nil, errors.New("[NewTriStateBitSet] failed to create tristatebitset")
 	}
 	bitset := &TriStateBitSet{
 		cells:  make([]*BitSetCell, mapper.Length()),
@@ -70,7 +70,7 @@ func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
 func (dbs *TriStateBitSet) changeBucketState(cell *BitSetCell) error {
 	n, err := dbs.mapper.RefToIndex(cell.NodeID)
 	if err != nil {
-		return errors.Wrap(err, "failed to get index from ref")
+		return errors.Wrap(err, "[changeBucketState] failed to get index from ref")
 	}
 	dbs.cells[n] = cell
 	return nil
@@ -79,17 +79,17 @@ func (dbs *TriStateBitSet) changeBucketState(cell *BitSetCell) error {
 func putLastBit(array *bitarray.BitArray, state TriState, i int) error {
 	bit := int(state & lastBitMask)
 	_, err := array.Put(i, bit)
-	return errors.Wrap(err, "failed to put a bit ti bitset")
+	return errors.Wrap(err, "[putLastBit] failed to put a bit ti bitset")
 }
 
 func changeBitState(array *bitarray.BitArray, i int, state TriState) error {
 	err := putLastBit(array, state, 2*i)
 	if err != nil {
-		return errors.Wrap(err, "failed to put last bit")
+		return errors.Wrap(err, "[changeBitState] failed to put last bit")
 	}
 	err = putLastBit(array, state>>1, 2*i+1)
 	if err != nil {
-		return errors.Wrap(err, "failed to put last bit")
+		return errors.Wrap(err, "[changeBitState] failed to put last bit")
 	}
 	return nil
 }
@@ -99,11 +99,11 @@ func (dbs *TriStateBitSet) bucketToArray() (*bitarray.BitArray, error) {
 	for _, bucket := range dbs.cells {
 		n, err := dbs.mapper.RefToIndex(bucket.NodeID)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get index from ref")
+			return nil, errors.Wrap(err, "[bucketToArray] failed to get index from ref")
 		}
 		err = changeBitState(array, n, bucket.State)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to change bit state")
+			return nil, errors.Wrap(err, "[bucketToArray] failed to change bit state")
 		}
 	}
 	return array, nil
