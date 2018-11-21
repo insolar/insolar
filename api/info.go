@@ -34,15 +34,21 @@ func (ar *Runner) infoHandler() func(http.ResponseWriter, *http.Request) {
 
 		rootDomain := ar.GenesisDataProvider.GetRootDomain(ctx)
 		if rootDomain == nil {
-			inslog.Error("[ INFO ] Can't get rootDomain ref")
+			inslog.Error("[ INFO ] rootDomain ref is nil")
 		}
-		rootMember := ar.GenesisDataProvider.GetRootMember(ctx)
+		rootMember, err := ar.GenesisDataProvider.GetRootMember(ctx)
+		if err != nil {
+			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get rootMember ref"))
+		}
 		if rootMember == nil {
-			inslog.Error("[ INFO ] Can't get rootMember ref")
+			inslog.Error("[ INFO ] rootMember ref is nil")
 		}
-		nodeDomain := ar.GenesisDataProvider.GetNodeDomain(ctx)
+		nodeDomain, err := ar.GenesisDataProvider.GetNodeDomain(ctx)
+		if err != nil {
+			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get nodeDomain ref"))
+		}
 		if nodeDomain == nil {
-			inslog.Error("[ INFO ] Can't get nodeDomain ref")
+			inslog.Error("[ INFO ] nodeDomain ref is nil")
 		}
 		data, err := json.MarshalIndent(map[string]interface{}{
 			"root_domain": rootDomain.String(),

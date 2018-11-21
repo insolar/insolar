@@ -136,17 +136,23 @@ func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordR
 }
 
 // GetNodeDomain returns reference to NodeDomain
-func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) *core.RecordRef {
+func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.RecordRef, error) {
 	if gdp.nodeDomainRef == nil {
-		gdp.setInfo(ctx)
+		err := gdp.setInfo(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetNodeDomain ] Can't get info")
+		}
 	}
-	return gdp.nodeDomainRef
+	return gdp.nodeDomainRef, nil
 }
 
 // GetRootMember returns reference to RootMember
-func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) *core.RecordRef {
+func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*core.RecordRef, error) {
 	if gdp.rootMemberRef == nil {
-		gdp.setInfo(ctx)
+		err := gdp.setInfo(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetNodeDomain ] Can't get info")
+		}
 	}
-	return gdp.rootMemberRef
+	return gdp.rootMemberRef, nil
 }
