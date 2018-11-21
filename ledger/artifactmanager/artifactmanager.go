@@ -140,7 +140,7 @@ func (m *LedgerArtifactManager) GetObject(
 	}
 
 	if genericReact.Type() == reply.TypeGetObjectRedirect {
-		genericReact, err = m.makeRedirect(ctx, genericReact, head, approved)
+		genericReact, err = m.makeRedirect(ctx, genericReact, getObjectMsg)
 		if err != nil {
 			return nil, err
 		}
