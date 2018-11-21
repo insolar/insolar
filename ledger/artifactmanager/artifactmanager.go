@@ -126,13 +126,14 @@ func (m *LedgerArtifactManager) GetObject(
 	)
 	defer instrument(ctx, "GetObject").err(&err).end()
 
+	getObjectMsg := &message.GetObject{
+		Head:     head,
+		State:    state,
+		Approved: approved,
+	}
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
-		&message.GetObject{
-			Head:     head,
-			State:    state,
-			Approved: approved,
-		},
+		getObjectMsg,
 	)
 	if err != nil {
 		return nil, err
@@ -166,20 +167,18 @@ func (m *LedgerArtifactManager) GetObject(
 	return desc, err
 }
 
-func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.Reply, head core.RecordRef, approved bool) (core.Reply, error) {
+func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.Reply, messageForRedirect *message.GetObject) (core.Reply, error) {
 	// TODO Need to be replaced with constant
 	maxCountOfReply := 2
 
 	for maxCountOfReply > 0 {
 		redirectResponse := response.(*reply.GetObjectRedirectReply)
 
+		redirectedMessage := redirectResponse.RecreateMessage(messageForRedirect)
+
 		genericReact, err := m.bus(ctx).Send(
 			ctx,
-			&message.GetObject{
-				Head:     head,
-				State:    redirectResponse.StateID,
-				Approved: approved,
-			},
+			redirectedMessage,
 			core.SendOptionToken(redirectResponse.Token),
 			core.SendOptionDestination(redirectResponse.To),
 		)
