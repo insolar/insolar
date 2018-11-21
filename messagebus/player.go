@@ -58,6 +58,9 @@ func (r *player) Send(ctx context.Context, msg core.Message, optionSetter ...cor
 		}
 	}
 	parcel, err := r.CreateParcel(ctx, msg, options)
+	if err != nil{
+		return nil, err
+	}
 	id := GetMessageHash(r.scheme, parcel)
 
 	// Value from storageTape.
