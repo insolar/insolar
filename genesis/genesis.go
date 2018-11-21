@@ -354,48 +354,31 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
-
-	rootDomainRef, err := g.getRootDomainRef(ctx)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't get ref of rootDomain")
-	}
-	if rootDomainRef != nil {
-		g.rootDomainRef = rootDomainRef
-
-		rootMemberRef, err := g.getRootMemberRef(ctx, *g.rootDomainRef)
+	if g.isGenesis {
+		inslog.Info("[ Genesis ] Run genesis ...")
+		isLightExecutor, err := g.isLightExecutor(ctx)
 		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't get ref of rootMember")
+			return errors.Wrap(err, "[ Genesis ] couldn't check if node is light executor")
+		}
+		if !isLightExecutor {
+			inslog.Info("[ Genesis ] Node is not light executor. Don't run genesis")
+			return nil
 		}
 
-		g.rootMemberRef = rootMemberRef
-		inslog.Info("[ Genesis ] RootDomain was found in ledger. Don't run genesis")
-		return nil
-	}
+		_, insgocc, err := goplugintestutils.Build()
+		if err != nil {
+			return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
+		}
 
-	isLightExecutor, err := g.isLightExecutor(ctx)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't check if node is light executor")
-	}
-	if !isLightExecutor {
-		inslog.Info("[ Genesis ] Node is not light executor. Don't run genesis")
-		return nil
-	}
+		cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
+		g.prototypeRefs = cb.Prototypes
+		defer cb.Clean()
 
-	_, insgocc, err := goplugintestutils.Build()
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
-	}
+		err = buildSmartContracts(ctx, cb)
+		if err != nil {
+			return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
+		}
 
-	cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
-	g.prototypeRefs = cb.Prototypes
-	defer cb.Clean()
-
-	err = buildSmartContracts(ctx, cb)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
-	}
-
-	if g.isGenesis {
 		_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
 		if err != nil {
 			return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
