@@ -29,7 +29,7 @@ const lastBitMask = 0x00000001
 type TriStateBitSet struct {
 	CompressedSet bool
 
-	cells  []*BitSetCell
+	cells  []BitSetCell
 	mapper BitSetMapper
 }
 
@@ -39,14 +39,14 @@ func NewTriStateBitSet(cells []*BitSetCell, mapper BitSetMapper) (*TriStateBitSe
 		return nil, errors.New("[ NewTriStateBitSet ] failed to create tristatebitset")
 	}
 	bitset := &TriStateBitSet{
-		cells:  make([]*BitSetCell, mapper.Length()),
+		cells:  make([]BitSetCell, mapper.Length()),
 		mapper: mapper,
 	}
 	bitset.ApplyChanges(cells)
 	return bitset, nil
 }
 
-func (dbs *TriStateBitSet) GetBuckets() []*BitSetCell {
+func (dbs *TriStateBitSet) GetCells() []BitSetCell {
 	return dbs.cells
 }
 
@@ -72,7 +72,7 @@ func (dbs *TriStateBitSet) changeBucketState(cell *BitSetCell) error {
 	if err != nil {
 		return errors.Wrap(err, "[ changeBucketState ] failed to get index from ref")
 	}
-	dbs.cells[n] = cell
+	dbs.cells[n] = *cell
 	return nil
 }
 

@@ -62,8 +62,8 @@ type BitSetMapper interface {
 // BitSet is interface
 type BitSet interface {
 	Serializer
-	// GetBuckets get buckets of bitset
-	GetBuckets() []*BitSetCell
+	// GetCells get buckets of bitset
+	GetCells() []BitSetCell
 	// ApplyChanges returns copy of the current bitset with changes applied
 	ApplyChanges(changes []*BitSetCell)
 }

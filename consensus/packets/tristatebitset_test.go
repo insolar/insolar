@@ -79,7 +79,7 @@ func TestTriStateBitSet_GetBuckets(t *testing.T) {
 	cells := initBitCells(refs)
 
 	bitset, _ := NewBitSet(cells, &BitSetMapperMock{refs: refs})
-	assert.Equal(t, cells, bitset.GetBuckets())
+	assert.Equal(t, cells, bitset.GetCells())
 }
 
 func TestTriStateBitSet_ApplyChanges(t *testing.T) {
@@ -90,7 +90,7 @@ func TestTriStateBitSet_ApplyChanges(t *testing.T) {
 
 	cells[refsCount-3].State = Fraud
 	bitset.ApplyChanges(cells)
-	assert.Equal(t, cells, bitset.GetBuckets())
+	assert.Equal(t, cells, bitset.GetCells())
 }
 
 func TestBitArray(t *testing.T) {
