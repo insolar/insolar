@@ -262,19 +262,19 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	return nil
+	panic("not implemented")
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
-	return nil
+	panic("not implemented")
 }
 
 func (nk *nodekeeper) Sync(list network.UnsyncList) {
-	log.Error("not implemented")
+	panic("not implemented")
 }
 
 func (nk *nodekeeper) MoveSyncToActive() {
-	log.Error("not implemented")
+	panic("not implemented")
 }
 
 func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
