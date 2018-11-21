@@ -94,6 +94,7 @@ func NewReplicaIter(
 		db:         db,
 		limitBytes: limit,
 
+		// records iterator (order matters!)
 		istates: []*iterstate{
 			recordsIter,
 			blobsIter,
@@ -169,13 +170,15 @@ func (fc *fetchchunk) fetch(
 		defer it.Close()
 
 		for it.Seek(start); it.ValidForPrefix(prefix); it.Next() {
-			if it.ValidForPrefix(end) {
-				break
-			}
 			item := it.Item()
 			if item == nil {
 				break
 			}
+			// key prefix < end
+			if bytes.Compare(item.Key()[:len(end)], end) != -1 {
+				break
+			}
+
 			key := item.KeyCopy(nil)
 			if fc.size > fc.limit {
 				nextstart = key
