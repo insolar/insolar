@@ -41,12 +41,12 @@ type BitSetBucket struct {
 
 // Possible errors in BitSetMapper
 var (
-	// BitSetOutOfRange is returned when index passed to IndexToRef function is out of range (ERROR)
-	BitSetOutOfRange = errors.New("index out of range")
-	// BitSetNodeIsMissing is returned in IndexToRef when we have no information about the node on specified index (SPECIAL CASE)
-	BitSetNodeIsMissing = errors.New("no information about node on specified index")
-	// BitSetIncorrectNode is returned when an incorrect node is passed to RefToIndex (ERROR)
-	BitSetIncorrectNode = errors.New("incorrect node ID")
+	// ErrBitSetOutOfRange is returned when index passed to IndexToRef function is out of range (ERROR)
+	ErrBitSetOutOfRange = errors.New("index out of range")
+	// ErrBitSetNodeIsMissing is returned in IndexToRef when we have no information about the node on specified index (SPECIAL CASE)
+	ErrBitSetNodeIsMissing = errors.New("no information about node on specified index")
+	// ErrBitSetIncorrectNode is returned when an incorrect node is passed to RefToIndex (ERROR)
+	ErrBitSetIncorrectNode = errors.New("incorrect node ID")
 )
 
 // BitSetMapper contains the mapping from bitset index to node ID (and vice versa)
