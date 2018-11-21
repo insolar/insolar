@@ -140,11 +140,10 @@ func (m *LedgerArtifactManager) GetObject(
 
 	if genericReact.Type() == reply.TypeGetObjectRedirect {
 		genericReact, err = m.makeRedirect(ctx, genericReact, head, approved)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
 	}
-
 
 	switch r := genericReact.(type) {
 	case *reply.Object:
@@ -194,18 +193,6 @@ func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.
 
 	return nil, errors.New("object not found")
 }
-
-// func (m *LedgerArtifactManager) createRedirectParcel(ctx context.Context, parcel core.Parcel, response core.Reply) (*core.RecordRef, core.Parcel, error) {
-// 	switch redirect := response.(type) {
-// 	case *reply.GetObjectRedirectReply:
-// 		newMessage := redirect.RecreateMessage(parcel.Message())
-// 		parcel, err := mb.CreateParcel(ctx, newMessage)
-// 		// TODO here a sign-token shoulb be put to parcel
-// 		return redirect.GetTo(), parcel, err
-// 	default:
-// 		panic("unknown type of redirect")
-// 	}
-// }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.
 //
