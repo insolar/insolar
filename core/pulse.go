@@ -18,7 +18,6 @@ package core
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"time"
 
 	"github.com/insolar/insolar/core/utils"
@@ -50,11 +49,6 @@ func NewPulseNumber(buf []byte) PulseNumber {
 // Bytes serializes pulse number.
 func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
-}
-
-// MarshalJSON serializes pulse number into JSON.
-func (pn PulseNumber) MarshalJSON() ([]byte, error) {
-	return json.Marshal(int(pn))
 }
 
 // Pulse is base data structure for a pulse.
