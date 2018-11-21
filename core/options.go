@@ -1,20 +1,20 @@
 package core
 
-type Options struct {
+type SendOptions struct {
 	Receiver *RecordRef
 	Token    DelegationToken
 }
 
-type Option func(*Options)
+type SendOption func(*SendOptions)
 
-func Receiver(receiver *RecordRef) Option {
-	return func(args *Options) {
+func Receiver(receiver *RecordRef) SendOption {
+	return func(args *SendOptions) {
 		args.Receiver = receiver
 	}
 }
 
-func Token(token DelegationToken) Option {
-	return func(args *Options) {
+func Token(token DelegationToken) SendOption {
+	return func(args *SendOptions) {
 		args.Token = token
 	}
 }
