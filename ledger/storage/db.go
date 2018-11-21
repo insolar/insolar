@@ -474,23 +474,30 @@ func (db *DB) GetLocalData(ctx context.Context, pulse core.PulseNumber, key []by
 // IterateLocalData iterates over all record with specified prefix and calls handler with key and value of that record.
 //
 // The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
-func (db *DB) IterateLocalData(ctx context.Context, pulse core.PulseNumber, prefix []byte, handler func(k, v []byte) error) error {
+func (db *DB) IterateLocalData(
+	ctx context.Context,
+	pulse core.PulseNumber,
+	prefix []byte,
+	handler func(k, v []byte) error,
+) error {
 	fullPrefix := bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), prefix}, nil)
+	return db.iterate(ctx, fullPrefix, handler)
+}
 
-	return db.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
+// IterateRecords iterates over records.
+func (db *DB) IterateRecords(
+	ctx context.Context,
+	pulse core.PulseNumber,
+	handler func(id core.RecordID, rec record.Record) error,
+) error {
+	prefix := bytes.Join([][]byte{{scopeIDRecord}, pulse.Bytes()}, nil)
 
-		for it.Seek(fullPrefix); it.ValidForPrefix(fullPrefix); it.Next() {
-			key := it.Item().KeyCopy(nil)[len(fullPrefix):]
-			value, err := it.Item().ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-			err = handler(key, value)
-			if err != nil {
-				return err
-			}
+	return db.iterate(ctx, prefix, func(k, v []byte) error {
+		id := core.NewRecordID(pulse, k)
+		rec := record.DeserializeRecord(v)
+		err := handler(*id, rec)
+		if err != nil {
+			return err
 		}
 		return nil
 	})
@@ -544,5 +551,29 @@ func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
 func (db *DB) set(ctx context.Context, key, value []byte) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		return tx.set(ctx, key, value)
+	})
+}
+
+func (db *DB) iterate(
+	ctx context.Context,
+	prefix []byte,
+	handler func(k, v []byte) error,
+) error {
+	return db.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			key := it.Item().KeyCopy(nil)[len(prefix):]
+			value, err := it.Item().ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+			err = handler(key, value)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
