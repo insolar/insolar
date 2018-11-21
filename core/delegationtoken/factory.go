@@ -57,10 +57,10 @@ func (f *delegationTokenFactory) IssueGetObjectRedirect(parcel core.Parcel, defi
 	getObjectRequest.State = definedState
 	dataForSign := append(parcel.GetSender().Bytes(), message.ToBytes(getObjectRequest)...)
 	sign, err := f.Cryptography.Sign(dataForSign)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
-	return &GetObjectRedirect{BaseDelegationToken{Signature:sign.Bytes()}}, nil
+	return &GetObjectRedirect{Signature: sign.Bytes()}, nil
 }
 
 func (f *delegationTokenFactory) Verify(parcel core.Parcel) (bool, error) {
