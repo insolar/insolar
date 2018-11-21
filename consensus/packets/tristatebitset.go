@@ -84,6 +84,9 @@ func (dbs *TriStateBitSet) changeBucketState(bucket *BitSetCell) error {
 func (dbs *TriStateBitSet) changeBitState(array *bitarray.BitArray, n int, state TriState) error {
 	bit := int(state & 0x00000001)
 	_, err := array.Put(2*n, bit)
+	if err != nil {
+		return err
+	}
 	bit = int((state >> 1) & 0x00000001)
 	_, err = array.Put(2*n+1, bit)
 	if err != nil {
