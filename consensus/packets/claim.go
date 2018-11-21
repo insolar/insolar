@@ -93,7 +93,7 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 	return TypeNodeJoinClaim
 }
 
-func (nac *NodeJoinClaim) Node() core.Node {
+func (njc *NodeJoinClaim) Node() core.Node {
 	// TODO: convert claim to node
 	return nil
 }

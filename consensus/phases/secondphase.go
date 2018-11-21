@@ -72,9 +72,9 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
 
-	var deviants []core.Node
-	deviants = append(deviants, state.TimedOutNodes...)
-	deviants = append(deviants, state.DeviantNodes...)
+	// var deviants []core.Node
+	// deviants = append(deviants, state.TimedOutNodes...)
+	// deviants = append(deviants, state.DeviantNodes...)
 
 	for ref, packet := range proofSet {
 		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
@@ -106,7 +106,6 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	// TODO: timeouts, deviants, etc.
 	sp.NodeKeeper.Sync(state.UnsyncList)
-
 	return &SecondPhaseState{
 		FirstPhaseState: state,
 
