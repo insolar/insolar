@@ -23,21 +23,26 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// ExporterArgs is arguments that Exporter service accepts.
 type ExporterArgs struct {
 	From uint32
 	Size int
 }
 
+// ExporterReply is reply for Exporter service requests.
 type ExporterReply = core.ExportResult
 
+// ExporterService is a service that provides API for exporting storage data.
 type ExporterService struct {
 	runner *Runner
 }
 
+// NewExporterService creates new Exporter service instance.
 func NewExporterService(runner *Runner) *ExporterService {
 	return &ExporterService{runner: runner}
 }
 
+// Export returns data view from storage.
 func (s *ExporterService) Export(r *http.Request, args *ExporterArgs, reply *ExporterReply) error {
 	exp := s.runner.Exporter
 	ctx := context.TODO()
