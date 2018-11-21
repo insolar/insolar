@@ -23,7 +23,6 @@ import (
 )
 
 type PacketType uint8
-type ReferendumType uint8
 
 const (
 	Phase1 = PacketType(iota + 1)
@@ -192,16 +191,6 @@ func (npp *NodePulseProof) Signature() []byte {
 }
 
 // ----------------------------------PHASE 2--------------------------------
-
-type ReferendumVote struct {
-	Type   ReferendumType
-	Length uint16
-}
-
-type NodeListVote struct {
-	NodeListCount uint16
-	NodeListHash  [32]byte
-}
 
 type DeviantBitSet struct {
 	CompressedSet     bool
