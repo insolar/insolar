@@ -6,7 +6,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-// TODO remove
 // PrototypeReference to prototype of this contract
 var PrototypeReference = core.NewRefFromBase58("")
 

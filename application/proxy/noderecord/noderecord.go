@@ -11,7 +11,6 @@ type RecordInfo struct {
 	Role      core.NodeRole
 }
 
-// TODO remove
 // PrototypeReference to prototype of this contract
 var PrototypeReference = core.NewRefFromBase58("")
 
