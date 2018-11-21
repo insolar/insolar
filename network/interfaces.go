@@ -140,11 +140,6 @@ const (
 	Ready
 )
 
-type NodeClaim struct {
-	Claim     consensus.ReferendumClaim
-	Initiator core.RecordRef
-}
-
 // NodeKeeper manages unsync, sync and active lists.
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
 type NodeKeeper interface {

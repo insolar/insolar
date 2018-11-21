@@ -109,10 +109,6 @@ type nodekeeper struct {
 	active       map[core.RecordRef]core.Node
 	indexNode    map[core.NodeRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
-
-	lock   sync.Mutex
-	unsync []*network.NodeClaim
-	sync   []*network.NodeClaim
 }
 
 func (nk *nodekeeper) Start(ctx context.Context, components core.Components) error {
@@ -274,35 +270,11 @@ func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
 }
 
 func (nk *nodekeeper) Sync(list network.UnsyncList) {
-	nk.lock.Lock()
-	defer nk.lock.Unlock()
-
 	log.Error("not implemented")
 }
 
 func (nk *nodekeeper) MoveSyncToActive() {
-	nk.lock.Lock()
-	nk.activeLock.Lock()
-	defer func() {
-		nk.activeLock.Unlock()
-		nk.lock.Unlock()
-	}()
-
-	nk.nodesJoinedDuringPrevPulse = false
-	for _, nodeClaim := range nk.sync {
-		switch nodeClaim.Claim.Type() {
-		case consensus.TypeNodeJoinClaim:
-			claim := nodeClaim.Claim.(*consensus.NodeJoinClaim)
-			nk.addActiveNode(claim.Node())
-			nk.nodesJoinedDuringPrevPulse = true
-		case consensus.TypeNodeLeaveClaim:
-			nk.delActiveNode(nodeClaim.Initiator)
-		default:
-			log.Error("unknown claim type: %d", nodeClaim.Claim.Type())
-		}
-	}
-
-	nk.sync = make([]*network.NodeClaim, 0)
+	log.Error("not implemented")
 }
 
 func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
