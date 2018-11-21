@@ -145,20 +145,18 @@ func Test_ReplicaIter(t *testing.T) {
 		replicator := storage.NewReplicaIter(ctx, db, p, p+1, maxsize)
 		var got []key
 
-		iterations := 0
-		for i := 0; ; i++ {
+		iterations := 1
+		for ; ; iterations++ {
+			if iterations > 500 {
+				t.Fatal("too many loops")
+			}
+
 			recs, err := replicator.NextRecords()
 			if err == storage.ErrReplicatorDone {
 				break
 			}
 			if err != nil {
 				panic(err)
-			}
-
-			iterations = i + 1
-			if i > 500 {
-				t.Fatal("too many loops")
-				continue
 			}
 
 			for _, rec := range recs {
