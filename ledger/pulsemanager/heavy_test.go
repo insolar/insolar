@@ -116,9 +116,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		for j := 0; j < 3; j++ {
-			addRecords(ctx, t, db, core.PulseNumber(lastpulse))
-		}
+		addRecords(ctx, t, db, core.PulseNumber(lastpulse))
 		lastpulse++
 	}
 
@@ -129,9 +127,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	// fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		for j := 0; j < 3; j++ {
-			addRecords(ctx, t, db, core.PulseNumber(lastpulse))
-		}
+		addRecords(ctx, t, db, core.PulseNumber(lastpulse))
 
 		lastpulse++
 		err = setpulse(ctx, pm, lastpulse)
@@ -167,6 +163,9 @@ func addRecords(
 			},
 		},
 	)
+	require.NoError(t, err)
+
+	_, err = db.SetBlob(ctx, pulsenum, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record

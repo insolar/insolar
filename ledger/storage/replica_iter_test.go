@@ -245,8 +245,7 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set blob
-	blobID, err := db.SetBlob(ctx, pulsenum, []byte("100500"))
-	_ = blobID
+	_, err = db.SetBlob(ctx, pulsenum, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
