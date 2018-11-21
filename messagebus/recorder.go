@@ -59,6 +59,9 @@ func (r *recorder) Send(ctx context.Context, msg core.Message, optionSetter ...c
 	}
 
 	parcel, err := r.CreateParcel(ctx, msg, options)
+	if err != nil{
+		return nil, err
+	}
 	id := GetMessageHash(r.scheme, parcel)
 
 	// Check if Value for this message is already stored.
