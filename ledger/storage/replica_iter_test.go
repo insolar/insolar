@@ -17,6 +17,7 @@
 package storage_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -43,8 +44,8 @@ func Test_StoreKeyValues(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	var (
-		expectedrecs []string
-		expectedidxs []string
+		expectedrecs []key
+		expectedidxs []key
 	)
 	var allKVs []core.KV
 	pulsescount := 3
@@ -53,7 +54,9 @@ func Test_StoreKeyValues(t *testing.T) {
 		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 		defer cleaner()
 		for n := 0; n < pulsescount; n++ {
-			addRecords(ctx, t, db, core.PulseNumber(pulseDelta(n)))
+			lastPulse := core.PulseNumber(pulseDelta(n))
+			addRecords(ctx, t, db, lastPulse)
+			setDrop(ctx, t, db, lastPulse)
 		}
 
 		for n := 0; n < pulsescount; n++ {
@@ -75,8 +78,8 @@ func Test_StoreKeyValues(t *testing.T) {
 	}()
 
 	var (
-		gotrecs []string
-		gotidxs []string
+		gotrecs []key
+		gotidxs []key
 	)
 	func() {
 		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
@@ -105,41 +108,52 @@ func Test_ReplicaIter(t *testing.T) {
 
 	// TODO: remove assertpulse struct
 	// tt represents test case PulseNumber -> expected record keys
-	tt := make(map[int][]string)
+	ttPerPulse := make(map[int][]key)
+	ttRange := make(map[int][]key)
 
-	recordsPerPulse := make(map[int][]string)
+	recsPerPulse := make(map[int][]key)
 	for i := 0; i < pulsescount; i++ {
 		lastPulse = pulseDelta(i)
+
 		addRecords(ctx, t, db, lastPulse)
+		setDrop(ctx, t, db, lastPulse)
+
 		recs, _ := getallkeys(db.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
 		recsBefore = recs
 
-		recordsPerPulse[i] = recKeys
+		_, idxAll := getallkeys(db.GetBadgerDB())
+
+		recsPerPulse[i] = recKeys
+		ttPerPulse[i] = append(ttPerPulse[i], recKeys...)
+		ttPerPulse[i] = append(ttPerPulse[i], idxAll...)
 	}
 	_, idxsAfter := getallkeys(db.GetBadgerDB())
+
 	for i := 0; i < pulsescount; i++ {
+		// in range should be all record from the next pulses
 		for j := i; j < pulsescount; j++ {
-			tt[i] = append(tt[i], recordsPerPulse[j]...)
+			ttRange[i] = append(ttRange[i], recsPerPulse[j]...)
 		}
-		tt[i] = append(tt[i], idxsAfter...)
+		// and all current indexes
+		ttRange[i] = append(ttRange[i], idxsAfter...)
 	}
 
-	// BEWARE: test expects limit 512 is enougth to have at least `atLeastIterations` iterations
-	// it could be fragile, probably I should figure out how to write this test in more stable way.
-	// (now there is no so much time for that)
-	maxsize := 512
+	// BEWARE: test expects limit 100is enough to have at least `atLeastIterations` iterations
+	maxsize := 100
 	atLeastIterations := 2
 
-	lastPulse = lastPulse + 1
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
-		fmt.Println("=================== Pulse:", p, " ====================")
-		replicator := storage.NewReplicaIter(ctx, db, p, lastPulse, maxsize)
-		var got []string
+		replicator := storage.NewReplicaIter(ctx, db, p, p+1, maxsize)
+		var got []key
 
-		iterations := 0
-		for i := 0; ; i++ {
+		iterations := 1
+		for ; ; iterations++ {
+			if iterations > 500 {
+				t.Fatal("too many loops")
+			}
+
 			recs, err := replicator.NextRecords()
 			if err == storage.ErrReplicatorDone {
 				break
@@ -148,25 +162,68 @@ func Test_ReplicaIter(t *testing.T) {
 				panic(err)
 			}
 
-			iterations = i + 1
-			if i > 5 {
-				fmt.Println("~~~~~~~~~~~ BREAK LOOP ~~~~~~~~~~~~~~")
-				break
-			}
-
 			for _, rec := range recs {
-				got = append(got, hex.EncodeToString(rec.K))
+				got = append(got, rec.K)
 			}
 		}
 
 		assert.Truef(t, iterations >= atLeastIterations,
 			"expect at least %v iterations", atLeastIterations)
 
-		sort.Strings(tt[n])
-		sort.Strings(got)
-		require.Equalf(t, tt[n], got,
-			"get expected records on pulse diapasone [%v:%v]", p, lastPulse)
+		ttPerPulse[n] = sortkeys(ttPerPulse[n])
+		got = sortkeys(got)
+		require.Equalf(t, ttPerPulse[n], got, "get expected records at pulse %v", p)
 	}
+
+	lastPulse = lastPulse + 1
+	// addRecords here is for purpose:
+	// new records on +1 pulse should not affect iterator result on previous pulse range
+	addRecords(ctx, t, db, lastPulse)
+	for n := 0; n < pulsescount; n++ {
+		p := pulseDelta(n)
+
+		replicator := storage.NewReplicaIter(ctx, db, p, lastPulse, maxsize)
+		var got []key
+		for {
+			recs, err := replicator.NextRecords()
+			if err == storage.ErrReplicatorDone {
+				break
+			}
+			if err != nil {
+				panic(err)
+			}
+			for _, rec := range recs {
+				got = append(got, rec.K)
+			}
+		}
+
+		got = sortkeys(got)
+		ttRange[n] = sortkeys(ttRange[n])
+
+		require.Equalf(t, ttRange[n], got,
+			"get expected records in pulse range [%v:%v]", p, lastPulse)
+	}
+}
+
+func setDrop(
+	ctx context.Context,
+	t *testing.T,
+	db *storage.DB,
+	pulsenum core.PulseNumber,
+) {
+	prevDrop, err := db.GetDrop(ctx, pulsenum-1)
+	var prevhash []byte
+	if err == nil {
+		prevhash = prevDrop.Hash
+	} else if err != storage.ErrNotFound {
+		require.NoError(t, err)
+	}
+	drop, _, err := db.CreateDrop(ctx, pulsenum, prevhash)
+	if err != nil {
+		require.NoError(t, err)
+	}
+	err = db.SetDrop(ctx, drop)
+	require.NoError(t, err)
 }
 
 func addRecords(
@@ -174,7 +231,7 @@ func addRecords(
 	t *testing.T,
 	db *storage.DB,
 	pulsenum core.PulseNumber,
-) (records, indexes int) {
+) {
 	// set record
 	parentID, err := db.SetRecord(
 		ctx,
@@ -185,43 +242,26 @@ func addRecords(
 			},
 		},
 	)
-	records++
+	require.NoError(t, err)
+
+	// set blob
+	_, err = db.SetBlob(ctx, pulsenum, []byte("100500"))
+	require.NoError(t, err)
 
 	// set index of record
 	err = db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)
-	indexes++
 
 	return
 }
 
-type keySize struct {
-	key  hexbytes
-	size int
-}
-
-type hexbytes []byte
-
-// String implements Stringer on bytes slice.
-func (b hexbytes) String() string {
-	return hex.EncodeToString(b)
-}
-
-func outputKeySizes(ks []keySize) (s string) {
-	s += fmt.Sprintf("Found %v keys:\n", len(ks))
-	for _, k := range ks {
-		s += fmt.Sprintf("  key=%s (size=%v)\n", k.key, k.size)
-	}
-	return
-}
-
-func getdelta(before []string, after []string) (delta []string) {
+func getdelta(before []key, after []key) (delta []key) {
 CHECKIFCONTAINS:
 	for _, k1 := range after {
 		for _, k2 := range before {
-			if k1 == k2 {
+			if bytes.Compare(k1, k2) == 0 {
 				continue CHECKIFCONTAINS
 			}
 		}
@@ -234,9 +274,11 @@ CHECKIFCONTAINS:
 var (
 	scopeIDLifeline = byte(1)
 	scopeIDRecord   = byte(2)
+	scopeIDJetDrop  = byte(3)
+	scopeIDBlob     = byte(7)
 )
 
-func getallkeys(db *badger.DB) (records []string, indexes []string) {
+func getallkeys(db *badger.DB) (records []key, indexes []key) {
 	txn := db.NewTransaction(true)
 	defer txn.Discard()
 
@@ -245,13 +287,39 @@ func getallkeys(db *badger.DB) (records []string, indexes []string) {
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		k := item.KeyCopy(nil)
-		kstr := hex.EncodeToString(k)
 		switch k[0] {
 		case scopeIDRecord:
-			records = append(records, kstr)
+			records = append(records, k)
+		case scopeIDBlob:
+			records = append(records, k)
+		case scopeIDJetDrop:
+			records = append(records, k)
 		case scopeIDLifeline:
-			indexes = append(indexes, kstr)
+			indexes = append(indexes, k)
 		}
 	}
 	return
+}
+
+type key []byte
+
+func (b key) pulse() core.PulseNumber {
+	return core.NewPulseNumber(b[1 : 1+core.PulseNumberSize])
+}
+
+func (b key) String() string {
+	return hex.EncodeToString(b)
+}
+
+func sortkeys(keys []key) []key {
+	sort.Slice(keys, func(i, j int) bool {
+		return bytes.Compare(keys[i], keys[j]) < 0
+	})
+	return keys
+}
+
+func printkeys(keys []key, prefix string) {
+	for _, k := range keys {
+		fmt.Printf("%v%v (%v)\n", prefix, k, k.pulse())
+	}
 }
