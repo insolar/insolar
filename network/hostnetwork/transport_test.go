@@ -62,11 +62,11 @@ func (m *MockResolver) ResolveS(id core.ShortNodeID) (*host.Host, error) {
 	return result, nil
 }
 
-func (m *MockResolver) Start(components core.Components)  {}
-func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
-func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
-func (m *MockResolver) GetLocalNodes() []core.RecordRef   { return nil }
-func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
+func (m *MockResolver) Inject(nodeKeeper network.NodeKeeper) {}
+func (m *MockResolver) AddToKnownHosts(h *host.Host)         {}
+func (m *MockResolver) Rebalance(network.PartitionPolicy)    {}
+func (m *MockResolver) GetLocalNodes() []core.RecordRef      { return nil }
+func (m *MockResolver) GetRandomNodes(int) []host.Host       { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
 	k := core.NewRefFromBase58(key)

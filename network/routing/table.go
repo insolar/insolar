@@ -108,10 +108,6 @@ func (t *Table) Rebalance(network.PartitionPolicy) {
 	log.Warn("not implemented")
 }
 
-func (t *Table) Start(components core.Components) {
-	t.NodeKeeper = components.NodeNetwork.(network.NodeKeeper)
-}
-
-func NewTable() network.RoutingTable {
-	return &Table{}
+func (t *Table) Inject(nodeKeeper network.NodeKeeper) {
+	t.NodeKeeper = nodeKeeper
 }

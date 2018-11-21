@@ -43,12 +43,14 @@ type ServiceNetwork struct {
 	controller   network.Controller
 	routingTable network.RoutingTable
 
-	Certificate         core.Certificate        `inject:""`
-	NodeNetwork         core.NodeNetwork        `inject:""`
-	PulseManager        core.PulseManager       `inject:""`
-	Coordinator         core.NetworkCoordinator `inject:""`
-	OldComponentManager OldComponentManager     `inject:""`
-	PhaseManager        phases.PhaseManager     `inject:""`
+	Certificate         core.Certificate         `inject:""`
+	NodeNetwork         core.NodeNetwork         `inject:""`
+	PulseManager        core.PulseManager        `inject:""`
+	Coordinator         core.NetworkCoordinator  `inject:""`
+	OldComponentManager OldComponentManager      `inject:""`
+	PhaseManager        phases.PhaseManager      `inject:""`
+	CryptographyService core.CryptographyService `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
 
 	fakePulsar *fakepulsar.FakePulsar
 }
@@ -101,11 +103,11 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 	components := n.OldComponentManager.GetAll() // TODO: REMOVE HACK
 
-	n.routingTable.Start(components)
+	n.routingTable.Inject(components)
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
 
-	n.controller.Inject(components.CryptographyService, components.NetworkCoordinator, components.NodeNetwork.(network.NodeKeeper))
+	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, components.NodeNetwork.(network.NodeKeeper))
 
 	log.Infoln("Bootstrapping network...")
 	err := n.controller.Bootstrap(ctx)

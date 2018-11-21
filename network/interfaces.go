@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/testutils/network"
 )
 
 // Controller contains network logic.
@@ -198,8 +199,8 @@ type PartitionPolicy interface {
 
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
-	// Start inject dependencies from components
-	Start(components core.Components)
+	// Inject inject dependencies from components
+	Inject(nodeKeeper NodeKeeper)
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(core.RecordRef) (*host.Host, error)
 	// ResolveS ShortID -> NodeID, Address for node inside current globe.
