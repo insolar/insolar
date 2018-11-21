@@ -46,7 +46,7 @@ func (s *recordRefSet) Contains(ref core.RecordRef) bool {
 func (s *recordRefSet) Collect() []core.RecordRef {
 	result := make([]core.RecordRef, len(s.data))
 	i := 0
-	for ref, _ := range s.data {
+	for ref := range s.data {
 		result[i] = ref
 		i++
 	}
