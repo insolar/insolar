@@ -36,8 +36,8 @@ func (m *PulseManager) HeavySync(
 	inslog := inslogger.FromContext(ctx)
 
 	// MAYBE we should check Message Bus replies?
-	startMsg := &message.HeavyStart{Start: start, End: end}
-	_, starterr := m.Bus.Send(ctx, startMsg)
+	signalMsg := &message.HeavyStartStop{Begin: start, End: end}
+	_, starterr := m.Bus.Send(ctx, signalMsg)
 	// TODO: check if locked
 	if starterr != nil {
 		return 0, starterr
@@ -60,9 +60,18 @@ func (m *PulseManager) HeavySync(
 			return 0, senderr
 		}
 	}
+
+	signalMsg.Finished = true
+	_, stoperr := m.Bus.Send(ctx, signalMsg)
+	if stoperr != nil {
+		return 0, stoperr
+	}
+	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", start, end)
+
+	lastmeetpulse := replicator.LastPulse()
 	inslog.Debugf("synchronize on [%v:%v] finised (maximum record pulse is %v)",
-		start, end, replicator.LastPulse())
-	return replicator.LastPulse(), nil
+		start, end, lastmeetpulse)
+	return lastmeetpulse, nil
 }
 
 // NextSyncPulses returns pulse numbers range for syncing to heavy node.

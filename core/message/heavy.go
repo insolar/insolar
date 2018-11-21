@@ -35,18 +35,19 @@ func (e *HeavyPayload) Type() core.MessageType {
 	return core.TypeHeavyPayload
 }
 
-// HeavyStart carries replication pulse range.
-type HeavyStart struct {
-	Start core.PulseNumber
-	End   core.PulseNumber
+// HeavyStartStop carries heavy replication start/stop signal with pulse range.
+type HeavyStartStop struct {
+	Begin    core.PulseNumber
+	End      core.PulseNumber
+	Finished bool
 }
 
 // GetCaller implementation of Message interface.
-func (HeavyStart) GetCaller() *core.RecordRef {
+func (HeavyStartStop) GetCaller() *core.RecordRef {
 	return nil
 }
 
 // Type implementation of Message interface.
-func (e *HeavyStart) Type() core.MessageType {
-	return core.TypeHeavyStart
+func (e *HeavyStartStop) Type() core.MessageType {
+	return core.TypeHeavyStartStop
 }

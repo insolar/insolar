@@ -154,8 +154,8 @@ const (
 
 	// Heavy replication
 
-	// TypeHeavyStart
-	TypeHeavyStart
+	// TypeHeavyStartStop carries start/stop signal for heavy replication.
+	TypeHeavyStartStop
 	// TypeHeavyPayload carries Key/Value records for replication to Heavy Material node.
 	TypeHeavyPayload
 

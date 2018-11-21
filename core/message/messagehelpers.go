@@ -87,7 +87,7 @@ func ExtractRole(msg core.Message) core.JetRole {
 	case *ValidationResults:
 		return core.RoleVirtualExecutor
 	case
-		*HeavyStart,
+		*HeavyStartStop,
 		*HeavyPayload:
 		return core.RoleHeavyExecutor
 	case *Parcel:
