@@ -45,12 +45,20 @@ func (r *recorder) WriteTape(ctx context.Context, w io.Writer) error {
 
 // Send wraps MessageBus Send to save received replies to the tape. This reply is also used to return directly from the
 // tape is the message is sent again, thus providing a cash for message replies.
-func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
+func (r *recorder) Send(ctx context.Context, msg core.Message, optionSetter ...core.SendOption) (core.Reply, error) {
 	var (
 		rep core.Reply
 		err error
 	)
-	parcel, err := r.CreateParcel(ctx, msg)
+	var options *core.SendOptions
+	if len(optionSetter) > 0 {
+		options = &core.SendOptions{}
+		for _, setter := range optionSetter {
+			setter(options)
+		}
+	}
+
+	parcel, err := r.CreateParcel(ctx, msg, options)
 	id := GetMessageHash(r.scheme, parcel)
 
 	// Check if Value for this message is already stored.
@@ -63,7 +71,7 @@ func (r *recorder) Send(ctx context.Context, msg core.Message) (core.Reply, erro
 	}
 
 	// Actually send message.
-	rep, err = r.SendParcel(ctx, parcel)
+	rep, err = r.SendParcel(ctx, parcel, options)
 	if err != nil {
 		return nil, err
 	}
