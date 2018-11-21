@@ -65,19 +65,6 @@ type Genesis struct {
 	Certificate     core.Certificate     `inject:""`
 }
 
-// Info returns json with references for info api endpoint
-func (g *Genesis) Info() ([]byte, error) {
-	prototypes := map[string]string{}
-	for prototype, ref := range g.prototypeRefs {
-		prototypes[prototype] = ref.String()
-	}
-	return json.MarshalIndent(map[string]interface{}{
-		"root_domain": g.rootDomainRef.String(),
-		"root_member": g.rootMemberRef.String(),
-		"prototypes":  prototypes,
-	}, "", "   ")
-}
-
 // GetRootDomainRef returns reference to RootDomain instance
 func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 	return g.rootDomainRef
