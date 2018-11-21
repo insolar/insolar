@@ -75,24 +75,18 @@ func mockParcelFactory(t *testing.T) message.ParcelFactory {
 	return parcelFactory
 }
 
-func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) core.Components {
+func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) (core.CryptographyService, network.NodeKeeper) {
 	pwd, _ := os.Getwd()
 	cs, _ := cryptography.NewStorageBoundCryptographyService(path.Join(pwd, keysPath))
 	kp := platformpolicy.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
-	cert, err := certificate.NewCertificatesWithKeys(pk, kp)
+	_, err := certificate.NewCertificatesWithKeys(pk, kp)
 
 	require.NoError(t, err)
 	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
 
 	mock := mockCryptographyService(t)
-
-	return core.Components{
-		Certificate:         cert,
-		NodeNetwork:         keeper,
-		Ledger:              &network.MockLedger{},
-		CryptographyService: mock,
-	}
+	return mock, keeper
 }
 
 func TestNewServiceNetwork(t *testing.T) {
@@ -124,10 +118,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.TODO()
-	networkComponents := initComponents(t, testutils.RandomRef(), "", true)
-	serviceNetwork.CryptographyService = networkComponents.CryptographyService
-	serviceNetwork.NetworkCoordinator = networkComponents.NetworkCoordinator
-	serviceNetwork.NodeKeeper = networkComponents.NodeNetwork.(network.NodeKeeper)
+	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, testutils.RandomRef(), "", true)
 
 	serviceNetwork.NodeNetwork, _ = nodenetwork.NewNodeNetwork(cfg)
 	err = serviceNetwork.Init(ctx)
@@ -181,17 +172,11 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		secondNodeId), scheme)
 	require.NoError(t, err)
 
-	secondNodeComponents := initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
-	secondNode.CryptographyService = secondNodeComponents.CryptographyService
-	secondNode.NetworkCoordinator = secondNodeComponents.NetworkCoordinator
-	secondNode.NodeKeeper = secondNodeComponents.NodeNetwork.(network.NodeKeeper)
+	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
 
 	err = secondNode.Init(ctx)
 	require.NoError(t, err)
-	firstNodeComponents := initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
-	firstNode.CryptographyService = firstNodeComponents.CryptographyService
-	firstNode.NetworkCoordinator = firstNodeComponents.NetworkCoordinator
-	firstNode.NodeKeeper = firstNodeComponents.NodeNetwork.(network.NodeKeeper)
+	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
 
 	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
 	err = firstNode.Init(ctx)
@@ -243,19 +228,12 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		secondNodeId), scheme)
 	require.NoError(t, err)
 
-	secondsNodeComponents := initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
-	secondNode.CryptographyService = secondsNodeComponents.CryptographyService
-	secondNode.NetworkCoordinator = secondsNodeComponents.NetworkCoordinator
-	secondNode.NodeKeeper = secondsNodeComponents.NodeNetwork.(network.NodeKeeper)
+	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
 
 	err = secondNode.Init(ctx)
 	require.NoError(t, err)
 
-	firstNodeComponents := initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
-
-	firstNode.CryptographyService = firstNodeComponents.CryptographyService
-	firstNode.NetworkCoordinator = firstNodeComponents.NetworkCoordinator
-	firstNode.NodeKeeper = firstNodeComponents.NodeNetwork.(network.NodeKeeper)
+	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
 
 	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
 
