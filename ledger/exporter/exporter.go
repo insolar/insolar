@@ -32,10 +32,12 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
+// Exporter provides methods for fetching data view from storage.
 type Exporter struct {
 	db *storage.DB
 }
 
+// NewExporter creates new Exporter instance.
 func NewExporter(db *storage.DB) *Exporter {
 	return &Exporter{db: db}
 }
@@ -55,6 +57,7 @@ type pulseData struct {
 	Pulse   core.Pulse
 }
 
+// Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.ExportResult, error) {
 	result := core.ExportResult{Data: map[string]interface{}{}}
 

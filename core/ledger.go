@@ -256,6 +256,6 @@ type ExportResult struct {
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter interface {
-	// Export returns data from storage.
+	// Export returns data view from storage.
 	Export(ctx context.Context, fromPulse PulseNumber, size int) (*ExportResult, error)
 }
