@@ -112,7 +112,6 @@ func (nlv *StateFraudNodeSupplementaryVote) Type() VoteType {
 
 // Deserialize implements interface method
 func (v *StateFraudNodeSupplementaryVote) Deserialize(data io.Reader) error {
-
 	err := v.Node1PulseProof.Deserialize(data)
 	if err != nil {
 		return errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Deserialize ] Can't read Node1PulseProof")
@@ -163,6 +162,37 @@ func (v *StateFraudNodeSupplementaryVote) Serialize() ([]byte, error) {
 	_, err = result.Write(pulseDataRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Serialize ] Can't append PulseData")
+	}
+
+	return result.Bytes(), nil
+}
+
+func (v *MissingNodeSupplementaryVote) Type() VoteType {
+	return TypeMissingNodeSupplementaryVote
+}
+
+// Deserialize implements interface method
+func (v *MissingNodeSupplementaryVote) Deserialize(data io.Reader) error {
+	err := v.NodePulseProof.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodePulseProof")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (v *MissingNodeSupplementaryVote) Serialize() ([]byte, error) {
+	result := allocateBuffer(1024)
+
+	nodePulseProofRaw, err := v.NodePulseProof.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't serialize NodePulseProof")
+	}
+
+	_, err = result.Write(nodePulseProofRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't append NodePulseProof")
 	}
 
 	return result.Bytes(), nil
