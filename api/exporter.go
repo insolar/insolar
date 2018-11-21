@@ -43,6 +43,40 @@ func NewStorageExporterService(runner *Runner) *StorageExporterService {
 }
 
 // Export returns data view from storage.
+//
+//   Request structure:
+//   {
+//     "jsonrpc": "2.0",
+//     "method": "exporter.Export",
+//     "params": {
+//       // Pulse number from which data load should start.
+//       // If less than first pulse, the load will start from the first pulse (e.i. use "0" to load from the beginning).
+//       "From": int,
+//       // Number of pulses to load.
+//       "Size": int
+//       },
+//     "id": str|int|null
+//   }
+//
+//   Response structure:
+//   {
+//     "Data": {
+//       [pulse number]: {
+//         "Records": {
+//           [record ID]: {
+//             "Type": str, // Constant record type.
+//             "Data": { ... }, // Structured record data.
+//             "Payload": { ... }|null // Additional data related to the record (e.g. Object's memory).
+//         }
+//       },
+//         "Pulse": {
+//           "PulseNumber": int, // Pulse number. Same as parent key.
+//         }
+//       },
+//       "NextFrom": int|null, // Pulse number from which to start next batch. Put it as "From" param for next incremental fetch.
+//       "Size": int // Number of returned pulses (length of the "Data" dictionary).
+//   }
+//
 func (s *StorageExporterService) Export(r *http.Request, args *StorageExporterArgs, reply *StorageExporterReply) error {
 	exp := s.runner.StorageExporter
 	ctx := context.TODO()
