@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,6 +37,13 @@ func testNode(ref core.RecordRef) *node {
 	return &node{
 		NodeID:    ref,
 		NodeRoles: []core.NodeRole{core.RoleUnknown},
+	}
+}
+
+func testNodeWithRole(ref core.RecordRef, role core.NodeRole) *node {
+	return &node{
+		NodeID:    ref,
+		NodeRoles: []core.NodeRole{role},
 	}
 }
 
@@ -395,4 +403,12 @@ func TestNodekeeper_GetActiveNodeByShortID(t *testing.T) {
 	keeper.AddActiveNodes([]core.Node{node1})
 	require.NotNil(t, keeper.GetActiveNodeByShortID(node1.ShortID()))
 	require.Nil(t, keeper.GetActiveNodeByShortID(node1.ShortID()+1))
+}
+
+func TestNodekeeper_AddActiveNodes(t *testing.T) {
+	keeper := newNodeKeeper()
+	node := testNodeWithRole(testutils.RandomRef(), core.RoleVirtual)
+	keeper.AddActiveNodes([]core.Node{node, node, node})
+	list := keeper.GetActiveNodesByRole(core.RoleVirtualValidator)
+	assert.Equal(t, 1, len(list))
 }

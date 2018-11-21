@@ -66,6 +66,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeSetRecord, h.messagePersistingWrapper(h.handleSetRecord))
 	h.Bus.MustRegister(core.TypeSetBlob, h.messagePersistingWrapper(h.handleSetBlob))
 	h.Bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
+	h.Bus.MustRegister(core.TypeHeavySyncRecords, h.handleHeavyRecords)
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
 	h.jetDropHandlers[core.TypeGetObject] = h.handleGetObject
@@ -576,4 +577,16 @@ func validateState(old record.State, new record.State) error {
 		return errors.New("object is already activated")
 	}
 	return nil
+}
+
+func (h *MessageHandler) handleHeavyRecords(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
+	msg := genericMsg.Message().(*message.HeavyRecords)
+	err := h.db.StoreKeyValues(ctx, msg.Records)
+	if err != nil {
+		return nil, err
+	}
+	return &reply.OK{}, nil
 }

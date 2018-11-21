@@ -14,19 +14,23 @@
  *    limitations under the License.
  */
 
-package certificate
+package message
 
 import (
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 )
 
-func GetTestCertificate() core.Certificate {
-	c := &certificate.Certificate{}
-	err := c.GenerateKeys()
-	if err != nil {
-		panic(err)
-	}
+// HeavyRecords carries Key/Value records for replication to Heavy Material node.
+type HeavyRecords struct {
+	Records []core.KV
+}
 
-	return c
+// GetCaller implementation of Message interface.
+func (HeavyRecords) GetCaller() *core.RecordRef {
+	return nil
+}
+
+// Type implementation of Message interface.
+func (e *HeavyRecords) Type() core.MessageType {
+	return core.TypeHeavySyncRecords
 }

@@ -30,13 +30,15 @@ type BaseContract struct {
 // ProxyInterface interface any proxy of a contract implements
 type ProxyInterface interface {
 	GetReference() core.RecordRef
-	GetPrototype() core.RecordRef
+	GetPrototype() (core.RecordRef, error)
+	GetCode() (core.RecordRef, error)
 }
 
 // BaseContractInterface is an interface to deal with any contract same way
 type BaseContractInterface interface {
 	GetReference() core.RecordRef
 	GetPrototype() core.RecordRef
+	GetCode() core.RecordRef
 }
 
 // GetReference - Returns public reference of contract
@@ -51,6 +53,11 @@ func (bc *BaseContract) GetReference() core.RecordRef {
 // GetPrototype - Returns prototype of contract
 func (bc *BaseContract) GetPrototype() core.RecordRef {
 	return *bc.GetContext().Prototype
+}
+
+// GetCode - Returns prototype of contract
+func (bc *BaseContract) GetCode() core.RecordRef {
+	return *bc.GetContext().Code
 }
 
 // GetContext returns current calling context OBSOLETED.

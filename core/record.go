@@ -18,7 +18,6 @@ package core
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 
 	"github.com/jbenet/go-base58"
 )
@@ -35,9 +34,9 @@ const (
 // RecordID is a unified record ID.
 type RecordID [RecordIDSize]byte
 
-// String implements stringer on RecordID and returns hex value
+// String implements stringer on RecordID and returns base58 encoded value
 func (id *RecordID) String() string {
-	return hex.EncodeToString(id[:])
+	return base58.Encode(id[:])
 }
 
 // NewRecordID generates RecordID byte representation.
@@ -53,10 +52,17 @@ func (id *RecordID) Bytes() []byte {
 	return id[:]
 }
 
-// Pulse returns byte slice of RecordID.
+// Pulse returns a copy of Pulse part of RecordID.
 func (id *RecordID) Pulse() PulseNumber {
 	pulse := binary.BigEndian.Uint32(id[:PulseNumberSize])
 	return PulseNumber(pulse)
+}
+
+// Hash returns a copy of Hash part of RecordID.
+func (id *RecordID) Hash() []byte {
+	recHash := make([]byte, RecordHashSize)
+	copy(recHash, id[PulseNumberSize:])
+	return recHash
 }
 
 // Equal checks if reference points to the same record.

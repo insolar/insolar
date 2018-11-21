@@ -52,6 +52,7 @@ type MachineLogicExecutor interface {
 }
 
 // LogicRunner is an interface that should satisfy logic executor
+//go:generate minimock -i github.com/insolar/insolar/core.LogicRunner -o ../testutils -s _mock.go
 type LogicRunner interface {
 	Execute(context.Context, Parcel) (res Reply, err error)
 	ValidateCaseBind(context.Context, Parcel) (res Reply, err error)
@@ -66,6 +67,7 @@ type LogicCallContext struct {
 	Callee          *RecordRef // Contract that was called
 	Request         *RecordRef // ref of request
 	Prototype       *RecordRef // Image of the callee
+	Code            *RecordRef // ref of contract code
 	CallerPrototype *RecordRef // Image of the caller
 	Parent          *RecordRef // Parent of the callee
 	Caller          *RecordRef // Contract that made the call

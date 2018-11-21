@@ -9,20 +9,20 @@ discovery_nodes:
   -
     host: "HOST1"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_1.json"
   -
     host: "HOST2"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_2.json"
   -
     host: "HOST3"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_3.json"
   -
     host: "HOST4"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_4.json"
   -
     host: "HOST5"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_5.json"

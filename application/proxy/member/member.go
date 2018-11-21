@@ -12,6 +12,8 @@ var PrototypeReference = core.NewRefFromBase58("")
 // Member holds proxy type
 type Member struct {
 	Reference core.RecordRef
+	Prototype core.RecordRef
+	Code      core.RecordRef
 }
 
 // ContractConstructorHolder holds logic with object construction
@@ -77,9 +79,63 @@ func (r *Member) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetPrototype returns reference to the prototype
-func (r *Member) GetPrototype() core.RecordRef {
-	return PrototypeReference
+// GetPrototype returns reference to the code
+func (r *Member) GetPrototype() (core.RecordRef, error) {
+	if r.Prototype == core.NewRefFromBase58("") {
+		ret := [2]interface{}{}
+		var ret0 core.RecordRef
+		ret[0] = &ret0
+		var ret1 *foundation.Error
+		ret[1] = &ret1
+
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0))
+		if err != nil {
+			return ret0, err
+		}
+
+		err = proxyctx.Current.Deserialize(res, &ret)
+		if err != nil {
+			return ret0, err
+		}
+
+		if ret1 != nil {
+			return ret0, ret1
+		}
+
+		r.Prototype = ret0
+	}
+
+	return r.Prototype, nil
+
+}
+
+// GetCode returns reference to the code
+func (r *Member) GetCode() (core.RecordRef, error) {
+	if r.Code == core.NewRefFromBase58("") {
+		ret := [2]interface{}{}
+		var ret0 core.RecordRef
+		ret[0] = &ret0
+		var ret1 *foundation.Error
+		ret[1] = &ret1
+
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0))
+		if err != nil {
+			return ret0, err
+		}
+
+		err = proxyctx.Current.Deserialize(res, &ret)
+		if err != nil {
+			return ret0, err
+		}
+
+		if ret1 != nil {
+			return ret0, ret1
+		}
+
+		r.Code = ret0
+	}
+
+	return r.Code, nil
 }
 
 // GetName is proxy generated method
