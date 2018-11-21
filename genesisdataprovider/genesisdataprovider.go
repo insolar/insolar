@@ -38,6 +38,12 @@ type GenesisDataProvider struct {
 	rootMemberRef *core.RecordRef
 }
 
+type infoResponse struct {
+	RootDomain string `json:"root_domain"`
+	RootMember string `json:"root_member"`
+	NodeDomain string `json:"node_domain"`
+}
+
 // New creates new GenesisDataProvider
 func New() (*GenesisDataProvider, error) {
 	return &GenesisDataProvider{}, nil
@@ -74,7 +80,7 @@ func (gdp *GenesisDataProvider) routeCall(ctx context.Context, ref core.RecordRe
 	return res, nil
 }
 
-func extractInfoResponse(data []byte) (map[string]interface{}, error) {
+func extractInfoResponse(data []byte) (*infoResponse, error) {
 	var infoMap interface{}
 	var infoError *foundation.Error
 	_, err := core.UnMarshalResponse(data, []interface{}{&infoMap, &infoError})
@@ -85,14 +91,14 @@ func extractInfoResponse(data []byte) (map[string]interface{}, error) {
 		return nil, errors.Wrap(infoError, "[ extractInfoResponse ] Has error in response")
 	}
 
-	var info map[string]interface{}
+	var info infoResponse
 	data = infoMap.([]byte)
 	err = json.Unmarshal(data, &info)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractInfoResponse ] Can't unmarshal response ")
 	}
 
-	return info, nil
+	return &info, nil
 }
 
 func (gdp *GenesisDataProvider) sendRequest(ctx context.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
@@ -119,9 +125,9 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Can't extract response")
 	}
-	rootMemberRef := core.NewRefFromBase58(info["root_member"].(string))
+	rootMemberRef := core.NewRefFromBase58(info.RootMember)
 	gdp.rootMemberRef = &rootMemberRef
-	nodeDomainRef := core.NewRefFromBase58(info["node_domain"].(string))
+	nodeDomainRef := core.NewRefFromBase58(info.NodeDomain)
 	gdp.nodeDomainRef = &nodeDomainRef
 
 	return nil
