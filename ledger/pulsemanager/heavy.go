@@ -33,12 +33,15 @@ func (m *PulseManager) HeavySync(
 	start core.PulseNumber,
 	end core.PulseNumber,
 ) (core.PulseNumber, error) {
+	inslog := inslogger.FromContext(ctx)
+
 	startMsg := &message.HeavyStart{Start: start, End: end}
 	_, starterr := m.Bus.Send(ctx, startMsg)
 	// TODO: check if locked
 	if starterr != nil {
 		return 0, starterr
 	}
+	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", start, end)
 
 	replicator := storage.NewReplicaIter(
 		ctx, m.db, start, end, m.options.syncmessagelimit)
@@ -58,8 +61,7 @@ func (m *PulseManager) HeavySync(
 		// TODO: check reply?
 		_ = reply
 	}
-	inslogger.FromContext(ctx).Debugf(
-		"synchronize on [%v:%v] finised (maximum record pulse is %v)",
+	inslog.Debugf("synchronize on [%v:%v] finised (maximum record pulse is %v)",
 		start, end, replicator.LastPulse())
 	return replicator.LastPulse(), nil
 }
