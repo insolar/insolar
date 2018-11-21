@@ -92,7 +92,7 @@ func (v *NodeListSupplementaryVote) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (nlv *NodeJoinSupplementaryVote) Type() VoteType {
+func (v *NodeJoinSupplementaryVote) Type() VoteType {
 	return TypeNodeJoinSupplementaryVote
 }
 
@@ -106,7 +106,7 @@ func (v *NodeJoinSupplementaryVote) Serialize() ([]byte, error) {
 	return nil, nil
 }
 
-func (nlv *StateFraudNodeSupplementaryVote) Type() VoteType {
+func (v *StateFraudNodeSupplementaryVote) Type() VoteType {
 	return TypeStateFraudNodeSupplementaryVote
 }
 
