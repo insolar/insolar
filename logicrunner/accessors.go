@@ -87,35 +87,9 @@ func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 	if !ok {
 		return nil, -1
 	}
-	if r.Request >= len(r.CaseBind.Requests) {
-		return nil, r.Steps
-	}
-
-	request := r.CaseBind.Requests[r.Request]
-
-	if r.Record < 0 {
-		r.Record = 0
-		r.Steps++
-		res := request.Request.(core.CaseRecord)
-		return &res, r.Steps
-	}
-
-	if r.Record >= len(request.Records) {
-		r.Record = -1
-		r.Request++
-		if r.Request >= len(r.CaseBind.Requests) {
-			return nil, r.Steps
-		}
-		r.Record = 0
-		r.Steps++
-		res := r.CaseBind.Requests[r.Request].Request.(core.CaseRecord)
-		return &res, 1
-	}
-	res := request.Records[r.Request]
-	r.Request++
-	r.Steps++
+	record, step := r.NextStep()
 	lr.caseBindReplays[ref] = r
-	return &res, r.Steps
+	return record, step
 }
 
 func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {

@@ -123,6 +123,37 @@ type CaseBindReplay struct {
 	Fail     int
 }
 
+func (r *CaseBindReplay) NextStep() (*CaseRecord, int) {
+	if r.Request >= len(r.CaseBind.Requests) {
+		return nil, r.Steps
+	}
+
+	request := r.CaseBind.Requests[r.Request]
+
+	if r.Record < 0 {
+		r.Record = 0
+		r.Steps++
+		res := request.Request.(CaseRecord)
+		return &res, r.Steps
+	}
+
+	if r.Record >= len(request.Records) {
+		r.Record = -1
+		r.Request++
+		if r.Request >= len(r.CaseBind.Requests) {
+			return nil, r.Steps
+		}
+		r.Record = 0
+		r.Steps++
+		res := r.CaseBind.Requests[r.Request].Request.(CaseRecord)
+		return &res, r.Steps
+	}
+	res := request.Records[r.Record]
+	r.Record++
+	r.Steps++
+	return &res, r.Steps
+}
+
 func init() {
 	gob.Register(&CaseRecord{})
 	gob.Register(&CaseRequest{})
