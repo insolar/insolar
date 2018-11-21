@@ -137,6 +137,14 @@ func (cert *Certificate) GetRole() core.NodeRole {
 	return core.GetRoleFromString(cert.Role)
 }
 
+func (cert *Certificate) GetRootDomainReference() string {
+	return cert.RootDomainReference
+}
+
+func (cert *Certificate) SetRootDomainReference(ref *core.RecordRef) {
+	cert.RootDomainReference = ref.String()
+}
+
 // NewCertificatesWithKeys generate certificate from given keys
 func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*Certificate, error) {
 	cert := Certificate{}
