@@ -27,7 +27,7 @@ import (
 )
 
 type Table struct {
-	keeper network.NodeKeeper
+	NodeKeeper network.NodeKeeper
 }
 
 func (t *Table) isLocalNode(core.RecordRef) bool {
@@ -45,7 +45,7 @@ func (t *Table) addRemoteHost(h *host.Host) {
 // Resolve NodeID -> ShortID, Address. Can initiate network requests.
 func (t *Table) Resolve(ref core.RecordRef) (*host.Host, error) {
 	if t.isLocalNode(ref) {
-		node := t.keeper.GetActiveNode(ref)
+		node := t.NodeKeeper.GetActiveNode(ref)
 		if node == nil {
 			return nil, errors.New("no such local node with NodeID: " + ref.String())
 		}
@@ -56,7 +56,7 @@ func (t *Table) Resolve(ref core.RecordRef) (*host.Host, error) {
 
 // ResolveS ShortID -> NodeID, Address for node inside current globe.
 func (t *Table) ResolveS(id core.ShortNodeID) (*host.Host, error) {
-	node := t.keeper.GetActiveNodeByShortID(id)
+	node := t.NodeKeeper.GetActiveNodeByShortID(id)
 	if node == nil {
 		return nil, errors.New("no such local node with ShortID: " + strconv.FormatUint(uint64(id), 10))
 	}
@@ -74,7 +74,7 @@ func (t *Table) AddToKnownHosts(h *host.Host) {
 
 // GetLocalNodes get all nodes from the local globe.
 func (t *Table) GetLocalNodes() []core.RecordRef {
-	nodes := t.keeper.GetActiveNodes()
+	nodes := t.NodeKeeper.GetActiveNodes()
 	result := make([]core.RecordRef, len(nodes))
 	for i, node := range nodes {
 		result[i] = node.ID()
@@ -85,7 +85,7 @@ func (t *Table) GetLocalNodes() []core.RecordRef {
 // GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
 func (t *Table) GetRandomNodes(count int) []host.Host {
 	// not so random for now
-	nodes := t.keeper.GetActiveNodes()
+	nodes := t.NodeKeeper.GetActiveNodes()
 	resultCount := count
 	if count > len(nodes) {
 		resultCount = len(nodes)
@@ -109,7 +109,7 @@ func (t *Table) Rebalance(network.PartitionPolicy) {
 }
 
 func (t *Table) Start(components core.Components) {
-	t.keeper = components.NodeNetwork.(network.NodeKeeper)
+	t.NodeKeeper = components.NodeNetwork.(network.NodeKeeper)
 }
 
 func NewTable() network.RoutingTable {

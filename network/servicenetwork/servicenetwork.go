@@ -105,7 +105,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
 
-	n.controller.Inject(components)
+	n.controller.Inject(components.CryptographyService, components.NetworkCoordinator, components.NodeNetwork.(network.NodeKeeper))
 
 	log.Infoln("Bootstrapping network...")
 	err := n.controller.Bootstrap(ctx)

@@ -46,7 +46,8 @@ type Controller interface {
 	GetNodeID() core.RecordRef
 
 	// Inject inject components.
-	Inject(components core.Components)
+	Inject(cryptographyService core.CryptographyService,
+		networkCoordinator core.NetworkCoordinator, nodeKeeper NodeKeeper)
 }
 
 // RequestHandler handler function to process incoming requests from network.
