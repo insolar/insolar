@@ -65,15 +65,6 @@ func (e *GetObject) Type() core.MessageType {
 	return core.TypeGetObject
 }
 
-func (e *GetObject) Sign(scheme core.PlatformCryptographyScheme, cs core.KeyStore) (*core.Signature, error) {
-	pk, err := cs.GetPrivateKey("")
-	if err != nil {
-		return nil, err
-	}
-	hash := ToBytes(e)
-	return scheme.Signer(pk).Sign(hash)
-}
-
 // GetDelegate retrieves object represented as provided type.
 type GetDelegate struct {
 	ledgerMessage
