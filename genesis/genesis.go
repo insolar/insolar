@@ -62,6 +62,7 @@ type Genesis struct {
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
 	Network         core.Network         `inject:""`
+	Certificate     core.Certificate     `inject:""`
 }
 
 // Info returns json with references for info api endpoint
@@ -145,6 +146,7 @@ func (g *Genesis) activateRootDomain(
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	g.rootDomainRef = contract
+	g.Certificate.SetRootDomainReference(contract)
 
 	return contractID, desc, nil
 }
