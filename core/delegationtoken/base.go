@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-// DelegationToken is an authorization token that allows a node to perform
+// Package delegationtoken is about an authorization token that allows a node to perform
 // actions it can not normally perform during this pulse
 package delegationtoken
 
@@ -23,20 +23,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type BaseDelegationToken struct {
-	Signature []byte
-}
-
 type PendingExecution struct {
-	BaseDelegationToken
+	Signature []byte
 }
 
 func (t *PendingExecution) Type() core.DelegationTokenType {
 	return core.DTTypePendingExecution
 }
 
-func (t *PendingExecution) Verify(msg core.Message) (bool, error) {
-	switch mt := msg.Type(); mt {
+func (t *PendingExecution) Verify(parcel core.Parcel) (bool, error) {
+	switch mt := parcel.Message().Type(); mt {
 
 	//TODO: stab should start verification
 	case core.TypeCallMethod:
@@ -44,4 +40,17 @@ func (t *PendingExecution) Verify(msg core.Message) (bool, error) {
 	default:
 		return false, errors.Errorf("Message of type %s can't be delegated with %s token", t.Type(), mt)
 	}
+}
+
+// GetObjectRedirect is a redirect token for the GetObject method
+type GetObjectRedirect struct {
+	Signature []byte
+}
+
+func (t *GetObjectRedirect) Type() core.DelegationTokenType {
+	return core.DTTypeGetObjectRedirect
+}
+
+func (t *GetObjectRedirect) Verify(parcel core.Parcel) (bool, error) {
+	panic("")
 }

@@ -219,7 +219,7 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManage
 	}
 
 	pf := lr.(*LogicRunner).ParcelFactory
-	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef())
+	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef(), nil)
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 	resp, err := lr.Execute(
 		ctx,
