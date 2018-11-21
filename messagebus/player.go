@@ -45,13 +45,19 @@ func (r *player) WriteTape(ctx context.Context, w io.Writer) error {
 
 // Send wraps MessageBus Send to reply replies from the tape. If reply for this message is not on the tape, an error
 // will be returned.
-func (r *player) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
+func (r *player) Send(ctx context.Context, msg core.Message, optionSetter ...core.SendOption) (core.Reply, error) {
 	var (
 		rep core.Reply
 		err error
 	)
-
-	parcel, err := r.CreateParcel(ctx, msg)
+	var options *core.SendOptions
+	if len(optionSetter) > 0 {
+		options = &core.SendOptions{}
+		for _, setter := range optionSetter {
+			setter(options)
+		}
+	}
+	parcel, err := r.CreateParcel(ctx, msg, options)
 	id := GetMessageHash(r.scheme, parcel)
 
 	// Value from storageTape.

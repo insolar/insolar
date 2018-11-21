@@ -62,7 +62,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	}, nil
 }
 
-// newPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
+// NewPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
 // stream is exhausted.
 //
 // Player can be created from MessageBus and passed as MessageBus instance.
@@ -75,7 +75,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageB
 	return pl, nil
 }
 
-// newRecorder creates a new recorder with unique tape that can be used to store message replies.
+// NewRecorder creates a new recorder with unique tape that can be used to store message replies.
 //
 // Recorder can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
@@ -129,7 +129,6 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message, optionSetter ...core.SendOption) (core.Reply, error) {
 	var options *core.SendOptions
-
 	if len(optionSetter) > 0 {
 		options = &core.SendOptions{}
 		for _, setter := range optionSetter {
