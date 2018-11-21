@@ -130,8 +130,7 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 // GetRootDomain returns reference to RootDomain
 func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordRef {
 	if gdp.rootDomainRef == nil {
-		ref := core.NewRefFromBase58(gdp.Certificate.GetRootDomainReference())
-		gdp.rootDomainRef = &ref
+		gdp.rootDomainRef = gdp.Certificate.GetRootDomainReference()
 	}
 	return gdp.rootDomainRef
 }
