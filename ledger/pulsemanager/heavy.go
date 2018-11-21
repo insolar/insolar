@@ -35,6 +35,7 @@ func (m *PulseManager) HeavySync(
 ) (core.PulseNumber, error) {
 	inslog := inslogger.FromContext(ctx)
 
+	// MAYBE we should check Message Bus replies?
 	startMsg := &message.HeavyStart{Start: start, End: end}
 	_, starterr := m.Bus.Send(ctx, startMsg)
 	// TODO: check if locked
@@ -54,12 +55,10 @@ func (m *PulseManager) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{Records: recs}
-		reply, senderr := m.Bus.Send(ctx, msg)
+		_, senderr := m.Bus.Send(ctx, msg)
 		if senderr != nil {
 			return 0, senderr
 		}
-		// TODO: check reply?
-		_ = reply
 	}
 	inslog.Debugf("synchronize on [%v:%v] finised (maximum record pulse is %v)",
 		start, end, replicator.LastPulse())
