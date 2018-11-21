@@ -33,6 +33,13 @@ func (m *PulseManager) HeavySync(
 	start core.PulseNumber,
 	end core.PulseNumber,
 ) (core.PulseNumber, error) {
+	startMsg := &message.HeavyStart{Start: start, End: end}
+	_, starterr := m.Bus.Send(ctx, startMsg)
+	// TODO: check if locked
+	if starterr != nil {
+		return 0, starterr
+	}
+
 	replicator := storage.NewReplicaIter(
 		ctx, m.db, start, end, m.options.syncmessagelimit)
 	for {
