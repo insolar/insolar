@@ -31,16 +31,6 @@ type NodeKeeperMock struct {
 	AddPendingClaimPreCounter uint64
 	AddPendingClaimMock       mNodeKeeperMockAddPendingClaim
 
-	AddUnsyncClaimsFunc       func(p []*network.NodeClaim)
-	AddUnsyncClaimsCounter    uint64
-	AddUnsyncClaimsPreCounter uint64
-	AddUnsyncClaimsMock       mNodeKeeperMockAddUnsyncClaims
-
-	CalculateUnsyncMergedHashFunc       func() (r []byte)
-	CalculateUnsyncMergedHashCounter    uint64
-	CalculateUnsyncMergedHashPreCounter uint64
-	CalculateUnsyncMergedHashMock       mNodeKeeperMockCalculateUnsyncMergedHash
-
 	GetActiveNodeFunc       func(p core.RecordRef) (r core.Node)
 	GetActiveNodeCounter    uint64
 	GetActiveNodePreCounter uint64
@@ -81,10 +71,20 @@ type NodeKeeperMock struct {
 	GetOriginClaimPreCounter uint64
 	GetOriginClaimMock       mNodeKeeperMockGetOriginClaim
 
+	GetSparseUnsyncListFunc       func(p int) (r network.UnsyncList)
+	GetSparseUnsyncListCounter    uint64
+	GetSparseUnsyncListPreCounter uint64
+	GetSparseUnsyncListMock       mNodeKeeperMockGetSparseUnsyncList
+
 	GetStateFunc       func() (r network.NodeKeeperState)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mNodeKeeperMockGetState
+
+	GetUnsyncListFunc       func() (r network.UnsyncList)
+	GetUnsyncListCounter    uint64
+	GetUnsyncListPreCounter uint64
+	GetUnsyncListMock       mNodeKeeperMockGetUnsyncList
 
 	MoveSyncToActiveFunc       func()
 	MoveSyncToActiveCounter    uint64
@@ -111,7 +111,7 @@ type NodeKeeperMock struct {
 	SetStatePreCounter uint64
 	SetStateMock       mNodeKeeperMockSetState
 
-	SyncFunc       func(p []core.Node)
+	SyncFunc       func(p network.UnsyncList)
 	SyncCounter    uint64
 	SyncPreCounter uint64
 	SyncMock       mNodeKeeperMockSync
@@ -127,8 +127,6 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 
 	m.AddActiveNodesMock = mNodeKeeperMockAddActiveNodes{mock: m}
 	m.AddPendingClaimMock = mNodeKeeperMockAddPendingClaim{mock: m}
-	m.AddUnsyncClaimsMock = mNodeKeeperMockAddUnsyncClaims{mock: m}
-	m.CalculateUnsyncMergedHashMock = mNodeKeeperMockCalculateUnsyncMergedHash{mock: m}
 	m.GetActiveNodeMock = mNodeKeeperMockGetActiveNode{mock: m}
 	m.GetActiveNodeByShortIDMock = mNodeKeeperMockGetActiveNodeByShortID{mock: m}
 	m.GetActiveNodesMock = mNodeKeeperMockGetActiveNodes{mock: m}
@@ -137,7 +135,9 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetCloudHashMock = mNodeKeeperMockGetCloudHash{mock: m}
 	m.GetOriginMock = mNodeKeeperMockGetOrigin{mock: m}
 	m.GetOriginClaimMock = mNodeKeeperMockGetOriginClaim{mock: m}
+	m.GetSparseUnsyncListMock = mNodeKeeperMockGetSparseUnsyncList{mock: m}
 	m.GetStateMock = mNodeKeeperMockGetState{mock: m}
+	m.GetUnsyncListMock = mNodeKeeperMockGetUnsyncList{mock: m}
 	m.MoveSyncToActiveMock = mNodeKeeperMockMoveSyncToActive{mock: m}
 	m.NodesJoinedDuringPreviousPulseMock = mNodeKeeperMockNodesJoinedDuringPreviousPulse{mock: m}
 	m.SetCloudHashMock = mNodeKeeperMockSetCloudHash{mock: m}
@@ -278,114 +278,6 @@ func (m *NodeKeeperMock) AddPendingClaimMinimockCounter() uint64 {
 //AddPendingClaimMinimockPreCounter returns the value of NodeKeeperMock.AddPendingClaim invocations
 func (m *NodeKeeperMock) AddPendingClaimMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.AddPendingClaimPreCounter)
-}
-
-type mNodeKeeperMockAddUnsyncClaims struct {
-	mock             *NodeKeeperMock
-	mockExpectations *NodeKeeperMockAddUnsyncClaimsParams
-}
-
-//NodeKeeperMockAddUnsyncClaimsParams represents input parameters of the NodeKeeper.AddUnsyncClaims
-type NodeKeeperMockAddUnsyncClaimsParams struct {
-	p []*network.NodeClaim
-}
-
-//Expect sets up expected params for the NodeKeeper.AddUnsyncClaims
-func (m *mNodeKeeperMockAddUnsyncClaims) Expect(p []*network.NodeClaim) *mNodeKeeperMockAddUnsyncClaims {
-	m.mockExpectations = &NodeKeeperMockAddUnsyncClaimsParams{p}
-	return m
-}
-
-//Return sets up a mock for NodeKeeper.AddUnsyncClaims to return Return's arguments
-func (m *mNodeKeeperMockAddUnsyncClaims) Return() *NodeKeeperMock {
-	m.mock.AddUnsyncClaimsFunc = func(p []*network.NodeClaim) {
-		return
-	}
-	return m.mock
-}
-
-//Set uses given function f as a mock of NodeKeeper.AddUnsyncClaims method
-func (m *mNodeKeeperMockAddUnsyncClaims) Set(f func(p []*network.NodeClaim)) *NodeKeeperMock {
-	m.mock.AddUnsyncClaimsFunc = f
-	m.mockExpectations = nil
-	return m.mock
-}
-
-//AddUnsyncClaims implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) AddUnsyncClaims(p []*network.NodeClaim) {
-	atomic.AddUint64(&m.AddUnsyncClaimsPreCounter, 1)
-	defer atomic.AddUint64(&m.AddUnsyncClaimsCounter, 1)
-
-	if m.AddUnsyncClaimsMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.AddUnsyncClaimsMock.mockExpectations, NodeKeeperMockAddUnsyncClaimsParams{p},
-			"NodeKeeper.AddUnsyncClaims got unexpected parameters")
-
-		if m.AddUnsyncClaimsFunc == nil {
-
-			m.t.Fatal("No results are set for the NodeKeeperMock.AddUnsyncClaims")
-
-			return
-		}
-	}
-
-	if m.AddUnsyncClaimsFunc == nil {
-		m.t.Fatal("Unexpected call to NodeKeeperMock.AddUnsyncClaims")
-		return
-	}
-
-	m.AddUnsyncClaimsFunc(p)
-}
-
-//AddUnsyncClaimsMinimockCounter returns a count of NodeKeeperMock.AddUnsyncClaimsFunc invocations
-func (m *NodeKeeperMock) AddUnsyncClaimsMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.AddUnsyncClaimsCounter)
-}
-
-//AddUnsyncClaimsMinimockPreCounter returns the value of NodeKeeperMock.AddUnsyncClaims invocations
-func (m *NodeKeeperMock) AddUnsyncClaimsMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.AddUnsyncClaimsPreCounter)
-}
-
-type mNodeKeeperMockCalculateUnsyncMergedHash struct {
-	mock *NodeKeeperMock
-}
-
-//Return sets up a mock for NodeKeeper.CalculateUnsyncMergedHash to return Return's arguments
-func (m *mNodeKeeperMockCalculateUnsyncMergedHash) Return(r []byte) *NodeKeeperMock {
-	m.mock.CalculateUnsyncMergedHashFunc = func() []byte {
-		return r
-	}
-	return m.mock
-}
-
-//Set uses given function f as a mock of NodeKeeper.CalculateUnsyncMergedHash method
-func (m *mNodeKeeperMockCalculateUnsyncMergedHash) Set(f func() (r []byte)) *NodeKeeperMock {
-	m.mock.CalculateUnsyncMergedHashFunc = f
-
-	return m.mock
-}
-
-//CalculateUnsyncMergedHash implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) CalculateUnsyncMergedHash() (r []byte) {
-	atomic.AddUint64(&m.CalculateUnsyncMergedHashPreCounter, 1)
-	defer atomic.AddUint64(&m.CalculateUnsyncMergedHashCounter, 1)
-
-	if m.CalculateUnsyncMergedHashFunc == nil {
-		m.t.Fatal("Unexpected call to NodeKeeperMock.CalculateUnsyncMergedHash")
-		return
-	}
-
-	return m.CalculateUnsyncMergedHashFunc()
-}
-
-//CalculateUnsyncMergedHashMinimockCounter returns a count of NodeKeeperMock.CalculateUnsyncMergedHashFunc invocations
-func (m *NodeKeeperMock) CalculateUnsyncMergedHashMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.CalculateUnsyncMergedHashCounter)
-}
-
-//CalculateUnsyncMergedHashMinimockPreCounter returns the value of NodeKeeperMock.CalculateUnsyncMergedHash invocations
-func (m *NodeKeeperMock) CalculateUnsyncMergedHashMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.CalculateUnsyncMergedHashPreCounter)
 }
 
 type mNodeKeeperMockGetActiveNode struct {
@@ -796,6 +688,72 @@ func (m *NodeKeeperMock) GetOriginClaimMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetOriginClaimPreCounter)
 }
 
+type mNodeKeeperMockGetSparseUnsyncList struct {
+	mock             *NodeKeeperMock
+	mockExpectations *NodeKeeperMockGetSparseUnsyncListParams
+}
+
+//NodeKeeperMockGetSparseUnsyncListParams represents input parameters of the NodeKeeper.GetSparseUnsyncList
+type NodeKeeperMockGetSparseUnsyncListParams struct {
+	p int
+}
+
+//Expect sets up expected params for the NodeKeeper.GetSparseUnsyncList
+func (m *mNodeKeeperMockGetSparseUnsyncList) Expect(p int) *mNodeKeeperMockGetSparseUnsyncList {
+	m.mockExpectations = &NodeKeeperMockGetSparseUnsyncListParams{p}
+	return m
+}
+
+//Return sets up a mock for NodeKeeper.GetSparseUnsyncList to return Return's arguments
+func (m *mNodeKeeperMockGetSparseUnsyncList) Return(r network.UnsyncList) *NodeKeeperMock {
+	m.mock.GetSparseUnsyncListFunc = func(p int) network.UnsyncList {
+		return r
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of NodeKeeper.GetSparseUnsyncList method
+func (m *mNodeKeeperMockGetSparseUnsyncList) Set(f func(p int) (r network.UnsyncList)) *NodeKeeperMock {
+	m.mock.GetSparseUnsyncListFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//GetSparseUnsyncList implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) GetSparseUnsyncList(p int) (r network.UnsyncList) {
+	atomic.AddUint64(&m.GetSparseUnsyncListPreCounter, 1)
+	defer atomic.AddUint64(&m.GetSparseUnsyncListCounter, 1)
+
+	if m.GetSparseUnsyncListMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.GetSparseUnsyncListMock.mockExpectations, NodeKeeperMockGetSparseUnsyncListParams{p},
+			"NodeKeeper.GetSparseUnsyncList got unexpected parameters")
+
+		if m.GetSparseUnsyncListFunc == nil {
+
+			m.t.Fatal("No results are set for the NodeKeeperMock.GetSparseUnsyncList")
+
+			return
+		}
+	}
+
+	if m.GetSparseUnsyncListFunc == nil {
+		m.t.Fatal("Unexpected call to NodeKeeperMock.GetSparseUnsyncList")
+		return
+	}
+
+	return m.GetSparseUnsyncListFunc(p)
+}
+
+//GetSparseUnsyncListMinimockCounter returns a count of NodeKeeperMock.GetSparseUnsyncListFunc invocations
+func (m *NodeKeeperMock) GetSparseUnsyncListMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetSparseUnsyncListCounter)
+}
+
+//GetSparseUnsyncListMinimockPreCounter returns the value of NodeKeeperMock.GetSparseUnsyncList invocations
+func (m *NodeKeeperMock) GetSparseUnsyncListMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetSparseUnsyncListPreCounter)
+}
+
 type mNodeKeeperMockGetState struct {
 	mock *NodeKeeperMock
 }
@@ -836,6 +794,48 @@ func (m *NodeKeeperMock) GetStateMinimockCounter() uint64 {
 //GetStateMinimockPreCounter returns the value of NodeKeeperMock.GetState invocations
 func (m *NodeKeeperMock) GetStateMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetStatePreCounter)
+}
+
+type mNodeKeeperMockGetUnsyncList struct {
+	mock *NodeKeeperMock
+}
+
+//Return sets up a mock for NodeKeeper.GetUnsyncList to return Return's arguments
+func (m *mNodeKeeperMockGetUnsyncList) Return(r network.UnsyncList) *NodeKeeperMock {
+	m.mock.GetUnsyncListFunc = func() network.UnsyncList {
+		return r
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of NodeKeeper.GetUnsyncList method
+func (m *mNodeKeeperMockGetUnsyncList) Set(f func() (r network.UnsyncList)) *NodeKeeperMock {
+	m.mock.GetUnsyncListFunc = f
+
+	return m.mock
+}
+
+//GetUnsyncList implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) GetUnsyncList() (r network.UnsyncList) {
+	atomic.AddUint64(&m.GetUnsyncListPreCounter, 1)
+	defer atomic.AddUint64(&m.GetUnsyncListCounter, 1)
+
+	if m.GetUnsyncListFunc == nil {
+		m.t.Fatal("Unexpected call to NodeKeeperMock.GetUnsyncList")
+		return
+	}
+
+	return m.GetUnsyncListFunc()
+}
+
+//GetUnsyncListMinimockCounter returns a count of NodeKeeperMock.GetUnsyncListFunc invocations
+func (m *NodeKeeperMock) GetUnsyncListMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetUnsyncListCounter)
+}
+
+//GetUnsyncListMinimockPreCounter returns the value of NodeKeeperMock.GetUnsyncList invocations
+func (m *NodeKeeperMock) GetUnsyncListMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetUnsyncListPreCounter)
 }
 
 type mNodeKeeperMockMoveSyncToActive struct {
@@ -1127,32 +1127,32 @@ type mNodeKeeperMockSync struct {
 
 //NodeKeeperMockSyncParams represents input parameters of the NodeKeeper.Sync
 type NodeKeeperMockSyncParams struct {
-	p []core.Node
+	p network.UnsyncList
 }
 
 //Expect sets up expected params for the NodeKeeper.Sync
-func (m *mNodeKeeperMockSync) Expect(p []core.Node) *mNodeKeeperMockSync {
+func (m *mNodeKeeperMockSync) Expect(p network.UnsyncList) *mNodeKeeperMockSync {
 	m.mockExpectations = &NodeKeeperMockSyncParams{p}
 	return m
 }
 
 //Return sets up a mock for NodeKeeper.Sync to return Return's arguments
 func (m *mNodeKeeperMockSync) Return() *NodeKeeperMock {
-	m.mock.SyncFunc = func(p []core.Node) {
+	m.mock.SyncFunc = func(p network.UnsyncList) {
 		return
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of NodeKeeper.Sync method
-func (m *mNodeKeeperMockSync) Set(f func(p []core.Node)) *NodeKeeperMock {
+func (m *mNodeKeeperMockSync) Set(f func(p network.UnsyncList)) *NodeKeeperMock {
 	m.mock.SyncFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //Sync implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) Sync(p []core.Node) {
+func (m *NodeKeeperMock) Sync(p network.UnsyncList) {
 	atomic.AddUint64(&m.SyncPreCounter, 1)
 	defer atomic.AddUint64(&m.SyncCounter, 1)
 
@@ -1198,14 +1198,6 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.AddPendingClaim")
 	}
 
-	if m.AddUnsyncClaimsFunc != nil && atomic.LoadUint64(&m.AddUnsyncClaimsCounter) == 0 {
-		m.t.Fatal("Expected call to NodeKeeperMock.AddUnsyncClaims")
-	}
-
-	if m.CalculateUnsyncMergedHashFunc != nil && atomic.LoadUint64(&m.CalculateUnsyncMergedHashCounter) == 0 {
-		m.t.Fatal("Expected call to NodeKeeperMock.CalculateUnsyncMergedHash")
-	}
-
 	if m.GetActiveNodeFunc != nil && atomic.LoadUint64(&m.GetActiveNodeCounter) == 0 {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetActiveNode")
 	}
@@ -1238,8 +1230,16 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginClaim")
 	}
 
+	if m.GetSparseUnsyncListFunc != nil && atomic.LoadUint64(&m.GetSparseUnsyncListCounter) == 0 {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetSparseUnsyncList")
+	}
+
 	if m.GetStateFunc != nil && atomic.LoadUint64(&m.GetStateCounter) == 0 {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetState")
+	}
+
+	if m.GetUnsyncListFunc != nil && atomic.LoadUint64(&m.GetUnsyncListCounter) == 0 {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
 	}
 
 	if m.MoveSyncToActiveFunc != nil && atomic.LoadUint64(&m.MoveSyncToActiveCounter) == 0 {
@@ -1291,14 +1291,6 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.AddPendingClaim")
 	}
 
-	if m.AddUnsyncClaimsFunc != nil && atomic.LoadUint64(&m.AddUnsyncClaimsCounter) == 0 {
-		m.t.Fatal("Expected call to NodeKeeperMock.AddUnsyncClaims")
-	}
-
-	if m.CalculateUnsyncMergedHashFunc != nil && atomic.LoadUint64(&m.CalculateUnsyncMergedHashCounter) == 0 {
-		m.t.Fatal("Expected call to NodeKeeperMock.CalculateUnsyncMergedHash")
-	}
-
 	if m.GetActiveNodeFunc != nil && atomic.LoadUint64(&m.GetActiveNodeCounter) == 0 {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetActiveNode")
 	}
@@ -1331,8 +1323,16 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginClaim")
 	}
 
+	if m.GetSparseUnsyncListFunc != nil && atomic.LoadUint64(&m.GetSparseUnsyncListCounter) == 0 {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetSparseUnsyncList")
+	}
+
 	if m.GetStateFunc != nil && atomic.LoadUint64(&m.GetStateCounter) == 0 {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetState")
+	}
+
+	if m.GetUnsyncListFunc != nil && atomic.LoadUint64(&m.GetUnsyncListCounter) == 0 {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
 	}
 
 	if m.MoveSyncToActiveFunc != nil && atomic.LoadUint64(&m.MoveSyncToActiveCounter) == 0 {
@@ -1375,8 +1375,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && (m.AddActiveNodesFunc == nil || atomic.LoadUint64(&m.AddActiveNodesCounter) > 0)
 		ok = ok && (m.AddPendingClaimFunc == nil || atomic.LoadUint64(&m.AddPendingClaimCounter) > 0)
-		ok = ok && (m.AddUnsyncClaimsFunc == nil || atomic.LoadUint64(&m.AddUnsyncClaimsCounter) > 0)
-		ok = ok && (m.CalculateUnsyncMergedHashFunc == nil || atomic.LoadUint64(&m.CalculateUnsyncMergedHashCounter) > 0)
 		ok = ok && (m.GetActiveNodeFunc == nil || atomic.LoadUint64(&m.GetActiveNodeCounter) > 0)
 		ok = ok && (m.GetActiveNodeByShortIDFunc == nil || atomic.LoadUint64(&m.GetActiveNodeByShortIDCounter) > 0)
 		ok = ok && (m.GetActiveNodesFunc == nil || atomic.LoadUint64(&m.GetActiveNodesCounter) > 0)
@@ -1385,7 +1383,9 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && (m.GetCloudHashFunc == nil || atomic.LoadUint64(&m.GetCloudHashCounter) > 0)
 		ok = ok && (m.GetOriginFunc == nil || atomic.LoadUint64(&m.GetOriginCounter) > 0)
 		ok = ok && (m.GetOriginClaimFunc == nil || atomic.LoadUint64(&m.GetOriginClaimCounter) > 0)
+		ok = ok && (m.GetSparseUnsyncListFunc == nil || atomic.LoadUint64(&m.GetSparseUnsyncListCounter) > 0)
 		ok = ok && (m.GetStateFunc == nil || atomic.LoadUint64(&m.GetStateCounter) > 0)
+		ok = ok && (m.GetUnsyncListFunc == nil || atomic.LoadUint64(&m.GetUnsyncListCounter) > 0)
 		ok = ok && (m.MoveSyncToActiveFunc == nil || atomic.LoadUint64(&m.MoveSyncToActiveCounter) > 0)
 		ok = ok && (m.NodesJoinedDuringPreviousPulseFunc == nil || atomic.LoadUint64(&m.NodesJoinedDuringPreviousPulseCounter) > 0)
 		ok = ok && (m.SetCloudHashFunc == nil || atomic.LoadUint64(&m.SetCloudHashCounter) > 0)
@@ -1406,14 +1406,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if m.AddPendingClaimFunc != nil && atomic.LoadUint64(&m.AddPendingClaimCounter) == 0 {
 				m.t.Error("Expected call to NodeKeeperMock.AddPendingClaim")
-			}
-
-			if m.AddUnsyncClaimsFunc != nil && atomic.LoadUint64(&m.AddUnsyncClaimsCounter) == 0 {
-				m.t.Error("Expected call to NodeKeeperMock.AddUnsyncClaims")
-			}
-
-			if m.CalculateUnsyncMergedHashFunc != nil && atomic.LoadUint64(&m.CalculateUnsyncMergedHashCounter) == 0 {
-				m.t.Error("Expected call to NodeKeeperMock.CalculateUnsyncMergedHash")
 			}
 
 			if m.GetActiveNodeFunc != nil && atomic.LoadUint64(&m.GetActiveNodeCounter) == 0 {
@@ -1448,8 +1440,16 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NodeKeeperMock.GetOriginClaim")
 			}
 
+			if m.GetSparseUnsyncListFunc != nil && atomic.LoadUint64(&m.GetSparseUnsyncListCounter) == 0 {
+				m.t.Error("Expected call to NodeKeeperMock.GetSparseUnsyncList")
+			}
+
 			if m.GetStateFunc != nil && atomic.LoadUint64(&m.GetStateCounter) == 0 {
 				m.t.Error("Expected call to NodeKeeperMock.GetState")
+			}
+
+			if m.GetUnsyncListFunc != nil && atomic.LoadUint64(&m.GetUnsyncListCounter) == 0 {
+				m.t.Error("Expected call to NodeKeeperMock.GetUnsyncList")
 			}
 
 			if m.MoveSyncToActiveFunc != nil && atomic.LoadUint64(&m.MoveSyncToActiveCounter) == 0 {
@@ -1496,14 +1496,6 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if m.AddUnsyncClaimsFunc != nil && atomic.LoadUint64(&m.AddUnsyncClaimsCounter) == 0 {
-		return false
-	}
-
-	if m.CalculateUnsyncMergedHashFunc != nil && atomic.LoadUint64(&m.CalculateUnsyncMergedHashCounter) == 0 {
-		return false
-	}
-
 	if m.GetActiveNodeFunc != nil && atomic.LoadUint64(&m.GetActiveNodeCounter) == 0 {
 		return false
 	}
@@ -1536,7 +1528,15 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if m.GetSparseUnsyncListFunc != nil && atomic.LoadUint64(&m.GetSparseUnsyncListCounter) == 0 {
+		return false
+	}
+
 	if m.GetStateFunc != nil && atomic.LoadUint64(&m.GetStateCounter) == 0 {
+		return false
+	}
+
+	if m.GetUnsyncListFunc != nil && atomic.LoadUint64(&m.GetUnsyncListCounter) == 0 {
 		return false
 	}
 
