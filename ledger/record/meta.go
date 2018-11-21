@@ -26,6 +26,16 @@ import (
 type GenesisRecord struct {
 }
 
+// PrevStateID returns previous state id.
+func (r *GenesisRecord) PrevStateID() *core.RecordID {
+	return nil
+}
+
+// State returns state id.
+func (r *GenesisRecord) State() State {
+	return StateActivation
+}
+
 // Type implementation of Record interface.
 func (r *GenesisRecord) Type() TypeID { return typeGenesis }
 
@@ -34,31 +44,26 @@ func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
-// IsDeactivation determines if current state is deactivation.
-func (*GenesisRecord) IsDeactivation() bool {
-	return false
-}
-
-// IsAmend determines if current state is amend.
-func (*GenesisRecord) IsAmend() bool {
-	return false
-}
-
 // GetMemory returns state memory.
-func (*GenesisRecord) GetMemory() []byte {
+func (*GenesisRecord) GetMemory() *core.RecordID {
 	return nil
 }
 
-// GetCode returns state code.
-func (*GenesisRecord) GetCode() *Reference {
+// GetImage returns state code.
+func (*GenesisRecord) GetImage() *core.RecordRef {
 	return nil
+}
+
+// GetIsPrototype returns state code.
+func (*GenesisRecord) GetIsPrototype() bool {
+	return false
 }
 
 // ChildRecord is a child activation record. Its used for children iterating.
 type ChildRecord struct {
-	PrevChild *ID
+	PrevChild *core.RecordID
 
-	Ref Reference // Reference to the child's head.
+	Ref core.RecordRef // Reference to the child's head.
 }
 
 // Type implementation of Record interface.

@@ -16,6 +16,10 @@
 
 package core
 
+import (
+	"crypto/ecdsa"
+)
+
 // Cascade contains routing data for cascade sending
 type Cascade struct {
 	// NodeIds contains the slice of node identifiers that will receive the message
@@ -32,13 +36,15 @@ type RemoteProcedure func(args [][]byte) ([]byte, error)
 // Network is interface for network modules facade.
 type Network interface {
 	// SendMessage sends a message.
-	SendMessage(nodeID RecordRef, method string, msg Message) ([]byte, error)
+	SendMessage(nodeID RecordRef, method string, msg SignedMessage) ([]byte, error)
 	// SendCascadeMessage sends a message.
-	SendCascadeMessage(data Cascade, method string, msg Message) error
+	SendCascadeMessage(data Cascade, method string, msg SignedMessage) error
 	// GetAddress returns an origin address.
 	GetAddress() string
 	// RemoteProcedureRegister is remote procedure register func.
 	RemoteProcedureRegister(name string, method RemoteProcedure)
 	// GetNodeID returns current node id.
 	GetNodeID() RecordRef
+	// GetPrivateKey returns a private key.
+	GetPrivateKey() *ecdsa.PrivateKey
 }

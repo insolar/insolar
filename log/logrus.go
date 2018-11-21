@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/insolar/insolar/core"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,9 +37,25 @@ func newLogrusAdapter() logrusAdapter {
 // the package, func, file name and line where the logging happened.
 func (l logrusAdapter) sourced() *logrus.Entry {
 	info := getCallInfo(l.skipCallNumber)
-	return l.entry.WithFields(logrus.Fields{"package": info.packageName,
-		"func": info.funcName,
-		"file": fmt.Sprintf("%s:%d", info.fileName, info.line)})
+	return l.entry.WithFields(logrus.Fields{
+		"package": info.packageName,
+		"func":    info.funcName,
+		"file":    fmt.Sprintf("%s:%d", info.fileName, info.line),
+	})
+}
+
+// WithFields return copy of adapter with predefined fields.
+func (l logrusAdapter) WithFields(fields map[string]interface{}) core.Logger {
+	lcopy := l
+	lcopy.entry = l.entry.WithFields(logrus.Fields(fields))
+	return lcopy
+}
+
+// WithField return copy of adapter with predefined single field.
+func (l logrusAdapter) WithField(key string, value interface{}) core.Logger {
+	lcopy := l
+	lcopy.entry = l.entry.WithField(key, value)
+	return lcopy
 }
 
 // Debug logs a message at level Debug on the stdout.
@@ -150,4 +167,23 @@ func (l logrusAdapter) GetLevel() string {
 // SetOutput sets the output destination for the logger.
 func (l logrusAdapter) SetOutput(w io.Writer) {
 	l.entry.Logger.SetOutput(w)
+}
+
+// WithSkipDelta changes current skip stack frames value for underlying logrus adapter
+// on delta value. More about skip value is here https://golang.org/pkg/runtime/#Caller.
+//
+// This is useful than logger methods called not from place they should report,
+// like helper functions.
+func WithSkipDelta(cl core.Logger, delta int) core.Logger {
+	l, ok := cl.(logrusAdapter)
+	if !ok {
+		return cl
+	}
+	newskip := l.skipCallNumber + delta
+	out := l
+	if newskip < 0 {
+		newskip = 0
+	}
+	out.skipCallNumber = newskip
+	return out
 }

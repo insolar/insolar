@@ -16,6 +16,10 @@
 
 package core
 
+import (
+	"context"
+)
+
 // JetRole is number representing a node role.
 type JetRole int
 
@@ -42,25 +46,28 @@ type Ledger interface {
 
 	// GetPulseManager returns pulse manager to work with.
 	GetPulseManager() PulseManager
+
+	// GetLocalStorage returns local storage to work with.
+	GetLocalStorage() LocalStorage
 }
 
 // PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {
 	// Current returns current pulse structure.
-	Current() (*Pulse, error)
+	Current(context.Context) (*Pulse, error)
 
 	// Set set's new pulse and closes current jet drop.
-	Set(Pulse) error
+	Set(context.Context, Pulse) error
 }
 
 // JetCoordinator provides methods for calculating Jet affinity
 // (e.g. to which Jet a message should be sent).
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(role JetRole, obj RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
+	IsAuthorized(ctx context.Context, role JetRole, obj *RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(role JetRole, obj RecordRef, pulse PulseNumber) ([]RecordRef, error)
+	QueryRole(ctx context.Context, role JetRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
 }
 
 // ArtifactManager is a high level storage interface.
@@ -72,84 +79,100 @@ type ArtifactManager interface {
 
 	// RegisterRequest creates or check call request record and returns it RecordRef.
 	// (used by VM on executing side)
-	RegisterRequest(ctx Context, message Message) (*RecordRef, error)
+	RegisterRequest(ctx context.Context, message Message) (*RecordID, error)
+
+	// RegisterValidation marks provided object state as approved or disapproved.
+	//
+	// When fetching object, validity can be specified.
+	RegisterValidation(ctx context.Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
+
+	// RegisterResult saves VM method call result.
+	RegisterResult(ctx context.Context, request RecordRef, payload []byte) (*RecordID, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
-	GetCode(ctx Context, ref RecordRef) (CodeDescriptor, error)
-
-	// GetClass returns descriptor for provided state.
-	//
-	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
-	// provide methods for fetching all related data.
-	GetClass(ctx Context, head RecordRef, state *RecordRef) (ClassDescriptor, error)
+	GetCode(ctx context.Context, ref RecordRef) (CodeDescriptor, error)
 
 	// GetObject returns descriptor for provided state.
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(ctx Context, head RecordRef, state *RecordRef) (ObjectDescriptor, error)
+	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
 
-	// GetDelegate returns provided object's delegate reference for provided class.
+	// GetDelegate returns provided object's delegate reference for provided type.
 	//
 	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
 	// be returned.
-	GetDelegate(ctx Context, head, asClass RecordRef) (*RecordRef, error)
+	GetDelegate(ctx context.Context, head, asType RecordRef) (*RecordRef, error)
 
 	// GetChildren returns children iterator.
 	//
 	// During iteration children refs will be fetched from remote source (parent object).
-	GetChildren(ctx Context, parent RecordRef, pulse *PulseNumber) (RefIterator, error)
+	GetChildren(ctx context.Context, parent RecordRef, pulse *PulseNumber) (RefIterator, error)
 
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
-	DeclareType(ctx Context, domain, request RecordRef, typeDec []byte) (*RecordRef, error)
+	DeclareType(ctx context.Context, domain, request RecordRef, typeDec []byte) (*RecordID, error)
 
 	// DeployCode creates new code record in storage.
 	//
-	// Code records are used to activate class or as migration code for an object.
-	DeployCode(ctx Context, domain, request RecordRef, code []byte, machineType MachineType) (*RecordRef, error)
+	// Code records are used to activate prototype.
+	DeployCode(ctx context.Context, domain, request RecordRef, code []byte, machineType MachineType) (*RecordID, error)
 
-	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
-	//
-	// Request reference will be this class'es identifier and referred as "class head".
-	ActivateClass(ctx Context, domain, request, code RecordRef) (*RecordID, error)
-
-	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
-	// the class. If class is already deactivated, an error should be returned.
-	//
-	// Deactivated class cannot be changed or instantiate objects.
-	DeactivateClass(ctx Context, domain, request, class RecordRef) (*RecordID, error)
-
-	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
-	// the class. Migrations are references to code records.
-	//
-	// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
-	// migrate objects memory in the order they appear in provided slice.
-	UpdateClass(ctx Context, domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordID, error)
-
-	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's class.
-	// If memory is not provided, the class default memory will be used.
+	// ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
+	// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 	//
 	// Request reference will be this object's identifier and referred as "object head".
-	ActivateObject(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
+	ActivatePrototype(
+		ctx context.Context,
+		domain, request, parent, code RecordRef,
+		memory []byte,
+	) (ObjectDescriptor, error)
 
-	// ActivateObjectDelegate is similar to ActivateObject but it created object will be parent's delegate of provided class.
-	ActivateObjectDelegate(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
-
-	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
-	// of the object. If object is already deactivated, an error should be returned.
+	// ActivateObject creates activate object record in storage. If memory is not provided, the prototype default
+	// memory will be used.
 	//
-	// Deactivated object cannot be changed.
-	DeactivateObject(ctx Context, domain, request, obj RecordRef) (*RecordID, error)
+	// Request reference will be this object's identifier and referred as "object head".
+	ActivateObject(
+		ctx context.Context,
+		domain, request, parent, prototype RecordRef,
+		asDelegate bool,
+		memory []byte,
+	) (ObjectDescriptor, error)
+
+	// UpdatePrototype creates amend object record in storage. Provided reference should be a reference to the head of
+	// the prototype. Provided memory well be the new object memory.
+	//
+	// Returned reference will be the latest object state (exact) reference.
+	UpdatePrototype(
+		ctx context.Context,
+		domain, request RecordRef,
+		obj ObjectDescriptor,
+		memory []byte,
+		code *RecordRef,
+	) (ObjectDescriptor, error)
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(ctx Context, domain, request, obj RecordRef, memory []byte) (*RecordID, error)
+	UpdateObject(
+		ctx context.Context,
+		domain, request RecordRef,
+		obj ObjectDescriptor,
+		memory []byte,
+	) (ObjectDescriptor, error)
+
+	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
+	// of the object. If object is already deactivated, an error should be returned.
+	//
+	// Deactivated object cannot be changed.
+	DeactivateObject(ctx context.Context, domain, request RecordRef, obj ObjectDescriptor) (*RecordID, error)
+
+	// State returns hash state for artifact manager.
+	State() ([]byte, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
@@ -164,18 +187,6 @@ type CodeDescriptor interface {
 	Code() ([]byte, error)
 }
 
-// ClassDescriptor represents meta info required to fetch all object data.
-type ClassDescriptor interface {
-	// HeadRef returns head reference to represented class record.
-	HeadRef() *RecordRef
-
-	// StateID returns reference to represented class state record.
-	StateID() *RecordID
-
-	// CodeDescriptor returns descriptor for fetching class's code data.
-	CodeDescriptor() CodeDescriptor
-}
-
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor interface {
 	// HeadRef returns head reference to represented object record.
@@ -187,15 +198,36 @@ type ObjectDescriptor interface {
 	// Memory fetches object memory from storage.
 	Memory() []byte
 
-	// ClassDescriptor returns descriptor for fetching object's class data.
-	ClassDescriptor(state *RecordRef) (ClassDescriptor, error)
+	// IsPrototype determines if the object is a prototype.
+	IsPrototype() bool
+
+	// Code returns code reference.
+	Code() (*RecordRef, error)
+
+	// Prototype returns prototype reference.
+	Prototype() (*RecordRef, error)
 
 	// Children returns object's children references.
 	Children(pulse *PulseNumber) (RefIterator, error)
+
+	// ChildPointer returns the latest child for this object.
+	ChildPointer() *RecordID
+
+	// Parent returns object's parent.
+	Parent() *RecordRef
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.
 type RefIterator interface {
 	Next() (*RecordRef, error)
 	HasNext() bool
+}
+
+// LocalStorage allows a node to save local data.
+type LocalStorage interface {
+	// SetMessage saves message in storage.
+	SetMessage(ctx context.Context, msg SignedMessage) (*RecordID, error)
+
+	// GetMessage retrieves message from storage.
+	GetMessage(ctx context.Context, id RecordID) (SignedMessage, error)
 }

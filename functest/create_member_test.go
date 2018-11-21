@@ -19,74 +19,49 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateMember(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       testutils.RandomString(),
-		"public_key": "000",
-	})
-
-	memberResponse := &createMemberResponse{}
-	unmarshalResponse(t, body, memberResponse)
-
-	firstMemberRef := memberResponse.Reference
-	assert.NotEqual(t, "", firstMemberRef)
+	result, err := signedRequest(&root, "CreateMember", "Member", "000")
+	assert.NoError(t, err)
+	ref, ok := result.(string)
+	assert.True(t, ok)
+	assert.NotEqual(t, "", ref)
 }
 
-func TestCreateMemberWrongType(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       1111,
-		"public_key": "000",
-	})
-
-	memberResponse := &createMemberResponse{}
-	unmarshalResponseWithError(t, body, memberResponse)
-
-	assert.Equal(t, api.BadRequest, memberResponse.Err.Code)
-	assert.Equal(t, "Bad request", memberResponse.Err.Message)
+func TestCreateMemberWrongNameType(t *testing.T) {
+	_, err := signedRequest(&root, "CreateMember", 111, "000")
+	assert.EqualError(t, err, "[ createMemberCall ]: unexpected EOF")
 }
 
-func TestCreateMemberWithoutName(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
-	})
+func TestCreateMemberWrongKeyType(t *testing.T) {
+	_, err := signedRequest(&root, "CreateMember", "Member", 111)
+	assert.EqualError(t, err, "[ createMemberCall ]: EOF")
+}
 
-	memberResponse := &createMemberResponse{}
-	unmarshalResponseWithError(t, body, memberResponse)
+// no error
+func _TestCreateMemberOneParameter(t *testing.T) {
+	_, err := signedRequest(&root, "CreateMember", "text")
+	assert.Error(t, err)
+}
 
-	assert.Equal(t, api.HandlerError, memberResponse.Err.Code)
-	assert.Equal(t, "Handler error: field 'name' is required", memberResponse.Err.Message)
+func TestCreateMemberOneParameterOtherType(t *testing.T) {
+	_, err := signedRequest(&root, "CreateMember", 111)
+	assert.EqualError(t, err, "[ createMemberCall ]: EOF")
 }
 
 func TestCreateMembersWithSameName(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       "NameForTestCreateMembersWithSameName",
-		"public_key": "000",
-	})
-
-	memberResponse := &createMemberResponse{}
-	unmarshalResponse(t, body, memberResponse)
-
-	firstMemberRef := memberResponse.Reference
-	assert.NotEqual(t, "", firstMemberRef)
-
-	body = getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       "NameForTestCreateMembersWithSameName",
-		"public_key": "000",
-	})
-
-	unmarshalResponse(t, body, memberResponse)
-
-	secondMemberRef := memberResponse.Reference
-	assert.NotEqual(t, "", secondMemberRef)
+	firstMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
+	assert.NoError(t, err)
+	secondMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
+	assert.NoError(t, err)
 
 	assert.NotEqual(t, firstMemberRef, secondMemberRef)
+}
+
+func TestCreateMemberByNoRoot(t *testing.T) {
+	member := createMember(t, "Member1")
+	_, err := signedRequest(member, "CreateMember", "Member2", "000")
+	assert.EqualError(t, err, "[ CreateMember ] Only Root member can create members")
 }

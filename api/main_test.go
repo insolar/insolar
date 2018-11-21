@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -25,28 +26,31 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/insolar/insolar/bootstrap"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/genesis"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 const HOST = "http://localhost:19191"
 const TestUrl = HOST + "/api/v1?query_type=LOL"
 
 func TestMain(m *testing.M) {
+	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
-	bootstrapCfg := configuration.NewConfiguration()
+	genesisCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)
 
 	cs := core.Components{}
-	b, _ := bootstrap.NewBootstrapper(bootstrapCfg)
-	cs.Bootstrapper = b
-	api.Start(cs)
+	b, _ := genesis.NewGenesis(genesisCfg.Genesis)
+	cs.Genesis = b
+	api.Start(ctx, cs)
 
 	code := m.Run()
 
-	api.Stop()
+	api.Stop(ctx)
 
 	os.Exit(code)
 }
@@ -59,18 +63,6 @@ func TestWrongQueryParam(t *testing.T) {
 	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
-}
-
-func TestHandlerError(t *testing.T) {
-	postParams := map[string]string{"query_type": "get_balance", "reference": "test"}
-	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	body, err := ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	a := string(body[:])
-	_ = a
-	assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] message`)
 }
 
 func TestBadRequest(t *testing.T) {

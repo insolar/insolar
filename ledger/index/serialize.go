@@ -22,28 +22,6 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// EncodeClassLifeline converts lifeline index into binary format
-func EncodeClassLifeline(index *ClassLifeline) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-	err := enc.Encode(index)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-// DecodeClassLifeline converts byte array into lifeline index struct
-func DecodeClassLifeline(buf []byte) (*ClassLifeline, error) {
-	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
-	var idx ClassLifeline
-	err := dec.Decode(&idx)
-	if err != nil {
-		return nil, err
-	}
-	return &idx, nil
-}
-
 // EncodeObjectLifeline converts lifeline index into binary format.
 func EncodeObjectLifeline(index *ObjectLifeline) ([]byte, error) {
 	var buf bytes.Buffer

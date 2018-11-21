@@ -17,23 +17,26 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/servicenetwork"
 )
 
-func repl(service *servicenetwork.ServiceNetwork) {
-	displayInteractiveHelp()
-	dhtNetwork, ctx := service.GetHostNetwork()
+// Repl is "read-eval-print loop" interactive console
+type Repl struct {
+	NodeNetwork core.NodeNetwork
+	Manager     core.PulseManager
+}
 
-	doInfo(service, dhtNetwork, ctx)
+// Start method starts interactive console
+func (r *Repl) Start(ctx context.Context) {
+	displayInteractiveHelp()
+
+	doInfo(r.NodeNetwork)
 
 	rl, err := readline.New("> ")
 	if err != nil {
@@ -60,97 +63,57 @@ func repl(service *servicenetwork.ServiceNetwork) {
 		case "help":
 			displayInteractiveHelp()
 		case "findhost":
-			doFindHost(input, dhtNetwork, ctx)
+			doFindHost(input, r.NodeNetwork)
 		case "info":
-			doInfo(service, dhtNetwork, ctx)
-		case "relay":
-			doSendRelay(input[2], input[1], dhtNetwork, ctx)
-		case "rpc":
-			input = input[1:]
-			doRPC(input, dhtNetwork, ctx)
+			doInfo(r.NodeNetwork)
 		case "activenodes":
-			doActiveNodes(dhtNetwork)
+			doActiveNodes(r.NodeNetwork)
 		case "pulse":
-			doPulse(dhtNetwork.GetNetworkCommonFacade().GetPulseManager())
+			doPulse(ctx, r.Manager)
 		default:
 			displayInteractiveHelp()
 		}
 	}
 }
 
-func doPulse(pm core.PulseManager) {
-	pulse, err := pm.Current()
+func doPulse(ctx context.Context, pm core.PulseManager) {
+	pulse, err := pm.Current(ctx)
 	if err != nil {
 		fmt.Println("Failed to get pulse")
 	} else {
 		fmt.Printf("Current pulse number: %d \n", pulse.PulseNumber)
 	}
-
 }
 
-func doActiveNodes(dhtNetwork hosthandler.HostHandler) {
-	nodes := dhtNetwork.GetActiveNodesList()
+func doActiveNodes(network core.NodeNetwork) {
+	nodes := network.GetActiveNodes()
 	fmt.Println("Active nodes:")
 	for _, n := range nodes {
-		fmt.Println(n.NodeID.String())
+		fmt.Println(n.ID().String())
 	}
 }
 
-func doFindHost(input []string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
+func doFindHost(input []string, network core.NodeNetwork) {
 	if len(input) != 2 {
 		displayInteractiveHelp()
 		return
 	}
-	fmt.Println("Searching for targetHost", input[1])
-	targetHost, exists, err := dhtNetwork.FindHost(ctx, input[1])
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	if exists {
-		fmt.Println("..Found targetHost:", targetHost)
+	fmt.Println("Searching for NodeID:", input[1])
+	nodeID := core.NewRefFromBase58(input[1])
+	node := network.GetActiveNode(nodeID)
+	if node != nil {
+		fmt.Println("..Found targetHost:", node.PhysicalAddress())
 	} else {
 		fmt.Println("..Nothing found for this id!")
 	}
 }
 
-func doInfo(service core.Network, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
-	hosts := dhtNetwork.NumHosts(ctx)
-	originID := dhtNetwork.GetOriginHost().IDs[0]
+func doInfo(network core.NodeNetwork) {
+	hosts := len(network.GetActiveNodes())
 	fmt.Println("======= Host info ======")
-	fmt.Println("ID key: " + originID.String())
+	fmt.Println("ID: " + network.GetOrigin().ID().String())
 	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
-	fmt.Println("Address: " + service.GetAddress())
-}
-
-func doSendRelay(command, relayAddr string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
-	err := hostnetwork.RelayRequest(dhtNetwork, command, relayAddr)
-	if err != nil {
-		log.Println(err)
-	}
-}
-
-func doRPC(input []string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
-	if len(input) < 2 || len(input[0]) == 0 || len(input[1]) == 0 {
-		if len(input) > 0 && len(input[0]) > 0 {
-			displayInteractiveHelp()
-		}
-		return
-	}
-
-	method, target := input[0], input[1]
-	args := make([][]byte, 0, 4)
-	for _, arg := range input[2:] {
-		args = append(args, []byte(arg))
-	}
-
-	fmt.Printf("Running remote method %s on %s with args %v \n", method, target, args)
-
-	result, err := dhtNetwork.RemoteProcedureCall(ctx, target, method, args)
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		fmt.Println(string(result))
-	}
+	fmt.Println("Address: " + network.GetOrigin().PhysicalAddress())
 }
 
 func displayInteractiveHelp() {
@@ -160,7 +123,5 @@ findhost <key> - Find node's real network address
 info - Display information about this node
 activenodes - Shows active node list for current pulse
 pulse - Shows current pulse number
-exit - Exit programm
-
-rpc <method> <target> <args...> - Remote procedure call`)
+exit - Exit programm`)
 }

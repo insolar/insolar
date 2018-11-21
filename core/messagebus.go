@@ -16,6 +16,11 @@
 
 package core
 
+import (
+	"context"
+	"crypto/ecdsa"
+)
+
 // Arguments is a dedicated type for arguments, that represented as bynary cbored blob
 type Arguments []byte
 
@@ -36,10 +41,23 @@ type Message interface {
 	TargetRole() JetRole
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
-	// SetSign sets a signature to message.
-	SetSign([]byte)
-	// GetSign returns a sign.
+}
+
+type Signature interface {
 	GetSign() []byte
+	GetSender() RecordRef
+	IsValid(key *ecdsa.PublicKey) bool
+}
+
+// SignedMessage by senders private key.
+type SignedMessage interface {
+	Message
+	Signature
+
+	Message() Message
+	Context(context.Context) context.Context
+	// Pulse returns pulse when message was sent.
+	Pulse() PulseNumber
 }
 
 // Reply for an `Message`
@@ -51,9 +69,7 @@ type Reply interface {
 // MessageBus interface
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(Message) (Reply, error)
-	// SendAsync sends an `Message` to remote host.
-	SendAsync(Message)
+	Send(context.Context, Message) (Reply, error)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.
@@ -61,7 +77,7 @@ type MessageBus interface {
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
-type MessageHandler func(Message) (Reply, error)
+type MessageHandler func(context.Context, SignedMessage) (Reply, error)
 
 //go:generate stringer -type=MessageType
 const (
@@ -75,7 +91,7 @@ const (
 	TypeExecutorResults
 	// TypeValidateCaseBind sends CaseBind form Executor to Validators for redo all actions
 	TypeValidateCaseBind
-	// TypeValidationResult sends from Validator to new Executor with results of validation actions of previous Executor
+	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
 	TypeValidationResults
 
 	// Ledger
@@ -84,36 +100,24 @@ const (
 	TypeRequestCall
 	// TypeGetCode retrieves code from storage.
 	TypeGetCode
-	// TypeGetClass retrieves class from storage.
-	TypeGetClass
 	// TypeGetObject retrieves object from storage.
 	TypeGetObject
-	// TypeGetDelegate retrieves object represented as provided class.
+	// TypeGetDelegate retrieves object represented as provided type.
 	TypeGetDelegate
-	// TypeGetChildren retrieves object represented as provided class.
+	// TypeGetChildren retrieves object's children.
 	TypeGetChildren
-	// TypeDeclareType creates new type.
-	TypeDeclareType
-	// TypeDeployCode creates new code.
-	TypeDeployCode
-	// TypeActivateClass activates class.
-	TypeActivateClass
-	// TypeDeactivateClass deactivates class.
-	TypeDeactivateClass
-	// TypeUpdateClass amends class.
-	TypeUpdateClass
-	// TypeActivateObject activates object.
-	TypeActivateObject
-	// TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
-	TypeActivateObjectDelegate
-	// TypeDeactivateObject deactivates object.
-	TypeDeactivateObject
 	// TypeUpdateObject amends object.
 	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.
 	TypeRegisterChild
 	// TypeJetDrop carries jet drop to validators
 	TypeJetDrop
+	// TypeSetRecord saves record in storage.
+	TypeSetRecord
+	// TypeValidateRecord saves record in storage.
+	TypeValidateRecord
+	// TypeSetBlob saves blob in storage.
+	TypeSetBlob
 
 	// Bootstrap
 

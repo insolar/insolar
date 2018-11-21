@@ -18,6 +18,7 @@ package pulsar
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/asn1"
@@ -26,7 +27,7 @@ import (
 
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/cryptohelpers/hash"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -61,8 +62,8 @@ func (currentPulsar *Pulsar) getMinimumNonTraitorsCount() int {
 	return nodes - currentPulsar.getMaxTraitorsCount()
 }
 
-func (currentPulsar *Pulsar) handleErrorState(err error) {
-	log.Error(err)
+func (currentPulsar *Pulsar) handleErrorState(ctx context.Context, err error) {
+	inslogger.FromContext(ctx).Error(err)
 
 	currentPulsar.clearState()
 }
@@ -184,4 +185,19 @@ func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string
 		selected = append(selected, values[hashes[i].idx])
 	}
 	return selected, nil
+}
+
+// GetLastPulse returns last pulse in the thread-safe mode
+func (currentPulsar *Pulsar) GetLastPulse() *core.Pulse {
+	currentPulsar.lastPulseLock.RLock()
+	defer currentPulsar.lastPulseLock.RUnlock()
+	return currentPulsar.lastPulse
+}
+
+// SetLastPulse sets last pulse in the thread-safe mode
+func (currentPulsar *Pulsar) SetLastPulse(newPulse *core.Pulse) {
+	currentPulsar.lastPulseLock.Lock()
+	defer currentPulsar.lastPulseLock.Unlock()
+	currentPulsar.lastPulse = newPulse
+
 }

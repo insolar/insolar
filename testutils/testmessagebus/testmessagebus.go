@@ -19,10 +19,14 @@
 package testmessagebus
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/testutils"
 )
 
 type TestMessageBus struct {
@@ -62,16 +66,17 @@ func (mb *TestMessageBus) Stop() error {
 	panic("implement me")
 }
 
-func (mb *TestMessageBus) Send(m core.Message) (core.Reply, error) {
-	t := m.Type()
+func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
+	key, _ := ecdsa.GeneratePrivateKey()
+	signedMsg, err := message.NewSignedMessage(ctx, m, testutils.RandomRef(), key, 0)
+	if err != nil {
+		return nil, err
+	}
+	t := signedMsg.Message().Type()
 	handler, ok := mb.handlers[t]
 	if !ok {
 		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
-	return handler(m)
-}
-
-func (mb *TestMessageBus) SendAsync(m core.Message) {
-	panic("implement me")
+	return handler(ctx, signedMsg)
 }

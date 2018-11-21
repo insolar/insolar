@@ -21,8 +21,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/stretchr/testify/assert"
@@ -46,19 +47,18 @@ which try reads and writes the same key simultaneously
 
 func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
-	classid := &record.ID{Pulse: 100500}
-	idxid := &record.ID{}
-	classvalue0 := &index.ClassLifeline{
-		LatestState: *classid,
+	objid := core.NewRecordID(100500, nil)
+	idxid := core.NewRecordID(0, nil)
+	objvalue0 := &index.ObjectLifeline{
+		LatestState: objid,
 	}
-	db.SetClassIndex(idxid, classvalue0)
+	db.SetObjectIndex(ctx, idxid, objvalue0)
 
-	rec1 := record.ID{Pulse: 1}
-	rec2 := record.ID{Pulse: 2}
-	lockfn := func(t *testing.T, withlock bool) *index.ClassLifeline {
+	lockfn := func(t *testing.T, withlock bool) *index.ObjectLifeline {
 		started2 := make(chan bool)
 		proceed2 := make(chan bool)
 		var wg sync.WaitGroup
@@ -66,19 +66,17 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 		var tx2err error
 		wg.Add(1)
 		go func() {
-			tx1err = db.Update(func(tx *storage.TransactionManager) error {
+			tx1err = db.Update(ctx, func(tx *storage.TransactionManager) error {
 				// log.Debugf("tx1: start")
 				<-started2
-				// log.Debug("tx1: GetClassIndex before")
-				idxlife, geterr := tx.GetClassIndex(idxid, true)
-				// log.Debug("tx1: GetClassIndex after")
+				// log.Debug("tx1: GetObjectIndex before")
+				idxlife, geterr := tx.GetObjectIndex(ctx, idxid, true)
+				// log.Debug("tx1: GetObjectIndex after")
 				if geterr != nil {
 					return geterr
 				}
-				// log.Debugf("tx1: got %+v\n", idxlife)
-				idxlife.AmendRefs = append(idxlife.AmendRefs, rec1)
 
-				seterr := tx.SetClassIndex(idxid, idxlife)
+				seterr := tx.SetObjectIndex(ctx, idxid, idxlife)
 				if seterr != nil {
 					return seterr
 				}
@@ -92,20 +90,18 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 		}()
 		wg.Add(1)
 		go func() {
-			tx2err = db.Update(func(tx *storage.TransactionManager) error {
+			tx2err = db.Update(ctx, func(tx *storage.TransactionManager) error {
 				close(started2)
 				// log.Debug("tx2: start")
 				<-proceed2
-				// log.Debug("tx2: GetClassIndex before")
-				idxlife, geterr := tx.GetClassIndex(idxid, withlock)
-				// log.Debug("tx2: GetClassIndex after")
+				// log.Debug("tx2: GetObjectIndex before")
+				idxlife, geterr := tx.GetObjectIndex(ctx, idxid, withlock)
+				// log.Debug("tx2: GetObjectIndex after")
 				if geterr != nil {
 					return geterr
 				}
-				// log.Debugf("tx2: got %+v\n", idxlife)
-				idxlife.AmendRefs = append(idxlife.AmendRefs, rec2)
 
-				seterr := tx.SetClassIndex(idxid, idxlife)
+				seterr := tx.SetObjectIndex(ctx, idxid, idxlife)
 				if seterr != nil {
 					return seterr
 				}
@@ -119,26 +115,20 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 
 		assert.NoError(t, tx1err)
 		assert.NoError(t, tx2err)
-		idxlife, geterr := db.GetClassIndex(idxid, false)
+		idxlife, geterr := db.GetObjectIndex(ctx, idxid, false)
 		assert.NoError(t, geterr)
 		// log.Debugf("withlock=%v) result: got %+v", withlock, idxlife)
 
 		// cleanup AmendRefs
-		assert.NoError(t, db.SetClassIndex(idxid, classvalue0))
+		assert.NoError(t, db.SetObjectIndex(ctx, idxid, objvalue0))
 		return idxlife
 	}
 	t.Run("with lock", func(t *testing.T) {
 		idxlife := lockfn(t, true)
-		assert.Equal(t, &index.ClassLifeline{
-			LatestState: *classid,
-			AmendRefs:   []record.ID{rec1, rec2},
-		}, idxlife)
+		assert.Equal(t, objid, idxlife.LatestState)
 	})
 	t.Run("no lock", func(t *testing.T) {
 		idxlife := lockfn(t, false)
-		assert.Equal(t, &index.ClassLifeline{
-			LatestState: *classid,
-			AmendRefs:   []record.ID{rec1},
-		}, idxlife)
+		assert.Equal(t, objid, idxlife.LatestState)
 	})
 }

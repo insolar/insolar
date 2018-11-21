@@ -17,12 +17,13 @@
 package pulsar
 
 import (
+	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // SetBftGridItem set item of the bftGrid in the thread-safe way
@@ -41,43 +42,72 @@ func (currentPulsar *Pulsar) GetBftGridItem(row string, column string) *BftCell 
 
 // BftCell is a cell in NxN btf-grid
 type BftCell struct {
-	lock              sync.Mutex
+	signLock              sync.RWMutex
+	entropyLock           sync.RWMutex
+	isEntropyReceivedLock sync.RWMutex
+
 	Sign              []byte
 	Entropy           core.Entropy
 	IsEntropyReceived bool
 }
 
-// Lock locks the current cell
-func (cell *BftCell) Lock() {
-	cell.lock.Lock()
+// SetSign sets Sign in the thread-safe way
+func (bftCell *BftCell) SetSign(sign []byte) {
+	bftCell.signLock.Lock()
+	defer bftCell.signLock.Unlock()
+	bftCell.Sign = sign
 }
 
-// Unlock calls unlock on the current cell's lock
-func (cell *BftCell) Unlock() {
-	cell.lock.Unlock()
+// GetSign gets Sign in the thread-safe way
+func (bftCell *BftCell) GetSign() []byte {
+	bftCell.signLock.RLock()
+	defer bftCell.signLock.RUnlock()
+	return bftCell.Sign
 }
 
-func (currentPulsar *Pulsar) isVerificationNeeded() bool {
+// SetEntropy sets Entropy in the thread-safe way
+func (bftCell *BftCell) SetEntropy(entropy core.Entropy) {
+	bftCell.entropyLock.Lock()
+	defer bftCell.entropyLock.Unlock()
+	bftCell.Entropy = entropy
+}
+
+// GetEntropy gets Entropy in the thread-safe way
+func (bftCell *BftCell) GetEntropy() core.Entropy {
+	bftCell.entropyLock.RLock()
+	defer bftCell.entropyLock.RUnlock()
+	return bftCell.Entropy
+}
+
+// SetIsEntropyReceived sets IsEntropyReceived in the thread-safe way
+func (bftCell *BftCell) SetIsEntropyReceived(isEntropyReceived bool) {
+	bftCell.isEntropyReceivedLock.Lock()
+	defer bftCell.isEntropyReceivedLock.Unlock()
+	bftCell.IsEntropyReceived = isEntropyReceived
+}
+
+// GetIsEntropyReceived gets IsEntropyReceived in the thread-safe way
+func (bftCell *BftCell) GetIsEntropyReceived() bool {
+	bftCell.isEntropyReceivedLock.RLock()
+	defer bftCell.isEntropyReceivedLock.RUnlock()
+	return bftCell.IsEntropyReceived
+}
+
+func (currentPulsar *Pulsar) verify(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[verify] - %v", currentPulsar.Config.MainListenerAddress)
+
 	if currentPulsar.IsStateFailed() {
-		return false
+		return
 
 	}
 	if currentPulsar.isStandalone() {
 		currentPulsar.CurrentSlotEntropy = currentPulsar.GeneratedEntropy
 		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
-		currentPulsar.StateSwitcher.SwitchToState(SendingPulse, nil)
-		return false
-
-	}
-
-	return true
-}
-
-func (currentPulsar *Pulsar) verify() {
-	log.Debugf("[verify] - %v", currentPulsar.Config.MainListenerAddress)
-	if !currentPulsar.isVerificationNeeded() {
+		currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
 		return
 	}
+
 	type bftMember struct {
 		PubPem string
 		PubKey *ecdsa.PublicKey
@@ -104,13 +134,14 @@ func (currentPulsar *Pulsar) verify() {
 				continue
 			}
 
-			ok, err := checkSignature(bftCell.Entropy, column.PubPem, bftCell.Sign)
+			ok, err := checkSignature(bftCell.GetEntropy(), column.PubPem, bftCell.GetSign())
 			if !ok || err != nil {
 				currentColumnStat["nil"]++
 				continue
 			}
 
-			currentColumnStat[string(bftCell.Entropy[:])]++
+			entropy := bftCell.GetEntropy()
+			currentColumnStat[string(entropy[:])]++
 		}
 
 		maxConfirmationsForEntropy := int(0)
@@ -130,7 +161,11 @@ func (currentPulsar *Pulsar) verify() {
 	}
 
 	if len(finalEntropySet) == 0 || wrongVectors > currentPulsar.getMaxTraitorsCount() {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, errors.New("bft is broken"))
+		currentPulsar.StateSwitcher.SwitchToState(
+			ctx,
+			Failed,
+			fmt.Errorf("bft is broken. len(finalEntropySet) == %v, wrongVectors - %v", len(finalEntropySet), wrongVectors),
+		)
 		return
 	}
 
@@ -141,14 +176,14 @@ func (currentPulsar *Pulsar) verify() {
 			finalEntropy[byteIndex] ^= tempEntropy[byteIndex]
 		}
 	}
-	currentPulsar.finalizeBft(finalEntropy, keys)
+	currentPulsar.finalizeBft(ctx, finalEntropy, keys)
 }
 
-func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsars []string) {
+func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.Entropy, activePulsars []string) {
 	currentPulsar.CurrentSlotEntropy = finalEntropy
 	chosenPulsar, err := selectByEntropy(finalEntropy, activePulsars, len(activePulsars))
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 	}
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
@@ -159,7 +194,7 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		})
 		if err != nil {
-			currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+			currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 			return
 		}
 		currentPulsar.currentSlotSenderConfirmationsLock.Lock()
@@ -171,8 +206,8 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 		}
 		currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
 
-		currentPulsar.StateSwitcher.SwitchToState(WaitingForPulseSigns, nil)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForPulseSigns, nil)
 	} else {
-		currentPulsar.StateSwitcher.SwitchToState(SendingPulseSign, nil)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulseSign, nil)
 	}
 }

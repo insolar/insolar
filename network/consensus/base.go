@@ -18,26 +18,28 @@ package consensus
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 )
 
 // exchangeResults is thread safe results struct
 type exchangeResults struct {
 	mutex *sync.Mutex
-	data  map[core.RecordRef][]*core.ActiveNode
-	hash  []*NodeUnsyncHash
+	data  map[core.RecordRef][]core.Node
+	hash  []*network.NodeUnsyncHash
 }
 
-func (r *exchangeResults) writeResultData(id core.RecordRef, data []*core.ActiveNode) {
+func (r *exchangeResults) writeResultData(id core.RecordRef, data []core.Node) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.data[id] = data
 }
 
-func (r *exchangeResults) calculateResultHash() []*NodeUnsyncHash {
+func (r *exchangeResults) calculateResultHash() []*network.NodeUnsyncHash {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -52,11 +54,22 @@ func (r *exchangeResults) calculateResultHash() []*NodeUnsyncHash {
 	return r.hash
 }
 
+func (r *exchangeResults) getAllCollectedNodes() []core.Node {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	result := make([]core.Node, 0)
+	for _, nodes := range r.data {
+		result = append(result, nodes...)
+	}
+	return result
+}
+
 func newExchangeResults(participantsCount int) *exchangeResults {
 	return &exchangeResults{
 		mutex: &sync.Mutex{},
-		data:  make(map[core.RecordRef][]*core.ActiveNode, participantsCount),
-		hash:  make([]*NodeUnsyncHash, participantsCount),
+		data:  make(map[core.RecordRef][]core.Node, participantsCount),
+		hash:  make([]*network.NodeUnsyncHash, 0),
 	}
 }
 
@@ -69,7 +82,8 @@ type baseConsensus struct {
 }
 
 // DoConsensus implements consensus interface
-func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]*core.ActiveNode, error) {
+func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]core.Node, error) {
+	log.Infof("Start consensus between %d participants about %d unsyncs", len(allParticipants), len(holder.GetUnsync()))
 	c.self = self
 	c.allParticipants = allParticipants
 	c.holder = holder
@@ -81,30 +95,37 @@ func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, se
 }
 
 func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
-
+	log.Debugln("Start exchange data between consensus participants")
 	wg := &sync.WaitGroup{}
+	wg.Add(len(c.allParticipants))
 	for _, p := range c.allParticipants {
-		wg.Add(1)
 
 		go func(wg *sync.WaitGroup, participant Participant) {
 			defer wg.Done()
-			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
-				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
+			if participant.GetActiveNode().ID() != c.self.GetActiveNode().ID() {
+				log.Infof("data exchage with %s", participant.GetActiveNode().ID().String())
 
 				data, err := c.communicator.ExchangeData(ctx, c.holder.GetPulse(), participant, c.holder.GetUnsync())
+				receivedNodes := make([]string, 0)
+				for _, node := range data {
+					receivedNodes = append(receivedNodes, node.ID().String())
+				}
+				log.Debugf("received from %s unsync list: %s", participant.GetActiveNode().ID(), strings.Join(receivedNodes, ", "))
 				if err != nil {
 					log.Errorln(err.Error())
 				}
-				c.results.writeResultData(participant.GetActiveNode().NodeID, data)
+				c.results.writeResultData(participant.GetActiveNode().ID(), data)
 			} else {
-				c.results.writeResultData(participant.GetActiveNode().NodeID, c.holder.GetUnsync())
+				c.results.writeResultData(participant.GetActiveNode().ID(), c.holder.GetUnsync())
 			}
 		}(wg, p)
 	}
 	wg.Wait()
+	log.Debugln("End exchange data between consensus participants")
 }
 
 func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
+	log.Debugln("Start exchange hashes between consensus participants")
 
 	hash := c.results.calculateResultHash()
 	c.holder.SetHash(hash)
@@ -115,8 +136,8 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 
 		go func(wg *sync.WaitGroup, participant Participant) {
 			defer wg.Done()
-			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
-				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
+			if participant.GetActiveNode().ID() != c.self.GetActiveNode().ID() {
+				log.Infof("data exchage with %s", participant.GetActiveNode().ID().String())
 
 				_, err := c.communicator.ExchangeHash(ctx, c.holder.GetPulse(), participant, hash)
 				if err != nil {
@@ -126,9 +147,9 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 		}(wg, p)
 	}
 	wg.Wait()
+	log.Debugln("End exchange hashes between consensus participants")
 }
 
-func (c *baseConsensus) analyzeResults() ([]*core.ActiveNode, error) {
-
-	return c.holder.GetUnsync(), nil
+func (c *baseConsensus) analyzeResults() ([]core.Node, error) {
+	return c.results.getAllCollectedNodes(), nil
 }

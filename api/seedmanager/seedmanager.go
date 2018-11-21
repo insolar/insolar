@@ -21,22 +21,33 @@ import (
 	"time"
 )
 
+// Expiration represents time of expiration
 type Expiration = int64
 
-const TTL = time.Duration(1 * time.Second)
+// DefaultTTL is default time period for deleting expired seeds
+const DefaultTTL = time.Duration(1 * time.Second)
+
+// DefaultCleanPeriod default time period for launching cleaning goroutine
+const DefaultCleanPeriod = time.Duration(1 * time.Second)
 
 // SeedManager manages working with seed pool
 // It's thread safe
 type SeedManager struct {
-	mu       sync.RWMutex
+	mutex    sync.RWMutex
 	seedPool map[Seed]Expiration
+	ttl      time.Duration
 }
 
-// New creates new seed manager
+// New creates new seed manager with default params
 func New() *SeedManager {
-	sm := SeedManager{seedPool: make(map[Seed]Expiration)}
+	return NewSpecified(DefaultTTL, DefaultCleanPeriod)
+}
+
+// NewSpecified creates new seed manager with custom params
+func NewSpecified(TTL time.Duration, cleanPeriod time.Duration) *SeedManager {
+	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: TTL}
 	go func() {
-		for range time.Tick(time.Second) {
+		for range time.Tick(cleanPeriod) {
 			sm.deleteExpired()
 		}
 	}()
@@ -46,11 +57,11 @@ func New() *SeedManager {
 
 // Add adds seed to pool
 func (sm *SeedManager) Add(seed Seed) {
-	expTime := time.Now().Add(TTL).UnixNano()
+	expTime := time.Now().Add(sm.ttl).UnixNano()
 
-	sm.mu.Lock()
+	sm.mutex.Lock()
 	sm.seedPool[seed] = expTime
-	sm.mu.Unlock()
+	sm.mutex.Unlock()
 
 }
 
@@ -60,20 +71,37 @@ func (sm *SeedManager) isExpired(expTime Expiration) bool {
 
 // Exists checks whether seed in the pool
 func (sm *SeedManager) Exists(seed Seed) bool {
-	sm.mu.RLock()
+	sm.mutex.RLock()
 	expTime, ok := sm.seedPool[seed]
-	sm.mu.RUnlock()
+	sm.mutex.RUnlock()
 
-	return ok && !sm.isExpired(expTime)
+	isSeedOk := ok && !sm.isExpired(expTime)
+	if isSeedOk {
+		sm.mutex.Lock()
+		delete(sm.seedPool, seed)
+		sm.mutex.Unlock()
+	}
+
+	return isSeedOk
 }
 
 func (sm *SeedManager) deleteExpired() {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
 
 	for seed, expTime := range sm.seedPool {
 		if sm.isExpired(expTime) {
 			delete(sm.seedPool, seed)
 		}
 	}
+}
+
+// SeedFromBytes converts slice of bytes to Seed. Returns nil if slice's size is not equal to SeedSize
+func SeedFromBytes(slice []byte) *Seed {
+	if len(slice) != int(SeedSize) {
+		return nil
+	}
+	var result Seed
+	copy(result[:], slice[:SeedSize])
+	return &result
 }

@@ -19,168 +19,138 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTransferMoney(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
 	amount := 111
 
-	// Transfer money from one member to another
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     amount,
-	})
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.NoError(t, err)
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, body, transferResponse)
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, oldFirstBalance-amount, newFirstBalance)
+	assert.Equal(t, oldSecondBalance+amount, newSecondBalance)
+}
 
-	assert.True(t, transferResponse.Success)
+func TestTransferMoneyFromNotExist(t *testing.T) {
+	firstMember := createMember(t, "Member1")
+	firstMember.ref = testutils.RandomRef().String()
 
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
+	secondMember := createMember(t, "Member2")
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
-	assert.Equal(t, oldFirstBalance+amount, newFirstBalance)
-	assert.Equal(t, oldSecondBalance-amount, newSecondBalance)
+	amount := 111
+
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.EqualError(t, err, "Can't get public key: couldn't get object message: couldn't get object: failed to fetch object index: storage object not found")
+
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, oldSecondBalance, newSecondBalance)
+}
+
+func TestTransferMoneyToNotExist(t *testing.T) {
+	firstMember := createMember(t, "Member1")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+
+	amount := 111
+
+	_, err := signedRequest(firstMember, "Transfer", amount, testutils.RandomRef())
+	assert.EqualError(t, err, "[ Transfer ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
+
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	assert.Equal(t, oldFirstBalance, newFirstBalance)
 }
 
 func TestTransferNegativeAmount(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     -111,
-	})
+	amount := -111
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponseWithError(t, body, transferResponse)
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.EqualError(t, err, "[ transferCall ] Amount must be positive")
 
-	assert.Equal(t, api.BadRequest, transferResponse.Err.Code)
-	assert.Equal(t, "Bad request", transferResponse.Err.Message)
-
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
-
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	assert.Equal(t, oldFirstBalance, newFirstBalance)
 	assert.Equal(t, oldSecondBalance, newSecondBalance)
-
 }
 
 func TestTransferAllAmount(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     oldSecondBalance,
-	})
+	amount := oldFirstBalance
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, body, transferResponse)
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.NoError(t, err)
 
-	assert.True(t, transferResponse.Success)
-
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
-
-	assert.Equal(t, oldFirstBalance+oldSecondBalance, newFirstBalance)
-	assert.Equal(t, 0, newSecondBalance)
-
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, 0, newFirstBalance)
+	assert.Equal(t, oldSecondBalance+oldFirstBalance, newSecondBalance)
 }
 
-func _TestTransferMoreThanAvailableAmount(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+func TestTransferMoreThanAvailableAmount(t *testing.T) {
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     10000000000,
-	})
+	amount := oldFirstBalance + 100
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, body, transferResponse)
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.EqualError(t, err, "[ Transfer ] Not enough balance for transfer: subtrahend must be smaller than minuend")
 
-	// Add checking than contract gives specific error
-
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
-
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	assert.Equal(t, oldFirstBalance, newFirstBalance)
 	assert.Equal(t, oldSecondBalance, newSecondBalance)
 }
 
-func _TestTransferToMyself(t *testing.T) {
-	memberRef := createMember(t)
-	oldBalance := getBalance(t, memberRef)
+func TestTransferToMyself(t *testing.T) {
+	member := createMember(t, "Member1")
+	oldMemberBalance := getBalanceNoErr(t, member, member.ref)
 
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       memberRef,
-		"to":         memberRef,
-		"amount":     oldBalance - 1,
-	})
+	amount := 100
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, body, transferResponse)
+	_, err := signedRequest(member, "Transfer", amount, member.ref)
+	assert.EqualError(t, err, "[ transferCall ] Recipient must be different from the sender")
 
-	assert.True(t, transferResponse.Success)
-
-	newBalance := getBalance(t, memberRef)
-
-	assert.Equal(t, oldBalance, newBalance)
+	newMemberBalance := getBalanceNoErr(t, member, member.ref)
+	assert.Equal(t, oldMemberBalance, newMemberBalance)
 }
 
 // TODO: test to check overflow of balance
 // TODO: check transfer zero amount
 
 func TestTransferTwoTimes(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
-	firstBody := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     100,
-	})
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, firstBody, transferResponse)
-	assert.True(t, transferResponse.Success)
+	amount := 100
 
-	secondBody := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     100,
-	})
-	unmarshalResponse(t, secondBody, transferResponse)
-	assert.True(t, transferResponse.Success)
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.NoError(t, err)
+	_, err = signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.NoError(t, err)
 
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
-
-	assert.Equal(t, oldFirstBalance+200, newFirstBalance)
-	assert.Equal(t, oldSecondBalance-200, newSecondBalance)
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, oldFirstBalance-2*amount, newFirstBalance)
+	assert.Equal(t, oldSecondBalance+2*amount, newSecondBalance)
 }

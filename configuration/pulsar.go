@@ -70,6 +70,6 @@ func NewPulsar() Pulsar {
 		NumberOfRandomHosts: 1,
 		NumberDelta:         10,
 		BootstrapListener:   Transport{Protocol: "UTP", Address: "0.0.0.0:18091", BehindNAT: false},
-		BootstrapNodes:      []string{"127.0.0.1:64278"},
+		BootstrapNodes:      []string{"localhost:53837"},
 	}
 }

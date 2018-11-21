@@ -45,14 +45,10 @@ const (
 
 	// TypeCode is code from storage.
 	TypeCode
-	// TypeClass is class from storage.
-	TypeClass
 	// TypeObject is object from storage.
 	TypeObject
 	// TypeDelegate is delegate reference from storage.
 	TypeDelegate
-	// TypeReference is common reply for methods returning reference to created records.
-	TypeReference
 	// TypeID is common reply for methods returning id to lifeline states.
 	TypeID
 	// TypeChildren is a reply for fetching objects children in chunks.
@@ -65,6 +61,7 @@ type ErrType int
 const (
 	// ErrDeactivated returned when requested object is deactivated.
 	ErrDeactivated = iota + 1
+	ErrStateNotAvailable
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {
@@ -75,14 +72,10 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &CallConstructor{}, nil
 	case TypeCode:
 		return &Code{}, nil
-	case TypeClass:
-		return &Class{}, nil
 	case TypeObject:
 		return &Object{}, nil
 	case TypeDelegate:
 		return &Delegate{}, nil
-	case TypeReference:
-		return &Reference{}, nil
 	case TypeID:
 		return &ID{}, nil
 	case TypeChildren:
@@ -130,10 +123,8 @@ func init() {
 	gob.Register(&CallMethod{})
 	gob.Register(&CallConstructor{})
 	gob.Register(&Code{})
-	gob.Register(&Class{})
 	gob.Register(&Object{})
 	gob.Register(&Delegate{})
-	gob.Register(&Reference{})
 	gob.Register(&ID{})
 	gob.Register(&Children{})
 	gob.Register(&Error{})

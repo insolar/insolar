@@ -20,11 +20,13 @@ package logicrunner
 
 import (
 	"bytes"
+	"context"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
@@ -41,39 +43,16 @@ func HashInterface(in interface{}) []byte {
 	return sh.Sum(s)
 }
 
-func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
-	lr.caseBindMutex.Lock()
-	lr.caseBind.Records[ref] = append(lr.caseBind.Records[ref], cr)
-	lr.caseBindMutex.Unlock()
-}
-
-func (lr *LogicRunner) lastObjectCaseRecord(ref Ref) core.CaseRecord {
-	lr.caseBindMutex.Lock()
-	defer lr.caseBindMutex.Unlock()
-	list := lr.caseBind.Records[ref]
-	return list[len(list)-1]
-}
-
-func (lr *LogicRunner) getNextValidationStep(ref Ref) (*core.CaseRecord, int) {
-	lr.caseBindReplaysMutex.Lock()
-	defer lr.caseBindReplaysMutex.Unlock()
-	r, ok := lr.caseBindReplays[ref]
-	if !ok {
-		return nil, -1
-	} else if r.RecordsLen <= r.Step {
-		return nil, r.Step
-	}
-	ret := r.Records[r.Step]
-	r.Step++
-	lr.caseBindReplays[ref] = r
-	return &ret, r.Step
-}
-
 func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
 
+	es := lr.UpsertExecution(ref)
+	ctx := context.TODO()
+	es.insContext = ctx
+	es.validate = true
+	es.objectbody = nil
 	err := func() error {
 		lr.caseBindReplaysMutex.Lock()
 		defer lr.caseBindReplaysMutex.Unlock()
@@ -99,7 +78,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 	}()
 
 	for {
-		start, step := lr.getNextValidationStep(ref)
+		start, step := lr.nextValidationStep(ref)
 		if step < 0 {
 			return step, errors.New("no validation data")
 		} else if start == nil { // finish
@@ -109,11 +88,30 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			return step, errors.New("step between two shores")
 		}
 
-		ret, err := lr.Execute(start.Resp.(core.Message))
+		msg := start.Resp.(core.Message)
+		signed, err := message.NewSignedMessage(
+			ctx, msg, ref, lr.Network.GetPrivateKey(), lr.execution[ref].callContext.Pulse.PulseNumber,
+		)
+		if err != nil {
+			return 0, errors.New("failed to create a signed message")
+		}
+
+		traceStep, step := lr.nextValidationStep(ref)
+		if traceStep == nil {
+			return step, errors.New("trace is missing")
+		}
+
+		traceID, ok := traceStep.Resp.(string)
+		if !ok {
+			return step, errors.New("trace is wrong type")
+		}
+
+		es.insContext = inslogger.ContextWithTrace(es.insContext, traceID)
+		ret, err := lr.Execute(es.insContext, signed)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
-		stop, step := lr.getNextValidationStep(ref)
+		stop, step := lr.nextValidationStep(ref)
 		if step < 0 {
 			return 0, errors.New("validation container broken")
 		} else if stop.Type != core.CaseRecordTypeResult {
@@ -131,7 +129,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			}
 		case *reply.CallConstructor:
 			if got, ok := ret.(*reply.CallConstructor); !ok {
-				return step, errors.New("not result type callmethod")
+				return step, errors.New("not result type callconstructor")
 			} else if !got.Object.Equal(*need.Object) {
 				return step, errors.New("constructed refs mismatch mismatch")
 			}
@@ -140,11 +138,51 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 	}
 }
+func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
+	if !ok {
+		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
+	}
+	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	_, err := lr.MessageBus.Send(
+		ctx,
+		&message.ValidationResults{
+			RecordRef:        msg.GetReference(),
+			PassedStepsCount: passedStepsCount,
+			Error:            validationError.Error(),
+		},
+	)
+
+	return nil, err
+}
+
+func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+	msg, ok := inmsg.Message().(*message.ValidationResults)
+	if !ok {
+		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+	}
+	c, _ := lr.GetConsensus(msg.RecordRef)
+	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+	msg, ok := inmsg.Message().(*message.ExecutorResults)
+	if !ok {
+		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+	}
+	c, _ := lr.GetConsensus(msg.RecordRef)
+	c.AddExecutor(ctx, inmsg, msg)
+	return nil, nil
+}
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
 type ValidationBehaviour interface {
 	Begin(refs Ref, record core.CaseRecord)
 	End(refs Ref, record core.CaseRecord)
+	GetRole() core.JetRole
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
 	RegisterRequest(m message.IBaseLogicMessage) (*Ref, error)
@@ -155,18 +193,21 @@ type ValidationSaver struct {
 }
 
 func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
-	ctx := inscontext.TODO()
-	reqref, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
+	ctx := context.TODO()
+	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
 	if err != nil {
 		return nil, err
 	}
+	// TODO: use proper conversion
+	reqref := Ref{}
+	reqref.SetRecord(*reqid)
 
 	vb.lr.addObjectCaseRecord(m.GetReference(), core.CaseRecord{
 		Type:   core.CaseRecordTypeRequest,
 		ReqSig: HashInterface(m),
 		Resp:   reqref,
 	})
-	return reqref, err
+	return &reqref, err
 }
 
 func (vb ValidationSaver) NeedSave() bool {
@@ -185,21 +226,25 @@ func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
+func (vb ValidationSaver) GetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
 type ValidationChecker struct {
 	lr *LogicRunner
 	cb core.CaseBindReplay
 }
 
 func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
-	cr, _ := vb.lr.getNextValidationStep(m.GetReference())
+	cr, _ := vb.lr.nextValidationStep(m.GetReference())
 	if core.CaseRecordTypeRequest != cr.Type {
 		return nil, errors.New("Wrong validation type on Request")
 	}
 	if !bytes.Equal(cr.ReqSig, HashInterface(m)) {
 		return nil, errors.New("Wrong validation sig on Request")
 	}
-	if req, ok := cr.Resp.(*Ref); ok {
-		return req, nil
+	if req, ok := cr.Resp.(Ref); ok {
+		return &req, nil
 	}
 	return nil, errors.Errorf("wrong validation, request contains %t", cr.Resp)
 
@@ -219,4 +264,8 @@ func (vb ValidationChecker) Begin(refs Ref, record core.CaseRecord) {
 
 func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
+}
+
+func (vb ValidationChecker) GetRole() core.JetRole {
+	return core.RoleVirtualValidator
 }

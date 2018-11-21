@@ -4,7 +4,7 @@ INSOLARD = insolard
 INSGOCC = $(BIN_DIR)/insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
-LOADANALYZER = loadanalyzer
+BENCHMARK = benchmark
 
 ALL_PACKAGES = ./...
 COVERPROFILE = coverage.txt
@@ -36,15 +36,18 @@ metalint:
 clean:
 	go clean $(ALL_PACKAGES)
 	rm -f $(COVERPROFILE)
-	rm -rf $(BIN_DIR) 
+	rm -rf $(BIN_DIR)
+	./scripts/insolard/launch.sh clear
 
 install-deps:
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u golang.org/x/tools/cmd/stringer
+	go get -u github.com/gojuno/minimock/cmd/minimock
 
 pre-build:
 	dep ensure
-	go generate -x $(ALL_PACKAGES)
+	# workaround for minimock
+	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
 
 build: 
 	mkdir -p $(BIN_DIR)
@@ -65,8 +68,8 @@ $(PULSARD):
 $(INSGORUND):
 	go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
 
-$(LOADANALYZER):
-	go build -o $(BIN_DIR)/$(LOADANALYZER) -ldflags "${LDFLAGS}" cmd/loadanalyzer/*.go
+$(BENCHMARK):
+	go build -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
 
 test:
 	go test -v $(ALL_PACKAGES)

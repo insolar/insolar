@@ -17,15 +17,17 @@
 package storage
 
 import (
+	"context"
 	"encoding/binary"
+	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/log"
 )
 
 type keyval struct {
@@ -37,8 +39,20 @@ type keyval struct {
 type TransactionManager struct {
 	db        *DB
 	update    bool
-	locks     []*record.ID
+	locks     []*core.RecordID
 	txupdates map[string]keyval
+}
+
+type byte2hex byte
+
+func (b byte2hex) String() string {
+	return hex.EncodeToString([]byte{byte(b)})
+}
+
+type bytes2hex []byte
+
+func (h bytes2hex) String() string {
+	return hex.EncodeToString(h)
 }
 
 func prefixkey(prefix byte, key []byte) []byte {
@@ -48,7 +62,7 @@ func prefixkey(prefix byte, key []byte) []byte {
 	return k
 }
 
-func (m *TransactionManager) lockOnID(id *record.ID) {
+func (m *TransactionManager) lockOnID(id *core.RecordID) {
 	m.db.idlocker.Lock(id)
 	m.locks = append(m.locks, id)
 }
@@ -73,7 +87,6 @@ func (m *TransactionManager) Commit() error {
 			break
 		}
 	}
-	m.txupdates = nil
 	if err != nil {
 		return err
 	}
@@ -82,6 +95,7 @@ func (m *TransactionManager) Commit() error {
 
 // Discard terminates transaction without disk writes.
 func (m *TransactionManager) Discard() {
+	m.txupdates = nil
 	m.releaseLocks()
 	if m.update {
 		m.db.dropWG.Done()
@@ -91,8 +105,8 @@ func (m *TransactionManager) Discard() {
 // GetRequest returns request record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRequest(id *record.ID) (record.Request, error) {
-	rec, err := m.GetRecord(id)
+func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) (record.Request, error) {
+	rec, err := m.GetRecord(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -101,29 +115,44 @@ func (m *TransactionManager) GetRequest(id *record.ID) (record.Request, error) {
 	return req, nil
 }
 
-// SetRequest stores request record in BadgerDB and returns *record.ID of new record.
-//
-// If record exists SetRequest just returns *record.ID without error.
-func (m *TransactionManager) SetRequest(req record.Request) (*record.ID, error) {
-	log.Debugf("SetRequest call")
-	id, err := m.SetRecord(req)
-	if err != nil && err != ErrOverride {
+// GetBlob returns binary value stored by record ID.
+func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
+	k := prefixkey(scopeIDBlob, id[:])
+	inslogger.FromContext(ctx).Debugf(
+		"GetRecord by id %v (prefix=%v)", id, byte2hex(scopeIDBlob))
+	return m.get(ctx, k)
+}
+
+// SetBlob saves binary value for provided pulse.
+func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+	id := record.CalculateIDForBlob(pulseNumber, blob)
+	k := prefixkey(scopeIDBlob, id[:])
+	geterr := m.db.db.View(func(tx *badger.Txn) error {
+		_, err := tx.Get(k)
+		return err
+	})
+	if geterr == nil {
+		return id, ErrOverride
+	}
+	if geterr != badger.ErrKeyNotFound {
+		return nil, ErrNotFound
+	}
+
+	err := m.set(ctx, k, blob)
+	if err != nil {
 		return nil, err
 	}
 	return id, nil
 }
 
-func (m *TransactionManager) set(key, val []byte) {
-	m.txupdates[string(key)] = keyval{k: key, v: val}
-}
-
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
-	k := prefixkey(scopeIDRecord, record.ID2Bytes(*id))
-	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
-	buf, err := m.Get(k)
+func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
+	k := prefixkey(scopeIDRecord, id[:])
+	inslogger.FromContext(ctx).Debugf(
+		"GetRecord by id %v (prefix=%v)", id, byte2hex(scopeIDRecord))
+	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
@@ -134,68 +163,43 @@ func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
-	latestPulse, err := m.db.GetLatestPulseNumber()
-	if err != nil {
-		return nil, err
-	}
-
+func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	recHash := hash.NewIDHash()
-	_, err = rec.WriteHashData(recHash)
+	_, err := rec.WriteHashData(recHash)
 	if err != nil {
 		return nil, err
 	}
-	id := record.ID{
-		Pulse: latestPulse,
-		Hash:  recHash.Sum(nil),
-	}
-	k := prefixkey(scopeIDRecord, record.ID2Bytes(id))
+	id := core.NewRecordID(pulseNumber, recHash.Sum(nil))
+	k := prefixkey(scopeIDRecord, id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
 		return err
 	})
 	if geterr == nil {
-		return &id, ErrOverride
+		return id, ErrOverride
 	}
 	if geterr != badger.ErrKeyNotFound {
 		return nil, ErrNotFound
 	}
 
-	m.set(k, record.SerializeRecord(rec))
-	return &id, nil
-}
-
-// GetClassIndex fetches class lifeline's index.
-func (m *TransactionManager) GetClassIndex(id *record.ID, forupdate bool) (*index.ClassLifeline, error) {
-	if forupdate {
-		m.lockOnID(id)
-	}
-	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
-	buf, err := m.Get(k)
+	err = m.set(ctx, k, record.SerializeRecord(rec))
 	if err != nil {
 		return nil, err
 	}
-	return index.DecodeClassLifeline(buf)
-}
-
-// SetClassIndex stores class lifeline index.
-func (m *TransactionManager) SetClassIndex(id *record.ID, idx *index.ClassLifeline) error {
-	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
-	encoded, err := index.EncodeClassLifeline(idx)
-	if err != nil {
-		return err
-	}
-	m.set(k, encoded)
-	return nil
+	return id, nil
 }
 
 // GetObjectIndex fetches object lifeline index.
-func (m *TransactionManager) GetObjectIndex(id *record.ID, forupdate bool) (*index.ObjectLifeline, error) {
+func (m *TransactionManager) GetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	forupdate bool,
+) (*index.ObjectLifeline, error) {
 	if forupdate {
 		m.lockOnID(id)
 	}
-	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
-	buf, err := m.Get(k)
+	k := prefixkey(scopeIDLifeline, id[:])
+	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
@@ -203,21 +207,43 @@ func (m *TransactionManager) GetObjectIndex(id *record.ID, forupdate bool) (*ind
 }
 
 // SetObjectIndex stores object lifeline index.
-func (m *TransactionManager) SetObjectIndex(id *record.ID, idx *index.ObjectLifeline) error {
-	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
+func (m *TransactionManager) SetObjectIndex(
+	ctx context.Context,
+	id *core.RecordID,
+	idx *index.ObjectLifeline,
+) error {
+	k := prefixkey(scopeIDLifeline, id[:])
 	if idx.Delegates == nil {
-		idx.Delegates = map[core.RecordRef]record.Reference{}
+		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
 	encoded, err := index.EncodeObjectLifeline(idx)
 	if err != nil {
 		return err
 	}
-	m.set(k, encoded)
+	return m.set(ctx, k, encoded)
+}
+
+// GetLatestPulseNumber returns current pulse number.
+func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
+	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
+	if err != nil {
+		return 0, err
+	}
+	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
+}
+
+// set stores value by key.
+func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
+	inslogger.FromContext(ctx).Debugf("set key %v", bytes2hex(key))
+
+	m.txupdates[string(key)] = keyval{k: key, v: value}
 	return nil
 }
 
-// Get returns value by key.
-func (m *TransactionManager) Get(key []byte) ([]byte, error) {
+// get returns value by key.
+func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error) {
+	inslogger.FromContext(ctx).Debugf("get key %v", bytes2hex(key))
+
 	if kv, ok := m.txupdates[string(key)]; ok {
 		return kv.v, nil
 	}
@@ -232,19 +258,4 @@ func (m *TransactionManager) Get(key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return item.ValueCopy(nil)
-}
-
-// GetLatestPulseNumber returns current pulse number.
-func (m *TransactionManager) GetLatestPulseNumber() (core.PulseNumber, error) {
-	buf, err := m.Get(prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
-	if err != nil {
-		return 0, err
-	}
-	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
-}
-
-// Set stores value by key.
-func (m *TransactionManager) Set(key, value []byte) error {
-	m.set(key, value)
-	return nil
 }

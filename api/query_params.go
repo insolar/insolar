@@ -22,12 +22,6 @@ type QueryType int
 // Supported query types
 const (
 	UNDEFINED QueryType = iota
-	CreateMember
-	DumpUserInfo
-	GetBalance
-	SendMoney
-	DumpAllUsers
-	RegisterNode
 	IsAuth
 	GetSeed
 )
@@ -35,18 +29,6 @@ const (
 // QTypeFromString converts string representation to enum
 func QTypeFromString(strQType string) QueryType {
 	switch strQType {
-	case "create_member":
-		return CreateMember
-	case "dump_user_info":
-		return DumpUserInfo
-	case "get_balance":
-		return GetBalance
-	case "send_money":
-		return SendMoney
-	case "dump_all_users":
-		return DumpAllUsers
-	case "register_node":
-		return RegisterNode
 	case "is_auth":
 		return IsAuth
 	case "get_seed":
@@ -58,16 +40,18 @@ func QTypeFromString(strQType string) QueryType {
 
 // Params contains supported query params
 type Params struct {
-	QType     string `json:"query_type"`
-	Name      string `json:"name"`
-	Reference string `json:"reference"`
-	From      string `json:"from"`
-	To        string `json:"to"`
-	Method    string `json:"method"`
-	Requester string `json:"requester"`
-	Target    string `json:"target"`
-	QID       string `json:"qid"`
-	Amount    uint   `json:"amount"`
-	PublicKey string `json:"public_key"`
-	Role      string `json:"role"`
+	QueryType              string   `json:"query_type"`
+	Name                   string   `json:"name"`
+	Reference              string   `json:"reference"`
+	From                   string   `json:"from"`
+	To                     string   `json:"to"`
+	Method                 string   `json:"method"`
+	Requester              string   `json:"requester"`
+	Target                 string   `json:"target"`
+	Amount                 uint     `json:"amount"`
+	PublicKey              string   `json:"public_key"`
+	Roles                  []string `json:"roles"`
+	NumberOfBootstrapNodes uint     `json:"bootstrap_nodes_num"`
+	MajorityRule           uint     `json:"majority_rule"`
+	Host                   string   `json:"host"`
 }

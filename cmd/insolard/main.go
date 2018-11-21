@@ -17,82 +17,116 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"reflect"
 	"syscall"
 
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/bootstrap"
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/networkcoordinator"
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/insolar/insolar/version"
+	"github.com/insolar/insolar/core/utils"
+
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+
+	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/version"
 )
 
-type componentManager struct {
+// ComponentManager is deprecated and will be removed after completly switching to component.Manager
+type ComponentManager struct {
 	components core.Components
 }
 
 // linkAll - link dependency for all components
-func (cm *componentManager) linkAll() {
+func (cm *ComponentManager) linkAll(ctx context.Context) {
+	inslog := inslogger.FromContext(ctx)
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
-		componentName := v.Field(i).String()
-		log.Infof("Starting component `%s` ...", componentName)
-		err := v.Field(i).Interface().(core.Component).Start(cm.components)
-		if err != nil {
-			log.Fatalf("failed to start component %s : %s", componentName, err.Error())
-		}
 
-		log.Infof("Component `%s` successfully started", componentName)
-	}
-}
-
-// stopAll - reverse order stop all components
-func (cm *componentManager) stopAll() {
-	v := reflect.ValueOf(cm.components)
-	for i := v.NumField() - 1; i >= 0; i-- {
-		err := v.Field(i).Interface().(core.Component).Stop()
-		log.Infoln("Stop component: ", v.String())
-		if err != nil {
-			log.Errorf("failed to stop component %s : %s", v.String(), err.Error())
+		if component, ok := v.Field(i).Interface().(core.Component); ok {
+			componentName := v.Field(i).String()
+			inslog.Infof("==== Old ComponentManager: Starting component `%s` ...", componentName)
+			err := component.Start(ctx, cm.components)
+			if err != nil {
+				inslog.Fatalf("==== Old ComponentManager: failed to start component %s : %s", componentName, err.Error())
+			}
+			inslog.Infof("==== Old ComponentManager: Component `%s` successfully started", componentName)
 		}
 	}
 }
 
-var (
-	configPath string
-)
+type inputParams struct {
+	configPath               string
+	isBootstrap              bool
+	bootstrapCertificatePath string
+	traceEnabled             bool
+}
 
-func parseInputParams() {
+func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
-	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
+	var result inputParams
+	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	rootCmd.Flags().BoolVarP(&result.isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
+	rootCmd.Flags().StringVarP(&result.bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
+	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
 	}
+
+	if result.isBootstrap && len(result.bootstrapCertificatePath) == 0 {
+		log.Fatal("flag '--cert_out|-r' must not be empty, if '--bootstrap|-b' exists")
+	}
+	return result
+}
+
+func registerCurrentNode(ctx context.Context, host string, bootstrapCertificatePath string, cert core.Certificate, nc core.NetworkCoordinator) {
+	roles := []string{"virtual", "heavy_material", "light_material"}
+	publicKey, err := cert.GetPublicKey()
+	checkError(ctx, err, "failed to get public key")
+
+	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, roles, host)
+	checkError(ctx, err, "can't register node")
+
+	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)
+	checkError(ctx, err, "can't write certificate")
+}
+
+func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration) {
+	inslog := inslogger.FromContext(ctx)
+	if len(cfg.CertificatePath) == 0 {
+		inslog.Info("No certificate path - No merge")
+		return
+	}
+	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
+	checkError(ctx, err, "can't create certificate")
+
+	cfg.Host.BootstrapHosts = []string{}
+	for _, bn := range cert.BootstrapNodes {
+		cfg.Host.BootstrapHosts = append(cfg.Host.BootstrapHosts, bn.Host)
+	}
+	cfg.Node.Node.ID = cert.Reference
+	cfg.Host.MajorityRule = cert.MajorityRule
+
+	inslog.Infof("Add %d bootstrap nodes. Set node id to %s. Set majority rule to %d",
+		len(cfg.Host.BootstrapHosts), cfg.Node.Node.ID, cfg.Host.MajorityRule)
 }
 
 func main() {
-	parseInputParams()
+	params := parseInputParams()
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
 	var err error
-	if len(configPath) != 0 {
-		err = cfgHolder.LoadFromFile(configPath)
+	if len(params.configPath) != 0 {
+		err = cfgHolder.LoadFromFile(params.configPath)
 	} else {
 		err = cfgHolder.Load()
 	}
@@ -105,60 +139,38 @@ func main() {
 		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
-	initLogger(cfgHolder.Configuration.Log)
+	cfg := &cfgHolder.Configuration
+	traceid := utils.RandTraceID()
+	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
+	ctx, inslog := initLogger(ctx, cfg.Log)
+
+	if !params.isBootstrap {
+		mergeConfigAndCertificate(ctx, cfg)
+	}
+	cfg.Metrics.Namespace = "insolard"
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	cm := componentManager{}
-	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration)
-	if err != nil {
-		log.Fatalln("failed to start Network: ", err.Error())
+	jaegerflush := func() {}
+	if params.traceEnabled {
+		jconf := cfg.Tracer.Jaeger
+		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint)
+		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceid})
 	}
-	cm.components.Network = nw
+	defer jaegerflush()
 
-	cm.components.Ledger, err = ledger.NewLedger(cfgHolder.Configuration.Ledger)
-	if err != nil {
-		log.Fatalln("failed to start Ledger: ", err.Error())
-	}
+	cm, cmOld, repl, err := InitComponents(ctx, *cfg, params.isBootstrap)
+	checkError(ctx, err, "failed to init components")
 
-	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
-	if err != nil {
-		log.Fatalln("failed to start LogicRunner: ", err.Error())
-	}
+	cmOld.linkAll(ctx)
 
-	cm.components.MessageBus, err = messagebus.NewMessageBus(cfgHolder.Configuration)
-	if err != nil {
-		log.Fatalln("failed to start MessageBus: ", err.Error())
-	}
-
-	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(cfgHolder.Configuration)
-	if err != nil {
-		log.Fatalln("failed to start Bootstrapper: ", err.Error())
-	}
-
-	cm.components.APIRunner, err = api.NewRunner(&cfgHolder.Configuration.APIRunner)
-	if err != nil {
-		log.Fatalln("failed to start ApiRunner: ", err.Error())
-	}
-
-	cm.components.Metrics, err = metrics.NewMetrics(cfgHolder.Configuration.Metrics)
-	if err != nil {
-		log.Fatalln("failed to start Metrics: ", err.Error())
-	}
-
-	cm.components.NetworkCoordinator, err = networkcoordinator.New()
-	if err != nil {
-		log.Fatalln("failed to start NetworkCoordinator: ", err.Error())
-	}
-
-	cm.linkAll()
-	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(cfgHolder.Configuration.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	if err != nil {
-		log.Fatalln("failed init pulse for LogicRunner: ", err.Error())
-	}
+	err = cm.Start(ctx)
+	checkError(ctx, err, "failed to start components")
 
 	defer func() {
-		cm.stopAll()
+		inslog.Warn("DEFER STOP APP")
+		err = cm.Stop(ctx)
+		checkError(ctx, err, "failed to stop components")
 	}()
 
 	var gracefulStop = make(chan os.Signal)
@@ -167,20 +179,50 @@ func main() {
 
 	go func() {
 		sig := <-gracefulStop
-		log.Debugln("caught sig: ", sig)
+		inslog.Debugln("caught sig: ", sig)
 
-		cm.stopAll()
+		inslog.Warn("GRACEFULL STOP APP")
+		err = cm.Stop(ctx)
+		jaegerflush()
+		checkError(ctx, err, "failed to graceful stop components")
 		os.Exit(0)
 	}()
 
+	// move to bootstrap component
+	if params.isBootstrap {
+		registerCurrentNode(
+			ctx,
+			cfg.Host.Transport.Address,
+			params.bootstrapCertificatePath,
+			cmOld.components.Certificate,
+			cmOld.components.NetworkCoordinator,
+		)
+		inslog.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
+		gracefulStop <- syscall.SIGINT
+	}
+
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")
-	repl(nw)
+	repl.Start(ctx)
 }
 
-func initLogger(cfg configuration.Log) {
-	err := log.SetLevel(cfg.Level)
+func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, core.Logger) {
+	inslog, err := log.NewLog(cfg)
 	if err != nil {
-		log.Errorln(err.Error())
+		panic(err)
 	}
+	err = inslog.SetLevel(cfg.Level)
+	if err != nil {
+		inslog.Errorln(err.Error())
+	}
+	ctx = inslogger.SetLogger(ctx, inslog)
+	return ctx, inslog
+}
+
+func checkError(ctx context.Context, err error, message string) {
+	if err == nil {
+		return
+	}
+	inslog := inslogger.FromContext(ctx)
+	log.WithSkipDelta(inslog, +1).Fatalf("%v: %v", message, err.Error())
 }

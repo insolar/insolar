@@ -34,16 +34,14 @@ func initNodes(count int) []TestNode {
 
 	nodes := make([]TestNode, count)
 	for i := range nodes {
-
-		var c Consensus
-		c, _ = NewConsensus(&testCommunicator{})
+		c := NewConsensus(&testCommunicator{})
 
 		nodes[i] = TestNode{self: participants[i],
 			allParticipants: participants,
 			consensus:       c,
 			ctx:             context.Background(),
 		}
-		log.Infof("Node %d has id %s", i, nodes[i].self.GetActiveNode().NodeID.String())
+		log.Infof("Node %d has id %s", i, nodes[i].self.GetActiveNode().ID().String())
 	}
 
 	return nodes
@@ -59,12 +57,12 @@ func TestNodeConsensus_DoConsensus(t *testing.T) {
 		wg.Add(1)
 		go func(p TestNode, wg *sync.WaitGroup) {
 			defer wg.Done()
-			log.Info("Do consensus for ", p.self.GetActiveNode().NodeID.String())
+			log.Info("Do consensus for ", p.self.GetActiveNode().ID().String())
 			result, err := p.consensus.DoConsensus(p.ctx, &mockUnsyncHolder{}, p.self, p.allParticipants)
 			//consensusResult, err := p.consensus.DoConsensus(p.ctx, p.self, p.allParticipants)
 			assert.NoError(t, err)
 			assert.Equal(t, 0, len(result))
-			//log.Infof("%s consensus result %b", p.self.GetActiveNode().NodeID.String(), consensusResult)
+			//log.Infof("%s consensus result %b", p.self.GetActiveNode().ID().String(), consensusResult)
 		}(n, wg)
 	}
 

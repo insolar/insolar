@@ -32,19 +32,19 @@ type HandshakePayload struct {
 	Entropy core.Entropy
 }
 
-// EntropySignaturePayload is a struct for sending sign of entropy step
+// EntropySignaturePayload is a struct for sending Sign of Entropy step
 type EntropySignaturePayload struct {
 	PulseNumber core.PulseNumber
 	Signature   []byte
 }
 
-// EntropyPayload is a struct for sending entropy step
+// EntropyPayload is a struct for sending Entropy step
 type EntropyPayload struct {
 	PulseNumber core.PulseNumber
 	Entropy     core.Entropy
 }
 
-// VectorPayload is a struct for sending vector of entropy step
+// VectorPayload is a struct for sending vector of Entropy step
 type VectorPayload struct {
 	PulseNumber core.PulseNumber
 	Vector      map[string]*BftCell

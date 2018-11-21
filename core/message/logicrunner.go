@@ -36,28 +36,23 @@ type IBaseLogicMessage interface {
 	core.Message
 	GetReference() core.RecordRef
 	GetRequest() core.RecordRef
+	GetCallerPrototype() *core.RecordRef
 }
 
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
-	Caller  core.RecordRef
-	Request core.RecordRef
-	Nonce   uint64
-	sign    []byte
-}
-
-// SetSign sets a signature to message.
-func (m *BaseLogicMessage) SetSign(sign []byte) {
-	m.sign = sign
-}
-
-// GetSign returns a sign.
-func (m *BaseLogicMessage) GetSign() []byte {
-	return m.sign
+	Caller          core.RecordRef
+	Request         core.RecordRef
+	CallerPrototype core.RecordRef
+	Nonce           uint64
 }
 
 func (m *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &m.Caller
+}
+
+func (m *BaseLogicMessage) GetCallerPrototype() *core.RecordRef {
+	return &m.CallerPrototype
 }
 
 // TargetRole returns RoleVirtualExecutor as routing target role.
@@ -103,16 +98,16 @@ const (
 // CallConstructor is a message for calling constructor and obtain its reply
 type CallConstructor struct {
 	BaseLogicMessage
-	ParentRef core.RecordRef
-	SaveAs    SaveAs
-	ClassRef  core.RecordRef
-	Name      string
-	Arguments core.Arguments
-	PulseNum  core.PulseNumber
+	ParentRef    core.RecordRef
+	SaveAs       SaveAs
+	PrototypeRef core.RecordRef
+	Name         string
+	Arguments    core.Arguments
+	PulseNum     core.PulseNumber
 }
 
 func (m *CallConstructor) GetReference() core.RecordRef {
-	return m.ClassRef
+	return *core.GenRequest(m.PulseNum, MustSerializeBytes(m))
 }
 
 // Type returns TypeCallConstructor.
@@ -129,9 +124,9 @@ func (m *CallConstructor) Target() *core.RecordRef {
 }
 
 type ExecutorResults struct {
+	Caller      core.RecordRef
 	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
-	sign        []byte
 }
 
 func (m *ExecutorResults) Type() core.MessageType {
@@ -148,26 +143,18 @@ func (m *ExecutorResults) Target() *core.RecordRef {
 
 // TODO change after changing pulsar
 func (m *ExecutorResults) GetCaller() *core.RecordRef {
-	return &core.RecordRef{}
+	return &m.Caller
 }
 
 func (m *ExecutorResults) GetReference() core.RecordRef {
 	return m.RecordRef
 }
 
-func (m *ExecutorResults) GetSign() []byte {
-	return m.sign
-}
-
-func (m *ExecutorResults) SetSign(sign []byte) {
-	m.sign = sign
-}
-
 type ValidateCaseBind struct {
+	Caller      core.RecordRef
 	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
 	Pulse       core.Pulse
-	sign        []byte
 }
 
 func (m *ValidateCaseBind) Type() core.MessageType {
@@ -184,7 +171,7 @@ func (m *ValidateCaseBind) Target() *core.RecordRef {
 
 // TODO change after changing pulsar
 func (m *ValidateCaseBind) GetCaller() *core.RecordRef {
-	return &m.RecordRef // TODO actually it's not right. There is no caller.
+	return &m.Caller // TODO actually it's not right. There is no caller.
 }
 
 func (m *ValidateCaseBind) GetReference() core.RecordRef {
@@ -199,19 +186,11 @@ func (m *ValidateCaseBind) GetPulse() core.Pulse {
 	return m.Pulse
 }
 
-func (m *ValidateCaseBind) GetSign() []byte {
-	return m.sign
-}
-
-func (m *ValidateCaseBind) SetSign(sign []byte) {
-	m.sign = sign
-}
-
 type ValidationResults struct {
+	Caller           core.RecordRef
 	RecordRef        core.RecordRef
 	PassedStepsCount int
-	Error            error
-	sign             []byte
+	Error            string
 }
 
 func (m *ValidationResults) Type() core.MessageType {
@@ -228,17 +207,9 @@ func (m *ValidationResults) Target() *core.RecordRef {
 
 // TODO change after changing pulsar
 func (m *ValidationResults) GetCaller() *core.RecordRef {
-	return &m.RecordRef // TODO actually it's not right. There is no caller.
+	return &m.Caller // TODO actually it's not right. There is no caller.
 }
 
 func (m *ValidationResults) GetReference() core.RecordRef {
 	return m.RecordRef
-}
-
-func (m *ValidationResults) GetSign() []byte {
-	return m.sign
-}
-
-func (m *ValidationResults) SetSign(sign []byte) {
-	m.sign = sign
 }

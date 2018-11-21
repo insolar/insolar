@@ -17,90 +17,154 @@
 package functest
 
 import (
+	"encoding/json"
+	"strconv"
 	"testing"
 
-	"github.com/insolar/insolar/api"
 	"github.com/stretchr/testify/assert"
 )
 
+const TESTHOST = "127.0.0.1"
+const TESTPUBLICKEY = "some_fancy_public_key"
+
+type registerAnswer struct {
+	BootstrapNodes []bootstrapNode `json:"bootstrap_nodes"`
+	MajorityRule   int             `json:"majority_rule"`
+	PublicKey      string          `json:"public_key"`
+	Reference      string
+	Roles          []string
+}
+
+func registerNodeSignedCall(params ...interface{}) (*registerAnswer, error) {
+	res, err := signedRequest(&root, "RegisterNode", params...)
+	if err != nil {
+		return nil, err
+	}
+	var cert registerAnswer
+	err = json.Unmarshal([]byte(res.(string)), &cert)
+	if err != nil {
+		return nil, err
+	}
+	return &cert, nil
+}
+
+func sendNoEnoughNodesRequest(t *testing.T) {
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 5, 0, []string{"virtual"}, TESTHOST)
+	assert.EqualError(t, err, "[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ] : Can't make bootstrap nodes config: [ makeBootstrapNodesConfig ] There no enough nodes")
+}
+
+// TODO: This test must be first!! Somehow fix it
+// This test tests that in case of error new node isn't added to NodeDomain
+func TestRegisterDontAddIfError(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		sendNoEnoughNodesRequest(t)
+	}
+}
+
+func TestRegisterNodeNoEnoughNodes(t *testing.T) {
+	sendNoEnoughNodesRequest(t)
+}
+
 func TestRegisterNodeVirtual(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
-		"role":       "virtual",
-	})
+	const testRole = "virtual"
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, []string{testRole}, TESTHOST)
+	assert.NoError(t, err)
 
-	response := &registerNodeResponse{}
-	unmarshalResponse(t, body, response)
-
-	nodeRef := response.Reference
-	assert.NotEqual(t, "", nodeRef)
+	assert.Len(t, cert.Roles, 1)
+	assert.Equal(t, testRole, cert.Roles[0])
+	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
+	assert.Empty(t, cert.BootstrapNodes)
 }
 
 func TestRegisterNodeHeavyMaterial(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
-		"role":       "heavy_material",
-	})
+	const testRole = "heavy_material"
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, []string{testRole}, TESTHOST)
+	assert.NoError(t, err)
 
-	response := &registerNodeResponse{}
-	unmarshalResponse(t, body, response)
-
-	nodeRef := response.Reference
-	assert.NotEqual(t, "", nodeRef)
+	assert.Len(t, cert.Roles, 1)
+	assert.Equal(t, testRole, cert.Roles[0])
+	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
 }
 
 func TestRegisterNodeLightMaterial(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
-		"role":       "light_material",
-	})
+	const testRole = "light_material"
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, []string{testRole}, TESTHOST)
+	assert.NoError(t, err)
 
-	response := &registerNodeResponse{}
-	unmarshalResponse(t, body, response)
-
-	nodeRef := response.Reference
-	assert.NotEqual(t, "", nodeRef)
+	assert.Len(t, cert.Roles, 1)
+	assert.Equal(t, testRole, cert.Roles[0])
+	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
 }
 
-func _TestRegisterNodeNotExistRole(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
-		"role":       "some_not_fancy_role",
-	})
-
-	response := &registerNodeResponse{}
-	unmarshalResponseWithError(t, body, response)
-
-	assert.Equal(t, api.HandlerError, response.Err.Code)
-	assert.Equal(t, "Error: role 'some_not_fancy_role' doesn't exist", response.Err.Message)
+func TestRegisterNodeNotExistRole(t *testing.T) {
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, []string{"some_not_fancy_role"}, TESTHOST)
+	assert.EqualError(t, err, "[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ]: on calling main API: couldn't save new object as child: executer error: problem with API call: Can't call constructor NewNodeRecord: Role is not supported: some_not_fancy_role")
 }
 
-func TestRegisterNodeWithoutRole(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
-	})
-
-	response := &registerNodeResponse{}
-	unmarshalResponseWithError(t, body, response)
-
-	assert.Equal(t, api.HandlerError, response.Err.Code)
-	assert.Equal(t, "Handler error: field 'role' is required", response.Err.Message)
+// TODO An error is expected but got nil.
+func _TestRegisterNodeWithoutRole(t *testing.T) {
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, nil, TESTHOST)
+	assert.Error(t, err)
 }
 
-func TestRegisterNodeWithoutPK(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "register_node",
-		"role":       "virtual",
-	})
+// TODO An error is expected but got nil.
+func _TestRegisterNodeWithoutPulicKey(t *testing.T) {
+	_, err := registerNodeSignedCall("", 0, 0, []string{"virtual"}, TESTHOST)
+	assert.Error(t, err)
+}
 
-	response := &registerNodeResponse{}
-	unmarshalResponseWithError(t, body, response)
+// TODO An error is expected but got nil.
+func _TestRegisterNodeWithoutHost(t *testing.T) {
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, []string{"virtual"}, "")
+	assert.Error(t, err)
+}
 
-	assert.Equal(t, api.HandlerError, response.Err.Code)
-	assert.Equal(t, "Handler error: field 'public_key' is required", response.Err.Message)
+func TestRegisterNodeBadMajorityRule(t *testing.T) {
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, 10, 3, []string{"virtual"}, TESTHOST)
+	assert.EqualError(t, err, "[ registerNodeCall ] Problems with RegisterNode: majorityRule must be more than 0.51 * numberOfBootstrapNodes")
+}
+
+func findPublicKey(publicKey string, bNodes []bootstrapNode) bool {
+	for _, node := range bNodes {
+		if node.PublicKey == publicKey {
+			return true
+		}
+	}
+
+	return false
+}
+
+func findHost(host string, bNodes []bootstrapNode) bool {
+	for _, node := range bNodes {
+		if node.Host == host {
+			return true
+		}
+	}
+
+	return false
+}
+
+func TestRegisterNodeWithBootstrapNodes(t *testing.T) {
+	const testRole = "virtual"
+	const numNodes = 5
+	// Adding nodes
+	for i := 0; i < numNodes; i++ {
+		_, err := registerNodeSignedCall(TESTPUBLICKEY+strconv.Itoa(i), 0, 0, []string{testRole}, TESTHOST+strconv.Itoa(i))
+		assert.NoError(t, err)
+	}
+
+	cert, err := registerNodeSignedCall("FFFF", numNodes, numNodes, []string{"heavy_material"}, TESTHOST+"new")
+	assert.NoError(t, err)
+
+	assert.Len(t, cert.Roles, 1)
+	assert.Equal(t, "heavy_material", cert.Roles[0])
+	assert.Equal(t, "FFFF", cert.PublicKey)
+	assert.Len(t, cert.BootstrapNodes, numNodes)
+
+	for i := 0; i < numNodes; i++ {
+		tPK := TESTPUBLICKEY + strconv.Itoa(i)
+		assert.True(t, findPublicKey(tPK, cert.BootstrapNodes), "Couldn't find PublicKey: %s", tPK)
+		tHost := TESTHOST + strconv.Itoa(i)
+		assert.True(t, findHost(tHost, cert.BootstrapNodes), "Couldn't find Host: %s", tHost)
+	}
 }

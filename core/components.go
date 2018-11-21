@@ -16,21 +16,26 @@
 
 package core
 
+import "context"
+
 // Component controller methods
 type Component interface {
-	Start(components Components) error
-	Stop() error
+	Start(ctx context.Context, components Components) error
+	Stop(ctx context.Context) error
 }
 
 // Components is a registry for other core interfaces
 // Fields order are important and represent start and stop order in the daemon
 type Components struct {
-	Network            Network
-	Ledger             Ledger
+	Certificate        Certificate
+	NodeNetwork        NodeNetwork
 	LogicRunner        LogicRunner
+	Ledger             Ledger
+	Network            Network
 	MessageBus         MessageBus
-	Bootstrapper       Bootstrapper
-	APIRunner          Component
 	Metrics            Component
+	Genesis            Genesis
+	APIRunner          Component
+	VersionManager     Component
 	NetworkCoordinator NetworkCoordinator
 }

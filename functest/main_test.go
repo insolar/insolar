@@ -18,9 +18,12 @@ package functest
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"go/build"
 	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,14 +32,15 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
 const HOST = "http://localhost:19191"
 const TestURL = HOST + "/api/v1"
 const insolarImportPath = "github.com/insolar/insolar"
-const insolarRootKeys = "bootstrap_keys.json"
+const insolarNodeKeys = "bootstrap_keys.json"
+const insolarRootMemberKeys = "root_member_keys.json"
+const insolarCertificate = "certificate.json"
 
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
@@ -45,7 +49,18 @@ var stdout io.ReadCloser
 var stderr io.ReadCloser
 var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
-var insolarRootKeysPath = filepath.Join(testdataPath(), insolarRootKeys)
+var insolarNodeKeysPath = filepath.Join(testdataPath(), insolarNodeKeys)
+var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
+var insolarCertificatePath = filepath.Join(testdataPath(), insolarCertificate)
+
+var info infoResponse
+var root user
+
+type user struct {
+	ref     string
+	privKey string
+	pubKey  string
+}
 
 func testdataPath() string {
 	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
@@ -93,11 +108,59 @@ func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
 }
 
-func generateRootKeys() error {
+func generateNodeKeys() error {
 	out, err := exec.Command(
 		insolarPath, "-c", "gen_keys",
-		"-o", insolarRootKeysPath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateRootKeys ] could't generate root keys: %s", out)
+		"-o", insolarNodeKeysPath).CombinedOutput()
+	return errors.Wrapf(err, "[ generateNodeKeys ] could't generate node keys: %s", out)
+}
+
+func generateRootMemberKeys() error {
+	out, err := exec.Command(
+		insolarPath, "-c", "gen_keys",
+		"-o", insolarRootMemberKeysPath).CombinedOutput()
+	return errors.Wrapf(err, "[ generateRootMemberKeys ] could't generate root member keys: %s", out)
+}
+
+func generateCertificate() error {
+	out, err := exec.Command(
+		insolarPath, "-c", "gen_certificate", "-g", insolarNodeKeysPath,
+		"-o", insolarCertificatePath).CombinedOutput()
+	return errors.Wrapf(err, "[ generateCertificate ] could't generate certificate: %s", out)
+}
+
+func loadRootKeys() error {
+	text, err := ioutil.ReadFile(insolarRootMemberKeysPath)
+	if err != nil {
+		return errors.Wrapf(err, "[ loadRootKeys ] could't load root keys")
+	}
+	var data map[string]string
+	err = json.Unmarshal(text, &data)
+	if err != nil {
+		return errors.Wrapf(err, "[ loadRootKeys ] could't unmarshal root keys")
+	}
+	if data["private_key"] == "" || data["public_key"] == "" {
+		return errors.New("[ loadRootKeys ] could't find any keys")
+	}
+	root.privKey = data["private_key"]
+	root.pubKey = data["public_key"]
+	return nil
+}
+
+func setInfo() error {
+	resp, err := http.Get(TestURL + "/info")
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/info")
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't read answer")
+	}
+	err = json.Unmarshal(body, &info)
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't unmarshall answer")
+	}
+	return nil
 }
 
 var insgorundPath string
@@ -200,7 +263,7 @@ func stopInsolard() error {
 var insgorundCleaner func()
 
 func startInsgorund() (err error) {
-	insgorundCleaner, err = testutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:18181", "tcp", "127.0.0.1:18182")
+	insgorundCleaner, err = goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:18181", "tcp", "127.0.0.1:18182")
 	if err != nil {
 		return errors.Wrap(err, "[ startInsolard ] could't wait for insolard to start completely: ")
 	}
@@ -239,11 +302,29 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolar was successfully builded")
 
-	err = generateRootKeys()
+	err = generateNodeKeys()
 	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate root keys: ")
+		return errors.Wrap(err, "[ setup ] could't generate node keys: ")
 	}
-	fmt.Println("[ setup ] root keys successfully generated")
+	fmt.Println("[ setup ] node keys successfully generated")
+
+	err = generateCertificate()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't generate certificate: ")
+	}
+	fmt.Println("[ setup ] certificate successfully generated")
+
+	err = generateRootMemberKeys()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't generate root member keys: ")
+	}
+	fmt.Println("[ setup ] root member keys successfully generated")
+
+	err = loadRootKeys()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't load root keys: ")
+	}
+	fmt.Println("[ setup ] root keys successfully loaded")
 
 	err = buildInsolard()
 	if err != nil {
@@ -262,6 +343,12 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't start insolard: ")
 	}
 	fmt.Println("[ setup ] insolard was successfully started")
+	err = setInfo()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't receive root reference ")
+	}
+	fmt.Println("[ setup ] root reference successfully received")
+	root.ref = info.RootMember
 
 	return nil
 }

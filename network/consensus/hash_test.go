@@ -32,7 +32,7 @@ const (
 func TestNodeConsensus_calculateNodeHash(t *testing.T) {
 	nodeID := testutils.RandomRef()
 	hash1, _ := CalculateNodeUnsyncHash(nodeID, nil)
-	hash2, _ := CalculateNodeUnsyncHash(nodeID, []*core.ActiveNode{})
+	hash2, _ := CalculateNodeUnsyncHash(nodeID, []core.Node{})
 
 	assert.Equal(t, nullHash, hex.EncodeToString(hash1.Hash))
 	assert.Equal(t, hash1, hash2)
@@ -41,19 +41,21 @@ func TestNodeConsensus_calculateNodeHash(t *testing.T) {
 	activeNode1 := newActiveNode(0, 0)
 	activeNode2 := newActiveNode(0, 0)
 
-	activeNode1Slice := []*core.ActiveNode{activeNode1}
-	activeNode2Slice := []*core.ActiveNode{activeNode2}
+	activeNode1Slice := []core.Node{activeNode1}
+	activeNode2Slice := []core.Node{activeNode2}
 
 	hash1, _ = CalculateNodeUnsyncHash(nodeID, activeNode1Slice)
 	hash2, _ = CalculateNodeUnsyncHash(nodeID, activeNode2Slice)
 	assert.Equal(t, hash1, hash2)
-	activeNode2.NodeID = core.RecordRef{1}
-	hash2, _ = CalculateNodeUnsyncHash(nodeID, activeNode2Slice)
-	assert.NotEqual(t, hash1, hash2)
+
+	activeNode3 := newActiveNode(1, 0)
+	activeNode3Slice := []core.Node{activeNode3}
+	hash3, _ := CalculateNodeUnsyncHash(nodeID, activeNode3Slice)
+	assert.NotEqual(t, hash1, hash3)
 
 	// nodes order in slice should not affect hash calculating
-	slice1 := []*core.ActiveNode{activeNode1, activeNode2}
-	slice2 := []*core.ActiveNode{activeNode2, activeNode1}
+	slice1 := []core.Node{activeNode1, activeNode2}
+	slice2 := []core.Node{activeNode2, activeNode1}
 	hash1, _ = CalculateNodeUnsyncHash(nodeID, slice1)
 	hash2, _ = CalculateNodeUnsyncHash(nodeID, slice2)
 	assert.Equal(t, hash1, hash2)

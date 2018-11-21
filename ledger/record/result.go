@@ -22,33 +22,59 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// ClassState is common class state record.
-type ClassState interface {
-	// IsDeactivation determines if current state is deactivation.
-	IsDeactivation() bool
-	// GetCode returns state code.
-	GetCode() *Reference
-	// GetMachineType returns state code machine type.
-	GetMachineType() core.MachineType
-}
+// State is a state of lifeline records.
+type State int
+
+const (
+	// StateUndefined is used for special cases.
+	StateUndefined = State(iota)
+	// StateActivation means it's an activation record.
+	StateActivation
+	// StateAmend means it's an amend record.
+	StateAmend
+	// StateDeactivation means it's a deactivation record.
+	StateDeactivation
+)
 
 // ObjectState is common object state record.
 type ObjectState interface {
-	// IsDeactivation determines if current state is deactivation.
-	IsDeactivation() bool
+	// State returns state id.
+	State() State
+	// GetImage returns state code.
+	GetImage() *core.RecordRef
+	// GetIsPrototype returns state code.
+	GetIsPrototype() bool
 	// GetMemory returns state memory.
-	GetMemory() []byte
+	GetMemory() *core.RecordID
+	// PrevStateID returns previous state id.
+	PrevStateID() *core.RecordID
 }
 
-// ResultRecord is a record which is created in response to a request.
+// ResultRecord represents result of a VM method.
 type ResultRecord struct {
-	Domain  Reference
-	Request Reference
+	Request core.RecordRef
+	Payload []byte
+}
+
+// Type implementation of Record interface.
+func (ResultRecord) Type() TypeID {
+	return typeResult
+}
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ResultRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
+
+// SideEffectRecord is a record which is created in response to a request.
+type SideEffectRecord struct {
+	Domain  core.RecordRef
+	Request core.RecordRef
 }
 
 // TypeRecord is a code interface declaration.
 type TypeRecord struct {
-	ResultRecord
+	SideEffectRecord
 
 	TypeDeclaration []byte
 }
@@ -63,9 +89,9 @@ func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
 
 // CodeRecord is a code storage record.
 type CodeRecord struct {
-	ResultRecord
+	SideEffectRecord
 
-	Code        []byte
+	Code        *core.RecordID
 	MachineType core.MachineType
 }
 
@@ -77,81 +103,45 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
-// ClassStateRecord is a record containing data for a class state.
-type ClassStateRecord struct {
-	Code        Reference
-	MachineType core.MachineType
-}
-
-// GetMachineType returns state code machine type.
-func (r *ClassStateRecord) GetMachineType() core.MachineType {
-	return r.MachineType
-}
-
-// GetCode returns state code.
-func (r *ClassStateRecord) GetCode() *Reference {
-	return &r.Code
-}
-
-// IsDeactivation determines if current state is deactivation.
-func (r *ClassStateRecord) IsDeactivation() bool {
-	return false
-}
-
-// ClassActivateRecord is produced when we "activate" new contract class.
-type ClassActivateRecord struct {
-	ResultRecord
-	ClassStateRecord
-}
-
-// Type implementation of Record interface.
-func (r *ClassActivateRecord) Type() TypeID { return typeClassActivate }
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ClassActivateRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
-}
-
-// ClassAmendRecord is an amendment record for classes.
-type ClassAmendRecord struct {
-	ResultRecord
-	ClassStateRecord
-
-	PrevState  ID
-	Migrations []Reference
-}
-
-// Type implementation of Record interface.
-func (r *ClassAmendRecord) Type() TypeID { return typeClassAmend }
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ClassAmendRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
-}
-
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
-	Memory []byte
-}
-
-// IsDeactivation determines if current state is deactivation.
-func (r *ObjectStateRecord) IsDeactivation() bool {
-	return false
+	Memory      *core.RecordID
+	Image       core.RecordRef // If code or prototype object reference.
+	IsPrototype bool           // If true, Image should point to a prototype object. Otherwise to a code.
 }
 
 // GetMemory returns state memory.
-func (r *ObjectStateRecord) GetMemory() []byte {
+func (r *ObjectStateRecord) GetMemory() *core.RecordID {
 	return r.Memory
 }
 
-// ObjectActivateRecord is produced when we instantiate new object from an available class.
+// GetImage returns state code.
+func (r *ObjectStateRecord) GetImage() *core.RecordRef {
+	return &r.Image
+}
+
+// GetIsPrototype returns state code.
+func (r *ObjectStateRecord) GetIsPrototype() bool {
+	return r.IsPrototype
+}
+
+// ObjectActivateRecord is produced when we instantiate new object from an available prototype.
 type ObjectActivateRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ObjectStateRecord
 
-	Class    Reference
-	Parent   Reference
-	Delegate bool
+	Parent     core.RecordRef
+	IsDelegate bool
+}
+
+// PrevStateID returns previous state id.
+func (r *ObjectActivateRecord) PrevStateID() *core.RecordID {
+	return nil
+}
+
+// State returns state id.
+func (r *ObjectActivateRecord) State() State {
+	return StateActivation
 }
 
 // Type implementation of Record interface.
@@ -164,10 +154,20 @@ func (r *ObjectActivateRecord) WriteHashData(w io.Writer) (int, error) {
 
 // ObjectAmendRecord is an amendment record for objects.
 type ObjectAmendRecord struct {
-	ResultRecord
+	SideEffectRecord
 	ObjectStateRecord
 
-	PrevState ID
+	PrevState core.RecordID
+}
+
+// PrevStateID returns previous state id.
+func (r *ObjectAmendRecord) PrevStateID() *core.RecordID {
+	return &r.PrevState
+}
+
+// State returns state id.
+func (r *ObjectAmendRecord) State() State {
+	return StateAmend
 }
 
 // Type implementation of Record interface.
@@ -180,8 +180,18 @@ func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {
 
 // DeactivationRecord marks targeted object as disabled.
 type DeactivationRecord struct {
-	ResultRecord
-	PrevState ID
+	SideEffectRecord
+	PrevState core.RecordID
+}
+
+// PrevStateID returns previous state id.
+func (r *DeactivationRecord) PrevStateID() *core.RecordID {
+	return &r.PrevState
+}
+
+// State returns state id.
+func (r *DeactivationRecord) State() State {
+	return StateDeactivation
 }
 
 // Type implementation of Record interface.
@@ -197,22 +207,17 @@ func (*DeactivationRecord) GetMachineType() core.MachineType {
 	return core.MachineTypeNotExist
 }
 
-// IsDeactivation determines if current state is deactivation.
-func (*DeactivationRecord) IsDeactivation() bool {
-	return true
-}
-
-// IsAmend determines if current state is amend.
-func (*DeactivationRecord) IsAmend() bool {
-	return false
-}
-
 // GetMemory returns state memory.
-func (*DeactivationRecord) GetMemory() []byte {
+func (*DeactivationRecord) GetMemory() *core.RecordID {
 	return nil
 }
 
-// GetCode returns state code.
-func (*DeactivationRecord) GetCode() *Reference {
+// GetImage returns state code.
+func (r *DeactivationRecord) GetImage() *core.RecordRef {
 	return nil
+}
+
+// GetIsPrototype returns state code.
+func (r *DeactivationRecord) GetIsPrototype() bool {
+	return false
 }

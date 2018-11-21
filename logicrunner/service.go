@@ -20,6 +20,7 @@ package logicrunner
 
 import (
 	"bytes"
+	"context"
 	"net"
 	"net/rpc"
 	"sync/atomic"
@@ -27,14 +28,13 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
 
 // StartRPC starts RPC server for isolated executors to use
-func StartRPC(lr *LogicRunner) *RPC {
+func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
 	rpcService := &RPC{lr: lr}
 
 	rpcServer := rpc.NewServer()
@@ -45,14 +45,14 @@ func StartRPC(lr *LogicRunner) *RPC {
 
 	l, e := net.Listen(lr.Cfg.RPCProtocol, lr.Cfg.RPCListen)
 	if e != nil {
-		log.Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"' over "+lr.Cfg.RPCProtocol+": ", e)
+		inslogger.FromContext(ctx).Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"' over "+lr.Cfg.RPCProtocol+": ", e)
 	}
 	lr.sock = l
 
-	log.Infof("starting LogicRunner RPC service on %q over %s", lr.Cfg.RPCListen, lr.Cfg.RPCProtocol)
+	inslogger.FromContext(ctx).Infof("starting LogicRunner RPC service on %q over %s", lr.Cfg.RPCListen, lr.Cfg.RPCProtocol)
 	go func() {
 		rpcServer.Accept(l)
-		log.Info("LogicRunner RPC service stopped")
+		inslogger.FromContext(ctx).Info("LogicRunner RPC service stopped")
 	}()
 
 	return rpcService
@@ -65,9 +65,11 @@ type RPC struct {
 
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
+
 	am := gpr.lr.ArtifactManager
-	insctx := inscontext.TODO()
-	codeDescriptor, err := am.GetCode(insctx, req.Code)
+	codeDescriptor, err := am.GetCode(ctx, req.Code)
 	if err != nil {
 		return err
 	}
@@ -83,22 +85,26 @@ var serial uint64 = 1
 // MakeBaseMessage makes base of logicrunner event from base of up request
 func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
 	return message.BaseLogicMessage{
-		Caller:  req.Callee,
-		Request: req.Request,
-		Nonce:   atomicLoadAndIncrementUint64(&serial),
+		Caller:          req.Callee,
+		CallerPrototype: req.Prototype,
+		Request:         req.Request,
+		Nonce:           atomicLoadAndIncrementUint64(&serial),
 	}
 }
 
 // RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
+
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeRouteCall != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
+			return errors.New("wrong validation type on RouteCall")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
+			return errors.New("wrong validation sig on RouteCall")
 		}
 
 		rep.Result = cr.Resp.(core.Arguments)
@@ -120,7 +126,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		Arguments:        req.Arguments,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(msg)
+	res, err := gpr.lr.MessageBus.Send(ctx, msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -137,18 +143,21 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
+
 	if gpr.lr.MessageBus == nil {
 		return errors.New("event bus was not set during initialization")
 	}
 
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeSaveAsChild != cr.Type {
-			return errors.New("Wrong validation type on SaveAsChild")
+			return errors.New("wrong validation type on SaveAsChild")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on SaveAsChild")
+			return errors.New("wrong validation sig on SaveAsChild")
 		}
 
 		rep.Reference = cr.Resp.(*core.RecordRef)
@@ -157,14 +166,14 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 	msg := &message.CallConstructor{
 		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		ClassRef:         req.Class,
+		PrototypeRef:     req.Prototype,
 		ParentRef:        req.Parent,
 		Name:             req.ConstructorName,
 		Arguments:        req.ArgsSerialized,
 		SaveAs:           message.Child,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(msg)
+	res, err := gpr.lr.MessageBus.Send(ctx, msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as child")
 	}
@@ -182,17 +191,17 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 // GetObjChildren is an RPC returns set of object children
 func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.UpGetObjChildrenResp) error {
-	ctx := inscontext.TODO()
-	// TODO: INS-408
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
 
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObjChildren != cr.Type {
-			return errors.New("Wrong validation type on GetObjChildren")
+			return errors.New("wrong validation type on GetObjChildren")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on GetObjChildren")
+			return errors.New("wrong validation sig on GetObjChildren")
 		}
 
 		rep.Children = cr.Resp.([]core.RecordRef)
@@ -202,24 +211,26 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 	am := gpr.lr.ArtifactManager
 	i, err := am.GetChildren(ctx, req.Obj, nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ GetObjChildren ] Can't get children")
 	}
 	for i.HasNext() {
 		r, err := i.Next()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ GetObjChildren ] Can't get Next")
 		}
-		o, err := am.GetObject(ctx, *r, nil)
+		o, err := am.GetObject(ctx, *r, nil, false)
 		if err != nil {
-			// TODO: we should detect deactivated objects
-			continue
+			if err == core.ErrDeactivated {
+				continue
+			}
+			return errors.Wrap(err, "[ GetObjChildren ] Can't get Next")
 		}
-		cd, err := o.ClassDescriptor(nil)
+		protoRef, err := o.Prototype()
 		if err != nil {
-			return errors.Wrap(err, "Have ref, have no object")
+			return errors.Wrap(err, "[ GetObjChildren ] Can't get prototype reference")
 		}
-		ref := cd.HeadRef()
-		if ref.Equal(req.Class) {
+
+		if protoRef.Equal(req.Prototype) {
 			rep.Children = append(rep.Children, *r)
 		}
 	}
@@ -233,14 +244,17 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
+
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeSaveAsDelegate != cr.Type {
-			return errors.New("Wrong validation type on SaveAsDelegate")
+			return errors.New("wrong validation type on SaveAsDelegate")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on SaveAsDelegate")
+			return errors.New("wrong validation sig on SaveAsDelegate")
 		}
 
 		rep.Reference = cr.Resp.(*core.RecordRef)
@@ -249,14 +263,14 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 
 	msg := &message.CallConstructor{
 		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		ClassRef:         req.Class,
+		PrototypeRef:     req.Prototype,
 		ParentRef:        req.Into,
 		Name:             req.ConstructorName,
 		Arguments:        req.ArgsSerialized,
 		SaveAs:           message.Delegate,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(msg)
+	res, err := gpr.lr.MessageBus.Send(ctx, msg)
 
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as delegate")
@@ -274,15 +288,17 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
-	ctx := inscontext.TODO()
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
+
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetDelegate != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
+			return errors.New("wrong validation type on RouteCall")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
+			return errors.New("wrong validation sig on RouteCall")
 		}
 
 		rep.Object = cr.Resp.(core.RecordRef)
@@ -304,27 +320,14 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
-	ctx := inscontext.TODO()
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeDeactivateObject != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
-		}
-		sig := HashInterface(req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
-		}
-		return nil
+	state := gpr.lr.GetExecution(req.Callee)
+	if state == nil {
+		return errors.New("no execution state, impossible, shouldn't be")
 	}
-	am := gpr.lr.ArtifactManager
-	_, err := am.DeactivateObject(ctx, core.RecordRef{}, core.RecordRef{}, req.Object)
-	if err != nil {
-		return err
-	}
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeDeactivateObject,
-		ReqSig: HashInterface(req),
-	})
+
+	// TODO: is it race? make sure it's not!
+	state.deactivate = true
+
 	return nil
 }
 

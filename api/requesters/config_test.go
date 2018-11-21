@@ -17,7 +17,6 @@
 package requesters
 
 import (
-	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,14 +37,6 @@ func TestReadRequestConfigFromFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "CreateMember", conf.Method)
 
-	decodedCallee, err := base64.StdEncoding.DecodeString("5APzToQsvhLJjJFk4tptkAavULrDAj1rAJidEcCizvJYJpdJN3CXZpCGzSdKg35PcvdZX2FFiNsu2tmLW4zjRSPh")
-	assert.NoError(t, err)
-	assert.Equal(t, decodedCallee, conf.Callee)
-
-	decodedDelegate, err := base64.StdEncoding.DecodeString("VGVzdDI=")
-	assert.NoError(t, err)
-	assert.Equal(t, decodedDelegate, conf.Delegate)
-
 	assert.Len(t, conf.Params, 2)
 	assert.Equal(t, float64(200), conf.Params[0])
 	assert.Equal(t, "Test", conf.Params[1])
@@ -55,6 +46,5 @@ func TestReadUserConfigFromFile(t *testing.T) {
 	conf, err := ReadUserConfigFromFile("testdata/userConfig.json")
 	assert.NoError(t, err)
 	assert.Contains(t, conf.PrivateKey, "MHcCAQEEIPOsF3ujjM7jnb7V")
-	decodedCaller, err := base64.StdEncoding.DecodeString("VGVzdA==")
-	assert.Equal(t, decodedCaller, conf.Caller)
+	assert.Equal(t, "VGVzdA==", conf.Caller)
 }

@@ -20,40 +20,29 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// BootstrapRequest is used for bootstrap records generation.
-type BootstrapRequest struct {
-	// Name should be unique for each bootstrap record.
+// GenesisRequest is used for genesis records generation.
+type GenesisRequest struct {
+	// Name should be unique for each genesis record.
 	Name string
-	sign []byte
 }
 
-// Type implementation for bootstrap request.
-func (*BootstrapRequest) Type() core.MessageType {
+// Type implementation for genesis request.
+func (*GenesisRequest) Type() core.MessageType {
 	return core.TypeBootstrapRequest
 }
 
-// Target implementation for bootstrap request.
-func (m *BootstrapRequest) Target() *core.RecordRef {
-	ref := core.NewRefFromBase58(m.Name)
+// Target implementation for genesis request.
+func (g *GenesisRequest) Target() *core.RecordRef {
+	ref := core.NewRefFromBase58(g.Name)
 	return &ref
 }
 
-// TargetRole implementation for bootstrap request.
-func (*BootstrapRequest) TargetRole() core.JetRole {
+// TargetRole implementation for genesis request.
+func (*GenesisRequest) TargetRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-// GetCaller implementation for bootstrap request.
-func (*BootstrapRequest) GetCaller() *core.RecordRef {
+// GetCaller implementation for genesis request.
+func (*GenesisRequest) GetCaller() *core.RecordRef {
 	return nil
-}
-
-// GetSign returns a sign.
-func (m *BootstrapRequest) GetSign() []byte {
-	return m.sign
-}
-
-// SetSign sets a signature to message.
-func (m *BootstrapRequest) SetSign(sign []byte) {
-	m.sign = sign
 }

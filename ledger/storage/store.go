@@ -17,6 +17,8 @@
 package storage
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
@@ -24,11 +26,11 @@ import (
 
 // Store is used by context unaware clients who can work inside transactions as well as outside.
 type Store interface {
-	GetRecord(ref *record.ID) (record.Record, error)
-	SetRecord(rec record.Record) (*record.ID, error)
-	GetClassIndex(ref *record.ID, forupdate bool) (*index.ClassLifeline, error)
-	SetClassIndex(ref *record.ID, idx *index.ClassLifeline) error
-	GetObjectIndex(ref *record.ID, forupdate bool) (*index.ObjectLifeline, error)
-	SetObjectIndex(ref *record.ID, idx *index.ObjectLifeline) error
-	GetLatestPulseNumber() (core.PulseNumber, error)
+	GetRecord(ctx context.Context, ref *core.RecordID) (record.Record, error)
+	SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
+	GetBlob(ctx context.Context, ref *core.RecordID) ([]byte, error)
+	SetBlob(ctx context.Context, number core.PulseNumber, blob []byte) (*core.RecordID, error)
+	GetObjectIndex(ctx context.Context, ref *core.RecordID, forupdate bool) (*index.ObjectLifeline, error)
+	SetObjectIndex(ctx context.Context, ref *core.RecordID, idx *index.ObjectLifeline) error
+	GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error)
 }

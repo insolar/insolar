@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -25,10 +26,10 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/api/requesters"
-	"github.com/insolar/insolar/application/bootstrapcertificate"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
@@ -37,7 +38,7 @@ import (
 )
 
 const defaultStdoutPath = "-"
-const defaultURL = "http://localhost:19191/api/v1?"
+const defaultURL = "http://localhost:19191/api/v1"
 
 func genDefaultConfig(r interface{}) ([]byte, error) {
 	t := reflect.TypeOf(r)
@@ -67,7 +68,7 @@ func chooseOutput(path string) (io.Writer, error) {
 		res = os.Stdout
 	} else {
 		var err error
-		res, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
+		res, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't open file for writing")
 		}
@@ -90,18 +91,20 @@ var (
 	paramsPath         string
 	verbose            bool
 	sendUrls           string
+	rootAsCaller       bool
 )
 
 func parseInputParams() {
 	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
-		"available commands: default_config | random_ref | version | gen_keys | gen_certificates | send_request | gen_send_configs")
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
 	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
 	rootCmd.Flags().StringVarP(&paramsPath, "params", "p", "", "path to params file (default params.json)")
+	rootCmd.Flags().BoolVarP(&rootAsCaller, "root_as_caller", "r", false, "use root member as caller")
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 
@@ -126,17 +129,6 @@ func writeToOutput(out io.Writer, data string) {
 
 func printDefaultConfig(out io.Writer) {
 	cfgHolder := configuration.NewHolder()
-	key, err := ecdsahelper.GeneratePrivateKey()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	keyStr, err := ecdsahelper.ExportPrivateKey(key)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	cfgHolder.Configuration.PrivateKey = keyStr
 	writeToOutput(out, configuration.ToString(cfgHolder.Configuration))
 }
 
@@ -180,44 +172,24 @@ func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
 	return json.MarshalIndent(map[string]interface{}{"keys": kk}, "", "    ")
 }
 
-type certRecords = bootstrapcertificate.CertRecords
+func generateCertificate(out io.Writer) {
+	cert, err := certificate.NewCertificatesWithKeys(configPath)
+	check("[ generateCertificate ] Can't create certificate", err)
 
-func generateCertificates(out io.Writer) {
-
-	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
-	cRecords := certRecords{}
-
-	var keys []*ecdsa.PrivateKey
-	for i := uint(0); i < numberCertificates; i++ {
-		ref := testutils.RandomRef()
-		privKey, err := ecdsahelper.GeneratePrivateKey()
-		check("[ generateCertificates ]:", err)
-
-		records[ref] = privKey
-		pubKey, err := ecdsahelper.ExportPublicKey(&privKey.PublicKey)
-		check("[ generateCertificates ]:", err)
-
-		cRecords = append(cRecords, bootstrapcertificate.Record{NodeRef: ref.String(), PublicKey: pubKey})
-		keys = append(keys, privKey)
-	}
-
-	cert, err := bootstrapcertificate.NewCertificateFromFields(cRecords, keys)
-	check("[ generateCertificates ]:", err)
-
-	certStr, err := cert.Dump()
-	check("[ generateCertificates ]:", err)
-
-	writeToOutput(out, certStr+"\n")
-
-	keysList, err := makeKeysJSON(keys)
-	check("[ generateCertificates ]:", err)
-	writeToOutput(out, string(keysList)+"\n")
+	data, err := cert.Dump()
+	check("[ generateCertificate ] Can't dump certificate", err)
+	writeToOutput(out, data)
 }
 
 func sendRequest(out io.Writer) {
 	requesters.SetVerbose(verbose)
 	userCfg, err := requesters.ReadUserConfigFromFile(configPath)
 	check("[ sendRequest ]", err)
+	if rootAsCaller {
+		info, err := requesters.Info(defaultURL)
+		check("[ sendRequest ]", err)
+		userCfg.Caller = info.RootMember
+	}
 
 	pPath := paramsPath
 	if len(pPath) == 0 {
@@ -229,7 +201,8 @@ func sendRequest(out io.Writer) {
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
 	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
 
-	response, err := requesters.Send(defaultURL, userCfg, reqCfg)
+	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
+	response, err := requesters.Send(ctx, defaultURL, userCfg, reqCfg)
 	check("[ sendRequest ]", err)
 
 	writeToOutput(out, string(response))
@@ -264,8 +237,8 @@ func main() {
 		fmt.Println(version.GetFullVersion())
 	case "gen_keys":
 		generateKeysPair(out)
-	case "gen_certificates":
-		generateCertificates(out)
+	case "gen_certificate":
+		generateCertificate(out)
 	case "send_request":
 		sendRequest(out)
 	case "gen_send_configs":

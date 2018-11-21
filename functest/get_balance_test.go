@@ -19,49 +19,17 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetBalance(t *testing.T) {
-	memberRef := createMember(t)
-
-	body := getResponseBody(t, postParams{
-		"query_type": "get_balance",
-		"reference":  memberRef,
-	})
-
-	response := &getBalanceResponse{}
-	unmarshalResponse(t, body, response)
-
-	assert.Equal(t, 1000, int(response.Amount))
-	assert.Equal(t, "RUB", response.Currency)
+	firstMember := createMember(t, "Member1")
+	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	assert.Equal(t, 1000, firstBalance)
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "get_balance",
-		"reference":  testutils.RandomRef(),
-	})
-
-	response := &getBalanceResponse{}
-	unmarshalResponseWithError(t, body, response)
-
-	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Message)
-}
-
-// TODO: unskip test after doing errors in smart contracts
-func _TestWrongReferenceInParams(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "get_balance",
-		"reference":  testutils.RandomString(),
-	})
-
-	response := &baseResponse{}
-	unmarshalResponseWithError(t, body, response)
-
-	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Message)
+	_, err := getBalance(&root, testutils.RandomRef().String())
+	assert.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
 }

@@ -17,6 +17,7 @@
 package pulsar
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/gob"
 	"errors"
@@ -25,7 +26,9 @@ import (
 	"net/rpc"
 	"sync"
 
+	"github.com/insolar/insolar/certificate"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 
 	"github.com/insolar/insolar/configuration"
@@ -38,6 +41,8 @@ import (
 // Pulsar is a base struct for pulsar's node
 // It contains all the stuff, which is needed for working of a pulsar
 type Pulsar struct {
+	ID string
+
 	Sock               net.Listener
 	SockConnectionType configuration.ConnectionType
 	RPCServer          *rpc.Server
@@ -62,7 +67,9 @@ type Pulsar struct {
 	CurrentSlotSenderConfirmations     map[string]core.PulseSenderConfirmation
 
 	ProcessingPulseNumber core.PulseNumber
-	LastPulse             *core.Pulse
+
+	lastPulseLock sync.RWMutex
+	lastPulse     *core.Pulse
 
 	OwnedBftRow map[string]*BftCell
 
@@ -70,39 +77,35 @@ type Pulsar struct {
 	BftGridLock sync.RWMutex
 
 	StateSwitcher StateSwitcher
+	Certificate   certificate.Certificate
 }
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
-	configuration configuration.Configuration,
+	configuration configuration.Pulsar,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator entropygenerator.EntropyGenerator,
 	stateSwitcher StateSwitcher,
+	certificate core.Certificate,
 	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 
 	log.Debug("[NewPulsar]")
 
 	// Listen for incoming connections.
-	listenerImpl, err := listener(configuration.Pulsar.ConnectionType.String(), configuration.Pulsar.MainListenerAddress)
+	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.MainListenerAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse private key from config
-	privateKey, err := ecdsahelper.ImportPrivateKey(configuration.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
 	pulsar := &Pulsar{
-		Sock:               listenerImpl,
-		SockConnectionType: configuration.Pulsar.ConnectionType,
-		Neighbours:         map[string]*Neighbour{},
-		PrivateKey:         privateKey,
-		Config:             configuration.Pulsar,
-		Storage:            storage,
-		EntropyGenerator:   entropyGenerator,
-		StateSwitcher:      stateSwitcher,
+		Sock:             listenerImpl,
+		Neighbours:       map[string]*Neighbour{},
+		PrivateKey:       certificate.GetEcdsaPrivateKey(),
+		Config:           configuration,
+		Storage:          storage,
+		EntropyGenerator: entropyGenerator,
+		StateSwitcher:    stateSwitcher,
 	}
 	pulsar.clearState()
 
@@ -118,12 +121,12 @@ func NewPulsar(
 		log.Fatal(err)
 		panic(err)
 	}
-	pulsar.LastPulse = lastPulse
+	pulsar.SetLastPulse(lastPulse)
 
 	// Adding other pulsars
-	for _, neighbour := range configuration.Pulsar.Neighbours {
+	for _, neighbour := range configuration.Neighbours {
 		currentMap := map[string]*BftCell{}
-		for _, gridColumn := range configuration.Pulsar.Neighbours {
+		for _, gridColumn := range configuration.Neighbours {
 			currentMap[gridColumn.PublicKey] = nil
 		}
 		pulsar.SetBftGridItem(neighbour.PublicKey, currentMap)
@@ -157,13 +160,13 @@ func NewPulsar(
 }
 
 // StartServer starts listening of the rpc-server
-func (currentPulsar *Pulsar) StartServer() {
-	log.Debugf("[StartServer] address - %v", currentPulsar.Config.MainListenerAddress)
+func (currentPulsar *Pulsar) StartServer(ctx context.Context) {
+	inslogger.FromContext(ctx).Debugf("[StartServer] address - %v", currentPulsar.Config.MainListenerAddress)
 	server := rpc.NewServer()
 
 	err := server.RegisterName("Pulsar", &Handler{Pulsar: currentPulsar})
 	if err != nil {
-		log.Fatal(err)
+		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
 	currentPulsar.RPCServer = server
@@ -171,26 +174,26 @@ func (currentPulsar *Pulsar) StartServer() {
 }
 
 // StopServer stops listening of the rpc-server
-func (currentPulsar *Pulsar) StopServer() {
-	log.Debugf("[StopServer] address - %v", currentPulsar.Config.MainListenerAddress)
+func (currentPulsar *Pulsar) StopServer(ctx context.Context) {
+	inslogger.FromContext(ctx).Debugf("[StopServer] address - %v", currentPulsar.Config.MainListenerAddress)
 	for _, neighbour := range currentPulsar.Neighbours {
 		if neighbour.OutgoingClient != nil && neighbour.OutgoingClient.IsInitialised() {
 			err := neighbour.OutgoingClient.Close()
 			if err != nil {
-				log.Error(err)
+				inslogger.FromContext(ctx).Error(err)
 			}
 		}
 	}
 
 	err := currentPulsar.Sock.Close()
 	if err != nil {
-		log.Error(err)
+		inslogger.FromContext(ctx).Error(err)
 	}
 }
 
 // EstablishConnectionToPulsar is a method for creating connection to another pulsar
-func (currentPulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
-	log.Debug("[EstablishConnectionToPulsar]")
+func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pubKey string) error {
+	inslogger.FromContext(ctx).Debug("[EstablishConnectionToPulsar]")
 	neighbour, err := currentPulsar.FetchNeighbour(pubKey)
 	if err != nil {
 		return err
@@ -227,18 +230,19 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
 		return errors.New("signature check Failed")
 	}
 
-	log.Infof("pulsar - %v connected to - %v", currentPulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
+	inslogger.FromContext(ctx).Infof("pulsar - %v connected to - %v", currentPulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
 	return nil
 }
 
 // CheckConnectionsToPulsars is a method refreshing connections between pulsars
-func (currentPulsar *Pulsar) CheckConnectionsToPulsars() {
+func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
 	for pubKey, neighbour := range currentPulsar.Neighbours {
-		log.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
+		logger.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
 		if neighbour.OutgoingClient == nil || !neighbour.OutgoingClient.IsInitialised() {
-			err := currentPulsar.EstablishConnectionToPulsar(pubKey)
+			err := currentPulsar.EstablishConnectionToPulsar(ctx, pubKey)
 			if err != nil {
-				log.Error(err)
+				inslogger.FromContext(ctx).Error(err)
 				continue
 			}
 		}
@@ -246,11 +250,11 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars() {
 		healthCheckCall := neighbour.OutgoingClient.Go(HealthCheck.String(), nil, nil, nil)
 		replyCall := <-healthCheckCall.Done
 		if replyCall.Error != nil {
-			log.Warnf("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
+			logger.Warnf("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
 			neighbour.OutgoingClient.ResetClient()
-			err := currentPulsar.EstablishConnectionToPulsar(pubKey)
+			err := currentPulsar.EstablishConnectionToPulsar(ctx, pubKey)
 			if err != nil {
-				log.Errorf("Attempt of connection to %v Failed with error - %v", neighbour.ConnectionAddress, err)
+				logger.Errorf("Attempt of connection to %v Failed with error - %v", neighbour.ConnectionAddress, err)
 				neighbour.OutgoingClient.ResetClient()
 				continue
 			}
@@ -259,8 +263,9 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars() {
 }
 
 // StartConsensusProcess starts process of calculating consensus between pulsars
-func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error {
-	log.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
+func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNumber core.PulseNumber) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
 	currentPulsar.StartProcessLock.Lock()
 
 	if pulseNumber == currentPulsar.ProcessingPulseNumber {
@@ -269,17 +274,28 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 
 	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
 		currentPulsar.StartProcessLock.Unlock()
-		log.Warnf("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.StateSwitcher.GetState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
-		return fmt.Errorf("wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.StateSwitcher.GetState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
+		err := fmt.Errorf(
+			"wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
+			currentPulsar.StateSwitcher.GetState().String(),
+			pulseNumber, currentPulsar.GetLastPulse().PulseNumber,
+			currentPulsar.ProcessingPulseNumber)
+		logger.Warn(err)
+		return err
 	}
+	currentPulsar.ProcessingPulseNumber = pulseNumber
+
+	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%v", currentPulsar.ID, string(pulseNumber)))
+
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 
 	err := currentPulsar.generateNewEntropyAndSign()
 	if err != nil {
 		currentPulsar.StartProcessLock.Unlock()
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return err
 	}
+	inslog.Debugf("Entropy generated - %v", currentPulsar.GeneratedEntropy)
+	inslog.Debugf("Entropy sign generated - %v", currentPulsar.GeneratedEntropySign)
 
 	currentPulsar.OwnedBftRow[currentPulsar.PublicKeyRaw] = &BftCell{
 		Entropy:           currentPulsar.GeneratedEntropy,
@@ -287,10 +303,9 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 		Sign:              currentPulsar.GeneratedEntropySign,
 	}
 
-	currentPulsar.ProcessingPulseNumber = pulseNumber
 	currentPulsar.StartProcessLock.Unlock()
 
-	currentPulsar.broadcastSignatureOfEntropy()
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForEntropySigns, nil)
+	currentPulsar.broadcastSignatureOfEntropy(ctx)
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForEntropySigns, nil)
 	return nil
 }

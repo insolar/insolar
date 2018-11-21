@@ -7,6 +7,8 @@ host:
   isrelay: false
   infinitybootstrap: false
   timeout: 4
+  majoritirule: 5
+  signmessages: false
 node:
   node:
     id: 4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj
@@ -17,31 +19,11 @@ ledger:
     datadirectory: ./data
     txretriesonconflict: 3
   jetcoordinator:
-    rolecandidates:
-      1:
-      - ve1
-      - ve2
-      2:
-      - vv1
-      - vv2
-      - vv3
-      - vv4
-      3:
-      - le1
-      - le2
-      4:
-      - lv1
-      - lv2
-      - lv3
-      - lv4
-      5:
-      - he1
-      - he2
     rolecounts:
       1: 1
-      2: 3
+      2: 1
       3: 1
-      4: 3
+      4: 1
       5: 1
 log:
   level: Info

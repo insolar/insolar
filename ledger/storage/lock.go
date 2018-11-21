@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
 )
 
 type mucount struct {
@@ -46,14 +45,12 @@ func NewIDLocker() *IDLocker {
 
 // Lock locks mutex belonged to record ID.
 // If mutex does not exist, it will be created in concurrent safe fashion.
-func (l *IDLocker) Lock(id *record.ID) {
-	cid := id.CoreID()
-
+func (l *IDLocker) Lock(id *core.RecordID) {
 	l.rwmu.Lock()
-	mc, ok := l.m[*cid]
+	mc, ok := l.m[*id]
 	if !ok {
 		mc = &mucount{Mutex: &sync.Mutex{}}
-		l.m[*cid] = mc
+		l.m[*id] = mc
 	}
 	mc.count++
 	l.rwmu.Unlock()
@@ -62,19 +59,17 @@ func (l *IDLocker) Lock(id *record.ID) {
 }
 
 // Unlock unlocks mutex belonged to record ID.
-func (l *IDLocker) Unlock(id *record.ID) {
-	cid := id.CoreID()
-
+func (l *IDLocker) Unlock(id *core.RecordID) {
 	l.rwmu.Lock()
 	defer l.rwmu.Unlock()
 
-	mc, ok := l.m[*cid]
+	mc, ok := l.m[*id]
 	if !ok {
-		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", cid))
+		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", id))
 	}
 	mc.count--
 	mc.Unlock()
 	if mc.count == 0 {
-		delete(l.m, *cid)
+		delete(l.m, *id)
 	}
 }

@@ -23,22 +23,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 )
 
-// testing storage SetDrop lock logic
+// testing storage CreateDrop lock logic
 //
-// 1) wait update transaction start, when start SetDrop (should lock)
-// 2) transaction waits start of SetDrop call and waits 'waittime' (200ms)
+// 1) wait update transaction start, when start CreateDrop (should lock)
+// 2) transaction waits start of CreateDrop call and waits 'waittime' (200ms)
 // (could be unstable in really slow environments)
-// 3) wait SetDrop and transaction finished
-// 4) compare finish time of SetDrop and transaction
-// SetDrop should happen after transaction (after 'waittime' timeout happens)
+// 3) wait CreateDrop and transaction finished
+// 4) compare finish time of CreateDrop and transaction
+// CreateDrop should happen after transaction (after 'waittime' timeout happens)
 func TestStore_DropWaitWrites(t *testing.T) {
 	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t, "")
 	defer cleaner()
 
 	var txFin time.Time
@@ -50,7 +52,7 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	txstarted := make(chan bool)
 	dropwaits := make(chan bool)
 	go func() {
-		db.Update(func(tx *storage.TransactionManager) error {
+		db.Update(ctx, func(tx *storage.TransactionManager) error {
 			log.Debugln("start tx")
 			close(txstarted)
 			<-dropwaits
@@ -64,14 +66,14 @@ func TestStore_DropWaitWrites(t *testing.T) {
 
 	go func() {
 		<-txstarted
-		log.Debugln("start SetDrop")
+		log.Debugln("start CreateDrop")
 		close(dropwaits)
-		_, _, _, droperr := db.CreateDrop(0, []byte{})
+		_, _, droperr := db.CreateDrop(ctx, 0, []byte{})
 		if droperr != nil {
 			panic(droperr)
 		}
 		dropFin = time.Now()
-		log.Debugln("end SetDrop")
+		log.Debugln("end CreateDrop")
 		wg.Done()
 	}()
 	wg.Wait()

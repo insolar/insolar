@@ -25,8 +25,8 @@ import (
 )
 
 func TestBaseConsensus_exchangeDataWithOtherParticipants(t *testing.T) {
-	list2 := []*core.ActiveNode{newActiveNode(12, 0)}
-	list5 := []*core.ActiveNode{newActiveNode(15, 0), newActiveNode(25, 0)}
+	list2 := []core.Node{newActiveNode(12, 0)}
+	list5 := []core.Node{newActiveNode(15, 0), newActiveNode(25, 0)}
 
 	self := NewParticipant(1, nil)
 

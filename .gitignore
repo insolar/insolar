@@ -44,5 +44,4 @@ data
 # GoReleaser dist dir
 /dist
 
-/scripts/insolard/bootstrap_keys.json
-/testdata/functional/bootstrap_keys.json
+/scripts/insolard/configs

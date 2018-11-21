@@ -22,15 +22,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/insolar/insolar/ledger/record"
 )
 
 func Test_IDLockTheSame(t *testing.T) {
 	tl := newtestlocker()
-	id1 := record.ID{Hash: []byte{0x0A}}
-	id2 := record.ID{Hash: []byte{0x0A}}
+	id1 := core.RecordID{0x0A}
+	id2 := core.RecordID{0x0A}
 	start1 := make(chan bool)
 	start2 := make(chan bool)
 	var wg sync.WaitGroup
@@ -40,7 +39,7 @@ func Test_IDLockTheSame(t *testing.T) {
 		tl.Lock("lock1", &id1)
 		close(start2)
 
-		time.Sleep(time.Millisecond * 250)
+		time.Sleep(time.Millisecond * 50)
 		tl.Unlock("unlock1", &id1)
 		wg.Done()
 	}()
@@ -55,27 +54,23 @@ func Test_IDLockTheSame(t *testing.T) {
 
 	expectsteps := []string{
 		"before-lock1",
-		"after-lock1",
 		"before-lock2",
 		"before-unlock1",
-		"after-unlock1",
-		"after-lock2",
 		"before-unlock2",
-		"after-unlock2",
 	}
 	assert.Equal(t, expectsteps, tl.synclist.list, "steps in proper order")
 }
 
 func Test_IDLockDifferent(t *testing.T) {
 	tl := newtestlocker()
-	id1 := record.ID{Pulse: 0, Hash: []byte{0x0A}}
-	id2 := record.ID{Pulse: 1, Hash: []byte{0x0A}}
+	id1 := core.NewRecordID(0, []byte{0x0A})
+	id2 := core.NewRecordID(1, []byte{0x0A})
 	end := make(chan bool)
 	go func() {
-		tl.Lock("lock1", &id1)
-		tl.Lock("lock2", &id2)
-		tl.Unlock("unlock1", &id1)
-		tl.Unlock("unlock2", &id2)
+		tl.Lock("lock1", id1)
+		tl.Lock("lock2", id2)
+		tl.Unlock("unlock1", id1)
+		tl.Unlock("unlock2", id2)
 		close(end)
 	}()
 	select {
@@ -86,13 +81,9 @@ func Test_IDLockDifferent(t *testing.T) {
 
 	expectsteps := []string{
 		"before-lock1",
-		"after-lock1",
 		"before-lock2",
-		"after-lock2",
 		"before-unlock1",
-		"after-unlock1",
 		"before-unlock2",
-		"after-unlock2",
 	}
 	assert.Equal(t, expectsteps, tl.synclist.list, "steps in proper order")
 }
@@ -130,14 +121,12 @@ func (l *synclist) String() string {
 	return strings.Join(s, "\n")
 }
 
-func (tl *testlock) Lock(name string, id *record.ID) {
+func (tl *testlock) Lock(name string, id *core.RecordID) {
 	tl.synclist.Add("before-" + name)
 	tl.lock.Lock(id)
-	tl.synclist.Add("after-" + name)
 }
 
-func (tl *testlock) Unlock(name string, id *record.ID) {
+func (tl *testlock) Unlock(name string, id *core.RecordID) {
 	tl.synclist.Add("before-" + name)
 	tl.lock.Unlock(id)
-	tl.synclist.Add("after-" + name)
 }

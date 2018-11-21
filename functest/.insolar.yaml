@@ -17,29 +17,11 @@ ledger:
     datadirectory: ./data
     txretriesonconflict: 3
   jetcoordinator:
-    rolecandidates:
-      1:
-      - "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
-      2:
-      - vv1
-      - vv2
-      - vv3
-      - vv4
-      3:
-      - "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
-      4:
-      - lv1
-      - lv2
-      - lv3
-      - lv4
-      5:
-      - he1
-      - he2
     rolecounts:
       1: 1
-      2: 3
+      2: 1
       3: 1
-      4: 3
+      4: 1
       5: 1
 
 log:
@@ -56,12 +38,9 @@ pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
   nodesaddresses: []
-bootstrap:
-  rootkeys: "testdata/functional/bootstrap_keys.json"
+genesis:
+  rootkeys: "../testdata/functional/root_member_keys.json"
   rootbalance: 10000
-privatekey: |-
-  -----BEGIN PRIVATE KEY-----
-  MHcCAQEEID6XJHMb2aiaK1bp2GHHw0r4LrzZZ4exlcmx8GrjGsMFoAoGCCqGSM49
-  AwEHoUQDQgAE7DE4ArqxIYbY/UAyLLFBGuFu2gROPaqp4vxbEeie7mnZeqsYexmN
-  BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
-  -----END PRIVATE KEY-----
+keyspath: "../testdata/functional/bootstrap_keys.json"
+certificatepath: "../testdata/functional/certificate.json"
+

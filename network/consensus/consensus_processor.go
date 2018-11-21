@@ -20,13 +20,15 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
 )
 
+// CommunicatorReceiver
 type CommunicatorReceiver interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*core.ActiveNode) ([]*core.ActiveNode, error)
+	ExchangeData(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []core.Node) ([]core.Node, error)
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
-	ExchangeHash(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*NodeUnsyncHash) ([]*NodeUnsyncHash, error)
+	ExchangeHash(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*network.NodeUnsyncHash) ([]*network.NodeUnsyncHash, error)
 }
 
 // Processor is an interface to bind all functionality related to consensus with the network layer
@@ -37,4 +39,6 @@ type Processor interface {
 	IsPartOfConsensus() bool
 	// ReceiverHandler return handler that is responsible to handle consensus network requests
 	ReceiverHandler() CommunicatorReceiver
+	// SetNodeKeeper set NodeKeeper for the processor to integrate Processor with unsync -> sync -> active pipeline
+	SetNodeKeeper(keeper network.NodeKeeper)
 }

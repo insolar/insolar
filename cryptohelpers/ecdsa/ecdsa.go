@@ -88,9 +88,10 @@ func ImportPublicKey(pemPubEncoded string) (*ecdsa.PublicKey, error) {
 }
 
 type ecdsaPair struct {
-	First  *big.Int
-	Second *big.Int
+	R, S *big.Int
 }
+
+// TODO: Align Verify and Sing interface. We should pass ecdsa.Public/PrivateKey or either string to both functions.
 
 // Sign signs given seed.
 func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
@@ -101,7 +102,7 @@ func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ Sign ]")
 	}
 
-	signature, err := asn1.Marshal(ecdsaPair{First: r, Second: s})
+	signature, err := asn1.Marshal(ecdsaPair{R: r, S: s})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ]")
 	}
@@ -117,7 +118,7 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 		return false, errors.Wrap(err, "[ Verify ]")
 	}
 	if len(rest) != 0 {
-		return false, errors.New("[ Verify ] len of  rest must be 0")
+		return false, errors.New("[ Verify ] len of rest must be 0")
 	}
 
 	savedKey, err := ImportPublicKey(pubKey)
@@ -126,7 +127,7 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 	}
 
 	h := hash.SHA3Bytes256(data)
-	return ecdsa.Verify(savedKey, h, ecdsaP.First, ecdsaP.Second), nil
+	return ecdsa.Verify(savedKey, h, ecdsaP.R, ecdsaP.S), nil
 }
 
 // ExportSignature serializes signature to string.

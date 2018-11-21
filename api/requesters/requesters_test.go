@@ -28,14 +28,17 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const TESTSEED = "VGVzdA=="
 const TESTREFERENCE = "222222"
+const TESTSEED = "VGVzdA=="
+const TESTROOTMEMBER = "root_member_ref"
+const TESTROOTDOMAIN = "root_domain_ref"
 
 func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 	serJSON, err := json.MarshalIndent(answer, "", "    ")
@@ -52,13 +55,14 @@ func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 
-	params, err := api.PreprocessRequest(req)
+	ctx := inslogger.ContextWithTrace(context.Background(), "FakeHandler")
+	params, err := api.PreprocessRequest(ctx, req)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
 	}
 
-	qtype := api.QTypeFromString(params.QType)
+	qtype := api.QTypeFromString(params.QueryType)
 	answer := map[string]interface{}{}
 	if qtype == api.GetSeed {
 		answer[api.SEED] = TESTSEED
@@ -68,6 +72,16 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 		answer["random_data"] = TESTSEED
 	}
 
+	writeReponse(response, answer)
+}
+
+func FakeInfoHandler(response http.ResponseWriter, req *http.Request) {
+	response.Header().Add("Content-Type", "application/json")
+	answer := map[string]interface{}{
+		"root_domain": TESTROOTDOMAIN,
+		"root_member": TESTROOTMEMBER,
+		"prototypes":  map[string]string{},
+	}
 	writeReponse(response, answer)
 }
 
@@ -95,17 +109,32 @@ func waitForStart() error {
 	return nil
 }
 
+func startServer() error {
+	server := &http.Server{}
+	listener, err := net.ListenTCP("tcp4", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 12221})
+	if err != nil {
+		return errors.Wrap(err, "error creating listener")
+	}
+	go server.Serve(listener)
+
+	return nil
+}
+
 func setup() error {
 	fh := FakeHandler
+	fih := FakeInfoHandler
 	http.HandleFunc(LOCATION, fh)
+	http.HandleFunc(LOCATION+"/call", fh)
+	http.HandleFunc(LOCATION+"/info", fih)
 	log.Info("Starting Test api server ...")
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Error("Test Httpserver: ListenAndServe() error: ", err)
-		}
-	}()
 
-	err := waitForStart()
+	err := startServer()
+	if err != nil {
+		log.Error("Problem with starting test server: ", err)
+		return errors.Wrap(err, "[ setup ]")
+	}
+
+	err = waitForStart()
 	if err != nil {
 		log.Error("Can't start api: ", err)
 		return errors.Wrap(err, "[ setup ]")
@@ -181,32 +210,48 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *RequestConfigJSON) {
 }
 
 func TestSend(t *testing.T) {
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
-	resp, err := Send(URL, userConf, reqConf)
+	resp, err := Send(ctx, URL, userConf, reqConf)
 	assert.NoError(t, err)
 	assert.Contains(t, string(resp), TESTREFERENCE)
 }
 
 func TestSendWithSeed(t *testing.T) {
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
-	resp, err := SendWithSeed(URL, userConf, reqConf, []byte(TESTSEED))
+	resp, err := SendWithSeed(ctx, URL, userConf, reqConf, []byte(TESTSEED))
 	assert.NoError(t, err)
 	assert.Contains(t, string(resp), TESTREFERENCE)
 }
 
 func TestSendWithSeed_WithBadUrl(t *testing.T) {
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
-	_, err := SendWithSeed(URL+"TTT", userConf, reqConf, []byte(TESTSEED))
+	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, []byte(TESTSEED))
 	assert.EqualError(t, err, "[ Send ] Problem with sending target request: [ getResponseBody ] Bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
-	_, err := SendWithSeed(URL, nil, nil, []byte(TESTSEED))
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
+	_, err := SendWithSeed(ctx, URL, nil, nil, []byte(TESTSEED))
 	assert.EqualError(t, err, "[ Send ] Configs must be initialized")
 }
 
 func TestSend_BadSeedUrl(t *testing.T) {
+	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend_BadSeedUrl")
 	userConf, reqConf := readConfigs(t)
-	_, err := Send(URL+"TTT", userConf, reqConf)
+	_, err := Send(ctx, URL+"TTT", userConf, reqConf)
 	assert.EqualError(t, err, "[ Send ] Problem with getting seed: [ getSeed ]: [ getResponseBody ] Bad http response code: 404")
+}
+
+func TestInfo(t *testing.T) {
+	resp, err := Info(URL)
+	assert.NoError(t, err)
+	fmt.Println(resp.RootDomain)
+	assert.Equal(t, resp, &InfoResponse{
+		RootMember: "root_member_ref",
+		RootDomain: "root_domain_ref",
+		Prototypes: map[string]string{},
+	})
 }

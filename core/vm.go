@@ -17,6 +17,7 @@
 package core
 
 import (
+	"context"
 	"time"
 )
 
@@ -34,30 +35,43 @@ const (
 
 // MachineLogicExecutor is an interface for implementers of one particular machine type
 type MachineLogicExecutor interface {
-	CallMethod(ctx *LogicCallContext, code RecordRef, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
-	CallConstructor(ctx *LogicCallContext, code RecordRef, name string, args Arguments) (objectState []byte, err error)
+	CallMethod(
+		ctx context.Context, callContext *LogicCallContext,
+		code RecordRef, data []byte,
+		method string, args Arguments,
+	) (
+		newObjectState []byte, methodResults Arguments, err error,
+	)
+	CallConstructor(
+		ctx context.Context, callContext *LogicCallContext,
+		code RecordRef, name string, args Arguments,
+	) (
+		objectState []byte, err error,
+	)
 	Stop() error
 }
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	Execute(Message) (res Reply, err error)
-	ValidateCaseBind(Message) (res Reply, err error)
-	ProcessValidationResults(Message) (res Reply, err error)
-	ExecutorResults(Message) (res Reply, err error)
+	Execute(context.Context, SignedMessage) (res Reply, err error)
+	ValidateCaseBind(context.Context, SignedMessage) (res Reply, err error)
+	ProcessValidationResults(context.Context, SignedMessage) (res Reply, err error)
+	ExecutorResults(context.Context, SignedMessage) (res Reply, err error)
 	Validate(ref RecordRef, p Pulse, cr []CaseRecord) (int, error) // TODO hide?
 	OnPulse(Pulse) error
 }
 
 // LogicCallContext is a context of contract execution
 type LogicCallContext struct {
-	Callee  *RecordRef // Contract that was called
-	Request *RecordRef // ref of request
-	Class   *RecordRef // Class of the callee
-	Parent  *RecordRef // Parent of the callee
-	Caller  *RecordRef // Contract that made the call
-	Time    time.Time  // Time when call was made
-	Pulse   Pulse      // Number of the pulse
+	Callee          *RecordRef // Contract that was called
+	Request         *RecordRef // ref of request
+	Prototype       *RecordRef // Image of the callee
+	CallerPrototype *RecordRef // Image of the caller
+	Parent          *RecordRef // Parent of the callee
+	Caller          *RecordRef // Contract that made the call
+	Time            time.Time  // Time when call was made
+	Pulse           Pulse      // Number of the pulse
+	TraceID         string
 }
 
 // CaseRecordType is a type of caserecord
@@ -67,9 +81,11 @@ type CaseRecordType int
 const (
 	caseRecordTypeUnexistent CaseRecordType = iota
 	CaseRecordTypeStart
+	CaseRecordTypeTraceID
 	CaseRecordTypeResult
 	CaseRecordTypeRequest
 	CaseRecordTypeGetObject
+	CaseRecordTypeSignObject
 	CaseRecordTypeRouteCall
 	CaseRecordTypeSaveAsChild
 	CaseRecordTypeGetObjChildren
@@ -87,7 +103,6 @@ type CaseRecord struct {
 
 // CaseBinder is a whole result of executor efforts on every object it seen on this pulse
 type CaseBind struct {
-	Pulse   Pulse                      // pulse info for this bind
 	Records map[RecordRef][]CaseRecord // ordered cases for each object
 }
 

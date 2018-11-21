@@ -18,30 +18,115 @@ package nodenetwork
 
 import (
 	"crypto/ecdsa"
+	"encoding/gob"
+	"hash/crc32"
 
 	"github.com/insolar/insolar/core"
 )
 
-// Node is an essence which provides communication between network level and MessageBus.
-type Node struct {
-	id         core.RecordRef
-	privateKey *ecdsa.PrivateKey
+type mutableNode interface {
+	core.Node
+
+	SetPulse(core.PulseNumber)
+	SetShortID(shortID core.ShortNodeID)
 }
 
-// NewNode creates a node with given args.
-func NewNode(nodeID core.RecordRef, privKey *ecdsa.PrivateKey) *Node {
-	return &Node{
-		id:         nodeID,
-		privateKey: privKey,
+type node struct {
+	NodeID        core.RecordRef
+	NodeShortID   core.ShortNodeID
+	NodeRoles     []core.NodeRole
+	NodePublicKey *ecdsa.PublicKey
+
+	NodePulseNum core.PulseNumber
+
+	NodePhysicalAddress string
+	NodeVersion         string
+}
+
+func newMutableNode(
+	id core.RecordRef,
+	roles []core.NodeRole,
+	publicKey *ecdsa.PublicKey,
+	pulseNum core.PulseNumber,
+	physicalAddress,
+	version string) mutableNode {
+	return &node{
+		NodeID:              id,
+		NodeShortID:         generateShortID(id),
+		NodeRoles:           roles,
+		NodePublicKey:       publicKey,
+		NodePulseNum:        pulseNum,
+		NodePhysicalAddress: physicalAddress,
+		NodeVersion:         version,
 	}
 }
 
-// GetID returns a Node ID.
-func (node Node) GetID() core.RecordRef {
-	return node.id
+func NewNode(
+	id core.RecordRef,
+	roles []core.NodeRole,
+	publicKey *ecdsa.PublicKey,
+	pulseNum core.PulseNumber,
+	physicalAddress,
+	version string) core.Node {
+	return newMutableNode(id, roles, publicKey, pulseNum, physicalAddress, version)
 }
 
-// GetPrivateKey returns a private key.
-func (node Node) GetPrivateKey() *ecdsa.PrivateKey {
-	return node.privateKey
+func (n *node) ID() core.RecordRef {
+	return n.NodeID
+}
+
+func (n *node) ShortID() core.ShortNodeID {
+	return n.NodeShortID
+}
+
+func (n *node) Pulse() core.PulseNumber {
+	return n.NodePulseNum
+}
+
+func (n *node) Roles() []core.NodeRole {
+	return n.NodeRoles
+}
+
+func (n *node) Role() core.NodeRole {
+	return n.NodeRoles[0]
+}
+
+func (n *node) PublicKey() *ecdsa.PublicKey {
+	// TODO: make a copy of pk
+	return n.NodePublicKey
+}
+
+func (n *node) PhysicalAddress() string {
+	return n.NodePhysicalAddress
+}
+
+func (n *node) Version() string {
+	return n.NodeVersion
+}
+
+func (n *node) SetPulse(pulseNum core.PulseNumber) {
+	n.NodePulseNum = pulseNum
+}
+
+func (n *node) SetShortID(id core.ShortNodeID) {
+	n.NodeShortID = id
+}
+
+type mutableNodes []mutableNode
+
+func (mn mutableNodes) Export() []core.Node {
+	nodes := make([]core.Node, len(mn))
+	for i := range mn {
+		nodes[i] = mn[i]
+	}
+	return nodes
+}
+
+func generateShortID(ref core.RecordRef) core.ShortNodeID {
+	result := crc32.ChecksumIEEE(ref[:])
+	return core.ShortNodeID(result)
+}
+
+func init() {
+	gob.Register(&node{})
 }

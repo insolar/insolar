@@ -17,8 +17,10 @@
 package allowance
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -30,34 +32,37 @@ type Allowance struct {
 	ExpireTime int64
 }
 
-func (a *Allowance) IsExpired() bool {
+func (a *Allowance) isExpired() bool {
 	return a.GetContext().Time.After(time.Unix(a.ExpireTime, 0))
 }
 
-func (a *Allowance) TakeAmount() uint {
+func (a *Allowance) TakeAmount() (uint, error) {
 	caller := a.GetContext().Caller
-	if *caller == a.To && !a.IsExpired() {
+	if *caller == a.To && !a.isExpired() {
 		a.SelfDestruct()
-		return a.Amount
+		return a.Amount, nil
 	}
-	return 0
+	return 0, nil
 }
 
-func (a *Allowance) GetBalanceForOwner() uint {
-	if !a.IsExpired() {
-		return a.Amount
+func (a *Allowance) GetBalanceForOwner() (uint, error) {
+	if !a.isExpired() {
+		return a.Amount, nil
 	}
-	return 0
+	return 0, nil
 }
 
-func (a *Allowance) DeleteExpiredAllowance() uint {
-	if a.GetContext().Caller == a.GetContext().Parent && !a.IsExpired() {
+func (a *Allowance) DeleteExpiredAllowance() (uint, error) {
+	if a.GetContext().Caller == a.GetContext().Parent && !a.isExpired() {
 		a.SelfDestruct()
-		return a.Amount
+		return a.Amount, nil
 	}
-	return 0
+	return 0, nil
 }
 
-func New(to *core.RecordRef, amount uint, expire int64) *Allowance {
-	return &Allowance{To: *to, Amount: amount, ExpireTime: expire}
+func New(to *core.RecordRef, amount uint, expire int64) (*Allowance, error) {
+	if !wallet.PrototypeReference.Equal(*foundation.GetContext().CallerPrototype) {
+		return nil, fmt.Errorf("[ New Allowance ] : Can't create allowance from not wallet contract")
+	}
+	return &Allowance{To: *to, Amount: amount, ExpireTime: expire}, nil
 }

@@ -18,29 +18,28 @@ package requesters
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
-	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
-
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 )
 
 // verbose switches on verbose mode
 var verbose = false
 
-func verboseInfo(msg string) {
+func verboseInfo(ctx context.Context, msg string) {
 	if verbose {
-		log.Infoln(msg)
+		inslogger.FromContext(ctx).Infoln(msg)
 	}
 }
 
-// SetVerbose switchs on verbose mode
+// SetVerbose switches on verbose mode
 func SetVerbose(verb bool) {
 	verbose = verb
 }
@@ -93,7 +92,7 @@ func GetSeed(url string) ([]byte, error) {
 }
 
 func constructParams(params []interface{}) ([]byte, error) {
-	args, err := core.MarshalArgs(params)
+	args, err := core.MarshalArgs(params...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ constructParams ]")
 	}
@@ -101,7 +100,7 @@ func constructParams(params []interface{}) ([]byte, error) {
 }
 
 // SendWithSeed sends request with known seed
-func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
+func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ Send ] Configs must be initialized")
 	}
@@ -111,24 +110,26 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
 	}
 
-	serRequest, err := signer.Serialize(userCfg.Caller, reqCfg.Delegate, reqCfg.Method, params, seed)
+	serRequest, err := core.MarshalArgs(
+		core.NewRefFromBase58(userCfg.Caller),
+		reqCfg.Method,
+		params,
+		seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
 	}
 
-	verboseInfo("Signing request ...")
+	verboseInfo(ctx, "Signing request ...")
 	signature, err := ecdsahelper.Sign(serRequest, userCfg.privateKeyObject)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}
-	verboseInfo("Signing request completed")
+	verboseInfo(ctx, "Signing request completed")
 
 	body, err := GetResponseBody(url, PostParams{
 		"params":    params,
 		"method":    reqCfg.Method,
-		"caller":    userCfg.Caller,
-		"callee":    reqCfg.Callee,
-		"delegate":  reqCfg.Delegate,
+		"reference": userCfg.Caller,
 		"seed":      seed,
 		"signature": signature,
 	})
@@ -140,19 +141,43 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 	return body, nil
 }
 
-// Send: first gets seed and after that makes target request
-func Send(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
-	verboseInfo("Sending GETSEED request ...")
+// Send first gets seed and after that makes target request
+func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
+	verboseInfo(ctx, "Sending GETSEED request ...")
 	seed, err := GetSeed(url)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}
-	verboseInfo("GETSEED request completed. seed: " + string(seed))
+	verboseInfo(ctx, "GETSEED request completed. seed: "+string(seed))
 
-	response, err := SendWithSeed(url, userCfg, reqCfg, seed)
+	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}
 
 	return response, nil
+}
+
+// InfoResponse represents response from /info
+type InfoResponse struct {
+	Prototypes map[string]string `json:"prototypes"`
+	RootDomain string            `json:"root_domain"`
+	RootMember string            `json:"root_member"`
+}
+
+// Info sends request to /info and return result
+func Info(url string) (*InfoResponse, error) {
+	body, err := GetResponseBody(url+"/info", PostParams{})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ] problem with sending request:")
+	}
+
+	infoResp := InfoResponse{}
+
+	err = json.Unmarshal(body, &infoResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ] problem with unmarshal response:")
+	}
+
+	return &infoResp, nil
 }

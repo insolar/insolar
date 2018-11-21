@@ -18,12 +18,15 @@ package functest
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,7 +74,7 @@ type getSeedResponse struct {
 type isAuthorized struct {
 	baseResponse
 	PublicKey     string `json:"public_key"`
-	Role          int    `json:"role"`
+	Roles         []int  `json:"roles"`
 	NetCoordCheck bool   `json:"netcoord_auth_success"`
 }
 
@@ -90,34 +93,58 @@ type dumpAllUsersResponse struct {
 	DumpInfo []userInfo `json:"dump_info"`
 }
 
+type bootstrapNode struct {
+	PublicKey string `json:"public_key"`
+	Host      string `json:"host"`
+}
+
+type certificate struct {
+	MajorityRule   int             `json:"majority_rule"`
+	PublicKey      string          `json:"public_key"`
+	Reference      string          `json:"reference"`
+	Roles          []string        `json:"roles"`
+	BootstrapNodes []bootstrapNode `json:"bootstrap_nodes"`
+}
+
 type registerNodeResponse struct {
 	baseResponse
-	Reference string `json:"reference"`
+	Certificate certificate `json:"certificate"`
 }
 
-func createMember(t *testing.T) string {
-	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       testutils.RandomString(),
-		"public_key": "000",
-	})
-
-	firstMemberResponse := &createMemberResponse{}
-	unmarshalResponse(t, body, firstMemberResponse)
-
-	return firstMemberResponse.Reference
+type infoResponse struct {
+	Error      string            `json:"error"`
+	RootDomain string            `json:"root_domain"`
+	RootMember string            `json:"root_member"`
+	Prototypes map[string]string `json:"prototypes"`
 }
 
-func getBalance(t *testing.T, reference string) int {
-	body := getResponseBody(t, postParams{
-		"query_type": "get_balance",
-		"reference":  reference,
-	})
+func createMember(t *testing.T, name string) *user {
+	member, err := newUserWithKeys()
+	assert.NoError(t, err)
+	result, err := signedRequest(&root, "CreateMember", name, member.pubKey)
+	assert.NoError(t, err)
+	ref, ok := result.(string)
+	assert.True(t, ok)
+	member.ref = ref
+	return member
+}
 
-	firstBalanceResponse := &getBalanceResponse{}
-	unmarshalResponse(t, body, firstBalanceResponse)
+func getBalanceNoErr(t *testing.T, caller *user, reference string) int {
+	balance, err := getBalance(caller, reference)
+	assert.NoError(t, err)
+	return balance
+}
 
-	return int(firstBalanceResponse.Amount)
+func getBalance(caller *user, reference string) (int, error) {
+	res, err := signedRequest(caller, "GetBalance", reference)
+	if err != nil {
+		return 0, err
+	}
+	amount, ok := res.(float64)
+	if !ok {
+		return 0, errors.New("result is not int")
+	}
+	return int(amount), nil
 }
 
 func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
@@ -141,6 +168,16 @@ func getSeed(t *testing.T) string {
 	return getSeedResponse.Seed
 }
 
+func getInfo(t *testing.T) infoResponse {
+	resp, err := http.Get(TestURL + "/info")
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	err = json.Unmarshal(body, &info)
+	assert.NoError(t, err)
+	return info
+}
+
 func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
 	err := json.Unmarshal(body, &response)
 	assert.NoError(t, err)
@@ -151,4 +188,53 @@ func unmarshalResponseWithError(t *testing.T, body []byte, response responseInte
 	err := json.Unmarshal(body, &response)
 	assert.NoError(t, err)
 	assert.NotNil(t, response.getError())
+}
+
+type response struct {
+	Result interface{}
+	Error  string
+}
+
+func signedRequest(user *user, method string, params ...interface{}) (interface{}, error) {
+	ctx := context.TODO()
+	rootCfg, err := requesters.CreateUserConfig(user.ref, user.privKey)
+	if err != nil {
+		return nil, err
+	}
+	res, err := requesters.Send(ctx, TestURL, rootCfg, &requesters.RequestConfigJSON{
+		Method: method,
+		Params: params,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp = response{}
+	err = json.Unmarshal(res, &resp)
+
+	if err != nil {
+		return nil, err
+	}
+	if resp.Error != "" {
+		return resp.Result, errors.New(resp.Error)
+	}
+	return resp.Result, nil
+}
+
+func newUserWithKeys() (*user, error) {
+	key, err := ecdsa.GeneratePrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	privKeyStr, err := ecdsa.ExportPrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	pubKeyStr, err := ecdsa.ExportPublicKey(&key.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	return &user{
+		privKey: privKeyStr,
+		pubKey:  pubKeyStr,
+	}, nil
 }

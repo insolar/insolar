@@ -17,11 +17,13 @@
 package pulsar
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
@@ -33,24 +35,24 @@ type Handler struct {
 	Pulsar *Pulsar
 }
 
-func (handler *Handler) isRequestValid(request *Payload) (success bool, neighbour *Neighbour, err error) {
+func (handler *Handler) isRequestValid(ctx context.Context, request *Payload) (success bool, neighbour *Neighbour, err error) {
 	if handler.Pulsar.IsStateFailed() {
 		return false, nil, nil
 	}
 
 	neighbour, err = handler.Pulsar.FetchNeighbour(request.PublicKey)
 	if err != nil {
-		log.Warn("Message from unknown host %v", request.PublicKey)
+		inslogger.FromContext(ctx).Warn("Message from unknown host %v", request.PublicKey)
 		return false, neighbour, err
 	}
 
 	result, err := checkPayloadSignature(request)
 	if err != nil {
-		log.Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
+		inslogger.FromContext(ctx).Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
 		return false, neighbour, err
 	}
 	if !result {
-		log.Warnf("Message %v, from host %v failed signature check")
+		inslogger.FromContext(ctx).Warnf("Message %v, from host %v failed signature check")
 		return false, neighbour, errors.New("signature check failed")
 	}
 
@@ -66,33 +68,35 @@ func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
 
 // MakeHandshake is a handler of call with handshake purpose
 func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
-	log.Infof("[MakeHandshake] from %v", request.PublicKey)
+	_, inslog := inslogger.WithTraceField(context.Background(), handler.Pulsar.ID)
+
+	inslog.Infof("[MakeHandshake] from %v", request.PublicKey)
 	neighbour, err := handler.Pulsar.FetchNeighbour(request.PublicKey)
 	if err != nil {
-		log.Warn("Message from unknown host %v", request.PublicKey)
+		inslog.Warn("Message from unknown host %v", request.PublicKey)
 		return err
 	}
 
 	result, err := checkPayloadSignature(request)
 	if err != nil {
-		log.Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
+		inslog.Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
 		return err
 	}
 	if !result {
-		log.Warnf("Message %v, from host %v failed signature check")
+		inslog.Warnf("Message %v, from host %v failed signature check")
 		return err
 	}
 
 	generator := entropygenerator.StandardEntropyGenerator{}
 	convertedKey, err := ecdsa.ExportPublicKey(&handler.Pulsar.PrivateKey.PublicKey)
 	if err != nil {
-		log.Warn(err)
+		inslog.Warn(err)
 		return err
 	}
 	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
 	message.Signature, err = signData(handler.Pulsar.PrivateKey, message.Body)
 	if err != nil {
-		log.Error(err)
+		inslog.Error(err)
 		return err
 	}
 	*response = message
@@ -106,46 +110,52 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	err = neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
 	neighbour.OutgoingClient.Unlock()
 	if err != nil {
-		log.Error(err)
+		inslog.Error(err)
 		return err
 	}
-	log.Infof("Pulsar - %v connected to - %v", handler.Pulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
+	inslog.Infof("Pulsar - %v connected to - %v", handler.Pulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
 	return nil
 }
 
-// ReceiveSignatureForEntropy is a handler of call for receiving sign of entropy from one of the pulsars
+// ReceiveSignatureForEntropy is a handler of call for receiving Sign of Entropy from one of the pulsars
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
-	log.Infof("[ReceiveSignatureForEntropy] from %v", request.PublicKey)
-	ok, _, err := handler.isRequestValid(request)
+	ctx, inslog := inslogger.WithTraceField(context.Background(), handler.Pulsar.ID)
+
+	inslog.Infof("[ReceiveSignatureForEntropy] from %v", request.PublicKey)
+	ok, _, err := handler.isRequestValid(ctx, request)
 	if !ok {
 		if err != nil {
-			log.Error(err)
+			inslog.Error(err)
 		}
 		return err
 	}
 
 	requestBody := request.Body.(EntropySignaturePayload)
-	if requestBody.PulseNumber <= handler.Pulsar.LastPulse.PulseNumber {
+	if requestBody.PulseNumber <= handler.Pulsar.GetLastPulse().PulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
 	}
 
 	if handler.Pulsar.StateSwitcher.GetState() < GenerateEntropy {
-		err = handler.Pulsar.StartConsensusProcess(requestBody.PulseNumber)
+		err = handler.Pulsar.StartConsensusProcess(ctx, requestBody.PulseNumber)
 		if err != nil {
-			handler.Pulsar.StateSwitcher.SwitchToState(Failed, err)
+			handler.Pulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 			return nil
 		}
 	}
 
-	handler.Pulsar.OwnedBftRow[request.PublicKey] = &BftCell{Sign: requestBody.Signature}
+	bftCell := &BftCell{}
+	bftCell.SetSign(requestBody.Signature)
+	handler.Pulsar.OwnedBftRow[request.PublicKey] = bftCell
 
 	return nil
 }
 
-// ReceiveEntropy is a handler of call for receiving entropy from one of the pulsars
+// ReceiveEntropy is a handler of call for receiving Entropy from one of the pulsars
 func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) error {
-	log.Infof("[ReceiveEntropy] from %v", request.PublicKey)
-	ok, _, err := handler.isRequestValid(request)
+	ctx, inslog := inslogger.WithTraceField(context.Background(), fmt.Sprintf("%v_%v", handler.Pulsar.ID, string(handler.Pulsar.ProcessingPulseNumber)))
+
+	inslog.Infof("[ReceiveEntropy] from %v", request.PublicKey)
+	ok, _, err := handler.isRequestValid(ctx, request)
 	if !ok {
 		if err != nil {
 			log.Error(err)
@@ -159,29 +169,29 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	}
 
 	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
-		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
+		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.GetSign())
 		if err != nil || !isVerified {
 			handler.Pulsar.OwnedBftRow[request.PublicKey] = nil
-			log.Errorf("signature and entropy aren't matched. error - %v isVerified - %v", err, isVerified)
-			return errors.New("signature and entropy aren't matched")
+			inslog.Errorf("signature and Entropy aren't matched. error - %v isVerified - %v", err, isVerified)
+			return errors.New("signature and Entropy aren't matched")
 		}
 
-		btfCell.Lock()
-		btfCell.Entropy = requestBody.Entropy
-		btfCell.IsEntropyReceived = true
-		btfCell.Unlock()
+		btfCell.SetEntropy(requestBody.Entropy)
+		btfCell.SetIsEntropyReceived(true)
 	}
 
 	return nil
 }
 
-// ReceiveVector is a handler of call for receiving vector of entropy
+// ReceiveVector is a handler of call for receiving vector of Entropy
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
+	ctx, inslog := inslogger.WithTraceField(context.Background(), fmt.Sprintf("%v_%v", handler.Pulsar.ID, string(handler.Pulsar.ProcessingPulseNumber)))
+
 	log.Infof("[ReceiveVector] from %v", request.PublicKey)
-	ok, _, err := handler.isRequestValid(request)
+	ok, _, err := handler.isRequestValid(ctx, request)
 	if !ok {
 		if err != nil {
-			log.Errorf("%v - %v", handler.Pulsar.Config.MainListenerAddress, err)
+			inslog.Errorf("%v - %v", handler.Pulsar.Config.MainListenerAddress, err)
 		}
 		return err
 	}
@@ -203,11 +213,13 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 
 // ReceiveChosenSignature is a handler of call with the confirmation signature
 func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Payload) error {
+	ctx, inslog := inslogger.WithTraceField(context.Background(), fmt.Sprintf("%v_%v", handler.Pulsar.ID, string(handler.Pulsar.ProcessingPulseNumber)))
+
 	log.Infof("[ReceiveChosenSignature] from %v", request.PublicKey)
-	ok, _, err := handler.isRequestValid(request)
+	ok, _, err := handler.isRequestValid(ctx, request)
 	if !ok {
 		if err != nil {
-			log.Error(err)
+			inslog.Error(err)
 		}
 		return err
 	}
@@ -222,8 +234,9 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		Entropy:         requestBody.Entropy,
 		PulseNumber:     requestBody.PulseNumber,
 	}, request.PublicKey, requestBody.Signature)
+
 	if !isVerified || err != nil {
-		log.Errorf("signature and chosen publicKey aren't matched. error - %v isVerified - %v", err, isVerified)
+		inslog.Errorf("signature and chosen publicKey aren't matched. error - %v isVerified - %v", err, isVerified)
 		return errors.New("signature check failed")
 	}
 
@@ -240,11 +253,13 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 
 // ReceivePulse is a handler of call with the freshest pulse
 func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error {
+	ctx, inslog := inslogger.WithTraceField(context.Background(), fmt.Sprintf("%v_%v", handler.Pulsar.ID, string(handler.Pulsar.ProcessingPulseNumber)))
+
 	log.Infof("[ReceivePulse] from %v", request.PublicKey)
-	ok, _, err := handler.isRequestValid(request)
+	ok, _, err := handler.isRequestValid(ctx, request)
 	if !ok {
 		if err != nil {
-			log.Error(err)
+			inslog.Error(err)
 		}
 		return err
 	}
@@ -253,7 +268,8 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 	if handler.Pulsar.ProcessingPulseNumber != 0 && requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
 		return fmt.Errorf("processing pulse number is not zero and received number is not the same")
 	}
-	if handler.Pulsar.ProcessingPulseNumber == 0 && requestBody.Pulse.PulseNumber < handler.Pulsar.LastPulse.PulseNumber {
+
+	if handler.Pulsar.ProcessingPulseNumber == 0 && requestBody.Pulse.PulseNumber < handler.Pulsar.GetLastPulse().PulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
 	}
 
@@ -267,7 +283,8 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 		log.Error(err)
 		return err
 	}
-	handler.Pulsar.LastPulse = &requestBody.Pulse
+
+	handler.Pulsar.SetLastPulse(&requestBody.Pulse)
 	handler.Pulsar.ProcessingPulseNumber = 0
 
 	return nil

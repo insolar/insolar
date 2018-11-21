@@ -17,6 +17,8 @@
 package jetcoordinator
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
@@ -25,10 +27,10 @@ import (
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db             *storage.DB
-	rootJetNode    *JetNode
-	roleCandidates map[core.JetRole][]core.RecordRef
-	roleCounts     map[core.JetRole]int
+	db          *storage.DB
+	rootJetNode *JetNode
+	roleCounts  map[core.JetRole]int
+	activeNodes core.NodeNetwork
 }
 
 // NewJetCoordinator creates new coordinator instance.
@@ -53,16 +55,7 @@ func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) (*JetC
 }
 
 func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
-	jc.roleCandidates = map[core.JetRole][]core.RecordRef{}
 	jc.roleCounts = map[core.JetRole]int{}
-
-	for intRole, candidates := range conf.RoleCandidates {
-		role := core.JetRole(intRole)
-		jc.roleCandidates[role] = []core.RecordRef{}
-		for _, cand := range candidates {
-			jc.roleCandidates[role] = append(jc.roleCandidates[role], core.NewRefFromBase58(cand))
-		}
-	}
 
 	for intRole, count := range conf.RoleCounts {
 		role := core.JetRole(intRole)
@@ -72,9 +65,13 @@ func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
 
 // IsAuthorized checks for role on concrete pulse for the address.
 func (jc *JetCoordinator) IsAuthorized(
-	role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef,
+	ctx context.Context,
+	role core.JetRole,
+	obj *core.RecordRef,
+	pulse core.PulseNumber,
+	node core.RecordRef,
 ) (bool, error) {
-	nodes, err := jc.QueryRole(role, obj, pulse)
+	nodes, err := jc.QueryRole(ctx, role, obj, pulse)
 	if err != nil {
 		return false, err
 	}
@@ -88,15 +85,17 @@ func (jc *JetCoordinator) IsAuthorized(
 
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
 func (jc *JetCoordinator) QueryRole(
-	role core.JetRole, obj core.RecordRef, pulse core.PulseNumber,
+	ctx context.Context,
+	role core.JetRole,
+	obj *core.RecordRef,
+	pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	pulseData, err := jc.db.GetPulse(pulse)
+	pulseData, err := jc.db.GetPulse(ctx, pulse)
 	if err != nil {
 		return nil, err
 	}
-
-	candidates, ok := jc.roleCandidates[role]
-	if !ok {
+	candidates := jc.activeNodes.GetActiveNodesByRole(role)
+	if len(candidates) == 0 {
 		return nil, errors.New("no candidates for this role")
 	}
 	count, ok := jc.roleCounts[role]
@@ -110,6 +109,14 @@ func (jc *JetCoordinator) QueryRole(
 	}
 
 	return selected, nil
+}
+
+func (jc *JetCoordinator) Link(components core.Components) error {
+	if components.NodeNetwork == nil {
+		return errors.New("core.NodeNetwork is nil")
+	}
+	jc.activeNodes = components.NodeNetwork
+	return nil
 }
 
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck

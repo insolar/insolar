@@ -17,6 +17,9 @@
 package core
 
 import (
+	"encoding/binary"
+	"encoding/hex"
+
 	"github.com/jbenet/go-base58"
 
 	"github.com/insolar/insolar/cryptohelpers/hash"
@@ -31,46 +34,20 @@ const (
 	RecordRefSize = RecordIDSize * 2
 )
 
-// RecordRef is a unified record reference.
-type RecordRef [RecordRefSize]byte
-
-// ComposeRecordRef returns RecordRef composed from domain and record
-func ComposeRecordRef(domain RecordID, record RecordID) (ref RecordRef) {
-	(&ref).SetDomain(domain)
-	(&ref).SetRecord(record)
-	return
-}
-
-// SetRecord set record's RecordID.
-func (ref *RecordRef) SetRecord(recID RecordID) {
-	copy(ref[:RecordIDSize], recID[:])
-}
-
-// SetDomain set domain's RecordID.
-func (ref *RecordRef) SetDomain(recID RecordID) {
-	copy(ref[RecordIDSize:], recID[:])
-}
-
-// GetRecordID returns record's RecordID.
-func (ref *RecordRef) GetRecordID() (id RecordID) {
-	copy(id[:], ref[:RecordIDSize])
-	return id
-}
-
-// GetDomainID returns domain's RecordID.
-func (ref *RecordRef) GetDomainID() (id RecordID) {
-	copy(id[:], ref[RecordIDSize:])
-	return id
-}
-
 // RecordID is a unified record ID.
 type RecordID [RecordIDSize]byte
 
-// GenRecordID generates RecordID byte representation.
-func GenRecordID(pn PulseNumber, h []byte) (recid RecordID) {
-	copy(recid[:PulseNumberSize], pn.Bytes())
-	copy(recid[PulseNumberSize:], h)
-	return
+// String implements stringer on RecordID and returns hex value
+func (id *RecordID) String() string {
+	return hex.EncodeToString(id[:])
+}
+
+// NewRecordID generates RecordID byte representation.
+func NewRecordID(pulse PulseNumber, hash []byte) *RecordID {
+	var id RecordID
+	copy(id[:PulseNumberSize], pulse.Bytes())
+	copy(id[PulseNumberSize:], hash)
+	return &id
 }
 
 // Bytes returns byte slice of RecordID.
@@ -78,9 +55,71 @@ func (id *RecordID) Bytes() []byte {
 	return id[:]
 }
 
+// Pulse returns byte slice of RecordID.
+func (id *RecordID) Pulse() PulseNumber {
+	pulse := binary.BigEndian.Uint32(id[:PulseNumberSize])
+	return PulseNumber(pulse)
+}
+
+// Equal checks if reference points to the same record.
+func (id *RecordID) Equal(other *RecordID) bool {
+	if id == nil || other == nil {
+		return false
+	}
+	return *id == *other
+}
+
+// RecordRef is a unified record reference.
+type RecordRef [RecordRefSize]byte
+
+// NewRecordRef returns RecordRef composed from domain and record
+func NewRecordRef(domain RecordID, record RecordID) *RecordRef {
+	var ref RecordRef
+	ref.SetDomain(domain)
+	ref.SetRecord(record)
+	return &ref
+}
+
+// SetDomain set domain's RecordID.
+func (ref *RecordRef) SetDomain(recID RecordID) {
+	copy(ref[RecordIDSize:], recID[:])
+}
+
+// SetRecord set record's RecordID.
+func (ref *RecordRef) SetRecord(recID RecordID) {
+	copy(ref[:RecordIDSize], recID[:])
+}
+
+// Domain returns domain ID part of reference.
+func (ref RecordRef) Domain() *RecordID {
+	var id RecordID
+	copy(id[:], ref[RecordIDSize:])
+	return &id
+}
+
+// Record returns record's RecordID.
+func (ref *RecordRef) Record() *RecordID {
+	var id RecordID
+	copy(id[:], ref[:RecordIDSize])
+	return &id
+}
+
 // String outputs base58 RecordRef representation.
 func (ref RecordRef) String() string {
 	return base58.Encode(ref[:])
+}
+
+// FromSlice : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
+func (ref RecordRef) FromSlice(from []byte) RecordRef {
+	for i := 0; i < RecordRefSize; i++ {
+		ref[i] = from[i]
+	}
+	return ref
+}
+
+// Bytes returns byte slice of RecordRef.
+func (ref RecordRef) Bytes() []byte {
+	return ref[:]
 }
 
 // Equal checks if reference points to the same record.
@@ -88,20 +127,13 @@ func (ref RecordRef) Equal(other RecordRef) bool {
 	return ref == other
 }
 
-// Domain returns domain ID part of reference.
-func (ref RecordRef) Domain() RecordID {
-	var domain RecordID
-	copy(domain[:], ref[RecordIDSize:])
-	return domain
-}
-
 // GenRequest calculates RecordRef for request message from pulse number and request's payload.
 func GenRequest(pn PulseNumber, payload []byte) *RecordRef {
-	ref := ComposeRecordRef(
+	ref := NewRecordRef(
 		RecordID{},
-		GenRecordID(pn, hash.IDHashBytes(payload)),
+		*NewRecordID(pn, hash.IDHashBytes(payload)),
 	)
-	return &ref
+	return ref
 }
 
 // NewRefFromBase58 deserializes reference from base58 encoded string.

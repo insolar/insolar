@@ -17,26 +17,31 @@
 package pulsar
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
-	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/id"
+	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
+
+	"github.com/insolar/insolar/network/transport/relay"
 )
 
-func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
-	log.Debug("[broadcastSignatureOfEntropy]")
+func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[broadcastSignatureOfEntropy]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
 
 	payload, err := currentPulsar.preparePayload(EntropySignaturePayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Signature: currentPulsar.GeneratedEntropySign})
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -47,15 +52,16 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			logger.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 			continue
 		}
-		log.Infof("Sign of entropy sent to %v", neighbour.ConnectionAddress)
+		logger.Infof("Sign of Entropy sent to %v", neighbour.ConnectionAddress)
 	}
 }
 
-func (currentPulsar *Pulsar) broadcastVector() {
-	log.Debug("[broadcastVector]")
+func (currentPulsar *Pulsar) broadcastVector(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[broadcastVector]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -64,7 +70,7 @@ func (currentPulsar *Pulsar) broadcastVector() {
 		Vector:      currentPulsar.OwnedBftRow})
 
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -75,20 +81,21 @@ func (currentPulsar *Pulsar) broadcastVector() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			logger.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 		}
 	}
 }
 
-func (currentPulsar *Pulsar) broadcastEntropy() {
-	log.Debug("[broadcastEntropy]")
+func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[broadcastEntropy]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
 
 	payload, err := currentPulsar.preparePayload(EntropyPayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Entropy: currentPulsar.GeneratedEntropy})
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -99,13 +106,14 @@ func (currentPulsar *Pulsar) broadcastEntropy() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			logger.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 		}
 	}
 }
 
-func (currentPulsar *Pulsar) sendPulseToPulsars() {
-	log.Debug("[sendPulseToPulsars]")
+func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[sendPulseToPulsars]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -119,7 +127,7 @@ func (currentPulsar *Pulsar) sendPulseToPulsars() {
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -130,46 +138,46 @@ func (currentPulsar *Pulsar) sendPulseToPulsars() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			logger.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 		}
 	}
 }
 
-func (currentPulsar *Pulsar) sendVector() {
-	log.Debug("[sendVector]")
+func (currentPulsar *Pulsar) sendVector(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[sendVector]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
 
 	if currentPulsar.isStandalone() {
-		currentPulsar.StateSwitcher.SwitchToState(Verifying, nil)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Verifying, nil)
 		return
 	}
 
-	currentPulsar.broadcastVector()
+	currentPulsar.broadcastVector(ctx)
 
 	currentPulsar.SetBftGridItem(currentPulsar.PublicKeyRaw, currentPulsar.OwnedBftRow)
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForVectors, nil)
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForVectors, nil)
 }
 
-func (currentPulsar *Pulsar) sendEntropy() {
-	log.Debug("[sendEntropy]")
+func (currentPulsar *Pulsar) sendEntropy(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[sendEntropy]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
 
 	if currentPulsar.isStandalone() {
-		currentPulsar.StateSwitcher.SwitchToState(Verifying, nil)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Verifying, nil)
 		return
 	}
 
-	currentPulsar.broadcastEntropy()
+	currentPulsar.broadcastEntropy(ctx)
 
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForEntropy, nil)
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForEntropy, nil)
 }
 
-func (currentPulsar *Pulsar) sendPulseSign() {
-	log.Debug("[sendPulseSign]")
+func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
+	inslogger.FromContext(ctx).Debug("[sendPulseSign]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -180,7 +188,7 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 		PulseNumber:     currentPulsar.ProcessingPulseNumber,
 	})
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 	confirmation := core.PulseSenderConfirmation{
@@ -192,7 +200,7 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 
 	payload, err := currentPulsar.preparePayload(confirmation)
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
@@ -201,14 +209,15 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 	if reply.Error != nil {
 		//Here should be retry
 		log.Error(reply.Error)
-		currentPulsar.StateSwitcher.SwitchToState(Failed, log.Error)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, log.Error)
 	}
 
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForStart, nil)
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
 }
 
-func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
-	log.Debug("[sendPulseToNodesAndPulsars]. Pulse - %v", time.Now())
+func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[sendPulseToNodesAndPulsars]. Pulse - %v", time.Now())
 
 	if currentPulsar.IsStateFailed() {
 		return
@@ -223,14 +232,23 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
 	}
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
-	pulsarHost, t, err := currentPulsar.prepareForSendingPulse()
+	logger.Debug("Start a process of sending pulse")
+	pulsarHost, t, err := currentPulsar.prepareForSendingPulse(ctx)
 	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
-	currentPulsar.sendPulseToNetwork(pulsarHost, t, pulseForSending)
-	currentPulsar.sendPulseToPulsars()
+	go func() {
+		logger.Debug("Before sending to network")
+		currentPulsar.sendPulseToNetwork(ctx, pulsarHost, t, pulseForSending)
+		defer func() {
+			go t.Stop()
+			<-t.Stopped()
+			t.Close()
+		}()
+	}()
+	go currentPulsar.sendPulseToPulsars(ctx)
 
 	err = currentPulsar.Storage.SavePulse(&pulseForSending)
 	if err != nil {
@@ -240,18 +258,15 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
 	if err != nil {
 		log.Error(err)
 	}
-	currentPulsar.LastPulse = &pulseForSending
+	currentPulsar.SetLastPulse(&pulseForSending)
+	logger.Infof("Latest pulse is %v", pulseForSending.PulseNumber)
 
-	currentPulsar.StateSwitcher.SwitchToState(WaitingForStart, nil)
-	defer func() {
-		go t.Stop()
-		<-t.Stopped()
-		t.Close()
-	}()
+	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
 }
 
-func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t transport.Transport, err error) {
-
+func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsarHost *host.Host, t transport.Transport, err error) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("New transport creation")
 	t, err = transport.NewTransport(currentPulsar.Config.BootstrapListener, relay.NewProxy())
 	if err != nil {
 		return
@@ -260,7 +275,7 @@ func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t 
 	go func() {
 		err = t.Start()
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 	}()
 
@@ -268,6 +283,7 @@ func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t 
 		return
 	}
 
+	logger.Debug("Init output port")
 	pulsarHostAddress, err := host.NewAddress(currentPulsar.Config.BootstrapListener.Address)
 	if err != nil {
 		return
@@ -278,80 +294,116 @@ func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t 
 	}
 	pulsarHost = host.NewHost(pulsarHostAddress)
 	pulsarHost.ID = pulsarHostID
+	logger.Debug("Network is ready")
 
 	return
 }
 
-func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
+func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
+	logger := inslogger.FromContext(ctx)
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("sendPulseToNetwork failed with panic: %v", r)
+		}
+	}()
+
+	logger.Infof("Before sending pulse to bootstraps - %v", currentPulsar.Config.BootstrapNodes)
 	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
 		receiverAddress, err := host.NewAddress(bootstrapNode)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			continue
 		}
 		receiverHost := host.NewHost(receiverAddress)
 
-		b := packet.NewBuilder()
-		pingPacket := packet.NewPingPacket(pulsarHost, receiverHost)
+		b := packet.NewBuilder(pulsarHost)
+		pingPacket := b.Receiver(receiverHost).Type(types.Ping).Build()
 		pingCall, err := t.SendRequest(pingPacket)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			continue
 		}
-		pingResult := <-pingCall.Result()
+		logger.Debugf("before ping request")
+		pingResult, err := pingCall.GetResult(2 * time.Second)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+		if pingResult.Error != nil {
+			logger.Error(pingResult.Error)
+			continue
+		}
 		receiverHost.ID = pingResult.Sender.ID
+		logger.Debugf("ping request is done")
 
-		b = packet.NewBuilder()
-		request := b.Sender(pulsarHost).Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(packet.TypeGetRandomHosts).Build()
+		b = packet.NewBuilder(pulsarHost)
+		request := b.Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(types.GetRandomHosts).Build()
 
 		call, err := t.SendRequest(request)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			continue
 		}
-		result := <-call.Result()
+		result, err := call.GetResult(2 * time.Second)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
 		if result.Error != nil {
-			log.Error(result.Error)
+			logger.Error(result.Error)
 			continue
 		}
+		logger.Debugf("request get random hosts is done")
 		body := result.Data.(*packet.ResponseGetRandomHosts)
 		if len(body.Error) != 0 {
-			log.Error(body.Error)
+			logger.Error(body.Error)
 			continue
 		}
 
 		if body.Hosts == nil || len(body.Hosts) == 0 {
-			err := sendPulseToHost(pulsarHost, t, receiverHost, &pulse)
+			err := sendPulseToHost(ctx, pulsarHost, t, receiverHost, &pulse)
 			if err != nil {
-				log.Error(err)
+				logger.Error(err)
 			}
 			continue
 		}
 
-		sendPulseToHosts(pulsarHost, t, body.Hosts, &pulse)
+		sendPulseToHosts(ctx, pulsarHost, t, body.Hosts, &pulse)
 	}
 }
 
-func sendPulseToHost(sender *host.Host, t transport.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
-	pb := packet.NewBuilder()
-	pulseRequest := pb.Sender(sender).Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(packet.TypePulse).Build()
+func sendPulseToHost(ctx context.Context, sender *host.Host, t transport.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
+	logger := inslogger.FromContext(ctx)
+	defer func() {
+		if x := recover(); x != nil {
+			logger.Errorf("sendPulseToHost failed with panic: %v", x)
+		}
+	}()
+
+	pb := packet.NewBuilder(sender)
+	pulseRequest := pb.Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.Pulse).Build()
 	call, err := t.SendRequest(pulseRequest)
 	if err != nil {
 		return err
 	}
-	result := <-call.Result()
-	if result.Error != nil {
+	result, err := call.GetResult(2 * time.Second)
+	if err != nil {
 		return err
+	}
+	if result.Error != nil {
+		return result.Error
 	}
 
 	return nil
 }
 
-func sendPulseToHosts(sender *host.Host, t transport.Transport, hosts []host.Host, pulse *core.Pulse) {
+func sendPulseToHosts(ctx context.Context, sender *host.Host, t transport.Transport, hosts []host.Host, pulse *core.Pulse) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("Before sending pulse to nodes - %v", hosts)
 	for _, pulseReceiver := range hosts {
-		err := sendPulseToHost(sender, t, &pulseReceiver, pulse)
+		err := sendPulseToHost(ctx, sender, t, &pulseReceiver, pulse)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 	}
 }

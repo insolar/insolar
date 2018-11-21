@@ -31,25 +31,15 @@ func (e *Code) Type() core.ReplyType {
 	return TypeCode
 }
 
-// Class is class from storage.
-type Class struct {
-	Head        core.RecordRef
-	State       core.RecordID
-	Code        *core.RecordRef // Can be nil.
-	MachineType core.MachineType
-}
-
-// Type implementation of Reply interface.
-func (e *Class) Type() core.ReplyType {
-	return TypeClass
-}
-
 // Object is object from storage.
 type Object struct {
-	Head   core.RecordRef
-	State  core.RecordID
-	Class  core.RecordRef
-	Memory []byte
+	Head         core.RecordRef
+	State        core.RecordID
+	Prototype    *core.RecordRef
+	IsPrototype  bool
+	ChildPointer *core.RecordID
+	Memory       []byte
+	Parent       core.RecordRef
 }
 
 // Type implementation of Reply interface.
@@ -65,16 +55,6 @@ type Delegate struct {
 // Type implementation of Reply interface.
 func (e *Delegate) Type() core.ReplyType {
 	return TypeDelegate
-}
-
-// Reference is common reaction for methods returning reference to created records.
-type Reference struct {
-	Ref core.RecordRef
-}
-
-// Type implementation of Reply interface.
-func (e *Reference) Type() core.ReplyType {
-	return TypeReference
 }
 
 // ID is common reaction for methods returning id to lifeline states.

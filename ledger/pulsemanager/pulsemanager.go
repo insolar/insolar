@@ -17,6 +17,8 @@
 package pulsemanager
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -25,18 +27,19 @@ import (
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	db  *storage.DB
-	lr  core.LogicRunner
-	bus core.MessageBus
+	db      *storage.DB
+	lr      core.LogicRunner
+	bus     core.MessageBus
+	nodenet core.NodeNetwork
 }
 
 // Current returns current pulse structure.
-func (m *PulseManager) Current() (*core.Pulse, error) {
-	latestPulse, err := m.db.GetLatestPulseNumber()
+func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
+	latestPulse, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
 		return nil, err
 	}
-	pulse, err := m.db.GetPulse(latestPulse)
+	pulse, err := m.db.GetPulse(ctx, latestPulse)
 	if err != nil {
 		return nil, err
 	}
@@ -48,30 +51,24 @@ func (m *PulseManager) Current() (*core.Pulse, error) {
 	return &data, nil
 }
 
-// Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(pulse core.Pulse) error {
-	latestPulseNumber, err := m.db.GetLatestPulseNumber()
+func (m *PulseManager) processDrop(ctx context.Context) error {
+	latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 	if err != nil {
 		return err
 	}
-	latestPulse, err := m.db.GetPulse(latestPulseNumber)
+	latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
 	if err != nil {
 		return err
 	}
-	prevDrop, err := m.db.GetDrop(latestPulse.PrevPulse)
+	prevDrop, err := m.db.GetDrop(ctx, latestPulse.PrevPulse)
 	if err != nil {
 		return err
 	}
-	drop, records, indexes, err := m.db.CreateDrop(latestPulseNumber, prevDrop.Hash)
+	drop, messages, err := m.db.CreateDrop(ctx, latestPulseNumber, prevDrop.Hash)
 	if err != nil {
 		return err
 	}
-	err = m.db.SetDrop(drop)
-	if err != nil {
-		return err
-	}
-
-	err = m.db.AddPulse(pulse)
+	err = m.db.SetDrop(ctx, drop)
 	if err != nil {
 		return err
 	}
@@ -80,11 +77,30 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	if err != nil {
 		return err
 	}
-	_, err = m.bus.Send(&message.JetDrop{
-		Drop:    dropSerialized,
-		Records: records,
-		Indexes: indexes,
-	})
+
+	msg := &message.JetDrop{
+		Drop:        dropSerialized,
+		Messages:    messages,
+		PulseNumber: latestPulseNumber,
+	}
+	_, err = m.bus.Send(ctx, msg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Set set's new pulse and closes current jet drop.
+func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
+	// execute only on material executor
+	if m.nodenet.GetOrigin().Role() == core.RoleLightMaterial {
+		err := m.processDrop(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := m.db.AddPulse(ctx, pulse)
 	if err != nil {
 		return err
 	}
@@ -102,5 +118,6 @@ func NewPulseManager(db *storage.DB) (*PulseManager, error) {
 func (m *PulseManager) Link(components core.Components) error {
 	m.bus = components.MessageBus
 	m.lr = components.LogicRunner
+	m.nodenet = components.NodeNetwork
 	return nil
 }

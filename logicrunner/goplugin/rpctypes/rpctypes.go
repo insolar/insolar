@@ -45,6 +45,7 @@ type DownCallConstructorReq struct {
 	Code      core.RecordRef
 	Name      string
 	Arguments core.Arguments
+	Context   *core.LogicCallContext
 }
 
 // DownCallConstructorResp is response from CallConstructor RPC in the runner
@@ -54,8 +55,9 @@ type DownCallConstructorResp struct {
 
 // UpBaseReq  is a base type for all insgorund -> logicrunner requests
 type UpBaseReq struct {
-	Callee  core.RecordRef
-	Request core.RecordRef
+	Callee    core.RecordRef
+	Prototype core.RecordRef
+	Request   core.RecordRef
 }
 
 // UpRespIface interface for UpBaseReq descendant responses
@@ -91,7 +93,7 @@ type UpRouteResp struct {
 type UpSaveAsChildReq struct {
 	UpBaseReq
 	Parent          core.RecordRef
-	Class           core.RecordRef
+	Prototype       core.RecordRef
 	ConstructorName string
 	ArgsSerialized  []byte
 }
@@ -104,8 +106,8 @@ type UpSaveAsChildResp struct {
 // UpGetObjChildrenReq is a set of arguments for GetObjChildren RPC in goplugin
 type UpGetObjChildrenReq struct {
 	UpBaseReq
-	Obj   core.RecordRef
-	Class core.RecordRef
+	Obj       core.RecordRef
+	Prototype core.RecordRef
 }
 
 // UpGetObjChildrenResp is response from GetObjChildren RPC in goplugin
@@ -117,7 +119,7 @@ type UpGetObjChildrenResp struct {
 type UpSaveAsDelegateReq struct {
 	UpBaseReq
 	Into            core.RecordRef
-	Class           core.RecordRef
+	Prototype       core.RecordRef
 	ConstructorName string
 	ArgsSerialized  []byte
 }
@@ -142,7 +144,6 @@ type UpGetDelegateResp struct {
 // UpDeactivateObjectReq is a set of arguments for DeactivateObject RPC in goplugin
 type UpDeactivateObjectReq struct {
 	UpBaseReq
-	Object core.RecordRef
 }
 
 // UpDeactivateObjectResp is response from DeactivateObject RPC in goplugin

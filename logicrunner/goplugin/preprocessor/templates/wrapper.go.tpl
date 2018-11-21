@@ -6,6 +6,14 @@ import (
     {{- end }}
 )
 
+type ExtendableError struct{
+    S string
+}
+
+func ( e *ExtendableError ) Error() string{
+    return e.S
+}
+
 {{ range $method := .Methods }}
 func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, error) {
     ph := proxyctx.Current
@@ -14,13 +22,15 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 
     err := ph.Deserialize(object, self)
     if err != nil {
-        return nil, nil, err
+        e := &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
+        return nil, nil, e
     }
 
     {{ $method.ArgumentsZeroList }}
     err = ph.Deserialize(data, &args)
     if err != nil {
-        return nil, nil, err
+        e := &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
+        return nil, nil, e
     }
 
 {{ if $method.Results }}
@@ -53,13 +63,26 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
     {{ $f.ArgumentsZeroList }}
     err := ph.Deserialize(data, &args)
     if err != nil {
-        return nil, err
+        e := &ExtendableError{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
+        return nil, e
     }
 
     {{ $f.Results }} := {{ $f.Name }}( {{ $f.Arguments }} )
+    if ret1 != nil {
+        return nil, ret1
+    }
 
     ret := []byte{}
-    err = ph.Serialize({{ $f.Results }}, &ret)
+    err = ph.Serialize(ret0, &ret)
+    if err != nil {
+        return nil, err
+    }
+
+    if ret0 == nil {
+        e := &ExtendableError{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil" }
+        return nil, e
+    }
+
     return ret, err
 }
 {{ end }}

@@ -63,3 +63,11 @@
 [[constraint]]
   name = "github.com/dgraph-io/badger"
   version = "1.5.3"
+
+[[constraint]]
+  name = "github.com/prometheus/client_golang"
+  version = "0.8.0"
+
+[[constraint]]
+  name = "go.opencensus.io"
+  version = "0.18.0"

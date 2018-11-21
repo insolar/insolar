@@ -31,8 +31,7 @@ type Storage struct {
 
 // JetCoordinator holds configuration for JetCoordinator.
 type JetCoordinator struct {
-	RoleCandidates map[int][]string
-	RoleCounts     map[int]int
+	RoleCounts map[int]int
 }
 
 // Ledger holds configuration for ledger.
@@ -52,19 +51,12 @@ func NewLedger() Ledger {
 		},
 
 		JetCoordinator: JetCoordinator{
-			RoleCandidates: map[int][]string{
-				int(core.RoleVirtualExecutor):  {"ve1", "ve2"},
-				int(core.RoleHeavyExecutor):    {"he1", "he2"},
-				int(core.RoleLightExecutor):    {"le1", "le2"},
-				int(core.RoleVirtualValidator): {"vv1", "vv2", "vv3", "vv4"},
-				int(core.RoleLightValidator):   {"lv1", "lv2", "lv3", "lv4"},
-			},
 			RoleCounts: map[int]int{
 				int(core.RoleVirtualExecutor):  1,
 				int(core.RoleHeavyExecutor):    1,
 				int(core.RoleLightExecutor):    1,
-				int(core.RoleVirtualValidator): 3,
-				int(core.RoleLightValidator):   3,
+				int(core.RoleVirtualValidator): 1,
+				int(core.RoleLightValidator):   1,
 			},
 		},
 	}

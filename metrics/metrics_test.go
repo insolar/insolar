@@ -14,38 +14,100 @@
  *    limitations under the License.
  */
 
-package metrics
+package metrics_test
 
 import (
-	"io/ioutil"
+	"math/rand"
 	"net/http"
-	"strings"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/testutils/testmetrics"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 )
 
 func TestMetrics_NewMetrics(t *testing.T) {
-	cfg := configuration.NewMetrics()
-	m, err := NewMetrics(cfg)
-	assert.NoError(t, err)
-	err = m.Start(core.Components{})
-	assert.NoError(t, err)
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	testm := testmetrics.Start(ctx)
 
-	NetworkMessageSentTotal.Inc()
-	NetworkPacketSentTotal.WithLabelValues("ping").Add(55)
+	var (
+		// https://godoc.org/go.opencensus.io/stats
+		videoCount = stats.Int64("example.com/measures/video_count", "number of processed videos", stats.UnitDimensionless)
+		videoSize  = stats.Int64("video_size", "size of processed video", stats.UnitBytes)
+	)
+	osxtag := insmetrics.MustTagKey("osx")
 
-	response, err := http.Get("http://" + cfg.ListenAddress + "/metrics")
-	defer response.Body.Close()
+	err := view.Register(
+		&view.View{
+			Measure:     videoCount,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{osxtag},
+		},
+		&view.View{
+			Name:        "video_size",
+			Measure:     videoSize,
+			Aggregation: view.Distribution(0, 1<<16, 1<<32),
+			TagKeys:     []tag.Key{osxtag},
+		},
+	)
+	require.NoError(t, err)
 
-	content, err := ioutil.ReadAll(response.Body)
-	contentText := string(content)
-	assert.NoError(t, err)
+	newctx := insmetrics.ChangeTags(ctx, tag.Insert(osxtag, "11.12.13"))
+	stats.Record(newctx, videoCount.M(1), videoSize.M(rand.Int63()))
+	metrics.NetworkMessageSentTotal.Inc()
+	metrics.NetworkPacketSentTotal.WithLabelValues("ping").Add(55)
 
-	assert.True(t, strings.Contains(contentText, "insolar_network_message_sent_total 1"))
-	assert.True(t, strings.Contains(contentText, `insolar_network_packet_sent_total{packetType="ping"} 55`))
+	content, err := testm.FetchContent()
+	require.NoError(t, err)
+	// fmt.Println("/metrics => ", content)
 
-	assert.NoError(t, m.Stop())
+	assert.Contains(t, content, "insolar_network_message_sent_total 1")
+	assert.Contains(t, content, `insolar_network_packet_sent_total{packetType="ping"} 55`)
+	assert.Contains(t, content, `insolar_video_size_count{osx="11.12.13"} 1`)
+	assert.Contains(t, content, `insolar_example_com_measures_video_count{osx="11.12.13"} 1`)
+
+	assert.NoError(t, testm.Stop())
+}
+
+func TestMetrics_ZPages(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	testm := testmetrics.Start(ctx)
+
+	// One more thing... from https://github.com/rakyll/opencensus-grpc-demo
+	// also check /debug/rpcz
+	code, content, err := testm.FetchURL("/debug/tracez")
+	_ = content
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, code)
+	// fmt.Println("/debug/tracez => ", content)
+
+	assert.NoError(t, testm.Stop())
+}
+
+func TestMetrics_Badger(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	_, cleaner := storagetest.TmpDB(ctx, t, "")
+	defer cleaner()
+
+	testm := testmetrics.Start(ctx)
+
+	code, content, err := testm.FetchURL("/metrics")
+	_ = content
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, code)
+	// fmt.Println("/metrics => ", content)
+	assert.Contains(t, content, "insolar_badger_blocked_puts_total")
+
+	assert.NoError(t, testm.Stop())
 }

@@ -30,7 +30,7 @@ const (
 	// ReceiveSignatureForEntropy is a method for receiving signs from peers
 	ReceiveSignatureForEntropy RequestType = "Pulsar.ReceiveSignatureForEntropy"
 
-	// ReceiveEntropy is a method for receiving entropy from peers
+	// ReceiveEntropy is a method for receiving Entropy from peers
 	ReceiveEntropy RequestType = "Pulsar.ReceiveEntropy"
 
 	// ReceiveVector is a method for receiving vectors from peers

@@ -17,6 +17,7 @@
 package storagetest
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -29,7 +30,7 @@ import (
 // TmpDB returns BadgerDB's storage implementation and cleanup function.
 //
 // Creates BadgerDB in temporary directory and uses t for errors reporting.
-func TmpDB(t testing.TB, dir string) (*storage.DB, func()) {
+func TmpDB(ctx context.Context, t testing.TB, dir string) (*storage.DB, func()) {
 	tmpdir, err := ioutil.TempDir(dir, "bdb-test-")
 	if err != nil {
 		t.Fatal(err)
@@ -43,7 +44,7 @@ func TmpDB(t testing.TB, dir string) (*storage.DB, func()) {
 		t.Fatal(err)
 	}
 	// Bootstrap
-	err = db.Bootstrap()
+	err = db.Bootstrap(ctx)
 	assert.NoError(t, err)
 
 	return db, func() {

@@ -22,8 +22,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+// SeedSize is size of seed
+const SeedSize uint = 32
+
 // Seed is a type of seed
-type Seed = [32]byte
+type Seed = [SeedSize]byte
 
 // SeedGenerator holds logic with seed generation
 type SeedGenerator struct {

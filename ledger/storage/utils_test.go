@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
 )
 
 func zerohash() []byte {
@@ -51,12 +50,9 @@ func hexhash(hash string) []byte {
 	return b
 }
 
-func referenceWithHashes(domainhash, recordhash string) record.Reference {
+func referenceWithHashes(domainhash, recordhash string) core.RecordRef {
 	dh := hexhash(domainhash)
 	rh := hexhash(recordhash)
 
-	return record.Reference{
-		Domain: record.ID{Hash: dh},
-		Record: record.ID{Hash: rh},
-	}
+	return *core.NewRecordRef(*core.NewRecordID(0, dh), *core.NewRecordID(0, rh))
 }

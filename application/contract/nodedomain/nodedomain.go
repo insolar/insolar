@@ -17,6 +17,9 @@
 package nodedomain
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/insolar/insolar/application/proxy/noderecord"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -29,62 +32,139 @@ type NodeDomain struct {
 }
 
 // NewNodeDomain create new NodeDomain
-func NewNodeDomain() *NodeDomain {
-	return &NodeDomain{}
-}
-
-// RegisterNode registers node in system
-func (nd *NodeDomain) RegisterNode(pk string, role string) core.RecordRef {
-	// TODO: what should be done when record already exists?
-	newRecord := noderecord.NewNodeRecord(pk, role)
-	record := newRecord.AsChild(nd.GetReference())
-	return record.GetReference()
+func NewNodeDomain() (*NodeDomain, error) {
+	return &NodeDomain{}, nil
 }
 
 func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
+func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, publicKey string, majorityRule int, roles []string) (map[string]interface{}, error) {
+	result := map[string]interface{}{}
+	result["majority_rule"] = majorityRule
+	result["public_key"] = publicKey
+	result["roles"] = roles
+
+	bNodes, err := nd.makeBootstrapNodesConfig(numberOfBootstrapNodes)
+	if err != nil {
+		return nil, fmt.Errorf("Can't make bootstrap nodes config: %s", err.Error())
+	}
+
+	result["bootstrap_nodes"] = bNodes
+
+	return result, nil
+}
+
+func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]map[string]string, error) {
+
+	if numberOfBootstrapNodes == 0 {
+		return []map[string]string{}, nil
+	}
+
+	nodeRefs, err := nd.GetChildrenTyped(noderecord.GetPrototype())
+	if err != nil {
+		return nil, fmt.Errorf("[ makeBootstrapNodesConfig ] Problem with taking records: %s", err.Error())
+	}
+
+	requiredNodesNum := numberOfBootstrapNodes
+
+	var result []map[string]string
+	for _, ref := range nodeRefs {
+		if requiredNodesNum == 0 {
+			break
+		}
+		requiredNodesNum -= 1
+
+		nodeRecord := noderecord.GetObject(ref)
+		recordInfo, err := nodeRecord.GetNodeInfo()
+		if err != nil {
+			return nil, fmt.Errorf("[ makeBootstrapNodesConfig ] Can't get NodeInfo: %s", err.Error())
+		}
+
+		bConf := map[string]string{}
+		bConf["public_key"] = recordInfo.PublicKey
+		bConf["host"] = recordInfo.IP
+
+		result = append(result, bConf)
+	}
+
+	if requiredNodesNum != 0 {
+		return nil, fmt.Errorf("[ makeBootstrapNodesConfig ] There no enough nodes")
+	}
+
+	return result, nil
+}
+
+// RegisterNode registers node in system
+func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+	const majorityPercentage = 0.51
+
+	if majorityRule != 0 {
+		if float32(majorityRule) <= majorityPercentage*float32(numberOfBootstrapNodes) {
+			return nil, fmt.Errorf("majorityRule must be more than %.2f * numberOfBootstrapNodes", majorityPercentage)
+		}
+	}
+
+	result, err := nd.makeCertificate(numberOfBootstrapNodes, publicKey, majorityRule, roles)
+	if err != nil {
+		return nil, fmt.Errorf("[ RegisterNode ] : %s", err.Error())
+	}
+
+	// TODO: what should be done when record already exists?
+	newRecord := noderecord.NewNodeRecord(publicKey, roles, ip)
+	record, err := newRecord.AsChild(nd.GetReference())
+	if err != nil {
+		return nil, fmt.Errorf("[ RegisterNode ]: %s", err.Error())
+	}
+
+	result["reference"] = record.GetReference().String()
+
+	rawCert, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("Can't marshal certificate: %s", err.Error())
+	}
+
+	return rawCert, nil
+}
+
 // RemoveNode deletes node from registry
-func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
+func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 	node := nd.getNodeRecord(nodeRef)
-	node.Destroy()
+	return node.Destroy()
 }
 
 // IsAuthorized checks is signature correct
-func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
-	nodeR := nd.getNodeRecord(nodeRef)
-	ok, err := ecdsa.Verify(seed, signatureRaw, nodeR.GetPublicKey())
+func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (bool, error) {
+	pubKey, err := nd.getNodeRecord(nodeRef).GetPublicKey()
 	if err != nil {
-		panic(err)
+		return false, fmt.Errorf("[ IsAuthorized ] Can't get nodes: %s", err.Error())
 	}
-	return ok
+	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
+	if err != nil {
+		return false, fmt.Errorf("[ IsAuthorized ] Can't verify: %s", err.Error())
+	}
+	return ok, nil
 }
 
 // Authorize checks node and returns node info
-func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (pubKey string, role core.NodeRole, errS string) {
-	// TODO: this should be removed when proxies stop panic
-	defer func() {
-		if r := recover(); r != nil {
-			pubKey = ""
-			role = core.RoleUnknown
-			err, ok := r.(error)
-			errTxt := ""
-			if ok {
-				errTxt = err.Error()
-			}
-			errS = "[ Authorize ] Recover after panic: " + errTxt
-		}
-	}()
+func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
 	nodeR := nd.getNodeRecord(nodeRef)
-	role, pubKey = nodeR.GetRoleAndPublicKey()
-	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
+	nodeInfo, err := nodeR.GetNodeInfo()
 	if err != nil {
-		return "", core.RoleUnknown, "[ Authorize ] Problem with verifying of signature: " + err.Error()
-	}
-	if !ok {
-		return "", core.RoleUnknown, "[ Authorize ] Can't verify signature: " + err.Error()
+		return "", nil, fmt.Errorf("[ Authorize ] Problem with Getting info: %s", err.Error())
 	}
 
-	return pubKey, role, ""
+	pubKey := nodeInfo.PublicKey
+	roles := nodeInfo.Roles
+
+	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
+	if err != nil {
+		return "", nil, fmt.Errorf("[ Authorize ] Problem with verifying: %s", err.Error())
+	}
+	if !ok {
+		return "", nil, fmt.Errorf("[ Authorize ] Can't verify signature")
+	}
+
+	return pubKey, roles, nil
 }

@@ -42,6 +42,8 @@ func (e *Error) Error() error {
 	switch e.ErrType {
 	case ErrDeactivated:
 		return core.ErrDeactivated
+	case ErrStateNotAvailable:
+		return core.ErrStateNotAvailable
 	}
 	return core.ErrUnknown
 }

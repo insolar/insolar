@@ -17,6 +17,7 @@
 package goplugintestutils
 
 import (
+	"context"
 	"go/build"
 	"io/ioutil"
 	"os"
@@ -26,7 +27,6 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -80,50 +80,35 @@ func (t *TestCodeDescriptor) Code() ([]byte, error) {
 	return t.ACode, nil
 }
 
-// TestClassDescriptor ...
-type TestClassDescriptor struct {
-	AM    *TestArtifactManager
-	ARef  *core.RecordRef
-	ACode *core.RecordRef
-}
-
-// HeadRef ...
-func (t *TestClassDescriptor) HeadRef() *core.RecordRef {
-	return t.ARef
-}
-
-// StateID ...
-func (t *TestClassDescriptor) StateID() *core.RecordID {
-	panic("not implemented")
-}
-
-// CodeDescriptor ...≈
-func (t *TestClassDescriptor) CodeDescriptor() core.CodeDescriptor {
-	res, ok := t.AM.Codes[*t.ACode]
-	if !ok {
-		return nil
-	}
-	return res
-}
-
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
 	AM                *TestArtifactManager
+	ARef              *core.RecordRef
 	Data              []byte
-	Code              *core.RecordRef
-	Class             *core.RecordRef
+	State             *core.RecordID
+	PrototypeRef      *core.RecordRef
 	Delegates         map[core.RecordRef]core.RecordRef
 	ChildrenContainer []core.RecordRef
 }
 
+// Parent implementation for tests
+func (t *TestObjectDescriptor) Parent() *core.RecordRef {
+	panic("implement me")
+}
+
+// ChildPointer implementation for tests
+func (t *TestObjectDescriptor) ChildPointer() *core.RecordID {
+	panic("not implemented")
+}
+
 // HeadRef implementation for tests
 func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
-	panic("not implemented")
+	return t.ARef
 }
 
 // StateID implementation for tests
 func (t *TestObjectDescriptor) StateID() *core.RecordID {
-	panic("not implemented")
+	return t.State
 }
 
 // Memory implementation for tests
@@ -136,38 +121,51 @@ func (t *TestObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterat
 	panic("not implemented")
 }
 
-// ClassDescriptor implementation for tests
-func (t *TestObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDescriptor, error) {
-	if t.Class == nil {
-		return nil, errors.New("No class")
-	}
+// IsPrototype implementation for tests
+func (t *TestObjectDescriptor) IsPrototype() bool {
+	return false
+}
 
-	res, ok := t.AM.Classes[*t.Class]
-	if !ok {
-		return nil, errors.New("No class")
+// Prototype implementation for tests
+func (t *TestObjectDescriptor) Prototype() (*core.RecordRef, error) {
+	if t.PrototypeRef == nil {
+		panic("No prototype")
 	}
-	return res, nil
+	return t.PrototypeRef, nil
+}
+
+// Code implementation for tests
+func (t *TestObjectDescriptor) Code() (*core.RecordRef, error) {
+	if t.PrototypeRef == nil {
+		panic("No code")
+	}
+	return t.PrototypeRef, nil
 }
 
 // TestArtifactManager implementation for tests
 type TestArtifactManager struct {
-	Types   []core.MachineType
-	Codes   map[core.RecordRef]*TestCodeDescriptor
-	Objects map[core.RecordRef]*TestObjectDescriptor
-	Classes map[core.RecordRef]*TestClassDescriptor
+	Types      []core.MachineType
+	Codes      map[core.RecordRef]*TestCodeDescriptor
+	Objects    map[core.RecordRef]*TestObjectDescriptor
+	Prototypes map[core.RecordRef]*TestObjectDescriptor
+}
+
+// State implementation for tests
+func (t *TestArtifactManager) State() ([]byte, error) {
+	panic("implement me")
 }
 
 // GetChildren implementation for tests
-func (t *TestArtifactManager) GetChildren(ctx core.Context, parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+func (t *TestArtifactManager) GetChildren(ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
 	panic("implement me")
 }
 
 // NewTestArtifactManager implementation for tests
 func NewTestArtifactManager() *TestArtifactManager {
 	return &TestArtifactManager{
-		Codes:   make(map[core.RecordRef]*TestCodeDescriptor),
-		Objects: make(map[core.RecordRef]*TestObjectDescriptor),
-		Classes: make(map[core.RecordRef]*TestClassDescriptor),
+		Codes:      make(map[core.RecordRef]*TestCodeDescriptor),
+		Objects:    make(map[core.RecordRef]*TestObjectDescriptor),
+		Prototypes: make(map[core.RecordRef]*TestObjectDescriptor),
 	}
 }
 
@@ -181,22 +179,20 @@ func (t *TestArtifactManager) Stop() error { return nil }
 func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx core.Context, message core.Message) (*core.RecordRef, error) {
-	nonce := testutils.RandomRef()
+func (t *TestArtifactManager) RegisterRequest(ctx context.Context, message core.Message) (*core.RecordID, error) {
+	nonce := testutils.RandomID()
 	return &nonce, nil
 }
 
-// GetClass implementation for tests
-func (t *TestArtifactManager) GetClass(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
-	res, ok := t.Classes[object]
-	if !ok {
-		return nil, errors.New("No object")
-	}
-	return res, nil
+// RegisterResult saves VM method call result.
+func (t *TestArtifactManager) RegisterResult(
+	ctx context.Context, request core.RecordRef, payload []byte,
+) (*core.RecordID, error) {
+	panic("implement me")
 }
 
 // GetObject implementation for tests
-func (t *TestArtifactManager) GetObject(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
+func (t *TestArtifactManager) GetObject(ctx context.Context, object core.RecordRef, state *core.RecordID, approved bool) (core.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -205,7 +201,7 @@ func (t *TestArtifactManager) GetObject(ctx core.Context, object core.RecordRef,
 }
 
 // GetDelegate implementation for tests
-func (t *TestArtifactManager) GetDelegate(ctx core.Context, head, asClass core.RecordRef) (*core.RecordRef, error) {
+func (t *TestArtifactManager) GetDelegate(ctx context.Context, head, asClass core.RecordRef) (*core.RecordRef, error) {
 	obj, ok := t.Objects[head]
 	if !ok {
 		return nil, errors.New("No object")
@@ -220,12 +216,12 @@ func (t *TestArtifactManager) GetDelegate(ctx core.Context, head, asClass core.R
 }
 
 // DeclareType implementation for tests
-func (t *TestArtifactManager) DeclareType(ctx core.Context, domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeclareType(ctx context.Context, domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
 // DeployCode implementation for tests
-func (t *TestArtifactManager) DeployCode(ctx core.Context, domain core.RecordRef, request core.RecordRef, code []byte, mt core.MachineType) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeployCode(ctx context.Context, domain core.RecordRef, request core.RecordRef, code []byte, mt core.MachineType) (*core.RecordID, error) {
 	ref := testutils.RandomRef()
 
 	t.Codes[ref] = &TestCodeDescriptor{
@@ -233,11 +229,12 @@ func (t *TestArtifactManager) DeployCode(ctx core.Context, domain core.RecordRef
 		ACode:        code,
 		AMachineType: core.MachineTypeGoPlugin,
 	}
-	return &ref, nil
+	id := ref.Record()
+	return id, nil
 }
 
 // GetCode implementation for tests
-func (t *TestArtifactManager) GetCode(ctx core.Context, code core.RecordRef) (core.CodeDescriptor, error) {
+func (t *TestArtifactManager) GetCode(ctx context.Context, code core.RecordRef) (core.CodeDescriptor, error) {
 	res, ok := t.Codes[code]
 	if !ok {
 		return nil, errors.New("No code")
@@ -245,97 +242,73 @@ func (t *TestArtifactManager) GetCode(ctx core.Context, code core.RecordRef) (co
 	return res, nil
 }
 
-// ActivateClass implementation for tests
-func (t *TestArtifactManager) ActivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, code core.RecordRef) (*core.RecordID, error) {
-	t.Classes[request] = &TestClassDescriptor{
-		AM:   t,
-		ARef: &request,
+// ActivatePrototype implementation for tests
+func (t *TestArtifactManager) ActivatePrototype(
+	ctx context.Context,
+	domain, request, parent, code core.RecordRef,
+	memory []byte,
+) (core.ObjectDescriptor, error) {
+	id := testutils.RandomID()
+
+	t.Prototypes[request] = &TestObjectDescriptor{
+		AM:           t,
+		ARef:         &request,
+		Data:         memory,
+		State:        &id,
+		PrototypeRef: &code,
+		Delegates:    make(map[core.RecordRef]core.RecordRef),
 	}
 
-	id := testutils.RandomID()
-	return &id, nil
-}
-
-// DeactivateClass implementation for tests
-func (t *TestArtifactManager) DeactivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordID, error) {
-	panic("not implemented")
-}
-
-// UpdateClass implementation for tests
-func (t *TestArtifactManager) UpdateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordID, error) {
-	classDesc, ok := t.Classes[class]
-	if !ok {
-		return nil, errors.New("wrong class")
-	}
-	classDesc.ACode = &code
-	id := testutils.RandomID()
-	return &id, nil
+	return t.Objects[request], nil
 }
 
 // ActivateObject implementation for tests
 func (t *TestArtifactManager) ActivateObject(
-	ctx core.Context,
-	domain core.RecordRef,
-	request core.RecordRef,
-	class core.RecordRef,
-	parent core.RecordRef,
+	ctx context.Context,
+	domain, request, parent, prototype core.RecordRef,
+	asDelegate bool,
 	memory []byte,
-) (*core.RecordID, error) {
-	codeRef := t.Classes[class].ACode
+) (core.ObjectDescriptor, error) {
+	id := testutils.RandomID()
 
 	t.Objects[request] = &TestObjectDescriptor{
-		AM:        t,
-		Data:      memory,
-		Code:      codeRef,
-		Class:     &class,
-		Delegates: make(map[core.RecordRef]core.RecordRef),
+		AM:           t,
+		ARef:         &request,
+		Data:         memory,
+		State:        &id,
+		PrototypeRef: &prototype,
+		Delegates:    make(map[core.RecordRef]core.RecordRef),
+	}
+	if asDelegate {
+		pObj, ok := t.Objects[parent]
+		if !ok {
+			return nil, errors.New("No parent to inject delegate into")
+		}
+
+		pObj.Delegates[prototype] = request
 	}
 
-	id := testutils.RandomID()
-	return &id, nil
-}
-
-// ActivateObjectDelegate implementation for tests
-func (t *TestArtifactManager) ActivateObjectDelegate(
-	ctx core.Context,
-	domain core.RecordRef,
-	request core.RecordRef,
-	class core.RecordRef,
-	parent core.RecordRef,
-	memory []byte,
-) (*core.RecordID, error) {
-	id, err := t.ActivateObject(ctx, domain, request, class, parent, memory)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to generate ref")
-	}
-
-	pObj, ok := t.Objects[parent]
-	if !ok {
-		return nil, errors.New("No parent to inject delegate into")
-	}
-
-	pObj.Delegates[class] = request
-
-	return id, nil
+	return t.Objects[request], nil
 }
 
 // DeactivateObject implementation for tests
 func (t *TestArtifactManager) DeactivateObject(
-	ctx core.Context,
-	domain core.RecordRef, request core.RecordRef, obj core.RecordRef,
+	ctx context.Context,
+	domain core.RecordRef, request core.RecordRef, obj core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
-// UpdateObject implementation for tests
-func (t *TestArtifactManager) UpdateObject(
-	ctx core.Context,
+// UpdatePrototype implementation for tests
+func (t *TestArtifactManager) UpdatePrototype(
+	ctx context.Context,
 	domain core.RecordRef,
 	request core.RecordRef,
-	object core.RecordRef,
+	object core.ObjectDescriptor,
 	memory []byte,
-) (*core.RecordID, error) {
-	objDesc, ok := t.Objects[object]
+	code *core.RecordRef,
+) (core.ObjectDescriptor, error) {
+	objDesc, ok := t.Prototypes[*object.HeadRef()]
 	if !ok {
 		return nil, errors.New("No object to update")
 	}
@@ -343,7 +316,37 @@ func (t *TestArtifactManager) UpdateObject(
 	objDesc.Data = memory
 
 	// TODO: return real exact "ref"
-	return &core.RecordID{}, nil
+	return objDesc, nil
+}
+
+// UpdateObject implementation for tests
+func (t *TestArtifactManager) UpdateObject(
+	ctx context.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	object core.ObjectDescriptor,
+	memory []byte,
+) (core.ObjectDescriptor, error) {
+	objDesc, ok := t.Objects[*object.HeadRef()]
+	if !ok {
+		return nil, errors.New("No object to update")
+	}
+
+	objDesc.Data = memory
+
+	// TODO: return real exact "ref"
+	return objDesc, nil
+}
+
+// RegisterValidation implementation for tests
+func (t *TestArtifactManager) RegisterValidation(
+	ctx context.Context,
+	object core.RecordRef,
+	state core.RecordID,
+	isValid bool,
+	validationMessages []core.Message,
+) error {
+	panic("implement me")
 }
 
 // CBORMarshal - testing serialize helper
@@ -382,22 +385,26 @@ func AMPublishCode(
 ) (
 	typeRef *core.RecordRef,
 	codeRef *core.RecordRef,
-	classRef *core.RecordRef,
+	protoRef *core.RecordRef,
 	err error,
 ) {
-	ctx := inscontext.TODO()
-	codeRef, err = am.DeployCode(
+	ctx := context.TODO()
+	codeID, err := am.DeployCode(
 		ctx, domain, request, code, mtype,
 	)
 	assert.NoError(t, err, "create code on ledger")
+	codeRef = &core.RecordRef{}
+	codeRef.SetRecord(*codeID)
 
 	nonce := testutils.RandomRef()
-	classRef, err = am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
+	protoID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: nonce})
 	assert.NoError(t, err)
-	_, err = am.ActivateClass(ctx, domain, *classRef, *codeRef)
+	protoRef = &core.RecordRef{}
+	protoRef.SetRecord(*protoID)
+	_, err = am.ActivatePrototype(ctx, domain, *protoRef, *am.GenesisRef(), *codeRef, nil)
 	assert.NoError(t, err, "create template for contract data")
 
-	return typeRef, codeRef, classRef, err
+	return typeRef, codeRef, protoRef, err
 }
 
 // ContractsBuilder for tests
@@ -406,7 +413,7 @@ type ContractsBuilder struct {
 
 	ArtifactManager core.ArtifactManager
 	IccPath         string
-	Classes         map[string]*core.RecordRef
+	Prototypes      map[string]*core.RecordRef
 	Codes           map[string]*core.RecordRef
 }
 
@@ -420,7 +427,7 @@ func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
 
 	cb := &ContractsBuilder{
 		root:            tmpDir,
-		Classes:         make(map[string]*core.RecordRef),
+		Prototypes:      make(map[string]*core.RecordRef),
 		Codes:           make(map[string]*core.RecordRef),
 		ArtifactManager: am,
 		IccPath:         icc}
@@ -438,17 +445,19 @@ func (cb *ContractsBuilder) Clean() {
 
 // Build ...
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 
 	for name := range contracts {
 		nonce := testutils.RandomRef()
-		class, err := cb.ArtifactManager.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
+		protoID, err := cb.ArtifactManager.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: nonce})
 		if err != nil {
 			return err
 		}
 
-		log.Debugf("Registered class %q for contract %q in %q", class.String(), name, cb.root)
-		cb.Classes[name] = class
+		protoRef := core.RecordRef{}
+		protoRef.SetRecord(*protoID)
+		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
+		cb.Prototypes[name] = &protoRef
 	}
 
 	re := regexp.MustCompile(`package\s+\S+`)
@@ -481,21 +490,28 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			return err
 		}
 
-		code, err := cb.ArtifactManager.DeployCode(
+		log.Debugf("Deploying code for contract %q", name)
+		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
 			core.RecordRef{}, core.RecordRef{},
 			pluginBinary, core.MachineTypeGoPlugin,
 		)
+		codeRef := &core.RecordRef{}
+		codeRef.SetRecord(*codeID)
 		if err != nil {
 			return err
 		}
-		log.Debugf("Deployed code %q for contract %q in %q", code.String(), name, cb.root)
-		cb.Codes[name] = code
+		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
+		cb.Codes[name] = codeRef
 
-		_, err = cb.ArtifactManager.ActivateClass(
+		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
+		_, err = cb.ArtifactManager.ActivatePrototype(
 			ctx,
-			core.RecordRef{}, *cb.Classes[name],
-			*code,
+			core.RecordRef{},
+			*cb.Prototypes[name],
+			*cb.ArtifactManager.GenesisRef(), // FIXME: Only bootstrap can do this!
+			*codeRef,
+			nil,
 		)
 		if err != nil {
 			return err
@@ -518,7 +534,7 @@ func (cb *ContractsBuilder) proxy(name string) error {
 	out, err := exec.Command(
 		cb.IccPath, "proxy",
 		"-o", filepath.Join(dstDir, "main.go"),
-		"--code-reference", cb.Classes[name].String(),
+		"--code-reference", cb.Prototypes[name].String(),
 		contractPath,
 	).CombinedOutput()
 	if err != nil {

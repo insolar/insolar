@@ -23,4 +23,6 @@ var (
 	ErrUnknown = errors.New("unknown error")
 	// ErrDeactivated returned when requested object is deactivated.
 	ErrDeactivated = errors.New("object is deactivated")
+	// ErrStateNotAvailable returned when requested object is deactivated.
+	ErrStateNotAvailable = errors.New("object state is not available")
 )

@@ -17,10 +17,13 @@
 package ledger
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
@@ -33,6 +36,7 @@ type Ledger struct {
 	pm      *pulsemanager.PulseManager
 	jc      *jetcoordinator.JetCoordinator
 	handler *artifactmanager.MessageHandler
+	ls      *localstorage.LocalStorage
 }
 
 // GetPulseManager returns PulseManager.
@@ -50,8 +54,13 @@ func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	return l.am
 }
 
+// GetLocalStorage returns local storage to work with.
+func (l *Ledger) GetLocalStorage() core.LocalStorage {
+	return l.ls
+}
+
 // NewLedger creates new ledger instance.
-func NewLedger(conf configuration.Ledger) (*Ledger, error) {
+func NewLedger(ctx context.Context, conf configuration.Ledger) (*Ledger, error) {
 	var err error
 	db, err := storage.NewDB(conf, nil)
 	if err != nil {
@@ -73,8 +82,12 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	if err != nil {
 		return nil, err
 	}
+	ls, err := localstorage.NewLocalStorage(db)
+	if err != nil {
+		return nil, err
+	}
 
-	err = db.Bootstrap()
+	err = db.Bootstrap(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +98,7 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 		pm:      pm,
 		jc:      jc,
 		handler: handler,
+		ls:      ls,
 	}
 
 	return &ledger, nil
@@ -98,6 +112,7 @@ func NewTestLedger(
 	pm *pulsemanager.PulseManager,
 	jc *jetcoordinator.JetCoordinator,
 	amh *artifactmanager.MessageHandler,
+	ls *localstorage.LocalStorage,
 ) *Ledger {
 	return &Ledger{
 		db:      db,
@@ -105,11 +120,12 @@ func NewTestLedger(
 		pm:      pm,
 		jc:      jc,
 		handler: amh,
+		ls:      ls,
 	}
 }
 
 // Start initializes external ledger dependencies.
-func (l *Ledger) Start(c core.Components) error {
+func (l *Ledger) Start(ctx context.Context, c core.Components) error {
 	var err error
 	if err = l.am.Link(c); err != nil {
 		return err
@@ -120,11 +136,14 @@ func (l *Ledger) Start(c core.Components) error {
 	if err = l.handler.Link(c); err != nil {
 		return err
 	}
+	if err = l.jc.Link(c); err != nil {
+		return err
+	}
 
 	return nil
 }
 
 // Stop stops Ledger gracefully.
-func (l *Ledger) Stop() error {
+func (l *Ledger) Stop(ctx context.Context) error {
 	return l.db.Close()
 }
