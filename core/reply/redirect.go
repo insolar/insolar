@@ -10,7 +10,7 @@ type GetObjectRedirectReply struct {
 	To *core.RecordRef
 	StateID *core.RecordID
 
-	Token *core.DelegationToken
+	Token core.DelegationToken
 }
 
 

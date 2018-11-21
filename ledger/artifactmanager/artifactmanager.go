@@ -173,7 +173,7 @@ func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.
 
 	for maxCountOfReply > 0 {
 		redirectResponse := response.(*reply.GetObjectRedirectReply)
-		panic("need to insert token from response")
+
 		genericReact, err := m.bus(ctx).Send(
 			ctx,
 			&message.GetObject{
@@ -181,6 +181,8 @@ func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.
 				State:    redirectResponse.StateID,
 				Approved: approved,
 			},
+			core.SendOptionToken(redirectResponse.Token),
+			core.SendOptionDestination(redirectResponse.To),
 		)
 
 		if genericReact.Type() != reply.TypeGetObjectRedirect {

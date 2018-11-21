@@ -7,13 +7,13 @@ type SendOptions struct {
 
 type SendOption func(*SendOptions)
 
-func Receiver(receiver *RecordRef) SendOption {
+func SendOptionDestination(receiver *RecordRef) SendOption {
 	return func(args *SendOptions) {
 		args.Receiver = receiver
 	}
 }
 
-func Token(token DelegationToken) SendOption {
+func SendOptionToken(token DelegationToken) SendOption {
 	return func(args *SendOptions) {
 		args.Token = token
 	}
