@@ -5,6 +5,8 @@ min_roles:
   virtual:  1
   heavy_material: 2
   light_material: 4
+pulsar_public_keys:
+  - "pulsar_public_key"
 discovery_nodes:
   -
     host: "HOST1"

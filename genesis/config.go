@@ -20,7 +20,8 @@ type genesisConfig struct {
 		HeavyMaterial uint `mapstructure:"heavy_material"`
 		LightMaterial uint `mapstructure:"light_material"`
 	} `mapstructure:"min_roles"`
-	DiscoveryNodes []discovery `mapstructure:"discovery_nodes"`
+	PulsarPublicKeys []string    `mapstructure:"pulsar_public_keys"`
+	DiscoveryNodes   []discovery `mapstructure:"discovery_nodes"`
 }
 
 func parseGenesisConfig(path string) (*genesisConfig, error) {
