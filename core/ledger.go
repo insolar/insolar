@@ -246,3 +246,13 @@ type KV struct {
 	K []byte
 	V []byte
 }
+
+type ExportResult struct {
+	Data     map[string]interface{}
+	NextFrom *PulseNumber
+	Size     int
+}
+
+type Exporter interface {
+	Export(ctx context.Context, fromPulse PulseNumber, size int) (*ExportResult, error)
+}
