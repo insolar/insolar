@@ -127,7 +127,7 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, setters ...core.Option) (core.Reply, error) {
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, setters ...core.SendOption) (core.Reply, error) {
 	parcel, err := mb.CreateParcel(ctx, msg)
 	if err != nil {
 		return nil, err
