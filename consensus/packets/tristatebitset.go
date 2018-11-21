@@ -23,6 +23,8 @@ import (
 	"github.com/damnever/bitarray"
 )
 
+const lastBitMask = 0x00000001
+
 // TriStateBitSet bitset implementation.
 type TriStateBitSet struct {
 	CompressedSet     bool
@@ -56,8 +58,8 @@ func (dbs *TriStateBitSet) GetBuckets(mapper BitSetMapper) []*BitSetCell {
 }
 
 func (dbs *TriStateBitSet) ApplyChanges(changes []*BitSetCell) (BitSet, error) {
-	for _, bucket := range changes {
-		dbs.changeBucketState(bucket)
+	for _, cell := range changes {
+		dbs.changeBucketState(cell)
 	}
 	return dbs, nil
 }
@@ -70,29 +72,31 @@ func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
 	return nil
 }
 
-func (dbs *TriStateBitSet) changeBucketState(bucket *BitSetCell) error {
-	for _, b := range dbs.cells {
-		n, err := dbs.mapper.RefToIndex(b.NodeID)
-		if err != nil {
-			return err
-		}
-		dbs.cells[n] = b
+func (dbs *TriStateBitSet) changeBucketState(cell *BitSetCell) error {
+	n, err := dbs.mapper.RefToIndex(cell.NodeID)
+	if err != nil {
+		return err
 	}
+	dbs.cells[n] = cell
 	return nil
 }
 
 func (dbs *TriStateBitSet) changeBitState(array *bitarray.BitArray, n int, state TriState) error {
-	bit := int(state & 0x00000001)
-	_, err := array.Put(2*n, bit)
+	err := dbs.putLastBit(state, array, 2*n)
 	if err != nil {
 		return err
 	}
-	bit = int((state >> 1) & 0x00000001)
-	_, err = array.Put(2*n+1, bit)
+	err = dbs.putLastBit(state>>1, array, 2*n+1)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (dbs *TriStateBitSet) putLastBit(state TriState, array *bitarray.BitArray, i int) error {
+	bit := int(state & lastBitMask)
+	_, err := array.Put(i, bit)
+	return err
 }
 
 func (dbs *TriStateBitSet) bucketToArray(buckets []*BitSetCell) error {
