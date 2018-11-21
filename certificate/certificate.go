@@ -137,10 +137,12 @@ func (cert *Certificate) GetRole() core.NodeRole {
 	return core.GetRoleFromString(cert.Role)
 }
 
+// GetRootDomainReference returns RootDomain reference as string
 func (cert *Certificate) GetRootDomainReference() string {
 	return cert.RootDomainReference
 }
 
+// SetRootDomainReference sets RootDomain reference for certificate
 func (cert *Certificate) SetRootDomainReference(ref *core.RecordRef) {
 	cert.RootDomainReference = ref.String()
 }
