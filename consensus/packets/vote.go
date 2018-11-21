@@ -109,3 +109,61 @@ func (v *NodeJoinSupplementaryVote) Serialize() ([]byte, error) {
 func (nlv *StateFraudNodeSupplementaryVote) Type() VoteType {
 	return TypeStateFraudNodeSupplementaryVote
 }
+
+// Deserialize implements interface method
+func (v *StateFraudNodeSupplementaryVote) Deserialize(data io.Reader) error {
+
+	err := v.Node1PulseProof.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Deserialize ] Can't read Node1PulseProof")
+	}
+
+	err = v.Node2PulseProof.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Deserialize ] Can't read Node2PulseProof")
+	}
+
+	err = v.PulseData.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Deserialize ] Can't read PulseData")
+	}
+
+	return nil
+}
+
+// Serialize implements interface method
+func (v *StateFraudNodeSupplementaryVote) Serialize() ([]byte, error) {
+	result := allocateBuffer(2048)
+
+	node1PulseProofRaw, err := v.Node1PulseProof.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Serialize ] Can't serialize Node1PulseProof")
+	}
+
+	_, err = result.Write(node1PulseProofRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Serialize ] Can't append Node1PulseProof")
+	}
+
+	node2PulseProofRaw, err := v.Node2PulseProof.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Serialize ] Can't serialize Node2PulseProof")
+	}
+
+	_, err = result.Write(node2PulseProofRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Serialize ] Can't append Node2PulseProof")
+	}
+
+	// serializing of  PulseData
+	pulseDataRaw, err := v.PulseData.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Serialize ] Can't serialize PulseData")
+	}
+	_, err = result.Write(pulseDataRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ StateFraudNodeSupplementaryVote.Serialize ] Can't append PulseData")
+	}
+
+	return result.Bytes(), nil
+}
