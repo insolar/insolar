@@ -99,22 +99,6 @@ func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyPr
 	return &cert, nil
 }
 
-// GenerateKeys generates certificate keys
-func (cert *Certificate) GenerateKeys() error {
-	// keyProcessor := platformpolicy.NewKeyProcessor()
-	// privateKey, err := keyProcessor.GeneratePrivateKey()
-	// if err != nil {
-	// 	return errors.Wrap(err, "[ GenerateKeys ] Failed to generate private key.")
-	// }
-	//
-	// err = cert.setKeys(privateKey)
-	// if err != nil {
-	// 	return errors.Wrap(err, "[ GenerateKeys ] Problem with setting keys.")
-	// }
-
-	return nil
-}
-
 func (cert *Certificate) Dump() (string, error) {
 	result, err := json.MarshalIndent(cert, "", "    ")
 	if err != nil {

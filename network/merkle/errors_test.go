@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/certificate"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -127,7 +126,6 @@ func (t *calculatorErrorSuite) TestGetCloudProofCalculateError() {
 }
 
 func TestCalculatorError(t *testing.T) {
-	c := certificate.GetTestCertificate()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, clean := ledgertestutils.TmpLedger(t, "", core.Components{})
 
@@ -148,7 +146,7 @@ func TestCalculatorError(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	nk := nodekeeper.GetTestNodekeeper(service)
-	cm.Inject(nk, l.ArtifactManager, c, calculator, service, scheme)
+	cm.Inject(nk, l.ArtifactManager, calculator, service, scheme)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)
