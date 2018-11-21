@@ -470,26 +470,3 @@ func (g *Genesis) isLightExecutor(ctx context.Context) (bool, error) {
 	}
 	return true, nil
 }
-
-func (g *Genesis) getRootDomainRef(ctx context.Context) (*core.RecordRef, error) {
-	genesisRef := g.ArtifactManager.GenesisRef()
-	if genesisRef == nil {
-		return nil, errors.New("[ getRootDomainRef ] Genesis ref is nil")
-	}
-	rootObj, err := g.ArtifactManager.GetObject(ctx, *genesisRef, nil, true)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
-	}
-	rootRefChildren, err := rootObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootRefChildren.HasNext() {
-		rootDomainRef, err := rootRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
-		}
-		return rootDomainRef, nil
-	}
-	return nil, nil
-}
