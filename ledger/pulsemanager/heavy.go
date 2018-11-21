@@ -46,13 +46,13 @@ func (m *PulseManager) HeavySync(
 		msg := &message.HeavyPayload{Records: recs}
 		reply, senderr := m.Bus.Send(ctx, msg)
 		if senderr != nil {
-			return core.PulseNumber(0), senderr
+			return 0, senderr
 		}
 		// TODO: check reply?
 		_ = reply
 	}
 	inslogger.FromContext(ctx).Debugf(
-		"synchronize on [%v:%v) finised (maximum record pulse is %v)",
+		"synchronize on [%v:%v] finised (maximum record pulse is %v)",
 		start, end, replicator.LastPulse())
 	return replicator.LastPulse(), nil
 }
