@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/exporter"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -94,6 +95,7 @@ func GetLedgerComponents(conf configuration.Ledger) []interface{} {
 		pulsemanager.NewPulseManager(db),
 		artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(1)),
 		localstorage.NewLocalStorage(db),
+		exporter.NewExporter(db),
 	}
 }
 

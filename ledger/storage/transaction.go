@@ -18,7 +18,6 @@ package storage
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
@@ -215,15 +214,6 @@ func (m *TransactionManager) SetObjectIndex(
 		return err
 	}
 	return m.set(ctx, k, encoded)
-}
-
-// GetLatestPulseNumber returns current pulse number.
-func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
-	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
-	if err != nil {
-		return 0, err
-	}
-	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
 }
 
 // set stores value by key.
