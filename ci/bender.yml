@@ -1,13 +1,13 @@
 groups: []
 
 resources:
-- name: lock
-  type: pool
-  source:
-    uri: git@github.com:insolar/locks.git
-    branch: master
-    pool: builds
-    private_key: ((meta.github.lock_key))
+  #- name: lock
+  #  type: pool
+  #  source:
+  #    uri: git@github.com:insolar/locks.git
+  #    branch: master
+  #    pool: builds
+  #    private_key: ((meta.github.lock_key))
 - name: branches
   type: smuggler
   source:
@@ -70,8 +70,8 @@ jobs:
   plan:
   - get: branches
     trigger: true
-  - put: lock
-    params: {acquire: true}
+    #  - put: lock
+    #    params: {acquire: true}
   - get: insolar
   - task: generate_pipelines
     config:
@@ -110,9 +110,9 @@ jobs:
         icon_emoji: ':sun_with_face:'
         silent: true
         text: rebuild branches
-    ensure:
-      put: lock
-      params: {release: lock}
+        #    ensure:
+        #      put: lock
+        #      params: {release: lock}
   - put: deploy
     params:
       pipelines:
@@ -126,8 +126,8 @@ jobs:
   plan:
   - get: pull-requests
     trigger: true
-  - put: lock
-    params: {acquire: true}
+    #  - put: lock
+    #    params: {acquire: true}
   - get: insolar
   - task: generate-pulls
     config:
@@ -155,9 +155,9 @@ jobs:
       - name: insolar
       outputs:
       - name: pipelines
-    ensure:
-      put: lock
-      params: {release: lock}
+        #    ensure:
+        #      put: lock
+        #      params: {release: lock}
   - put: deploy
     params:
       pipelines:
