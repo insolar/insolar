@@ -30,7 +30,6 @@ type DeviantBitSet struct {
 	HighBitLength     uint8
 	Payload           []byte
 
-	array  *bitarray.BitArray
 	bucket []*BitSetBucket
 	mapper BitSetMapper
 }
@@ -39,7 +38,6 @@ func NewDeviantBitSet(buckets []*BitSetBucket, mapper BitSetMapper) (*DeviantBit
 	bitset := &DeviantBitSet{
 		bucket: buckets,
 		mapper: mapper,
-		array:  bitarray.New(mapper.Length() * 2), // cuz stores 2 bits for 1 id
 	}
 	err := bitset.bucketToArray(buckets)
 	if err != nil {
@@ -55,14 +53,6 @@ func (dbs *DeviantBitSet) GetBuckets(mapper BitSetMapper) []*BitSetBucket {
 func (dbs *DeviantBitSet) ApplyChanges(changes []*BitSetBucket) (BitSet, error) {
 	for _, bucket := range changes {
 		dbs.changeBucketState(bucket)
-		n, err := dbs.mapper.RefToIndex(bucket.NodeID)
-		if err != nil {
-			return nil, err
-		}
-		err = dbs.changeBitState(n, bucket.State)
-		if err != nil {
-			return nil, err
-		}
 	}
 	return dbs, nil
 }
@@ -85,23 +75,23 @@ func (dbs *DeviantBitSet) changeBucketState(bucket *BitSetBucket) {
 	dbs.bucket = append(dbs.bucket, bucket)
 }
 
-func (dbs *DeviantBitSet) changeBitState(n int, state TriState) error {
+func (dbs *DeviantBitSet) changeBitState(array *bitarray.BitArray, n int, state TriState) error {
 	var err error
 	switch state {
 	case Legit:
-		err = dbs.array.Clear(2*n, 2*n+1)
+		err = array.Clear(2*n, 2*n+1)
 	case TimedOut:
-		err = dbs.array.Clear(2*n, 2*n+1)
+		err = array.Clear(2*n, 2*n+1)
 		if err != nil {
 			return err
 		}
-		_, err = dbs.array.Put(2*n+1, 1)
+		_, err = array.Put(2*n+1, 1)
 	case Fraud:
-		err = dbs.array.Clear(2*n, 2*n+1)
+		err = array.Clear(2*n, 2*n+1)
 		if err != nil {
 			return err
 		}
-		_, err = dbs.array.Put(2*n, 1)
+		_, err = array.Put(2*n, 1)
 	default:
 		return errors.New("failed to change bit state: unknown state")
 	}
@@ -112,12 +102,13 @@ func (dbs *DeviantBitSet) changeBitState(n int, state TriState) error {
 }
 
 func (dbs *DeviantBitSet) bucketToArray(buckets []*BitSetBucket) error {
+	array := bitarray.New(dbs.mapper.Length() * 2) // cuz stores 2 bits for 1 id
 	for _, bucket := range buckets {
 		n, err := dbs.mapper.RefToIndex(bucket.NodeID)
 		if err != nil {
 			return err
 		}
-		err = dbs.changeBitState(n, bucket.State)
+		err = dbs.changeBitState(array, n, bucket.State)
 		if err != nil {
 			return err
 		}
