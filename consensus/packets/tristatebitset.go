@@ -46,7 +46,7 @@ func NewTriStateBitSet(cells []*BitSetCell, mapper BitSetMapper) (*TriStateBitSe
 	return bitset, nil
 }
 
-func (dbs *TriStateBitSet) GetBuckets(mapper BitSetMapper) []*BitSetCell {
+func (dbs *TriStateBitSet) GetBuckets() []*BitSetCell {
 	return dbs.cells
 }
 
