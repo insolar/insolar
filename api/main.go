@@ -159,7 +159,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 // Runner implements Component for API
 type Runner struct {
 	MessageBus          core.MessageBus         `inject:""`
-	Genesis             core.Genesis            `inject:""`
+	Certificate         core.Certificate        `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
@@ -208,7 +208,7 @@ func (ar *Runner) IsAPIRunner() bool {
 
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
-	rootDomainReference := ar.Genesis.GetRootDomainRef()
+	rootDomainReference := ar.Certificate.GetRootDomainReference()
 
 	ar.seedmanager = seedmanager.New()
 
