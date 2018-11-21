@@ -17,91 +17,82 @@
 package packets
 
 import (
+	"errors"
 	"io"
 
 	"github.com/damnever/bitarray"
-	"github.com/pkg/errors"
 )
 
-type DeviantBitSet struct {
+// TriStateBitSet bitset implementation.
+type TriStateBitSet struct {
 	CompressedSet     bool
 	HighBitLengthFlag bool
 	LowBitLength      uint8
 	HighBitLength     uint8
 	Payload           []byte
 
-	bucket []*BitSetBucket
+	cells  []*BitSetCell
 	mapper BitSetMapper
 }
 
-func NewDeviantBitSet(buckets []*BitSetBucket, mapper BitSetMapper) (*DeviantBitSet, error) {
-	bitset := &DeviantBitSet{
-		bucket: buckets,
+// NewTriStateBitSet creates and returns a tristatebitset.
+func NewTriStateBitSet(cells []*BitSetCell, mapper BitSetMapper) (*TriStateBitSet, error) {
+	if (mapper == nil) || (cells == nil) {
+		return nil, errors.New("failed to create tristatebitset")
+	}
+	bitset := &TriStateBitSet{
+		cells:  cells,
 		mapper: mapper,
 	}
-	err := bitset.bucketToArray(buckets)
+	err := bitset.bucketToArray(cells)
 	if err != nil {
 		return nil, err
 	}
 	return bitset, nil
 }
 
-func (dbs *DeviantBitSet) GetBuckets(mapper BitSetMapper) []*BitSetBucket {
-	return dbs.bucket
+func (dbs *TriStateBitSet) GetBuckets(mapper BitSetMapper) []*BitSetCell {
+	return dbs.cells
 }
 
-func (dbs *DeviantBitSet) ApplyChanges(changes []*BitSetBucket) (BitSet, error) {
+func (dbs *TriStateBitSet) ApplyChanges(changes []*BitSetCell) (BitSet, error) {
 	for _, bucket := range changes {
 		dbs.changeBucketState(bucket)
 	}
 	return dbs, nil
 }
 
-func (dbs *DeviantBitSet) Serialize() ([]byte, error) {
+func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 	return nil, nil
 }
 
-func (dbs *DeviantBitSet) Deserialize(data io.Reader) error {
+func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
 	return nil
 }
 
-func (dbs *DeviantBitSet) changeBucketState(bucket *BitSetBucket) {
-	for _, b := range dbs.bucket {
-		if b.NodeID == bucket.NodeID {
-			b.State = bucket.State
-			return
+func (dbs *TriStateBitSet) changeBucketState(bucket *BitSetCell) error {
+	for _, b := range dbs.cells {
+		n, err := dbs.mapper.RefToIndex(b.NodeID)
+		if err != nil {
+			return err
 		}
+		dbs.cells[n] = b
 	}
-	dbs.bucket = append(dbs.bucket, bucket)
+	return nil
 }
 
-func (dbs *DeviantBitSet) changeBitState(array *bitarray.BitArray, n int, state TriState) error {
-	var err error
-	switch state {
-	case Legit:
-		err = array.Clear(2*n, 2*n+1)
-	case TimedOut:
-		err = array.Clear(2*n, 2*n+1)
-		if err != nil {
-			return err
-		}
-		_, err = array.Put(2*n+1, 1)
-	case Fraud:
-		err = array.Clear(2*n, 2*n+1)
-		if err != nil {
-			return err
-		}
-		_, err = array.Put(2*n, 1)
-	default:
-		return errors.New("failed to change bit state: unknown state")
-	}
+func (dbs *TriStateBitSet) changeBitState(array *bitarray.BitArray, n int, state TriState) error {
+	bit := int(state & 0x00000001)
+	_, err := array.Put(2*n, bit)
+	bit = int((state >> 1) & 0x00000001)
+	_, err = array.Put(2*n+1, bit)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (dbs *DeviantBitSet) bucketToArray(buckets []*BitSetBucket) error {
+func (dbs *TriStateBitSet) bucketToArray(buckets []*BitSetCell) error {
 	array := bitarray.New(dbs.mapper.Length() * 2) // cuz stores 2 bits for 1 id
 	for _, bucket := range buckets {
 		n, err := dbs.mapper.RefToIndex(bucket.NodeID)

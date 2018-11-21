@@ -801,7 +801,7 @@ func (nlv *NodeListVote) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-// DeviantBitSet auxiliar constants
+// TriStateBitSet auxiliar constants
 const (
 	// take high bit
 	compressedSetMask   = 0x80

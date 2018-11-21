@@ -33,8 +33,8 @@ const (
 	Fraud
 )
 
-// BitSetBucket is structure that contains the state of the node
-type BitSetBucket struct {
+// BitSetCell is structure that contains the state of the node
+type BitSetCell struct {
 	NodeID core.RecordRef
 	State  TriState
 }
@@ -63,12 +63,12 @@ type BitSetMapper interface {
 type BitSet interface {
 	Serializer
 	// GetBuckets get buckets of bitset
-	GetBuckets(mapper BitSetMapper) []*BitSetBucket
+	GetBuckets(mapper BitSetMapper) []*BitSetCell
 	// ApplyChanges returns copy of the current bitset with changes applied
-	ApplyChanges(changes []*BitSetBucket) (BitSet, error)
+	ApplyChanges(changes []*BitSetCell) (BitSet, error)
 }
 
 // NewBitSet creates bitset from a set of buckets and the mapper
-func NewBitSet(buckets []*BitSetBucket, mapper BitSetMapper) (BitSet, error) {
-	return NewDeviantBitSet(buckets, mapper)
+func NewBitSet(buckets []*BitSetCell, mapper BitSetMapper) (BitSet, error) {
+	return NewTriStateBitSet(buckets, mapper)
 }
