@@ -48,6 +48,21 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 	return nil
 }
 
+// GetCert method returns node certificate
+func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
+	return nil, errors.New("not implemented")
+}
+
+// WriteActiveNodes writes active nodes to ledger
+func (nc *NetworkCoordinator) IsValidCert(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) (bool, error) {
+	return false, errors.New("not implemented")
+}
+
+// WriteActiveNodes writes active nodes to ledger
+func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
+	return errors.New("not implemented")
+}
+
 // RandomUint64 generates random uint64
 func RandomUint64() uint64 {
 	buf := make([]byte, 8)
@@ -117,54 +132,3 @@ func (nc *NetworkCoordinator) fetchNodeDomainRef(ctx context.Context) (*core.Rec
 
 	return nodeDomainRef, nil
 }
-
-// WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
-	return errors.New("not implemented")
-}
-
-// Authorize authorizes node by verifying it's signature
-/*func (nc *NetworkCoordinator) Authorize(ctx context.Context, nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
-	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
-	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't get nodeDomainRef")
-	}
-
-	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
-
-	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't send request")
-	}
-
-	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
-	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't extract response")
-	}
-
-	return pubKey, role, nil
-}*/
-
-// RegisterNode registers node in nodedomain
-/*func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey crypto.PublicKey, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
-	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ RegisterNode ] Can't get nodeDomainRef")
-	}
-	publicKeyStr, err := nc.KeyProcessor.ExportPublicKey(publicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ RegisterNode ] Can't import public key")
-	}
-
-	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKeyStr, numberOfBootstrapNodes, majorityRule, role})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")
-	}
-
-	rawCertificate, err := ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ RegisterNode ] Can't extract response")
-	}
-
-	return rawCertificate, nil
-}
-*/

@@ -18,9 +18,13 @@ package core
 
 import (
 	"context"
+
+	"github.com/insolar/insolar/certificate"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator interface {
+	GetCert(context.Context, RecordRef) (*certificate.Certificate, error)
+	IsValidCert(context.Context, *certificate.Certificate) (bool, error)
 	WriteActiveNodes(ctx context.Context, number PulseNumber, activeNodes []Node) error
 }
