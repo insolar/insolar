@@ -14,7 +14,6 @@ import (
 	core "github.com/insolar/insolar/core"
 	network "github.com/insolar/insolar/network"
 	types "github.com/insolar/insolar/network/transport/packet/types"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 

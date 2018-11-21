@@ -11,7 +11,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 

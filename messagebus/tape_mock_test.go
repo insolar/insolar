@@ -13,7 +13,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -345,7 +344,7 @@ func (m *tapeMock) MinimockWait(timeout time.Duration) {
 }
 
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-//it can be used with require/require, i.e. require.True(mock.AllMocksCalled())
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *tapeMock) AllMocksCalled() bool {
 
 	if m.GetReplyFunc != nil && atomic.LoadUint64(&m.GetReplyCounter) == 0 {
