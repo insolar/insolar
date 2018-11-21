@@ -167,7 +167,7 @@ type Runner struct {
 	keyCache           map[string]crypto.PublicKey
 	cacheLock          *sync.RWMutex
 	seedmanager        *seedmanager.SeedManager
-	Exporter           core.Exporter `inject:""`
+	StorageExporter    core.StorageExporter `inject:""`
 }
 
 // NewRunner is C-tor for API Runner
@@ -193,7 +193,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	}
 
 	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")
-	err := rpcServer.RegisterService(NewExporterService(&ar), "exporter")
+	err := rpcServer.RegisterService(NewStorageExporterService(&ar), "exporter")
 	if err != nil {
 		return nil, err
 	}

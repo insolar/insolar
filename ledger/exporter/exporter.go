@@ -37,7 +37,7 @@ type Exporter struct {
 	db *storage.DB
 }
 
-// NewExporter creates new Exporter instance.
+// NewExporter creates new StorageExporter instance.
 func NewExporter(db *storage.DB) *Exporter {
 	return &Exporter{db: db}
 }
@@ -58,8 +58,8 @@ type pulseData struct {
 }
 
 // Export returns data view from storage.
-func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.ExportResult, error) {
-	result := core.ExportResult{Data: map[string]interface{}{}}
+func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
+	result := core.StorageExportResult{Data: map[string]interface{}{}}
 
 	counter := 0
 	currentPN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
