@@ -14,19 +14,41 @@
  *    limitations under the License.
  */
 
-package certificate
+package nodenetwork
 
 import (
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 )
 
-func GetTestCertificate() core.Certificate {
-	c := &certificate.Certificate{}
-	err := c.GenerateKeys()
-	if err != nil {
-		panic(err)
-	}
+type none struct{}
 
-	return c
+type recordRefSet struct {
+	data map[core.RecordRef]none
+}
+
+func newRecordRefSet() *recordRefSet {
+	return &recordRefSet{data: make(map[core.RecordRef]none)}
+}
+
+func (s *recordRefSet) Add(ref core.RecordRef) {
+	s.data[ref] = none{}
+}
+
+func (s *recordRefSet) Remove(ref core.RecordRef) {
+	delete(s.data, ref)
+}
+
+func (s *recordRefSet) Contains(ref core.RecordRef) bool {
+	_, ok := s.data[ref]
+	return ok
+}
+
+func (s *recordRefSet) Collect() []core.RecordRef {
+	result := make([]core.RecordRef, len(s.data))
+	i := 0
+	for ref := range s.data {
+		result[i] = ref
+		i++
+	}
+	return result
 }

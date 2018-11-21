@@ -88,7 +88,7 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		state:        network.Undefined,
 		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
-		indexNode:    make(map[core.NodeRole][]core.RecordRef),
+		indexNode:    make(map[core.NodeRole]*recordRefSet),
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 	}
 }
@@ -107,7 +107,7 @@ type nodekeeper struct {
 
 	activeLock   sync.RWMutex
 	active       map[core.RecordRef]core.Node
-	indexNode    map[core.NodeRole][]core.RecordRef
+	indexNode    map[core.NodeRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
 
 	lock   sync.Mutex
@@ -169,9 +169,7 @@ func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
 	if !exists {
 		return nil
 	}
-	result := make([]core.RecordRef, len(list))
-	copy(result, list)
-	return result
+	return list.Collect()
 }
 
 func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
@@ -209,10 +207,10 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 	for _, role := range node.Roles() {
 		list, ok := nk.indexNode[role]
 		if !ok {
-			list := make([]core.RecordRef, 0)
-			nk.indexNode[role] = list
+			list = newRecordRefSet()
 		}
-		nk.indexNode[role] = append(list, node.ID())
+		list.Add(node.ID())
+		nk.indexNode[role] = list
 	}
 	nk.indexShortID[node.ShortID()] = node
 }
