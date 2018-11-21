@@ -116,7 +116,7 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 	return resJSON, nil
 }
 
-var INSATTR_GetNodeDomainRef_API = true
+var INSATTR_Info_API = true
 
 // Info returns information about basic objects
 func (rd *RootDomain) Info() (interface{}, error) {
@@ -131,7 +131,7 @@ func (rd *RootDomain) Info() (interface{}, error) {
 	return resJSON, nil
 }
 
-var INSATTR_Info_API = true
+var INSATTR_GetNodeDomainRef_API = true
 
 // GetNodeDomainRef returns reference of NodeDomain instance
 func (rd *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
