@@ -34,7 +34,7 @@ type BootstrapNode struct {
 }
 
 // Certificate holds info about certificate
-type Certificate struct {
+type aaaa struct {
 	MajorityRule        int             `json:"majority_rule"`
 	PublicKey           string          `json:"public_key"`
 	Reference           string          `json:"reference"`
