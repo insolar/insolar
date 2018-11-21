@@ -276,22 +276,13 @@ type NodeListVote struct {
 	NodeListHash  [32]byte
 }
 
-type DeviantBitSet struct {
-	CompressedSet     bool
-	HighBitLengthFlag bool
-	LowBitLength      uint8
-	//------------------
-	HighBitLength uint8
-	Payload       []byte
-}
-
 type Phase2Packet struct {
 	// -------------------- Header
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
 	globuleHashSignature    [HashLength]byte
-	deviantBitSet           DeviantBitSet
+	deviantBitSet           BitSet
 	signatureHeaderSection1 [SignatureLength]byte
 
 	// -------------------- Section 2 (optional)
