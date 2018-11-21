@@ -237,11 +237,6 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 
 	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
 
-	if firstNode.NodeKeeper == nil {
-
-		panic("dawdq")
-	}
-
 	err = firstNode.Init(ctx)
 	require.NoError(t, err)
 
