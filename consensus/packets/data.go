@@ -58,7 +58,7 @@ type Phase1Packet struct {
 
 	// --------------------
 	// signature contains signature of Header + Section 1 + Section 2
-	signature uint64
+	signature [SignatureLength]byte
 }
 
 func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
@@ -281,8 +281,9 @@ type Phase2Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    [HashLength]byte
-	deviantBitSet           BitSet
+	globuleHashSignature [HashLength]byte
+	// TODO: uncomment this after impl (de)serializers
+	// deviantBitSet           BitSet
 	signatureHeaderSection1 [SignatureLength]byte
 
 	// -------------------- Section 2 (optional)
