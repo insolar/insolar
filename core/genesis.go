@@ -17,6 +17,4 @@
 package core
 
 // Genesis is the global genesis handler. Other system parts communicate with genesis through it.
-type Genesis interface {
-	GetRootDomainRef() *RecordRef
-}
+type Genesis interface{}
