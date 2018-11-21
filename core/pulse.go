@@ -41,14 +41,14 @@ type Entropy [EntropySize]byte
 // If PulseNum <65536 it is a relative PulseNum
 type PulseNumber uint32
 
-// Bytes serializes pulse number.
-func (pn PulseNumber) Bytes() []byte {
-	return utils.UInt32ToBytes(uint32(pn))
-}
-
 // NewPulseNumber creates pulse number from bytes.
 func NewPulseNumber(buf []byte) PulseNumber {
 	return PulseNumber(binary.BigEndian.Uint32(buf))
+}
+
+// Bytes serializes pulse number.
+func (pn PulseNumber) Bytes() []byte {
+	return utils.UInt32ToBytes(uint32(pn))
 }
 
 // Pulse is base data structure for a pulse.

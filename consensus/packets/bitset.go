@@ -33,20 +33,20 @@ const (
 	Fraud
 )
 
-// BitSetBucket is structure that contains the state of the node
-type BitSetBucket struct {
+// BitSetCell is structure that contains the state of the node
+type BitSetCell struct {
 	NodeID core.RecordRef
 	State  TriState
 }
 
 // Possible errors in BitSetMapper
 var (
-	// BitSetOutOfRange is returned when index passed to IndexToRef function is out of range (ERROR)
-	BitSetOutOfRange = errors.New("index out of range")
-	// BitSetNodeIsMissing is returned in IndexToRef when we have no information about the node on specified index (SPECIAL CASE)
-	BitSetNodeIsMissing = errors.New("no information about node on specified index")
-	// BitSetIncorrectNode is returned when an incorrect node is passed to RefToIndex (ERROR)
-	BitSetIncorrectNode = errors.New("incorrect node ID")
+	// ErrBitSetOutOfRange is returned when index passed to IndexToRef function is out of range (ERROR)
+	ErrBitSetOutOfRange = errors.New("index out of range")
+	// ErrBitSetNodeIsMissing is returned in IndexToRef when we have no information about the node on specified index (SPECIAL CASE)
+	ErrBitSetNodeIsMissing = errors.New("no information about node on specified index")
+	// ErrBitSetIncorrectNode is returned when an incorrect node is passed to RefToIndex (ERROR)
+	ErrBitSetIncorrectNode = errors.New("incorrect node ID")
 )
 
 // BitSetMapper contains the mapping from bitset index to node ID (and vice versa)
@@ -62,13 +62,13 @@ type BitSetMapper interface {
 // BitSet is interface
 type BitSet interface {
 	Serializer
-	// GetBuckets get buckets of bitset
-	GetBuckets(mapper BitSetMapper) []*BitSetBucket
+	// GetCells get buckets of bitset
+	GetCells() []BitSetCell
 	// ApplyChanges returns copy of the current bitset with changes applied
-	ApplyChanges(changes []*BitSetBucket, mapper BitSetMapper) BitSet
+	ApplyChanges(changes []BitSetCell)
 }
 
 // NewBitSet creates bitset from a set of buckets and the mapper
-func NewBitSet(buckets []*BitSetBucket, mapper BitSetMapper) BitSet {
-	panic("not implemented")
+func NewBitSet(cells []BitSetCell, mapper BitSetMapper) (BitSet, error) {
+	return NewTriStateBitSet(cells, mapper)
 }

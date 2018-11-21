@@ -24,7 +24,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -374,57 +373,6 @@ func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 	return db.set(ctx, k, encoded)
 }
 
-// AddPulse saves new pulse data and updates index.
-func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
-	return db.Update(ctx, func(tx *TransactionManager) error {
-		var latest core.PulseNumber
-		latest, err := tx.GetLatestPulseNumber(ctx)
-		if err != nil && err != ErrNotFound {
-			return err
-		}
-		pulseRec := record.PulseRecord{
-			PrevPulse:          latest,
-			Entropy:            pulse.Entropy,
-			PredictedNextPulse: pulse.NextPulseNumber,
-		}
-		var buf bytes.Buffer
-		enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-		err = enc.Encode(pulseRec)
-		if err != nil {
-			return err
-		}
-		err = tx.set(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), buf.Bytes())
-		if err != nil {
-			return err
-		}
-		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}), pulse.PulseNumber.Bytes())
-	})
-}
-
-// GetPulse returns pulse for provided pulse number.
-func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*record.PulseRecord, error) {
-	buf, err := db.get(ctx, prefixkey(scopeIDPulse, num.Bytes()))
-	if err != nil {
-		return nil, err
-	}
-
-	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
-	var rec record.PulseRecord
-	err = dec.Decode(&rec)
-	if err != nil {
-		return nil, err
-	}
-	return &rec, nil
-}
-
-// GetLatestPulseNumber returns current pulse number.
-func (db *DB) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
-	tx := db.BeginTransaction(false)
-	defer tx.Discard()
-
-	return tx.GetLatestPulseNumber(ctx)
-}
-
 // BeginTransaction opens a new transaction.
 // All methods called on returned transaction manager will persist changes
 // only after success on "Commit" call.
@@ -526,23 +474,30 @@ func (db *DB) GetLocalData(ctx context.Context, pulse core.PulseNumber, key []by
 // IterateLocalData iterates over all record with specified prefix and calls handler with key and value of that record.
 //
 // The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
-func (db *DB) IterateLocalData(ctx context.Context, pulse core.PulseNumber, prefix []byte, handler func(k, v []byte) error) error {
+func (db *DB) IterateLocalData(
+	ctx context.Context,
+	pulse core.PulseNumber,
+	prefix []byte,
+	handler func(k, v []byte) error,
+) error {
 	fullPrefix := bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), prefix}, nil)
+	return db.iterate(ctx, fullPrefix, handler)
+}
 
-	return db.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
+// IterateRecords iterates over records.
+func (db *DB) IterateRecords(
+	ctx context.Context,
+	pulse core.PulseNumber,
+	handler func(id core.RecordID, rec record.Record) error,
+) error {
+	prefix := bytes.Join([][]byte{{scopeIDRecord}, pulse.Bytes()}, nil)
 
-		for it.Seek(fullPrefix); it.ValidForPrefix(fullPrefix); it.Next() {
-			key := it.Item().KeyCopy(nil)[len(fullPrefix):]
-			value, err := it.Item().ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-			err = handler(key, value)
-			if err != nil {
-				return err
-			}
+	return db.iterate(ctx, prefix, func(k, v []byte) error {
+		id := core.NewRecordID(pulse, k)
+		rec := record.DeserializeRecord(v)
+		err := handler(*id, rec)
+		if err != nil {
+			return err
 		}
 		return nil
 	})
@@ -596,5 +551,29 @@ func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
 func (db *DB) set(ctx context.Context, key, value []byte) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		return tx.set(ctx, key, value)
+	})
+}
+
+func (db *DB) iterate(
+	ctx context.Context,
+	prefix []byte,
+	handler func(k, v []byte) error,
+) error {
+	return db.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			key := it.Item().KeyCopy(nil)[len(prefix):]
+			value, err := it.Item().ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+			err = handler(key, value)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }

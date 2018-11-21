@@ -202,7 +202,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	}
 
 	pf := mockParcelFactory(t)
-	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID())
+	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID(), nil)
 	require.NoError(t, err)
 
 	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", parcel)
@@ -266,7 +266,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	}
 
 	pf := mockParcelFactory(t)
-	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID())
+	parcel, err := pf.Create(ctx, e, firstNode.GetNodeID(), nil)
 	require.NoError(t, err)
 
 	err = firstNode.SendCascadeMessage(c, "test", parcel)
@@ -360,7 +360,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	}
 
 	pf := mockParcelFactory(t)
-	parcel, err := pf.Create(ctx, e, firstService.GetNodeID())
+	parcel, err := pf.Create(ctx, e, firstService.GetNodeID(), nil)
 	require.NoError(t, err)
 
 	firstService.SendCascadeMessage(c, "test", parcel)

@@ -104,7 +104,7 @@ func (jc *JetCoordinator) QueryRole(
 		return nil, errors.New("no candidate count for this role")
 	}
 
-	selected, err := selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Entropy, candidates, count)
+	selected, err := selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, candidates, count)
 	if err != nil {
 		return nil, err
 	}

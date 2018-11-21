@@ -122,7 +122,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
-	parcel, err := parcelFactory.Create(ctx, msg, testutils.RandomRef())
+	parcel, err := parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil)
 	assert.NoError(t, err)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
@@ -142,7 +142,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
-	parcel, err = parcelFactory.Create(ctx, msg, testutils.RandomRef())
+	parcel, err = parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil)
 	assert.NoError(t, err)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")

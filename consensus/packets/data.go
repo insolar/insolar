@@ -190,27 +190,20 @@ func (npp *NodePulseProof) Signature() []byte {
 
 // ----------------------------------PHASE 2--------------------------------
 
-type DeviantBitSet struct {
-	CompressedSet     bool
-	HighBitLengthFlag bool
-	LowBitLength      uint8
-	//------------------
-	HighBitLength uint8
-	Payload       []byte
-}
 
 type Phase2Packet struct {
 	// -------------------- Header
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    []byte
-	deviantBitSet           DeviantBitSet
-	SignatureHeaderSection1 []byte
+	globuleHashSignature [HashLength]byte
+	// TODO: uncomment this after impl (de)serializers
+	// deviantBitSet           BitSet
+	signatureHeaderSection1 [SignatureLength]byte
 
 	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
-	SignatureHeaderSection2 []byte
+	signatureHeaderSection2 [SignatureLength]byte
 }
 
 func NewPhase2Packet() *Phase2Packet {

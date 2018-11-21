@@ -43,6 +43,7 @@ type MessageBus struct {
 	Ledger                     core.Ledger                     `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
 
@@ -61,7 +62,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	}, nil
 }
 
-// newPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
+// NewPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
 // stream is exhausted.
 //
 // Player can be created from MessageBus and passed as MessageBus instance.
@@ -74,7 +75,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageB
 	return pl, nil
 }
 
-// newRecorder creates a new recorder with unique tape that can be used to store message replies.
+// NewRecorder creates a new recorder with unique tape that can be used to store message replies.
 //
 // Recorder can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
@@ -136,22 +137,30 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message) (core.Reply, error) {
-	parcel, err := mb.CreateParcel(ctx, msg)
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, optionSetter ...core.SendOption) (core.Reply, error) {
+	var options *core.SendOptions
+	if len(optionSetter) > 0 {
+		options = &core.SendOptions{}
+		for _, setter := range optionSetter {
+			setter(options)
+		}
+	}
+
+	parcel, err := mb.CreateParcel(ctx, msg, options)
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel)
+	return mb.SendParcel(ctx, parcel, options)
 }
 
 // CreateParcel creates signed message from provided message.
-func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID())
+func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, options *core.SendOptions) (core.Parcel, error) {
+	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), options)
 }
 
 // SendParcel sends provided message via network.
-func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel, options *core.SendOptions) (core.Reply, error) {
 	scope := newReaderScope(&mb.globalLock)
 	scope.Lock()
 	defer scope.Unlock()
@@ -161,12 +170,17 @@ func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel) (core.Rep
 		return nil, err
 	}
 
-	jc := mb.Ledger.GetJetCoordinator()
-	// TODO: send to all actors of the role if nil Target
-	target := message.ExtractTarget(msg)
-	nodes, err := jc.QueryRole(ctx, message.ExtractRole(msg), &target, pulse.PulseNumber)
-	if err != nil {
-		return nil, err
+	var nodes []core.RecordRef
+	if options != nil && options.Receiver != nil {
+		nodes = []core.RecordRef{*options.Receiver}
+	} else {
+		jc := mb.Ledger.GetJetCoordinator()
+		// TODO: send to all actors of the role if nil Target
+		target := message.ExtractTarget(msg)
+		nodes, err = jc.QueryRole(ctx, message.ExtractRole(msg), &target, pulse.PulseNumber)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if len(nodes) > 1 {
@@ -215,6 +229,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 			S: err.Error(),
 		}
 	}
+
 	return resp, nil
 }
 
@@ -245,8 +260,8 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 
 	ctx := parcel.Context(context.Background())
 
-	if len(parcel.DelegationToken()) != 0 {
-		valid, err := mb.DelegationTokenFactory.Verify(parcel.DelegationToken(), parcel.Message())
+	if parcel.DelegationToken() != nil {
+		valid, err := mb.DelegationTokenFactory.Verify(parcel)
 		if err != nil {
 			return nil, err
 		}

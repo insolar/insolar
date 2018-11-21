@@ -184,35 +184,6 @@ func TestPhase1Packet_SetPulseProof(t *testing.T) {
 }
 
 // ----------------------------------PHASE 2--------------------------------
-
-func makeDeviantBitSet() *DeviantBitSet {
-	deviantBitSet := &DeviantBitSet{}
-	deviantBitSet.CompressedSet = true
-	deviantBitSet.HighBitLengthFlag = true
-	deviantBitSet.LowBitLength = uint8(3)
-	//-----------------
-	deviantBitSet.HighBitLength = uint8(9)
-
-	// TODO: uncomment it when we support reading payload
-	// DeviantBitSet.Payload = []byte("Hello, World!")
-
-	return deviantBitSet
-}
-
-func TestDeviantBitSet(t *testing.T) {
-	checkSerializationDeserialization(t, makeDeviantBitSet())
-}
-
-func _TestDeviantBitSet_BadData(t *testing.T) {
-	deviantBitSet := makeDeviantBitSet()
-	newDeviantBitSet := &DeviantBitSet{}
-
-	data := serializeData(t, deviantBitSet)
-	r := bytes.NewReader(data[:len(data)-2])
-	err := newDeviantBitSet.Deserialize(r)
-	assert.NoError(t, err)
-
-	require.NotEqual(t, deviantBitSet.Payload, newDeviantBitSet.Payload)
 }
 
 func TestParseAndCompactRouteInfo(t *testing.T) {

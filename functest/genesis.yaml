@@ -5,24 +5,26 @@ min_roles:
   virtual:  1
   heavy_material: 2
   light_material: 4
+pulsar_public_keys:
+  - "pulsar_public_key"
 discovery_nodes:
   -
     host: "HOST1"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_1.json"
   -
     host: "HOST2"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_2.json"
   -
     host: "HOST3"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_3.json"
   -
     host: "HOST4"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_4.json"
   -
     host: "HOST5"
     role: ""
-    keys_file: ""
+    keys_file: "../testdata/functional/discovery_node_5.json"
