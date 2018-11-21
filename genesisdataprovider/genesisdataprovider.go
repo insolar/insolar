@@ -157,7 +157,7 @@ func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*core.Record
 	if gdp.rootMemberRef == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetNodeDomain ] Can't get info")
+			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetRootMember ] Can't get info")
 		}
 	}
 	return gdp.rootMemberRef, nil
