@@ -54,7 +54,9 @@ func Test_StoreKeyValues(t *testing.T) {
 		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 		defer cleaner()
 		for n := 0; n < pulsescount; n++ {
-			addRecords(ctx, t, db, core.PulseNumber(pulseDelta(n)))
+			lastPulse := core.PulseNumber(pulseDelta(n))
+			addRecords(ctx, t, db, lastPulse)
+			setDrop(ctx, t, db, lastPulse)
 		}
 
 		for n := 0; n < pulsescount; n++ {
