@@ -167,7 +167,7 @@ func (h *MessageHandler) createRedirect(ctx context.Context, genericMsg core.Par
 		return nil, err
 	}
 
-	redirect.Token = &token
+	redirect.Token = token
 
 	return redirect, nil
 }
