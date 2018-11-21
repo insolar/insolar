@@ -52,6 +52,7 @@ func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
 }
 
+// MarshalJSON serializes pulse number into JSON.
 func (pn PulseNumber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(int(pn))
 }

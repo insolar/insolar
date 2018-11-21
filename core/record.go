@@ -75,7 +75,7 @@ func (id *RecordID) Equal(other *RecordID) bool {
 	return *id == *other
 }
 
-// MarshalJSON checks if reference points to the same record.
+// MarshalJSON serializes ID into JSON.
 func (id *RecordID) MarshalJSON() ([]byte, error) {
 	if id == nil {
 		return json.Marshal(nil)
@@ -150,7 +150,7 @@ func NewRefFromBase58(str string) RecordRef {
 	return ref
 }
 
-// MarshalJSON checks if reference points to the same record.
+// MarshalJSON serializes reference into JSON.
 func (ref *RecordRef) MarshalJSON() ([]byte, error) {
 	if ref == nil {
 		return json.Marshal(nil)
