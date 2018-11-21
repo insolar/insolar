@@ -156,7 +156,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	return &rep, nil
 }
 
-func (h *MessageHandler) createRedirect(ctx context.Context, genericMsg core.Parcel, msg *message.GetObject, definedState *core.RecordID, pulse core.PulseNumber) (*reply.GetObjectRedirectReply, error) {
+func (h *MessageHandler) createRedirect(ctx context.Context, genericMsg core.Parcel, msg *message.GetObject, definedState *core.RecordID) (*reply.GetObjectRedirectReply, error) {
 	// here we need find node by pulse
 	redirect, err := h.prepareRedirect(ctx, msg, definedState, definedState.Pulse())
 	if err != nil {
@@ -203,7 +203,7 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 			if stateID == nil {
 				return nil, err
 			}
-			return h.createRedirect(ctx, parcel, msg, stateID, stateID.Pulse())
+			return h.createRedirect(ctx, parcel, msg, stateID)
 		default:
 			return nil, err
 		}
