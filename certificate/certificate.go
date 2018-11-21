@@ -84,7 +84,7 @@ func (cert *Certificate) serializeNodePart() []byte {
 	return []byte(cert.PublicKey + cert.Reference + cert.Role)
 }
 
-// SignNetworkPart signs node part in certificate
+// SignNodePart signs node part in certificate
 func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
 	signer := platformpolicy.NewPlatformCryptographyScheme().Signer(key)
 	sign, err := signer.Sign(cert.serializeNodePart())
