@@ -125,7 +125,6 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 
 	ctx := context.TODO()
 	networkComponents := initComponents(t, testutils.RandomRef(), "", true)
-	//serviceNetwork.OldComponentManager = &HackComponentManager{networkComponents}
 	serviceNetwork.CryptographyService = networkComponents.CryptographyService
 	serviceNetwork.NetworkCoordinator = networkComponents.NetworkCoordinator
 	serviceNetwork.NodeKeeper = networkComponents.NodeNetwork.(network.NodeKeeper)
@@ -183,7 +182,6 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	require.NoError(t, err)
 
 	secondNodeComponents := initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
-	//secondNode.OldComponentManager = &HackComponentManager{secondNodeComponents}
 	secondNode.CryptographyService = secondNodeComponents.CryptographyService
 	secondNode.NetworkCoordinator = secondNodeComponents.NetworkCoordinator
 	secondNode.NodeKeeper = secondNodeComponents.NodeNetwork.(network.NodeKeeper)
@@ -191,7 +189,6 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	err = secondNode.Init(ctx)
 	require.NoError(t, err)
 	firstNodeComponents := initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
-	//firstNode.OldComponentManager = &HackComponentManager{firstNodeComponents}
 	firstNode.CryptographyService = firstNodeComponents.CryptographyService
 	firstNode.NetworkCoordinator = firstNodeComponents.NetworkCoordinator
 	firstNode.NodeKeeper = firstNodeComponents.NodeNetwork.(network.NodeKeeper)
@@ -229,14 +226,6 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	require.True(t, success)
 }
 
-type HackComponentManager struct {
-	components core.Components
-}
-
-func (cm *HackComponentManager) GetAll() core.Components {
-	return cm.components
-}
-
 func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	ctx := context.TODO()
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
@@ -255,7 +244,6 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	secondsNodeComponents := initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
-	//secondNode.OldComponentManager = &HackComponentManager{secondsNodeComponents}
 	secondNode.CryptographyService = secondsNodeComponents.CryptographyService
 	secondNode.NetworkCoordinator = secondsNodeComponents.NetworkCoordinator
 	secondNode.NodeKeeper = secondsNodeComponents.NodeNetwork.(network.NodeKeeper)
@@ -264,7 +252,6 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	firstNodeComponents := initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
-	//firstNode.OldComponentManager = &HackComponentManager{firstNodeComponents}
 
 	firstNode.CryptographyService = firstNodeComponents.CryptographyService
 	firstNode.NetworkCoordinator = firstNodeComponents.NetworkCoordinator
@@ -363,7 +350,6 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
 		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node), scheme)
-		//service.OldComponentManager = &HackComponentManager{core.Components{}}
 		service.Init(ctx)
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
