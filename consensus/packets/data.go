@@ -48,13 +48,11 @@ type Phase1Packet struct {
 
 	// --------------------
 	// signature contains signature of Header + Section 1 + Section 2
-	Signature []byte
+	Signature [SignatureLength]byte
 }
 
 func NewPhase1Packet() *Phase1Packet {
-	return &Phase1Packet{
-		Signature: make([]byte, SignatureLength),
-	}
+	return &Phase1Packet{}
 }
 
 func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
