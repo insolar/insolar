@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/insolar/insolar/contractrequester"
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/cryptography"
 
@@ -151,7 +151,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		result, contractErr, err := contractrequester.ExtractCallResponse(res.(*reply.CallMethod).Result)
+		result, contractErr, err := extractor.ExtractCallResponse(res.(*reply.CallMethod).Result)
 		if err != nil {
 			resp.Error = err.Error()
 			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't extract response"))

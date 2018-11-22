@@ -54,7 +54,7 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't send request")
 	}
 
-	pubKey, role, err := contractrequester.ExtractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
+	pubKey, role, err := extractor.ExtractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't extract response")
 	}
@@ -78,7 +78,7 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")
 	}
 
-	rawCertificate, err := contractrequester.ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
+	rawCertificate, err := extractor.ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't extract response")
 	}

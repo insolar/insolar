@@ -28,7 +28,7 @@ import (
 
 	"github.com/gorilla/rpc/v2"
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
-	"github.com/insolar/insolar/contractrequester"
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
@@ -257,7 +257,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't get public key")
 	}
 
-	publicKeyString, err := contractrequester.ExtractStringResponse(res.(*reply.CallMethod).Result)
+	publicKeyString, err := extractor.ExtractStringResponse(res.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't extract response")
 	}

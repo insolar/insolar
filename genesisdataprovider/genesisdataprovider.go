@@ -19,7 +19,7 @@ package genesisdataprovider
 import (
 	"context"
 
-	"github.com/insolar/insolar/contractrequester"
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
@@ -45,7 +45,7 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 		return errors.Wrap(err, "[ setInfo ] Can't send request")
 	}
 
-	info, err := contractrequester.ExtractInfoResponse(routResult.(*reply.CallMethod).Result)
+	info, err := extractor.ExtractInfoResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Can't extract response")
 	}
