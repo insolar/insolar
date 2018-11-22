@@ -32,3 +32,8 @@ func CallResponse(data []byte) (interface{}, *foundation.Error, error) {
 	}
 	return result, contractErr, nil
 }
+
+// PublicKeyResponse extracts response of GetPublicKey
+func PublicKeyResponse(data []byte) (string, error) {
+	return StringResponse(data)
+}
