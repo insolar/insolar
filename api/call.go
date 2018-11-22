@@ -22,15 +22,14 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/cryptography"
 
 	"github.com/insolar/insolar/api/seedmanager"
-	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
@@ -152,12 +151,10 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		var result interface{}
-		var contractErr *foundation.Error
-		err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
+		result, contractErr, err := contractrequester.ExtractCallResponse(res.(*reply.CallMethod).Result)
 		if err != nil {
 			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal params"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't extract response"))
 			return
 		}
 
