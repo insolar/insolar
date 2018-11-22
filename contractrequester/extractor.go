@@ -53,6 +53,7 @@ func ExtractInfoResponse(data []byte) (*InfoResponse, error) {
 	return &info, nil
 }
 
+// ExtractAuthorizeResponse extracts response of Authorize
 func ExtractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 	var pubKey string
 	var role core.NodeRole
@@ -113,6 +114,7 @@ func ExtractNodeRef(rawJSON []byte) (string, error) {
 	return nRef.Ref, nil
 }
 
+// ExtractReferenceResponse extracts reference response
 func ExtractReferenceResponse(data []byte) (*core.RecordRef, error) {
 	var ref *core.RecordRef
 	var contractErr *foundation.Error
@@ -126,6 +128,7 @@ func ExtractReferenceResponse(data []byte) (*core.RecordRef, error) {
 	return ref, nil
 }
 
+// ExtractCallResponse extracts response of Call
 func ExtractCallResponse(data []byte) (interface{}, *foundation.Error, error) {
 	var result interface{}
 	var contractErr *foundation.Error
@@ -136,6 +139,7 @@ func ExtractCallResponse(data []byte) (interface{}, *foundation.Error, error) {
 	return result, contractErr, nil
 }
 
+// ExtractStringResponse extracts string response
 func ExtractStringResponse(data []byte) (string, error) {
 	var result string
 	var contractErr *foundation.Error
