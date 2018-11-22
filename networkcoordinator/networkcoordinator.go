@@ -19,19 +19,18 @@ package networkcoordinator
 import (
 	"context"
 
-	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
-	Certificate       core.Certificate       `inject:""`
-	KeyProcessor      core.KeyProcessor      `inject:""`
-	ContractRequester core.ContractRequester `inject:""`
-	nodeDomainRef     *core.RecordRef
-	rootDomainRef     *core.RecordRef
+	Certificate         core.Certificate         `inject:""`
+	KeyProcessor        core.KeyProcessor        `inject:""`
+	ContractRequester   core.ContractRequester   `inject:""`
+	GenesisDataProvider core.GenesisDataProvider `inject:""`
+	nodeDomainRef       *core.RecordRef
+	rootDomainRef       *core.RecordRef
 }
 
 // New creates new NetworkCoordinator
@@ -46,31 +45,6 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 	return nil
 }
 
-func (nc *NetworkCoordinator) getNodeDomainRef(ctx context.Context) (*core.RecordRef, error) {
-	if nc.nodeDomainRef == nil {
-		nodeDomainRef, err := nc.fetchNodeDomainRef(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getNodeDomainRef ] can't fetch nodeDomainRef")
-		}
-		nc.nodeDomainRef = nodeDomainRef
-	}
-	return nc.nodeDomainRef, nil
-}
-
-func (nc *NetworkCoordinator) fetchNodeDomainRef(ctx context.Context) (*core.RecordRef, error) {
-	routResult, err := nc.ContractRequester.SendRequest(ctx, nc.rootDomainRef, "GetNodeDomainRef", []interface{}{})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't send request")
-	}
-
-	nodeDomainRef, err := contractrequester.ExtractReferenceResponse(routResult.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't extract response")
-	}
-
-	return nodeDomainRef, nil
-}
-
 // WriteActiveNodes writes active nodes to ledger
 func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
 	return errors.New("not implemented")
@@ -78,7 +52,7 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 
 // Authorize authorizes node by verifying it's signature
 /*func (nc *NetworkCoordinator) Authorize(ctx context.Context, nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
-	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
+	nodeDomainRef, err := nc.GenesisDataProvider.GetNodeDomain(ctx)
 	if err != nil {
 		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't get nodeDomainRef")
 	}
@@ -99,7 +73,7 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 
 // RegisterNode registers node in nodedomain
 /*func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey crypto.PublicKey, numberOfBootstrapNodes int, majorityRule int, role string, ip string) ([]byte, error) {
-	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
+	nodeDomainRef, err := nc.GenesisDataProvider.GetNodeDomain(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't get nodeDomainRef")
 	}
