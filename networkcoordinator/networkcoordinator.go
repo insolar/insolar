@@ -27,6 +27,7 @@ import (
 type NetworkCoordinator struct {
 	Certificate         core.Certificate         `inject:""`
 	KeyProcessor        core.KeyProcessor        `inject:""`
+	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
 	ContractRequester   core.ContractRequester   `inject:""`
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
 
@@ -45,7 +46,11 @@ func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 }
 
 func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
-	return nil
+	if nc.NetworkSwitcher.GetState() {
+		return nc.realCoordinator
+	} else {
+		return nc.zeroCoordinator
+	}
 }
 
 // GetCert method returns node certificate
