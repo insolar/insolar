@@ -31,12 +31,15 @@ import (
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	db      *storage.DB
-	LR      core.LogicRunner `inject:""`
-	Bus     core.MessageBus  `inject:""`
-	NodeNet core.NodeNetwork `inject:""`
+	db           *storage.DB
+	LR           core.LogicRunner       `inject:""`
+	Bus          core.MessageBus        `inject:""`
+	NodeNet      core.NodeNetwork       `inject:""`
+	GIL          core.GlobalInsolarLock `inject:""`
+	currentPulse core.Pulse
+
 	// setLock locks Set method call.
-	setLock sync.Mutex
+	setLock sync.RWMutex
 	stopped bool
 	// gotpulse signals if there is something to sync to Heavy
 	gotpulse chan struct{}
@@ -84,22 +87,13 @@ func NewPulseManager(db *storage.DB, options ...Option) *PulseManager {
 
 // Current returns current pulse structure.
 func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
-	latestPulse, err := m.db.GetLatestPulseNumber(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pulse, err := m.db.GetPulse(ctx, latestPulse)
-	if err != nil {
-		return nil, err
-	}
-	return &pulse.Pulse, nil
+	m.setLock.RLock()
+	defer m.setLock.RUnlock()
+
+	return &m.currentPulse, nil
 }
 
-func (m *PulseManager) processDrop(ctx context.Context) error {
-	latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
-	if err != nil {
-		return err
-	}
+func (m *PulseManager) processDrop(ctx context.Context, latestPulseNumber core.PulseNumber) error {
 	latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
 	if err != nil {
 		return err
@@ -135,7 +129,7 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 }
 
 // Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
+func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) error {
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -143,31 +137,49 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
-	// Run only on material executor.
+	var latestPulseNumber core.PulseNumber
 	var err error
-	// execute only on material executor
-	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
-		if err = m.processDrop(ctx); err != nil {
-			return errors.Wrap(err, "processDrop failed")
-		}
 
-		latestPulseAsLight, err := m.db.GetLatestPulseNumber(ctx)
+	m.GIL.Acquire(ctx)
+
+	// swap pulse
+	m.currentPulse = pulse
+
+	// []swap active nodes and set prev pulse state to network
+
+	if !dry {
+		latestPulseNumber, err = m.db.GetLatestPulseNumber(ctx)
 		if err != nil {
 			return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 		}
-		if err = m.db.SetLastPulseAsLightMaterial(ctx, latestPulseAsLight); err != nil {
+
+		if err := m.db.AddPulse(ctx, pulse); err != nil {
+			return errors.Wrap(err, "call of AddPulse failed")
+		}
+		err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
+		if err != nil {
+			return errors.Wrap(err, "call of SetActiveNodes failed")
+		}
+	}
+
+	m.GIL.Release(ctx)
+
+	if dry {
+		return nil
+	}
+
+	// Run only on material executor.
+	// execute only on material executor
+	// TODO: do as much as possible async.
+	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
+		if err = m.processDrop(ctx, latestPulseNumber); err != nil {
+			return errors.Wrap(err, "processDrop failed")
+		}
+
+		if err = m.db.SetLastPulseAsLightMaterial(ctx, latestPulseNumber); err != nil {
 			return errors.Wrap(err, "call of SetLastPulseAsLightMaterial failed")
 		}
 		m.SyncToHeavy()
-	}
-
-	if err = m.db.AddPulse(ctx, pulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
-	}
-
-	err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
-	if err != nil {
-		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
 	return m.LR.OnPulse(ctx, pulse)

@@ -144,7 +144,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 }
 
 func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {
-	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)})
+	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)}, false)
 }
 
 func addRecords(
