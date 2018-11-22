@@ -17,22 +17,23 @@
 package core
 
 const (
-	// NoNetwork state means that nodes doesn`t match majority_rule
+	// NoNetworkState state means that nodes doesn`t match majority_rule
 	NoNetworkState = iota
-	// VoidNetwork state means that nodes have not complete min_role_count rule for proper work
+	// VoidNetworkState state means that nodes have not complete min_role_count rule for proper work
 	VoidNetworkState
-	// JetlessNetwork state means that every Jet need proof completeness of stored data
+	// JetlessNetworkState state means that every Jet need proof completeness of stored data
 	JetlessNetworkState
-	// AuthorizationNetwork state means that every node need to validate ActiveNodeList using NodeDomain
+	// AuthorizationNetworkState state means that every node need to validate ActiveNodeList using NodeDomain
 	AuthorizationNetworkState
-	// CompleteNetwork state means network is ok and ready for proper work
+	// CompleteNetworkState state means network is ok and ready for proper work
 	CompleteNetworkState
 )
 
-// State type for bootstrapping process
+// NetworkState type for bootstrapping process
 type NetworkState int
 
-// Switcher is a network FSM
+// Switcher is a network FSM using for bootstrapping
 type NetworkSwitcher interface {
+	// GetState method returns current network state
 	GetState() NetworkState
 }

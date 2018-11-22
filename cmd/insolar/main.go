@@ -24,7 +24,7 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -177,11 +177,11 @@ func generateCertificate(out io.Writer) {
 }
 
 func sendRequest(out io.Writer) {
-	requesters.SetVerbose(verbose)
-	userCfg, err := requesters.ReadUserConfigFromFile(configPath)
+	requester.SetVerbose(verbose)
+	userCfg, err := requester.ReadUserConfigFromFile(configPath)
 	check("[ sendRequest ]", err)
 	if rootAsCaller {
-		info, err := requesters.Info(sendUrls)
+		info, err := requester.Info(sendUrls)
 		check("[ sendRequest ]", err)
 		userCfg.Caller = info.RootMember
 	}
@@ -190,24 +190,24 @@ func sendRequest(out io.Writer) {
 	if len(pPath) == 0 {
 		pPath = configPath
 	}
-	reqCfg, err := requesters.ReadRequestConfigFromFile(pPath)
+	reqCfg, err := requester.ReadRequestConfigFromFile(pPath)
 	check("[ sendRequest ]", err)
 
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
 	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	response, err := requesters.Send(ctx, sendUrls, userCfg, reqCfg)
+	response, err := requester.Send(ctx, sendUrls, userCfg, reqCfg)
 	check("[ sendRequest ]", err)
 
 	writeToOutput(out, string(response))
 }
 
 func genSendConfigs(out io.Writer) {
-	reqConf, err := genDefaultConfig(requesters.RequestConfigJSON{})
+	reqConf, err := genDefaultConfig(requester.RequestConfigJSON{})
 	check("[ genSendConfigs ]", err)
 
-	userConf, err := genDefaultConfig(requesters.UserConfigJSON{})
+	userConf, err := genDefaultConfig(requester.UserConfigJSON{})
 	check("[ genSendConfigs ]", err)
 
 	writeToOutput(out, "Request config:\n")
