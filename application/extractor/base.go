@@ -35,8 +35,7 @@ func referenceResponse(data []byte) (*core.RecordRef, error) {
 	return ref, nil
 }
 
-// StringResponse extracts string response
-func StringResponse(data []byte) (string, error) {
+func stringResponse(data []byte) (string, error) {
 	var result string
 	var contractErr *foundation.Error
 	_, err := core.UnMarshalResponse(data, []interface{}{&result, &contractErr})

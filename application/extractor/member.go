@@ -35,5 +35,5 @@ func CallResponse(data []byte) (interface{}, *foundation.Error, error) {
 
 // PublicKeyResponse extracts response of GetPublicKey
 func PublicKeyResponse(data []byte) (string, error) {
-	return StringResponse(data)
+	return stringResponse(data)
 }
