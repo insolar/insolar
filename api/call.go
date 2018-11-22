@@ -151,7 +151,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		result, contractErr, err := extractor.ExtractCallResponse(res.(*reply.CallMethod).Result)
+		result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
 		if err != nil {
 			resp.Error = err.Error()
 			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't extract response"))

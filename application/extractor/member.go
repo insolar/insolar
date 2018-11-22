@@ -22,13 +22,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ExtractCallResponse extracts response of Call
-func ExtractCallResponse(data []byte) (interface{}, *foundation.Error, error) {
+// CallResponse extracts response of Call
+func CallResponse(data []byte) (interface{}, *foundation.Error, error) {
 	var result interface{}
 	var contractErr *foundation.Error
 	_, err := core.UnMarshalResponse(data, []interface{}{&result, &contractErr})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ExtractCallResponse ] Can't unmarshal response ")
+		return nil, nil, errors.Wrap(err, "[ CallResponse ] Can't unmarshal response ")
 	}
 	return result, contractErr, nil
 }
