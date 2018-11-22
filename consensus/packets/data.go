@@ -198,11 +198,11 @@ type Phase2Packet struct {
 	globuleHashSignature [HashLength]byte
 	// TODO: uncomment this after impl (de)serializers
 	// deviantBitSet           BitSet
-	signatureHeaderSection1 [SignatureLength]byte
+	SignatureHeaderSection1 [SignatureLength]byte
 
 	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
-	signatureHeaderSection2 [SignatureLength]byte
+	SignatureHeaderSection2 [SignatureLength]byte
 }
 
 func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {

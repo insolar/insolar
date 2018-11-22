@@ -274,8 +274,8 @@ func makePhase2Packet() *Phase2Packet {
 	phase2Packet := &Phase2Packet{}
 	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
 	phase2Packet.globuleHashSignature = randomArray64()
-	phase2Packet.signatureHeaderSection1 = randomArray71()
-	phase2Packet.signatureHeaderSection2 = randomArray71()
+	phase2Packet.SignatureHeaderSection1 = randomArray71()
+	phase2Packet.SignatureHeaderSection2 = randomArray71()
 
 	// TODO: uncomment when support ser\deser of ReferendumVote
 	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
@@ -291,7 +291,7 @@ func TestPhase2Packet_Deserialize(t *testing.T) {
 func TestPhase2Packet_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makePhase2Packet(),
 		"[ Phase2Packet.Deserialize ] Can't deserialize body: [ Phase2Packet.Deserialize ] "+
-			"Can't read signatureHeaderSection2: unexpected EOF")
+			"Can't read SignatureHeaderSection2: unexpected EOF")
 
 }
 

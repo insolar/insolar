@@ -131,7 +131,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	}
 
 	pf := mockParcelFactory(t)
-	parcel, err := pf.Create(ctx, e, serviceNetwork.GetNodeID())
+	parcel, err := pf.Create(ctx, e, serviceNetwork.GetNodeID(), nil)
 	require.NoError(t, err)
 
 	ref := testutils.RandomRef()
