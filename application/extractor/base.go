@@ -22,13 +22,30 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ExtractCallResponse extracts response of Call
-func ExtractCallResponse(data []byte) (interface{}, *foundation.Error, error) {
-	var result interface{}
+// ExtractReferenceResponse extracts reference response
+func ExtractReferenceResponse(data []byte) (*core.RecordRef, error) {
+	var ref *core.RecordRef
+	var contractErr *foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{&ref, &contractErr})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ExtractReferenceResponse ] Can't unmarshal response ")
+	}
+	if contractErr != nil {
+		return nil, errors.Wrap(contractErr, "[ ExtractReferenceResponse ] Has error in response")
+	}
+	return ref, nil
+}
+
+// ExtractStringResponse extracts string response
+func ExtractStringResponse(data []byte) (string, error) {
+	var result string
 	var contractErr *foundation.Error
 	_, err := core.UnMarshalResponse(data, []interface{}{&result, &contractErr})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ExtractCallResponse ] Can't unmarshal response ")
+		return "", errors.Wrap(err, "[ ExtractStringResponse ] Can't unmarshal response ")
 	}
-	return result, contractErr, nil
+	if contractErr != nil {
+		return "", errors.Wrap(contractErr, "[ ExtractStringResponse ] Has error in response")
+	}
+	return result, nil
 }
