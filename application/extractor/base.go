@@ -22,19 +22,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-func referenceResponse(data []byte) (*core.RecordRef, error) {
-	var ref *core.RecordRef
-	var contractErr *foundation.Error
-	_, err := core.UnMarshalResponse(data, []interface{}{&ref, &contractErr})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ referenceResponse ] Can't unmarshal response ")
-	}
-	if contractErr != nil {
-		return nil, errors.Wrap(contractErr, "[ referenceResponse ] Has error in response")
-	}
-	return ref, nil
-}
-
 func stringResponse(data []byte) (string, error) {
 	var result string
 	var contractErr *foundation.Error
