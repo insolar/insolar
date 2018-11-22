@@ -26,6 +26,7 @@ type APIRunner struct {
 	Location string
 	Info     string
 	Call     string
+	RPC      string
 }
 
 // NewAPIRunner creates new api config
@@ -35,6 +36,7 @@ func NewAPIRunner() APIRunner {
 		Location: "/api/v1",
 		Info:     "/api/v1/info",
 		Call:     "/api/v1/call",
+		RPC:      "/api/rpc",
 	}
 }
 

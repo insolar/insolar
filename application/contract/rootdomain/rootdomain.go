@@ -116,6 +116,21 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 	return resJSON, nil
 }
 
+var INSATTR_Info_API = true
+
+// Info returns information about basic objects
+func (rd *RootDomain) Info() (interface{}, error) {
+	res := map[string]interface{}{
+		"root_member": rd.RootMember.String(),
+		"node_domain": rd.NodeDomainRef.String(),
+	}
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		return nil, fmt.Errorf("[ Info ] Can't marshal res: %s", err.Error())
+	}
+	return resJSON, nil
+}
+
 var INSATTR_GetNodeDomainRef_API = true
 
 // GetNodeDomainRef returns reference of NodeDomain instance

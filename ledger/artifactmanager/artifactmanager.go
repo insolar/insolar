@@ -126,16 +126,24 @@ func (m *LedgerArtifactManager) GetObject(
 	)
 	defer instrument(ctx, "GetObject").err(&err).end()
 
+	getObjectMsg := &message.GetObject{
+		Head:     head,
+		State:    state,
+		Approved: approved,
+	}
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
-		&message.GetObject{
-			Head:     head,
-			State:    state,
-			Approved: approved,
-		},
+		getObjectMsg,
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if genericReact.Type() == reply.TypeGetObjectRedirect {
+		genericReact, err = m.makeRedirect(ctx, genericReact, getObjectMsg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	switch r := genericReact.(type) {
@@ -157,6 +165,32 @@ func (m *LedgerArtifactManager) GetObject(
 		err = ErrUnexpectedReply
 	}
 	return desc, err
+}
+
+func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.Reply, messageForRedirect *message.GetObject) (core.Reply, error) {
+	// TODO Need to be replaced with constant
+	maxCountOfReply := 2
+
+	for maxCountOfReply > 0 {
+		redirectResponse := response.(*reply.GetObjectRedirectReply)
+
+		redirectedMessage := redirectResponse.RecreateMessage(messageForRedirect)
+
+		genericReact, err := m.bus(ctx).Send(
+			ctx,
+			redirectedMessage,
+			core.SendOptionToken(redirectResponse.Token),
+			core.SendOptionDestination(redirectResponse.To),
+		)
+
+		if genericReact.Type() != reply.TypeGetObjectRedirect {
+			return response, err
+		}
+
+		maxCountOfReply--
+	}
+
+	return nil, errors.New("object not found")
 }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.

@@ -42,11 +42,11 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	}
 
 	parcel := &message.Parcel{
-		Msg: &message.HeavyRecords{Records: payload},
+		Msg: &message.HeavyPayload{Records: payload},
 	}
 
 	var err error
-	_, err = mh.handleHeavyRecords(ctx, parcel)
+	_, err = mh.handleHeavyPayload(ctx, parcel)
 	require.NoError(t, err)
 
 	badgerdb := db.GetBadgerDB()

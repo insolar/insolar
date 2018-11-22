@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package pulsemanager
 
 import (
@@ -17,6 +33,17 @@ func (m *PulseManager) HeavySync(
 	start core.PulseNumber,
 	end core.PulseNumber,
 ) (core.PulseNumber, error) {
+	inslog := inslogger.FromContext(ctx)
+
+	// MAYBE we should check Message Bus replies?
+	signalMsg := &message.HeavyStartStop{Begin: start, End: end}
+	_, starterr := m.Bus.Send(ctx, signalMsg)
+	// TODO: check if locked
+	if starterr != nil {
+		return 0, starterr
+	}
+	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", start, end)
+
 	replicator := storage.NewReplicaIter(
 		ctx, m.db, start, end, m.options.syncmessagelimit)
 	for {
@@ -27,18 +54,24 @@ func (m *PulseManager) HeavySync(
 		if err != nil {
 			panic(err)
 		}
-		msg := &message.HeavyRecords{Records: recs}
-		reply, senderr := m.Bus.Send(ctx, msg)
+		msg := &message.HeavyPayload{Records: recs}
+		_, senderr := m.Bus.Send(ctx, msg)
 		if senderr != nil {
-			return core.PulseNumber(0), senderr
+			return 0, senderr
 		}
-		// TODO: check reply?
-		_ = reply
 	}
-	inslogger.FromContext(ctx).Debugf(
-		"synchronize on [%v:%v) finised (maximum record pulse is %v)",
-		start, end, replicator.LastPulse())
-	return replicator.LastPulse(), nil
+
+	signalMsg.Finished = true
+	_, stoperr := m.Bus.Send(ctx, signalMsg)
+	if stoperr != nil {
+		return 0, stoperr
+	}
+	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", start, end)
+
+	lastmeetpulse := replicator.LastPulse()
+	inslog.Debugf("synchronize on [%v:%v] finised (maximum record pulse is %v)",
+		start, end, lastmeetpulse)
+	return lastmeetpulse, nil
 }
 
 // NextSyncPulses returns pulse numbers range for syncing to heavy node.

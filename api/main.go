@@ -26,8 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/gorilla/rpc/v2"
+	jsonrpc "github.com/gorilla/rpc/v2/json2"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/contract/member/signer"
@@ -35,8 +36,9 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 const (
@@ -156,14 +158,17 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 
 // Runner implements Component for API
 type Runner struct {
-	MessageBus         core.MessageBus         `inject:""`
-	Genesis            core.Genesis            `inject:""`
-	NetworkCoordinator core.NetworkCoordinator `inject:""`
-	server             *http.Server
-	cfg                *configuration.APIRunner
-	keyCache           map[string]crypto.PublicKey
-	cacheLock          *sync.RWMutex
-	seedmanager        *seedmanager.SeedManager
+	MessageBus          core.MessageBus          `inject:""`
+	Certificate         core.Certificate         `inject:""`
+	StorageExporter     core.StorageExporter     `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
+	GenesisDataProvider core.GenesisDataProvider `inject:""`
+	server              *http.Server
+	rpcServer           *rpc.Server
+	cfg                 *configuration.APIRunner
+	keyCache            map[string]crypto.PublicKey
+	cacheLock           *sync.RWMutex
+	seedmanager         *seedmanager.SeedManager
 }
 
 // NewRunner is C-tor for API Runner
@@ -179,11 +184,19 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	}
 
 	addrStr := fmt.Sprint(cfg.Address)
+	rpcServer := rpc.NewServer()
 	ar := Runner{
 		server:    &http.Server{Addr: addrStr},
+		rpcServer: rpcServer,
 		cfg:       cfg,
 		keyCache:  make(map[string]crypto.PublicKey),
 		cacheLock: &sync.RWMutex{},
+	}
+
+	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")
+	err := rpcServer.RegisterService(NewStorageExporterService(&ar), "exporter")
+	if err != nil {
+		return nil, err
 	}
 
 	return &ar, nil
@@ -195,7 +208,7 @@ func (ar *Runner) IsAPIRunner() bool {
 
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
-	rootDomainReference := ar.Genesis.GetRootDomainRef()
+	rootDomainReference := ar.Certificate.GetRootDomainReference()
 
 	ar.seedmanager = seedmanager.New()
 
@@ -203,6 +216,7 @@ func (ar *Runner) Start(ctx context.Context) error {
 	http.HandleFunc(ar.cfg.Location, fw)
 	http.HandleFunc(ar.cfg.Info, ar.infoHandler())
 	http.HandleFunc(ar.cfg.Call, ar.callHandler())
+	http.Handle(ar.cfg.RPC, ar.rpcServer)
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")
 	inslog.Info("Config: ", ar.cfg)

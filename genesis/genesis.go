@@ -62,24 +62,7 @@ type Genesis struct {
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
 	Network         core.Network         `inject:""`
-}
-
-// Info returns json with references for info api endpoint
-func (g *Genesis) Info() ([]byte, error) {
-	prototypes := map[string]string{}
-	for prototype, ref := range g.prototypeRefs {
-		prototypes[prototype] = ref.String()
-	}
-	return json.MarshalIndent(map[string]interface{}{
-		"root_domain": g.rootDomainRef.String(),
-		"root_member": g.rootMemberRef.String(),
-		"prototypes":  prototypes,
-	}, "", "   ")
-}
-
-// GetRootDomainRef returns reference to RootDomain instance
-func (g *Genesis) GetRootDomainRef() *core.RecordRef {
-	return g.rootDomainRef
+	Certificate     core.Certificate     `inject:""`
 }
 
 // NewGenesis creates new Genesis
@@ -145,6 +128,7 @@ func (g *Genesis) activateRootDomain(
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	g.rootDomainRef = contract
+	g.Certificate.SetRootDomainReference(contract)
 
 	return contractID, desc, nil
 }
@@ -370,48 +354,23 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
+	if g.isGenesis {
+		inslog.Info("[ Genesis ] Run genesis ...")
 
-	rootDomainRef, err := g.getRootDomainRef(ctx)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't get ref of rootDomain")
-	}
-	if rootDomainRef != nil {
-		g.rootDomainRef = rootDomainRef
-
-		rootMemberRef, err := g.getRootMemberRef(ctx, *g.rootDomainRef)
+		_, insgocc, err := goplugintestutils.Build()
 		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't get ref of rootMember")
+			return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
 		}
 
-		g.rootMemberRef = rootMemberRef
-		inslog.Info("[ Genesis ] RootDomain was found in ledger. Don't run genesis")
-		return nil
-	}
+		cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
+		g.prototypeRefs = cb.Prototypes
+		defer cb.Clean()
 
-	isLightExecutor, err := g.isLightExecutor(ctx)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't check if node is light executor")
-	}
-	if !isLightExecutor {
-		inslog.Info("[ Genesis ] Node is not light executor. Don't run genesis")
-		return nil
-	}
+		err = buildSmartContracts(ctx, cb)
+		if err != nil {
+			return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
+		}
 
-	_, insgocc, err := goplugintestutils.Build()
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
-	}
-
-	cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
-	g.prototypeRefs = cb.Prototypes
-	defer cb.Clean()
-
-	err = buildSmartContracts(ctx, cb)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
-	}
-
-	if g.isGenesis {
 		_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
 		if err != nil {
 			return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
@@ -477,71 +436,4 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 		}
 	}
 	return nil
-}
-
-func (g *Genesis) isLightExecutor(ctx context.Context) (bool, error) {
-	currentPulse, err := g.PulseManager.Current(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
-	}
-
-	nodeID := g.Network.GetNodeID()
-
-	isLightExecutor, err := g.JetCoordinator.IsAuthorized(
-		ctx,
-		core.RoleLightExecutor,
-		g.ArtifactManager.GenesisRef(),
-		currentPulse.PulseNumber,
-		nodeID,
-	)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
-	}
-	if !isLightExecutor {
-		inslogger.FromContext(ctx).Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
-		return false, nil
-	}
-	return true, nil
-}
-
-func (g *Genesis) getRootDomainRef(ctx context.Context) (*core.RecordRef, error) {
-	genesisRef := g.ArtifactManager.GenesisRef()
-	if genesisRef == nil {
-		return nil, errors.New("[ getRootDomainRef ] Genesis ref is nil")
-	}
-	rootObj, err := g.ArtifactManager.GetObject(ctx, *genesisRef, nil, true)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
-	}
-	rootRefChildren, err := rootObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootRefChildren.HasNext() {
-		rootDomainRef, err := rootRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
-		}
-		return rootDomainRef, nil
-	}
-	return nil, nil
-}
-
-func (g *Genesis) getRootMemberRef(ctx context.Context, rootDomainRef core.RecordRef) (*core.RecordRef, error) {
-	rootDomainObj, err := g.ArtifactManager.GetObject(ctx, rootDomainRef, nil, false)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get children of RootDomain object")
-	}
-	rootDomainRefChildren, err := rootDomainObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootDomainRefChildren.HasNext() {
-		rootMemberRef, err := rootDomainRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get next child of RootDomain object")
-		}
-		return rootMemberRef, nil
-	}
-	return nil, nil
 }

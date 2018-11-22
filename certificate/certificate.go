@@ -49,6 +49,7 @@ type Certificate struct {
 	} `json:"min_roles"`
 	PublicKey           string          `json:"public_key"`
 	Reference           string          `json:"reference"`
+	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
 	Role                string          `json:"role"`
 	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
 	RootDomainReference string          `json:"root_domain_ref"`
@@ -59,6 +60,8 @@ func (cert *Certificate) serializeNetworkPart() []byte {
 		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +
 		cert.RootDomainReference
 
+	sort.Strings(cert.PulsarPublicKeys)
+	out += strings.Join(cert.PulsarPublicKeys, "")
 	sort.Slice(cert.BootstrapNodes, func(i, j int) bool {
 		return strings.Compare(cert.BootstrapNodes[i].PublicKey, cert.BootstrapNodes[j].PublicKey) == -1
 	})
@@ -132,6 +135,17 @@ func (cert *Certificate) reset() {
 
 func (cert *Certificate) GetRole() core.NodeRole {
 	return core.GetRoleFromString(cert.Role)
+}
+
+// GetRootDomainReference returns RootDomain reference
+func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
+	ref := core.NewRefFromBase58(cert.RootDomainReference)
+	return &ref
+}
+
+// SetRootDomainReference sets RootDomain reference for certificate
+func (cert *Certificate) SetRootDomainReference(ref *core.RecordRef) {
+	cert.RootDomainReference = ref.String()
 }
 
 // NewCertificatesWithKeys generate certificate from given keys

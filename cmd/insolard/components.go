@@ -23,10 +23,12 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesis"
+	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
@@ -132,6 +134,9 @@ func InitComponents(
 		checkError(ctx, err, "failed to start Bootstrapper")
 	}
 
+	genesisDataProvider, err := genesisdataprovider.New()
+	checkError(ctx, err, "failed to start GenesisDataProvider")
+
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
@@ -147,6 +152,8 @@ func InitComponents(
 	// move to logic runner ??
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
+
+	phases := phases.NewPhaseManager()
 
 	cm := component.Manager{}
 	cm.Register(
@@ -186,9 +193,12 @@ func InitComponents(
 		delegationTokenFactory,
 		parcelFactory,
 		gen,
+		genesisDataProvider,
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
+		phases,
+		cryptographyService,
 	}...)
 
 	cm.Inject(components...)

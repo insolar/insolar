@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -140,7 +140,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		args, err := core.MarshalArgs(*ar.Genesis.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
+		args, err := core.MarshalArgs(*ar.Certificate.GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature)
 		if err != nil {
 			resp.Error = err.Error()
 			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't marshal args"))

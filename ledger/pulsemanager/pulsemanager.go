@@ -92,12 +92,7 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	if err != nil {
 		return nil, err
 	}
-	data := core.Pulse{
-		PulseNumber:     latestPulse,
-		Entropy:         pulse.Entropy,
-		NextPulseNumber: pulse.PredictedNextPulse,
-	}
-	return &data, nil
+	return &pulse.Pulse, nil
 }
 
 func (m *PulseManager) processDrop(ctx context.Context) error {
@@ -109,7 +104,7 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	prevDrop, err := m.db.GetDrop(ctx, latestPulse.PrevPulse)
+	prevDrop, err := m.db.GetDrop(ctx, *latestPulse.Prev)
 	if err != nil {
 		return err
 	}
@@ -243,7 +238,7 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 				panic(err)
 			}
 		}
-		inslog.Debugf("syncronization sync pulses: [%v:%v)", start, end)
+		inslog.Debugf("syncronization sync pulses: [%v:%v]", start, end)
 
 		lastprocessed, syncerr := m.HeavySync(ctx, start, end)
 		if syncerr != nil {
