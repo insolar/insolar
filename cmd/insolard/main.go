@@ -37,34 +37,6 @@ import (
 	"github.com/insolar/insolar/version"
 )
 
-/*
-// ComponentManager is deprecated and will be removed after completly switching to component.Manager
-type ComponentManager struct {
-	components core.Components
-}
-
-func (cm *ComponentManager) GetAll() core.Components {
-	return cm.components
-}
-
-// LinkAll - link dependency for all components
-func (cm *ComponentManager) LinkAll(ctx context.Context) {
-	inslog := inslogger.FromContext(ctx)
-	v := reflect.ValueOf(cm.components)
-	for i := 0; i < v.NumField(); i++ {
-
-		if component, ok := v.Field(i).Interface().(core.Component); ok {
-			componentName := v.Field(i).String()
-			inslog.Infof("==== Old ComponentManager: Starting component `%s` ...", componentName)
-			err := component.Start(ctx, cm.components)
-			if err != nil {
-				inslog.Fatalf("==== Old ComponentManager: failed to start component %s : %s", componentName, err.Error())
-			}
-			inslog.Infof("==== Old ComponentManager: Component `%s` successfully started", componentName)
-		}
-	}
-}
-*/
 type inputParams struct {
 	configPath        string
 	isGenesis         bool
@@ -175,8 +147,6 @@ func main() {
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
-
-	//cmOld.LinkAll(ctx)
 
 	err = cm.Start(ctx)
 	checkError(ctx, err, "failed to start components")
