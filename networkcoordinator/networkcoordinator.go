@@ -31,8 +31,8 @@ type NetworkCoordinator struct {
 	ContractRequester   core.ContractRequester   `inject:""`
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
 
-	realCoordinator realNetworkCoordinator
-	zeroCoordinator zeroNetworkCoordinator
+	realCoordinator core.NetworkCoordinator
+	zeroCoordinator core.NetworkCoordinator
 }
 
 // New creates new NetworkCoordinator
@@ -46,7 +46,7 @@ func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 }
 
 func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
-	if nc.NetworkSwitcher.GetState() {
+	if nc.NetworkSwitcher.GetState() == core.CompleteNetworkState {
 		return nc.realCoordinator
 	} else {
 		return nc.zeroCoordinator
