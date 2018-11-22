@@ -14,12 +14,12 @@
  *    limitations under the License.
  */
 
-package network
+package core
 
 // State type for bootstrapping process
-type State int
+type NetworkState int
 
 // Switcher is a network FSM
-type Switcher interface {
-	GetState() State
+type NetworkSwitcher interface {
+	GetState() NetworkState
 }

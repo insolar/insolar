@@ -17,7 +17,7 @@
 package state
 
 import (
-	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/core"
 )
 
 const (
@@ -40,6 +40,6 @@ func NewNetworkSwitcher() (*NetworkSwitcher, error) {
 	return &NetworkSwitcher{}, nil
 }
 
-func (ns *NetworkSwitcher) GetState() network.State {
+func (ns *NetworkSwitcher) GetState() core.NetworkState {
 	return CompleteNetwork
 }
