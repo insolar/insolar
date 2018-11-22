@@ -34,13 +34,13 @@ type InfoResponse struct {
 // ExtractInfoResponse returns response from Info() method of RootDomain contract
 func ExtractInfoResponse(data []byte) (*InfoResponse, error) {
 	var infoMap interface{}
-	var infoError *foundation.Error
-	_, err := core.UnMarshalResponse(data, []interface{}{&infoMap, &infoError})
+	var contractErr *foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{&infoMap, &contractErr})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ExtractInfoResponse ] Can't unmarshal")
 	}
-	if infoError != nil {
-		return nil, errors.Wrap(infoError, "[ ExtractInfoResponse ] Has error in response")
+	if contractErr != nil {
+		return nil, errors.Wrap(contractErr, "[ ExtractInfoResponse ] Has error in response")
 	}
 
 	var info InfoResponse
@@ -115,13 +115,13 @@ func ExtractNodeRef(rawJSON []byte) (string, error) {
 
 func ExtractReferenceResponse(data []byte) (*core.RecordRef, error) {
 	var ref *core.RecordRef
-	var ferr *foundation.Error
-	_, err := core.UnMarshalResponse(data, []interface{}{&ref, &ferr})
+	var contractErr *foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{&ref, &contractErr})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ExtractReferenceResponse ] Can't unmarshal response ")
 	}
-	if ferr != nil {
-		return nil, errors.Wrap(ferr, "[ ExtractReferenceResponse ] Has error in response")
+	if contractErr != nil {
+		return nil, errors.Wrap(contractErr, "[ ExtractReferenceResponse ] Has error in response")
 	}
 	return ref, nil
 }
@@ -134,4 +134,17 @@ func ExtractCallResponse(data []byte) (interface{}, *foundation.Error, error) {
 		return nil, nil, errors.Wrap(err, "[ ExtractCallResponse ] Can't unmarshal response ")
 	}
 	return result, contractErr, nil
+}
+
+func ExtractStringResponse(data []byte) (string, error) {
+	var result string
+	var contractErr *foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{&result, &contractErr})
+	if err != nil {
+		return "", errors.Wrap(err, "[ ExtractStringResponse ] Can't unmarshal response ")
+	}
+	if contractErr != nil {
+		return "", errors.Wrap(contractErr, "[ ExtractStringResponse ] Has error in response")
+	}
+	return result, nil
 }
