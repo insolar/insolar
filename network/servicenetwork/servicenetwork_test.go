@@ -121,7 +121,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, testutils.RandomRef(), "", true)
 
 	serviceNetwork.NodeNetwork, _ = nodenetwork.NewNodeNetwork(cfg)
-	err = serviceNetwork.Init(ctx)
+	err = serviceNetwork.Start(ctx)
 	require.NoError(t, err)
 
 	e := &message.CallMethod{
@@ -174,12 +174,12 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 
 	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
 
-	err = secondNode.Init(ctx)
+	err = secondNode.Start(ctx)
 	require.NoError(t, err)
 	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
 
 	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
-	err = firstNode.Init(ctx)
+	err = firstNode.Start(ctx)
 	require.NoError(t, err)
 
 	defer func() {
@@ -230,14 +230,14 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 
 	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
 
-	err = secondNode.Init(ctx)
+	err = secondNode.Start(ctx)
 	require.NoError(t, err)
 
 	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
 
 	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
 
-	err = firstNode.Init(ctx)
+	err = firstNode.Start(ctx)
 	require.NoError(t, err)
 
 	defer func() {
@@ -323,7 +323,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
 		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node), scheme)
-		service.Init(ctx)
+		service.Start(ctx)
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
 			return nil, nil

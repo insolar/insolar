@@ -94,8 +94,8 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 	n.controller.RemoteProcedureRegister(name, method)
 }
 
-// Init implements core.Component
-func (n *ServiceNetwork) Init(ctx context.Context) error {
+// Start implements component.Starter
+func (n *ServiceNetwork) Start(ctx context.Context) error {
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
 

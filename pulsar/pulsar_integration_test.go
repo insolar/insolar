@@ -141,7 +141,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 
 	serviceNetwork.PulseManager = tempLedger.GetPulseManager()
 	require.NoError(t, err)
-	err = serviceNetwork.Init(ctx)
+	err = serviceNetwork.Start(ctx)
 	require.NoError(t, err)
 	address := serviceNetwork.GetAddress()
 	return tempLedger, cleaner, serviceNetwork, address
