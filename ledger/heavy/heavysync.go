@@ -18,9 +18,10 @@ package heavy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
@@ -53,17 +54,48 @@ func NewSync(db *storage.DB) *Sync {
 	}
 }
 
+func (s *Sync) checkIsNextPulse(ctx context.Context, pn core.PulseNumber) error {
+	var (
+		checkpoint core.PulseNumber
+		err        error
+	)
+
+	checkpoint = s.lastok
+	if checkpoint == 0 {
+		checkpoint, err = s.db.GetHeavySyncedPulse(ctx)
+		if err != nil {
+			return errors.Wrap(err, "GetHeavySyncedPulse failed")
+		}
+	}
+	if checkpoint == 0 {
+		if pn != core.FirstPulseNumber {
+			return errors.New("Range should start with first pulse if sync checkpoint on heavy not found")
+		}
+		return nil
+	}
+
+	if pn <= s.lastok {
+		return errors.New("Pulse has been already synced")
+	}
+
+	pulse, err := s.db.GetPulse(ctx, checkpoint)
+	if err != nil {
+		return errors.Wrapf(err, "GetPulse with pulse num %v failed", checkpoint)
+	}
+	if pulse.Next == nil {
+		return fmt.Errorf("next pulse after %v not found", checkpoint)
+	}
+
+	if pn != *pulse.Next {
+		return fmt.Errorf("pulse %v is not next after %v", pn, *pulse.Next)
+	}
+	return nil
+}
+
 // Start try to start heavy sync in provided range of pulses.
 func (s *Sync) Start(ctx context.Context, prange core.PulseRange) error {
 	s.Lock()
 	defer s.Unlock()
-	if s.lastok == 0 {
-		pnum, err := s.db.GetHeavySyncedPulse(ctx)
-		if err != nil {
-			return err
-		}
-		s.lastok = pnum
-	}
 
 	if prange.Begin >= prange.End {
 		return errors.New("Wrong pulse range")
@@ -73,23 +105,10 @@ func (s *Sync) Start(ctx context.Context, prange core.PulseRange) error {
 		return ErrSyncInProgress
 	}
 
-	if prange.Begin <= s.lastok {
-		return errors.New("Range already synced")
+	if err := s.checkIsNextPulse(ctx, prange.Begin); err != nil {
+		return err
 	}
 
-	if s.lastok == 0 {
-		if prange.Begin != core.FirstPulseNumber {
-			return errors.New("Range should start with first pulse on empty heavy")
-		}
-		// for passing next check
-		// TODO: move to storage method logic?
-		s.lastok = prange.Begin - 1
-	}
-
-	// TODO: increase lastok by one if lastok more than N pulses in past
-	if prange.Begin-1 > s.lastok {
-		return fmt.Errorf("last synced pulse is %v, but range is %v", s.lastok, prange)
-	}
 	s.syncrange = &prange
 	return nil
 }

@@ -79,6 +79,7 @@ func TestHeavy_Sync(t *testing.T) {
 
 	// stop previous
 	err = sync.Stop(ctx, prange)
+	require.NoError(t, err)
 
 	// start next
 	prangeNextPlus := prangeNext
@@ -86,6 +87,16 @@ func TestHeavy_Sync(t *testing.T) {
 	prangeNextPlus.End++
 	err = sync.Start(ctx, prangeNextPlus)
 	require.Error(t, err, "start when previous pulses not synced")
+
+	// prepare pulses
+	preparepulse := func(pn core.PulseNumber) {
+		pulse := core.Pulse{PulseNumber: pn}
+		// fmt.Printf("Store pulse: %v\n", pulse.PulseNumber)
+		err = db.AddPulse(ctx, pulse)
+		require.NoError(t, err)
+	}
+	preparepulse(prange.Begin)
+	preparepulse(prangeNext.Begin) // should set corret next for previous pulse
 
 	err = sync.Start(ctx, prangeNext)
 	require.NoError(t, err, "start next pulse")
@@ -103,6 +114,7 @@ func TestHeavy_Sync(t *testing.T) {
 	err = sync.Stop(ctx, prangeNext)
 	require.NoError(t, err, "stop current range")
 
+	preparepulse(prangeNextPlus.Begin) // should set corret next for previous pulse
 	sync = NewSync(db)
 	err = sync.Start(ctx, prangeNextPlus)
 	require.NoError(t, err, "start next+1 range on new sync instance (checkpoint check)")
