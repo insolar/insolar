@@ -427,7 +427,7 @@ const (
 	lowBitLengthMask        = 0x3f
 )
 
-func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+func (p2p *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
 	if header == nil {
 		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
 	}
@@ -435,26 +435,26 @@ func (phase2Packet *Phase2Packet) DeserializeWithoutHeader(data io.Reader, heade
 		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Wrong packet type")
 	}
 
-	phase2Packet.packetHeader = *header
+	p2p.packetHeader = *header
 
-	err := binary.Read(data, defaultByteOrder, &phase2Packet.globuleHashSignature)
+	err := binary.Read(data, defaultByteOrder, &p2p.globuleHashSignature)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read globuleHashSignature")
 	}
 
-	// err = phase2Packet.deviantBitSet.Deserialize(data)
+	// err = p2p.deviantBitSet.Deserialize(data)
 	// if err != nil {
 	// 	return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize deviantBitSet")
 	// }
 
-	err = binary.Read(data, defaultByteOrder, &phase2Packet.SignatureHeaderSection1)
+	err = binary.Read(data, defaultByteOrder, &p2p.SignatureHeaderSection1)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read SignatureHeaderSection1")
 	}
 
 	// TODO: add reading Referendum vote
 
-	err = binary.Read(data, defaultByteOrder, &phase2Packet.SignatureHeaderSection2)
+	err = binary.Read(data, defaultByteOrder, &p2p.SignatureHeaderSection2)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read SignatureHeaderSection2")
 	}
