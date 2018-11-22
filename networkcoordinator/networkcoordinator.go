@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
@@ -34,8 +33,6 @@ type NetworkCoordinator struct {
 	Certificate     core.Certificate  `inject:""`
 	KeyProcessor    core.KeyProcessor `inject:""`
 	NetworkSwitcher network.Switcher  `inject:""`
-	nodeDomainRef   *core.RecordRef
-	rootDomainRef   *core.RecordRef
 
 	realCoordinator realNetworkCoordinator
 	zeroCoordinator zeroNetworkCoordinator
@@ -46,14 +43,8 @@ func New() (*NetworkCoordinator, error) {
 	return &NetworkCoordinator{}, nil
 }
 
+// Init implements interface of Component
 func (nc *NetworkCoordinator) Init(ctx context.Context) error {
-	return nil
-}
-
-// Start implements interface of Component
-func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	nc.rootDomainRef = nc.Certificate.GetRootDomainReference()
-
 	return nil
 }
 
@@ -119,29 +110,4 @@ func (nc *NetworkCoordinator) sendRequest(ctx context.Context, ref *core.RecordR
 	}
 
 	return routResult, nil
-}
-
-func (nc *NetworkCoordinator) getNodeDomainRef(ctx context.Context) (*core.RecordRef, error) {
-	if nc.nodeDomainRef == nil {
-		nodeDomainRef, err := nc.fetchNodeDomainRef(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getNodeDomainRef ] can't fetch nodeDomainRef")
-		}
-		nc.nodeDomainRef = nodeDomainRef
-	}
-	return nc.nodeDomainRef, nil
-}
-
-func (nc *NetworkCoordinator) fetchNodeDomainRef(ctx context.Context) (*core.RecordRef, error) {
-	routResult, err := nc.sendRequest(ctx, nc.rootDomainRef, "GetNodeDomainRef", []interface{}{})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't send request")
-	}
-
-	nodeDomainRef, err := extractReferenceResponse(routResult.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't extract response")
-	}
-
-	return nodeDomainRef, nil
 }

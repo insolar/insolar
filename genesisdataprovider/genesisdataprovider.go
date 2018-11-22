@@ -29,7 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// GenesisDataProvider gives access to basic infotmation about genesis objects
+// GenesisDataProvider gives access to basic information about genesis objects
 type GenesisDataProvider struct {
 	Certificate   core.Certificate `inject:""`
 	MessageBus    core.MessageBus  `inject:""`

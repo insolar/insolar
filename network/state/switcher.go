@@ -33,13 +33,13 @@ const (
 	CompleteNetwork
 )
 
-type NetworkSwitcherImpl struct {
+type NetworkSwitcher struct {
 }
 
-func NewNetworkSwitcherImpl() *NetworkSwitcherImpl {
-	return &NetworkSwitcherImpl{}
+func NewNetworkSwitcher() (*NetworkSwitcher, error) {
+	return &NetworkSwitcher{}, nil
 }
 
-func (ns *NetworkSwitcherImpl) GetState() network.State {
+func (ns *NetworkSwitcher) GetState() network.State {
 	return CompleteNetwork
 }
