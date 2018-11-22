@@ -1,0 +1,10 @@
+#!/bin/sh
+
+echo tests
+pwd
+ls -alh
+cd gopath/src/github.com/insolar/insolar
+echo "fetching dependencies..."
+go get -t -d ./...
+cd network/host
+go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
