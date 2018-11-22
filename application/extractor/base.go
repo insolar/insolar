@@ -22,30 +22,29 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ExtractReferenceResponse extracts reference response
-func ExtractReferenceResponse(data []byte) (*core.RecordRef, error) {
+func referenceResponse(data []byte) (*core.RecordRef, error) {
 	var ref *core.RecordRef
 	var contractErr *foundation.Error
 	_, err := core.UnMarshalResponse(data, []interface{}{&ref, &contractErr})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ExtractReferenceResponse ] Can't unmarshal response ")
+		return nil, errors.Wrap(err, "[ referenceResponse ] Can't unmarshal response ")
 	}
 	if contractErr != nil {
-		return nil, errors.Wrap(contractErr, "[ ExtractReferenceResponse ] Has error in response")
+		return nil, errors.Wrap(contractErr, "[ referenceResponse ] Has error in response")
 	}
 	return ref, nil
 }
 
-// ExtractStringResponse extracts string response
-func ExtractStringResponse(data []byte) (string, error) {
+// StringResponse extracts string response
+func StringResponse(data []byte) (string, error) {
 	var result string
 	var contractErr *foundation.Error
 	_, err := core.UnMarshalResponse(data, []interface{}{&result, &contractErr})
 	if err != nil {
-		return "", errors.Wrap(err, "[ ExtractStringResponse ] Can't unmarshal response ")
+		return "", errors.Wrap(err, "[ StringResponse ] Can't unmarshal response ")
 	}
 	if contractErr != nil {
-		return "", errors.Wrap(contractErr, "[ ExtractStringResponse ] Has error in response")
+		return "", errors.Wrap(contractErr, "[ StringResponse ] Has error in response")
 	}
 	return result, nil
 }

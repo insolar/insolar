@@ -257,7 +257,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't get public key")
 	}
 
-	publicKeyString, err := extractor.ExtractStringResponse(res.(*reply.CallMethod).Result)
+	publicKeyString, err := extractor.StringResponse(res.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't extract response")
 	}
