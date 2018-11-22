@@ -189,20 +189,17 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 	for _, r := range mustfail {
 		failmap[r] = struct{}{}
 	}
+
 	rlr := lr.(*LogicRunner)
-	rlr.caseBindMutex.Lock()
-	rlrcbr := rlr.caseBind.Records
-	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
-	rlr.caseBindMutex.Unlock()
-	for ref, cr := range rlrcbr {
+
+	for ref, state := range rlr.execution {
 		log.Debugf("TEST validating: %s", ref)
-		vstep, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), cr)
+
+		_, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), state.caseBind)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation %s", ref)
-			assert.True(t, len(cr) > vstep, "Validation failed before end %s", ref)
 		} else {
 			assert.NoError(t, err, "validation %s", ref)
-			assert.Equal(t, len(cr), vstep, "Validation passed to the end %s", ref)
 		}
 	}
 }
@@ -229,6 +226,11 @@ func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManage
 	return resp, err
 }
 
+func firstMethodRes(t *testing.T, resp core.Reply) interface{} {
+	res := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	return res.([]interface{})[0]
+}
+
 func TestTypeCompatibility(t *testing.T) {
 	var _ core.LogicRunner = (*LogicRunner)(nil)
 }
@@ -237,6 +239,96 @@ func getRefFromID(id *core.RecordID) *core.RecordRef {
 	ref := core.RecordRef{}
 	ref.SetRecord(*id)
 	return &ref
+}
+
+func TestSingleContract(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+	Number int
+}
+
+func (c *One) Inc() (int, error) {
+	c.Number++
+	return c.Number, nil
+}
+
+func (c *One) Get() (int, error) {
+	return c.Number, nil
+}
+
+func (c *One) Dec() (int, error) {
+	c.Number--
+	return c.Number, nil
+}
+`
+	ctx := context.Background()
+
+	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{"one": contractOneCode})
+	assert.NoError(t, err)
+
+	objID, err := am.RegisterRequest(
+		ctx, &message.Parcel{Msg: &message.CallConstructor{}},
+	)
+	assert.NoError(t, err)
+
+	obj := getRefFromID(objID)
+	_, err = am.ActivateObject(
+		ctx,
+		core.RecordRef{}, *obj,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
+		goplugintestutils.CBORMarshal(t, &struct{}{}),
+	)
+	assert.NoError(t, err)
+
+	resp, err := executeMethod(
+		ctx, lr, pm, *obj, 0, "Get",
+		goplugintestutils.CBORMarshal(t, []interface{}{}),
+	)
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
+
+	resp, err = executeMethod(
+		ctx, lr, pm, *obj, 0, "Inc",
+		goplugintestutils.CBORMarshal(t, []interface{}{}),
+	)
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(1), firstMethodRes(t, resp))
+
+	resp, err = executeMethod(
+		ctx, lr, pm, *obj, 0, "Get",
+		goplugintestutils.CBORMarshal(t, []interface{}{}),
+	)
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(1), firstMethodRes(t, resp))
+
+	resp, err = executeMethod(
+		ctx, lr, pm, *obj, 0, "Dec",
+		goplugintestutils.CBORMarshal(t, []interface{}{}),
+	)
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
+
+	resp, err = executeMethod(
+		ctx, lr, pm, *obj, 0, "Get",
+		goplugintestutils.CBORMarshal(t, []interface{}{}),
+	)
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
+
+	ValidateAllResults(t, ctx, lr)
 }
 
 func TestContractCallingContract(t *testing.T) {
