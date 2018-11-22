@@ -533,7 +533,7 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 		es.Unlock()
 	}()
 
-	if es.callContext.Caller.Equal(Ref{}) {
+	if es.callContext.Caller.IsEmpty() {
 		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
 	}
 
