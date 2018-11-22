@@ -36,7 +36,9 @@ func (m *PulseManager) HeavySync(
 	inslog := inslogger.FromContext(ctx)
 
 	// MAYBE we should check Message Bus replies?
-	signalMsg := &message.HeavyStartStop{Begin: start, End: end}
+	signalMsg := &message.HeavyStartStop{
+		PulseRange: core.PulseRange{Begin: start, End: end},
+	}
 	_, starterr := m.Bus.Send(ctx, signalMsg, nil)
 	// TODO: check if locked
 	if starterr != nil {
