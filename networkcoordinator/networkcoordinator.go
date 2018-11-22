@@ -18,22 +18,20 @@ package networkcoordinator
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/binary"
 
+	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
-	MessageBus    core.MessageBus   `inject:""`
-	KeyProcessor  core.KeyProcessor `inject:""`
-	Certificate   core.Certificate  `inject:""`
-	nodeDomainRef *core.RecordRef
-	rootDomainRef *core.RecordRef
+	Certificate       core.Certificate       `inject:""`
+	KeyProcessor      core.KeyProcessor      `inject:""`
+	ContractRequester core.ContractRequester `inject:""`
+	nodeDomainRef     *core.RecordRef
+	rootDomainRef     *core.RecordRef
 }
 
 // New creates new NetworkCoordinator
@@ -48,51 +46,6 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 	return nil
 }
 
-// RandomUint64 generates random uint64
-func RandomUint64() uint64 {
-	buf := make([]byte, 8)
-	_, err := rand.Read(buf)
-	if err != nil {
-		panic(err)
-	}
-
-	return binary.LittleEndian.Uint64(buf)
-}
-
-func (nc *NetworkCoordinator) routeCall(ctx context.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
-	if nc.MessageBus == nil {
-		return nil, errors.New("[ NetworkCoordinator::routeCall ] message bus was not set during initialization")
-	}
-
-	e := &message.CallMethod{
-		BaseLogicMessage: message.BaseLogicMessage{Nonce: RandomUint64()},
-		ObjectRef:        ref,
-		Method:           method,
-		Arguments:        args,
-	}
-
-	res, err := nc.MessageBus.Send(ctx, e)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NetworkCoordinator::routeCall ] couldn't send message: "+ref.String())
-	}
-
-	return res, nil
-}
-
-func (nc *NetworkCoordinator) sendRequest(ctx context.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
-	args, err := core.MarshalArgs(argsIn...)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NetworkCoordinator::sendRequest ]")
-	}
-
-	routResult, err := nc.routeCall(ctx, *ref, method, args)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NetworkCoordinator::sendRequest ]")
-	}
-
-	return routResult, nil
-}
-
 func (nc *NetworkCoordinator) getNodeDomainRef(ctx context.Context) (*core.RecordRef, error) {
 	if nc.nodeDomainRef == nil {
 		nodeDomainRef, err := nc.fetchNodeDomainRef(ctx)
@@ -105,12 +58,12 @@ func (nc *NetworkCoordinator) getNodeDomainRef(ctx context.Context) (*core.Recor
 }
 
 func (nc *NetworkCoordinator) fetchNodeDomainRef(ctx context.Context) (*core.RecordRef, error) {
-	routResult, err := nc.sendRequest(ctx, nc.rootDomainRef, "GetNodeDomainRef", []interface{}{})
+	routResult, err := nc.ContractRequester.SendRequest(ctx, nc.rootDomainRef, "GetNodeDomainRef", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't send request")
 	}
 
-	nodeDomainRef, err := extractReferenceResponse(routResult.(*reply.CallMethod).Result)
+	nodeDomainRef, err := contractrequester.ExtractReferenceResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't extract response")
 	}
@@ -130,13 +83,13 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't get nodeDomainRef")
 	}
 
-	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
+	routResult, err := nc.ContractRequester.SendRequest(ctx, nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
 
 	if err != nil {
 		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't send request")
 	}
 
-	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
+	pubKey, role, err := contractrequester.ExtractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't extract response")
 	}
@@ -155,12 +108,12 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't import public key")
 	}
 
-	routResult, err := nc.sendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKeyStr, numberOfBootstrapNodes, majorityRule, role})
+	routResult, err := nc.ContractRequester.SendRequest(ctx, nodeDomainRef, "RegisterNode", []interface{}{publicKeyStr, numberOfBootstrapNodes, majorityRule, role})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")
 	}
 
-	rawCertificate, err := ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
+	rawCertificate, err := contractrequester.ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't extract response")
 	}
