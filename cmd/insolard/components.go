@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/phases"
+	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
@@ -135,6 +136,9 @@ func initComponents(
 		checkError(ctx, err, "failed to start Bootstrapper")
 	}
 
+	contractRequester, err := contractrequester.New()
+	checkError(ctx, err, "failed to start ContractRequester")
+
 	genesisDataProvider, err := genesisdataprovider.New()
 	checkError(ctx, err, "failed to start GenesisDataProvider")
 
@@ -172,6 +176,7 @@ func initComponents(
 	components = append(components, []interface{}{
 		nw,
 		messageBus,
+		contractRequester,
 		&ld,
 		logicRunner,
 		delegationTokenFactory,

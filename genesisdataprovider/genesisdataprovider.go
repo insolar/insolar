@@ -18,30 +18,20 @@ package genesisdataprovider
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/binary"
-	"encoding/json"
 
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
 // GenesisDataProvider gives access to basic information about genesis objects
 type GenesisDataProvider struct {
-	Certificate   core.Certificate `inject:""`
-	MessageBus    core.MessageBus  `inject:""`
-	nodeDomainRef *core.RecordRef
-	rootDomainRef *core.RecordRef
-	rootMemberRef *core.RecordRef
-}
-
-type infoResponse struct {
-	RootDomain string `json:"root_domain"`
-	RootMember string `json:"root_member"`
-	NodeDomain string `json:"node_domain"`
+	Certificate       core.Certificate       `inject:""`
+	ContractRequester core.ContractRequester `inject:""`
+	nodeDomainRef     *core.RecordRef
+	rootDomainRef     *core.RecordRef
+	rootMemberRef     *core.RecordRef
 }
 
 // New creates new GenesisDataProvider
@@ -49,79 +39,13 @@ func New() (*GenesisDataProvider, error) {
 	return &GenesisDataProvider{}, nil
 }
 
-// RandomUint64 generates random uint64
-func RandomUint64() uint64 {
-	buf := make([]byte, 8)
-	_, err := rand.Read(buf)
-	if err != nil {
-		panic(err)
-	}
-
-	return binary.LittleEndian.Uint64(buf)
-}
-
-func (gdp *GenesisDataProvider) routeCall(ctx context.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
-	if gdp.MessageBus == nil {
-		return nil, errors.New("[ GenesisDataProvider::routeCall ] message bus was not set during initialization")
-	}
-
-	e := &message.CallMethod{
-		BaseLogicMessage: message.BaseLogicMessage{Nonce: RandomUint64()},
-		ObjectRef:        ref,
-		Method:           method,
-		Arguments:        args,
-	}
-
-	res, err := gdp.MessageBus.Send(ctx, e)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GenesisDataProvider::routeCall ] couldn't send message: "+ref.String())
-	}
-
-	return res, nil
-}
-
-func extractInfoResponse(data []byte) (*infoResponse, error) {
-	var infoMap interface{}
-	var infoError *foundation.Error
-	_, err := core.UnMarshalResponse(data, []interface{}{&infoMap, &infoError})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ extractInfoResponse ] Can't unmarshal")
-	}
-	if infoError != nil {
-		return nil, errors.Wrap(infoError, "[ extractInfoResponse ] Has error in response")
-	}
-
-	var info infoResponse
-	data = infoMap.([]byte)
-	err = json.Unmarshal(data, &info)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ extractInfoResponse ] Can't unmarshal response ")
-	}
-
-	return &info, nil
-}
-
-func (gdp *GenesisDataProvider) sendRequest(ctx context.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
-	args, err := core.MarshalArgs(argsIn...)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GenesisDataProvider::sendRequest ]")
-	}
-
-	routResult, err := gdp.routeCall(ctx, *ref, method, args)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GenesisDataProvider::sendRequest ]")
-	}
-
-	return routResult, nil
-}
-
 func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
-	routResult, err := gdp.sendRequest(ctx, gdp.GetRootDomain(ctx), "Info", []interface{}{})
+	routResult, err := gdp.ContractRequester.SendRequest(ctx, gdp.GetRootDomain(ctx), "Info", []interface{}{})
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Can't send request")
 	}
 
-	info, err := extractInfoResponse(routResult.(*reply.CallMethod).Result)
+	info, err := extractor.InfoResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Can't extract response")
 	}
