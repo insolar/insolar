@@ -31,7 +31,7 @@ import (
 type NetworkCoordinator struct {
 	MessageBus    core.MessageBus   `inject:""`
 	KeyProcessor  core.KeyProcessor `inject:""`
-	Genesis       core.Genesis      `inject:""`
+	Certificate   core.Certificate  `inject:""`
 	nodeDomainRef *core.RecordRef
 	rootDomainRef *core.RecordRef
 }
@@ -43,7 +43,7 @@ func New() (*NetworkCoordinator, error) {
 
 // Start implements interface of Component
 func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	nc.rootDomainRef = nc.Genesis.GetRootDomainRef()
+	nc.rootDomainRef = nc.Certificate.GetRootDomainReference()
 
 	return nil
 }

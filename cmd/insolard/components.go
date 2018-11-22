@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesis"
+	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
@@ -133,6 +134,9 @@ func initComponents(
 		checkError(ctx, err, "failed to start Bootstrapper")
 	}
 
+	genesisDataProvider, err := genesisdataprovider.New()
+	checkError(ctx, err, "failed to start GenesisDataProvider")
+
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
@@ -169,6 +173,7 @@ func initComponents(
 		delegationTokenFactory,
 		parcelFactory,
 		gen,
+		genesisDataProvider,
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
