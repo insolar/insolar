@@ -103,6 +103,8 @@ func TestServiceNetwork_GetAddress(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	network, err := NewServiceNetwork(cfg, scheme)
 	require.NoError(t, err)
+	err = network.Init(context.Background())
+	require.NoError(t, err)
 	require.True(t, strings.Contains(network.GetAddress(), strings.Split(cfg.Host.Transport.Address, ":")[0]))
 }
 
@@ -121,6 +123,8 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, testutils.RandomRef(), "", true)
 
 	serviceNetwork.NodeNetwork, _ = nodenetwork.NewNodeNetwork(cfg)
+	err = serviceNetwork.Init(context.Background())
+	require.NoError(t, err)
 	err = serviceNetwork.Start(ctx)
 	require.NoError(t, err)
 
@@ -173,12 +177,15 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	require.NoError(t, err)
 
 	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
-
+	err = secondNode.Init(context.Background())
+	require.NoError(t, err)
 	err = secondNode.Start(ctx)
 	require.NoError(t, err)
 	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
 
 	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
+	err = firstNode.Init(context.Background())
+	require.NoError(t, err)
 	err = firstNode.Start(ctx)
 	require.NoError(t, err)
 
@@ -229,14 +236,16 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
-
+	err = secondNode.Init(context.Background())
+	require.NoError(t, err)
 	err = secondNode.Start(ctx)
 	require.NoError(t, err)
 
 	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
 
 	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
-
+	err = firstNode.Init(context.Background())
+	require.NoError(t, err)
 	err = firstNode.Start(ctx)
 	require.NoError(t, err)
 

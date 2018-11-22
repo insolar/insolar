@@ -35,9 +35,12 @@ import (
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	hostNetwork  network.HostNetwork
-	controller   network.Controller
-	routingTable network.RoutingTable
+	cfg    configuration.Configuration
+	scheme core.PlatformCryptographyScheme
+
+	hostNetwork  network.HostNetwork  // TODO: should be injected
+	controller   network.Controller   // TODO: should be injected
+	routingTable network.RoutingTable // TODO: should be injected
 
 	Certificate         core.Certificate         `inject:""`
 	NodeNetwork         core.NodeNetwork         `inject:""`
@@ -52,15 +55,7 @@ type ServiceNetwork struct {
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{}
-	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork, scheme)
-	if err != nil {
-		log.Error("failed to create network components: %s", err.Error())
-	}
-	serviceNetwork.fakePulsar = fakepulsar.NewFakePulsar(serviceNetwork.HandlePulse, conf.Pulsar.PulseTime)
-	serviceNetwork.routingTable = routingTable
-	serviceNetwork.hostNetwork = hostnetwork
-	serviceNetwork.controller = controller
+	serviceNetwork := &ServiceNetwork{cfg: conf, scheme: scheme}
 	return serviceNetwork, nil
 }
 
@@ -92,6 +87,19 @@ func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, ms
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 	n.controller.RemoteProcedureRegister(name, method)
+}
+
+// Start implements component.Initer
+func (n *ServiceNetwork) Init(ctx context.Context) error {
+	routingTable, hostnetwork, controller, err := NewNetworkComponents(n.cfg, n, n.scheme)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create network components.")
+	}
+	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
+	n.routingTable = routingTable
+	n.hostNetwork = hostnetwork
+	n.controller = controller
+	return nil
 }
 
 // Start implements component.Starter
