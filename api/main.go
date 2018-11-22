@@ -158,16 +158,17 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 
 // Runner implements Component for API
 type Runner struct {
-	MessageBus         core.MessageBus         `inject:""`
-	Genesis            core.Genesis            `inject:""`
-	NetworkCoordinator core.NetworkCoordinator `inject:""`
-	server             *http.Server
-	rpcServer          *rpc.Server
-	cfg                *configuration.APIRunner
-	keyCache           map[string]crypto.PublicKey
-	cacheLock          *sync.RWMutex
-	seedmanager        *seedmanager.SeedManager
-	StorageExporter    core.StorageExporter `inject:""`
+	MessageBus          core.MessageBus          `inject:""`
+	Certificate         core.Certificate         `inject:""`
+	StorageExporter     core.StorageExporter     `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
+	GenesisDataProvider core.GenesisDataProvider `inject:""`
+	server              *http.Server
+	rpcServer           *rpc.Server
+	cfg                 *configuration.APIRunner
+	keyCache            map[string]crypto.PublicKey
+	cacheLock           *sync.RWMutex
+	seedmanager         *seedmanager.SeedManager
 }
 
 // NewRunner is C-tor for API Runner
@@ -207,7 +208,7 @@ func (ar *Runner) IsAPIRunner() bool {
 
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
-	rootDomainReference := ar.Genesis.GetRootDomainRef()
+	rootDomainReference := ar.Certificate.GetRootDomainReference()
 
 	ar.seedmanager = seedmanager.New()
 
