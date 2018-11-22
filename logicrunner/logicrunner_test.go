@@ -204,11 +204,22 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 	}
 }
 
-func executeMethod(ctx context.Context, lr core.LogicRunner, pm core.PulseManager, objRef core.RecordRef, nonce uint64, method string, arguments core.Arguments) (core.Reply, error) {
+func executeMethod(
+	ctx context.Context, lr core.LogicRunner, pm core.PulseManager,
+	objRef core.RecordRef, nonce uint64,
+	method string, arguments ...interface{},
+) (
+	core.Reply, error,
+) {
+	argsSerialized, err := core.Serialize(arguments)
+	if err != nil {
+		return nil, err
+	}
+
 	msg := &message.CallMethod{
 		ObjectRef: objRef,
 		Method:    method,
-		Arguments: arguments,
+		Arguments: argsSerialized,
 	}
 	msg.Caller = testutils.RandomRef()
 	if nonce != 0 {
@@ -293,38 +304,23 @@ func (c *One) Dec() (int, error) {
 	)
 	assert.NoError(t, err)
 
-	resp, err := executeMethod(
-		ctx, lr, pm, *obj, 0, "Get",
-		goplugintestutils.CBORMarshal(t, []interface{}{}),
-	)
+	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Get")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(
-		ctx, lr, pm, *obj, 0, "Inc",
-		goplugintestutils.CBORMarshal(t, []interface{}{}),
-	)
+	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "Inc")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(1), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(
-		ctx, lr, pm, *obj, 0, "Get",
-		goplugintestutils.CBORMarshal(t, []interface{}{}),
-	)
+	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "Get")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(1), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(
-		ctx, lr, pm, *obj, 0, "Dec",
-		goplugintestutils.CBORMarshal(t, []interface{}{}),
-	)
+	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "Dec")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(
-		ctx, lr, pm, *obj, 0, "Get",
-		goplugintestutils.CBORMarshal(t, []interface{}{}),
-	)
+	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "Get")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
@@ -421,38 +417,35 @@ func (r *Two) Hello(s string) (string, error) {
 	)
 	assert.NoError(t, err)
 
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello", goplugintestutils.CBORMarshal(t, []interface{}{"ins"}))
+	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello", "ins")
 	assert.NoError(t, err, "contract call")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	f := r.([]interface{})[0]
-	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", f)
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", firstMethodRes(t, resp))
 
 	for i := 2; i <= 5; i++ {
-		resp, err = executeMethod(ctx, lr, pm, *obj, uint64(i), "Again", goplugintestutils.CBORMarshal(t, []interface{}{"ins"}))
+		resp, err = executeMethod(ctx, lr, pm, *obj, uint64(i), "Again", "ins")
 		assert.NoError(t, err, "contract call")
-		r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-		f := r.([]interface{})[0]
-		assert.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), f)
+		assert.Equal(
+			t,
+			fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i),
+			firstMethodRes(t, resp),
+		)
 	}
 
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetFriend", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetFriend")
 	assert.NoError(t, err, "contract call")
-	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	r0 := r.([]interface{})[0].([]uint8)
+	r0 := firstMethodRes(t, resp).([]uint8)
 	var two core.RecordRef
 	for i := 0; i < 64; i++ {
 		two[i] = r0[i]
 	}
 
 	for i := 6; i <= 9; i++ {
-		resp, err = executeMethod(ctx, lr, pm, two, uint64(i), "Hello", goplugintestutils.CBORMarshal(t, []interface{}{"Insolar"}))
+		resp, err = executeMethod(ctx, lr, pm, two, uint64(i), "Hello", "Insolar")
 		assert.NoError(t, err, "contract call")
-		r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-		f := r.([]interface{})[0]
-		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), f)
+		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), firstMethodRes(t, resp))
 	}
-	ValidateAllResults(t, ctx, lr)
 
+	ValidateAllResults(t, ctx, lr)
 }
 
 func TestInjectingDelegate(t *testing.T) {
@@ -539,17 +532,13 @@ func (r *Two) Hello(s string) (string, error) {
 	)
 	assert.NoError(t, err)
 
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello", goplugintestutils.CBORMarshal(t, []interface{}{"ins"}))
+	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello", "ins")
 	assert.NoError(t, err)
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", firstMethodRes(t, resp))
 
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{"Hi, ins! Two said: Hello you too, ins. 644 times!", nil}, r)
-
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "HelloFromDelegate", goplugintestutils.CBORMarshal(t, []interface{}{"ins"}))
+	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "HelloFromDelegate", "ins")
 	assert.NoError(t, err)
-	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{"Hello you too, ins. 1288 times!", nil}, r)
-
+	assert.Equal(t, "Hello you too, ins. 1288 times!", firstMethodRes(t, resp))
 }
 
 func TestBasicNotificationCall(t *testing.T) {
@@ -628,7 +617,7 @@ func (r *Two) Hello() (string, error) {
 	)
 	assert.NoError(t, err)
 
-	_, err = executeMethod(ctx, lr, pm, *obj, 0, "Hello", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	_, err = executeMethod(ctx, lr, pm, *obj, 0, "Hello")
 	assert.NoError(t, err, "contract call")
 
 }
@@ -671,7 +660,7 @@ func (r *One) Hello() (string, error) {
 	)
 	assert.NoError(t, err)
 
-	res, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	res, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello")
 	assert.NoError(t, err)
 
 	resParsed := goplugintestutils.CBORUnMarshalToSlice(t, res.(*reply.CallMethod).Result)
@@ -716,7 +705,7 @@ func (r *One) Kill() error {
 	)
 	assert.NoError(t, err)
 
-	_, err = executeMethod(ctx, lr, pm, *obj, 0, "Kill", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	_, err = executeMethod(ctx, lr, pm, *obj, 0, "Kill")
 	assert.NoError(t, err, "contract call")
 }
 
@@ -761,10 +750,10 @@ func (r *One) NotPanic() error {
 	)
 	assert.NoError(t, err)
 
-	_, err = executeMethod(ctx, lr, pm, *obj, 0, "Panic", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	_, err = executeMethod(ctx, lr, pm, *obj, 0, "Panic")
 	assert.Error(t, err)
 
-	_, err = executeMethod(ctx, lr, pm, *obj, 0, "NotPanic", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	_, err = executeMethod(ctx, lr, pm, *obj, 0, "NotPanic")
 	assert.NoError(t, err)
 }
 
@@ -868,19 +857,15 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", goplugintestutils.CBORMarshal(t, []interface{}{10}))
+	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", 10)
 	assert.NoError(t, err, "contract call")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{uint64(45), nil}, r)
+	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "SumChilds", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "SumChilds")
 	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
 	ValidateAllResults(t, ctx, lr)
-
-	assert.NoError(t, err, "contract call")
-	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{uint64(45), nil}, r)
 }
 
 func TestFailValidate(t *testing.T) {
@@ -932,7 +917,7 @@ func (c *Contract) Rand() (int, error) {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	for i := 0; i < 5; i++ {
-		_, err = executeMethod(ctx, lr, pm, *contract, uint64(i), "Rand", goplugintestutils.CBORMarshal(t, []interface{}{}))
+		_, err = executeMethod(ctx, lr, pm, *contract, uint64(i), "Rand")
 		assert.NoError(t, err, "contract call")
 	}
 
@@ -1024,7 +1009,7 @@ func (r *Two) NoError() error {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "AnError", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "AnError")
 	assert.NoError(t, err, "contract call")
 
 	ch := new(codec.CborHandle)
@@ -1033,13 +1018,11 @@ func (r *Two) NoError() error {
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 
-	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "NoError", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "NoError")
 	assert.NoError(t, err, "contract call")
+	assert.Equal(t, nil, firstMethodRes(t, resp))
 
 	ValidateAllResults(t, ctx, lr)
-
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{nil}, r)
 }
 
 func TestNilResult(t *testing.T) {
@@ -1112,13 +1095,11 @@ func (r *Two) Hello() (*string, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Hello", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Hello")
 	assert.NoError(t, err, "contract call")
+	assert.Equal(t, nil, firstMethodRes(t, resp))
 
 	ValidateAllResults(t, ctx, lr)
-
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{nil, nil}, r)
 }
 
 type Caller struct {
@@ -1146,12 +1127,11 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 	signature, err := s.cs.Sign(args)
 	assert.NoError(s.t, err)
 
-	res, err := executeMethod(ctx, s.lr, pm, core.NewRefFromBase58(s.member), 0, "Call", goplugintestutils.CBORMarshal(
-		s.t, []interface{}{rootDomain, method, buf, seed, signature.Bytes()}),
+	res, err := executeMethod(
+		ctx, s.lr, pm, core.NewRefFromBase58(s.member), 0,
+		"Call", rootDomain, method, buf, seed, signature.Bytes(),
 	)
 	assert.NoError(s.t, err, "contract call")
-
-	fmt.Printf("%s", res)
 
 	var result interface{}
 	var contractErr interface{}
@@ -1372,10 +1352,9 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", goplugintestutils.CBORMarshal(t, []interface{}{1}))
+	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", 1)
 	assert.NoError(t, err, "contract call")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{uint64(0), nil}, r)
+	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
 	mb := lr.(*LogicRunner).MessageBus.(*testmessagebus.TestMessageBus)
 	toValidate := make([]core.Parcel, 0)
@@ -1480,7 +1459,7 @@ func New() (*Two, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Hello", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Hello")
 	assert.NoError(t, err, "contract call")
 
 	var result interface{}
@@ -1543,7 +1522,7 @@ func (r *One) Recursive() (error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Recursive", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Recursive")
 	assert.NoError(t, err, "contract call")
 
 	var contractErr *foundation.Error
@@ -1680,7 +1659,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "CreateAllowance", goplugintestutils.CBORMarshal(t, []interface{}{memberRef}))
+	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "CreateAllowance", memberRef)
 	assert.NoError(t, err, "contract call")
 
 	var contractErr *foundation.Error
@@ -1751,11 +1730,9 @@ package main
 		goplugintestutils.CBORMarshal(t, &struct{}{}),
 	)
 	assert.NoError(t, err)
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "AddChildAndReturnMyselfAsParent", goplugintestutils.CBORMarshal(t, []interface{}{}))
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "AddChildAndReturnMyselfAsParent")
+	assert.Equal(t, *obj, Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)))
 
-	refFromMethod := r.([]interface{})[0].([]byte)
-	assert.Equal(t, *obj, Ref{}.FromSlice(refFromMethod))
 	ValidateAllResults(t, ctx, lr)
 }
 
@@ -1821,7 +1798,7 @@ func (r *One) ShortSleep() (error) {
 	// hold executor
 	go func() {
 		log.Debugf("!!!!! Long start")
-		executeMethod(ctx, lr, pm, *contract, 0, "LongSleep", goplugintestutils.CBORMarshal(t, []interface{}{}))
+		executeMethod(ctx, lr, pm, *contract, 0, "LongSleep")
 		log.Debugf("!!!!! Long end")
 	}()
 
@@ -1841,7 +1818,7 @@ func (r *One) ShortSleep() (error) {
 	log.Debugf("!!!!! Short sleep")
 	time.Sleep(time.Second)
 	log.Debugf("!!!!! Short start")
-	_, err = executeMethod(ctx, lr, pm, *contract, 0, "ShortSleep", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	_, err = executeMethod(ctx, lr, pm, *contract, 0, "ShortSleep")
 	log.Debugf("!!!!! Short end")
 	assert.Error(t, err, "contract call")
 
@@ -2023,15 +2000,11 @@ package main
 	)
 	assert.NoError(t, err)
 
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "GetChildCode", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "GetChildCode")
 	assert.NoError(t, err, "contract call")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	refFromMethod := r.([]interface{})[0].([]byte)
-	assert.Equal(t, *cb.Codes["two"], Ref{}.FromSlice(refFromMethod), "Compare Code Refs")
+	assert.Equal(t, *cb.Codes["two"], Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)), "Compare Code Refs")
 
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetChildPrototype", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetChildPrototype")
 	assert.NoError(t, err, "contract call")
-	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	refFromMethod = r.([]interface{})[0].([]byte)
-	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(refFromMethod), "Compare Code Prototypes")
+	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)), "Compare Code Prototypes")
 }
