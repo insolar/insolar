@@ -135,8 +135,8 @@ func main() {
 	traceid := utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
 
-	bootstrapComponents := InitBootstrapComponents(ctx, *cfg)
-	cert := InitCertificate(
+	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
+	cert := initCertificate(
 		ctx,
 		*cfg,
 		params.isGenesis,

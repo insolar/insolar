@@ -42,7 +42,7 @@ import (
 	"github.com/insolar/insolar/version/manager"
 )
 
-type BootstrapComponents struct {
+type bootstrapComponents struct {
 	CryptographyService        core.CryptographyService
 	PlatformCryptographyScheme core.PlatformCryptographyScheme
 	KeyStore                   core.KeyStore
@@ -50,7 +50,7 @@ type BootstrapComponents struct {
 	Certificate                core.Certificate
 }
 
-func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuration) BootstrapComponents {
+func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
 	earlyComponents := component.Manager{}
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
@@ -63,7 +63,7 @@ func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	earlyComponents.Register(platformCryptographyScheme, keyStore)
 	earlyComponents.Inject(cryptographyService, keyProcessor)
 
-	return BootstrapComponents{
+	return bootstrapComponents{
 		CryptographyService:        cryptographyService,
 		PlatformCryptographyScheme: platformCryptographyScheme,
 		KeyStore:                   keyStore,
@@ -71,7 +71,7 @@ func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	}
 }
 
-func InitCertificate(
+func initCertificate(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	isBootstrap bool,
@@ -149,8 +149,6 @@ func InitComponents(
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
-	phases := phases.NewPhaseManager()
-
 	cm := component.Manager{}
 	cm.Register(
 		platformCryptographyScheme,
@@ -161,30 +159,8 @@ func InitComponents(
 		nodeNetwork,
 	)
 
+	components := ledger.GetLedgerComponents(cfg.Ledger)
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
-
-	components := []interface{}{
-		cert,
-		nodeNetwork,
-		// logicRunner,
-	}
-	components = append(components, ledger.GetLedgerComponents(cfg.Ledger)...)
-	/*
-		cmOld := &ComponentManager{components: core.Components{
-			Certificate:                cert,
-			NodeNetwork:                nodeNetwork,
-			LogicRunner:                logicRunner,
-			Ledger:                     &ld,
-			Network:                    nw,
-			MessageBus:                 messageBus,
-			Genesis:                    gen,
-			APIRunner:                  apiRunner,
-			NetworkCoordinator:         networkCoordinator,
-			PlatformCryptographyScheme: platformCryptographyScheme,
-			CryptographyService:        cryptographyService,
-		}}
-		//components = append(components, &ld, cmOld) // TODO: remove me with cmOld
-	*/
 	components = append(components, []interface{}{
 		nw,
 		messageBus,
@@ -196,7 +172,7 @@ func InitComponents(
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
-		phases,
+		phases.NewPhaseManager(),
 		cryptographyService,
 	}...)
 

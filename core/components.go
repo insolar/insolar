@@ -16,7 +16,10 @@
 
 package core
 
-/*
+import (
+	"context"
+)
+
 // Component controller methods
 type Component interface {
 	Start(ctx context.Context, components Components) error
@@ -39,4 +42,3 @@ type Components struct {
 	PlatformCryptographyScheme PlatformCryptographyScheme
 	CryptographyService        CryptographyService
 }
-*/
