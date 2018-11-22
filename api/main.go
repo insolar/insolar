@@ -28,10 +28,10 @@ import (
 
 	"github.com/gorilla/rpc/v2"
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
+	"github.com/insolar/insolar/contractrequester"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
-	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
@@ -253,17 +253,12 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 	reference := core.NewRefFromBase58(ref)
 	res, err := ar.ContractRequester.SendRequest(ctx, &reference, "GetPublicKey", []interface{}{})
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't get public key")
+		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't get public key")
 	}
 
-	var publicKeyString string
-	var contractErr error
-	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &publicKeyString, &contractErr)
+	publicKeyString, err := contractrequester.ExtractStringResponse(res.(*reply.CallMethod).Result)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't unmarshal public key")
-	}
-	if contractErr != nil {
-		return nil, errors.Wrap(contractErr, "Error in get public key")
+		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't extract response")
 	}
 
 	kp := platformpolicy.NewKeyProcessor()
