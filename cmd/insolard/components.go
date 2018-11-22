@@ -108,7 +108,7 @@ func InitComponents(
 	genesisConfigPath string,
 	genesisKeyOut string,
 
-) (*component.Manager, *ComponentManager, *Repl, error) {
+) (*component.Manager, *Repl, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
 	checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -157,6 +157,8 @@ func InitComponents(
 		keyStore,
 		cryptographyService,
 		keyProcessor,
+		cert,
+		nodeNetwork,
 	)
 
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
@@ -164,28 +166,30 @@ func InitComponents(
 	components := []interface{}{
 		cert,
 		nodeNetwork,
-		logicRunner,
+		// logicRunner,
 	}
 	components = append(components, ledger.GetLedgerComponents(cfg.Ledger)...)
-
-	cmOld := &ComponentManager{components: core.Components{
-		Certificate:                cert,
-		NodeNetwork:                nodeNetwork,
-		LogicRunner:                logicRunner,
-		Ledger:                     &ld,
-		Network:                    nw,
-		MessageBus:                 messageBus,
-		Genesis:                    gen,
-		APIRunner:                  apiRunner,
-		NetworkCoordinator:         networkCoordinator,
-		PlatformCryptographyScheme: platformCryptographyScheme,
-		CryptographyService:        cryptographyService,
-	}}
-	components = append(components, &ld, cmOld) // TODO: remove me with cmOld
-
+	/*
+		cmOld := &ComponentManager{components: core.Components{
+			Certificate:                cert,
+			NodeNetwork:                nodeNetwork,
+			LogicRunner:                logicRunner,
+			Ledger:                     &ld,
+			Network:                    nw,
+			MessageBus:                 messageBus,
+			Genesis:                    gen,
+			APIRunner:                  apiRunner,
+			NetworkCoordinator:         networkCoordinator,
+			PlatformCryptographyScheme: platformCryptographyScheme,
+			CryptographyService:        cryptographyService,
+		}}
+		//components = append(components, &ld, cmOld) // TODO: remove me with cmOld
+	*/
 	components = append(components, []interface{}{
 		nw,
 		messageBus,
+		&ld,
+		logicRunner,
 		delegationTokenFactory,
 		parcelFactory,
 		gen,
@@ -198,5 +202,5 @@ func InitComponents(
 
 	cm.Inject(components...)
 
-	return &cm, cmOld, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
+	return &cm, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }

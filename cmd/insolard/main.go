@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"reflect"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
@@ -38,6 +37,7 @@ import (
 	"github.com/insolar/insolar/version"
 )
 
+/*
 // ComponentManager is deprecated and will be removed after completly switching to component.Manager
 type ComponentManager struct {
 	components core.Components
@@ -64,7 +64,7 @@ func (cm *ComponentManager) LinkAll(ctx context.Context) {
 		}
 	}
 }
-
+*/
 type inputParams struct {
 	configPath        string
 	isGenesis         bool
@@ -159,7 +159,7 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, cmOld, repl, err := InitComponents(
+	cm, repl, err := InitComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
@@ -176,7 +176,7 @@ func main() {
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	cmOld.LinkAll(ctx)
+	//cmOld.LinkAll(ctx)
 
 	err = cm.Start(ctx)
 	checkError(ctx, err, "failed to start components")
