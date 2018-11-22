@@ -462,9 +462,11 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 					ctx, Ref{}, *es.request, es.objectbody.objDescriptor,
 				)
 			} else {
-				es.objectbody.objDescriptor, err = am.UpdateObject(
-					ctx, Ref{}, *es.request, es.objectbody.objDescriptor, newData,
-				)
+				od, e := am.UpdateObject(ctx, Ref{}, *es.request, es.objectbody.objDescriptor, newData)
+				err = e
+				if od != nil && e == nil {
+					es.objectbody.objDescriptor = od
+				}
 			}
 			if err != nil {
 				return nil, es.ErrorWrap(err, "couldn't update object")
