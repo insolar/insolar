@@ -95,8 +95,8 @@ func initCertificate(
 	return cert
 }
 
-// InitComponents creates and links all insolard components
-func InitComponents(
+// initComponents creates and links all insolard components
+func initComponents(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	cryptographyService core.CryptographyService,
