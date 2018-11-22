@@ -167,12 +167,6 @@ func NewTestArtifactManager() *TestArtifactManager {
 	}
 }
 
-// Start implementation for tests
-func (t *TestArtifactManager) Start(components core.Components) error { return nil }
-
-// Stop implementation for tests
-func (t *TestArtifactManager) Stop() error { return nil }
-
 // GenesisRef implementation for tests
 func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
