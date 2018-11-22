@@ -42,7 +42,7 @@ func TestMain(m *testing.M) {
 	cfg := configuration.NewAPIRunner()
 	api, _ := NewRunner(&cfg)
 
-	b, _ := genesis.NewGenesis(false, "")
+	b, _ := genesis.NewGenesis(false, "", "")
 	api.Genesis = b
 	api.Start(ctx)
 

@@ -48,13 +48,11 @@ type Phase1Packet struct {
 
 	// --------------------
 	// signature contains signature of Header + Section 1 + Section 2
-	Signature []byte
+	Signature [SignatureLength]byte
 }
 
 func NewPhase1Packet() *Phase1Packet {
-	return &Phase1Packet{
-		Signature: make([]byte, SignatureLength),
-	}
+	return &Phase1Packet{}
 }
 
 func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
@@ -192,34 +190,19 @@ func (npp *NodePulseProof) Signature() []byte {
 
 // ----------------------------------PHASE 2--------------------------------
 
-type DeviantBitSet struct {
-	CompressedSet     bool
-	HighBitLengthFlag bool
-	LowBitLength      uint8
-	//------------------
-	HighBitLength uint8
-	Payload       []byte
-}
-
 type Phase2Packet struct {
 	// -------------------- Header
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    []byte
-	deviantBitSet           DeviantBitSet
-	SignatureHeaderSection1 []byte
+	globuleHashSignature [HashLength]byte
+	// TODO: uncomment this after impl (de)serializers
+	// deviantBitSet           BitSet
+	SignatureHeaderSection1 [SignatureLength]byte
 
 	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
-	SignatureHeaderSection2 []byte
-}
-
-func NewPhase2Packet() *Phase2Packet {
-	return &Phase2Packet{
-		SignatureHeaderSection1: make([]byte, SignatureLength),
-		SignatureHeaderSection2: make([]byte, SignatureLength),
-	}
+	SignatureHeaderSection2 [SignatureLength]byte
 }
 
 func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {

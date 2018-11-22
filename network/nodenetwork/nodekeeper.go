@@ -18,7 +18,6 @@ package nodenetwork
 
 import (
 	"bytes"
-	"context"
 	"sort"
 	"strings"
 	"sync"
@@ -109,14 +108,6 @@ type nodekeeper struct {
 	active       map[core.RecordRef]core.Node
 	indexNode    map[core.NodeRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
-}
-
-func (nk *nodekeeper) Start(ctx context.Context, components core.Components) error {
-	return nil
-}
-
-func (nk *nodekeeper) Stop(ctx context.Context) error {
-	return nil
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {

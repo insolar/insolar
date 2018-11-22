@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package pulsemanager_test
 
 import (
@@ -54,8 +70,8 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 		keys []key
 	}
 	syncmessagesPerMessage := map[int]*messageStat{}
-	busMock.SendFunc = func(ctx context.Context, msg core.Message) (core.Reply, error) {
-		heavymsg, ok := msg.(*message.HeavyRecords)
+	busMock.SendFunc = func(ctx context.Context, msg core.Message, op ...core.SendOption) (core.Reply, error) {
+		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			syncsended++
 			var size int
@@ -100,63 +116,34 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		for j := 0; j < 3; j++ {
-			addRecords(ctx, t, db, core.PulseNumber(lastpulse))
-		}
+		addRecords(ctx, t, db, core.PulseNumber(lastpulse))
 		lastpulse++
 	}
 
-	// fmt.Println(strings.Repeat("-", 55))
 	// fmt.Println("Case1: sync after db fill and with new received pulses")
 	err = setpulse(ctx, pm, lastpulse)
 	require.NoError(t, err)
 
-	// fmt.Println(strings.Repeat("-", 55))
 	// fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
-		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
 		// fill DB with records, indexes (TODO: add blobs)
-		for j := 0; j < 3; j++ {
-			addRecords(ctx, t, db, core.PulseNumber(lastpulse))
-		}
+		addRecords(ctx, t, db, core.PulseNumber(lastpulse))
 
 		lastpulse++
 		err = setpulse(ctx, pm, lastpulse)
 		require.NoError(t, err)
 	}
-	// time.Sleep(time.Second * 2)
 
 	err = pm.Stop(ctx)
 	assert.NoError(t, err)
 
-	synckeys = sortkeys(synckeys)
-	// fmt.Println("sort(syncmessages):", len(synckeys))
-	// printkeys(synckeys, "  ")
+	synckeys = uniqkeys(sortkeys(synckeys))
 
-	synckeys = uniqkeys(synckeys)
-	// fmt.Println("uniq(syncmessages):", len(synckeys))
-	// printkeys(synckeys, "  ")
-
-	// fmt.Println("Per message:", syncsended)
-	// for n := 1; n <= syncsended; n++ {
-	// 	stat := syncmessagesPerMessage[n]
-	// 	fmt.Printf("Message %v. Size=%v\n", n, stat.size)
-	// 	printkeys(sortkeys(uniqkeys(stat.keys)), "  ")
-	// }
-	// fmt.Println("")
-
-	recs, idxs := getallkeys(db.GetBadgerDB())
-	// fmt.Println("getallkeys:", len(idxs)+len(recs))
-	// fmt.Println(" records", len(recs))
-	// printkeys(recs, "  ")
-	// fmt.Println(" indexes", len(idxs))
-	// printkeys(idxs, "  ")
-
-	assert.Equal(t, len(recs)+len(idxs), len(synckeys), "uniq synced keys count are the same as records count in database")
+	recs := getallkeys(db.GetBadgerDB())
+	assert.Equal(t, recs, synckeys, "synced keys count are the same as records in storage")
 }
 
 func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {
-	fmt.Println("CALL PulseManager.Set with pulse", pulsenum)
 	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)})
 }
 
@@ -178,6 +165,9 @@ func addRecords(
 	)
 	require.NoError(t, err)
 
+	_, err = db.SetBlob(ctx, pulsenum, []byte("100500"))
+	require.NoError(t, err)
+
 	// set index of record
 	err = db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
@@ -189,24 +179,31 @@ func addRecords(
 var (
 	scopeIDLifeline = byte(1)
 	scopeIDRecord   = byte(2)
+	scopeIDJetDrop  = byte(3)
+	scopeIDBlob     = byte(7)
 )
 
 type key []byte
 
-func getallkeys(db *badger.DB) (records []key, indexes []key) {
+func getallkeys(db *badger.DB) (records []key) {
 	txn := db.NewTransaction(true)
 	defer txn.Discard()
 
+	var emptypulse core.PulseNumber
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		k := item.KeyCopy(nil)
 		switch k[0] {
-		case scopeIDRecord:
-			records = append(records, k)
-		case scopeIDLifeline:
-			indexes = append(indexes, k)
+		case
+			scopeIDRecord,
+			scopeIDJetDrop,
+			scopeIDLifeline,
+			scopeIDBlob:
+			if !bytes.HasPrefix(k[1:], emptypulse.Bytes()) {
+				records = append(records, k)
+			}
 		}
 	}
 	return

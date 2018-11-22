@@ -33,22 +33,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-type OldComponentManager interface {
-	GetAll() core.Components
-}
-
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
 	hostNetwork  network.HostNetwork
 	controller   network.Controller
 	routingTable network.RoutingTable
 
-	Certificate         core.Certificate        `inject:""`
-	NodeNetwork         core.NodeNetwork        `inject:""`
-	PulseManager        core.PulseManager       `inject:""`
-	Coordinator         core.NetworkCoordinator `inject:""`
-	OldComponentManager OldComponentManager     `inject:""`
-	PhaseManager        phases.PhaseManager     `inject:""`
+	Certificate         core.Certificate         `inject:""`
+	NodeNetwork         core.NodeNetwork         `inject:""`
+	PulseManager        core.PulseManager        `inject:""`
+	Coordinator         core.NetworkCoordinator  `inject:""`
+	PhaseManager        phases.PhaseManager      `inject:""`
+	CryptographyService core.CryptographyService `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
+	NodeKeeper          network.NodeKeeper       `inject:""`
 
 	fakePulsar *fakepulsar.FakePulsar
 }
@@ -99,13 +97,11 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 
 // Init implements core.Component
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	components := n.OldComponentManager.GetAll() // TODO: REMOVE HACK
-
-	n.routingTable.Start(components)
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
 
-	n.controller.Inject(components)
+	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper /*components.NodeNetwork.(network.NodeKeeper)*/)
+	n.routingTable.Inject(n.NodeKeeper)
 
 	log.Infoln("Bootstrapping network...")
 	err := n.controller.Bootstrap(ctx)
@@ -183,7 +179,7 @@ func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
 // NewNetworkComponents create network.HostNetwork and network.Controller for new network
 func NewNetworkComponents(conf configuration.Configuration,
 	pulseHandler network.PulseHandler, scheme core.PlatformCryptographyScheme) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
-	routingTable := routing.NewTable()
+	routingTable := &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(conf)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "error creating internal transport")

@@ -151,7 +151,7 @@ func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to sign a phase 2 packet")
 	}
-	packet.Signature = sign.Bytes()
+	copy(packet.Signature[:], sign.Bytes())
 	return nil
 }
 

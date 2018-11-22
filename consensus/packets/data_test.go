@@ -185,36 +185,6 @@ func TestPhase1Packet_SetPulseProof(t *testing.T) {
 
 // ----------------------------------PHASE 2--------------------------------
 
-func makeDeviantBitSet() *DeviantBitSet {
-	deviantBitSet := &DeviantBitSet{}
-	deviantBitSet.CompressedSet = true
-	deviantBitSet.HighBitLengthFlag = true
-	deviantBitSet.LowBitLength = uint8(3)
-	//-----------------
-	deviantBitSet.HighBitLength = uint8(9)
-
-	// TODO: uncomment it when we support reading payload
-	// DeviantBitSet.Payload = []byte("Hello, World!")
-
-	return deviantBitSet
-}
-
-func TestDeviantBitSet(t *testing.T) {
-	checkSerializationDeserialization(t, makeDeviantBitSet())
-}
-
-func _TestDeviantBitSet_BadData(t *testing.T) {
-	deviantBitSet := makeDeviantBitSet()
-	newDeviantBitSet := &DeviantBitSet{}
-
-	data := serializeData(t, deviantBitSet)
-	r := bytes.NewReader(data[:len(data)-2])
-	err := newDeviantBitSet.Deserialize(r)
-	assert.NoError(t, err)
-
-	require.NotEqual(t, deviantBitSet.Payload, newDeviantBitSet.Payload)
-}
-
 func TestParseAndCompactRouteInfo(t *testing.T) {
 	var routInfoTests = []PacketHeader{
 		PacketHeader{
@@ -291,7 +261,7 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet.AddClaim(makeNodeViolationBlame())
 	phase1Packet.AddClaim(&NodeLeaveClaim{})
 
-	phase1Packet.Signature = genRandomSlice(SignatureLength)
+	phase1Packet.Signature = randomArray71()
 
 	return phase1Packet
 }
@@ -301,12 +271,11 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 }
 
 func makePhase2Packet() *Phase2Packet {
-	phase2Packet := NewPhase2Packet()
+	phase2Packet := &Phase2Packet{}
 	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
-	phase2Packet.globuleHashSignature = genRandomSlice(SignatureLength)
-	phase2Packet.deviantBitSet = *makeDeviantBitSet()
-	phase2Packet.SignatureHeaderSection1 = genRandomSlice(SignatureLength)
-	phase2Packet.SignatureHeaderSection2 = genRandomSlice(SignatureLength)
+	phase2Packet.globuleHashSignature = randomArray64()
+	phase2Packet.SignatureHeaderSection1 = randomArray71()
+	phase2Packet.SignatureHeaderSection2 = randomArray71()
 
 	// TODO: uncomment when support ser\deser of ReferendumVote
 	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
@@ -322,7 +291,7 @@ func TestPhase2Packet_Deserialize(t *testing.T) {
 func TestPhase2Packet_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makePhase2Packet(),
 		"[ Phase2Packet.Deserialize ] Can't deserialize body: [ Phase2Packet.Deserialize ] "+
-			"Can't read signatureHeaderSection2: unexpected EOF")
+			"Can't read SignatureHeaderSection2: unexpected EOF")
 
 }
 

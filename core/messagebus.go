@@ -51,7 +51,8 @@ type Parcel interface {
 
 	Message() Message
 	Context(context.Context) context.Context
-	DelegationToken() []byte
+
+	DelegationToken() DelegationToken
 }
 
 // Reply for an `Message`
@@ -64,7 +65,7 @@ type Reply interface {
 //go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(context.Context, Message) (Reply, error)
+	Send(context.Context, Message, ...SendOption) (Reply, error)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.
@@ -150,8 +151,13 @@ const (
 	TypeValidateRecord
 	// TypeSetBlob saves blob in storage.
 	TypeSetBlob
-	// TypeHeavySyncRecords carries Key/Value records for replication on Heavy Material node.
-	TypeHeavySyncRecords
+
+	// Heavy replication
+
+	// TypeHeavyStartStop carries start/stop signal for heavy replication.
+	TypeHeavyStartStop
+	// TypeHeavyPayload carries Key/Value records for replication to Heavy Material node.
+	TypeHeavyPayload
 
 	// Bootstrap
 
@@ -165,5 +171,6 @@ type DelegationTokenType byte
 //go:generate stringer -type=DelegationTokenType
 const (
 	// DTTypePendingExecution allows to continue method calls
-	DTTypePendingExecution DelegationTokenType = iota
+	DTTypePendingExecution DelegationTokenType = iota + 1
+	DTTypeGetObjectRedirect
 )

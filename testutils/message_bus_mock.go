@@ -41,7 +41,7 @@ type MessageBusMock struct {
 	RegisterPreCounter uint64
 	RegisterMock       mMessageBusMockRegister
 
-	SendFunc       func(p context.Context, p1 core.Message) (r core.Reply, r1 error)
+	SendFunc       func(p context.Context, p1 core.Message, p2 ...core.SendOption) (r core.Reply, r1 error)
 	SendCounter    uint64
 	SendPreCounter uint64
 	SendMock       mMessageBusMockSend
@@ -346,36 +346,37 @@ type mMessageBusMockSend struct {
 type MessageBusMockSendParams struct {
 	p  context.Context
 	p1 core.Message
+	p2 []core.SendOption
 }
 
 //Expect sets up expected params for the MessageBus.Send
-func (m *mMessageBusMockSend) Expect(p context.Context, p1 core.Message) *mMessageBusMockSend {
-	m.mockExpectations = &MessageBusMockSendParams{p, p1}
+func (m *mMessageBusMockSend) Expect(p context.Context, p1 core.Message, p2 ...core.SendOption) *mMessageBusMockSend {
+	m.mockExpectations = &MessageBusMockSendParams{p, p1, p2}
 	return m
 }
 
 //Return sets up a mock for MessageBus.Send to return Return's arguments
 func (m *mMessageBusMockSend) Return(r core.Reply, r1 error) *MessageBusMock {
-	m.mock.SendFunc = func(p context.Context, p1 core.Message) (core.Reply, error) {
+	m.mock.SendFunc = func(p context.Context, p1 core.Message, p2 ...core.SendOption) (core.Reply, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of MessageBus.Send method
-func (m *mMessageBusMockSend) Set(f func(p context.Context, p1 core.Message) (r core.Reply, r1 error)) *MessageBusMock {
+func (m *mMessageBusMockSend) Set(f func(p context.Context, p1 core.Message, p2 ...core.SendOption) (r core.Reply, r1 error)) *MessageBusMock {
 	m.mock.SendFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //Send implements github.com/insolar/insolar/core.MessageBus interface
-func (m *MessageBusMock) Send(p context.Context, p1 core.Message) (r core.Reply, r1 error) {
+func (m *MessageBusMock) Send(p context.Context, p1 core.Message, p2 ...core.SendOption) (r core.Reply, r1 error) {
 	atomic.AddUint64(&m.SendPreCounter, 1)
 	defer atomic.AddUint64(&m.SendCounter, 1)
 
 	if m.SendMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SendMock.mockExpectations, MessageBusMockSendParams{p, p1},
+		testify_assert.Equal(m.t, *m.SendMock.mockExpectations, MessageBusMockSendParams{p, p1, p2},
 			"MessageBus.Send got unexpected parameters")
 
 		if m.SendFunc == nil {
@@ -391,7 +392,7 @@ func (m *MessageBusMock) Send(p context.Context, p1 core.Message) (r core.Reply,
 		return
 	}
 
-	return m.SendFunc(p, p1)
+	return m.SendFunc(p, p1, p2...)
 }
 
 //SendMinimockCounter returns a count of MessageBusMock.SendFunc invocations

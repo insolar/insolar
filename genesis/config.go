@@ -12,15 +12,16 @@ type discovery struct {
 }
 
 type genesisConfig struct {
-	RootKeysFile string  `mapstructure:"root_keys_file"`
-	RootBalance  uint    `mapstructure:"root_balance"`
-	MajorityRule float32 `mapstructure:"majority_rule"`
+	RootKeysFile string `mapstructure:"root_keys_file"`
+	RootBalance  uint   `mapstructure:"root_balance"`
+	MajorityRule int    `mapstructure:"majority_rule"`
 	MinRoles     struct {
 		Virtual       uint `mapstructure:"virtual"`
 		HeavyMaterial uint `mapstructure:"heavy_material"`
 		LightMaterial uint `mapstructure:"light_material"`
 	} `mapstructure:"min_roles"`
-	DiscoveryNodes []discovery `mapstructure:"discovery_nodes"`
+	PulsarPublicKeys []string    `mapstructure:"pulsar_public_keys"`
+	DiscoveryNodes   []discovery `mapstructure:"discovery_nodes"`
 }
 
 func parseGenesisConfig(path string) (*genesisConfig, error) {

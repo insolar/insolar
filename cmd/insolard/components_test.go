@@ -48,6 +48,7 @@ func TestInitComponents(t *testing.T) {
 		cert,
 		false,
 		"",
+		"",
 	)
 	require.NoError(t, err)
 	require.NotNil(t, cm)

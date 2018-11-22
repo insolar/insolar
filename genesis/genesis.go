@@ -18,7 +18,11 @@ package genesis
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
+	"io/ioutil"
+	"log"
+	"path"
 	"strconv"
 
 	"github.com/insolar/insolar/application/contract/member"
@@ -26,6 +30,7 @@ import (
 	"github.com/insolar/insolar/application/contract/noderecord"
 	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/application/contract/wallet"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -52,6 +57,7 @@ type Genesis struct {
 	prototypeRefs   map[string]*core.RecordRef
 	isGenesis       bool
 	config          *genesisConfig
+	keyOut          string
 	ArtifactManager core.ArtifactManager `inject:""`
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
@@ -77,13 +83,14 @@ func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 }
 
 // NewGenesis creates new Genesis
-func NewGenesis(isGenesis bool, genesisConfigPath string) (*Genesis, error) {
+func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) (*Genesis, error) {
 	var err error
 	genesis := &Genesis{}
 	genesis.rootDomainRef = &core.RecordRef{}
 	genesis.isGenesis = isGenesis
 	if isGenesis {
 		genesis.config, err = parseGenesisConfig(genesisConfigPath)
+		genesis.keyOut = genesisKeyOut
 	}
 	return genesis, err
 }
@@ -300,14 +307,22 @@ func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestut
 	return nil
 }
 
-func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
+type genesisNode struct {
+	node    certificate.BootstrapNode
+	privKey crypto.PrivateKey
+	ref     *core.RecordRef
+	role    string
+}
+
+func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestutils.ContractsBuilder) ([]genesisNode, error) {
+
+	nodes := make([]genesisNode, len(g.config.DiscoveryNodes))
 
 	for i, discoverNode := range g.config.DiscoveryNodes {
-		/*_, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
+		privKey, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
 		if err != nil {
 			log.Fatal(err)
-		}*/
-		nodePubKey := ""
+		}
 
 		nodeState := &noderecord.NodeRecord{
 			Record: noderecord.RecordInfo{
@@ -317,12 +332,12 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 		}
 		nodeData, err := serializeInstance(nodeState)
 		if err != nil {
-			return errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't serialize discovery node instance")
+			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't serialize discovery node instance")
 		}
 
 		nodeID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)}})
 		if err != nil {
-			return errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't register request to artifact manager")
+			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't register request to artifact manager")
 		}
 		contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
 		_, err = g.ArtifactManager.ActivateObject(
@@ -335,10 +350,20 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 			nodeData,
 		)
 		if err != nil {
-			return errors.Wrap(err, "[ registerDiscoveryNodes ] Could'n activate discovery node object")
+			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Could'n activate discovery node object")
+		}
+
+		nodes[i] = genesisNode{
+			node: certificate.BootstrapNode{
+				PublicKey: nodePubKey,
+				Host:      discoverNode.Host,
+			},
+			privKey: privKey,
+			ref:     contract,
+			role:    discoverNode.Role,
 		}
 	}
-	return nil
+	return nodes, nil
 }
 
 // Start creates types and RootDomain instance
@@ -397,12 +422,60 @@ func (g *Genesis) Start(ctx context.Context) error {
 			return errors.Wrap(err, "[ Genesis ]")
 		}
 
-		err = g.registerDiscoveryNodes(ctx, cb)
+		nodes, err := g.registerDiscoveryNodes(ctx, cb)
 		if err != nil {
 			return errors.Wrap(err, "[ Genesis ]")
 		}
+
+		err = g.makeCertificates(nodes)
+		if err != nil {
+			return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
+		}
 	}
 
+	return nil
+}
+
+func (g *Genesis) makeCertificates(nodes []genesisNode) error {
+	certs := make([]certificate.Certificate, len(nodes))
+	for i, node := range nodes {
+		certs[i].Role = node.role
+		certs[i].Reference = node.ref.String()
+		certs[i].PublicKey = node.node.PublicKey
+		certs[i].RootDomainReference = g.rootDomainRef.String()
+		certs[i].MajorityRule = g.config.MajorityRule
+		certs[i].MinRoles.Virtual = g.config.MinRoles.Virtual
+		certs[i].MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial
+		certs[i].MinRoles.LightMaterial = g.config.MinRoles.LightMaterial
+		certs[i].BootstrapNodes = make([]certificate.BootstrapNode, len(nodes))
+		for j, node := range nodes {
+			certs[i].BootstrapNodes[j] = node.node
+		}
+	}
+
+	var err error
+	for i := range nodes {
+		for j, node := range nodes {
+			certs[i].BootstrapNodes[j].NetworkSign, err = certs[i].SignNetworkPart(node.privKey)
+			if err != nil {
+				return err
+			}
+			certs[i].BootstrapNodes[j].NodeSign, err = certs[i].SignNodePart(node.privKey)
+			if err != nil {
+				return err
+			}
+		}
+
+		// save cert to disk
+		cert, err := json.MarshalIndent(certs[i], "", "  ")
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(path.Join(g.keyOut, "discovery_cert_"+strconv.Itoa(i+1)+".json"), cert, 0644)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

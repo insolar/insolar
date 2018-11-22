@@ -43,7 +43,7 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.Object
 	case *ValidationResults:
 		return t.RecordRef
-	case *HeavyRecords:
+	case *HeavyPayload:
 		return core.RecordRef{}
 	case *Parcel:
 		return ExtractTarget(t.Msg)
@@ -86,7 +86,9 @@ func ExtractRole(msg core.Message) core.JetRole {
 		return core.RoleLightExecutor
 	case *ValidationResults:
 		return core.RoleVirtualExecutor
-	case *HeavyRecords:
+	case
+		*HeavyStartStop,
+		*HeavyPayload:
 		return core.RoleHeavyExecutor
 	case *Parcel:
 		return ExtractRole(t.Msg)

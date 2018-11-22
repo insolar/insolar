@@ -73,10 +73,3 @@ func (r *ChildRecord) Type() TypeID { return typeChild }
 func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
-
-// PulseRecord is a record containing pulse info.
-type PulseRecord struct {
-	PrevPulse          core.PulseNumber
-	Entropy            core.Entropy
-	PredictedNextPulse core.PulseNumber
-}

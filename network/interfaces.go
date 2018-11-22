@@ -46,7 +46,8 @@ type Controller interface {
 	GetNodeID() core.RecordRef
 
 	// Inject inject components.
-	Inject(components core.Components)
+	Inject(cryptographyService core.CryptographyService,
+		networkCoordinator core.NetworkCoordinator, nodeKeeper NodeKeeper)
 }
 
 // RequestHandler handler function to process incoming requests from network.
@@ -197,8 +198,8 @@ type PartitionPolicy interface {
 
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
-	// Start inject dependencies from components
-	Start(components core.Components)
+	// Inject inject dependencies from components
+	Inject(nodeKeeper NodeKeeper)
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(core.RecordRef) (*host.Host, error)
 	// ResolveS ShortID -> NodeID, Address for node inside current globe.

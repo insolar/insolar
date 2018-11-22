@@ -72,9 +72,9 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
 
-	var deviants []core.Node
-	deviants = append(deviants, state.TimedOutNodes...)
-	deviants = append(deviants, state.DeviantNodes...)
+	// var deviants []core.Node
+	// deviants = append(deviants, state.TimedOutNodes...)
+	// deviants = append(deviants, state.DeviantNodes...)
 
 	for ref, packet := range proofSet {
 		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
@@ -106,7 +106,6 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	// TODO: timeouts, deviants, etc.
 	sp.NodeKeeper.Sync(state.UnsyncList)
-
 	return &SecondPhaseState{
 		FirstPhaseState: state,
 
@@ -117,8 +116,8 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}, nil
 }
 
-func (sp *SecondPhase) signPhase2Packet(packet *packets.Phase2Packet) error {
-	data, err := packet.RawFirstPart()
+func (sp *SecondPhase) signPhase2Packet(p *packets.Phase2Packet) error {
+	data, err := p.RawFirstPart()
 	if err != nil {
 		return errors.Wrap(err, "failed to get raw bytes")
 	}
@@ -126,7 +125,8 @@ func (sp *SecondPhase) signPhase2Packet(packet *packets.Phase2Packet) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to sign a phase 2 packet")
 	}
-	packet.SignatureHeaderSection1 = sign.Bytes()
+
+	copy(p.SignatureHeaderSection1[:], sign.Bytes())
 	// TODO: sign a second part after claim addition
 	return nil
 }
