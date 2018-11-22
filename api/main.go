@@ -201,6 +201,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	return &ar, nil
 }
 
+// IsAPIRunner is implementation of APIRunner interface
 func (ar *Runner) IsAPIRunner() bool {
 	return true
 }
