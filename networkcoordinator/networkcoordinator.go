@@ -57,7 +57,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 }
 
 // WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) (bool, error) {
+func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.Certificate) (bool, error) {
 	return false, errors.New("not implemented")
 }
 
