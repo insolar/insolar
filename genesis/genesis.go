@@ -356,14 +356,6 @@ func (g *Genesis) Start(ctx context.Context) error {
 	inslog.Info("[ Genesis ] Starting Genesis ...")
 	if g.isGenesis {
 		inslog.Info("[ Genesis ] Run genesis ...")
-		isLightExecutor, err := g.isLightExecutor(ctx)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't check if node is light executor")
-		}
-		if !isLightExecutor {
-			inslog.Info("[ Genesis ] Node is not light executor. Don't run genesis")
-			return nil
-		}
 
 		_, insgocc, err := goplugintestutils.Build()
 		if err != nil {
