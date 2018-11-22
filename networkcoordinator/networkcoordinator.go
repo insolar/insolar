@@ -29,20 +29,11 @@ type NetworkCoordinator struct {
 	KeyProcessor        core.KeyProcessor        `inject:""`
 	ContractRequester   core.ContractRequester   `inject:""`
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
-	nodeDomainRef       *core.RecordRef
-	rootDomainRef       *core.RecordRef
 }
 
 // New creates new NetworkCoordinator
 func New() (*NetworkCoordinator, error) {
 	return &NetworkCoordinator{}, nil
-}
-
-// Start implements interface of Component
-func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	nc.rootDomainRef = nc.Certificate.GetRootDomainReference()
-
-	return nil
 }
 
 // WriteActiveNodes writes active nodes to ledger
