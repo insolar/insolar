@@ -19,8 +19,6 @@ package servicenetwork
 import (
 	"context"
 	"crypto"
-	"os"
-	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,8 +39,6 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
-
-var keysPath = path.Join("..", "..", "testdata", "functional", "bootstrap_keys.json")
 
 func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
 	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
@@ -76,8 +72,9 @@ func mockParcelFactory(t *testing.T) message.ParcelFactory {
 }
 
 func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) (core.CryptographyService, network.NodeKeeper) {
-	pwd, _ := os.Getwd()
-	cs, _ := cryptography.NewStorageBoundCryptographyService(path.Join(pwd, keysPath))
+	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	require.NotNil(t, key)
+	cs := cryptography.NewKeyBoundCryptographyService(key)
 	kp := platformpolicy.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
 	_, err := certificate.NewCertificatesWithKeys(pk, kp)
@@ -113,7 +110,9 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	serviceNetwork, err := NewServiceNetwork(cfg, scheme)
 
-	cs, _ := cryptography.NewStorageBoundCryptographyService(keysPath)
+	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	require.NotNil(t, key)
+	cs := cryptography.NewKeyBoundCryptographyService(key)
 	kp := platformpolicy.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
 	serviceNetwork.Certificate, _ = certificate.NewCertificatesWithKeys(pk, kp)
@@ -154,7 +153,6 @@ func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID strin
 	n := configuration.NodeNetwork{Node: &configuration.Node{ID: nodeID}}
 	cfg.Host = h
 	cfg.Node = n
-	cfg.KeysPath = keysPath
 
 	return cfg
 }
