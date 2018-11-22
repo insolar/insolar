@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/phases"
+	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
@@ -125,6 +126,9 @@ func InitComponents(
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
+	contractRequester, err := contractrequester.New()
+	checkError(ctx, err, "failed to start ContractRequester")
+
 	var gen core.Genesis
 	if isGenesis {
 		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
@@ -190,6 +194,7 @@ func InitComponents(
 	components = append(components, []interface{}{
 		nw,
 		messageBus,
+		contractRequester,
 		delegationTokenFactory,
 		parcelFactory,
 		gen,
