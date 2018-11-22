@@ -42,6 +42,8 @@ func New() (*NetworkCoordinator, error) {
 
 // Init implements interface of Component
 func (nc *NetworkCoordinator) Init(ctx context.Context) error {
+	nc.zeroCoordinator = newZeroNetworkCoordinator()
+	nc.realCoordinator = newRealNetworkCoordinator()
 	return nil
 }
 

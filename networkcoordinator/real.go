@@ -26,6 +26,10 @@ import (
 type realNetworkCoordinator struct {
 }
 
+func newRealNetworkCoordinator() *realNetworkCoordinator {
+	return &realNetworkCoordinator{}
+}
+
 // GetCert method returns node certificate
 func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
 	return nil, errors.New("not implemented")
