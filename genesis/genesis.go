@@ -437,28 +437,3 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 	}
 	return nil
 }
-
-func (g *Genesis) isLightExecutor(ctx context.Context) (bool, error) {
-	currentPulse, err := g.PulseManager.Current(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
-	}
-
-	nodeID := g.Network.GetNodeID()
-
-	isLightExecutor, err := g.JetCoordinator.IsAuthorized(
-		ctx,
-		core.RoleLightExecutor,
-		g.ArtifactManager.GenesisRef(),
-		currentPulse.PulseNumber,
-		nodeID,
-	)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
-	}
-	if !isLightExecutor {
-		inslogger.FromContext(ctx).Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
-		return false, nil
-	}
-	return true, nil
-}
