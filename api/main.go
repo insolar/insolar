@@ -158,17 +158,17 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 
 // Runner implements Component for API
 type Runner struct {
-	MessageBus          core.MessageBus         `inject:""`
-	Certificate         core.Certificate        `inject:""`
-	NetworkCoordinator  core.NetworkCoordinator `inject:""`
+	MessageBus          core.MessageBus          `inject:""`
+	Certificate         core.Certificate         `inject:""`
+	StorageExporter     core.StorageExporter     `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
+	GenesisDataProvider core.GenesisDataProvider `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
 	keyCache            map[string]crypto.PublicKey
 	cacheLock           *sync.RWMutex
 	seedmanager         *seedmanager.SeedManager
-	StorageExporter     core.StorageExporter     `inject:""`
-	GenesisDataProvider core.GenesisDataProvider `inject:""`
 }
 
 // NewRunner is C-tor for API Runner
