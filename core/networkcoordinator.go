@@ -18,14 +18,17 @@ package core
 
 import (
 	"context"
-
-	"github.com/insolar/insolar/certificate"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator interface {
-	GetCert(context.Context, RecordRef) (*certificate.Certificate, error)
-	ValidateCert(context.Context, *certificate.Certificate) (bool, error)
+	GetCert(context.Context, RecordRef) (Certificate, error)
+
+	ValidateCert(context.Context, Certificate) (bool, error)
+
+	// TODO: Remove this method
+	WriteActiveNodes(ctx context.Context, number PulseNumber, activeNodes []Node) error
+
 	// SetPulse uses PulseManager component for saving pulse info
 	SetPulse(ctx context.Context, pulse Pulse) error
 }

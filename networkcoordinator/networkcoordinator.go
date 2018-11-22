@@ -23,16 +23,15 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
-	MessageBus      core.MessageBus   `inject:""`
-	Certificate     core.Certificate  `inject:""`
-	KeyProcessor    core.KeyProcessor `inject:""`
-	NetworkSwitcher network.Switcher  `inject:""`
+	MessageBus      core.MessageBus      `inject:""`
+	Certificate     core.Certificate     `inject:""`
+	KeyProcessor    core.KeyProcessor    `inject:""`
+	NetworkSwitcher core.NetworkSwitcher `inject:""`
 
 	realCoordinator realNetworkCoordinator
 	zeroCoordinator zeroNetworkCoordinator
@@ -64,6 +63,10 @@ func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, number core.Puls
 
 // WriteActiveNodes writes active nodes to ledger
 func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
+	return errors.New("not implemented")
+}
+
+func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return errors.New("not implemented")
 }
 
