@@ -1,0 +1,159 @@
+groups:
+- name: master
+  jobs:
+    - build
+    - insolar-io
+      #    - update-cloudlare-cache
+
+resource_types:
+- name: kubernetes
+  type: docker-image
+  source:
+    repository: zlabjp/kubernetes-resource
+    tag: "1.11"
+
+resources:
+- name: master
+  type: git
+  source:
+    uri: ssh://git@gitlab.corp.code-pilots.ru:22222/its/Insolar.git
+    branch: master
+    private_key: ((meta.github.private_key))
+
+- name: tags
+  type: git
+  source:
+    uri: ssh://git@gitlab.corp.code-pilots.ru:22222/its/Insolar.git
+    branch: master
+    private_key: ((meta.github.private_key))
+    tag_filter: '*'
+
+- name: docker-builder
+  type: docker-image
+  source:
+    repository: registry.ins.world/site
+    username: ((meta.registry.username))
+    password: ((meta.registry.password))
+
+- name: deploy
+  type: kubernetes
+  source:
+    kubeconfig: ((meta.kubernetes.site-config))
+
+
+jobs:
+- name: build
+  public: true
+  plan:
+  - get: master
+    trigger: true
+  - get: docker-builder
+    trigger: false
+    params:
+      save: true
+  - task: build
+    timeout: 10m
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: alpine/git}
+      inputs:
+      - name: master
+      outputs:
+      - name: site
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             cp master/.git/short_ref site/docker-tag
+             cd master
+             git tag -l --points-at HEAD > ../site/prod-tag
+             cd ../
+
+             echo create Dockerfile
+             cat << EOF > master/Dockerfile
+             FROM node:8-alpine as builder
+             ADD . /site 
+             WORKDIR /site
+             RUN rm -Rf dist/* && npm i && npm run build
+
+             FROM nginx:alpine as site
+             COPY --from=builder /site/dist /usr/share/nginx/html
+             EOF
+             cat master/Dockerfile
+             rm -Rf master/dist/*
+             mv master/* site/
+             ls -alh
+             ls -alh site
+             env
+  - put: docker-builder
+    get_params: {skip_download: true}
+    params:
+      load_base: docker-builder
+      build: site
+      target: site
+      tag_file: site/docker-tag
+      additional_tags: site/prod-tag
+      tag_as_latest: true
+  - put: deploy
+    params:
+      namespace: site
+      kubectl: |
+        patch deployment site -p '{"spec":{"template":{"spec":{"containers":[{"name":"site","image":"registry.ins.world/site:'$(cat master/.git/short_ref)'"}]}}}}'
+      wait_until_ready_selector: app=site
+      wait_until_ready: 60
+- name: insolar-io
+  public: true
+  plan:
+  - aggregate:
+    - get: docker-builder
+      trigger: false
+      params:
+        save: true
+      passed:
+        - build
+    - get: tags
+      trigger: false
+  - task: build
+    timeout: 10m
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: alpine/git}
+      inputs:
+      - name: docker-builder
+      - name: tags
+      outputs: 
+      - name: artifacts
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo
+             ls -alh .
+             ls -alh docker-builder
+             cat docker-builder/tag
+             cat docker-builder/image-id
+             TAG=$(cd tags && git tag -l --points-at HEAD && cd ../)
+             echo $TAG > artifacts/tag
+             echo deploy $TAG
+  - put: docker-builder
+    get_params: {skip_download: true}
+    params:
+      additional_tags: artifacts/tag
+      load: docker-builder
+  - put: deploy
+    params:
+      namespace: site
+      kubectl: |
+        patch deployment insolar-io -p '{"spec":{"template":{"spec":{"containers":[{"name":"insolar-io","image":"registry.ins.world/site:'$(cat artifacts/tag)'"}]}}}}'
+      wait_until_ready_selector: app=insolar-io
+      wait_until_ready: 90
+        #get deploy $(cat artifacts/tag)
+
+
+

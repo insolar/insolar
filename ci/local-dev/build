@@ -1,0 +1,71 @@
+#!/bin/bash
+
+set -e
+
+echo start
+
+DOCKER=./ci/local-dev/docker/
+K8S=./ci/local-dev/manifests/
+
+PID=/tmp/kubectl-pid
+LOG=/tmp/test-watch
+
+
+# run only in local k8s
+kubectl config current-context | grep -q 'docker-for-desktop' || (echo "bad context, it can run only on local k8s: kubectl config use-context docker-for-desktop" && exit 1)
+
+pause () {
+  STR=$1
+  while ! $(grep -q "$STR" $LOG) ; do
+    sleep 1
+  done
+  kill $(cat $PID)
+  rm $PID
+  rm $LOG
+}
+
+
+full-rebuild () {
+  echo start full rebuild
+  docker build --rm --tag pre -f $DOCKER/Dockerfile.pre .
+  docker build --rm --tag base -f $DOCKER/Dockerfile.base .
+}
+
+rebuild () {
+  echo start rebuild
+  DEP=$(docker images -q pre)
+  [ -z "$DEP" ] && full-rebuild || docker build --rm --tag base -f $DOCKER/Dockerfile.base .
+}
+
+start-dev () {
+  echo start dev
+  kubectl apply -f $K8S/environments.yaml
+  kubectl -n dev apply -f $K8S/bootstrap.yaml
+  (kubectl -n dev get pods -w & echo $! >$PID ) | tee $LOG - &
+  pause 'seed-0.*Running'
+  kubectl -n dev apply -f $K8S/pulsar.yaml
+  kubectl -n dev apply -f $K8S/virtual.yaml
+}
+
+stop-dev () {
+  echo stop dev
+  kubectl delete ns dev || echo don\'t have dev namespace
+  while $(kubectl get ns | grep -q 'dev   ') ; do
+    sleep 1
+  done
+}
+
+restart-dev () {
+  stop-dev
+  start-dev
+}
+
+rebuild-and-restart () {
+  rebuild
+  restart-dev
+}
+
+
+
+rebuild-and-restart
+

@@ -1,0 +1,72 @@
+groups:
+- name: master
+  jobs:
+    - unit
+
+resources:
+- name: master
+  type: git
+  source:
+    uri: https://github.com/insolar/insolar.git
+    branch: master
+
+- name: insolard
+  type: docker-image
+  source:
+    repository: registry.ins.world/insolard
+    username: ((meta.registry.username))
+    password: ((meta.registry.password))
+
+- name: builder
+  type: docker-image
+  source:
+    repository: registry.ins.world/builder
+    username: ((meta.registry.username))
+    password: ((meta.registry.password))
+
+jobs:
+- name: unit
+  public: true
+  plan:
+  - get: master
+    trigger: true
+  - get: builder
+    params: 
+      save: true
+  - task: unit
+    timeout: 10m
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: golang}
+      inputs:
+      - name: master
+        path: /go/src/github.com/insolar/insolar
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo tests
+             #pwd
+             #ls -alh go
+             #export CGO_ENABLED=0
+             #export GORACE="halt_on_error=1"
+             #export GOMAXPROCS=2
+             #export INSOLAR_LOG_LEVEL=debug
+             #export GOPATH=$(pwd)/go
+
+             #mkdir $GOPATH/bin
+             #export PATH=$PATH:$GOPATH/bin
+             #ls -alh
+             #env
+             #cd $GOPATH/src/github.com/insolar/insolar
+             #make install-deps
+             #make pre-build
+             #make build
+  - put: insolard
+    params:
+      build: master
+      target: insolard
+      load_base: builder
