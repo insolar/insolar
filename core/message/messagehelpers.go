@@ -106,9 +106,17 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 	case *GenesisRequest:
 		return nil, 0
 	case *CallConstructor:
-		return t.GetCaller(), core.RoleVirtualExecutor
+		c := t.GetCaller()
+		if c.IsEmpty() {
+			return nil, 0
+		}
+		return c, core.RoleVirtualExecutor
 	case *CallMethod:
-		return t.GetCaller(), core.RoleVirtualExecutor
+		c := t.GetCaller()
+		if c.IsEmpty() {
+			return nil, 0
+		}
+		return c, core.RoleVirtualExecutor
 	case *ExecutorResults:
 		return nil, 0
 	case *GetChildren:
