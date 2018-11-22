@@ -30,17 +30,14 @@ func newRealNetworkCoordinator() *realNetworkCoordinator {
 	return &realNetworkCoordinator{}
 }
 
-// GetCert method returns node certificate
 func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
 	return nil, errors.New("not implemented")
 }
 
-// WriteActiveNodes writes active nodes to ledger
 func (rnc *realNetworkCoordinator) ValidateCert(ctx context.Context, certificate core.Certificate) (bool, error) {
 	return false, errors.New("not implemented")
 }
 
-// WriteActiveNodes writes active nodes to ledger
 func (rnc *realNetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
 	return errors.New("not implemented")
 }

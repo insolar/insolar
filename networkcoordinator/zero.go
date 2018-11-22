@@ -30,17 +30,14 @@ func newZeroNetworkCoordinator() *zeroNetworkCoordinator {
 	return &zeroNetworkCoordinator{}
 }
 
-// GetCert method returns node certificate
 func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
 	return nil, errors.New("not implemented")
 }
 
-// WriteActiveNodes writes active nodes to ledger
 func (znc *zeroNetworkCoordinator) ValidateCert(ctx context.Context, certificate core.Certificate) (bool, error) {
 	return false, errors.New("not implemented")
 }
 
-// WriteActiveNodes writes active nodes to ledger
 func (znc *zeroNetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
 	return errors.New("not implemented")
 }
