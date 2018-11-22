@@ -419,22 +419,21 @@ func (r *Two) Hello(s string) (string, error) {
 
 	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello", "ins")
 	assert.NoError(t, err, "contract call")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	f := r.([]interface{})[0]
-	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", f)
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", firstMethodRes(t, resp))
 
 	for i := 2; i <= 5; i++ {
 		resp, err = executeMethod(ctx, lr, pm, *obj, uint64(i), "Again", "ins")
 		assert.NoError(t, err, "contract call")
-		r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-		f := r.([]interface{})[0]
-		assert.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), f)
+		assert.Equal(
+			t,
+			fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i),
+			firstMethodRes(t, resp),
+		)
 	}
 
 	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetFriend")
 	assert.NoError(t, err, "contract call")
-	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	r0 := r.([]interface{})[0].([]uint8)
+	r0 := firstMethodRes(t, resp).([]uint8)
 	var two core.RecordRef
 	for i := 0; i < 64; i++ {
 		two[i] = r0[i]
@@ -443,12 +442,10 @@ func (r *Two) Hello(s string) (string, error) {
 	for i := 6; i <= 9; i++ {
 		resp, err = executeMethod(ctx, lr, pm, two, uint64(i), "Hello", "Insolar")
 		assert.NoError(t, err, "contract call")
-		r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-		f := r.([]interface{})[0]
-		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), f)
+		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), firstMethodRes(t, resp))
 	}
-	ValidateAllResults(t, ctx, lr)
 
+	ValidateAllResults(t, ctx, lr)
 }
 
 func TestInjectingDelegate(t *testing.T) {
@@ -537,15 +534,11 @@ func (r *Two) Hello(s string) (string, error) {
 
 	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello", "ins")
 	assert.NoError(t, err)
-
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{"Hi, ins! Two said: Hello you too, ins. 644 times!", nil}, r)
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", firstMethodRes(t, resp))
 
 	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "HelloFromDelegate", "ins")
 	assert.NoError(t, err)
-	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{"Hello you too, ins. 1288 times!", nil}, r)
-
+	assert.Equal(t, "Hello you too, ins. 1288 times!", firstMethodRes(t, resp))
 }
 
 func TestBasicNotificationCall(t *testing.T) {
@@ -866,17 +859,13 @@ func New(n int) (*Child, error) {
 
 	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", 10)
 	assert.NoError(t, err, "contract call")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{uint64(45), nil}, r)
+	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
 	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "SumChilds")
 	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
 	ValidateAllResults(t, ctx, lr)
-
-	assert.NoError(t, err, "contract call")
-	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{uint64(45), nil}, r)
 }
 
 func TestFailValidate(t *testing.T) {
@@ -1031,11 +1020,9 @@ func (r *Two) NoError() error {
 
 	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "NoError")
 	assert.NoError(t, err, "contract call")
+	assert.Equal(t, nil, firstMethodRes(t, resp))
 
 	ValidateAllResults(t, ctx, lr)
-
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{nil}, r)
 }
 
 func TestNilResult(t *testing.T) {
@@ -1110,11 +1097,9 @@ func (r *Two) Hello() (*string, error) {
 
 	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Hello")
 	assert.NoError(t, err, "contract call")
+	assert.Equal(t, nil, firstMethodRes(t, resp))
 
 	ValidateAllResults(t, ctx, lr)
-
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{nil, nil}, r)
 }
 
 type Caller struct {
@@ -1147,8 +1132,6 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 		"Call", rootDomain, method, buf, seed, signature.Bytes(),
 	)
 	assert.NoError(s.t, err, "contract call")
-
-	fmt.Printf("%s", res)
 
 	var result interface{}
 	var contractErr interface{}
@@ -1371,8 +1354,7 @@ func New(n int) (*Child, error) {
 
 	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", 1)
 	assert.NoError(t, err, "contract call")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}{uint64(0), nil}, r)
+	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
 	mb := lr.(*LogicRunner).MessageBus.(*testmessagebus.TestMessageBus)
 	toValidate := make([]core.Parcel, 0)
@@ -1749,10 +1731,8 @@ package main
 	)
 	assert.NoError(t, err)
 	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "AddChildAndReturnMyselfAsParent")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, *obj, Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)))
 
-	refFromMethod := r.([]interface{})[0].([]byte)
-	assert.Equal(t, *obj, Ref{}.FromSlice(refFromMethod))
 	ValidateAllResults(t, ctx, lr)
 }
 
@@ -2022,13 +2002,9 @@ package main
 
 	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "GetChildCode")
 	assert.NoError(t, err, "contract call")
-	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	refFromMethod := r.([]interface{})[0].([]byte)
-	assert.Equal(t, *cb.Codes["two"], Ref{}.FromSlice(refFromMethod), "Compare Code Refs")
+	assert.Equal(t, *cb.Codes["two"], Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)), "Compare Code Refs")
 
 	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetChildPrototype")
 	assert.NoError(t, err, "contract call")
-	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	refFromMethod = r.([]interface{})[0].([]byte)
-	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(refFromMethod), "Compare Code Prototypes")
+	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)), "Compare Code Prototypes")
 }
