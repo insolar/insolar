@@ -18,6 +18,7 @@ package core
 
 import (
 	"context"
+	"encoding/gob"
 	"time"
 )
 
@@ -58,7 +59,7 @@ type LogicRunner interface {
 	ValidateCaseBind(context.Context, Parcel) (res Reply, err error)
 	ProcessValidationResults(context.Context, Parcel) (res Reply, err error)
 	ExecutorResults(context.Context, Parcel) (res Reply, err error)
-	Validate(ctx context.Context, ref RecordRef, p Pulse, cr []CaseRecord) (int, error) // TODO hide?
+	Validate(ctx context.Context, ref RecordRef, p Pulse, cb CaseBind) (int, error) // TODO hide?
 	OnPulse(context.Context, Pulse) error
 }
 
@@ -103,15 +104,58 @@ type CaseRecord struct {
 	Resp   interface{}
 }
 
+type CaseRequest struct {
+	Request interface{}
+	Records []CaseRecord
+}
+
 // CaseBinder is a whole result of executor efforts on every object it seen on this pulse
 type CaseBind struct {
-	Records map[RecordRef][]CaseRecord // ordered cases for each object
+	Requests []CaseRequest
 }
 
 type CaseBindReplay struct {
-	Pulse      Pulse
-	Records    []CaseRecord
-	RecordsLen int
-	Step       int
-	Fail       int
+	Pulse    Pulse
+	CaseBind CaseBind
+	Request  int
+	Record   int
+	Steps    int
+	Fail     int
+}
+
+func (r *CaseBindReplay) NextStep() (*CaseRecord, int) {
+	if r.Request >= len(r.CaseBind.Requests) {
+		return nil, r.Steps
+	}
+
+	request := r.CaseBind.Requests[r.Request]
+
+	if r.Record < 0 {
+		r.Record = 0
+		r.Steps++
+		res := request.Request.(CaseRecord)
+		return &res, r.Steps
+	}
+
+	if r.Record >= len(request.Records) {
+		r.Record = -1
+		r.Request++
+		if r.Request >= len(r.CaseBind.Requests) {
+			return nil, r.Steps
+		}
+		r.Record = 0
+		r.Steps++
+		res := r.CaseBind.Requests[r.Request].Request.(CaseRecord)
+		return &res, r.Steps
+	}
+	res := request.Records[r.Record]
+	r.Record++
+	r.Steps++
+	return &res, r.Steps
+}
+
+func init() {
+	gob.Register(&CaseRecord{})
+	gob.Register(&CaseRequest{})
+	gob.Register(&CaseBind{})
 }
