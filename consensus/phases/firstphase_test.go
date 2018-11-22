@@ -17,11 +17,13 @@
 package phases
 
 import (
+	"crypto"
 	"testing"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/merkle"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
@@ -29,20 +31,29 @@ import (
 
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhase{}
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeKeeperMock := network.NewNodeKeeperMock(t)
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := NewCommunicatorMock(t)
 	consensusNetworkMock := network.NewConsensusNetworkMock(t)
 
-	nodeNetworkMock.GetActiveNodesMock.Set(func() (r []core.Node) {
+	cryptoServ := testutils.NewCryptographyServiceMock(t)
+	cryptoServ.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+		return true
+	}
+
+	nodeKeeperMock.GetActiveNodesMock.Set(func() (r []core.Node) {
 		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", "")}
 	})
 
 	cm := component.Manager{}
-	cm.Inject(nodeNetworkMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
+	cm.Inject(cryptoServ, nodeKeeperMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
 
 	assert.NotNil(t, firstPhase.Calculator)
-	assert.NotNil(t, firstPhase.NodeNetwork)
-	activeNodes := firstPhase.NodeNetwork.GetActiveNodes()
+	assert.NotNil(t, firstPhase.NodeKeeper)
+	activeNodes := firstPhase.NodeKeeper.GetActiveNodes()
 	assert.Equal(t, 1, len(activeNodes))
 }

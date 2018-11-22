@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -59,6 +60,8 @@ func createTwoConsensusNetworks(id1, id2 core.ShortNodeID) (t1, t2 network.Conse
 func TestTransportConsensus_SendRequest(t *testing.T) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
 	require.NoError(t, err)
+	ctx := context.Background()
+	ctx2 := context.Background()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -69,14 +72,15 @@ func TestTransportConsensus_SendRequest(t *testing.T) {
 	}
 	cn2.RegisterRequestHandler(types.Phase1, handler)
 
-	cn2.Start(testContext)
-	cn1.Start(testContext)
+	cn2.Start(ctx)
+	cn1.Start(ctx2)
 	defer func() {
 		cn1.Stop()
 		cn2.Stop()
 	}()
 
-	request := cn1.NewRequestBuilder().Type(types.Phase1).Data(&packets.Phase1Packet{}).Build()
+	packet := packets.NewPhase1Packet()
+	request := cn1.NewRequestBuilder().Type(types.Phase1).Data(packet).Build()
 	err = cn1.SendRequest(request, cn2.GetNodeID())
 	require.NoError(t, err)
 	success := network.WaitTimeout(&wg, time.Second)

@@ -76,12 +76,14 @@ func (c *Controller) GetNodeID() core.RecordRef {
 }
 
 // Inject inject components.
-func (c *Controller) Inject(components core.Components) {
+func (c *Controller) Inject(cryptographyService core.CryptographyService,
+	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
+
 	c.network.RegisterRequestHandler(types.Ping, func(request network.Request) (network.Response, error) {
 		return c.network.BuildResponse(request, nil), nil
 	})
 	c.bootstrapController.Start()
-	c.authController.Start(components)
+	c.authController.Start(cryptographyService, networkCoordinator, nodeKeeper)
 	c.pulseController.Start()
 	c.rpcController.Start()
 }

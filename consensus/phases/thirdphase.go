@@ -17,41 +17,29 @@
 package phases
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/merkle"
 )
 
-type FirstPhaseState struct {
-	PulseEntry *merkle.PulseEntry
-
-	PulseHash  merkle.OriginHash
-	PulseProof *merkle.PulseProof
-
-	PulseProofSet map[core.Node]*merkle.PulseProof
-
-	TimedOutNodes []core.Node
-	DeviantNodes  []core.Node
-
-	UnsyncList network.UnsyncList
+// ThirdPhasePulse.
+type ThirdPhasePulse struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *ThirdPhasePulseState
 }
 
-type SecondPhaseState struct {
-	*FirstPhaseState
-
-	GlobuleEntry *merkle.GlobuleEntry
-
-	GlobuleHash  merkle.OriginHash
-	GlobuleProof *merkle.GlobuleProof
-
-	GlobuleProofSet map[core.Node]*merkle.GlobuleProof
-
-	NodeListCount uint16
-	NodeListHash  []byte
+func (tpp *ThirdPhasePulse) Execute(ctx context.Context, state *SecondPhaseState) error {
+	// TODO: do something here
+	return nil
 }
 
-type ThirdPhasePulseState struct {
+// ThirdPhaseReferendum.
+type ThirdPhaseReferendum struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *ThirdPhaseReferendumState
 }
 
-type ThirdPhaseReferendumState struct {
+func (tpr *ThirdPhaseReferendum) Execute(ctx context.Context, state *SecondPhaseState) error {
+	// TODO: do something here
+	return nil
 }
