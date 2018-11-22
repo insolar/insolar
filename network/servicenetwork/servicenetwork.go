@@ -42,7 +42,6 @@ type ServiceNetwork struct {
 	Certificate         core.Certificate         `inject:""`
 	NodeNetwork         core.NodeNetwork         `inject:""`
 	PulseManager        core.PulseManager        `inject:""`
-	Coordinator         core.NetworkCoordinator  `inject:""`
 	PhaseManager        phases.PhaseManager      `inject:""`
 	CryptographyService core.CryptographyService `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
@@ -100,7 +99,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
 
-	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper /*components.NodeNetwork.(network.NodeKeeper)*/)
+	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper)
 	n.routingTable.Inject(n.NodeKeeper)
 
 	log.Infoln("Bootstrapping network...")
@@ -153,10 +152,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		go func(logger core.Logger, network *ServiceNetwork) {
 			// FIXME: we need to resend pulse only to nodes outside the globe, we send pulse to nodes inside the globe on phase1 of the consensus
 			// network.controller.ResendPulseToKnownHosts(pulse)
-			if network.Coordinator == nil {
+			if network.NetworkCoordinator == nil {
 				return
 			}
-			err := network.Coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
+			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
