@@ -44,7 +44,6 @@ import (
 	"github.com/insolar/insolar/version/manager"
 )
 
-// BootstrapComponents contains components for network bootstrap process
 type BootstrapComponents struct {
 	CryptographyService        core.CryptographyService
 	PlatformCryptographyScheme core.PlatformCryptographyScheme
@@ -53,7 +52,6 @@ type BootstrapComponents struct {
 	Certificate                core.Certificate
 }
 
-// InitBootstrapComponents creates new BootstrapComponents
 func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuration) BootstrapComponents {
 	earlyComponents := component.Manager{}
 
@@ -75,7 +73,6 @@ func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	}
 }
 
-// InitCertificate creates Certificate component
 func InitCertificate(
 	ctx context.Context,
 	cfg configuration.Configuration,
