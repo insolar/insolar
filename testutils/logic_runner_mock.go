@@ -40,7 +40,7 @@ type LogicRunnerMock struct {
 	ProcessValidationResultsPreCounter uint64
 	ProcessValidationResultsMock       mLogicRunnerMockProcessValidationResults
 
-	ValidateFunc       func(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 []core.CaseRecord) (r int, r1 error)
+	ValidateFunc       func(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) (r int, r1 error)
 	ValidateCounter    uint64
 	ValidatePreCounter uint64
 	ValidateMock       mLogicRunnerMockValidate
@@ -347,32 +347,32 @@ type LogicRunnerMockValidateParams struct {
 	p  context.Context
 	p1 core.RecordRef
 	p2 core.Pulse
-	p3 []core.CaseRecord
+	p3 core.CaseBind
 }
 
 //Expect sets up expected params for the LogicRunner.Validate
-func (m *mLogicRunnerMockValidate) Expect(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 []core.CaseRecord) *mLogicRunnerMockValidate {
+func (m *mLogicRunnerMockValidate) Expect(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) *mLogicRunnerMockValidate {
 	m.mockExpectations = &LogicRunnerMockValidateParams{p, p1, p2, p3}
 	return m
 }
 
 //Return sets up a mock for LogicRunner.Validate to return Return's arguments
 func (m *mLogicRunnerMockValidate) Return(r int, r1 error) *LogicRunnerMock {
-	m.mock.ValidateFunc = func(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 []core.CaseRecord) (int, error) {
+	m.mock.ValidateFunc = func(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) (int, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of LogicRunner.Validate method
-func (m *mLogicRunnerMockValidate) Set(f func(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 []core.CaseRecord) (r int, r1 error)) *LogicRunnerMock {
+func (m *mLogicRunnerMockValidate) Set(f func(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) (r int, r1 error)) *LogicRunnerMock {
 	m.mock.ValidateFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //Validate implements github.com/insolar/insolar/core.LogicRunner interface
-func (m *LogicRunnerMock) Validate(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 []core.CaseRecord) (r int, r1 error) {
+func (m *LogicRunnerMock) Validate(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) (r int, r1 error) {
 	atomic.AddUint64(&m.ValidatePreCounter, 1)
 	defer atomic.AddUint64(&m.ValidateCounter, 1)
 

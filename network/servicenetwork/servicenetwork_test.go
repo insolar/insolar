@@ -19,8 +19,6 @@ package servicenetwork
 import (
 	"context"
 	"crypto"
-	"os"
-	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,8 +39,6 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
-
-var keysPath = path.Join("..", "..", "testdata", "functional", "bootstrap_keys.json")
 
 func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
 	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
@@ -76,8 +72,9 @@ func mockParcelFactory(t *testing.T) message.ParcelFactory {
 }
 
 func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) (core.CryptographyService, network.NodeKeeper) {
-	pwd, _ := os.Getwd()
-	cs, _ := cryptography.NewStorageBoundCryptographyService(path.Join(pwd, keysPath))
+	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	require.NotNil(t, key)
+	cs := cryptography.NewKeyBoundCryptographyService(key)
 	kp := platformpolicy.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
 	_, err := certificate.NewCertificatesWithKeys(pk, kp)
@@ -103,6 +100,8 @@ func TestServiceNetwork_GetAddress(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	network, err := NewServiceNetwork(cfg, scheme)
 	require.NoError(t, err)
+	err = network.Init(context.Background())
+	require.NoError(t, err)
 	require.True(t, strings.Contains(network.GetAddress(), strings.Split(cfg.Host.Transport.Address, ":")[0]))
 }
 
@@ -111,7 +110,9 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	serviceNetwork, err := NewServiceNetwork(cfg, scheme)
 
-	cs, _ := cryptography.NewStorageBoundCryptographyService(keysPath)
+	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	require.NotNil(t, key)
+	cs := cryptography.NewKeyBoundCryptographyService(key)
 	kp := platformpolicy.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
 	serviceNetwork.Certificate, _ = certificate.NewCertificatesWithKeys(pk, kp)
@@ -121,7 +122,9 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, testutils.RandomRef(), "", true)
 
 	serviceNetwork.NodeNetwork, _ = nodenetwork.NewNodeNetwork(cfg)
-	err = serviceNetwork.Init(ctx)
+	err = serviceNetwork.Init(context.Background())
+	require.NoError(t, err)
+	err = serviceNetwork.Start(ctx)
 	require.NoError(t, err)
 
 	e := &message.CallMethod{
@@ -150,7 +153,6 @@ func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID strin
 	n := configuration.NodeNetwork{Node: &configuration.Node{ID: nodeID}}
 	cfg.Host = h
 	cfg.Node = n
-	cfg.KeysPath = keysPath
 
 	return cfg
 }
@@ -173,13 +175,16 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	require.NoError(t, err)
 
 	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
-
-	err = secondNode.Init(ctx)
+	err = secondNode.Init(context.Background())
+	require.NoError(t, err)
+	err = secondNode.Start(ctx)
 	require.NoError(t, err)
 	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
 
 	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
-	err = firstNode.Init(ctx)
+	err = firstNode.Init(context.Background())
+	require.NoError(t, err)
+	err = firstNode.Start(ctx)
 	require.NoError(t, err)
 
 	defer func() {
@@ -229,15 +234,17 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
-
-	err = secondNode.Init(ctx)
+	err = secondNode.Init(context.Background())
+	require.NoError(t, err)
+	err = secondNode.Start(ctx)
 	require.NoError(t, err)
 
 	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
 
 	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
-
-	err = firstNode.Init(ctx)
+	err = firstNode.Init(context.Background())
+	require.NoError(t, err)
+	err = firstNode.Start(ctx)
 	require.NoError(t, err)
 
 	defer func() {
@@ -323,7 +330,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
 		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node), scheme)
-		service.Init(ctx)
+		service.Start(ctx)
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
 			return nil, nil

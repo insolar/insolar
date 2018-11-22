@@ -107,9 +107,9 @@ func (m *CallConstructor) Type() core.MessageType {
 }
 
 type ExecutorResults struct {
-	Caller      core.RecordRef
-	RecordRef   core.RecordRef
-	CaseRecords []core.CaseRecord
+	Caller    core.RecordRef
+	RecordRef core.RecordRef
+	CaseBind  core.CaseBind
 }
 
 func (m *ExecutorResults) Type() core.MessageType {
@@ -126,10 +126,10 @@ func (m *ExecutorResults) GetReference() core.RecordRef {
 }
 
 type ValidateCaseBind struct {
-	Caller      core.RecordRef
-	RecordRef   core.RecordRef
-	CaseRecords []core.CaseRecord
-	Pulse       core.Pulse
+	Caller    core.RecordRef
+	RecordRef core.RecordRef
+	CaseBind  core.CaseBind
+	Pulse     core.Pulse
 }
 
 func (m *ValidateCaseBind) Type() core.MessageType {
@@ -143,10 +143,6 @@ func (m *ValidateCaseBind) GetCaller() *core.RecordRef {
 
 func (m *ValidateCaseBind) GetReference() core.RecordRef {
 	return m.RecordRef
-}
-
-func (m *ValidateCaseBind) GetCaseRecords() []core.CaseRecord {
-	return m.CaseRecords
 }
 
 func (m *ValidateCaseBind) GetPulse() core.Pulse {
