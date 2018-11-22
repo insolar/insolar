@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package contractrequester
+package extractor
 
 import (
 	"encoding/json"
