@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2018 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,17 +14,11 @@
  *    limitations under the License.
  */
 
-package core
+package networkcoordinator
 
-import (
-	"context"
+type zeroNetworkCoordinator struct {
+}
 
-	"github.com/insolar/insolar/certificate"
-)
-
-// NetworkCoordinator encapsulates logic of network configuration
-type NetworkCoordinator interface {
-	GetCert(context.Context, RecordRef) (*certificate.Certificate, error)
-	ValidateCert(context.Context, *certificate.Certificate) (bool, error)
-	WriteActiveNodes(ctx context.Context, number PulseNumber, activeNodes []Node) error
+func newZeroNetworkCoordinator() *zeroNetworkCoordinator {
+	return &zeroNetworkCoordinator{}
 }

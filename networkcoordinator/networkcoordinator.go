@@ -24,21 +24,30 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
-	MessageBus    core.MessageBus   `inject:""`
-	KeyProcessor  core.KeyProcessor `inject:""`
-	Certificate   core.Certificate  `inject:""`
-	nodeDomainRef *core.RecordRef
-	rootDomainRef *core.RecordRef
+	MessageBus      core.MessageBus   `inject:""`
+	Certificate     core.Certificate  `inject:""`
+	KeyProcessor    core.KeyProcessor `inject:""`
+	NetworkSwitcher network.Switcher  `inject:""`
+	nodeDomainRef   *core.RecordRef
+	rootDomainRef   *core.RecordRef
+
+	realCoordinator realNetworkCoordinator
+	zeroCoordinator zeroNetworkCoordinator
 }
 
 // New creates new NetworkCoordinator
 func New() (*NetworkCoordinator, error) {
 	return &NetworkCoordinator{}, nil
+}
+
+func (nc *NetworkCoordinator) Init(ctx context.Context) error {
+	return nil
 }
 
 // Start implements interface of Component
@@ -48,13 +57,17 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 	return nil
 }
 
+func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
+	return nil
+}
+
 // GetCert method returns node certificate
 func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
 	return nil, errors.New("not implemented")
 }
 
 // WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) IsValidCert(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) (bool, error) {
+func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) (bool, error) {
 	return false, errors.New("not implemented")
 }
 
