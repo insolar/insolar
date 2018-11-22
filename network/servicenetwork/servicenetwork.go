@@ -91,7 +91,7 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	routingTable, hostnetwork, controller, err := NewNetworkComponents(n.cfg, n, n.scheme)
+	routingTable, hostnetwork, controller, err := newNetworkComponents(n.cfg, n, n.scheme)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create network components.")
 	}
@@ -183,8 +183,8 @@ func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
 	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
 }
 
-// NewNetworkComponents create network.HostNetwork and network.Controller for new network
-func NewNetworkComponents(conf configuration.Configuration,
+// newNetworkComponents create network.HostNetwork and network.Controller for new network
+func newNetworkComponents(conf configuration.Configuration,
 	pulseHandler network.PulseHandler, scheme core.PlatformCryptographyScheme) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
 	routingTable := &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(conf)
