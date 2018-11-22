@@ -22,6 +22,7 @@ import (
 
 // HeavyPayload carries Key/Value records for replication to Heavy Material node.
 type HeavyPayload struct {
+	core.PulseRange
 	Records []core.KV
 }
 
@@ -37,8 +38,7 @@ func (e *HeavyPayload) Type() core.MessageType {
 
 // HeavyStartStop carries heavy replication start/stop signal with pulse range.
 type HeavyStartStop struct {
-	Begin    core.PulseNumber
-	End      core.PulseNumber
+	core.PulseRange
 	Finished bool
 }
 
