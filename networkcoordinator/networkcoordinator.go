@@ -20,13 +20,11 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
 	Certificate         core.Certificate         `inject:""`
-	KeyProcessor        core.KeyProcessor        `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
 	ContractRequester   core.ContractRequester   `inject:""`
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
@@ -57,19 +55,20 @@ func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
 
 // GetCert method returns node certificate
 func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
-	return nil, errors.New("not implemented")
+	return nc.getCoordinator().GetCert(ctx, nodeRef)
 }
 
 // WriteActiveNodes writes active nodes to ledger
 func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.Certificate) (bool, error) {
-	return false, errors.New("not implemented")
+	return nc.getCoordinator().ValidateCert(ctx, certificate)
 }
 
 // WriteActiveNodes writes active nodes to ledger
 func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
-	return errors.New("not implemented")
+	return nc.getCoordinator().WriteActiveNodes(ctx, number, activeNodes)
 }
 
+// SetPulse writes pulse data on local storage
 func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
-	return errors.New("not implemented")
+	return nc.getCoordinator().SetPulse(ctx, pulse)
 }
