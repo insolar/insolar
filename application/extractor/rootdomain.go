@@ -25,29 +25,29 @@ import (
 )
 
 // InfoResponse represents response from Info() method of RootDomain contract
-type InfoResponse struct {
+type Info struct {
 	RootDomain string `json:"root_domain"`
 	RootMember string `json:"root_member"`
 	NodeDomain string `json:"node_domain"`
 }
 
-// ExtractInfoResponse returns response from Info() method of RootDomain contract
-func ExtractInfoResponse(data []byte) (*InfoResponse, error) {
+// InfoResponse returns response from Info() method of RootDomain contract
+func InfoResponse(data []byte) (*Info, error) {
 	var infoMap interface{}
 	var contractErr *foundation.Error
 	_, err := core.UnMarshalResponse(data, []interface{}{&infoMap, &contractErr})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ExtractInfoResponse ] Can't unmarshal")
+		return nil, errors.Wrap(err, "[ InfoResponse ] Can't unmarshal")
 	}
 	if contractErr != nil {
-		return nil, errors.Wrap(contractErr, "[ ExtractInfoResponse ] Has error in response")
+		return nil, errors.Wrap(contractErr, "[ InfoResponse ] Has error in response")
 	}
 
-	var info InfoResponse
+	var info Info
 	data = infoMap.([]byte)
 	err = json.Unmarshal(data, &info)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ExtractInfoResponse ] Can't unmarshal response ")
+		return nil, errors.Wrap(err, "[ InfoResponse ] Can't unmarshal response ")
 	}
 
 	return &info, nil

@@ -45,7 +45,7 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 		return errors.Wrap(err, "[ setInfo ] Can't send request")
 	}
 
-	info, err := extractor.ExtractInfoResponse(routResult.(*reply.CallMethod).Result)
+	info, err := extractor.InfoResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Can't extract response")
 	}
