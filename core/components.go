@@ -36,7 +36,6 @@ type Components struct {
 	Metrics                    Component
 	Genesis                    Genesis
 	APIRunner                  APIRunner
-	NetworkCoordinator         NetworkCoordinator
 	PlatformCryptographyScheme PlatformCryptographyScheme
 	CryptographyService        CryptographyService
 }

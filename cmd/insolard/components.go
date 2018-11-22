@@ -188,7 +188,6 @@ func InitComponents(
 		MessageBus:                 messageBus,
 		Genesis:                    gen,
 		APIRunner:                  apiRunner,
-		NetworkCoordinator:         networkCoordinator,
 		PlatformCryptographyScheme: platformCryptographyScheme,
 		CryptographyService:        cryptographyService,
 	}}
