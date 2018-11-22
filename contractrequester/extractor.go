@@ -125,3 +125,13 @@ func ExtractReferenceResponse(data []byte) (*core.RecordRef, error) {
 	}
 	return ref, nil
 }
+
+func ExtractCallResponse(data []byte) (interface{}, *foundation.Error, error) {
+	var result interface{}
+	var contractErr *foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{&result, &contractErr})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ ExtractCallResponse ] Can't unmarshal response ")
+	}
+	return result, contractErr, nil
+}
