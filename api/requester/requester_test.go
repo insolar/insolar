@@ -214,11 +214,11 @@ func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 	require.EqualError(t, err, "[ getResponseBody ] Bad http response code: 404")
 }
 
-// func TestGetResponseBody(t *testing.T) {
-// 	data, err := GetResponseBody(URL, PostParams{})
-// 	require.NoError(t, err)
-// 	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
-// }
+func TestGetResponseBody(t *testing.T) {
+	data, err := GetResponseBody(APIURL+"/v1/call", PostParams{})
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
+}
 
 func TestSetVerbose(t *testing.T) {
 	require.False(t, verbose)
