@@ -24,6 +24,7 @@ import (
 type NetworkSwitcher struct {
 }
 
+// NewNetworkSwitcher creates new NetworkSwitcher
 func NewNetworkSwitcher() (*NetworkSwitcher, error) {
 	return &NetworkSwitcher{}, nil
 }
