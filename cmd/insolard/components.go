@@ -177,11 +177,12 @@ func initComponents(
 		logicRunner,
 		delegationTokenFactory,
 		parcelFactory,
-	}...)
-	if gen != nil {
-		components = append(components, gen)
-	}
-	components = append(components, []interface{}{genesisDataProvider,
+		//}...)
+		//if gen != nil {
+		//	components = append(components, gen)
+		//}
+		//components = append(components, []interface{}{genesisDataProvider,
+		gen,
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
