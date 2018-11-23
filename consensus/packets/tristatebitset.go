@@ -117,7 +117,95 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 }
 
 func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
+	var firstbyte uint8
+	err := binary.Read(data, defaultByteOrder, &firstbyte)
+	if err != nil {
+		return errors.Wrap(err, "[ Deserialize ] failed to read first byte")
+	}
+	compressed, hbitFlag, length, err := parseFirstByte(firstbyte)
+	if hbitFlag {
+		err = binary.Read(data, defaultByteOrder, &length)
+		if err != nil {
+			return errors.Wrap(err, "[ Deserialize ] failed to read second byte")
+		}
+	}
+	blockCount := uint64(math.Round(float64(length/8) + 0.5))
+	payload := make([]uint8, blockCount)
+	for i := 0; uint64(i) < blockCount; i++ {
+		err = binary.Read(data, defaultByteOrder, &payload[i])
+		if err != nil {
+			return errors.Wrap(err, "[ Deserialize ] failed to read first byte")
+		}
+	}
+	var array *bitArray
+	if compressed {
+		// TODO: uncompress payload
+	} else {
+		array, err = parseBitArray(payload, int(length))
+		if err != nil {
+			return nil
+		}
+	}
+	cells, err := dbs.parseCells(array)
+	if err != nil {
+		return err
+	}
+
+	dbs.cells = cells
+	dbs.CompressedSet = compressed
 	return nil
+}
+
+func (dbs *TriStateBitSet) parseCells(array *bitArray) ([]BitSetCell, error) {
+	cellSize := int(array.bitsSize / 2)
+	cells := make([]BitSetCell, cellSize)
+	for i := 0; i < cellSize; i++ {
+		id, err := dbs.mapper.IndexToRef(i)
+		if err != nil {
+			return nil, err
+		}
+		cells[i].NodeID = id
+		stateFirstBit, err := array.get(2 * i)
+		if err != nil {
+			return nil, err
+		}
+		stateSecondBit, err := array.get(2*i + 1)
+		if err != nil {
+			return nil, err
+		}
+		cells[i].State = TriState((stateFirstBit << 1) + stateSecondBit)
+	}
+	return cells, nil
+}
+
+func parseBitArray(payload []uint8, size int) (*bitArray, error) {
+	array := newBitArray(uint(size))
+	for i := 0; i < size; i++ {
+		bitsN := uint8(math.Round(float64(i / 8)))
+		step := uint8(8 - i%8 - 1)
+		bit := (payload[bitsN] >> step) & 0x01
+		err := array.put(int(bit), i)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return array, nil
+}
+
+func parseFirstByte(byte uint8) (compressed bool, hbitFlag bool, lbitLength uint8, err error) {
+	lbitLength = uint8(0)
+	compressed = false
+	hbitFlag = false
+	if (byte & 0x80) == 1 {
+		compressed = true
+	}
+	check := (byte << 1) & 0x80
+	if check == 0x80 {
+		hbitFlag = true
+		return
+	}
+	lbitLength = (byte << 2) >> 2
+	return
 }
 
 func (dbs *TriStateBitSet) changeBucketState(cell *BitSetCell) error {
