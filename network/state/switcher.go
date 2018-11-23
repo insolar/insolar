@@ -22,6 +22,7 @@ import (
 
 // NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher struct {
+	state core.NetworkState
 }
 
 // NewNetworkSwitcher creates new NetworkSwitcher
