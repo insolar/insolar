@@ -169,27 +169,46 @@ func initComponents(
 
 	components := ledger.GetLedgerComponents(cfg.Ledger)
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
-	components = append(components, []interface{}{
-		nw,
-		messageBus,
-		contractRequester,
-		&ld,
-		logicRunner,
-		delegationTokenFactory,
-		parcelFactory,
-		//}...)
-		//if gen != nil {
-		//	components = append(components, gen)
-		//}
-		//components = append(components, []interface{}{
-		genesisDataProvider,
-		gen,
-		apiRunner,
-		metricsHandler,
-		networkCoordinator,
-		phases.NewPhaseManager(),
-		cryptographyService,
-	}...)
+
+	if gen != nil {
+		components = append(components, []interface{}{
+			nw,
+			messageBus,
+			contractRequester,
+			&ld,
+			logicRunner,
+			delegationTokenFactory,
+			parcelFactory,
+			// }...)
+			// if gen != nil {
+			// 	components = append(components, gen)
+			// }
+			// components = append(components, []interface{}{
+			genesisDataProvider,
+			gen,
+			apiRunner,
+			metricsHandler,
+			networkCoordinator,
+			phases.NewPhaseManager(),
+			cryptographyService,
+		}...)
+	} else {
+		components = append(components, []interface{}{
+			nw,
+			messageBus,
+			contractRequester,
+			&ld,
+			logicRunner,
+			delegationTokenFactory,
+			parcelFactory,
+			genesisDataProvider,
+			apiRunner,
+			metricsHandler,
+			networkCoordinator,
+			phases.NewPhaseManager(),
+			cryptographyService,
+		}...)
+	}
 
 	cm.Inject(components...)
 
