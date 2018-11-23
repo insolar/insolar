@@ -90,6 +90,7 @@ func (m *LedgerArtifactManager) GetCode(
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetCode{Code: code},
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -209,6 +210,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 			Head:   head,
 			AsType: asType,
 		},
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -433,7 +435,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		IsValid:            isValid,
 		ValidationMessages: validationMessages,
 	}
-	_, err = m.bus(ctx).Send(ctx, &msg)
+	_, err = m.bus(ctx).Send(ctx, &msg, nil)
 	return err
 }
 
@@ -604,6 +606,7 @@ func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record
 			Record:    record.SerializeRecord(rec),
 			TargetRef: target,
 		},
+		nil,
 	)
 
 	if err != nil {
@@ -625,6 +628,7 @@ func (m *LedgerArtifactManager) setBlob(ctx context.Context, blob []byte, target
 			Memory:    blob,
 			TargetRef: target,
 		},
+		nil,
 	)
 
 	if err != nil {
@@ -657,6 +661,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 				Record: record.SerializeRecord(rec),
 				Object: object,
 			},
+			nil,
 		)
 		wg.Done()
 	}()
@@ -670,6 +675,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 				TargetRef: object,
 				Memory:    memory,
 			},
+			nil,
 		)
 		wg.Done()
 	}()
@@ -710,6 +716,7 @@ func (m *LedgerArtifactManager) registerChild(
 			Child:  child,
 			AsType: asType,
 		},
+		nil,
 	)
 
 	if err != nil {
