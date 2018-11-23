@@ -77,14 +77,6 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	writeReponse(response, answer)
 }
 
-func FakeInfoHandler(response http.ResponseWriter, req *http.Request) {
-	response.Header().Add("Content-Type", "application/json")
-	answer := map[string]interface{}{
-		"prototypes": map[string]string{},
-	}
-	writeReponse(response, answer)
-}
-
 func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 	answer := map[string]interface{}{
@@ -147,10 +139,8 @@ func startServer() error {
 
 func setup() error {
 	fh := FakeHandler
-	fih := FakeInfoHandler
 	fRPCh := FakeRPCHandler
 	http.HandleFunc(LOCATION+"/call", fh)
-	http.HandleFunc(LOCATION+"/info", fih)
 	http.HandleFunc(RPCLOCATION, fRPCh)
 	log.Info("Starting Test api server ...")
 
