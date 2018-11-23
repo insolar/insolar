@@ -130,10 +130,10 @@ func initComponents(
 	if isGenesis {
 		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
-	} else {
+	} /*else {
 		gen, err = genesis.NewGenesis(isGenesis, "", "")
 		checkError(ctx, err, "failed to start Bootstrapper")
-	}
+	}*/
 
 	contractRequester, err := contractrequester.New()
 	checkError(ctx, err, "failed to start ContractRequester")
@@ -177,8 +177,11 @@ func initComponents(
 		logicRunner,
 		delegationTokenFactory,
 		parcelFactory,
-		gen,
-		genesisDataProvider,
+	}...)
+	if gen != nil {
+		components = append(components, gen)
+	}
+	components = append(components, []interface{}{genesisDataProvider,
 		apiRunner,
 		metricsHandler,
 		networkCoordinator,
