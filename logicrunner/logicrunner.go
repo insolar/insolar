@@ -489,6 +489,8 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 				err = e
 				if od != nil && e == nil {
 					es.objectbody.objDescriptor = od
+				} else {
+					es.objectbody = nil
 				}
 			}
 			if err != nil {
