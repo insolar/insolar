@@ -25,7 +25,7 @@ type UnsyncListMock struct {
 	AddClaimsPreCounter uint64
 	AddClaimsMock       mUnsyncListMockAddClaims
 
-	CalculateHashFunc       func() (r []byte)
+	CalculateHashFunc       func() (r []byte, r1 error)
 	CalculateHashCounter    uint64
 	CalculateHashPreCounter uint64
 	CalculateHashMock       mUnsyncListMockCalculateHash
@@ -141,22 +141,22 @@ type mUnsyncListMockCalculateHash struct {
 }
 
 //Return sets up a mock for UnsyncList.CalculateHash to return Return's arguments
-func (m *mUnsyncListMockCalculateHash) Return(r []byte) *UnsyncListMock {
-	m.mock.CalculateHashFunc = func() []byte {
-		return r
+func (m *mUnsyncListMockCalculateHash) Return(r []byte, r1 error) *UnsyncListMock {
+	m.mock.CalculateHashFunc = func() ([]byte, error) {
+		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of UnsyncList.CalculateHash method
-func (m *mUnsyncListMockCalculateHash) Set(f func() (r []byte)) *UnsyncListMock {
+func (m *mUnsyncListMockCalculateHash) Set(f func() (r []byte, r1 error)) *UnsyncListMock {
 	m.mock.CalculateHashFunc = f
 
 	return m.mock
 }
 
 //CalculateHash implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) CalculateHash() (r []byte) {
+func (m *UnsyncListMock) CalculateHash() (r []byte, r1 error) {
 	atomic.AddUint64(&m.CalculateHashPreCounter, 1)
 	defer atomic.AddUint64(&m.CalculateHashCounter, 1)
 
