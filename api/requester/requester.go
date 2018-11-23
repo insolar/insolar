@@ -20,9 +20,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
@@ -91,6 +93,48 @@ func GetSeed(url string) ([]byte, error) {
 	return seedResp.Seed, nil
 }
 
+// GetRPCSeed makes rpc request to seed.Get method and extracts it
+func GetRPCSeed(url string) ([]byte, error) {
+	splitedURL := strings.Split(url, "v1")
+	baseURL := splitedURL[0]
+	body, err := GetResponseBody(baseURL+"rpc", PostParams{
+		"jsonrpc": "2.0",
+		"method":  "seed.Get",
+		"id":      "",
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getSeed ]")
+	}
+
+	type RPCResponse struct {
+		RPCVersion string                 `json:"jsonrpc"`
+		Error      map[string]interface{} `json:"error"`
+	}
+	type seedResponse struct {
+		RPCResponse
+		Result struct {
+			Seed    []byte `json:"Seed"`
+			TraceID string `json:"TraceID"`
+		} `json:"result"`
+	}
+
+	seedResp := seedResponse{}
+
+	err = json.Unmarshal(body, &seedResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getSeed ] Can't unmarshal")
+	}
+	if seedResp.Error != nil {
+		return nil, errors.New("[ getSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
+	}
+	res := &seedResp.Result
+	if res == nil {
+		return nil, errors.New("[ getSeed ] Field 'result' is nil")
+	}
+
+	return res.Seed, nil
+}
+
 func constructParams(params []interface{}) ([]byte, error) {
 	args, err := core.MarshalArgs(params...)
 	if err != nil {
@@ -145,7 +189,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 // Send first gets seed and after that makes target request
 func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
 	verboseInfo(ctx, "Sending GETSEED request ...")
-	seed, err := GetSeed(url)
+	seed, err := GetRPCSeed(url)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}

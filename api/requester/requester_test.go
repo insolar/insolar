@@ -39,6 +39,11 @@ const TESTSEED = "VGVzdA=="
 const TESTROOTMEMBER = "root_member_ref"
 const TESTROOTDOMAIN = "root_domain_ref"
 
+type TESTSEEDRESULT struct {
+	Seed    []byte
+	TraceID string
+}
+
 func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 	serJSON, err := json.MarshalIndent(answer, "", "    ")
 	if err != nil {
@@ -84,10 +89,22 @@ func FakeInfoHandler(response http.ResponseWriter, req *http.Request) {
 	writeReponse(response, answer)
 }
 
+func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
+	response.Header().Add("Content-Type", "application/json")
+	answer := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      "",
+		"result":  TESTSEEDRESULT{Seed: []byte("someSeed"), TraceID: "testTraceID"},
+	}
+	writeReponse(response, answer)
+}
+
 const LOCATION = "/api/v1"
+const RPCLOCATION = "/api/rpc"
 const PORT = "12221"
 const HOST = "127.0.0.1"
 const URL = "http://" + HOST + ":" + PORT + LOCATION
+const RPCURL = "http://" + HOST + ":" + PORT + RPCLOCATION
 
 var server = &http.Server{Addr: ":" + PORT}
 
@@ -122,9 +139,11 @@ func startServer() error {
 func setup() error {
 	fh := FakeHandler
 	fih := FakeInfoHandler
+	fRPCh := FakeRPCHandler
 	http.HandleFunc(LOCATION, fh)
 	http.HandleFunc(LOCATION+"/call", fh)
 	http.HandleFunc(LOCATION+"/info", fih)
+	http.HandleFunc(RPCLOCATION, fRPCh)
 	log.Info("Starting Test api server ...")
 
 	err := startServer()
