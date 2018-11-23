@@ -17,7 +17,6 @@
 package nodenetwork
 
 import (
-	"bytes"
 	"sort"
 	"strings"
 	"sync"
@@ -143,7 +142,7 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 	// Sort active nodes to return list with determinate order on every node.
 	// If we have more than 10k nodes, we need to optimize this
 	sort.Slice(result, func(i, j int) bool {
-		return bytes.Compare(result[i].ID().Bytes(), result[j].ID().Bytes()) < 0
+		return result[i].ID().Compare(result[j].ID()) < 0
 	})
 	return result
 }

@@ -17,7 +17,6 @@
 package nodenetwork
 
 import (
-	"bytes"
 	"sort"
 
 	consensus "github.com/insolar/insolar/consensus/packets"
@@ -86,7 +85,7 @@ func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
 		i++
 	}
 	sort.Slice(result, func(i, j int) bool {
-		return bytes.Compare(result[i].ID().Bytes(), result[j].ID().Bytes()) < 0
+		return result[i].ID().Compare(result[j].ID()) < 0
 	})
 	return result
 }

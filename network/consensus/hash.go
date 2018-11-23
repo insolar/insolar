@@ -17,7 +17,6 @@
 package consensus
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"hash"
@@ -66,7 +65,7 @@ func calculateNodeHash(scheme core.PlatformCryptographyScheme, node core.Node) [
 // CalculateHash calculates hash of active node list
 func CalculateHash(scheme core.PlatformCryptographyScheme, list []core.Node) (result []byte, err error) {
 	sort.Slice(list[:], func(i, j int) bool {
-		return bytes.Compare(list[i].ID().Bytes(), list[j].ID().Bytes()) < 0
+		return list[i].ID().Compare(list[j].ID()) < 0
 	})
 
 	// catch possible panic from hashWriteChecked in this function and in all calculateNodeHash funcs
