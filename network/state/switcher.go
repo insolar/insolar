@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher struct {
 }
 
@@ -27,6 +28,7 @@ func NewNetworkSwitcher() (*NetworkSwitcher, error) {
 	return &NetworkSwitcher{}, nil
 }
 
+// GetState method returns current network state
 func (ns *NetworkSwitcher) GetState() core.NetworkState {
 	return core.CompleteNetworkState
 }

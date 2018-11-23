@@ -57,7 +57,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 	return nc.getCoordinator().GetCert(ctx, nodeRef)
 }
 
-// WriteActiveNodes validates node certificate
+// ValidateCert validates node certificate
 func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.Certificate) (bool, error) {
 	return nc.getCoordinator().ValidateCert(ctx, certificate)
 }

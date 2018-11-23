@@ -32,7 +32,7 @@ const (
 // NetworkState type for bootstrapping process
 type NetworkState int
 
-// Switcher is a network FSM using for bootstrapping
+// NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher interface {
 	// GetState method returns current network state
 	GetState() NetworkState
