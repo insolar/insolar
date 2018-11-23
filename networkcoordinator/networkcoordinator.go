@@ -48,9 +48,8 @@ func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
 	if nc.NetworkSwitcher.GetState() == core.CompleteNetworkState {
 		return nc.realCoordinator
-	} else {
-		return nc.zeroCoordinator
 	}
+	return nc.zeroCoordinator
 }
 
 // GetCert method returns node certificate
