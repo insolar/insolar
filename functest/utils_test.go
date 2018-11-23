@@ -138,6 +138,18 @@ type infoResponse struct {
 	NodeDomain string `json:"node_domain"`
 }
 
+type newInfoResponse struct {
+	RootDomain string `json:"RootDomain"`
+	RootMember string `json:"RootMember"`
+	NodeDomain string `json:"NodeDomain"`
+	TraceID    string `json:"TraceID"`
+}
+
+type rpcInfoResponse struct {
+	RPCResponse
+	Result newInfoResponse `json:"result"`
+}
+
 func createMember(t *testing.T, name string) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
@@ -199,14 +211,17 @@ func getSeed(t *testing.T) string {
 	return getSeedResponse.Result.Seed
 }
 
-func getInfo(t *testing.T) infoResponse {
-	resp, err := http.Get(TestAPIURL + "/v1/info")
-	require.NoError(t, err)
-	body, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-	err = json.Unmarshal(body, &info)
-	require.NoError(t, err)
-	return info
+func getInfo(t *testing.T) newInfoResponse {
+	body := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "info.Get",
+		"id":      "",
+	})
+	rpcInfoResponse := &rpcInfoResponse{}
+	unmarshalRPCResponse(t, body, rpcInfoResponse)
+	require.NotNil(t, rpcInfoResponse.Result)
+	// info = rpcInfoResponse.Result
+	return rpcInfoResponse.Result
 }
 
 func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
