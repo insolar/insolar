@@ -31,8 +31,6 @@ func QTypeFromString(strQType string) QueryType {
 	switch strQType {
 	case "is_auth":
 		return IsAuth
-	case "get_seed":
-		return GetSeed
 	}
 
 	return UNDEFINED

@@ -75,8 +75,6 @@ func processQueryType(ctx context.Context, rh *RequestHandler, qTypeStr string) 
 
 	var hError error
 	switch qtype {
-	case GetSeed:
-		answer, hError = rh.ProcessGetSeed(ctx)
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
 		answer = writeError(msg, BadRequest)
