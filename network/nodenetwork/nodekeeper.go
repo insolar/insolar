@@ -253,7 +253,7 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	panic("not implemented")
+	return newUnsyncList(nk.GetActiveNodes())
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
