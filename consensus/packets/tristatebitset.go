@@ -27,6 +27,7 @@ import (
 )
 
 const lastBitMask = 0x01
+const lowLengthSize = 6
 
 // TriStateBitSet bitset implementation.
 type TriStateBitSet struct {
@@ -64,7 +65,6 @@ func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell) {
 
 func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 	var firstByte uint8
-	var secondByte uint8
 	if dbs.CompressedSet {
 		firstByte = 0x01
 	} else {
@@ -80,27 +80,15 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 	totalSize := int(math.Round(float64((tmpLen*2)/8))+0.5) + 1 // first byte
 	var result *bytes.Buffer
 	firstByte = firstByte << 1
-	if bits.Len(tmpLen) > 6 {
-		firstByte++
-		firstByte = firstByte << 6
-		secondByte = uint8(tmpLen)
-		totalSize++ // secondbyte is optional
-		result = allocateBuffer(totalSize)
-		err = binary.Write(result, defaultByteOrder, firstByte)
+	if bits.Len(tmpLen) > lowLengthSize {
+		result, err = dbs.serializeWithHLength(firstByte, tmpLen, totalSize, result)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
-		}
-		err = binary.Write(result, defaultByteOrder, secondByte)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
+			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
 	} else {
-		result = allocateBuffer(totalSize)
-		firstByte = firstByte << 1
-		firstByte += uint8(tmpLen)
-		err = binary.Write(result, defaultByteOrder, firstByte)
+		result, err = dbs.serializeWithLLength(firstByte, tmpLen, totalSize, result)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
+			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
 	}
 
@@ -114,6 +102,45 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 	}
 
 	return result.Bytes(), nil
+}
+
+func (dbs *TriStateBitSet) serializeWithHLength(
+	firstByte uint8,
+	tmpLen uint,
+	totalSize int,
+	result *bytes.Buffer,
+) (res *bytes.Buffer, err error) {
+	var secondByte uint8
+	firstByte++
+	firstByte = firstByte << 6
+	secondByte = uint8(tmpLen)
+	totalSize++ // secondbyte is optional
+	result = allocateBuffer(totalSize)
+	err = binary.Write(result, defaultByteOrder, firstByte)
+	if err != nil {
+		return result, errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
+	}
+	err = binary.Write(result, defaultByteOrder, secondByte)
+	if err != nil {
+		return result, errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
+	}
+	return result, nil
+}
+
+func (dbs *TriStateBitSet) serializeWithLLength(
+	firstByte uint8,
+	tmpLen uint,
+	totalSize int,
+	result *bytes.Buffer,
+) (res *bytes.Buffer, err error) {
+	result = allocateBuffer(totalSize)
+	firstByte = firstByte << 1
+	firstByte += uint8(tmpLen)
+	err = binary.Write(result, defaultByteOrder, firstByte)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ serializeWithLLength ] failed to write binary")
+	}
+	return result, nil
 }
 
 func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
@@ -139,7 +166,7 @@ func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
 	}
 	var array *bitArray
 	if compressed {
-		// TODO: uncompress payload
+		panic("we have no implementation for this branch")
 	} else {
 		array, err = parseBitArray(payload, int(length))
 		if err != nil {
