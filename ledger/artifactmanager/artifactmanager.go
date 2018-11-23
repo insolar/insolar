@@ -132,19 +132,9 @@ func (m *LedgerArtifactManager) GetObject(
 		State:    state,
 		Approved: approved,
 	}
-	genericReact, err := m.bus(ctx).Send(
-		ctx,
-		getObjectMsg,
-	)
+	genericReact, err := m.sendAndFollowRedirect(ctx, getObjectMsg)
 	if err != nil {
 		return nil, err
-	}
-
-	if genericReact.Type() == reply.TypeGetObjectRedirect {
-		genericReact, err = m.makeRedirect(ctx, genericReact, getObjectMsg)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	switch r := genericReact.(type) {
@@ -166,32 +156,6 @@ func (m *LedgerArtifactManager) GetObject(
 		err = ErrUnexpectedReply
 	}
 	return desc, err
-}
-
-func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.Reply, messageForRedirect *message.GetObject) (core.Reply, error) {
-	// TODO Need to be replaced with constant
-	maxCountOfReply := 2
-
-	for maxCountOfReply > 0 {
-		redirectResponse := response.(*reply.GetObjectRedirectReply)
-
-		redirectedMessage := redirectResponse.RecreateMessage(messageForRedirect)
-
-		genericReact, err := m.bus(ctx).Send(
-			ctx,
-			redirectedMessage,
-			core.SendOptionToken(redirectResponse.Token),
-			core.SendOptionDestination(redirectResponse.To),
-		)
-
-		if genericReact.Type() != reply.TypeGetObjectRedirect {
-			return response, err
-		}
-
-		maxCountOfReply--
-	}
-
-	return nil, errors.New("object not found")
 }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.
@@ -733,4 +697,25 @@ func (m *LedgerArtifactManager) registerChild(
 
 func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
 	return core.MessageBusFromContext(ctx, m.DefaultBus)
+}
+
+func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg core.Message) (core.Reply, error) {
+	rep, err := m.bus(ctx).Send(ctx, msg, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if redirect, ok := rep.(core.RedirectReply); ok {
+		redirected := redirect.Redirected(msg)
+		return m.bus(ctx).Send(
+			ctx,
+			redirected,
+			&core.MessageSendOptions{
+				Token:    redirect.GetToken(),
+				Receiver: redirect.GetReceiver(),
+			},
+		)
+	}
+
+	return rep, err
 }
