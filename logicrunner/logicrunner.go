@@ -202,25 +202,17 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 		lr.machinePrefs = append(lr.machinePrefs, core.MachineTypeGoPlugin)
 	}
 
-	// TODO: use separate handlers
-	if err := lr.MessageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
-		return err
-	}
-	if err := lr.MessageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
-		return err
-	}
-
-	if err := lr.MessageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
-		return err
-	}
-	if err := lr.MessageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
-		return err
-	}
-	if err := lr.MessageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
-		return err
-	}
+	lr.RegisterHandlers()
 
 	return nil
+}
+
+func (lr *LogicRunner) RegisterHandlers() {
+	lr.MessageBus.MustRegister(core.TypeCallMethod, lr.Execute)
+	lr.MessageBus.MustRegister(core.TypeCallConstructor, lr.Execute)
+	lr.MessageBus.MustRegister(core.TypeExecutorResults, lr.ExecutorResults)
+	lr.MessageBus.MustRegister(core.TypeValidateCaseBind, lr.ValidateCaseBind)
+	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.ProcessValidationResults)
 }
 
 // Stop stops logic runner component and its executors
