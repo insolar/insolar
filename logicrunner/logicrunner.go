@@ -98,8 +98,8 @@ func (es *ExecutionState) ErrorWrap(err error, message string) error {
 }
 
 func (es *ExecutionState) Lock() {
-	es.Mutex.Lock()
 	es.queueLength++
+	es.Mutex.Lock()
 }
 
 func (es *ExecutionState) Unlock() {
@@ -261,17 +261,18 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	fuse := true
 	es.Lock()
-	defer func() {
-		if fuse {
-			es.Unlock()
-		}
-	}()
 
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
 	if entryPulse != lr.pulse(ctx).PulseNumber {
 		return nil, es.ErrorWrap(nil, "abort execution: new Pulse coming")
 	}
+
+	defer func() {
+		if fuse {
+			es.Unlock()
+		}
+	}()
 
 	es.traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
