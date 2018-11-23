@@ -63,14 +63,16 @@ func (ul *unsyncList) AddClaims(from core.RecordRef, claims []consensus.Referend
 	ul.cache = nil
 }
 
-func (ul *unsyncList) CalculateHash() []byte {
+func (ul *unsyncList) CalculateHash() ([]byte, error) {
 	if ul.cache != nil {
-		return ul.cache
+		return ul.cache, nil
 	}
 	m := copyMap(ul.activeNodes)
 	merge(m, ul.claims)
 	sorted := sortedNodeList(m)
-	return calcHash(sorted)
+	var err error
+	ul.cache, err = CalculateHash(nil, sorted)
+	return ul.cache, err
 }
 
 func merge(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]consensus.ReferendumClaim) {
@@ -88,11 +90,6 @@ func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
 		return result[i].ID().Compare(result[j].ID()) < 0
 	})
 	return result
-}
-
-func calcHash(nodes []core.Node) []byte {
-	// TODO: implement
-	return nil
 }
 
 func (ul *unsyncList) IndexToRef(index int) (core.RecordRef, error) {
