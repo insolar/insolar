@@ -29,13 +29,13 @@ import (
 	"github.com/gorilla/rpc/v2"
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -149,7 +149,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			inslog.Errorf("[ wrapAPIV1Handler ] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, runner.ContractRequester, runner.NetworkCoordinator, rootDomainReference, runner.seedmanager)
+		rh := NewRequestHandler(params, runner.ContractRequester, runner.NetworkCoordinator, rootDomainReference, runner.SeedManager)
 
 		answer = processQueryType(ctx, rh, params.QueryType)
 	}
@@ -167,7 +167,8 @@ type Runner struct {
 	cfg                 *configuration.APIRunner
 	keyCache            map[string]crypto.PublicKey
 	cacheLock           *sync.RWMutex
-	seedmanager         *seedmanager.SeedManager
+	SeedManager         *seedmanager.SeedManager
+	SeedGenerator       seedmanager.SeedGenerator
 }
 
 // NewRunner is C-tor for API Runner
@@ -193,7 +194,13 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	}
 
 	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")
+
 	err := rpcServer.RegisterService(NewStorageExporterService(&ar), "exporter")
+	if err != nil {
+		return nil, err
+	}
+
+	err = rpcServer.RegisterService(NewSeedService(&ar), "seed")
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +217,7 @@ func (ar *Runner) IsAPIRunner() bool {
 func (ar *Runner) Start(ctx context.Context) error {
 	rootDomainReference := ar.Certificate.GetRootDomainReference()
 
-	ar.seedmanager = seedmanager.New()
+	ar.SeedManager = seedmanager.New()
 
 	fw := wrapAPIV1Handler(ar, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)

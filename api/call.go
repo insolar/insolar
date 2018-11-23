@@ -125,7 +125,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		if !ar.seedmanager.Exists(*seed) {
+		if !ar.SeedManager.Exists(*seed) {
 			resp.Error = "[ CallHandler ] Incorrect seed"
 			inslog.Error(resp.Error)
 			return
