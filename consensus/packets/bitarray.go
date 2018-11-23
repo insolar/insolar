@@ -44,13 +44,12 @@ func (arr *bitArray) put(bit, index int) error {
 	if uint(index) >= arr.bitsSize {
 		return errors.New("[ put ] failed to put a bit. out of range")
 	}
-	block := uint8(math.Round(float64(index / 8)))
+	block := uint8(index / 8)
 	step := uint8(8 - index%8 - 1)
 
-	mask := uint8(bit)
-	mask = mask << step
+	mask := uint8(1 << step)
 	if bit == 0 {
-		arr.array[block] += mask
+		arr.array[block] &= ^(mask)
 	} else if bit == 1 {
 		arr.array[block] |= mask
 	}
@@ -74,7 +73,7 @@ func (arr *bitArray) get(index int) (uint8, error) {
 		return 0, errors.New("failed to get a bit - index out of range")
 	}
 
-	bitsN := uint8(math.Round(float64(index / 8)))
+	bitsN := uint8(index / 8)
 	step := uint8(8 - index%8 - 1)
 	res := arr.array[bitsN] >> step
 
