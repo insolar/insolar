@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package consensus
+package nodenetwork
 
 import (
 	"encoding/binary"
@@ -81,13 +81,4 @@ func CalculateHash(scheme core.PlatformCryptographyScheme, list []core.Node) (re
 		hashWriteChecked(h, nodeHash)
 	}
 	return h.Sum(nil), nil
-}
-
-// CalculateNodeUnsyncHash calculates hash for a NodeUnsyncHash
-func CalculateNodeUnsyncHash(scheme core.PlatformCryptographyScheme, nodeID core.RecordRef, list []core.Node) (*NodeUnsyncHash, error) {
-	h, err := CalculateHash(scheme, list)
-	if err != nil {
-		return nil, err
-	}
-	return &NodeUnsyncHash{NodeID: nodeID, Hash: h}, nil
 }
