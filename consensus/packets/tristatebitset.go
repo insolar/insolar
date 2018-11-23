@@ -81,12 +81,12 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 	var result *bytes.Buffer
 	firstByte = firstByte << 1
 	if bits.Len(tmpLen) > lowLengthSize {
-		result, err = dbs.serializeWithHLength(firstByte, tmpLen, totalSize, result)
+		result, err = dbs.serializeWithHLength(firstByte, tmpLen, totalSize)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
 	} else {
-		result, err = dbs.serializeWithLLength(firstByte, tmpLen, totalSize, result)
+		result, err = dbs.serializeWithLLength(firstByte, tmpLen, totalSize)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
@@ -108,8 +108,8 @@ func (dbs *TriStateBitSet) serializeWithHLength(
 	firstByte uint8,
 	tmpLen uint,
 	totalSize int,
-	result *bytes.Buffer,
 ) (res *bytes.Buffer, err error) {
+	var result *bytes.Buffer
 	var secondByte uint8
 	firstByte++
 	firstByte = firstByte << 6
@@ -131,8 +131,8 @@ func (dbs *TriStateBitSet) serializeWithLLength(
 	firstByte uint8,
 	tmpLen uint,
 	totalSize int,
-	result *bytes.Buffer,
 ) (res *bytes.Buffer, err error) {
+	var result *bytes.Buffer
 	result = allocateBuffer(totalSize)
 	firstByte = firstByte << 1
 	firstByte += uint8(tmpLen)
