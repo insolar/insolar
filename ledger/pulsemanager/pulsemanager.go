@@ -127,7 +127,7 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 		Messages:    messages,
 		PulseNumber: latestPulseNumber,
 	}
-	_, err = m.Bus.Send(ctx, msg)
+	_, err = m.Bus.Send(ctx, msg, nil)
 	if err != nil {
 		return err
 	}
