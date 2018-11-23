@@ -64,6 +64,7 @@ type rpcSeedResponse struct {
 
 // GetResponseBody makes request and extracts body
 func GetResponseBody(url string, postP PostParams) ([]byte, error) {
+	fmt.Println("uuuurl", url)
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
@@ -174,7 +175,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	}
 	verboseInfo(ctx, "GETSEED request completed. seed: "+string(seed))
 
-	response, err := SendWithSeed(ctx, url+"/v1/call", userCfg, reqCfg, seed)
+	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}

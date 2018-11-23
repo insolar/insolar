@@ -99,13 +99,11 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	writeReponse(response, answer)
 }
 
-const LOCATION = "/api/v1"
-const RPCLOCATION = "/api/rpc"
+const callLOCATION = "/api/call"
+const rpcLOCATION = "/api/rpc"
 const PORT = "12221"
 const HOST = "127.0.0.1"
-const URL = "http://" + HOST + ":" + PORT + LOCATION
-const APIURL = "http://" + HOST + ":" + PORT + "/api"
-const RPCURL = "http://" + HOST + ":" + PORT + RPCLOCATION
+const URL = "http://" + HOST + ":" + PORT + "/api"
 
 var server = &http.Server{Addr: ":" + PORT}
 
@@ -140,8 +138,8 @@ func startServer() error {
 func setup() error {
 	fh := FakeHandler
 	fRPCh := FakeRPCHandler
-	http.HandleFunc(LOCATION+"/call", fh)
-	http.HandleFunc(RPCLOCATION, fRPCh)
+	http.HandleFunc(callLOCATION, fh)
+	http.HandleFunc(rpcLOCATION, fRPCh)
 	log.Info("Starting Test api server ...")
 
 	err := startServer()
@@ -187,7 +185,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetRPCSeed(t *testing.T) {
-	seed, err := GetRPCSeed(APIURL)
+	seed, err := GetRPCSeed(URL)
 	require.NoError(t, err)
 	decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
 	require.NoError(t, err)
@@ -205,7 +203,7 @@ func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 }
 
 func TestGetResponseBody(t *testing.T) {
-	data, err := GetResponseBody(APIURL+"/v1/call", PostParams{})
+	data, err := GetResponseBody(URL+"/call", PostParams{})
 	require.NoError(t, err)
 	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
 }
@@ -228,7 +226,7 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *RequestConfigJSON) {
 func TestSend(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
-	resp, err := Send(ctx, APIURL, userConf, reqConf)
+	resp, err := Send(ctx, URL, userConf, reqConf)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
@@ -255,7 +253,7 @@ func TestSendWithSeed_NilConfigs(t *testing.T) {
 }
 
 func TestInfo(t *testing.T) {
-	resp, err := Info(APIURL)
+	resp, err := Info(URL)
 	require.NoError(t, err)
 	fmt.Println(resp.RootDomain)
 	require.Equal(t, resp, &testInfoResponse)
