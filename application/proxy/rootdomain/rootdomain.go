@@ -298,6 +298,58 @@ func (r *RootDomain) DumpAllUsersNoWait() error {
 	return nil
 }
 
+// Info is proxy generated method
+func (r *RootDomain) Info() (interface{}, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Info", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// InfoNoWait is proxy generated method
+func (r *RootDomain) InfoNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Info", argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetNodeDomainRef is proxy generated method
 func (r *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
 	var args [0]interface{}

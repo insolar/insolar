@@ -26,11 +26,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -42,8 +42,8 @@ func TestMain(m *testing.M) {
 	cfg := configuration.NewAPIRunner()
 	api, _ := NewRunner(&cfg)
 
-	b, _ := genesis.NewGenesis(false, "", "")
-	api.Genesis = b
+	c := certificate.Certificate{}
+	api.Certificate = &c
 	api.Start(ctx)
 
 	code := m.Run()

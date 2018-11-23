@@ -12,6 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	merkle "github.com/insolar/insolar/network/merkle"
+
 	testify_assert "github.com/stretchr/testify/assert"
 )
 

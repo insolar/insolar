@@ -16,9 +16,12 @@
 
 package core
 
-import "context"
+import (
+	"context"
+)
 
 // Component controller methods
+// DEPRECATED and should be removed
 type Component interface {
 	Start(ctx context.Context, components Components) error
 	Stop(ctx context.Context) error
@@ -26,6 +29,7 @@ type Component interface {
 
 // Components is a registry for other core interfaces
 // Fields order are important and represent start and stop order in the daemon
+// DEPRECATED and should be removed
 type Components struct {
 	Certificate                Certificate
 	NodeNetwork                NodeNetwork
@@ -36,7 +40,6 @@ type Components struct {
 	Metrics                    Component
 	Genesis                    Genesis
 	APIRunner                  APIRunner
-	NetworkCoordinator         NetworkCoordinator
 	PlatformCryptographyScheme PlatformCryptographyScheme
 	CryptographyService        CryptographyService
 }

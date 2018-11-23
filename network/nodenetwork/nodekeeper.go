@@ -18,13 +18,12 @@ package nodenetwork
 
 import (
 	"bytes"
-	"context"
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/insolar/insolar/configuration"
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -85,29 +84,22 @@ func resolveAddress(configuration configuration.Configuration) (string, error) {
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 	return &nodekeeper{
 		origin:       origin,
-		state:        undefined,
+		state:        network.Undefined,
+		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
-		sync:         make([]core.Node, 0),
-		unsync:       make([]MutableNode, 0),
-		listWaiters:  make([]chan *UnsyncList, 0),
-		nodeWaiters:  make(map[core.RecordRef]chan core.Node),
 		indexNode:    make(map[core.NodeRole]*recordRefSet),
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 	}
 }
 
-type nodekeeperState uint8
-
-const (
-	undefined = nodekeeperState(iota + 1)
-	pulseSet
-	synced
-)
-
 type nodekeeper struct {
-	origin core.Node
-	state  nodekeeperState
-	pulse  core.PulseNumber
+	origin      core.Node
+	originClaim *consensus.NodeJoinClaim
+	originLock  sync.RWMutex
+	state       network.NodeKeeperState
+	claimQueue  *claimQueue
+
+	nodesJoinedDuringPrevPulse bool
 
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
@@ -116,21 +108,6 @@ type nodekeeper struct {
 	active       map[core.RecordRef]core.Node
 	indexNode    map[core.NodeRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
-	sync         []core.Node
-
-	unsyncLock  sync.Mutex
-	unsync      []MutableNode
-	unsyncList  *UnsyncList
-	listWaiters []chan *UnsyncList
-	nodeWaiters map[core.RecordRef]chan core.Node
-}
-
-func (nk *nodekeeper) Start(ctx context.Context, components core.Components) error {
-	return nil
-}
-
-func (nk *nodekeeper) Stop(ctx context.Context) error {
-	return nil
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {
@@ -208,141 +185,6 @@ func (nk *nodekeeper) GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
 	return nk.indexShortID[shortID]
 }
 
-func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, network.UnsyncList) {
-	nk.unsyncLock.Lock()
-	defer nk.unsyncLock.Unlock()
-
-	if nk.state == undefined {
-		return true, nk.collectUnsync(number)
-	}
-
-	if number <= nk.pulse {
-		log.Warnf("NodeKeeper: ignored SetPulse call with number=%d while current=%d", uint32(number), uint32(nk.pulse))
-		return false, nil
-	}
-
-	if nk.state == pulseSet {
-		log.Warn("NodeKeeper: SetPulse called from `pulseSet` state")
-		nk.activeLock.Lock()
-		nk.syncUnsafe(nil)
-		nk.activeLock.Unlock()
-	}
-
-	return true, nk.collectUnsync(number)
-}
-
-func (nk *nodekeeper) Sync(syncCandidates []core.Node, number core.PulseNumber) {
-	nk.unsyncLock.Lock()
-	nk.activeLock.Lock()
-
-	defer func() {
-		nk.activeLock.Unlock()
-		nk.unsyncLock.Unlock()
-	}()
-
-	if nk.state == synced || nk.state == undefined {
-		log.Warn("NodeKeeper: ignored Sync call from `synced` or `undefined` state")
-		return
-	}
-
-	if nk.pulse > number {
-		log.Warnf("NodeKeeper: ignored Sync call because passed number %d is less than internal number %d",
-			number, nk.pulse)
-		return
-	}
-
-	var candidates string
-	for _, node := range syncCandidates {
-		candidates += node.ID().String() + ", "
-	}
-	log.Debugf("Moving unsync to sync: %s", candidates)
-
-	nk.syncUnsafe(syncCandidates)
-}
-
-func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-	version string /*, publicKey *ecdsa.PublicKey*/) (chan core.Node, error) {
-
-	nk.unsyncLock.Lock()
-	defer nk.unsyncLock.Unlock()
-
-	node := newMutableNode(
-		nodeID,
-		roles,
-		nil, // TODO publicKey
-		nk.pulse,
-		address,
-		version,
-	)
-
-	nk.unsync = append(nk.unsync, node)
-	ch := make(chan core.Node, 1)
-	nk.nodeWaiters[node.ID()] = ch
-	return ch, nil
-}
-
-func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (network.UnsyncList, error) {
-	nk.unsyncLock.Lock()
-	currentPulse := nk.pulse
-
-	if currentPulse == pulse {
-		result := nk.unsyncList
-		nk.unsyncLock.Unlock()
-		return result, nil
-	}
-	if currentPulse > pulse || duration < 0 {
-		nk.unsyncLock.Unlock()
-		return nil, errors.Errorf("GetUnsyncHolder called with pulse %d, but current NodeKeeper pulse is %d",
-			pulse, currentPulse)
-	}
-	ch := make(chan *UnsyncList, 1)
-	nk.listWaiters = append(nk.listWaiters, ch)
-	nk.unsyncLock.Unlock()
-	var result *UnsyncList
-	select {
-	case data := <-ch:
-		if data == nil {
-			return nil, errors.New("GetUnsyncHolder: channel closed")
-		}
-		result = data
-	case <-time.After(duration):
-		return nil, errors.New("GetUnsyncHolder: timeout")
-	}
-	if result.GetPulse() != pulse {
-		return nil, errors.Errorf("GetUnsyncHolder called with pulse %d, but current UnsyncHolder pulse is %d",
-			pulse, result.GetPulse())
-	}
-	return result, nil
-}
-
-func (nk *nodekeeper) syncUnsafe(syncCandidates []core.Node) {
-	// sync -> active
-	for _, node := range nk.sync {
-		nk.addActiveNode(node)
-	}
-	// unsync -> sync
-	nk.sync = syncCandidates
-
-	// first notify all synced nodes that they have passed the consensus
-	for _, node := range nk.sync {
-		ch, exists := nk.nodeWaiters[node.ID()]
-		if !exists {
-			return
-		}
-		ch <- node
-		close(ch)
-		delete(nk.nodeWaiters, node.ID())
-	}
-	// then notify all the others that they have not passed the consensus
-	for _, ch := range nk.nodeWaiters {
-		close(ch)
-	}
-	// drop old waiters map and create new
-	nk.nodeWaiters = make(map[core.RecordRef]chan core.Node)
-	nk.state = synced
-	log.Infof("Sync success for pulse %d", nk.pulse)
-}
-
 func (nk *nodekeeper) addActiveNode(node core.Node) {
 	if node.ID().Equal(nk.origin.ID()) {
 		nk.origin = node
@@ -360,29 +202,70 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 	nk.indexShortID[node.ShortID()] = node
 }
 
-func (nk *nodekeeper) collectUnsync(number core.PulseNumber) network.UnsyncList {
-	nk.pulse = number
-	nk.state = pulseSet
-
-	for _, node := range nk.unsync {
-		node.SetPulse(nk.pulse)
+func (nk *nodekeeper) delActiveNode(ref core.RecordRef) {
+	if ref.Equal(nk.origin.ID()) {
+		// we received acknowledge to leave, can gracefully stop
+		// TODO: graceful stop instead of panic
+		panic("Node leave acknowledged by network. Goodbye!")
 	}
-	tmp := nk.unsync
-	nk.unsync = make([]MutableNode, 0)
-
-	unsyncNodes := mutableNodes(tmp).Export()
-
-	nk.unsyncList = NewUnsyncHolder(nk.pulse, unsyncNodes)
-	if len(nk.listWaiters) == 0 {
-		return nk.unsyncList
+	active, ok := nk.active[ref]
+	if !ok {
+		return
 	}
-	// notify waiters that new unsync holder is available for read
-	for _, ch := range nk.listWaiters {
-		ch <- nk.unsyncList
-		close(ch)
-	}
-	nk.listWaiters = make([]chan *UnsyncList, 0)
-	return nk.unsyncList
+	delete(nk.active, ref)
+	delete(nk.indexShortID, active.ShortID())
+	nk.indexNode[active.Role()].Remove(ref)
+}
+
+func (nk *nodekeeper) SetState(state network.NodeKeeperState) {
+	nk.state = state
+}
+
+func (nk *nodekeeper) GetState() network.NodeKeeperState {
+	return nk.state
+}
+
+func (nk *nodekeeper) SetOriginClaim(claim *consensus.NodeJoinClaim) {
+	nk.originLock.Lock()
+	defer nk.originLock.Unlock()
+
+	nk.originClaim = claim
+}
+
+func (nk *nodekeeper) GetOriginClaim() *consensus.NodeJoinClaim {
+	nk.originLock.RLock()
+	defer nk.originLock.RUnlock()
+
+	return nk.originClaim
+}
+
+func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
+	nk.claimQueue.Push(claim)
+	return true
+}
+
+func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
+	return nk.claimQueue
+}
+
+func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
+	return nk.nodesJoinedDuringPrevPulse
+}
+
+func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
+	panic("not implemented")
+}
+
+func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
+	panic("not implemented")
+}
+
+func (nk *nodekeeper) Sync(list network.UnsyncList) {
+	panic("not implemented")
+}
+
+func (nk *nodekeeper) MoveSyncToActive() {
+	panic("not implemented")
 }
 
 func jetRoleToNodeRole(role core.JetRole) core.NodeRole {

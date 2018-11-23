@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alpine
+  namespace: dev
+spec:
+  terminationGracePeriodSeconds: 0
+  containers:
+  - image: alpine
+    name: alpine
+    tty: true
+    stdin: true
+    command:
+      - "/bin/sh"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: root-keys
+  namespace: dev
+data:
+  rootkeys.json: |-
+    {
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMHcCAQEEIE6H6dTBu7Av6+EHqt2ZYqsSEkHNUsJtq2XSJ6zLXDUAoAoGCCqGSM49\nAwEHoUQDQgAEmsoJQ1PqOCPjKWwU95HhjdbV2E3mwXykb1cABrGLHLsPtg4/te5O\nhNPs1XcDH/4HBaMIlAA9x4EFWr88yyx0RA==\n-----END PRIVATE KEY-----\n",
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmsoJQ1PqOCPjKWwU95HhjdbV2E3m\nwXykb1cABrGLHLsPtg4/te5OhNPs1XcDH/4HBaMIlAA9x4EFWr88yyx0RA==\n-----END PUBLIC KEY-----\n"
+    }

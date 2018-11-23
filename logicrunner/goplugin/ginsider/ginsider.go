@@ -93,7 +93,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
 	}
 
-	if args.Context.Caller.Equal(core.RecordRef{}) {
+	if args.Context.Caller.IsEmpty() {
 		attr, err := p.Lookup("INSATTR_" + args.Method + "_API")
 		if err != nil {
 			return errors.Wrapf(

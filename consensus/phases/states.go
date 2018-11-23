@@ -18,6 +18,7 @@ package phases
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 )
 
@@ -28,6 +29,11 @@ type FirstPhaseState struct {
 	PulseProof *merkle.PulseProof
 
 	PulseProofSet map[core.Node]*merkle.PulseProof
+
+	TimedOutNodes []core.Node
+	DeviantNodes  []core.Node
+
+	UnsyncList network.UnsyncList
 }
 
 type SecondPhaseState struct {
@@ -39,6 +45,9 @@ type SecondPhaseState struct {
 	GlobuleProof *merkle.GlobuleProof
 
 	GlobuleProofSet map[core.Node]*merkle.GlobuleProof
+
+	NodeListCount uint16
+	NodeListHash  []byte
 }
 
 type ThirdPhasePulseState struct {

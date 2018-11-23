@@ -52,6 +52,8 @@ type phase2Result struct {
 type NaiveCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
 	PulseHandler     network.PulseHandler     `inject:""`
+	Cryptography     core.CryptographyService `inject:""`
+	NodeNetwork      core.NodeNetwork         `inject:""`
 
 	phase1result chan phase1Result
 	phase2result chan phase2Result
@@ -112,9 +114,12 @@ func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []
 	nc.sendRequestToNodes(participants, request)
 
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
-	select {
-	case res := <-nc.phase1result:
-		if res.packet.GetPulse().PulseNumber == core.PulseNumber(nc.currentPulseNumber) {
+	for {
+		select {
+		case res := <-nc.phase1result:
+			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
+				continue
+			}
 
 			if val, ok := result[res.id]; !ok || val == nil {
 				// send response
@@ -125,12 +130,12 @@ func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []
 			}
 			result[res.id] = res.packet
 
-		}
-		if len(result) == len(participants) {
+			if len(result) == len(participants) {
+				return result, nil
+			}
+		case <-ctx.Done():
 			return result, nil
 		}
-	case <-ctx.Done():
-		return result, nil
 	}
 
 	return result, nil
@@ -153,22 +158,29 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 	nc.sendRequestToNodes(participants, request)
 
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
-	select {
-	case res := <-nc.phase2result:
-		if val, ok := result[res.id]; !ok || val == nil {
-			// send response
-			err := nc.ConsensusNetwork.SendRequest(request, res.id)
-			if err != nil {
-				log.Errorln(err.Error())
+	for {
+		select {
+		case res := <-nc.phase2result:
+			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
+				continue
 			}
-		}
-		result[res.id] = res.packet
 
-		if len(result) == len(participants) {
+			if val, ok := result[res.id]; !ok || val == nil {
+				// send response
+				err := nc.ConsensusNetwork.SendRequest(request, res.id)
+				if err != nil {
+					log.Errorln(err.Error())
+				}
+			}
+			result[res.id] = res.packet
+
+			if len(result) == len(participants) {
+				return result, nil
+			}
+
+		case <-ctx.Done():
 			return result, nil
 		}
-	case <-ctx.Done():
-		return result, nil
 	}
 
 	return result, nil
@@ -185,6 +197,7 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 		log.Errorln("invalid Phase1Packet")
 		return
 	}
+
 	newPulse := p.GetPulse()
 
 	if newPulse.PulseNumber < nc.getPulseNumber() {
