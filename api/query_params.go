@@ -23,7 +23,6 @@ type QueryType int
 const (
 	UNDEFINED QueryType = iota
 	IsAuth
-	GetSeed
 )
 
 // QTypeFromString converts string representation to enum

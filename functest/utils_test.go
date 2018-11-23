@@ -169,7 +169,7 @@ func getBalance(caller *user, reference string) (int, error) {
 
 func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer(jsonValue))
+	postResp, err := http.Post(TestAPIURL, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -200,7 +200,7 @@ func getSeed(t *testing.T) string {
 }
 
 func getInfo(t *testing.T) infoResponse {
-	resp, err := http.Get(TestURL + "/info")
+	resp, err := http.Get(TestAPIURL + "/v1/info")
 	require.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -226,6 +226,11 @@ func unmarshalResponseWithError(t *testing.T, body []byte, response responseInte
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 	require.NotNil(t, response.getError())
+}
+
+func unmarshalCallResponse(t *testing.T, body []byte, response *response) {
+	err := json.Unmarshal(body, &response)
+	require.NoError(t, err)
 }
 
 type response struct {

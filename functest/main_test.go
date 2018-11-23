@@ -37,7 +37,6 @@ import (
 )
 
 const HOST = "http://localhost:19191"
-const TestURL = HOST + "/api/v1"
 const TestRPC = HOST + "/api/rpc"
 const TestAPIURL = HOST + "/api"
 const insolarImportPath = "github.com/insolar/insolar"
@@ -164,9 +163,9 @@ func loadRootKeys() error {
 }
 
 func setInfo() error {
-	resp, err := http.Get(TestURL + "/info")
+	resp, err := http.Get(TestAPIURL + "/v1/info")
 	if err != nil {
-		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/info")
+		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestAPIURL+"/api/info")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
