@@ -613,51 +613,31 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	object core.RecordRef,
 	memory []byte,
 ) (*reply.Object, error) {
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	var genericReact core.Reply
-	var genericError error
-	go func() {
-		genericReact, genericError = m.bus(ctx).Send(
-			ctx,
-			&message.UpdateObject{
-				Record: record.SerializeRecord(rec),
-				Object: object,
-			},
-			nil,
-		)
-		wg.Done()
-	}()
-
-	var blobReact core.Reply
-	var blobError error
-	go func() {
-		blobReact, blobError = m.bus(ctx).Send(
-			ctx,
-			&message.SetBlob{
-				TargetRef: object,
-				Memory:    memory,
-			},
-			nil,
-		)
-		wg.Done()
-	}()
-
-	wg.Wait()
-
-	if genericError != nil {
-		return nil, genericError
-	}
-	if blobError != nil {
-		return nil, blobError
+	_, err := m.bus(ctx).Send(
+		ctx,
+		&message.SetBlob{
+			TargetRef: object,
+			Memory:    memory,
+		},
+		nil,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to save object's memory blob")
 	}
 
-	rep, ok := genericReact.(*reply.Object)
-	if !ok {
-		return nil, ErrUnexpectedReply
+	genericRep, err := m.bus(ctx).Send(
+		ctx,
+		&message.UpdateObject{
+			Record: record.SerializeRecord(rec),
+			Object: object,
+		},
+		nil,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update object")
 	}
-	_, ok = blobReact.(*reply.ID)
+
+	rep, ok := genericRep.(*reply.Object)
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}

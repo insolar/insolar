@@ -175,8 +175,13 @@ const (
 	TypeValidateRecord
 	// TypeSetBlob saves blob in storage.
 	TypeSetBlob
-	// TypeHeavySyncRecords carries Key/Value records for replication on Heavy Material node.
-	TypeHeavySyncRecords
+
+	// Heavy replication
+
+	// TypeHeavyStartStop carries start/stop signal for heavy replication.
+	TypeHeavyStartStop
+	// TypeHeavyPayload carries Key/Value records for replication to Heavy Material node.
+	TypeHeavyPayload
 
 	// Bootstrap
 

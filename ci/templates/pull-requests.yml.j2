@@ -1,0 +1,117 @@
+groups:
+{% for pull in pulls %}
+- name: {{ pull.number }}
+  jobs:
+    - unit-{{ pull.number }}
+{% endfor %}
+
+resource_types:
+- name: pull-request
+  type: docker-image
+  source:
+    repository: chemist/pull-request
+    tag: latest
+- name: slack
+  type: docker-image
+  source:
+    repository: cfcommunity/slack-notification-resource
+    tag: latest
+
+resources:
+- name: lock
+  type: pool
+  source:
+    uri: git@github.com:insolar/locks.git
+    branch: master
+    pool: builds
+    private_key: ((meta.github.lock_key))
+- name: master
+  type: git
+  source:
+    uri: https://github.com/insolar/insolar.git
+- name: slack
+  type: slack
+  source:
+    url: ((meta.slack.url))
+
+{% for pull in pulls %}
+- name: pull-request-{{ pull.number }}
+  type: pull-request
+  source:
+    smuggler_debug: false
+    owner: ((meta.github.owner))
+    repo: ((meta.github.repo))
+    access_token: ((meta.github.access_token))
+    pull_request: {{ pull.number }}
+    #ssh_key: ((meta.github.private_key))
+{% endfor %}
+
+jobs:
+{% for pull in pulls %}
+- name: unit-{{ pull.number }}
+  public: true
+  plan:
+  - put: pull-request-{{ pull.number }}
+    params:
+      state: pending
+  - get: master
+    trigger: true
+  - put: lock
+    params: {acquire: true}
+  - get: pull-request-{{ pull.number }}
+    trigger: true
+  - task: unit
+    timeout: 10m
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: golang}
+      inputs:
+      - name: pull-request-{{ pull.number }}
+        path: /go/src/github.com/insolar/insolar
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo tests
+             pwd
+             ls -alh go
+             export CGO_ENABLED=0
+             export GORACE="halt_on_error=1"
+             export GOMAXPROCS=2
+             export INSOLAR_LOG_LEVEL=debug
+             export GOPATH=$(pwd)/go
+
+             mkdir $GOPATH/bin
+             export PATH=$PATH:$GOPATH/bin
+             ls -alh
+             env
+             cd $GOPATH/src/github.com/insolar/insolar
+             make install-deps
+             make pre-build
+             make build
+             make test_with_coverage
+    on_success:
+      aggregate:
+      - put: pull-request-{{ pull.number }}
+        params:
+          state: success
+      - put: slack
+        params:
+          silent: true
+          text: ":sun_with_face: {{ pull.number }}, {{ pull.title }}, $ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
+    on_failure:
+      aggregate:
+      - put: pull-request-{{ pull.number }}
+        params:
+          state: failure
+      - put: slack
+        params:
+          silent: true
+          text: ":new_moon_with_face: {{ pull.number }}, {{ pull.title }} $ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
+    ensure:
+      put: lock
+      params: {release: lock}
+{% endfor %}

@@ -238,7 +238,7 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 				panic(err)
 			}
 		}
-		inslog.Debugf("syncronization sync pulses: [%v:%v)", start, end)
+		inslog.Debugf("syncronization sync pulses: [%v:%v]", start, end)
 
 		lastprocessed, syncerr := m.HeavySync(ctx, start, end)
 		if syncerr != nil {

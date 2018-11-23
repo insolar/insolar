@@ -67,29 +67,25 @@ func NewReplicaIter(
 	end core.PulseNumber,
 	limit int,
 ) *ReplicaIter {
-	recordsPrefix := []byte{scopeIDRecord}
-	recordsIter := &iterstate{
-		prefix: recordsPrefix,
-		start:  bytes.Join([][]byte{recordsPrefix, start.Bytes()}, nil),
-		end:    bytes.Join([][]byte{recordsPrefix, end.Bytes()}, nil),
-	}
-
-	firstpulse := core.PulseNumber(core.FirstPulseNumber)
-	indexesPrefix := []byte{scopeIDLifeline}
-	indexesIter := &iterstate{
-		prefix: indexesPrefix,
-		start:  bytes.Join([][]byte{indexesPrefix, firstpulse.Bytes()}, nil),
-		end:    bytes.Join([][]byte{indexesPrefix, end.Bytes()}, nil),
+	newit := func(prefixbyte byte, start, end core.PulseNumber) *iterstate {
+		prefix := []byte{prefixbyte}
+		return &iterstate{
+			prefix: prefix,
+			start:  bytes.Join([][]byte{prefix, start.Bytes()}, nil),
+			end:    bytes.Join([][]byte{prefix, end.Bytes()}, nil),
+		}
 	}
 
 	return &ReplicaIter{
 		ctx:        ctx,
 		db:         db,
 		limitBytes: limit,
-
+		// record iterators (order matters for heavy node consistency)
 		istates: []*iterstate{
-			recordsIter,
-			indexesIter,
+			newit(scopeIDRecord, start, end),
+			newit(scopeIDBlob, start, end),
+			newit(scopeIDLifeline, core.FirstPulseNumber, end),
+			newit(scopeIDJetDrop, start, end),
 		},
 	}
 }
@@ -161,13 +157,15 @@ func (fc *fetchchunk) fetch(
 		defer it.Close()
 
 		for it.Seek(start); it.ValidForPrefix(prefix); it.Next() {
-			if it.ValidForPrefix(end) {
-				break
-			}
 			item := it.Item()
 			if item == nil {
 				break
 			}
+			// key prefix < end
+			if bytes.Compare(item.Key()[:len(end)], end) != -1 {
+				break
+			}
+
 			key := item.KeyCopy(nil)
 			if fc.size > fc.limit {
 				nextstart = key

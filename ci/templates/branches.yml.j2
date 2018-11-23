@@ -1,0 +1,69 @@
+groups:
+{% for branch in branches %}
+- name: {{ branch }}
+  jobs:
+    - unit-{{ branch }}
+{% endfor %}
+
+resources:
+- name: lock
+  type: pool
+  source:
+    uri: git@github.com:insolar/locks.git
+    branch: master
+    pool: builds
+    private_key: ((meta.github.lock_key))
+{% for branch in branches %}
+- name: insolar-{{ branch }}
+  type: git
+  source:
+    uri: https://github.com/insolar/insolar.git
+    branch: {{ branch }}
+{% endfor %}
+
+jobs:
+{% for branch in branches %}
+- name: unit-{{ branch }}
+  public: true
+  plan:
+  - get: insolar-{{ branch }}
+    trigger: true
+  - put: lock
+    params: {acquire: true}
+  - task: unit
+    timeout: 10m
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: golang}
+      inputs:
+      - name: insolar-{{ branch }}
+        path: /go/src/github.com/insolar/insolar
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo tests
+             pwd
+             ls -alh go
+             export CGO_ENABLED=0
+             export GORACE="halt_on_error=1"
+             export GOMAXPROCS=2
+             export INSOLAR_LOG_LEVEL=debug
+             export GOPATH=$(pwd)/go
+
+             mkdir $GOPATH/bin
+             export PATH=$PATH:$GOPATH/bin
+             ls -alh
+             env
+             cd $GOPATH/src/github.com/insolar/insolar
+             make install-deps
+             make pre-build
+             make build
+             make test_with_coverage
+    ensure:
+      put: lock
+      params: {release: lock}
+{% endfor %}

@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/platformpolicy"
@@ -99,12 +100,20 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	}()
 }
 
-type HackComponentManager struct {
-	components core.Components
+func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
+	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
+	keeper := nodenetwork.NewNodeKeeper(origin)
+	if isBootstrap {
+		keeper.AddActiveNodes([]core.Node{origin})
+	}
+	return keeper
 }
 
-func (cm *HackComponentManager) GetAll() core.Components {
-	return cm.components
+func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) (core.CryptographyService, network.NodeKeeper) {
+	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
+
+	mock := mockCryptographyService(t)
+	return mock, keeper
 }
 
 func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(), *servicenetwork.ServiceNetwork, string) {
@@ -127,10 +136,15 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	nodeConfig := configuration.NewConfiguration()
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig, scheme)
-	serviceNetwork.OldComponentManager = &HackComponentManager{c}
+	err = serviceNetwork.Init(ctx)
+	require.NoError(t, err)
+
+	nodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
+	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, core.NewRefFromBase58(nodeId), serviceNetwork.GetAddress(), true)
+
 	serviceNetwork.PulseManager = tempLedger.GetPulseManager()
 	require.NoError(t, err)
-	err = serviceNetwork.Init(ctx)
+	err = serviceNetwork.Start(ctx)
 	require.NoError(t, err)
 	address := serviceNetwork.GetAddress()
 	return tempLedger, cleaner, serviceNetwork, address

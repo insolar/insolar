@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package requesters
+package requester
 
 import (
 	"testing"
