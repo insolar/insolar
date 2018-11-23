@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -45,18 +45,18 @@ func getResponse(body []byte) *response {
 }
 
 func sendRequest(ctx context.Context, method string, params []interface{}, member memberInfo) []byte {
-	reqCfg := &requesters.RequestConfigJSON{
+	reqCfg := &requester.RequestConfigJSON{
 		Params: params,
 		Method: method,
 	}
 
-	userCfg, err := requesters.CreateUserConfig(member.ref, member.privateKey)
+	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
 	check("can not create user config:", err)
 
-	seed, err := requesters.GetSeed(URL)
+	seed, err := requester.GetSeed(URL)
 	check("can not get seed:", err)
 
-	body, err := requesters.SendWithSeed(ctx, callURL, userCfg, reqCfg, seed)
+	body, err := requester.SendWithSeed(ctx, callURL, userCfg, reqCfg, seed)
 	check("can not send request:", err)
 
 	return body
@@ -113,7 +113,7 @@ type infoResponse struct {
 }
 
 func info() infoResponse {
-	body, err := requesters.GetResponseBody(infoURL, requesters.PostParams{})
+	body, err := requester.GetResponseBody(infoURL, requester.PostParams{})
 	check("problem with sending request to info:", err)
 
 	infoResp := infoResponse{}

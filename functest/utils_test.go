@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
@@ -196,11 +196,11 @@ type response struct {
 
 func signedRequest(user *user, method string, params ...interface{}) (interface{}, error) {
 	ctx := context.TODO()
-	rootCfg, err := requesters.CreateUserConfig(user.ref, user.privKey)
+	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
 	if err != nil {
 		return nil, err
 	}
-	res, err := requesters.Send(ctx, TestURL, rootCfg, &requesters.RequestConfigJSON{
+	res, err := requester.Send(ctx, TestURL, rootCfg, &requester.RequestConfigJSON{
 		Method: method,
 		Params: params,
 	})

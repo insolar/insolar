@@ -17,29 +17,19 @@
 package state
 
 import (
-	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/core"
 )
 
-const (
-	// NoNetwork state means that nodes doesn`t match majority_rule
-	NoNetwork = iota
-	// VoidNetwork state means that nodes have not complete min_role_count rule for proper work
-	VoidNetwork
-	// JetlessNetwork state means that every Jet need proof completeness of stored data
-	JetlessNetwork
-	// AuthorizationNetwork state means that every node need to validate ActiveNodeList using NodeDomain
-	AuthorizationNetwork
-	// CompleteNetwork state means network is ok and ready for proper work
-	CompleteNetwork
-)
-
-type NetworkSwitcherImpl struct {
+// NetworkSwitcher is a network FSM using for bootstrapping
+type NetworkSwitcher struct {
 }
 
-func NewNetworkSwitcherImpl() *NetworkSwitcherImpl {
-	return &NetworkSwitcherImpl{}
+// NewNetworkSwitcher creates new NetworkSwitcher
+func NewNetworkSwitcher() (*NetworkSwitcher, error) {
+	return &NetworkSwitcher{}, nil
 }
 
-func (ns *NetworkSwitcherImpl) GetState() network.State {
-	return CompleteNetwork
+// GetState method returns current network state
+func (ns *NetworkSwitcher) GetState() core.NetworkState {
+	return core.CompleteNetworkState
 }
