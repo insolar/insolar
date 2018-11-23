@@ -114,7 +114,7 @@ func (rh *RequestHandler) routeCall(ctx context.Context, ref core.RecordRef, met
 		Arguments:        args,
 	}
 
-	res, err := rh.messageBus.Send(ctx, e)
+	res, err := rh.messageBus.Send(ctx, e, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't send message")
 	}

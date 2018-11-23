@@ -260,6 +260,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 			Method:    "GetPublicKey",
 			Arguments: args,
 		},
+		nil,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't get public key")

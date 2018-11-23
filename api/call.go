@@ -153,6 +153,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				Method:    "Call",
 				Arguments: args,
 			},
+			nil,
 		)
 		if err != nil {
 			resp.Error = err.Error()
