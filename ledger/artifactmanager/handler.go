@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/pkg/errors"
@@ -38,6 +39,7 @@ type MessageHandler struct {
 	db                         *storage.DB
 	jetDropHandlers            map[core.MessageType]internalHandler
 	recent                     *storage.RecentStorage
+	conf                       *configuration.ArtifactManager
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
@@ -46,11 +48,14 @@ type MessageHandler struct {
 }
 
 // NewMessageHandler creates new handler.
-func NewMessageHandler(db *storage.DB, recentObjects *storage.RecentStorage) *MessageHandler {
+func NewMessageHandler(
+	db *storage.DB, recentObjects *storage.RecentStorage, conf *configuration.ArtifactManager,
+) *MessageHandler {
 	return &MessageHandler{
 		db:              db,
 		jetDropHandlers: map[core.MessageType]internalHandler{},
 		recent:          recentObjects,
+		conf:            conf,
 	}
 }
 
