@@ -98,6 +98,11 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 		return nil, err
 	}
 
+	err = rpcServer.RegisterService(NewInfoService(&ar), "info")
+	if err != nil {
+		return nil, err
+	}
+
 	return &ar, nil
 }
 
