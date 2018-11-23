@@ -38,9 +38,10 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Service core.Network `inject:""`
-	// FIXME: Ledger component is deprecated. Inject required sub-components.
-	Ledger                     core.Ledger                     `inject:""`
+	Service                    core.Network                    `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
+	LocalStorage               core.LocalStorage               `inject:""`
+	PulseManager               core.PulseManager               `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
@@ -67,11 +68,11 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 //
 // Player can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageBus, error) {
-	tape, err := NewTapeFromReader(ctx, mb.Ledger.GetLocalStorage(), r)
+	tape, err := NewTapeFromReader(ctx, mb.LocalStorage, r)
 	if err != nil {
 		return nil, err
 	}
-	pl := newPlayer(mb, tape, mb.Ledger.GetPulseManager(), mb.PlatformCryptographyScheme)
+	pl := newPlayer(mb, tape, mb.PulseManager, mb.PlatformCryptographyScheme)
 	return pl, nil
 }
 
@@ -79,19 +80,19 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageB
 //
 // Recorder can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
-	pulse, err := mb.Ledger.GetPulseManager().Current(ctx)
+	pulse, err := mb.PulseManager.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
-	tape, err := NewTape(mb.Ledger.GetLocalStorage(), pulse.PulseNumber)
+	tape, err := NewTape(mb.LocalStorage, pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
-	rec := newRecorder(mb, tape, mb.Ledger.GetPulseManager(), mb.PlatformCryptographyScheme)
+	rec := newRecorder(mb, tape, mb.PulseManager, mb.PlatformCryptographyScheme)
 	return rec, nil
 }
 
-// Start initializes message bus
+// Init initializes message bus.
 func (mb *MessageBus) Init(ctx context.Context) error {
 	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 
@@ -157,7 +158,7 @@ func (mb *MessageBus) SendParcel(ctx context.Context, parcel core.Parcel, option
 	scope.Lock()
 	defer scope.Unlock()
 
-	pulse, err := mb.Ledger.GetPulseManager().Current(ctx)
+	pulse, err := mb.PulseManager.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -166,10 +167,9 @@ func (mb *MessageBus) SendParcel(ctx context.Context, parcel core.Parcel, option
 	if options != nil && options.Receiver != nil {
 		nodes = []core.RecordRef{*options.Receiver}
 	} else {
-		jc := mb.Ledger.GetJetCoordinator()
 		// TODO: send to all actors of the role if nil Target
-		target := message.ExtractTarget(msg)
-		nodes, err = jc.QueryRole(ctx, message.ExtractRole(msg), &target, pulse.PulseNumber)
+		target := message.ExtractTarget(parcel)
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, message.ExtractRole(parcel), &target, pulse.PulseNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -263,13 +263,12 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	} else {
 		sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
 		if sendingObject != nil {
-			currentPulse, err := mb.Ledger.GetPulseManager().Current(ctx)
+			currentPulse, err := mb.PulseManager.Current(ctx)
 			if err != nil {
 				return nil, err
 			}
 
-			jc := mb.Ledger.GetJetCoordinator()
-			validSender, err := jc.IsAuthorized(
+			validSender, err := mb.JetCoordinator.IsAuthorized(
 				ctx, allowedSenderRole, sendingObject, currentPulse.PulseNumber, sender,
 			)
 			if err != nil {
