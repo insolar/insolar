@@ -75,8 +75,40 @@ func (ul *unsyncList) CalculateHash() ([]byte, error) {
 	return ul.cache, err
 }
 
+type adder func(core.Node)
+type deleter func(core.RecordRef)
+
 func merge(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]consensus.ReferendumClaim) {
-	// TODO: implement
+	addNode := func(node core.Node) {
+		nodes[node.ID()] = node
+	}
+	delNode := func(ref core.RecordRef) {
+		delete(nodes, ref)
+	}
+	mergeWith(nodes, claims, addNode, delNode)
+}
+
+func mergeWith(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]consensus.ReferendumClaim,
+	addFunc adder, delFunc deleter) {
+
+	for _, claimList := range claims {
+		for _, claim := range claimList {
+			mergeClaim(claim, addFunc, delFunc)
+		}
+	}
+}
+
+func mergeClaim(claim consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
+	switch t := claim.(type) {
+	case *consensus.NodeAnnounceClaim:
+		addFunc(t.Node())
+	case *consensus.NodeJoinClaim:
+		addFunc(t.Node())
+	case *consensus.NodeLeaveClaim:
+		// TODO: add node ID to node leave claim (only to struct, not packet)
+		// delFunc()
+		break
+	}
 }
 
 func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {

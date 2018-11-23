@@ -107,6 +107,9 @@ type nodekeeper struct {
 	active       map[core.RecordRef]core.Node
 	indexNode    map[core.NodeRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
+
+	sync     network.UnsyncList
+	syncLock sync.Mutex
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {
@@ -260,11 +263,22 @@ func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
 }
 
 func (nk *nodekeeper) Sync(list network.UnsyncList) {
-	panic("not implemented")
+	nk.syncLock.Lock()
+	defer nk.syncLock.Unlock()
+
+	nk.sync = list
 }
 
 func (nk *nodekeeper) MoveSyncToActive() {
-	panic("not implemented")
+	nk.activeLock.Lock()
+	nk.syncLock.Lock()
+	defer func() {
+		nk.syncLock.Unlock()
+		nk.activeLock.Unlock()
+	}()
+
+	sync := nk.sync.(*unsyncList)
+	mergeWith(nk.active, sync.claims, nk.addActiveNode, nk.delActiveNode)
 }
 
 func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
