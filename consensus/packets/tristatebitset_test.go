@@ -120,30 +120,9 @@ func TestBitSet(t *testing.T) {
 
 func TestBitArray(t *testing.T) {
 	array := newBitArray(181)
+
+	expected := 1
 	err := array.put(1, 126)
-	assert.NoError(t, err)
-	err = array.put(1, 127)
-	assert.NoError(t, err)
-
-	expected := uint8(1)
-
-	actual, err := array.get(126)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, actual)
-
-	actual, err = array.get(127)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, actual)
-
-	actual, err = array.get(127)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, actual)
-
-	actual, err = array.get(2)
-	assert.NoError(t, err)
-	assert.NotEqual(t, expected, actual)
-
-	err = array.put(1, 126)
 	assert.NoError(t, err)
 	err = array.put(1, 127)
 	assert.NoError(t, err)
@@ -151,7 +130,7 @@ func TestBitArray(t *testing.T) {
 	assert.NoError(t, err)
 	err = array.put(0, 126)
 	assert.NoError(t, err)
-	actual, err = array.get(125)
+	actual, err := array.get(125)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, actual)
 	actual, err = array.get(127)
