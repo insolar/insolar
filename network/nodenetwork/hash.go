@@ -20,9 +20,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash"
-	"sort"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 func hashWriteChecked(hash hash.Hash, data []byte) {
@@ -31,32 +31,25 @@ func hashWriteChecked(hash hash.Hash, data []byte) {
 		panic(fmt.Sprintf("Error writing hash. Bytes expected: %d; bytes actual: %d", len(data), n))
 	}
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 }
 
-func calculateNodeHash(scheme core.PlatformCryptographyScheme, node core.Node) []byte {
+func calculateNodeHash(scheme core.PlatformCryptographyScheme, processor core.KeyProcessor, node core.Node) []byte {
 	h := scheme.IntegrityHasher()
 	hashWriteChecked(h, node.ID().Bytes())
-	b := make([]byte, 8)
-	nodeRoles := make([]core.NodeRole, len(node.Roles()))
-	copy(nodeRoles, node.Roles())
-	sort.Slice(nodeRoles[:], func(i, j int) bool {
-		return nodeRoles[i] < nodeRoles[j]
-	})
-	for _, nodeRole := range nodeRoles {
-		binary.LittleEndian.PutUint32(b, uint32(nodeRole))
-		hashWriteChecked(h, b[:4])
-	}
-	hashWriteChecked(h, b[:])
-	binary.LittleEndian.PutUint32(b, uint32(node.Pulse()))
+	b := [8]byte{}
+	binary.LittleEndian.PutUint32(b[:4], uint32(node.ShortID()))
 	hashWriteChecked(h, b[:4])
-	// TODO: pass correctly public key to active node
-	// publicKey, err := ecdsa.ExportPublicKey(node.PublicKey)
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
-	// hashWriteChecked(h, []byte(publicKey))
+	binary.LittleEndian.PutUint32(b[:4], uint32(node.Pulse()))
+	hashWriteChecked(h, b[:4])
+	binary.LittleEndian.PutUint32(b[:4], uint32(node.Role()))
+	hashWriteChecked(h, b[:4])
+	pk, err := processor.ExportPublicKey(node.PublicKey())
+	if err != nil {
+		panic(err)
+	}
+	hashWriteChecked(h, pk)
 	hashWriteChecked(h, []byte(node.PhysicalAddress()))
 	hashWriteChecked(h, []byte(node.Version()))
 	return h.Sum(nil)
@@ -64,10 +57,6 @@ func calculateNodeHash(scheme core.PlatformCryptographyScheme, node core.Node) [
 
 // CalculateHash calculates hash of active node list
 func CalculateHash(scheme core.PlatformCryptographyScheme, list []core.Node) (result []byte, err error) {
-	sort.Slice(list[:], func(i, j int) bool {
-		return list[i].ID().Compare(list[j].ID()) < 0
-	})
-
 	// catch possible panic from hashWriteChecked in this function and in all calculateNodeHash funcs
 	defer func() {
 		if r := recover(); r != nil {
@@ -76,8 +65,9 @@ func CalculateHash(scheme core.PlatformCryptographyScheme, list []core.Node) (re
 	}()
 
 	h := scheme.IntegrityHasher()
+	processor := platformpolicy.NewKeyProcessor()
 	for _, node := range list {
-		nodeHash := calculateNodeHash(scheme, node)
+		nodeHash := calculateNodeHash(scheme, processor, node)
 		hashWriteChecked(h, nodeHash)
 	}
 	return h.Sum(nil), nil
