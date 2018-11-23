@@ -273,6 +273,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 			es.Unlock()
 		}
 	}()
+
 	es.traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
 
