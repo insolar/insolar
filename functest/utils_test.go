@@ -184,7 +184,7 @@ func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 
 func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestRPC, "application/json", bytes.NewBuffer(jsonValue))
+	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)

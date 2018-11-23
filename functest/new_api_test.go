@@ -30,8 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const TestCallUrl = TestAPIURL + "/v1/call"
-
 func contractError(body []byte) error {
 	var t map[string]interface{}
 	err := json.Unmarshal(body, &t)

@@ -38,8 +38,9 @@ import (
 )
 
 const HOST = "http://localhost:19191"
-const TestRPC = HOST + "/api/rpc"
 const TestAPIURL = HOST + "/api"
+const TestRPCUrl = TestAPIURL + "/rpc"
+const TestCallUrl = TestAPIURL + "/call"
 const insolarImportPath = "github.com/insolar/insolar"
 const insolarNodeKeys = "bootstrap_keys.json"
 const insolarRootMemberKeys = "root_member_keys.json"
@@ -172,9 +173,9 @@ func setInfo() error {
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] couldn't marshal post params")
 	}
-	postResp, err := http.Post(TestRPC, "application/json", bytes.NewBuffer(jsonValue))
+	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
-		return errors.Wrapf(err, "[ setInfo ] couldn't send request to %s", TestRPC)
+		return errors.Wrapf(err, "[ setInfo ] couldn't send request to %s", TestRPCUrl)
 	}
 	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {

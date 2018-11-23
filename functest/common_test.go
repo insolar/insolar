@@ -28,14 +28,14 @@ import (
 
 func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{})
-	testURL := HOST + "/not_api/v1"
+	testURL := HOST + "/not_api"
 	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNotFound, postResp.StatusCode)
 }
 
 func TestGetRequest(t *testing.T) {
-	postResp, err := http.Get(TestAPIURL + "/v1/call")
+	postResp, err := http.Get(TestCallUrl)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -50,7 +50,7 @@ func TestGetRequest(t *testing.T) {
 }
 
 func TestWrongJson(t *testing.T) {
-	postResp, err := http.Post(TestAPIURL+"/v1/call", "application/json", bytes.NewBuffer([]byte("some not json value")))
+	postResp, err := http.Post(TestCallUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
