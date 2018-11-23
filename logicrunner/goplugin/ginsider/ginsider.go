@@ -19,6 +19,7 @@ package ginsider
 import (
 	"context"
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -200,6 +201,14 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 	client, err := gi.Upstream()
 	if err != nil {
 		return "", err
+	}
+
+	if ref == (core.RecordRef{}.FromSlice(append(make([]byte, 63), 1))) {
+		p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
+		if err != nil {
+			return "", errors.Wrap(err, "Error on .so import")
+		}
+		return filepath.Join(p.Dir, "logicrunner", "goplugin", "ginsider", "healthcheck", "healthcheck.so"), nil
 	}
 
 	inslogger.FromContext(ctx).Debugf("obtaining code %q", ref)
