@@ -85,12 +85,10 @@ func merge(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]conse
 	delNode := func(ref core.RecordRef) {
 		delete(nodes, ref)
 	}
-	mergeWith(nodes, claims, addNode, delNode)
+	mergeWith(claims, addNode, delNode)
 }
 
-func mergeWith(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]consensus.ReferendumClaim,
-	addFunc adder, delFunc deleter) {
-
+func mergeWith(claims map[core.RecordRef][]consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
 	for _, claimList := range claims {
 		for _, claim := range claimList {
 			mergeClaim(claim, addFunc, delFunc)
