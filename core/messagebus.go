@@ -61,6 +61,15 @@ type Reply interface {
 	Type() ReplyType
 }
 
+// RedirectReply is used to create redirected messages.
+type RedirectReply interface {
+	// Redirected creates redirected message from redirect data.
+	Redirected(genericMsg Message) Message
+	// GetReceiver returns node reference to send message to.
+	GetReceiver() *RecordRef
+	// GetToken returns delegation token.
+	GetToken() DelegationToken
+}
 
 // MessageSendOptions represents options for message sending.
 type MessageSendOptions struct {
