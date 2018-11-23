@@ -35,12 +35,12 @@ type unsyncList struct {
 	activeNodes map[core.RecordRef]core.Node
 	claims      map[core.RecordRef][]consensus.ReferendumClaim
 	refToIndex  map[core.RecordRef]int
-	indexToRef  []core.RecordRef
+	indexToRef  map[int]core.RecordRef
 	cache       []byte
 }
 
 func newUnsyncList(activeNodesSorted []core.Node) *unsyncList {
-	indexToRef := make([]core.RecordRef, len(activeNodesSorted))
+	indexToRef := make(map[int]core.RecordRef, len(activeNodesSorted))
 	refToIndex := make(map[core.RecordRef]int, len(activeNodesSorted))
 	activeNodes := make(map[core.RecordRef]core.Node, len(activeNodesSorted))
 	for i, node := range activeNodesSorted {
@@ -128,7 +128,11 @@ func (ul *unsyncList) IndexToRef(index int) (core.RecordRef, error) {
 	if index < 0 || index >= len(ul.indexToRef) {
 		return core.RecordRef{}, consensus.ErrBitSetOutOfRange
 	}
-	return ul.indexToRef[index], nil
+	result, ok := ul.indexToRef[index]
+	if !ok {
+		return core.RecordRef{}, consensus.ErrBitSetNodeIsMissing
+	}
+	return result, nil
 }
 
 func (ul *unsyncList) RefToIndex(nodeID core.RecordRef) (int, error) {
@@ -141,4 +145,17 @@ func (ul *unsyncList) RefToIndex(nodeID core.RecordRef) (int, error) {
 
 func (ul *unsyncList) Length() int {
 	return len(ul.activeNodes)
+}
+
+type sparseUnsyncList struct {
+	unsyncList
+	capacity int
+}
+
+func newSparseUnsyncList(capacity int) *sparseUnsyncList {
+	return &sparseUnsyncList{unsyncList: *newUnsyncList(nil), capacity: capacity}
+}
+
+func (ul *sparseUnsyncList) Length() int {
+	return ul.capacity
 }

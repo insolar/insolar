@@ -259,7 +259,7 @@ func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
-	panic("not implemented")
+	return newSparseUnsyncList(length)
 }
 
 func (nk *nodekeeper) Sync(list network.UnsyncList) {
