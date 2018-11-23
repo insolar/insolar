@@ -66,9 +66,30 @@ type getBalanceResponse struct {
 	Currency string `json:"currency"`
 }
 
+type RPCResponseInterface interface {
+	getRPCVersion() string
+	getError() map[string]interface{}
+}
+
+type RPCResponse struct {
+	RPCVersion string                 `json:"jsonrpc"`
+	Error      map[string]interface{} `json:"error"`
+}
+
+func (r *RPCResponse) getRPCVersion() string {
+	return r.RPCVersion
+}
+
+func (r *RPCResponse) getError() map[string]interface{} {
+	return r.Error
+}
+
 type getSeedResponse struct {
-	baseResponse
-	Seed string `json:"seed"`
+	RPCResponse
+	Result struct {
+		Seed    string `json:"Seed"`
+		TraceID string `json:"TraceID"`
+	} `json:"result"`
 }
 
 type isAuthorized struct {
@@ -156,15 +177,26 @@ func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	return body
 }
 
+func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
+	jsonValue, _ := json.Marshal(postParams)
+	postResp, err := http.Post(TestRPC, "application/json", bytes.NewBuffer(jsonValue))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, postResp.StatusCode)
+	body, err := ioutil.ReadAll(postResp.Body)
+	require.NoError(t, err)
+	return body
+}
+
 func getSeed(t *testing.T) string {
-	body := getResponseBody(t, postParams{
-		"query_type": "get_seed",
+	body := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "seed.Get",
+		"id":      "",
 	})
-
 	getSeedResponse := &getSeedResponse{}
-	unmarshalResponse(t, body, getSeedResponse)
-
-	return getSeedResponse.Seed
+	unmarshalRPCResponse(t, body, getSeedResponse)
+	require.NotNil(t, getSeedResponse.Result)
+	return getSeedResponse.Result.Seed
 }
 
 func getInfo(t *testing.T) infoResponse {
@@ -180,6 +212,13 @@ func getInfo(t *testing.T) infoResponse {
 func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
+	require.Nil(t, response.getError())
+}
+
+func unmarshalRPCResponse(t *testing.T, body []byte, response RPCResponseInterface) {
+	err := json.Unmarshal(body, &response)
+	require.NoError(t, err)
+	require.Equal(t, "2.0", response.getRPCVersion())
 	require.Nil(t, response.getError())
 }
 
