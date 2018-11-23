@@ -28,6 +28,7 @@ import (
 
 const lastBitMask = 0x01
 const lowLengthSize = 6
+const firstBitMask = 0x80
 
 // TriStateBitSet bitset implementation.
 type TriStateBitSet struct {
@@ -64,7 +65,7 @@ func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell) {
 }
 
 func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
-	var firstByte uint8
+	var firstByte uint8 // compressed and hBitLength bits
 	if dbs.CompressedSet {
 		firstByte = 0x01
 	} else {
@@ -77,7 +78,7 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 	}
 
 	tmpLen := array.Len()
-	totalSize := int(math.Round(float64((tmpLen*2)/8))+0.5) + 1 // first byte
+	totalSize := int(math.Round(float64((tmpLen*2)/sizeOfBlock))+0.5) + 1 // first byte
 	var result *bytes.Buffer
 	firstByte = firstByte << 1
 	if bits.Len(tmpLen) > lowLengthSize {
@@ -110,9 +111,9 @@ func (dbs *TriStateBitSet) serializeWithHLength(
 	totalSize int,
 ) (res *bytes.Buffer, err error) {
 	var result *bytes.Buffer
-	var secondByte uint8
+	var secondByte uint8 // hBitLength
 	firstByte++
-	firstByte = firstByte << 6
+	firstByte = firstByte << 6 // move compressed and hBitLength bits to right
 	secondByte = uint8(tmpLen)
 	totalSize++ // secondbyte is optional
 	result = allocateBuffer(totalSize)
@@ -134,7 +135,7 @@ func (dbs *TriStateBitSet) serializeWithLLength(
 ) (res *bytes.Buffer, err error) {
 	var result *bytes.Buffer
 	result = allocateBuffer(totalSize)
-	firstByte = firstByte << 1
+	firstByte = firstByte << 1 // move compressed flag to right
 	firstByte += uint8(tmpLen)
 	err = binary.Write(result, defaultByteOrder, firstByte)
 	if err != nil {
@@ -156,7 +157,7 @@ func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
 			return errors.Wrap(err, "[ Deserialize ] failed to read second byte")
 		}
 	}
-	blockCount := uint64(math.Round(float64(length/8) + 0.5))
+	blockCount := uint64(float64(length/sizeOfBlock) + 0.5)
 	payload := make([]uint8, blockCount)
 	for i := 0; uint64(i) < blockCount; i++ {
 		err = binary.Read(data, defaultByteOrder, &payload[i])
@@ -215,9 +216,9 @@ func parseState(array *bitArray, index int) (TriState, error) {
 func parseBitArray(payload []uint8, size int) (*bitArray, error) {
 	array := newBitArray(uint(size))
 	for i := 0; i < size; i++ {
-		bitsN := uint8(math.Round(float64(i / 8)))
-		step := uint8(8 - i%8 - 1)
-		bit := (payload[bitsN] >> step) & 0x01
+		block := getBlockInBitArray(i)
+		step := getStepToMove(i)
+		bit := (payload[block] >> step) & lastBitMask
 		err := array.put(int(bit), i)
 		if err != nil {
 			return nil, err
@@ -230,11 +231,11 @@ func parseFirstByte(byte uint8) (compressed bool, hbitFlag bool, lbitLength uint
 	lbitLength = uint8(0)
 	compressed = false
 	hbitFlag = false
-	if (byte & 0x80) == 1 {
+	if (byte & firstBitMask) == 1 {
 		compressed = true
 	}
-	check := (byte << 1) & 0x80
-	if check == 0x80 {
+	check := (byte << 1) & firstBitMask
+	if check == firstBitMask {
 		hbitFlag = true
 		return
 	}

@@ -23,13 +23,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+const sizeOfBlock = 8
+
 type bitArray struct {
 	array    []uint8
 	bitsSize uint
 }
 
 func newBitArray(size uint) *bitArray {
-	totalSize := uint64(math.Round(float64(size/8) + 0.5))
+	totalSize := uint64(math.Round(float64(size/sizeOfBlock) + 0.5))
 	return &bitArray{
 		array:    make([]uint8, totalSize),
 		bitsSize: uint(size),
@@ -44,8 +46,8 @@ func (arr *bitArray) put(bit, index int) error {
 	if uint(index) >= arr.bitsSize {
 		return errors.New("[ put ] failed to put a bit. out of range")
 	}
-	block := uint8(index / 8)
-	step := uint8(8 - index%8 - 1)
+	block := getBlockInBitArray(index)
+	step := getStepToMove(index)
 
 	mask := uint8(1 << step)
 	if bit == 0 {
@@ -57,7 +59,7 @@ func (arr *bitArray) put(bit, index int) error {
 }
 
 func (arr *bitArray) serialize() ([]byte, error) {
-	result := allocateBuffer(int(math.Round(float64(arr.bitsSize/8) + 0.5)))
+	result := allocateBuffer(int(math.Round(float64(arr.bitsSize/sizeOfBlock) + 0.5)))
 	for _, byte := range arr.array {
 		err := binary.Write(result, defaultByteOrder, byte)
 		if err != nil {
@@ -73,9 +75,17 @@ func (arr *bitArray) get(index int) (uint8, error) {
 		return 0, errors.New("failed to get a bit - index out of range")
 	}
 
-	bitsN := uint8(index / 8)
-	step := uint8(8 - index%8 - 1)
-	res := arr.array[bitsN] >> step
+	block := getBlockInBitArray(index)
+	step := getStepToMove(index)
+	res := arr.array[block] >> step
 
-	return res & 0x01, nil
+	return res & lastBitMask, nil
+}
+
+func getStepToMove(index int) uint8 {
+	return uint8(sizeOfBlock - index%sizeOfBlock - 1)
+}
+
+func getBlockInBitArray(index int) uint8 {
+	return uint8(index / sizeOfBlock)
 }
