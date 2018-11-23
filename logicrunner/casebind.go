@@ -149,6 +149,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 			PassedStepsCount: passedStepsCount,
 			Error:            errstr,
 		},
+		nil,
 	)
 
 	return &reply.OK{}, err
