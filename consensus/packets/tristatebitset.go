@@ -192,17 +192,24 @@ func (dbs *TriStateBitSet) parseCells(array *bitArray) ([]BitSetCell, error) {
 			return nil, err
 		}
 		cells[i].NodeID = id
-		stateFirstBit, err := array.get(2 * i)
+		cells[i].State, err = parseState(array, i)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "[ parseCells ] failed to parse TriState")
 		}
-		stateSecondBit, err := array.get(2*i + 1)
-		if err != nil {
-			return nil, err
-		}
-		cells[i].State = TriState((stateFirstBit << 1) + stateSecondBit)
 	}
 	return cells, nil
+}
+
+func parseState(array *bitArray, index int) (TriState, error) {
+	stateFirstBit, err := array.get(2 * index)
+	if err != nil {
+		return 0, err
+	}
+	stateSecondBit, err := array.get(2*index + 1)
+	if err != nil {
+		return 0, err
+	}
+	return TriState((stateFirstBit << 1) + stateSecondBit), nil
 }
 
 func parseBitArray(payload []uint8, size int) (*bitArray, error) {
