@@ -77,17 +77,16 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ Serialize ] failed to get bitarray from cells")
 	}
 
-	tmpLen := array.Len()
-	totalSize := int(math.Round(float64((tmpLen*2)/sizeOfBlock))+0.5) + 1 // first byte
+	totalSize := int(math.Round(float64((array.Len()*2)/sizeOfBlock))+0.5) + 1 // size of result bytes
 	var result *bytes.Buffer
 	firstByte = firstByte << 1
-	if bits.Len(tmpLen) > lowLengthSize {
-		result, err = dbs.serializeWithHLength(firstByte, tmpLen, totalSize)
+	if bits.Len(array.Len()) > lowLengthSize {
+		result, err = dbs.serializeWithHLength(firstByte, array.Len(), totalSize)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
 	} else {
-		result, err = dbs.serializeWithLLength(firstByte, tmpLen, totalSize)
+		result, err = dbs.serializeWithLLength(firstByte, array.Len(), totalSize)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
@@ -231,15 +230,15 @@ func parseFirstByte(byte uint8) (compressed bool, hbitFlag bool, lbitLength uint
 	lbitLength = uint8(0)
 	compressed = false
 	hbitFlag = false
-	if (byte & firstBitMask) == 1 {
+	if (byte & firstBitMask) == 1 { // check compressed flag bit
 		compressed = true
 	}
-	check := (byte << 1) & firstBitMask
+	check := (byte << 1) & firstBitMask // check hBitLength flag bit
 	if check == firstBitMask {
 		hbitFlag = true
 		return
 	}
-	lbitLength = (byte << 2) >> 2
+	lbitLength = (byte << 2) >> 2 // remove 2 first bits
 	return
 }
 
@@ -260,11 +259,11 @@ func putLastBit(array *bitArray, state TriState, index int) error {
 }
 
 func changeBitState(array *bitArray, i int, state TriState) error {
-	err := putLastBit(array, state>>1, 2*i)
+	err := putLastBit(array, state>>1, 2*i) // put first bit to array
 	if err != nil {
 		return errors.Wrap(err, "[ changeBitState ] failed to put last bit")
 	}
-	err = putLastBit(array, state, 2*i+1)
+	err = putLastBit(array, state, 2*i+1) // put second bit to array
 	if err != nil {
 		return errors.Wrap(err, "[ changeBitState ] failed to put last bit")
 	}

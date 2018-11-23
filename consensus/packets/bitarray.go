@@ -51,9 +51,9 @@ func (arr *bitArray) put(bit, index int) error {
 
 	mask := uint8(1 << step)
 	if bit == 0 {
-		arr.array[block] &= ^(mask)
+		arr.array[block] &= ^(mask) // change index bit to 0
 	} else if bit == 1 {
-		arr.array[block] |= mask
+		arr.array[block] |= mask // change index bit to 1
 	}
 	return nil
 }
@@ -77,7 +77,7 @@ func (arr *bitArray) get(index int) (uint8, error) {
 
 	block := getBlockInBitArray(index)
 	step := getStepToMove(index)
-	res := arr.array[block] >> step
+	res := arr.array[block] >> step // get bit by index from block
 
 	return res & lastBitMask, nil
 }
