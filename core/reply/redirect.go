@@ -24,11 +24,21 @@ func (r *GetObjectRedirectReply) GetToken() core.DelegationToken {
 }
 
 // NewGetObjectRedirectReply return new GetObjectRedirectReply
-func NewGetObjectRedirectReply(to *core.RecordRef, state *core.RecordID) *GetObjectRedirectReply {
-	return &GetObjectRedirectReply{
+func NewGetObjectRedirectReply(
+	factory core.DelegationTokenFactory, parcel core.Parcel, to *core.RecordRef, state *core.RecordID,
+) (*GetObjectRedirectReply, error) {
+	var err error
+	rep := GetObjectRedirectReply{
 		Receiver: to,
 		StateID:  state,
 	}
+	redirectedMessage := rep.Redirected(parcel.Message())
+	sender := parcel.GetSender()
+	rep.Token, err = factory.IssueGetObjectRedirect(&sender, redirectedMessage)
+	if err != nil {
+		return nil, err
+	}
+	return &rep, nil
 }
 
 // Type returns type of the reply

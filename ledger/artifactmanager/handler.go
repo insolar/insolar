@@ -171,7 +171,11 @@ func (h *MessageHandler) handleGetObject(
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		return h.createRedirect(ctx, parcel, msg, nil, pulseNumber)
+		nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse())
+		if err != nil {
+			return nil, err
+		}
+		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, &nodes[0], nil)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
@@ -192,7 +196,18 @@ func (h *MessageHandler) handleGetObject(
 			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 		case storage.ErrNotFound:
 			// The record wasn't found on the current node. Return redirect to the node that contains it.
-			return h.createRedirect(ctx, parcel, msg, stateID, pulseNumber)
+			var nodes []core.RecordRef
+			if stateID != nil && pulseNumber-stateID.Pulse() < h.conf.LightChainLimit {
+				// Find light executor that saved the state.
+				nodes, err = h.JetCoordinator.QueryRole(ctx, core.RoleLightExecutor, &msg.Head, stateID.Pulse())
+			} else {
+				// Find heavy that has this object.
+				nodes, err = h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse())
+			}
+			if err != nil {
+				return nil, err
+			}
+			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, &nodes[0], stateID)
 		default:
 			return nil, err
 		}
@@ -548,49 +563,6 @@ func getObjectStateRecord(
 	}
 
 	return stateRec, nil
-}
-
-func (h *MessageHandler) createRedirect(
-	ctx context.Context,
-	genericMsg core.Parcel,
-	msg *message.GetObject,
-	state *core.RecordID,
-	pulse core.PulseNumber,
-) (*reply.GetObjectRedirectReply, error) {
-	var (
-		toNodes []core.RecordRef
-		err     error
-	)
-	if state != nil && pulse-state.Pulse() < h.conf.LightChainLimit {
-		// Find light executor that saved the state.
-		toNodes, err = h.JetCoordinator.QueryRole(ctx, core.RoleLightExecutor, &msg.Head, state.Pulse())
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Find heavy that has this object.
-		toNodes, err = h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse())
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if len(toNodes) > 1 {
-		return nil, errors.New("found more than one executor")
-	}
-
-	redirect := reply.NewGetObjectRedirectReply(&toNodes[0], state)
-
-	sender := genericMsg.GetSender()
-	redirected := redirect.Redirected(msg)
-	token, err := h.DelegationTokenFactory.IssueGetObjectRedirect(&sender, redirected)
-	if err != nil {
-		return nil, err
-	}
-
-	redirect.Token = token
-
-	return redirect, nil
 }
 
 func getObjectIndexForUpdate(ctx context.Context, s storage.Store, head *core.RecordID) (*index.ObjectLifeline, error) {
