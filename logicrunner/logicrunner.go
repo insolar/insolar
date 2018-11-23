@@ -261,6 +261,11 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	fuse := true
 	es.Lock()
+	defer func() {
+		if fuse {
+			es.Unlock()
+		}
+	}()
 
 	// unlock comes from OnPulse()
 	// pulse changed while we was locked and we don't process anything
@@ -268,11 +273,6 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, es.ErrorWrap(nil, "abort execution: new Pulse coming")
 	}
 
-	defer func() {
-		if fuse {
-			es.Unlock()
-		}
-	}()
 	es.traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
 
