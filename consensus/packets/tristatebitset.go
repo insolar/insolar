@@ -17,7 +17,11 @@
 package packets
 
 import (
+	"bytes"
+	"encoding/binary"
 	"io"
+	"math"
+	"math/bits"
 
 	"github.com/pkg/errors"
 )
@@ -59,7 +63,57 @@ func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell) {
 }
 
 func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
-	return nil, nil
+	firstByte := uint8(0)
+	secondByte := uint8(0)
+	if dbs.CompressedSet {
+		firstByte = 0x01
+	} else {
+		firstByte = 0x00
+	}
+
+	array, err := dbs.cellsToBitArray()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to get bitarray from cells")
+	}
+
+	tmpLen := array.Len()
+	totalSize := int(math.Round(float64((tmpLen*2)/8))+0.5) + 1 // first byte
+	var result *bytes.Buffer
+	firstByte = firstByte << 1
+	if bits.Len(tmpLen) > 6 {
+		firstByte++
+		firstByte = firstByte << 6
+		secondByte = uint8(tmpLen)
+		totalSize += 1 // secondbyte is optional
+		result = allocateBuffer(totalSize)
+		err = binary.Write(result, defaultByteOrder, firstByte)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
+		}
+		err = binary.Write(result, defaultByteOrder, secondByte)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
+		}
+	} else {
+		result = allocateBuffer(totalSize)
+		firstByte = firstByte << 1
+		firstByte += uint8(tmpLen)
+		err = binary.Write(result, defaultByteOrder, firstByte)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
+		}
+	}
+
+	data, err := array.serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize a bitarray")
+	}
+	err = binary.Write(result, defaultByteOrder, data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
+	}
+
+	return result.Bytes(), nil
 }
 
 func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
