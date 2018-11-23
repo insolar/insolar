@@ -180,9 +180,8 @@ func (h *MessageHandler) handleGetObject(
 	if err != nil {
 		if err == ErrStateNotAvailable {
 			return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 	h.recent.AddObject(*msg.Head.Record())
 
