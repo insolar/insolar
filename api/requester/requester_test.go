@@ -36,12 +36,13 @@ import (
 
 const TESTREFERENCE = "222222"
 const TESTSEED = "VGVzdA=="
-const TESTROOTMEMBER = "root_member_ref"
-const TESTROOTDOMAIN = "root_domain_ref"
 
-type TESTSEEDRESULT struct {
-	Seed    string
-	TraceID string
+var testSeedResponse = seedResponse{Seed: []byte("Test"), TraceID: "testTraceID"}
+var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
+
+type RPCRequest struct {
+	RPCVersion string `json:"jsonrpc"`
+	Method     string `json:"method"`
 }
 
 func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
@@ -79,9 +80,7 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 func FakeInfoHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 	answer := map[string]interface{}{
-		"root_domain": TESTROOTDOMAIN,
-		"root_member": TESTROOTMEMBER,
-		"prototypes":  map[string]string{},
+		"prototypes": map[string]string{},
 	}
 	writeReponse(response, answer)
 }
@@ -91,7 +90,19 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	answer := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      "",
-		"result":  TESTSEEDRESULT{Seed: TESTSEED, TraceID: "testTraceID"},
+	}
+	rpcRequest := RPCRequest{}
+	_, err := api.UnmarshalRequest(req, &rpcRequest)
+	if err != nil {
+		log.Errorf("Can't read request\n")
+		return
+	}
+
+	switch rpcRequest.Method {
+	case "info.Get":
+		answer["result"] = testInfoResponse
+	case "seed.Get":
+		answer["result"] = testSeedResponse
 	}
 	writeReponse(response, answer)
 }
@@ -254,12 +265,8 @@ func TestSendWithSeed_NilConfigs(t *testing.T) {
 }
 
 func TestInfo(t *testing.T) {
-	resp, err := Info(URL)
+	resp, err := Info(APIURL)
 	require.NoError(t, err)
 	fmt.Println(resp.RootDomain)
-	require.Equal(t, resp, &InfoResponse{
-		RootMember: "root_member_ref",
-		RootDomain: "root_domain_ref",
-		Prototypes: map[string]string{},
-	})
+	require.Equal(t, resp, &testInfoResponse)
 }

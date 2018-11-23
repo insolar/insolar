@@ -48,6 +48,20 @@ func SetVerbose(verb bool) {
 // PostParams represents params struct
 type PostParams = map[string]interface{}
 
+type RPCResponse struct {
+	RPCVersion string                 `json:"jsonrpc"`
+	Error      map[string]interface{} `json:"error"`
+}
+
+type seedResponse struct {
+	Seed    []byte `json:"Seed"`
+	TraceID string `json:"TraceID"`
+}
+type rpcSeedResponse struct {
+	RPCResponse
+	Result seedResponse `json:"result"`
+}
+
 // GetResponseBody makes request and extracts body
 func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
@@ -83,19 +97,7 @@ func GetRPCSeed(url string) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getSeed ]")
 	}
 
-	type RPCResponse struct {
-		RPCVersion string                 `json:"jsonrpc"`
-		Error      map[string]interface{} `json:"error"`
-	}
-	type seedResponse struct {
-		RPCResponse
-		Result struct {
-			Seed    []byte `json:"Seed"`
-			TraceID string `json:"TraceID"`
-		} `json:"result"`
-	}
-
-	seedResp := seedResponse{}
+	seedResp := rpcSeedResponse{}
 
 	err = json.Unmarshal(body, &seedResp)
 	if err != nil {
@@ -180,26 +182,43 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	return response, nil
 }
 
-// InfoResponse represents response from /info
+// InfoResponse represents response from rpc on info.Get method
 type InfoResponse struct {
-	Prototypes map[string]string `json:"prototypes"`
-	RootDomain string            `json:"root_domain"`
-	RootMember string            `json:"root_member"`
+	RootDomain string `json:"RootDomain"`
+	RootMember string `json:"RootMember"`
+	NodeDomain string `json:"NodeDomain"`
+	TraceID    string `json:"TraceID"`
 }
 
-// Info sends request to /info and return result
+type rpcInfoResponse struct {
+	RPCResponse
+	Result InfoResponse `json:"result"`
+}
+
+// Info makes rpc request to info.Get method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	body, err := GetResponseBody(url+"/info", PostParams{})
+	body, err := GetResponseBody(url+"/rpc", PostParams{
+		"jsonrpc": "2.0",
+		"method":  "info.Get",
+		"id":      "",
+	})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Info ] problem with sending request:")
+		return nil, errors.Wrap(err, "[ Info ]")
 	}
 
-	infoResp := InfoResponse{}
+	infoResp := rpcInfoResponse{}
 
 	err = json.Unmarshal(body, &infoResp)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Info ] problem with unmarshal response:")
+		return nil, errors.Wrap(err, "[ Info ] Can't unmarshal")
+	}
+	if infoResp.Error != nil {
+		return nil, errors.New("[ Info ] Field 'error' is not nil: " + fmt.Sprint(infoResp.Error))
+	}
+	res := &infoResp.Result
+	if res == nil {
+		return nil, errors.New("[ Info ] Field 'result' is nil")
 	}
 
-	return &infoResp, nil
+	return res, nil
 }

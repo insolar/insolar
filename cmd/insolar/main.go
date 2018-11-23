@@ -181,7 +181,7 @@ func sendRequest(out io.Writer) {
 	userCfg, err := requester.ReadUserConfigFromFile(configPath)
 	check("[ sendRequest ]", err)
 	if rootAsCaller {
-		info, err := requester.Info(sendUrls + "/v1")
+		info, err := requester.Info(sendUrls)
 		check("[ sendRequest ]", err)
 		userCfg.Caller = info.RootMember
 	}
