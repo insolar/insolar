@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/insolar/insolar/core/utils"
@@ -29,11 +30,33 @@ import (
 func (ar *Runner) infoHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
-		_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+		ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
-		data, err := ar.Genesis.Info()
+		rootDomain := ar.GenesisDataProvider.GetRootDomain(ctx)
+		if rootDomain == nil {
+			inslog.Error("[ INFO ] rootDomain ref is nil")
+		}
+		rootMember, err := ar.GenesisDataProvider.GetRootMember(ctx)
 		if err != nil {
-			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get bootstraper info"))
+			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get rootMember ref"))
+		}
+		if rootMember == nil {
+			inslog.Error("[ INFO ] rootMember ref is nil")
+		}
+		nodeDomain, err := ar.GenesisDataProvider.GetNodeDomain(ctx)
+		if err != nil {
+			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get nodeDomain ref"))
+		}
+		if nodeDomain == nil {
+			inslog.Error("[ INFO ] nodeDomain ref is nil")
+		}
+		data, err := json.MarshalIndent(map[string]interface{}{
+			"root_domain": rootDomain.String(),
+			"root_member": rootMember.String(),
+			"node_domain": nodeDomain.String(),
+		}, "", "   ")
+		if err != nil {
+			inslog.Error(errors.Wrap(err, "[ INFO ] Can't marshal response"))
 		}
 
 		response.Header().Add("Content-Type", "application/json")

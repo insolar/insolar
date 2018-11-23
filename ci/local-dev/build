@@ -1,0 +1,114 @@
+#!/bin/bash
+
+set -e
+
+ARG=$1
+
+check () {
+  # run only in local k8s
+  kubectl config current-context | grep -q 'docker-for-desktop' || (echo "bad context, it can run only on local k8s: kubectl config use-context docker-for-desktop" && exit 1)
+}
+
+DOCKER=./ci/local-dev/docker/
+K8S=./ci/local-dev/manifests/
+
+PID=/tmp/kubectl-pid
+LOG=/tmp/test-watch
+
+
+
+pause () {
+  STR=$1
+  while ! $(grep -q "$STR" $LOG) ; do
+    sleep 1
+  done
+  kill $(cat $PID)
+  rm $PID
+  rm $LOG
+}
+
+
+full-rebuild () {
+  echo start full rebuild
+  docker build --rm --tag pre -f $DOCKER/Dockerfile.pre .
+  docker build --rm --tag base -f $DOCKER/Dockerfile.base .
+}
+
+rebuild () {
+  echo start rebuild
+  DEP=$(docker images -q pre)
+  [ -z "$DEP" ] && full-rebuild || docker build --rm --tag base -f $DOCKER/Dockerfile.base .
+}
+
+start-dev () {
+  echo start dev
+  kubectl apply -f $K8S/environments.yaml
+  kubectl -n dev apply -f $K8S/bootstrap.yaml
+  (kubectl -n dev get pods -w & echo $! >$PID ) | tee $LOG - &
+  pause 'seed-0.*Running'
+  kubectl -n dev apply -f $K8S/pulsar.yaml
+  kubectl -n dev apply -f $K8S/virtual.yaml
+}
+
+stop-dev () {
+  echo stop dev
+  kubectl delete ns dev || echo don\'t have dev namespace
+  while $(kubectl get ns | grep -q 'dev   ') ; do
+    sleep 1
+  done
+}
+
+restart-dev () {
+  stop-dev
+  start-dev
+}
+
+rebuild-and-restart () {
+  rebuild
+  restart-dev
+}
+
+
+case $ARG in
+  rebuild)
+    check
+    rebuild
+    ;;
+  full-rebuild)
+    check
+    full-rebuild
+    ;;
+  start-dev)
+    check
+    start-dev
+    ;;
+  stop-dev)
+    check
+    stop-dev
+    ;;
+  restart-dev)
+    check
+    restart-dev
+    ;;
+  rebuild-and-restart)
+    check
+    rebuild-and-restart
+    ;;
+  *)
+    echo "Use cases:"
+    echo "./ci/local-dev/build (rebuild|full-rebuild|start-dev|stop-dev|restart-dev|rebuild-and-restart)"
+    echo "rebuild - fast rebuild"
+    echo "full-rebuild - prepare dependencies and rebuild"
+    echo "start-dev - create dev namespace, delploy all to this namespace"
+    echo "stop-dev - stop all, remove dev namespace"
+    echo "restart-dev - stop-dev, start-dev"
+    echo "rebuild-and-restart - rebuild, restart-dev"
+    echo
+    echo "published services"
+    echo "bootstrap: TCP 127.0.0.1:19191, TCP 127.0.0.1:8080, UDP 127.0.0.1:7900"
+    echo "builded images"
+    echo "pre - image with dependencies"
+    echo "base - image with binaries"
+esac
+
+

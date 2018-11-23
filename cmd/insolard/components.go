@@ -23,10 +23,13 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
+	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesis"
+	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
@@ -34,6 +37,7 @@ import (
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/network/state"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
@@ -41,7 +45,7 @@ import (
 	"github.com/insolar/insolar/version/manager"
 )
 
-type BootstrapComponents struct {
+type bootstrapComponents struct {
 	CryptographyService        core.CryptographyService
 	PlatformCryptographyScheme core.PlatformCryptographyScheme
 	KeyStore                   core.KeyStore
@@ -49,7 +53,7 @@ type BootstrapComponents struct {
 	Certificate                core.Certificate
 }
 
-func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuration) BootstrapComponents {
+func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
 	earlyComponents := component.Manager{}
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
@@ -62,7 +66,7 @@ func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	earlyComponents.Register(platformCryptographyScheme, keyStore)
 	earlyComponents.Inject(cryptographyService, keyProcessor)
 
-	return BootstrapComponents{
+	return bootstrapComponents{
 		CryptographyService:        cryptographyService,
 		PlatformCryptographyScheme: platformCryptographyScheme,
 		KeyStore:                   keyStore,
@@ -70,7 +74,7 @@ func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	}
 }
 
-func InitCertificate(
+func initCertificate(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	isBootstrap bool,
@@ -94,8 +98,8 @@ func InitCertificate(
 	return cert
 }
 
-// InitComponents creates and links all insolard components
-func InitComponents(
+// initComponents creates and links all insolard components
+func initComponents(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	cryptographyService core.CryptographyService,
@@ -105,8 +109,9 @@ func InitComponents(
 	cert core.Certificate,
 	isGenesis bool,
 	genesisConfigPath string,
+	genesisKeyOut string,
 
-) (*component.Manager, *ComponentManager, *Repl, error) {
+) (*component.Manager, *Repl, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
 	checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -124,18 +129,27 @@ func InitComponents(
 
 	var gen core.Genesis
 	if isGenesis {
-		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath)
+		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
 	} else {
-		gen, err = genesis.NewGenesis(isGenesis, "")
+		gen, err = genesis.NewGenesis(isGenesis, "", "")
 		checkError(ctx, err, "failed to start Bootstrapper")
 	}
+
+	contractRequester, err := contractrequester.New()
+	checkError(ctx, err, "failed to start ContractRequester")
+
+	genesisDataProvider, err := genesisdataprovider.New()
+	checkError(ctx, err, "failed to start GenesisDataProvider")
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics)
 	checkError(ctx, err, "failed to start Metrics")
+
+	networkSwitcher, err := state.NewNetworkSwitcher()
+	checkError(ctx, err, "failed to start NetworkSwitcher")
 
 	networkCoordinator, err := networkcoordinator.New()
 	checkError(ctx, err, "failed to start NetworkCoordinator")
@@ -153,44 +167,31 @@ func InitComponents(
 		keyStore,
 		cryptographyService,
 		keyProcessor,
-	)
-
-	ld := ledger.Ledger{} // TODO: remove me with cmOld
-
-	components := []interface{}{
 		cert,
 		nodeNetwork,
-		logicRunner,
-	}
-	components = append(components, ledger.GetLedgerComponents(cfg.Ledger)...)
+	)
 
-	cmOld := &ComponentManager{components: core.Components{
-		Certificate:                cert,
-		NodeNetwork:                nodeNetwork,
-		LogicRunner:                logicRunner,
-		Ledger:                     &ld,
-		Network:                    nw,
-		MessageBus:                 messageBus,
-		Genesis:                    gen,
-		APIRunner:                  apiRunner,
-		NetworkCoordinator:         networkCoordinator,
-		PlatformCryptographyScheme: platformCryptographyScheme,
-		CryptographyService:        cryptographyService,
-	}}
-	components = append(components, &ld, cmOld) // TODO: remove me with cmOld
-
+	components := ledger.GetLedgerComponents(cfg.Ledger)
+	ld := ledger.Ledger{} // TODO: remove me with cmOld
 	components = append(components, []interface{}{
 		nw,
 		messageBus,
+		contractRequester,
+		&ld,
+		logicRunner,
 		delegationTokenFactory,
 		parcelFactory,
 		gen,
+		genesisDataProvider,
 		apiRunner,
 		metricsHandler,
+		networkSwitcher,
 		networkCoordinator,
+		phases.NewPhaseManager(),
+		cryptographyService,
 	}...)
 
 	cm.Inject(components...)
 
-	return &cm, cmOld, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
+	return &cm, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }

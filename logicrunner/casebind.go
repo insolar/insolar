@@ -38,8 +38,8 @@ func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byt
 	return scheme.IntegrityHasher().Hash(s)
 }
 
-func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
-	if len(cr) < 1 {
+func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb core.CaseBind) (int, error) {
+	if len(cb.Requests) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
 
@@ -54,10 +54,11 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 			return errors.New("already validating this ref")
 		}
 		lr.caseBindReplays[ref] = core.CaseBindReplay{
-			Pulse:      p,
-			Records:    cr,
-			RecordsLen: len(cr),
-			Step:       0,
+			Pulse:    p,
+			CaseBind: cb,
+			Request:  0,
+			Record:   -1,
+			Steps:    0,
 		}
 		return nil
 	}()
@@ -84,7 +85,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 
 		msg := start.Resp.(core.Message)
 		parcel, err := lr.ParcelFactory.Create(
-			ctx, msg, ref,
+			ctx, msg, ref, nil,
 		)
 		if err != nil {
 			return 0, errors.New("failed to create a parcel message")
@@ -132,18 +133,23 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 		}
 	}
 }
+
 func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
-	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.CaseBind)
+	errstr := ""
+	if validationError != nil {
+		errstr = validationError.Error()
+	}
 	_, err := lr.MessageBus.Send(
 		ctx,
 		&message.ValidationResults{
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
-			Error:            validationError.Error(),
+			Error:            errstr,
 		},
 	)
 

@@ -17,8 +17,9 @@
 package core
 
 type DelegationTokenFactory interface {
-	IssuePendingExecution(msg Message, pulse PulseNumber) ([]byte, error)
-	Verify(token []byte, msg Message) (bool, error)
+	IssuePendingExecution(msg Message, pulse PulseNumber) (DelegationToken, error)
+	IssueGetObjectRedirect(sender *RecordRef, redirectedMessage Message) (DelegationToken, error)
+	Verify(parcel Parcel) (bool, error)
 }
 
 // DelegationToken is the base interface for delegation tokens
@@ -27,5 +28,5 @@ type DelegationToken interface {
 	Type() DelegationTokenType
 
 	// Verify checks against the token. See also delegationtoken.Verify(...)
-	Verify(msg Message) (bool, error)
+	Verify(parcel Parcel) (bool, error)
 }

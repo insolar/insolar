@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 )
 
@@ -71,10 +70,10 @@ func (m *TestParticipant) GetPulse() core.PulseNumber {
 	return m.holder.GetPulse()
 }
 
-func (m *TestParticipant) SetHash([]*network.NodeUnsyncHash) {
+func (m *TestParticipant) SetHash([]*NodeUnsyncHash) {
 }
 
-func (TestParticipant) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyncHash, error) {
+func (TestParticipant) GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error) {
 	return nil, nil
 }
 
@@ -92,10 +91,10 @@ func (mockUnsyncHolder) GetPulse() core.PulseNumber {
 	return 0
 }
 
-func (mockUnsyncHolder) SetHash([]*network.NodeUnsyncHash) {
+func (mockUnsyncHolder) SetHash([]*NodeUnsyncHash) {
 }
 
-func (mockUnsyncHolder) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyncHash, error) {
+func (mockUnsyncHolder) GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error) {
 	return nil, nil
 }
 
@@ -109,6 +108,6 @@ func (c *testCommunicator) ExchangeData(ctx context.Context, pulse core.PulseNum
 	return tp.holder.GetUnsync(), nil
 }
 
-func (c *testCommunicator) ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*network.NodeUnsyncHash) ([]*network.NodeUnsyncHash, error) {
-	return []*network.NodeUnsyncHash{}, nil
+func (c *testCommunicator) ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*NodeUnsyncHash) ([]*NodeUnsyncHash, error) {
+	return []*NodeUnsyncHash{}, nil
 }

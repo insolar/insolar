@@ -244,9 +244,11 @@ func (ac *AuthorizationController) getAuthErrorResponse(request network.Request,
 	return ac.transport.BuildResponse(request, &ResponseAuthorize{Error: err})
 }
 
-func (ac *AuthorizationController) Start(components core.Components) {
-	ac.signer = NewSigner(components.CryptographyService, components.NetworkCoordinator)
-	ac.keeper = components.NodeNetwork.(network.NodeKeeper)
+func (ac *AuthorizationController) Start(cryptographyService core.CryptographyService,
+	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
+
+	ac.signer = NewSigner(cryptographyService, networkCoordinator)
+	ac.keeper = nodeKeeper
 
 	ac.transport.RegisterPacketHandler(types.GetNonce, ac.processNonceRequest)
 	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)

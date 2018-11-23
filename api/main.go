@@ -26,17 +26,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/gorilla/rpc/v2"
+	jsonrpc "github.com/gorilla/rpc/v2/json2"
+	"github.com/insolar/insolar/application/extractor"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
-	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 const (
@@ -148,7 +149,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			inslog.Errorf("[ wrapAPIV1Handler ] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, runner.MessageBus, runner.NetworkCoordinator, rootDomainReference, runner.seedmanager)
+		rh := NewRequestHandler(params, runner.ContractRequester, runner.NetworkCoordinator, rootDomainReference, runner.seedmanager)
 
 		answer = processQueryType(ctx, rh, params.QueryType)
 	}
@@ -156,14 +157,17 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 
 // Runner implements Component for API
 type Runner struct {
-	MessageBus         core.MessageBus         `inject:""`
-	Genesis            core.Genesis            `inject:""`
-	NetworkCoordinator core.NetworkCoordinator `inject:""`
-	server             *http.Server
-	cfg                *configuration.APIRunner
-	keyCache           map[string]crypto.PublicKey
-	cacheLock          *sync.RWMutex
-	seedmanager        *seedmanager.SeedManager
+	Certificate         core.Certificate         `inject:""`
+	StorageExporter     core.StorageExporter     `inject:""`
+	ContractRequester   core.ContractRequester   `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
+	GenesisDataProvider core.GenesisDataProvider `inject:""`
+	server              *http.Server
+	rpcServer           *rpc.Server
+	cfg                 *configuration.APIRunner
+	keyCache            map[string]crypto.PublicKey
+	cacheLock           *sync.RWMutex
+	seedmanager         *seedmanager.SeedManager
 }
 
 // NewRunner is C-tor for API Runner
@@ -179,23 +183,32 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	}
 
 	addrStr := fmt.Sprint(cfg.Address)
+	rpcServer := rpc.NewServer()
 	ar := Runner{
 		server:    &http.Server{Addr: addrStr},
+		rpcServer: rpcServer,
 		cfg:       cfg,
 		keyCache:  make(map[string]crypto.PublicKey),
 		cacheLock: &sync.RWMutex{},
 	}
 
+	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")
+	err := rpcServer.RegisterService(NewStorageExporterService(&ar), "exporter")
+	if err != nil {
+		return nil, err
+	}
+
 	return &ar, nil
 }
 
+// IsAPIRunner is implementation of APIRunner interface
 func (ar *Runner) IsAPIRunner() bool {
 	return true
 }
 
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
-	rootDomainReference := ar.Genesis.GetRootDomainRef()
+	rootDomainReference := ar.Certificate.GetRootDomainReference()
 
 	ar.seedmanager = seedmanager.New()
 
@@ -203,6 +216,7 @@ func (ar *Runner) Start(ctx context.Context) error {
 	http.HandleFunc(ar.cfg.Location, fw)
 	http.HandleFunc(ar.cfg.Info, ar.infoHandler())
 	http.HandleFunc(ar.cfg.Call, ar.callHandler())
+	http.Handle(ar.cfg.RPC, ar.rpcServer)
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")
 	inslog.Info("Config: ", ar.cfg)
@@ -236,30 +250,16 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 	if ok {
 		return publicKey, nil
 	}
-	args, err := core.MarshalArgs()
+
+	reference := core.NewRefFromBase58(ref)
+	res, err := ar.ContractRequester.SendRequest(ctx, &reference, "GetPublicKey", []interface{}{})
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't marshal empty args")
-	}
-	res, err := ar.MessageBus.Send(
-		ctx,
-		&message.CallMethod{
-			ObjectRef: core.NewRefFromBase58(ref),
-			Method:    "GetPublicKey",
-			Arguments: args,
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "Can't get public key")
+		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't get public key")
 	}
 
-	var publicKeyString string
-	var contractErr error
-	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &publicKeyString, &contractErr)
+	publicKeyString, err := extractor.PublicKeyResponse(res.(*reply.CallMethod).Result)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't unmarshal public key")
-	}
-	if contractErr != nil {
-		return nil, errors.Wrap(contractErr, "Error in get public key")
+		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't extract response")
 	}
 
 	kp := platformpolicy.NewKeyProcessor()

@@ -126,16 +126,24 @@ func (m *LedgerArtifactManager) GetObject(
 	)
 	defer instrument(ctx, "GetObject").err(&err).end()
 
+	getObjectMsg := &message.GetObject{
+		Head:     head,
+		State:    state,
+		Approved: approved,
+	}
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
-		&message.GetObject{
-			Head:     head,
-			State:    state,
-			Approved: approved,
-		},
+		getObjectMsg,
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if genericReact.Type() == reply.TypeGetObjectRedirect {
+		genericReact, err = m.makeRedirect(ctx, genericReact, getObjectMsg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	switch r := genericReact.(type) {
@@ -157,6 +165,32 @@ func (m *LedgerArtifactManager) GetObject(
 		err = ErrUnexpectedReply
 	}
 	return desc, err
+}
+
+func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.Reply, messageForRedirect *message.GetObject) (core.Reply, error) {
+	// TODO Need to be replaced with constant
+	maxCountOfReply := 2
+
+	for maxCountOfReply > 0 {
+		redirectResponse := response.(*reply.GetObjectRedirectReply)
+
+		redirectedMessage := redirectResponse.RecreateMessage(messageForRedirect)
+
+		genericReact, err := m.bus(ctx).Send(
+			ctx,
+			redirectedMessage,
+			core.SendOptionToken(redirectResponse.Token),
+			core.SendOptionDestination(redirectResponse.To),
+		)
+
+		if genericReact.Type() != reply.TypeGetObjectRedirect {
+			return response, err
+		}
+
+		maxCountOfReply--
+	}
+
+	return nil, errors.New("object not found")
 }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.
@@ -611,49 +645,29 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	object core.RecordRef,
 	memory []byte,
 ) (*reply.Object, error) {
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	var genericReact core.Reply
-	var genericError error
-	go func() {
-		genericReact, genericError = m.bus(ctx).Send(
-			ctx,
-			&message.UpdateObject{
-				Record: record.SerializeRecord(rec),
-				Object: object,
-			},
-		)
-		wg.Done()
-	}()
-
-	var blobReact core.Reply
-	var blobError error
-	go func() {
-		blobReact, blobError = m.bus(ctx).Send(
-			ctx,
-			&message.SetBlob{
-				TargetRef: object,
-				Memory:    memory,
-			},
-		)
-		wg.Done()
-	}()
-
-	wg.Wait()
-
-	if genericError != nil {
-		return nil, genericError
-	}
-	if blobError != nil {
-		return nil, blobError
+	_, err := m.bus(ctx).Send(
+		ctx,
+		&message.SetBlob{
+			TargetRef: object,
+			Memory:    memory,
+		},
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to save object's memory blob")
 	}
 
-	rep, ok := genericReact.(*reply.Object)
-	if !ok {
-		return nil, ErrUnexpectedReply
+	genericRep, err := m.bus(ctx).Send(
+		ctx,
+		&message.UpdateObject{
+			Record: record.SerializeRecord(rec),
+			Object: object,
+		},
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update object")
 	}
-	_, ok = blobReact.(*reply.ID)
+
+	rep, ok := genericRep.(*reply.Object)
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}

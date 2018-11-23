@@ -9,11 +9,10 @@ import (
 type skipValidationKey struct{}
 
 func SkipValidation(ctx context.Context) bool {
-	val := ctx.Value(skipValidationKey{})
-	if val == nil {
-		return false
+	if valBool, ok := ctx.Value(skipValidationKey{}).(bool); ok {
+		return valBool
 	}
-	return val.(bool)
+	return false
 }
 
 func SetSkipValidation(ctx context.Context, skip bool) context.Context {

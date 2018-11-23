@@ -145,7 +145,7 @@ func (r *ObjectActivateRecord) State() State {
 }
 
 // Type implementation of Record interface.
-func (r *ObjectActivateRecord) Type() TypeID { return typeObjectActivate }
+func (r *ObjectActivateRecord) Type() TypeID { return typeActivate }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ObjectActivateRecord) WriteHashData(w io.Writer) (int, error) {
@@ -171,7 +171,7 @@ func (r *ObjectAmendRecord) State() State {
 }
 
 // Type implementation of Record interface.
-func (r *ObjectAmendRecord) Type() TypeID { return typeObjectAmend }
+func (r *ObjectAmendRecord) Type() TypeID { return typeAmend }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {

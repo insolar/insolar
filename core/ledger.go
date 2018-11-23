@@ -240,3 +240,22 @@ type LocalStorage interface {
 	// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
 	Iterate(ctx context.Context, pulse PulseNumber, prefix []byte, handler func(k, v []byte) error) error
 }
+
+// KV is a generic key/value struct.
+type KV struct {
+	K []byte
+	V []byte
+}
+
+// StorageExportResult represents storage data view.
+type StorageExportResult struct {
+	Data     map[string]interface{}
+	NextFrom *PulseNumber
+	Size     int
+}
+
+// StorageExporter provides methods for fetching data view from storage.
+type StorageExporter interface {
+	// Export returns data view from storage.
+	Export(ctx context.Context, fromPulse PulseNumber, size int) (*StorageExportResult, error)
+}

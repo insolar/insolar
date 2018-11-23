@@ -18,6 +18,7 @@ package phases
 
 import (
 	"context"
+	"crypto"
 	"testing"
 	"time"
 
@@ -57,6 +58,16 @@ func (s *communicatorSuite) SetupTest() {
 	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
 	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
 	s.originNode = makeRandomNode()
+	nodeN := networkUtils.NewNodeNetworkMock(s.T())
+
+	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
+	cryptoServ.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+		return true
+	}
 
 	s.consensusNetworkMock.RegisterRequestHandlerMock.Set(func(p types.PacketType, p1 network.ConsensusRequestHandler) {
 	})
@@ -73,13 +84,13 @@ func (s *communicatorSuite) SetupTest() {
 
 	})
 
-	s.componentManager.Inject(s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
+	s.componentManager.Inject(nodeN, cryptoServ, s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
 	err := s.componentManager.Start(context.TODO())
 	s.NoError(err)
 }
 
 func makeRandomNode() core.Node {
-	return nodenetwork.NewNode(testutils.RandomRef(), nil, nil, 0, "127.0.0.1", "")
+	return nodenetwork.NewNode(testutils.RandomRef(), core.RoleUnknown, nil, 0, "127.0.0.1", "")
 }
 
 func (s *communicatorSuite) TestExchangeData() {

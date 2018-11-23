@@ -24,7 +24,6 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network"
 )
 
 func hashWriteChecked(hash hash.Hash, data []byte) {
@@ -80,10 +79,10 @@ func CalculateHash(scheme core.PlatformCryptographyScheme, list []core.Node) (re
 }
 
 // CalculateNodeUnsyncHash calculates hash for a NodeUnsyncHash
-func CalculateNodeUnsyncHash(scheme core.PlatformCryptographyScheme, nodeID core.RecordRef, list []core.Node) (*network.NodeUnsyncHash, error) {
+func CalculateNodeUnsyncHash(scheme core.PlatformCryptographyScheme, nodeID core.RecordRef, list []core.Node) (*NodeUnsyncHash, error) {
 	h, err := CalculateHash(scheme, list)
 	if err != nil {
 		return nil, err
 	}
-	return &network.NodeUnsyncHash{NodeID: nodeID, Hash: h}, nil
+	return &NodeUnsyncHash{NodeID: nodeID, Hash: h}, nil
 }

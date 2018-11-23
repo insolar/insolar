@@ -1,0 +1,92 @@
+groups:
+- name: master
+  jobs:
+    - unit-all
+- name: network
+  jobs:
+    - unit-network
+
+resource_types:
+- name: git-multibranch
+  type: docker-image
+  source:
+    repository: cfcommunity/git-multibranch-resource
+
+resources:
+- name: insolar
+  type: git
+  source:
+    uri: https://github.com/insolar/insolar.git
+    branch: master
+- name: multibranch
+  type: git-multibranch
+  source:
+    uri: https://github.com/insolar/insolar.git
+    branches: '.*'
+    paths: 
+     - 'network/host'
+
+
+jobs:
+- name: unit-all
+  public: true
+  plan:
+  - get: insolar
+    trigger: false
+  - task: unit
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: golang}
+      inputs:
+      - name: insolar
+        path: gopath/src/github.com/insolar/insolar
+      caches:
+      - path: depspath/
+      - path: gopath/pkg/
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo tests
+             pwd
+             ls -alh
+             cd gopath/src/github.com/insolar/insolar
+             echo "fetching dependencies..."
+             go get -t -d ./...
+             go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
+
+- name: unit-network
+  public: false
+  plan:
+  - get: multibranch
+    trigger: true
+  - task: unit-net
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: golang}
+      inputs:
+      - name: multibranch
+        path: gopath/src/github.com/insolar/insolar
+      caches:
+      - path: depspath/
+      - path: gopath/pkg/
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo tests
+             pwd
+             ls -alh
+             cd gopath/src/github.com/insolar/insolar
+             echo "fetching dependencies..."
+             go get -t -d ./...
+             cd network/host
+             go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
+
+

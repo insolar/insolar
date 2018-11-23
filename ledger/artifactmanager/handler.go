@@ -20,13 +20,14 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/insolar/insolar/instrumentation/hack"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/hack"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -37,9 +38,12 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 type MessageHandler struct {
 	db                         *storage.DB
 	jetDropHandlers            map[core.MessageType]internalHandler
+	recent                     *storage.RecentStorage
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	recent                     *storage.RecentStorage
+	JetCoordinator             core.JetCoordinator             `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
+	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 }
 
 // NewMessageHandler creates new handler.
@@ -63,6 +67,9 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeSetRecord, h.messagePersistingWrapper(h.handleSetRecord))
 	h.Bus.MustRegister(core.TypeSetBlob, h.messagePersistingWrapper(h.handleSetBlob))
 	h.Bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
+
+	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
+	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
 	h.jetDropHandlers[core.TypeGetObject] = h.handleGetObject
@@ -152,16 +159,56 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.GetObject)
+func (h *MessageHandler) createRedirect(ctx context.Context, genericMsg core.Parcel, msg *message.GetObject, definedState *core.RecordID) (*reply.GetObjectRedirectReply, error) {
+	// here we need find node by pulse
+	redirect, err := h.prepareRedirect(ctx, msg, definedState, definedState.Pulse())
+	if err != nil {
+		return nil, err
+	}
 
-	idx, stateID, state, err := getObject(ctx, h.db, msg.Head.Record(), msg.State, msg.Approved)
+	sender := genericMsg.GetSender()
+	redirectedMessage := redirect.RecreateMessage(msg)
+	token, err := h.DelegationTokenFactory.IssueGetObjectRedirect(&sender, redirectedMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	redirect.Token = token
+
+	return redirect, nil
+}
+
+func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetObject, definedState *core.RecordID, pulse core.PulseNumber) (*reply.GetObjectRedirectReply, error) {
+	nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleLightExecutor, &msg.Head, pulse)
+	if err != nil {
+		return nil, err
+	}
+	if len(nodes) > 1 {
+		return nil, errors.New("found more than one executer")
+	}
+
+	return reply.NewGetObjectRedirectReply(&nodes[0], definedState), nil
+}
+
+func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.GetObject)
+
+	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+	stateID, state, err := getObjectState(ctx, h.db, idx, msg.State, msg.Approved)
 	if err != nil {
 		switch err {
 		case ErrObjectDeactivated:
 			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 		case ErrStateNotAvailable:
 			return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
+		case ErrNotFound:
+			if stateID == nil {
+				return nil, err
+			}
+			return h.createRedirect(ctx, parcel, msg, stateID)
 		default:
 			return nil, err
 		}
@@ -194,7 +241,11 @@ func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.P
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetDelegate)
 
-	idx, _, _, err := getObject(ctx, h.db, msg.Head.Record(), nil, false)
+	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +266,11 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetChildren)
 
-	idx, _, _, err := getObject(ctx, h.db, msg.Parent.Record(), nil, false)
+	idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +329,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	var idx *index.ObjectLifeline
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		idx, err = getObjectIndex(ctx, tx, msg.Object.Record(), true)
+		idx, err = getObjectIndexForUpdate(ctx, tx, msg.Object.Record())
 		if err != nil {
 			return err
 		}
@@ -328,9 +383,9 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 
 	var child *core.RecordID
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(ctx, tx, msg.Parent.Record(), nil, false)
+		idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to fetch object index")
 		}
 		h.recent.AddObject(*msg.Parent.Record())
 
@@ -470,18 +525,13 @@ func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.C
 	return codeRec, nil
 }
 
-func getObject(
+func getObjectState(
 	ctx context.Context,
 	s storage.Store,
-	head *core.RecordID,
+	idx *index.ObjectLifeline,
 	state *core.RecordID,
 	approved bool,
-) (*index.ObjectLifeline, *core.RecordID, record.ObjectState, error) {
-	idx, err := s.GetObjectIndex(ctx, head, false)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to fetch object index")
-	}
-
+) (*core.RecordID, record.ObjectState, error) {
 	var stateID *core.RecordID
 	if state != nil {
 		stateID = state
@@ -492,28 +542,27 @@ func getObject(
 			stateID = idx.LatestState
 		}
 	}
-
 	if stateID == nil {
-		return nil, nil, nil, ErrStateNotAvailable
+		return nil, nil, ErrStateNotAvailable
 	}
 
 	rec, err := s.GetRecord(ctx, stateID)
 	if err != nil {
-		return nil, nil, nil, err
+		return stateID, nil, err
 	}
 	stateRec, ok := rec.(record.ObjectState)
 	if !ok {
-		return nil, nil, nil, errors.New("invalid object record")
+		return nil, nil, errors.New("invalid object record")
 	}
 	if stateRec.State() == record.StateDeactivation {
-		return nil, nil, nil, ErrObjectDeactivated
+		return nil, nil, ErrObjectDeactivated
 	}
 
-	return idx, stateID, stateRec, nil
+	return stateID, stateRec, nil
 }
 
-func getObjectIndex(ctx context.Context, s storage.Store, head *core.RecordID, forupdate bool) (*index.ObjectLifeline, error) {
-	idx, err := s.GetObjectIndex(ctx, head, forupdate)
+func getObjectIndexForUpdate(ctx context.Context, s storage.Store, head *core.RecordID) (*index.ObjectLifeline, error) {
+	idx, err := s.GetObjectIndex(ctx, head, true)
 	if err == storage.ErrNotFound {
 		return &index.ObjectLifeline{State: record.StateUndefined}, nil
 	}
@@ -531,4 +580,36 @@ func validateState(old record.State, new record.State) error {
 		return errors.New("object is already activated")
 	}
 	return nil
+}
+
+func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
+	msg := genericMsg.Message().(*message.HeavyPayload)
+	inslog.Debugf("Heavy sync: get start payload message with %v records", len(msg.Records))
+	err := h.db.StoreKeyValues(ctx, msg.Records)
+	if err != nil {
+		return nil, err
+	}
+	return &reply.OK{}, nil
+}
+
+func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
+	msg := genericMsg.Message().(*message.HeavyStartStop)
+	if msg.Finished {
+		// stop logic (unlock)
+		inslog.Debugf("Heavy sync: get stop message [%v,%v]", msg.Begin, msg.End)
+		return &reply.OK{}, nil
+	}
+
+	// start logick (try to lock)
+	inslog.Debugf("Heavy sync: get start message [%v,%v]", msg.Begin, msg.End)
+	// TODO: handle start message (i.e. add lock)
+	return &reply.OK{}, nil
 }
