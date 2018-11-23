@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,12 +14,11 @@
  *    limitations under the License.
  */
 
-package network
+package core
 
-// State type for bootstrapping process
-type State int
+import "context"
 
-// Switcher is a network FSM
-type Switcher interface {
-	GetState() State
+// ContractRequester is the global contract requester handler. Other system parts communicate with contract requester through it.
+type ContractRequester interface {
+	SendRequest(ctx context.Context, ref *RecordRef, method string, argsIn []interface{}) (Reply, error)
 }

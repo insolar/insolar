@@ -43,7 +43,7 @@ func TestRecorder_Send(t *testing.T) {
 	expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
 	pm := testutils.NewPulseManagerMock(mc)
 	s := NewsenderMock(mc)
-	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 *core.SendOptions) (r core.Parcel, r1 error) {
+	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 core.DelegationToken) (r core.Parcel, r1 error) {
 		return &message.Parcel{Msg: p2}, nil
 	}
 
@@ -54,7 +54,7 @@ func TestRecorder_Send(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
 		s.SendParcelMock.Expect(ctx, &parcel, nil)
 
-		_, err := recorder.Send(ctx, &msg)
+		_, err := recorder.Send(ctx, &msg, nil)
 		require.NoError(t, err)
 	})
 
@@ -62,7 +62,7 @@ func TestRecorder_Send(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
 		s.SendParcelMock.Set(nil)
 
-		_, err := recorder.Send(ctx, &msg)
+		_, err := recorder.Send(ctx, &msg, nil)
 		require.NoError(t, err)
 	})
 }

@@ -1,0 +1,20 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source: {repository: golang}
+
+inputs:
+- name: multibranch
+  path: gopath/src/github.com/insolar/insolar
+
+caches:
+- path: depspath/
+- path: gopath/pkg/
+
+params:
+  GIT_BRANCH: master
+
+run:
+  path: gopath/src/github.com/insolar/insolar/ci/test-net

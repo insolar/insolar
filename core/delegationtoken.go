@@ -16,6 +16,7 @@
 
 package core
 
+//go:generate minimock -i github.com/insolar/insolar/core.DelegationTokenFactory -o ../testutils -s _mock.go
 type DelegationTokenFactory interface {
 	IssuePendingExecution(msg Message, pulse PulseNumber) (DelegationToken, error)
 	IssueGetObjectRedirect(sender *RecordRef, redirectedMessage Message) (DelegationToken, error)

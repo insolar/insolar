@@ -131,8 +131,6 @@ func (rd *RootDomain) Info() (interface{}, error) {
 	return resJSON, nil
 }
 
-var INSATTR_GetNodeDomainRef_API = true
-
 // GetNodeDomainRef returns reference of NodeDomain instance
 func (rd *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
 	return rd.NodeDomainRef, nil

@@ -141,6 +141,12 @@ func (ref RecordRef) Equal(other RecordRef) bool {
 	return ref == other
 }
 
+// IsEmpty - check for void
+func (ref RecordRef) IsEmpty() bool {
+	return ref.Equal(RecordRef{})
+}
+
+// Compare compares two record references
 func (ref RecordRef) Compare(other RecordRef) int {
 	return bytes.Compare(ref.Bytes(), other.Bytes())
 }

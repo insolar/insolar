@@ -90,6 +90,7 @@ func (m *LedgerArtifactManager) GetCode(
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetCode{Code: code},
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -131,19 +132,9 @@ func (m *LedgerArtifactManager) GetObject(
 		State:    state,
 		Approved: approved,
 	}
-	genericReact, err := m.bus(ctx).Send(
-		ctx,
-		getObjectMsg,
-	)
+	genericReact, err := m.sendAndFollowRedirect(ctx, getObjectMsg)
 	if err != nil {
 		return nil, err
-	}
-
-	if genericReact.Type() == reply.TypeGetObjectRedirect {
-		genericReact, err = m.makeRedirect(ctx, genericReact, getObjectMsg)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	switch r := genericReact.(type) {
@@ -167,32 +158,6 @@ func (m *LedgerArtifactManager) GetObject(
 	return desc, err
 }
 
-func (m *LedgerArtifactManager) makeRedirect(ctx context.Context, response core.Reply, messageForRedirect *message.GetObject) (core.Reply, error) {
-	// TODO Need to be replaced with constant
-	maxCountOfReply := 2
-
-	for maxCountOfReply > 0 {
-		redirectResponse := response.(*reply.GetObjectRedirectReply)
-
-		redirectedMessage := redirectResponse.RecreateMessage(messageForRedirect)
-
-		genericReact, err := m.bus(ctx).Send(
-			ctx,
-			redirectedMessage,
-			core.SendOptionToken(redirectResponse.Token),
-			core.SendOptionDestination(redirectResponse.To),
-		)
-
-		if genericReact.Type() != reply.TypeGetObjectRedirect {
-			return response, err
-		}
-
-		maxCountOfReply--
-	}
-
-	return nil, errors.New("object not found")
-}
-
 // GetDelegate returns provided object's delegate reference for provided prototype.
 //
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
@@ -209,6 +174,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 			Head:   head,
 			AsType: asType,
 		},
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -433,7 +399,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		IsValid:            isValid,
 		ValidationMessages: validationMessages,
 	}
-	_, err = m.bus(ctx).Send(ctx, &msg)
+	_, err = m.bus(ctx).Send(ctx, &msg, nil)
 	return err
 }
 
@@ -604,6 +570,7 @@ func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record
 			Record:    record.SerializeRecord(rec),
 			TargetRef: target,
 		},
+		nil,
 	)
 
 	if err != nil {
@@ -625,6 +592,7 @@ func (m *LedgerArtifactManager) setBlob(ctx context.Context, blob []byte, target
 			Memory:    blob,
 			TargetRef: target,
 		},
+		nil,
 	)
 
 	if err != nil {
@@ -645,49 +613,31 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	object core.RecordRef,
 	memory []byte,
 ) (*reply.Object, error) {
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	var genericReact core.Reply
-	var genericError error
-	go func() {
-		genericReact, genericError = m.bus(ctx).Send(
-			ctx,
-			&message.UpdateObject{
-				Record: record.SerializeRecord(rec),
-				Object: object,
-			},
-		)
-		wg.Done()
-	}()
-
-	var blobReact core.Reply
-	var blobError error
-	go func() {
-		blobReact, blobError = m.bus(ctx).Send(
-			ctx,
-			&message.SetBlob{
-				TargetRef: object,
-				Memory:    memory,
-			},
-		)
-		wg.Done()
-	}()
-
-	wg.Wait()
-
-	if genericError != nil {
-		return nil, genericError
-	}
-	if blobError != nil {
-		return nil, blobError
+	_, err := m.bus(ctx).Send(
+		ctx,
+		&message.SetBlob{
+			TargetRef: object,
+			Memory:    memory,
+		},
+		nil,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to save object's memory blob")
 	}
 
-	rep, ok := genericReact.(*reply.Object)
-	if !ok {
-		return nil, ErrUnexpectedReply
+	genericRep, err := m.bus(ctx).Send(
+		ctx,
+		&message.UpdateObject{
+			Record: record.SerializeRecord(rec),
+			Object: object,
+		},
+		nil,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update object")
 	}
-	_, ok = blobReact.(*reply.ID)
+
+	rep, ok := genericRep.(*reply.Object)
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}
@@ -710,6 +660,7 @@ func (m *LedgerArtifactManager) registerChild(
 			Child:  child,
 			AsType: asType,
 		},
+		nil,
 	)
 
 	if err != nil {
@@ -726,4 +677,25 @@ func (m *LedgerArtifactManager) registerChild(
 
 func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
 	return core.MessageBusFromContext(ctx, m.DefaultBus)
+}
+
+func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg core.Message) (core.Reply, error) {
+	rep, err := m.bus(ctx).Send(ctx, msg, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if redirect, ok := rep.(core.RedirectReply); ok {
+		redirected := redirect.Redirected(msg)
+		return m.bus(ctx).Send(
+			ctx,
+			redirected,
+			&core.MessageSendOptions{
+				Token:    redirect.GetToken(),
+				Receiver: redirect.GetReceiver(),
+			},
+		)
+	}
+
+	return rep, err
 }
