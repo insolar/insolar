@@ -26,11 +26,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/certificate"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -40,13 +40,11 @@ const TestUrl = HOST + "/api/v1?query_type=LOL"
 func TestMain(m *testing.M) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
-	genesisCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)
 
-	cs := core.Components{}
-	b, _ := genesis.NewGenesis(genesisCfg.Genesis)
-	cs.Genesis = b
-	api.Start(ctx, cs)
+	c := certificate.Certificate{}
+	api.Certificate = &c
+	api.Start(ctx)
 
 	code := m.Run()
 
@@ -59,18 +57,18 @@ func TestWrongQueryParam(t *testing.T) {
 	postParams := map[string]string{"query_type": "TEST", "reference": "test"}
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	body, err := ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
+	require.NoError(t, err)
+	require.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
 }
 
 func TestBadRequest(t *testing.T) {
 	resp, err := http.Get(TestUrl)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
-	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"message": "Bad request"`)
+	require.NoError(t, err)
+	require.Contains(t, string(body[:]), `"message": "Bad request"`)
 }
 
 func TestSerialization(t *testing.T) {
@@ -79,38 +77,38 @@ func TestSerialization(t *testing.T) {
 	var c string = "test"
 
 	serArgs, err := core.MarshalArgs(a, b, c)
-	assert.NoError(t, err)
-	assert.NotNil(t, serArgs)
+	require.NoError(t, err)
+	require.NotNil(t, serArgs)
 
 	var aR uint
 	var bR bool
 	var cR string
 	rowResp, err := core.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
-	assert.NoError(t, err)
-	assert.Len(t, rowResp, 3)
-	assert.Equal(t, reflect.TypeOf(a), reflect.TypeOf(rowResp[0]))
-	assert.Equal(t, reflect.TypeOf(b), reflect.TypeOf(rowResp[1]))
-	assert.Equal(t, reflect.TypeOf(c), reflect.TypeOf(rowResp[2]))
-	assert.Equal(t, a, rowResp[0].(uint))
-	assert.Equal(t, b, rowResp[1].(bool))
-	assert.Equal(t, c, rowResp[2].(string))
+	require.NoError(t, err)
+	require.Len(t, rowResp, 3)
+	require.Equal(t, reflect.TypeOf(a), reflect.TypeOf(rowResp[0]))
+	require.Equal(t, reflect.TypeOf(b), reflect.TypeOf(rowResp[1]))
+	require.Equal(t, reflect.TypeOf(c), reflect.TypeOf(rowResp[2]))
+	require.Equal(t, a, rowResp[0].(uint))
+	require.Equal(t, b, rowResp[1].(bool))
+	require.Equal(t, c, rowResp[2].(string))
 }
 
 func TestNewApiRunnerNilConfig(t *testing.T) {
 	_, err := NewRunner(nil)
-	assert.EqualError(t, err, "[ NewAPIRunner ] config is nil")
+	require.EqualError(t, err, "[ NewAPIRunner ] config is nil")
 }
 
 func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 	cfg := configuration.APIRunner{}
 	_, err := NewRunner(&cfg)
-	assert.EqualError(t, err, "[ NewAPIRunner ] Port must not be 0")
+	require.EqualError(t, err, "[ NewAPIRunner ] Address must not be empty")
 
-	cfg.Port = 100
+	cfg.Address = "address:100"
 	_, err = NewRunner(&cfg)
-	assert.EqualError(t, err, "[ NewAPIRunner ] Location must exist")
+	require.EqualError(t, err, "[ NewAPIRunner ] Location must exist")
 
 	cfg.Location = "test"
 	_, err = NewRunner(&cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

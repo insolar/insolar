@@ -18,15 +18,17 @@ package logicrunner
 
 import (
 	"context"
+	"crypto"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/testutils/certificate"
+	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -53,29 +55,46 @@ func TestBareHelloworld(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 
-	ce := certificate.GetTestCertificate()
-	nk := nodekeeper.GetTestNodekeeper(ce)
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+		return nil, nil
+	}
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
+
+	nk := nodekeeper.GetTestNodekeeper(mock)
+
 	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
-	am := l.GetArtifactManager()
-	assert.NoError(t, err, "Initialize runner")
 
-	mb := testmessagebus.NewTestMessageBus()
+	mb := testmessagebus.NewTestMessageBus(t)
+	mb.PulseNumber = 0
 
-	nw := network.GetTestNetwork()
-	assert.NoError(t, lr.Start(ctx, core.Components{
-		Ledger:     l,
-		MessageBus: mb,
-		Network:    nw,
-	}), "starting logicrunner")
-
-	MessageBusTrivialBehavior(mb, lr)
 	l.GetPulseManager().Set(
 		ctx,
-		core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}},
+		core.Pulse{PulseNumber: mb.PulseNumber, Entropy: core.Entropy{}},
 	)
+
+	nw := network.GetTestNetwork()
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
+	cm := &component.Manager{}
+	cm.Register(scheme)
+	cm.Register(l.GetPulseManager(), l.GetArtifactManager(), l.GetJetCoordinator())
+	cm.Inject(nk, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	err = cm.Start(ctx)
+	assert.NoError(t, err)
+
+	am := l.GetArtifactManager()
+
+	MessageBusTrivialBehavior(mb, lr)
 
 	hw := helloworld.NewHelloWorld()
 
@@ -84,7 +103,7 @@ func TestBareHelloworld(t *testing.T) {
 	_, _, protoRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
-	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: byteRecorRef(4)})
+	contract, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: byteRecorRef(4)}})
 	assert.NoError(t, err)
 
 	// TODO: use proper conversion
@@ -103,13 +122,13 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
-	key, _ := ecdsa.GeneratePrivateKey()
-	signed, _ := message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
+	parcel, err := parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil)
+	assert.NoError(t, err)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
 	resp, err := lr.Execute(
 		ctx,
-		signed,
+		parcel,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -123,13 +142,13 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
-	key, _ = ecdsa.GeneratePrivateKey()
-	signed, _ = message.NewSignedMessage(ctx, msg, testutils.RandomRef(), key, 0)
+	parcel, err = parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil)
+	assert.NoError(t, err)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
 	resp, err = lr.Execute(
 		ctx,
-		signed,
+		parcel,
 	)
 	assert.NoError(t, err, "contract call")
 

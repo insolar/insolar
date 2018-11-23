@@ -17,6 +17,8 @@
 package routing
 
 import (
+	"strconv"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -25,31 +27,40 @@ import (
 )
 
 type Table struct {
-	keeper network.NodeKeeper
+	NodeKeeper network.NodeKeeper
 }
 
 func (t *Table) isLocalNode(core.RecordRef) bool {
 	return true
 }
 
-func (t *Table) resolveRemoteNode(ref core.RecordRef) (string, error) {
-	return "", errors.New("not implemented")
+func (t *Table) resolveRemoteNode(ref core.RecordRef) (*host.Host, error) {
+	return nil, errors.New("not implemented")
 }
 
 func (t *Table) addRemoteHost(h *host.Host) {
 	log.Warn("not implemented")
 }
 
-// Resolve NodeID -> Address. Can initiate network requests.
-func (t *Table) Resolve(ref core.RecordRef) (string, error) {
+// Resolve NodeID -> ShortID, Address. Can initiate network requests.
+func (t *Table) Resolve(ref core.RecordRef) (*host.Host, error) {
 	if t.isLocalNode(ref) {
-		node := t.keeper.GetActiveNode(ref)
+		node := t.NodeKeeper.GetActiveNode(ref)
 		if node == nil {
-			return "", errors.New("no such local node")
+			return nil, errors.New("no such local node with NodeID: " + ref.String())
 		}
-		return node.PhysicalAddress(), nil
+		return host.NewHostNS(node.PhysicalAddress(), node.ID(), node.ShortID())
 	}
 	return t.resolveRemoteNode(ref)
+}
+
+// ResolveS ShortID -> NodeID, Address for node inside current globe.
+func (t *Table) ResolveS(id core.ShortNodeID) (*host.Host, error) {
+	node := t.NodeKeeper.GetActiveNodeByShortID(id)
+	if node == nil {
+		return nil, errors.New("no such local node with ShortID: " + strconv.FormatUint(uint64(id), 10))
+	}
+	return host.NewHostNS(node.PhysicalAddress(), node.ID(), node.ShortID())
 }
 
 // AddToKnownHosts add host to routing table.
@@ -63,7 +74,7 @@ func (t *Table) AddToKnownHosts(h *host.Host) {
 
 // GetLocalNodes get all nodes from the local globe.
 func (t *Table) GetLocalNodes() []core.RecordRef {
-	nodes := t.keeper.GetActiveNodes()
+	nodes := t.NodeKeeper.GetActiveNodes()
 	result := make([]core.RecordRef, len(nodes))
 	for i, node := range nodes {
 		result[i] = node.ID()
@@ -74,7 +85,7 @@ func (t *Table) GetLocalNodes() []core.RecordRef {
 // GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
 func (t *Table) GetRandomNodes(count int) []host.Host {
 	// not so random for now
-	nodes := t.keeper.GetActiveNodes()
+	nodes := t.NodeKeeper.GetActiveNodes()
 	resultCount := count
 	if count > len(nodes) {
 		resultCount = len(nodes)
@@ -97,10 +108,6 @@ func (t *Table) Rebalance(network.PartitionPolicy) {
 	log.Warn("not implemented")
 }
 
-func (t *Table) Start(components core.Components) {
-	t.keeper = components.NodeNetwork.(network.NodeKeeper)
-}
-
-func NewTable() network.RoutingTable {
-	return &Table{}
+func (t *Table) Inject(nodeKeeper network.NodeKeeper) {
+	t.NodeKeeper = nodeKeeper
 }

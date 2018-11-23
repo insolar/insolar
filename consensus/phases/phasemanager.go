@@ -23,43 +23,52 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 )
 
-type PhaseManager struct {
-	FirstPhase           *FirstPhase           `inject:""`
-	SecondPhase          *SecondPhase          `inject:""`
-	ThirdPhasePulse      *ThirdPhasePulse      `inject:""`
-	ThirdPhaseReferendum *ThirdPhaseReferendum `inject:""`
+type PhaseManager interface {
+	OnPulse(ctx context.Context, pulse *core.Pulse) error
+}
+
+type Phases struct {
+	FirstPhase           *FirstPhase
+	SecondPhase          *SecondPhase
+	ThirdPhasePulse      *ThirdPhasePulse
+	ThirdPhaseReferendum *ThirdPhaseReferendum
+
+	PulseManager core.PulseManager  `inject:""`
+	NodeKeeper   network.NodeKeeper `inject:""`
 }
 
 // NewPhaseManager creates and returns a new phase manager.
-func NewPhaseManager() *PhaseManager {
-	return &PhaseManager{}
+func NewPhaseManager() PhaseManager {
+	return &Phases{}
 }
 
 // Start starts calculate args on phases.
-func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
-	pulseDuration := pm.getPulseDuration()
+func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	var err error
 
+	pulseDuration, err := getPulseDuration(pulse)
+	if err != nil {
+		return errors.Wrap(err, "[ OnPulse ] Failed to get pulse duration")
+	}
+
+	var tctx context.Context
 	var cancel context.CancelFunc
 
-	ctx, cancel = contextTimeout(ctx, pulseDuration, 0.2)
-	checkError(runPhase(ctx, func() error {
-		return pm.FirstPhase.Execute(pulse)
-	}))
-	cancel()
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
 
-	firstPhaseState := pm.FirstPhase.State
-	pm.FirstPhase.State = &FirstPhaseState{}
+	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
+	checkError(err)
 
-	ctx, cancel = contextTimeout(ctx, pulseDuration, 0.2)
-	checkError(runPhase(ctx, func() error {
-		return pm.SecondPhase.Execute(firstPhaseState)
-	}))
-	cancel()
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
 
-	secondPhaseState := pm.SecondPhase.State
-	pm.SecondPhase.State = &SecondPhaseState{}
+	secondPhaseState, err := pm.SecondPhase.Execute(tctx, firstPhaseState)
+	checkError(err)
 
 	fmt.Println(secondPhaseState) // TODO: remove after use
 
@@ -73,22 +82,9 @@ func (pm *PhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	return nil
 }
 
-func (pm *PhaseManager) getPulseDuration() time.Duration {
-	// TODO: calculate
-	return 10 * time.Second
-}
-
-func runPhase(ctx context.Context, phase func() error) error {
-	done := make(chan error, 1)
-	go func() {
-		done <- phase()
-	}()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-done:
-		return err
-	}
+func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
+	duration := time.Duration(pulse.PulseNumber-pulse.PrevPulseNumber) * time.Second
+	return &duration, nil
 }
 
 func contextTimeout(ctx context.Context, duration time.Duration, k float64) (context.Context, context.CancelFunc) {

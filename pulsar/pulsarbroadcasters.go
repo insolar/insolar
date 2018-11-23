@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 
@@ -93,7 +92,7 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 		return
 	}
 
-	payload, err := currentPulsar.preparePayload(EntropyPayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Entropy: currentPulsar.GeneratedEntropy})
+	payload, err := currentPulsar.preparePayload(EntropyPayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Entropy: *currentPulsar.GetGeneratedEntropy()})
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
@@ -111,7 +110,7 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 	}
 }
 
-func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context) {
+func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context, pulse core.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debug("[sendPulseToPulsars]")
 	if currentPulsar.IsStateFailed() {
@@ -119,11 +118,7 @@ func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context) {
 	}
 
 	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
-	payload, err := currentPulsar.preparePayload(PulsePayload{Pulse: core.Pulse{
-		PulseNumber: currentPulsar.ProcessingPulseNumber,
-		Entropy:     currentPulsar.CurrentSlotEntropy,
-		Signs:       currentPulsar.CurrentSlotSenderConfirmations,
-	}})
+	payload, err := currentPulsar.preparePayload(PulsePayload{Pulse: pulse})
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
 	if err != nil {
@@ -182,8 +177,8 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 		return
 	}
 
-	signature, err := signData(currentPulsar.PrivateKey, core.PulseSenderConfirmation{
-		Entropy:         currentPulsar.CurrentSlotEntropy,
+	signature, err := signData(currentPulsar.CryptographyService, core.PulseSenderConfirmation{
+		Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 		PulseNumber:     currentPulsar.ProcessingPulseNumber,
 	})
@@ -194,7 +189,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	confirmation := core.PulseSenderConfirmation{
 		PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
-		Entropy:         currentPulsar.CurrentSlotEntropy,
+		Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 		Signature:       signature,
 	}
 
@@ -225,10 +220,14 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 
 	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
 	pulseForSending := core.Pulse{
-		PulseNumber:     currentPulsar.ProcessingPulseNumber,
-		Entropy:         currentPulsar.CurrentSlotEntropy,
-		Signs:           currentPulsar.CurrentSlotSenderConfirmations,
-		NextPulseNumber: currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
+		PulseNumber:      currentPulsar.ProcessingPulseNumber,
+		Entropy:          *currentPulsar.GetCurrentSlotEntropy(),
+		Signs:            currentPulsar.CurrentSlotSenderConfirmations,
+		NextPulseNumber:  currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
+		PrevPulseNumber:  currentPulsar.lastPulse.PulseNumber,
+		EpochPulseNumber: 1,
+		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
+		PulseTimestamp:   time.Now().Unix(),
 	}
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
@@ -248,7 +247,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 			t.Close()
 		}()
 	}()
-	go currentPulsar.sendPulseToPulsars(ctx)
+	go currentPulsar.sendPulseToPulsars(ctx, pulseForSending)
 
 	err = currentPulsar.Storage.SavePulse(&pulseForSending)
 	if err != nil {
@@ -272,28 +271,23 @@ func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsar
 		return
 	}
 
-	go func() {
-		err = t.Start()
+	go func(ctx context.Context) {
+		err = t.Start(ctx)
 		if err != nil {
 			logger.Error(err)
 		}
-	}()
+	}(ctx)
 
 	if err != nil {
 		return
 	}
 
 	logger.Debug("Init output port")
-	pulsarHostAddress, err := host.NewAddress(currentPulsar.Config.BootstrapListener.Address)
+	pulsarHost, err = host.NewHost(currentPulsar.Config.BootstrapListener.Address)
 	if err != nil {
 		return
 	}
-	pulsarHostID, err := id.NewID()
-	if err != nil {
-		return
-	}
-	pulsarHost = host.NewHost(pulsarHostAddress)
-	pulsarHost.ID = pulsarHostID
+	pulsarHost.NodeID = core.RecordRef{}
 	logger.Debug("Network is ready")
 
 	return
@@ -309,12 +303,11 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 
 	logger.Infof("Before sending pulse to bootstraps - %v", currentPulsar.Config.BootstrapNodes)
 	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
-		receiverAddress, err := host.NewAddress(bootstrapNode)
+		receiverHost, err := host.NewHost(bootstrapNode)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
-		receiverHost := host.NewHost(receiverAddress)
 
 		b := packet.NewBuilder(pulsarHost)
 		pingPacket := b.Receiver(receiverHost).Type(types.Ping).Build()
@@ -333,7 +326,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost 
 			logger.Error(pingResult.Error)
 			continue
 		}
-		receiverHost.ID = pingResult.Sender.ID
+		receiverHost.NodeID = pingResult.Sender.NodeID
 		logger.Debugf("ping request is done")
 
 		b = packet.NewBuilder(pulsarHost)

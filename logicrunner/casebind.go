@@ -28,28 +28,22 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
-	"golang.org/x/crypto/sha3"
 )
 
-func HashInterface(in interface{}) []byte {
-	s := []byte{}
-	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&s, ch).Encode(in)
+func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byte {
+	s, err := core.Serialize(in)
 	if err != nil {
 		panic("Can't marshal: " + err.Error())
 	}
-	sh := sha3.New224()
-	return sh.Sum(s)
+	return scheme.IntegrityHasher().Hash(s)
 }
 
-func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
-	if len(cr) < 1 {
+func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb core.CaseBind) (int, error) {
+	if len(cb.Requests) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
 
 	es := lr.UpsertExecution(ref)
-	ctx := context.TODO()
 	es.insContext = ctx
 	es.validate = true
 	es.objectbody = nil
@@ -60,10 +54,11 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			return errors.New("already validating this ref")
 		}
 		lr.caseBindReplays[ref] = core.CaseBindReplay{
-			Pulse:      p,
-			Records:    cr,
-			RecordsLen: len(cr),
-			Step:       0,
+			Pulse:    p,
+			CaseBind: cb,
+			Request:  0,
+			Record:   -1,
+			Steps:    0,
 		}
 		return nil
 	}()
@@ -89,11 +84,11 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		msg := start.Resp.(core.Message)
-		signed, err := message.NewSignedMessage(
-			ctx, msg, ref, lr.Network.GetPrivateKey(), lr.execution[ref].callContext.Pulse.PulseNumber,
+		parcel, err := lr.ParcelFactory.Create(
+			ctx, msg, ref, nil,
 		)
 		if err != nil {
-			return 0, errors.New("failed to create a signed message")
+			return 0, errors.New("failed to create a parcel message")
 		}
 
 		traceStep, step := lr.nextValidationStep(ref)
@@ -107,7 +102,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 
 		es.insContext = inslogger.ContextWithTrace(es.insContext, traceID)
-		ret, err := lr.Execute(es.insContext, signed)
+		ret, err := lr.Execute(es.insContext, parcel)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -138,44 +133,49 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 	}
 }
-func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+
+func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
-	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.CaseBind)
+	errstr := ""
+	if validationError != nil {
+		errstr = validationError.Error()
+	}
 	_, err := lr.MessageBus.Send(
 		ctx,
 		&message.ValidationResults{
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
-			Error:            validationError.Error(),
+			Error:            errstr,
 		},
 	)
 
-	return nil, err
+	return &reply.OK{}, err
 }
 
-func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidationResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(msg.RecordRef)
+	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
 	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.SignedMessage) (core.Reply, error) {
+func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ExecutorResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(msg.RecordRef)
+	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
 	c.AddExecutor(ctx, inmsg, msg)
-	return nil, nil
+	return &reply.OK{}, nil
 }
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
@@ -185,16 +185,17 @@ type ValidationBehaviour interface {
 	GetRole() core.JetRole
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
-	RegisterRequest(m message.IBaseLogicMessage) (*Ref, error)
+	RegisterRequest(p core.Parcel) (*Ref, error)
 }
 
 type ValidationSaver struct {
 	lr *LogicRunner
 }
 
-func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+func (vb ValidationSaver) RegisterRequest(p core.Parcel) (*Ref, error) {
 	ctx := context.TODO()
-	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
+	m := p.Message().(message.IBaseLogicMessage)
+	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +205,7 @@ func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, er
 
 	vb.lr.addObjectCaseRecord(m.GetReference(), core.CaseRecord{
 		Type:   core.CaseRecordTypeRequest,
-		ReqSig: HashInterface(m),
+		ReqSig: HashInterface(vb.lr.PlatformCryptographyScheme, m),
 		Resp:   reqref,
 	})
 	return &reqref, err
@@ -235,12 +236,13 @@ type ValidationChecker struct {
 	cb core.CaseBindReplay
 }
 
-func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+func (vb ValidationChecker) RegisterRequest(p core.Parcel) (*Ref, error) {
+	m := p.Message().(message.IBaseLogicMessage)
 	cr, _ := vb.lr.nextValidationStep(m.GetReference())
 	if core.CaseRecordTypeRequest != cr.Type {
 		return nil, errors.New("Wrong validation type on Request")
 	}
-	if !bytes.Equal(cr.ReqSig, HashInterface(m)) {
+	if !bytes.Equal(cr.ReqSig, HashInterface(vb.lr.PlatformCryptographyScheme, m)) {
 		return nil, errors.New("Wrong validation sig on Request")
 	}
 	if req, ok := cr.Resp.(Ref); ok {

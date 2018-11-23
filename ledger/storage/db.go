@@ -24,12 +24,10 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -44,13 +42,18 @@ const (
 	scopeIDSystem   byte = 5
 	scopeIDMessage  byte = 6
 	scopeIDBlob     byte = 7
+	scopeIDLocal    byte = 8
 
-	sysGenesis     byte = 1
-	sysLatestPulse byte = 2
+	sysGenesis                  byte = 1
+	sysLatestPulse              byte = 2
+	sysReplicatedPulse          byte = 3
+	sysLastPulseAsLightMaterial byte = 4
 )
 
 // DB represents BadgerDB storage implementation.
 type DB struct {
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+
 	db         *badger.DB
 	genesisRef *core.RecordRef
 
@@ -63,6 +66,12 @@ type DB struct {
 	txretiries int
 
 	idlocker *IDLocker
+
+	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
+	// for past pulses to locate data.
+	// It should only contain previous N pulses. It should be stored on disk.
+	nodeHistory     map[core.PulseNumber][]core.Node
+	nodeHistoryLock sync.Mutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
@@ -98,15 +107,16 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	}
 
 	db := &DB{
-		db:         bdb,
-		txretiries: conf.Storage.TxRetriesOnConflict,
-		idlocker:   NewIDLocker(),
+		db:          bdb,
+		txretiries:  conf.Storage.TxRetriesOnConflict,
+		idlocker:    NewIDLocker(),
+		nodeHistory: map[core.PulseNumber][]core.Node{},
 	}
 	return db, nil
 }
 
-// Bootstrap creates initial records in storage.
-func (db *DB) Bootstrap(ctx context.Context) error {
+// Init creates initial records in storage.
+func (db *DB) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
 	getGenesisRef := func() (*core.RecordRef, error) {
@@ -183,6 +193,11 @@ func (db *DB) GenesisRef() *core.RecordRef {
 func (db *DB) Close() error {
 	// TODO: add close flag and mutex guard on Close method
 	return db.db.Close()
+}
+
+// Stop stops DB component.
+func (db *DB) Stop(ctx context.Context) error {
+	return db.Close()
 }
 
 // GetBlob returns binary value stored by record ID.
@@ -307,7 +322,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 	var err error
 	db.waitinflight()
 
-	hw := hash.NewIDHash()
+	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err = hw.Write(prevHash)
 	if err != nil {
 		return nil, nil, err
@@ -356,57 +371,6 @@ func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 		return err
 	}
 	return db.set(ctx, k, encoded)
-}
-
-// AddPulse saves new pulse data and updates index.
-func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
-	return db.Update(ctx, func(tx *TransactionManager) error {
-		var latest core.PulseNumber
-		latest, err := tx.GetLatestPulseNumber(ctx)
-		if err != nil && err != ErrNotFound {
-			return err
-		}
-		pulseRec := record.PulseRecord{
-			PrevPulse:          latest,
-			Entropy:            pulse.Entropy,
-			PredictedNextPulse: pulse.NextPulseNumber,
-		}
-		var buf bytes.Buffer
-		enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-		err = enc.Encode(pulseRec)
-		if err != nil {
-			return err
-		}
-		err = tx.set(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), buf.Bytes())
-		if err != nil {
-			return err
-		}
-		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}), pulse.PulseNumber.Bytes())
-	})
-}
-
-// GetPulse returns pulse for provided pulse number.
-func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*record.PulseRecord, error) {
-	buf, err := db.get(ctx, prefixkey(scopeIDPulse, num.Bytes()))
-	if err != nil {
-		return nil, err
-	}
-
-	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
-	var rec record.PulseRecord
-	err = dec.Decode(&rec)
-	if err != nil {
-		return nil, err
-	}
-	return &rec, nil
-}
-
-// GetLatestPulseNumber returns current pulse number.
-func (db *DB) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
-	tx := db.BeginTransaction(false)
-	defer tx.Discard()
-
-	return tx.GetLatestPulseNumber(ctx)
 }
 
 // BeginTransaction opens a new transaction.
@@ -475,13 +439,9 @@ func (db *DB) GetBadgerDB() *badger.DB {
 
 // SetMessage persists message to the database
 func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, genericMessage core.Message) error {
-	messageBytes, err := message.ToBytes(genericMessage)
-	if err != nil {
-		return err
-	}
-
-	hw := hash.NewIDHash()
-	_, err = hw.Write(messageBytes)
+	messageBytes := message.ToBytes(genericMessage)
+	hw := db.PlatformCryptographyScheme.ReferenceHasher()
+	_, err := hw.Write(messageBytes)
 	if err != nil {
 		return err
 	}
@@ -492,6 +452,92 @@ func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, gene
 		prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
 		messageBytes,
 	)
+}
+
+// SetLocalData saves provided data to storage.
+func (db *DB) SetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error {
+	return db.set(
+		ctx,
+		bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), key}, nil),
+		data,
+	)
+}
+
+// GetLocalData retrieves data from storage.
+func (db *DB) GetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error) {
+	return db.get(
+		ctx,
+		bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), key}, nil),
+	)
+}
+
+// IterateLocalData iterates over all record with specified prefix and calls handler with key and value of that record.
+//
+// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
+func (db *DB) IterateLocalData(
+	ctx context.Context,
+	pulse core.PulseNumber,
+	prefix []byte,
+	handler func(k, v []byte) error,
+) error {
+	fullPrefix := bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), prefix}, nil)
+	return db.iterate(ctx, fullPrefix, handler)
+}
+
+// IterateRecords iterates over records.
+func (db *DB) IterateRecords(
+	ctx context.Context,
+	pulse core.PulseNumber,
+	handler func(id core.RecordID, rec record.Record) error,
+) error {
+	prefix := bytes.Join([][]byte{{scopeIDRecord}, pulse.Bytes()}, nil)
+
+	return db.iterate(ctx, prefix, func(k, v []byte) error {
+		id := core.NewRecordID(pulse, k)
+		rec := record.DeserializeRecord(v)
+		err := handler(*id, rec)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+// SetActiveNodes saves active nodes for pulse in memory.
+func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
+	db.nodeHistoryLock.Lock()
+	defer db.nodeHistoryLock.Unlock()
+
+	if _, ok := db.nodeHistory[pulse]; ok {
+		return errors.New("node history override is forbidden")
+	}
+
+	db.nodeHistory[pulse] = nodes
+
+	return nil
+}
+
+// GetActiveNodes return active nodes for specified pulse.
+func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
+	nodes, ok := db.nodeHistory[pulse]
+	if !ok {
+		return nil, errors.New("no nodes for this pulse")
+	}
+
+	return nodes, nil
+}
+
+// StoreKeyValues stores provided key/value pairs.
+func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
+	return db.Update(ctx, func(tx *TransactionManager) error {
+		for _, rec := range kvs {
+			err := tx.set(ctx, rec.K, rec.V)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // get wraps matching transaction manager method.
@@ -505,5 +551,29 @@ func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
 func (db *DB) set(ctx context.Context, key, value []byte) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		return tx.set(ctx, key, value)
+	})
+}
+
+func (db *DB) iterate(
+	ctx context.Context,
+	prefix []byte,
+	handler func(k, v []byte) error,
+) error {
+	return db.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			key := it.Item().KeyCopy(nil)[len(prefix):]
+			value, err := it.Item().ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+			err = handler(key, value)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }

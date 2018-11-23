@@ -271,12 +271,15 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		return errors.Wrap(err, "couldn't open template file for proxy")
 	}
 
+	methodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
+	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
+
 	data := map[string]interface{}{
 		"PackageName":         proxyPackageName,
 		"Types":               generateTypes(pf),
 		"ContractType":        pf.contract,
-		"MethodsProxies":      pf.functionInfoForProxy(pf.methods[pf.contract]),
-		"ConstructorsProxies": pf.functionInfoForProxy(pf.constructors[pf.contract]),
+		"MethodsProxies":      methodsProxies,
+		"ConstructorsProxies": constructorProxies,
 		"ClassReference":      classReference,
 		"Imports":             pf.generateImports(false),
 	}
@@ -361,6 +364,7 @@ func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 			extendImportsMap(pf, fun.Type.Results, imports)
 		}
 	}
+
 	return imports
 }
 

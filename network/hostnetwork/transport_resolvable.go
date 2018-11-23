@@ -17,28 +17,23 @@
 package hostnetwork
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
 
-// Resolver is an interface that helps TransportResolvable to resolve NodeID -> Address.
-type Resolver interface {
-	Resolve(nodeID core.RecordRef) (string, error)
-	AddToKnownHosts(h *host.Host)
-}
-
 // TransportResolvable is implementation of HostNetwork interface that is capable of address resolving.
 type TransportResolvable struct {
-	internalTransport InternalTransport
-	resolver          Resolver
+	internalTransport network.InternalTransport
+	resolver          network.RoutingTable
 }
 
 // Start listening to network requests.
-func (tr *TransportResolvable) Start() {
-	go tr.internalTransport.Start()
+func (tr *TransportResolvable) Start(ctx context.Context) {
+	tr.internalTransport.Start(ctx)
 }
 
 // Stop listening to network requests.
@@ -58,15 +53,10 @@ func (tr *TransportResolvable) GetNodeID() core.RecordRef {
 
 // SendRequest send request to a remote node.
 func (tr *TransportResolvable) SendRequest(request network.Request, receiver core.RecordRef) (network.Future, error) {
-	addressStr, err := tr.resolver.Resolve(receiver)
+	h, err := tr.resolver.Resolve(receiver)
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving NodeID -> Address")
 	}
-	address, err := host.NewAddress(addressStr)
-	if err != nil {
-		return nil, errors.Wrap(err, "error parsing string address")
-	}
-	h := &host.Host{NodeID: receiver, Address: address}
 	return tr.internalTransport.SendRequestPacket(request, h)
 }
 
@@ -79,7 +69,7 @@ func (tr *TransportResolvable) RegisterRequestHandler(t types.PacketType, handle
 	tr.internalTransport.RegisterPacketHandler(t, f)
 }
 
-// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
+// NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
 func (tr *TransportResolvable) NewRequestBuilder() network.RequestBuilder {
 	return tr.internalTransport.NewRequestBuilder()
 }
@@ -89,6 +79,6 @@ func (tr *TransportResolvable) BuildResponse(request network.Request, responseDa
 	return tr.internalTransport.BuildResponse(request, responseData)
 }
 
-func NewHostTransport(transport InternalTransport, resolver Resolver) network.HostNetwork {
+func NewHostTransport(transport network.InternalTransport, resolver network.RoutingTable) network.HostNetwork {
 	return &TransportResolvable{internalTransport: transport, resolver: resolver}
 }

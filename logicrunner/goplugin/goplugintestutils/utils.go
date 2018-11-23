@@ -26,14 +26,12 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
-	"github.com/ugorji/go/codec"
 )
 
 // PrependGoPath prepends `path` to GOPATH environment variable
@@ -169,17 +167,11 @@ func NewTestArtifactManager() *TestArtifactManager {
 	}
 }
 
-// Start implementation for tests
-func (t *TestArtifactManager) Start(components core.Components) error { return nil }
-
-// Stop implementation for tests
-func (t *TestArtifactManager) Stop() error { return nil }
-
 // GenesisRef implementation for tests
 func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx context.Context, message core.Message) (*core.RecordID, error) {
+func (t *TestArtifactManager) RegisterRequest(ctx context.Context, parcel core.Parcel) (*core.RecordID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
@@ -351,18 +343,15 @@ func (t *TestArtifactManager) RegisterValidation(
 
 // CBORMarshal - testing serialize helper
 func CBORMarshal(t testing.TB, o interface{}) []byte {
-	ch := new(codec.CborHandle)
-	var data []byte
-	err := codec.NewEncoderBytes(&data, ch).Encode(o)
+	data, err := core.Serialize(o)
 	assert.NoError(t, err, "Marshal")
 	return data
 }
 
 // CBORUnMarshal - testing deserialize helper
 func CBORUnMarshal(t testing.TB, data []byte) interface{} {
-	ch := new(codec.CborHandle)
 	var ret interface{}
-	err := codec.NewDecoderBytes(data, ch).Decode(&ret)
+	err := core.Deserialize(data, &ret)
 	assert.NoError(t, err, "serialise")
 	return ret
 }
@@ -397,7 +386,7 @@ func AMPublishCode(
 	codeRef.SetRecord(*codeID)
 
 	nonce := testutils.RandomRef()
-	protoID, err := am.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: nonce})
+	protoID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}})
 	assert.NoError(t, err)
 	protoRef = &core.RecordRef{}
 	protoRef.SetRecord(*protoID)
@@ -449,7 +438,9 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 
 	for name := range contracts {
 		nonce := testutils.RandomRef()
-		protoID, err := cb.ArtifactManager.RegisterRequest(ctx, &message.CallConstructor{PrototypeRef: nonce})
+		protoID, err := cb.ArtifactManager.RegisterRequest(
+			ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+		)
 		if err != nil {
 			return err
 		}

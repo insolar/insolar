@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,16 +22,14 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/cryptography"
 
 	"github.com/insolar/insolar/api/seedmanager"
-	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
@@ -83,17 +81,15 @@ func (ar *Runner) verifySignature(ctx context.Context, params request) error {
 		return errors.Wrap(err, "[ VerifySignature ] Can't marshal arguments for verify signature")
 	}
 
-	verified, err := ecdsa.Verify(args, params.Signature, key)
-	if err != nil {
-		return errors.Wrap(err, "[ VerifySignature ] Can't verify signature")
-	}
+	cs := cryptography.NewKeyBoundCryptographyService(nil)
+	verified := cs.Verify(key, core.SignatureFromBytes(params.Signature), args)
 	if !verified {
 		return errors.New("[ VerifySignature ] Incorrect signature")
 	}
 	return nil
 }
 
-func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
+func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
 		params := request{}
@@ -142,32 +138,23 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			return
 		}
 
-		args, err := core.MarshalArgs(*c.Genesis.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
-		if err != nil {
-			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't marshal args"))
-			return
-		}
-		res, err := ar.messageBus.Send(
+		reference := core.NewRefFromBase58(params.Reference)
+		res, err := ar.ContractRequester.SendRequest(
 			ctx,
-			&message.CallMethod{
-				ObjectRef: core.NewRefFromBase58(params.Reference),
-				Method:    "Call",
-				Arguments: args,
-			},
+			&reference,
+			"Call",
+			[]interface{}{*ar.Certificate.GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
 		)
 		if err != nil {
 			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't send message to message bus"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't send request"))
 			return
 		}
 
-		var result interface{}
-		var contractErr *foundation.Error
-		err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
+		result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
 		if err != nil {
 			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal params"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't extract response"))
 			return
 		}
 

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,10 +38,10 @@ var type2idTests = []struct {
 	{"CallRequest", &CallRequest{}, typeCallRequest},
 
 	// result records
-	{"ObjectActivateRecord", &ObjectActivateRecord{}, typeObjectActivate},
+	{"ObjectActivateRecord", &ObjectActivateRecord{}, typeActivate},
 	{"CodeRecord", &CodeRecord{}, typeCode},
 	{"DeactivationRecord", &DeactivationRecord{}, typeDeactivate},
-	{"ObjectAmendRecord", &ObjectAmendRecord{}, typeObjectAmend},
+	{"ObjectAmendRecord", &ObjectAmendRecord{}, typeAmend},
 	{"TypeRecord", &TypeRecord{}, typeType},
 	{"ChildRecord", &ChildRecord{}, typeChild},
 	{"GenesisRecord", &GenesisRecord{}, typeGenesis},
@@ -58,9 +59,11 @@ func Test_TypeIDConversion(t *testing.T) {
 }
 
 func TestSerializeDeserializeRecord(t *testing.T) {
+	cs := platformpolicy.NewPlatformCryptographyScheme()
+
 	rec := ObjectActivateRecord{
 		ObjectStateRecord: ObjectStateRecord{
-			Memory: CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+			Memory: CalculateIDForBlob(cs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		},
 	}
 	serialized := SerializeRecord(&rec)

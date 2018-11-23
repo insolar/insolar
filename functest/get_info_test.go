@@ -19,14 +19,13 @@ package functest
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetInfo(t *testing.T) {
 	info := getInfo(t)
-	assert.NotNil(t, info)
-	assert.NotEqual(t, "", info.RootDomain)
-	assert.NotEqual(t, "", info.RootMember)
-	assert.NotNil(t, info.Prototypes)
-	assert.NotEqual(t, 0, len(info.Prototypes))
+	require.NotNil(t, info)
+	require.NotEqual(t, "", info.RootDomain)
+	require.NotEqual(t, "", info.RootMember)
+	require.NotEqual(t, "", info.NodeDomain)
 }

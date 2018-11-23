@@ -48,7 +48,7 @@ which try reads and writes the same key simultaneously
 func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	objid := core.NewRecordID(100500, nil)

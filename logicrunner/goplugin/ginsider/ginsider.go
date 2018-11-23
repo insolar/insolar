@@ -42,17 +42,20 @@ import (
 // GoInsider is an RPC interface to run code of plugins
 type GoInsider struct {
 	dir              string
-	UpstreamProtocol string
-	UpstreamAddress  string
-	UpstreamClient   *rpc.Client
-	plugins          map[string]*plugin.Plugin
-	pluginsMutex     sync.Mutex
+	upstreamProtocol string
+	upstreamAddress  string
+
+	upstreamMutex  sync.Mutex // lock UpstreamClient change
+	UpstreamClient *rpc.Client
+
+	plugins      map[string]*plugin.Plugin
+	pluginsMutex sync.Mutex
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
 func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	res := GoInsider{dir: path, UpstreamProtocol: network, UpstreamAddress: address}
+	res := GoInsider{dir: path, upstreamProtocol: network, upstreamAddress: address}
 	res.plugins = make(map[string]*plugin.Plugin)
 	return &res
 }
@@ -88,6 +91,23 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
 		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
+	}
+
+	if args.Context.Caller.IsEmpty() {
+		attr, err := p.Lookup("INSATTR_" + args.Method + "_API")
+		if err != nil {
+			return errors.Wrapf(
+				err, "Calling non INSATTRAPI method %s (code ref: %s)",
+				args.Method, args.Code.String(),
+			)
+		}
+		api, ok := attr.(*bool)
+		if !ok {
+			return errors.Errorf("INSATTRAPI attribute for method %s is not boolean", args.Method)
+		}
+		if !*api {
+			return errors.Errorf("Calling non INSATTRAPI method ")
+		}
 	}
 
 	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
@@ -150,13 +170,15 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 
 // Upstream returns RPC client connected to upstream server (goplugin)
 func (gi *GoInsider) Upstream() (*rpc.Client, error) {
+	gi.upstreamMutex.Lock()
+	defer gi.upstreamMutex.Unlock()
 	if gi.UpstreamClient != nil {
 		return gi.UpstreamClient, nil
 	}
 
-	client, err := rpc.Dial(gi.UpstreamProtocol, gi.UpstreamAddress)
+	client, err := rpc.Dial(gi.upstreamProtocol, gi.upstreamAddress)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't dial '%s' over %s", gi.UpstreamAddress, gi.UpstreamProtocol)
+		os.Exit(0)
 	}
 
 	gi.UpstreamClient = client
@@ -189,6 +211,9 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 	res := rpctypes.UpGetCodeResp{}
 	err = client.Call("RPC.GetCode", req, &res)
 	if err != nil {
+		if err == rpc.ErrShutdown {
+			os.Exit(0)
+		}
 		return "", errors.Wrap(err, "on calling main API")
 	}
 
@@ -256,6 +281,9 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, arg
 	res := rpctypes.UpRouteResp{}
 	err = client.Call("RPC.RouteCall", req, &res)
 	if err != nil {
+		if err == rpc.ErrShutdown {
+			os.Exit(0)
+		}
 		return nil, errors.Wrap(err, "on calling main API")
 	}
 
@@ -280,6 +308,9 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 	res := rpctypes.UpSaveAsChildResp{}
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
+		if err == rpc.ErrShutdown {
+			os.Exit(0)
+		}
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
@@ -301,6 +332,9 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([
 	}
 	err = client.Call("RPC.GetObjChildren", req, &res)
 	if err != nil {
+		if err == rpc.ErrShutdown {
+			os.Exit(0)
+		}
 		return nil, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
 	}
 
@@ -325,6 +359,9 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 	res := rpctypes.UpSaveAsDelegateResp{}
 	err = client.Call("RPC.SaveAsDelegate", req, &res)
 	if err != nil {
+		if err == rpc.ErrShutdown {
+			os.Exit(0)
+		}
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
@@ -347,6 +384,9 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 	res := rpctypes.UpGetDelegateResp{}
 	err = client.Call("RPC.GetDelegate", req, &res)
 	if err != nil {
+		if err == rpc.ErrShutdown {
+			os.Exit(0)
+		}
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
@@ -367,6 +407,9 @@ func (gi *GoInsider) DeactivateObject(object core.RecordRef) error {
 	res := rpctypes.UpDeactivateObjectResp{}
 	err = client.Call("RPC.DeactivateObject", req, &res)
 	if err != nil {
+		if err == rpc.ErrShutdown {
+			os.Exit(0)
+		}
 		return errors.Wrap(err, "on calling main API")
 	}
 

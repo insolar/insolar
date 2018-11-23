@@ -23,49 +23,124 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
+	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesis"
+	"github.com/insolar/insolar/genesisdataprovider"
+	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/network/state"
 	"github.com/insolar/insolar/networkcoordinator"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/version/manager"
 )
 
-// InitComponents creates and links all insolard components
-func InitComponents(ctx context.Context, cfg configuration.Configuration, isBootstrap bool) (*component.Manager, *ComponentManager, *Repl, error) {
+type bootstrapComponents struct {
+	CryptographyService        core.CryptographyService
+	PlatformCryptographyScheme core.PlatformCryptographyScheme
+	KeyStore                   core.KeyStore
+	KeyProcessor               core.KeyProcessor
+	Certificate                core.Certificate
+}
+
+func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
+	earlyComponents := component.Manager{}
+
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
+	checkError(ctx, err, "failed to load KeyStore: ")
+
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	cryptographyService := cryptography.NewCryptographyService()
+	earlyComponents.Register(platformCryptographyScheme, keyStore)
+	earlyComponents.Inject(cryptographyService, keyProcessor)
+
+	return bootstrapComponents{
+		CryptographyService:        cryptographyService,
+		PlatformCryptographyScheme: platformCryptographyScheme,
+		KeyStore:                   keyStore,
+		KeyProcessor:               keyProcessor,
+	}
+}
+
+func initCertificate(
+	ctx context.Context,
+	cfg configuration.Configuration,
+	isBootstrap bool,
+	cryptographyService core.CryptographyService,
+	keyProcessor core.KeyProcessor,
+) *certificate.Certificate {
 	var cert *certificate.Certificate
 	var err error
+
+	publicKey, err := cryptographyService.GetPublicKey()
+	checkError(ctx, err, "failed to retrieve node public key")
+
 	if isBootstrap {
-		cert, err = certificate.NewCertificatesWithKeys(cfg.KeysPath)
+		cert, err = certificate.NewCertificatesWithKeys(publicKey, keyProcessor)
 		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
 	} else {
-		cert, err = certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
+		cert, err = certificate.ReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
 		checkError(ctx, err, "failed to start Certificate")
 	}
 
+	return cert
+}
+
+// initComponents creates and links all insolard components
+func initComponents(
+	ctx context.Context,
+	cfg configuration.Configuration,
+	cryptographyService core.CryptographyService,
+	platformCryptographyScheme core.PlatformCryptographyScheme,
+	keyStore core.KeyStore,
+	keyProcessor core.KeyProcessor,
+	cert core.Certificate,
+	isGenesis bool,
+	genesisConfigPath string,
+	genesisKeyOut string,
+
+) (*component.Manager, *Repl, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	ledger, err := ledger.NewLedger(ctx, cfg.Ledger)
-	checkError(ctx, err, "failed to start Ledger")
-
-	nw, err := servicenetwork.NewServiceNetwork(cfg)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme)
 	checkError(ctx, err, "failed to start Network")
+
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
 
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	gen, err := genesis.NewGenesis(cfg.Genesis)
-	checkError(ctx, err, "failed to start Bootstrapper")
+	var gen core.Genesis
+	if isGenesis {
+		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
+		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
+	} else {
+		gen, err = genesis.NewGenesis(isGenesis, "", "")
+		checkError(ctx, err, "failed to start Bootstrapper")
+	}
+
+	contractRequester, err := contractrequester.New()
+	checkError(ctx, err, "failed to start ContractRequester")
+
+	genesisDataProvider, err := genesisdataprovider.New()
+	checkError(ctx, err, "failed to start GenesisDataProvider")
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
@@ -73,43 +148,50 @@ func InitComponents(ctx context.Context, cfg configuration.Configuration, isBoot
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics)
 	checkError(ctx, err, "failed to start Metrics")
 
+	networkSwitcher, err := state.NewNetworkSwitcher()
+	checkError(ctx, err, "failed to start NetworkSwitcher")
+
 	networkCoordinator, err := networkcoordinator.New()
 	checkError(ctx, err, "failed to start NetworkCoordinator")
 
-	versionManager, err := manager.NewVersionManager(cfg.VersionManager)
+	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
 	// move to logic runner ??
-	err = logicRunner.OnPulse(*pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
+	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
 	cm := component.Manager{}
 	cm.Register(
+		platformCryptographyScheme,
+		keyStore,
+		cryptographyService,
+		keyProcessor,
 		cert,
 		nodeNetwork,
-		logicRunner,
-		ledger,
-		nw,
-		messageBus,
-		gen,
-		apiRunner,
-		metricsHandler,
-		networkCoordinator,
-		versionManager,
 	)
 
-	cmOld := ComponentManager{components: core.Components{
-		Certificate:        cert,
-		NodeNetwork:        nodeNetwork,
-		LogicRunner:        logicRunner,
-		Ledger:             ledger,
-		Network:            nw,
-		MessageBus:         messageBus,
-		Genesis:            gen,
-		APIRunner:          apiRunner,
-		NetworkCoordinator: networkCoordinator,
-		VersionManager:     versionManager,
-	}}
+	components := ledger.GetLedgerComponents(cfg.Ledger)
+	ld := ledger.Ledger{} // TODO: remove me with cmOld
+	components = append(components, []interface{}{
+		nw,
+		messageBus,
+		contractRequester,
+		&ld,
+		logicRunner,
+		delegationTokenFactory,
+		parcelFactory,
+		gen,
+		genesisDataProvider,
+		apiRunner,
+		metricsHandler,
+		networkSwitcher,
+		networkCoordinator,
+		phases.NewPhaseManager(),
+		cryptographyService,
+	}...)
 
-	return &cm, &cmOld, &Repl{Manager: ledger.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
+	cm.Inject(components...)
+
+	return &cm, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }

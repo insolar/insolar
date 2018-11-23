@@ -23,26 +23,52 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
-	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
 	"github.com/satori/go.uuid"
+	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
+type inputParams struct {
+	configPath string
+}
+
+func parseInputParams() inputParams {
+	var rootCmd = &cobra.Command{Use: "insolard"}
+	var result inputParams
+	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	err := rootCmd.Execute()
+	if err != nil {
+		fmt.Println("Wrong input params:", err.Error())
+	}
+
+	return result
+}
+
 // Need to fix problem with start pulsar
 func main() {
+	params := parseInputParams()
 	uniqueID := RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), uniqueID)
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
-	err := cfgHolder.Load()
+	var err error
+	if len(params.configPath) != 0 {
+		err = cfgHolder.LoadFromFile(params.configPath)
+	} else {
+		err = cfgHolder.Load()
+	}
 	if err != nil {
 		inslog.Warnln("failed to load configuration from file: ", err.Error())
 	}
@@ -85,11 +111,18 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
-	cert, err := certificate.NewCertificatesWithKeys(cfg.KeysPath)
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
+	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	cryptographyService := cryptography.NewCryptographyService()
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	cm := &component.Manager{}
+	cm.Register(cryptographyScheme, keyStore, keyProcessor)
+	cm.Inject(cryptographyService)
 
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
@@ -97,12 +130,15 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 		panic(err)
 	}
 	switcher := &pulsar.StateSwitcherImpl{}
-	server, err := pulsar.NewPulsar(cfg.Pulsar,
+	server, err := pulsar.NewPulsar(
+		cfg.Pulsar,
+		cryptographyService,
+		cryptographyScheme,
+		keyProcessor,
 		storage,
 		&pulsar.RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
 		switcher,
-		cert,
 		net.Listen,
 	)
 

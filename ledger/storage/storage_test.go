@@ -20,8 +20,10 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -36,7 +38,7 @@ import (
 func TestDB_GetRecordNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	rec, err := db.GetRecord(ctx, &core.RecordID{})
@@ -47,7 +49,7 @@ func TestDB_GetRecordNotFound(t *testing.T) {
 func TestDB_SetRecord(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	rec := &record.CallRequest{}
@@ -65,7 +67,7 @@ func TestDB_SetRecord(t *testing.T) {
 func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	idx, err := db.GetObjectIndex(ctx, core.NewRecordID(0, hexhash("5000")), false)
@@ -76,7 +78,7 @@ func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
@@ -94,7 +96,7 @@ func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	drop, err := db.GetDrop(ctx, 1)
@@ -105,7 +107,7 @@ func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 func TestDB_CreateDrop(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
@@ -116,10 +118,12 @@ func TestDB_CreateDrop(t *testing.T) {
 			Entropy:     core.Entropy{1, 2, 3},
 		},
 	)
+	cs := platformpolicy.NewPlatformCryptographyScheme()
+
 	for i := 1; i < 4; i++ {
 		setRecordMessage := message.SetRecord{
 			Record: record.SerializeRecord(&record.CodeRecord{
-				Code: record.CalculateIDForBlob(pulse, []byte{byte(i)}),
+				Code: record.CalculateIDForBlob(cs, pulse, []byte{byte(i)}),
 			}),
 		}
 		db.SetMessage(ctx, pulse, &setRecordMessage)
@@ -142,7 +146,7 @@ func TestDB_CreateDrop(t *testing.T) {
 func TestDB_SetDrop(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	drop42 := jetdrop.JetDrop{
@@ -160,7 +164,7 @@ func TestDB_SetDrop(t *testing.T) {
 func TestDB_AddPulse(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	err := db.AddPulse(
@@ -172,5 +176,54 @@ func TestDB_AddPulse(t *testing.T) {
 	assert.Equal(t, core.PulseNumber(42), latestPulse)
 	pulse, err := db.GetPulse(ctx, latestPulse)
 	assert.NoError(t, err)
-	assert.Equal(t, record.PulseRecord{PrevPulse: core.FirstPulseNumber, Entropy: core.Entropy{1, 2, 3}}, *pulse)
+	prev := core.PulseNumber(core.FirstPulseNumber)
+	assert.Equal(t, storage.Pulse{Prev: &prev, Pulse: core.Pulse{Entropy: core.Entropy{1, 2, 3}, PulseNumber: 42}}, *pulse)
+}
+
+func TestDB_SetLocalData(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	err := db.SetLocalData(ctx, 0, []byte{1}, []byte{2})
+	require.NoError(t, err)
+
+	data, err := db.GetLocalData(ctx, 0, []byte{1})
+	require.NoError(t, err)
+	assert.Equal(t, []byte{2}, data)
+
+	_, err = db.GetLocalData(ctx, 1, []byte{1})
+	assert.Equal(t, storage.ErrNotFound, err)
+}
+
+func TestDB_IterateLocalData(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	err := db.SetLocalData(ctx, 1, []byte{1, 1}, []byte{1})
+	require.NoError(t, err)
+	err = db.SetLocalData(ctx, 1, []byte{1, 2}, []byte{2})
+	require.NoError(t, err)
+	err = db.SetLocalData(ctx, 1, []byte{2, 1}, []byte{3})
+	require.NoError(t, err)
+	err = db.SetLocalData(ctx, 2, []byte{1, 1}, []byte{4})
+	require.NoError(t, err)
+
+	type tuple struct {
+		k []byte
+		v []byte
+	}
+	var results []tuple
+	err = db.IterateLocalData(ctx, 1, []byte{1}, func(k, v []byte) error {
+		results = append(results, tuple{k: k, v: v})
+		return nil
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []tuple{
+		{k: []byte{1}, v: []byte{1}},
+		{k: []byte{2}, v: []byte{2}},
+	}, results)
 }

@@ -12,6 +12,8 @@ var PrototypeReference = core.NewRefFromBase58("")
 // RootDomain holds proxy type
 type RootDomain struct {
 	Reference core.RecordRef
+	Prototype core.RecordRef
+	Code      core.RecordRef
 }
 
 // ContractConstructorHolder holds logic with object construction
@@ -75,63 +77,63 @@ func (r *RootDomain) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetPrototype returns reference to the prototype
-func (r *RootDomain) GetPrototype() core.RecordRef {
-	return PrototypeReference
+// GetPrototype returns reference to the code
+func (r *RootDomain) GetPrototype() (core.RecordRef, error) {
+	if r.Prototype == core.NewRefFromBase58("") {
+		ret := [2]interface{}{}
+		var ret0 core.RecordRef
+		ret[0] = &ret0
+		var ret1 *foundation.Error
+		ret[1] = &ret1
+
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0))
+		if err != nil {
+			return ret0, err
+		}
+
+		err = proxyctx.Current.Deserialize(res, &ret)
+		if err != nil {
+			return ret0, err
+		}
+
+		if ret1 != nil {
+			return ret0, ret1
+		}
+
+		r.Prototype = ret0
+	}
+
+	return r.Prototype, nil
+
 }
 
-// Authorize is proxy generated method
-func (r *RootDomain) Authorize() (string, []core.NodeRole, error) {
-	var args [0]interface{}
+// GetCode returns reference to the code
+func (r *RootDomain) GetCode() (core.RecordRef, error) {
+	if r.Code == core.NewRefFromBase58("") {
+		ret := [2]interface{}{}
+		var ret0 core.RecordRef
+		ret[0] = &ret0
+		var ret1 *foundation.Error
+		ret[1] = &ret1
 
-	var argsSerialized []byte
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0))
+		if err != nil {
+			return ret0, err
+		}
 
-	ret := [3]interface{}{}
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 []core.NodeRole
-	ret[1] = &ret1
-	var ret2 *foundation.Error
-	ret[2] = &ret2
+		err = proxyctx.Current.Deserialize(res, &ret)
+		if err != nil {
+			return ret0, err
+		}
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, ret1, err
+		if ret1 != nil {
+			return ret0, ret1
+		}
+
+		r.Code = ret0
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Authorize", argsSerialized)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	if ret2 != nil {
-		return ret0, ret1, ret2
-	}
-	return ret0, ret1, nil
-}
-
-// AuthorizeNoWait is proxy generated method
-func (r *RootDomain) AuthorizeNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Authorize", argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return r.Code, nil
 }
 
 // CreateMember is proxy generated method
@@ -289,6 +291,58 @@ func (r *RootDomain) DumpAllUsersNoWait() error {
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllUsers", argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Info is proxy generated method
+func (r *RootDomain) Info() (interface{}, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Info", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// InfoNoWait is proxy generated method
+func (r *RootDomain) InfoNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Info", argsSerialized)
 	if err != nil {
 		return err
 	}

@@ -18,14 +18,11 @@ package storage
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
@@ -118,14 +115,12 @@ func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) 
 // GetBlob returns binary value stored by record ID.
 func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 	k := prefixkey(scopeIDBlob, id[:])
-	inslogger.FromContext(ctx).Debugf(
-		"GetRecord by id %v (prefix=%v)", id, byte2hex(scopeIDBlob))
 	return m.get(ctx, k)
 }
 
 // SetBlob saves binary value for provided pulse.
 func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
-	id := record.CalculateIDForBlob(pulseNumber, blob)
+	id := record.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
 	k := prefixkey(scopeIDBlob, id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
@@ -150,8 +145,6 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, id[:])
-	inslogger.FromContext(ctx).Debugf(
-		"GetRecord by id %v (prefix=%v)", id, byte2hex(scopeIDRecord))
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -164,7 +157,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
-	recHash := hash.NewIDHash()
+	recHash := m.db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := rec.WriteHashData(recHash)
 	if err != nil {
 		return nil, err
@@ -223,18 +216,9 @@ func (m *TransactionManager) SetObjectIndex(
 	return m.set(ctx, k, encoded)
 }
 
-// GetLatestPulseNumber returns current pulse number.
-func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
-	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
-	if err != nil {
-		return 0, err
-	}
-	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
-}
-
 // set stores value by key.
 func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
-	inslogger.FromContext(ctx).Debugf("set key %v", bytes2hex(key))
+	debugf(ctx, "set key %v", bytes2hex(key))
 
 	m.txupdates[string(key)] = keyval{k: key, v: value}
 	return nil
@@ -242,7 +226,7 @@ func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
 
 // get returns value by key.
 func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error) {
-	inslogger.FromContext(ctx).Debugf("get key %v", bytes2hex(key))
+	debugf(ctx, "get key %v", bytes2hex(key))
 
 	if kv, ok := m.txupdates[string(key)]; ok {
 		return kv.v, nil

@@ -34,6 +34,7 @@ func TestPulseManager_Current(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	c := core.Components{LogicRunner: lr}
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 

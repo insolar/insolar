@@ -21,7 +21,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBaseConsensus_exchangeDataWithOtherParticipants(t *testing.T) {
@@ -35,20 +36,22 @@ func TestBaseConsensus_exchangeDataWithOtherParticipants(t *testing.T) {
 	participant4 := NewParticipant(4, nil)
 	participant5 := NewParticipant(5, list5)
 
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
 	c := baseConsensus{self: self,
 		allParticipants: []Participant{participant2, self, participant3, participant5, participant4},
 		communicator:    &testCommunicator{self: self},
 		holder:          &mockUnsyncHolder{},
-		results:         newExchangeResults(5),
+		results:         newExchangeResults(scheme, 5),
 	}
 
 	ctx := context.Background()
 	c.exchangeDataWithOtherParticipants(ctx)
 
-	assert.Equal(t, 1, len(c.results.data[participant2.GetID()]))
-	assert.Equal(t, newActiveNode(12, 0), c.results.data[participant2.GetID()][0])
+	require.Equal(t, 1, len(c.results.data[participant2.GetID()]))
+	require.Equal(t, newActiveNode(12, 0), c.results.data[participant2.GetID()][0])
 
-	assert.Equal(t, 2, len(c.results.data[participant5.GetID()]))
-	assert.Equal(t, newActiveNode(15, 0), c.results.data[participant5.GetID()][0])
-	assert.Equal(t, newActiveNode(25, 0), c.results.data[participant5.GetID()][1])
+	require.Equal(t, 2, len(c.results.data[participant5.GetID()]))
+	require.Equal(t, newActiveNode(15, 0), c.results.data[participant5.GetID()][0])
+	require.Equal(t, newActiveNode(25, 0), c.results.data[participant5.GetID()][1])
 }

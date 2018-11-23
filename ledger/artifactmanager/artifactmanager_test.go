@@ -24,14 +24,15 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -63,15 +64,20 @@ func getTestData(t *testing.T) (
 	*LedgerArtifactManager,
 	func(), // cleaner
 ) {
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
-	mb := testmessagebus.NewTestMessageBus()
-	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}}
-	handler.Link(core.Components{MessageBus: mb})
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	mb := testmessagebus.NewTestMessageBus(t)
+	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, PlatformCryptographyScheme: scheme, recent: storage.NewRecentStorage(1)}
+
+	handler.Bus = mb
+	err := handler.Init(ctx)
+	require.NoError(t, err)
 	am := LedgerArtifactManager{
-		db:                   db,
-		messageBus:           mb,
-		getChildrenChunkSize: 100,
+		db:                         db,
+		DefaultBus:                 mb,
+		getChildrenChunkSize:       100,
+		PlatformCryptographyScheme: scheme,
 	}
 
 	return ctx, db, &am, cleaner
@@ -82,12 +88,12 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
-	msg := message.GenesisRequest{Name: "my little message"}
-	id, err := am.RegisterRequest(ctx, &msg)
+	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "my little message"}}
+	id, err := am.RegisterRequest(ctx, &parcel)
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, id)
 	assert.NoError(t, err)
-	assert.Equal(t, message.MustSerializeBytes(&msg), rec.(*record.CallRequest).Payload)
+	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.CallRequest).Payload)
 }
 
 func TestLedgerArtifactManager_DeclareType(t *testing.T) {
@@ -129,7 +135,7 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 			Domain:  domainRef,
 			Request: requestRef,
 		},
-		Code:        record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+		Code:        record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		MachineType: core.MachineTypeBuiltin,
 	})
 }
@@ -173,7 +179,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 			Request: objRef,
 		},
 		ObjectStateRecord: record.ObjectStateRecord{
-			Memory:      record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, memory),
+			Memory:      record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
 			Image:       *codeRef,
 			IsPrototype: false,
 		},
@@ -274,7 +280,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 			Request: requestRef,
 		},
 		ObjectStateRecord: record.ObjectStateRecord{
-			Memory:      record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, memory),
+			Memory:      record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
 			Image:       *prototype,
 			IsPrototype: false,
 		},
@@ -317,7 +323,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 				Domain: domainRef,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{3}),
+				Memory: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{3}),
 			},
 			Parent: *parentRef,
 		},
@@ -328,7 +334,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 			Domain: domainRef,
 		},
 		ObjectStateRecord: record.ObjectStateRecord{
-			Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{4}),
+			Memory: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{4}),
 			Image:  *prototypeRef,
 		},
 	})
@@ -371,7 +377,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 				Domain: domainRef,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{0}),
+				Memory: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{0}),
 			},
 		})
 	child1Ref := genRandomRef(1)
@@ -488,9 +494,9 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	defer cleaner()
 
 	codeRecord := record.CodeRecord{
-		Code: record.CalculateIDForBlob(core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
+		Code: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
 	}
-	recHash := hash.NewIDHash()
+	recHash := am.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := codeRecord.WriteHashData(recHash)
 	assert.NoError(t, err)
 	latestPulse, err := db.GetLatestPulseNumber(ctx)
@@ -500,14 +506,12 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	setRecordMessage := message.SetRecord{
 		Record: record.SerializeRecord(&codeRecord),
 	}
-	messageBytes, err := message.ToBytes(&setRecordMessage)
-	assert.NoError(t, err)
 
-	rep, err := am.messageBus.Send(
+	rep, err := am.DefaultBus.Send(
 		ctx,
 		&message.JetDrop{
 			Messages: [][]byte{
-				messageBytes,
+				message.ToBytes(&setRecordMessage),
 			},
 			PulseNumber: core.GenesisPulse.PulseNumber,
 		},
@@ -525,7 +529,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	ctx, _, am, cleaner := getTestData(t)
 	defer cleaner()
 
-	objID, err := am.RegisterRequest(ctx, &message.GenesisRequest{Name: "object"})
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "object"}})
 	objRef := genRefWithID(objID)
 	assert.NoError(t, err)
 

@@ -18,7 +18,7 @@ package pulsar
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"crypto"
 	"fmt"
 	"sync"
 
@@ -102,7 +102,7 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 
 	}
 	if currentPulsar.isStandalone() {
-		currentPulsar.CurrentSlotEntropy = currentPulsar.GeneratedEntropy
+		currentPulsar.SetCurrentSlotEntropy(currentPulsar.GetGeneratedEntropy())
 		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
 		currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
 		return
@@ -110,13 +110,13 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 
 	type bftMember struct {
 		PubPem string
-		PubKey *ecdsa.PublicKey
+		PubKey crypto.PublicKey
 	}
 
 	var finalEntropySet []core.Entropy
 
 	keys := []string{currentPulsar.PublicKeyRaw}
-	activePulsars := []*bftMember{{currentPulsar.PublicKeyRaw, &currentPulsar.PrivateKey.PublicKey}}
+	activePulsars := []*bftMember{{currentPulsar.PublicKeyRaw, currentPulsar.PublicKey}}
 	for key, neighbour := range currentPulsar.Neighbours {
 		activePulsars = append(activePulsars, &bftMember{key, neighbour.PublicKey})
 		keys = append(keys, key)
@@ -134,7 +134,13 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 				continue
 			}
 
-			ok, err := checkSignature(bftCell.GetEntropy(), column.PubPem, bftCell.GetSign())
+			ok, err := checkSignature(
+				currentPulsar.CryptographyService,
+				currentPulsar.KeyProcessor,
+				bftCell.GetEntropy(),
+				column.PubPem,
+				bftCell.GetSign(),
+			)
 			if !ok || err != nil {
 				currentColumnStat["nil"]++
 				continue
@@ -180,17 +186,17 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 }
 
 func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.Entropy, activePulsars []string) {
-	currentPulsar.CurrentSlotEntropy = finalEntropy
-	chosenPulsar, err := selectByEntropy(finalEntropy, activePulsars, len(activePulsars))
+	currentPulsar.SetCurrentSlotEntropy(&finalEntropy)
+	chosenPulsar, err := selectByEntropy(currentPulsar.PlatformCryptographyScheme, finalEntropy, activePulsars, len(activePulsars))
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 	}
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
 		//here confirmation myself
-		signature, err := signData(currentPulsar.PrivateKey, core.PulseSenderConfirmation{
+		signature, err := signData(currentPulsar.CryptographyService, core.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
-			Entropy:         currentPulsar.CurrentSlotEntropy,
+			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		})
 		if err != nil {
@@ -201,7 +207,7 @@ func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.
 		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = core.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Signature:       signature,
-			Entropy:         currentPulsar.CurrentSlotEntropy,
+			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		}
 		currentPulsar.currentSlotSenderConfirmationsLock.Unlock()

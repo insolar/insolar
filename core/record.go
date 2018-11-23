@@ -17,12 +17,11 @@
 package core
 
 import (
+	"bytes"
 	"encoding/binary"
-	"encoding/hex"
+	"encoding/json"
 
 	"github.com/jbenet/go-base58"
-
-	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 const (
@@ -37,9 +36,9 @@ const (
 // RecordID is a unified record ID.
 type RecordID [RecordIDSize]byte
 
-// String implements stringer on RecordID and returns hex value
+// String implements stringer on RecordID and returns base58 encoded value
 func (id *RecordID) String() string {
-	return hex.EncodeToString(id[:])
+	return base58.Encode(id[:])
 }
 
 // NewRecordID generates RecordID byte representation.
@@ -55,10 +54,17 @@ func (id *RecordID) Bytes() []byte {
 	return id[:]
 }
 
-// Pulse returns byte slice of RecordID.
+// Pulse returns a copy of Pulse part of RecordID.
 func (id *RecordID) Pulse() PulseNumber {
 	pulse := binary.BigEndian.Uint32(id[:PulseNumberSize])
 	return PulseNumber(pulse)
+}
+
+// Hash returns a copy of Hash part of RecordID.
+func (id *RecordID) Hash() []byte {
+	recHash := make([]byte, RecordHashSize)
+	copy(recHash, id[PulseNumberSize:])
+	return recHash
 }
 
 // Equal checks if reference points to the same record.
@@ -67,6 +73,14 @@ func (id *RecordID) Equal(other *RecordID) bool {
 		return false
 	}
 	return *id == *other
+}
+
+// MarshalJSON serializes ID into JSON.
+func (id *RecordID) MarshalJSON() ([]byte, error) {
+	if id == nil {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(base58.Encode(id[:]))
 }
 
 // RecordRef is a unified record reference.
@@ -127,13 +141,9 @@ func (ref RecordRef) Equal(other RecordRef) bool {
 	return ref == other
 }
 
-// GenRequest calculates RecordRef for request message from pulse number and request's payload.
-func GenRequest(pn PulseNumber, payload []byte) *RecordRef {
-	ref := NewRecordRef(
-		RecordID{},
-		*NewRecordID(pn, hash.IDHashBytes(payload)),
-	)
-	return ref
+// IsEmpty - check for void
+func (ref RecordRef) IsEmpty() bool {
+	return ref.Equal(RecordRef{})
 }
 
 // NewRefFromBase58 deserializes reference from base58 encoded string.
@@ -143,4 +153,20 @@ func NewRefFromBase58(str string) RecordRef {
 	var ref RecordRef
 	copy(ref[:], decoded)
 	return ref
+}
+
+// MarshalJSON serializes reference into JSON.
+func (ref *RecordRef) MarshalJSON() ([]byte, error) {
+	if ref == nil {
+		return json.Marshal(nil)
+	}
+	rec, err := ref.Record().MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	domain, err := ref.Domain().MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(bytes.Join([][]byte{rec, domain}, nil))
 }

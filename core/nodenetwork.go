@@ -17,12 +17,13 @@
 package core
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 )
 
 // ShortNodeID is the shortened ID of node that is unique inside the globe
 type ShortNodeID uint32
 
+//go:generate minimock -i github.com/insolar/insolar/core.Node -o ../testutils/network -s _mock.go
 type Node interface {
 	// ID is the unique identifier of the node
 	ID() RecordRef
@@ -35,14 +36,14 @@ type Node interface {
 	// Role is the candidate Role for the node
 	Role() NodeRole
 	// PublicKey is the public key of the node
-	PublicKey() *ecdsa.PublicKey
+	PublicKey() crypto.PublicKey
 	// PhysicalAddress is the network address of the node
 	PhysicalAddress() string
 	// Version of node software
 	Version() string
 }
 
-// TODO: fix issue with go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o github.com/insolar/insolar/testutils/network/node_network_mock.go
+//go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o ../testutils/network -s _mock.go
 type NodeNetwork interface {
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
 	GetOrigin() Node
@@ -52,4 +53,6 @@ type NodeNetwork interface {
 	GetActiveNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
 	GetActiveNodesByRole(role JetRole) []RecordRef
+	// GetCloudHash returns current cloud hash
+	GetCloudHash() []byte
 }

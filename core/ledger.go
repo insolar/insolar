@@ -37,6 +37,7 @@ const (
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
+// FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
 type Ledger interface {
 	// GetArtifactManager returns artifact manager to work with.
 	GetArtifactManager() ArtifactManager
@@ -52,6 +53,7 @@ type Ledger interface {
 }
 
 // PulseManager provides Ledger's methods related to Pulse.
+//go:generate minimock -i github.com/insolar/insolar/core.PulseManager -o ../testutils -s _mock.go
 type PulseManager interface {
 	// Current returns current pulse structure.
 	Current(context.Context) (*Pulse, error)
@@ -68,18 +70,21 @@ type JetCoordinator interface {
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
 	QueryRole(ctx context.Context, role JetRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
+
+	// GetActiveNodes return active nodes for specified pulse.
+	GetActiveNodes(pulse PulseNumber) ([]Node, error)
 }
 
 // ArtifactManager is a high level storage interface.
+//go:generate minimock -i github.com/insolar/insolar/core.ArtifactManager -o ../testutils -s _mock.go
 type ArtifactManager interface {
 	// GenesisRef returns the root record reference.
 	//
 	// Root record is the parent for all top-level records.
 	GenesisRef() *RecordRef
 
-	// RegisterRequest creates or check call request record and returns it RecordRef.
-	// (used by VM on executing side)
-	RegisterRequest(ctx context.Context, message Message) (*RecordID, error)
+	// RegisterRequest creates request record in storage.
+	RegisterRequest(ctx context.Context, parcel Parcel) (*RecordID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -224,10 +229,33 @@ type RefIterator interface {
 }
 
 // LocalStorage allows a node to save local data.
+//go:generate minimock -i github.com/insolar/insolar/core.LocalStorage -o ../testutils -s _mock.go
 type LocalStorage interface {
-	// SetMessage saves message in storage.
-	SetMessage(ctx context.Context, msg SignedMessage) (*RecordID, error)
+	// Set saves data in storage.
+	Set(ctx context.Context, pulse PulseNumber, key []byte, data []byte) error
+	// Get retrieves data from storage.
+	Get(ctx context.Context, pulse PulseNumber, key []byte) ([]byte, error)
+	// Iterate iterates over all record with specified prefix and calls handler with key and value of that record.
+	//
+	// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
+	Iterate(ctx context.Context, pulse PulseNumber, prefix []byte, handler func(k, v []byte) error) error
+}
 
-	// GetMessage retrieves message from storage.
-	GetMessage(ctx context.Context, id RecordID) (SignedMessage, error)
+// KV is a generic key/value struct.
+type KV struct {
+	K []byte
+	V []byte
+}
+
+// StorageExportResult represents storage data view.
+type StorageExportResult struct {
+	Data     map[string]interface{}
+	NextFrom *PulseNumber
+	Size     int
+}
+
+// StorageExporter provides methods for fetching data view from storage.
+type StorageExporter interface {
+	// Export returns data view from storage.
+	Export(ctx context.Context, fromPulse PulseNumber, size int) (*StorageExportResult, error)
 }

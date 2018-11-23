@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,16 +26,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/core/utils"
+	"github.com/gorilla/rpc/v2"
+	jsonrpc "github.com/gorilla/rpc/v2/json2"
+	"github.com/insolar/insolar/application/extractor"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
-	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 const (
@@ -72,8 +75,6 @@ func processQueryType(ctx context.Context, rh *RequestHandler, qTypeStr string) 
 
 	var hError error
 	switch qtype {
-	case IsAuth:
-		answer, hError = rh.ProcessIsAuthorized(ctx)
 	case GetSeed:
 		answer, hError = rh.ProcessGetSeed(ctx)
 	default:
@@ -148,7 +149,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			inslog.Errorf("[ wrapAPIV1Handler ] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, runner.seedmanager)
+		rh := NewRequestHandler(params, runner.ContractRequester, runner.NetworkCoordinator, rootDomainReference, runner.seedmanager)
 
 		answer = processQueryType(ctx, rh, params.QueryType)
 	}
@@ -156,13 +157,17 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 
 // Runner implements Component for API
 type Runner struct {
-	messageBus     core.MessageBus
-	server         *http.Server
-	cfg            *configuration.APIRunner
-	netCoordinator core.NetworkCoordinator
-	keyCache       map[string]string
-	cacheLock      *sync.RWMutex
-	seedmanager    *seedmanager.SeedManager
+	Certificate         core.Certificate         `inject:""`
+	StorageExporter     core.StorageExporter     `inject:""`
+	ContractRequester   core.ContractRequester   `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
+	GenesisDataProvider core.GenesisDataProvider `inject:""`
+	server              *http.Server
+	rpcServer           *rpc.Server
+	cfg                 *configuration.APIRunner
+	keyCache            map[string]crypto.PublicKey
+	cacheLock           *sync.RWMutex
+	seedmanager         *seedmanager.SeedManager
 }
 
 // NewRunner is C-tor for API Runner
@@ -170,45 +175,48 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	if cfg == nil {
 		return nil, errors.New("[ NewAPIRunner ] config is nil")
 	}
-	if cfg.Port == 0 {
-		return nil, errors.New("[ NewAPIRunner ] Port must not be 0")
+	if cfg.Address == "" {
+		return nil, errors.New("[ NewAPIRunner ] Address must not be empty")
 	}
 	if len(cfg.Location) == 0 {
 		return nil, errors.New("[ NewAPIRunner ] Location must exist")
 	}
 
-	portStr := fmt.Sprint(cfg.Port)
+	addrStr := fmt.Sprint(cfg.Address)
+	rpcServer := rpc.NewServer()
 	ar := Runner{
-		server:    &http.Server{Addr: ":" + portStr},
+		server:    &http.Server{Addr: addrStr},
+		rpcServer: rpcServer,
 		cfg:       cfg,
-		keyCache:  make(map[string]string),
+		keyCache:  make(map[string]crypto.PublicKey),
 		cacheLock: &sync.RWMutex{},
+	}
+
+	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")
+	err := rpcServer.RegisterService(NewStorageExporterService(&ar), "exporter")
+	if err != nil {
+		return nil, err
 	}
 
 	return &ar, nil
 }
 
-func (ar *Runner) reloadMessageBus(ctx context.Context, c core.Components) {
-	if c.MessageBus == nil {
-		inslogger.FromContext(ctx).Warn("Working in demo mode: without MessageBus")
-	} else {
-		ar.messageBus = c.MessageBus
-	}
+// IsAPIRunner is implementation of APIRunner interface
+func (ar *Runner) IsAPIRunner() bool {
+	return true
 }
 
 // Start runs api server
-func (ar *Runner) Start(ctx context.Context, c core.Components) error {
-	ar.reloadMessageBus(ctx, c)
-
-	rootDomainReference := c.Genesis.GetRootDomainRef()
-	ar.netCoordinator = c.NetworkCoordinator
+func (ar *Runner) Start(ctx context.Context) error {
+	rootDomainReference := ar.Certificate.GetRootDomainReference()
 
 	ar.seedmanager = seedmanager.New()
 
 	fw := wrapAPIV1Handler(ar, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
-	http.HandleFunc(ar.cfg.Info, ar.infoHandler(c))
-	http.HandleFunc(ar.cfg.Call, ar.callHandler(c))
+	http.HandleFunc(ar.cfg.Info, ar.infoHandler())
+	http.HandleFunc(ar.cfg.Call, ar.callHandler())
+	http.Handle(ar.cfg.RPC, ar.rpcServer)
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")
 	inslog.Info("Config: ", ar.cfg)
@@ -235,40 +243,33 @@ func (ar *Runner) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (string, error) { //nolint
+func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.PublicKey, error) { //nolint
 	ar.cacheLock.RLock()
-	key, ok := ar.keyCache[ref]
+	publicKey, ok := ar.keyCache[ref]
 	ar.cacheLock.RUnlock()
 	if ok {
-		return key, nil
-	}
-	args, err := core.MarshalArgs()
-	if err != nil {
-		return "", errors.Wrap(err, "Can't marshal empty args")
-	}
-	res, err := ar.messageBus.Send(
-		ctx,
-		&message.CallMethod{
-			ObjectRef: core.NewRefFromBase58(ref),
-			Method:    "GetPublicKey",
-			Arguments: args,
-		},
-	)
-	if err != nil {
-		return "", errors.Wrap(err, "Can't get public key")
+		return publicKey, nil
 	}
 
-	var contractErr error
-	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &key, &contractErr)
+	reference := core.NewRefFromBase58(ref)
+	res, err := ar.ContractRequester.SendRequest(ctx, &reference, "GetPublicKey", []interface{}{})
 	if err != nil {
-		return "", errors.Wrap(err, "Can't unmarshal public key")
+		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't get public key")
 	}
-	if contractErr != nil {
-		return "", errors.Wrap(contractErr, "Error in get public key")
+
+	publicKeyString, err := extractor.PublicKeyResponse(res.(*reply.CallMethod).Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't extract response")
+	}
+
+	kp := platformpolicy.NewKeyProcessor()
+	publicKey, err = kp.ImportPublicKey([]byte(publicKeyString))
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to convert public key")
 	}
 
 	ar.cacheLock.Lock()
-	ar.keyCache[ref] = key
+	ar.keyCache[ref] = publicKey
 	ar.cacheLock.Unlock()
-	return key, nil
+	return publicKey, nil
 }

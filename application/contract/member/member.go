@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -37,6 +36,9 @@ type Member struct {
 func (m *Member) GetName() (string, error) {
 	return m.Name, nil
 }
+
+var INSATTR_GetPublicKey_API = true
+
 func (m *Member) GetPublicKey() (string, error) {
 	return m.PublicKey, nil
 }
@@ -57,15 +59,20 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
-	verified, err := ecdsa.Verify(args, sign, key)
+
+	publicKey, err := foundation.ImportPublicKey(key)
 	if err != nil {
-		return fmt.Errorf("[ verifySig ] Can't verify: %s", err.Error())
+		return fmt.Errorf("[ verifySig ] Invalid public key")
 	}
+
+	verified := foundation.Verify(args, sign, publicKey)
 	if !verified {
 		return fmt.Errorf("[ verifySig ] Incorrect signature")
 	}
 	return nil
 }
+
+var INSATTR_Call_API = true
 
 // Call method for authorized calls
 func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
@@ -109,7 +116,7 @@ func (m *Member) getMyBalance() (interface{}, error) {
 		return 0, fmt.Errorf("[ getMyBalance ]: %s", err.Error())
 	}
 
-	return w.GetTotalBalance()
+	return w.GetBalance()
 }
 
 func (m *Member) getBalance(params []byte) (interface{}, error) {
@@ -122,7 +129,7 @@ func (m *Member) getBalance(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
 
-	return w.GetTotalBalance()
+	return w.GetBalance()
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
@@ -162,11 +169,8 @@ func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
 
 func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
 	var publicKey string
-	var numberOfBootstrapNodes float64
-	var majorityRule float64
-	var roles []string
-	var ip string
-	if err := signer.UnmarshalParams(params, &publicKey, &numberOfBootstrapNodes, &majorityRule, &roles, &ip); err != nil {
+	var role string
+	if err := signer.UnmarshalParams(params, &publicKey, &role); err != nil {
 		return nil, fmt.Errorf("[ registerNodeCall ] Can't unmarshal params: %s", err.Error())
 	}
 
@@ -177,7 +181,7 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	cert, err := nd.RegisterNode(publicKey, int(numberOfBootstrapNodes), int(majorityRule), roles, ip)
+	cert, err := nd.RegisterNode(publicKey, role)
 	if err != nil {
 		return nil, fmt.Errorf("[ registerNodeCall ] Problems with RegisterNode: %s", err.Error())
 	}

@@ -27,6 +27,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -51,6 +52,7 @@ var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
 var insolarNodeKeysPath = filepath.Join(testdataPath(), insolarNodeKeys)
 var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
+var insolarNodesKeysPath = filepath.Join(testdataPath(), "discovery_node_")
 var insolarCertificatePath = filepath.Join(testdataPath(), insolarCertificate)
 
 var info infoResponse
@@ -120,6 +122,18 @@ func generateRootMemberKeys() error {
 		insolarPath, "-c", "gen_keys",
 		"-o", insolarRootMemberKeysPath).CombinedOutput()
 	return errors.Wrapf(err, "[ generateRootMemberKeys ] could't generate root member keys: %s", out)
+}
+
+func generateDiscoveryNodesKeys() error {
+	for i := 0; i < 5; i++ {
+		out, err := exec.Command(
+			insolarPath, "-c", "gen_keys",
+			"-o", insolarNodesKeysPath+strconv.Itoa(i+1)+".json").CombinedOutput()
+		if err != nil {
+			return errors.Wrapf(err, "[ generateDiscoveryNodesKeys ] could't generate discovery node keys: %s", out)
+		}
+	}
+	return nil
 }
 
 func generateCertificate() error {
@@ -207,7 +221,8 @@ func waitForLaunch() error {
 
 func startInsolard() error {
 	cmd = exec.Command(
-		insolardPath,
+		insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
+		"--keyout", testdataPath(),
 	)
 	var err error
 
@@ -325,6 +340,12 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't load root keys: ")
 	}
 	fmt.Println("[ setup ] root keys successfully loaded")
+
+	err = generateDiscoveryNodesKeys()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't generate discovery node keys: ")
+	}
+	fmt.Println("[ setup ] discovery nodes keys successfully generated")
 
 	err = buildInsolard()
 	if err != nil {

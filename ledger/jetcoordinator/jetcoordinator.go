@@ -27,14 +27,15 @@ import (
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db          *storage.DB
-	rootJetNode *JetNode
-	roleCounts  map[core.JetRole]int
-	activeNodes core.NodeNetwork
+	db                         *storage.DB
+	rootJetNode                *JetNode
+	roleCounts                 map[core.JetRole]int
+	NodeNet                    core.NodeNetwork                `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 }
 
 // NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) (*JetCoordinator, error) {
+func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) *JetCoordinator {
 	jc := JetCoordinator{
 		db: db,
 		rootJetNode: &JetNode{
@@ -51,7 +52,7 @@ func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) (*JetC
 	}
 	jc.loadConfig(conf)
 
-	return &jc, nil
+	return &jc
 }
 
 func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
@@ -94,7 +95,7 @@ func (jc *JetCoordinator) QueryRole(
 	if err != nil {
 		return nil, err
 	}
-	candidates := jc.activeNodes.GetActiveNodesByRole(role)
+	candidates := jc.NodeNet.GetActiveNodesByRole(role)
 	if len(candidates) == 0 {
 		return nil, errors.New("no candidates for this role")
 	}
@@ -103,7 +104,7 @@ func (jc *JetCoordinator) QueryRole(
 		return nil, errors.New("no candidate count for this role")
 	}
 
-	selected, err := selectByEntropy(pulseData.Entropy, candidates, count)
+	selected, err := selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, candidates, count)
 	if err != nil {
 		return nil, err
 	}
@@ -111,14 +112,11 @@ func (jc *JetCoordinator) QueryRole(
 	return selected, nil
 }
 
-func (jc *JetCoordinator) Link(components core.Components) error {
-	if components.NodeNetwork == nil {
-		return errors.New("core.NodeNetwork is nil")
-	}
-	jc.activeNodes = components.NodeNetwork
-	return nil
-}
-
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
 	return jc.rootJetNode.GetContaining(&objRef)
+}
+
+// GetActiveNodes return active nodes for specified pulse.
+func (jc *JetCoordinator) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
+	return jc.db.GetActiveNodes(pulse)
 }

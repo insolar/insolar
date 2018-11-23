@@ -19,124 +19,85 @@ package certificate
 import (
 	"testing"
 
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/require"
 )
 
-const TEST_CERT = "testdata/cert.json"
-const TEST_BAD_CERT = "testdata/bad_cert.json"
+const TestCert = "testdata/cert.json"
+const TestBadCert = "testdata/bad_cert.json"
+const TestInvalidFileCert = "testdata/bad_cert11111.json"
 
-const TEST_KEYS = "testdata/keys.json"
-const TEST_BAD_KEYS = "testdata/bad_keys.json"
-
-func TestAreKeysTheSame(t *testing.T) {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	pubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	assert.NoError(t, err)
-	assert.NoError(t, AreKeysTheSame(privateKey, pubKey))
-}
-
-func TestAreKeysTheSame_NotTheSame(t *testing.T) {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	err = AreKeysTheSame(privateKey, "")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Public keys in certificate and keypath file are not the same")
-}
+const TestKeys = "testdata/keys.json"
+const TestDifferentKeys = "testdata/different_keys.json"
 
 func TestNewCertificate_NoCert(t *testing.T) {
-	_, err := NewCertificate("", "")
-	assert.EqualError(t, err, "[ NewCertificate ] couldn't read certificate from: ")
+	_, err := ReadCertificate(nil, nil, TestInvalidFileCert)
+	require.EqualError(t, err, "[ ReadCertificate ] failed to read certificate from: "+TestInvalidFileCert)
 }
 
 func TestNewCertificate_BadCert(t *testing.T) {
-	_, err := NewCertificate("", TEST_BAD_CERT)
-	assert.Contains(t, err.Error(), "failed to parse certificate json")
+	_, err := ReadCertificate(nil, nil, TestBadCert)
+	require.Contains(t, err.Error(), "failed to parse certificate json")
 }
 
-func TestNewCertificate_NoKeys(t *testing.T) {
-	_, err := NewCertificate("", TEST_CERT)
-	assert.Contains(t, err.Error(), "failed to read keys")
+func checkKeys(cert *Certificate, cs core.CryptographyService, t *testing.T) {
+	kp := platformpolicy.NewKeyProcessor()
+
+	pubKey, err := cs.GetPublicKey()
+	require.NoError(t, err)
+
+	pubKeyString, err := kp.ExportPublicKey(pubKey)
+	require.NoError(t, err)
+
+	require.Equal(t, string(pubKeyString), cert.PublicKey)
 }
 
-func checkKeys(cert *Certificate, t *testing.T) {
-	pubKey, err := ecdsahelper.ExportPublicKey(&cert.privateKey.PublicKey)
-	assert.NoError(t, err)
-	assert.Equal(t, pubKey, cert.PublicKey)
-}
+func TestReadCertificate(t *testing.T) {
+	cs, _ := cryptography.NewStorageBoundCryptographyService(TestKeys)
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
 
-func TestNewCertificate(t *testing.T) {
-	cert, err := NewCertificate(TEST_KEYS, TEST_CERT)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, cert.PublicKey)
-	assert.NotEmpty(t, cert.Reference)
+	cert, err := ReadCertificate(pk, kp, TestCert)
+	require.NoError(t, err)
+	require.NotEmpty(t, cert.PublicKey)
+	require.Equal(t, "virtual", cert.Role)
+	require.Equal(t, "2prKtCG51YhseciDY5EnnHapPskNHvrvhSc3HrCvYLKKxXn4K3kFQtiz3QLVD1acpQmaDBHUG2Q988xjSFhswJLs",
+		cert.Reference)
+	require.Equal(t, 7, cert.MajorityRule)
+	require.Equal(t, "0987654321", cert.RootDomainReference)
 
-	checkKeys(cert, t)
-}
+	bootstrapNodes := []BootstrapNode{
+		BootstrapNode{
+			PublicKey: "PUBKEY_1",
+			Host:      "localhost:22001",
+		},
+		BootstrapNode{
+			PublicKey: "PUBKEY_2",
+			Host:      "localhost:22002",
+		},
+		BootstrapNode{
+			PublicKey: "PUBKEY_3",
+			Host:      "localhost:22003",
+		},
+	}
+	require.Equal(t, bootstrapNodes, cert.BootstrapNodes)
 
-func TestCertificate_GenerateKeys(t *testing.T) {
-	cert := Certificate{}
-	assert.Nil(t, cert.privateKey)
-	assert.Empty(t, cert.PublicKey)
-
-	assert.NoError(t, cert.GenerateKeys())
-
-	assert.NotNil(t, cert.privateKey)
-	assert.NotEmpty(t, cert.PublicKey)
-}
-
-func TestNewCertificatesWithKeys(t *testing.T) {
-	cert, err := NewCertificatesWithKeys(TEST_KEYS)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, cert.Reference)
-	checkKeys(cert, t)
-}
-
-func TestNewCertificatesWithKeys_NoFile(t *testing.T) {
-	_, err := NewCertificatesWithKeys("")
-	assert.Contains(t, err.Error(), "failed to read keys: [ readKeys ] couldn't read keys from")
-}
-
-func TestReadPrivateKey(t *testing.T) {
-	_, err := readPrivateKey("")
-	assert.Contains(t, err.Error(), "couldn't read keys from")
+	checkKeys(cert, cs, t)
 }
 
 func TestReadPrivateKey_BadJson(t *testing.T) {
-	_, err := readPrivateKey(TEST_BAD_CERT)
-	assert.Contains(t, err.Error(), "failed to parse json")
-}
-
-func TestReadPrivateKey_BadPrivateKey(t *testing.T) {
-	_, err := readPrivateKey(TEST_BAD_KEYS)
-	assert.Contains(t, err.Error(), "Failed to import private key")
+	keyProcessor := platformpolicy.NewKeyProcessor()
+	_, err := ReadCertificate(nil, keyProcessor, TestBadCert)
+	require.Contains(t, err.Error(), "failed to parse certificate json")
 }
 
 func TestReadPrivateKey_BadKeyPair(t *testing.T) {
-	_, err := readPrivateKey("testdata/different_keys.json")
-	assert.Contains(t, err.Error(), "public key is not valid")
-}
+	cs, _ := cryptography.NewStorageBoundCryptographyService(TestDifferentKeys)
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
 
-func TestIsPublicKeyValid(t *testing.T) {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	pubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	assert.NoError(t, err)
-
-	assert.Nil(t, isValidPublicKey(pubKey, privateKey))
-}
-
-func TestIsPublicKeyValid_BadKeyPair(t *testing.T) {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	pubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	assert.NoError(t, err)
-
-	anotherPrivateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-
-	err = isValidPublicKey(pubKey, anotherPrivateKey)
-	assert.Contains(t, err.Error(), "[ isValidPublicKey ] invalid public key in config")
-
+	_, err := ReadCertificate(pk, kp, TestCert)
+	require.Contains(t, err.Error(), "Different public keys")
 }

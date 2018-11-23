@@ -20,6 +20,7 @@ package logicrunner
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -29,19 +30,20 @@ import (
 type ConsensusRecord struct {
 	Steps   int
 	Error   string
-	Message core.SignedMessage
+	Message core.Parcel
 }
 
 // Consensus is an object for one validation process where all validated results will be compared.
 type Consensus struct {
-	lr          *LogicRunner
-	ready       bool
-	Have        int
-	Need        int
-	Total       int
-	Results     map[Ref]ConsensusRecord
-	CaseRecords []core.CaseRecord
-	Message     core.SignedMessage
+	sync.Mutex
+	lr       *LogicRunner
+	ready    bool
+	Have     int
+	Need     int
+	Total    int
+	Results  map[Ref]ConsensusRecord
+	CaseBind core.CaseBind
+	Message  core.Parcel
 }
 
 func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
@@ -58,8 +60,10 @@ func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
 }
 
 // AddValidated adds results from validators
-func (c *Consensus) AddValidated(ctx context.Context, sm core.SignedMessage, msg *message.ValidationResults) error {
+func (c *Consensus) AddValidated(ctx context.Context, sm core.Parcel, msg *message.ValidationResults) error {
 	source := sm.GetSender()
+	c.Lock()
+	defer c.Unlock()
 	if _, ok := c.Results[source]; !ok {
 		return errors.Errorf("Validation packet from non validation node for %#v", sm)
 	} else {
@@ -73,16 +77,16 @@ func (c *Consensus) AddValidated(ctx context.Context, sm core.SignedMessage, msg
 	return nil
 }
 
-func (c *Consensus) AddExecutor(ctx context.Context, sm core.SignedMessage, msg *message.ExecutorResults) {
-	c.CaseRecords = msg.CaseRecords
+func (c *Consensus) AddExecutor(ctx context.Context, sm core.Parcel, msg *message.ExecutorResults) {
+	c.Lock()
+	defer c.Unlock()
+	c.CaseBind = msg.CaseBind
 	c.Message = sm
 	c.CheckReady(ctx)
 }
 
 func (c *Consensus) CheckReady(ctx context.Context) {
-	if c.CaseRecords == nil {
-		return
-	} else if c.Have < c.Need {
+	if c.Have < c.Need {
 		return
 	}
 	steps := make(map[int]int)
@@ -99,7 +103,7 @@ func (c *Consensus) CheckReady(ctx context.Context) {
 	if maxSame < c.Need && c.Total == c.Have {
 		c.ready = true
 		err = c.lr.ArtifactManager.RegisterValidation(ctx, c.GetReference(), *c.FindRequestBefore(stepsSame), false, c.GetValidatorSignatures())
-	} else if maxSame >= c.Need && stepsSame == len(c.CaseRecords) {
+	} else if maxSame >= c.Need && stepsSame == len(c.CaseBind.Requests) {
 		c.ready = true
 		err = c.lr.ArtifactManager.RegisterValidation(ctx, c.GetReference(), *c.FindRequestBefore(stepsSame), true, c.GetValidatorSignatures())
 	}
@@ -122,14 +126,6 @@ func (c *Consensus) GetValidatorSignatures() (messages []core.Message) {
 
 // FindRequestBefore returns request placed before step (last valid request)
 func (c *Consensus) FindRequestBefore(steps int) *core.RecordID {
-	cr := c.CaseRecords
-	for i := steps; i > 0; i-- {
-		if cr[i].Type == core.CaseRecordTypeRequest {
-			if req, ok := cr[i].Resp.(Ref); ok {
-				return req.Record()
-			}
-			return nil
-		}
-	}
+	// TODO: resurrect this part
 	return nil
 }

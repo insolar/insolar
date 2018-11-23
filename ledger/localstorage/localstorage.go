@@ -17,40 +17,44 @@
 package localstorage
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// LocalStorage allows a node to save local data.
+// LocalStorage allows node to save local data.
 type LocalStorage struct {
 	db *storage.DB
 }
 
 // NewLocalStorage create new storage instance.
-func NewLocalStorage(db *storage.DB) (*LocalStorage, error) {
-	return &LocalStorage{db: db}, nil
+func NewLocalStorage(db *storage.DB) *LocalStorage {
+	return &LocalStorage{db: db}
 }
 
-// SetMessage saves message in storage.
-func (s *LocalStorage) SetMessage(ctx context.Context, msg core.SignedMessage) (*core.RecordID, error) {
-	buff, err := message.SignedToBytes(msg)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.db.SetBlob(ctx, msg.Pulse(), buff)
+// Set saves data in storage.
+func (s *LocalStorage) Set(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error {
+	return s.db.SetLocalData(ctx, pulse, key, data)
 }
 
-// GetMessage retrieves message from storage.
-func (s *LocalStorage) GetMessage(ctx context.Context, id core.RecordID) (core.SignedMessage, error) {
-	buff, err := s.db.GetBlob(ctx, &id)
-	if err != nil {
-		return nil, err
+// Get retrieves data from storage.
+func (s *LocalStorage) Get(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error) {
+	buff, err := s.db.GetLocalData(ctx, pulse, key)
+	if err == storage.ErrNotFound {
+		return nil, ErrNotFound
 	}
+	return buff, err
+}
 
-	return message.DeserializeSigned(bytes.NewBuffer(buff))
+// Iterate iterates over all record with specified prefix and calls handler with key and value of that record.
+//
+// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
+func (s *LocalStorage) Iterate(
+	ctx context.Context,
+	pulse core.PulseNumber,
+	prefix []byte,
+	handler func(k, v []byte) error,
+) error {
+	return s.db.IterateLocalData(ctx, pulse, prefix, handler)
 }

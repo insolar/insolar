@@ -17,14 +17,15 @@
 package auth
 
 import (
+	"context"
 	"encoding/gob"
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -38,7 +39,7 @@ type AuthorizationController struct {
 	options             *common.Options
 	bootstrapController common.BootstrapController
 	signer              *Signer
-	transport           hostnetwork.InternalTransport
+	transport           network.InternalTransport
 	keeper              network.NodeKeeper
 }
 
@@ -72,26 +73,26 @@ func init() {
 	gob.Register(&ResponseAuthorize{})
 }
 
-func (ac *AuthorizationController) Authorize() error {
+func (ac *AuthorizationController) Authorize(ctx context.Context) error {
 	hosts := ac.bootstrapController.GetBootstrapHosts()
 	if len(hosts) == 0 {
-		log.Info("Empty list of bootstrap hosts")
+		inslogger.FromContext(ctx).Info("Empty list of bootstrap hosts")
 		return nil
 	}
 
 	ch := make(chan []core.Node, len(hosts))
 	for _, h := range hosts {
-		go func(ch chan<- []core.Node, h *host.Host) {
-			activeNodes, err := ac.authorizeOnHost(h)
+		go func(ctx context.Context, ch chan<- []core.Node, h *host.Host) {
+			activeNodes, err := ac.authorizeOnHost(ctx, h)
 			if err != nil {
 				log.Error(err)
 				return
 			}
 			ch <- activeNodes
-		}(ch, h)
+		}(ctx, ch, h)
 	}
 
-	activeLists := ac.collectActiveLists(ch, len(hosts))
+	activeLists := ac.collectActiveLists(ctx, ch, len(hosts))
 	if len(activeLists) == 0 {
 		return errors.New("Failed to authorize on any of discovery nodes")
 	}
@@ -103,7 +104,7 @@ func (ac *AuthorizationController) Authorize() error {
 	return nil
 }
 
-func (ac *AuthorizationController) collectActiveLists(ch <-chan []core.Node, count int) [][]core.Node {
+func (ac *AuthorizationController) collectActiveLists(ctx context.Context, ch <-chan []core.Node, count int) [][]core.Node {
 	receivedResults := make([][]core.Node, 0)
 	for {
 		select {
@@ -113,26 +114,26 @@ func (ac *AuthorizationController) collectActiveLists(ch <-chan []core.Node, cou
 				return receivedResults
 			}
 		case <-time.After(ac.options.AuthorizeTimeout):
-			log.Warnf("Authorize timeout, successful auths: %d/%d", len(receivedResults), count)
+			inslogger.FromContext(ctx).Warnf("Authorize timeout, successful auths: %d/%d", len(receivedResults), count)
 			return receivedResults
 		}
 	}
 }
 
 // authorizeOnHost send all authorize requests to host and get list of active nodes
-func (ac *AuthorizationController) authorizeOnHost(h *host.Host) ([]core.Node, error) {
-	log.Infof("Authorizing on host: %s", h)
+func (ac *AuthorizationController) authorizeOnHost(ctx context.Context, h *host.Host) ([]core.Node, error) {
+	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", h)
 
 	nonce, err := ac.sendNonceRequest(h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting nonce from discovery node %s", h)
 	}
-	log.Debugf("Got nonce from discovery node: %s", base58.Encode(nonce))
+	inslogger.FromContext(ctx).Debugf("Got nonce from discovery node: %s", base58.Encode(nonce))
 	signedNonce, err := ac.signer.SignNonce(nonce)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error signing received nonce from node %s", h)
 	}
-	nodes, err := ac.sendAuthorizeRequest(signedNonce, h)
+	nodes, err := ac.sendAuthorizeRequest(*signedNonce, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error authorizing on discovery node %s", h)
 	}
@@ -156,9 +157,9 @@ func (ac *AuthorizationController) sendNonceRequest(h *host.Host) (Nonce, error)
 	return data.Nonce, nil
 }
 
-func (ac *AuthorizationController) sendAuthorizeRequest(signedNonce []byte, h *host.Host) ([]core.Node, error) {
+func (ac *AuthorizationController) sendAuthorizeRequest(signature core.Signature, h *host.Host) ([]core.Node, error) {
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&RequestAuthorize{
-		SignedNonce: signedNonce,
+		SignedNonce: signature.Bytes(),
 		NodeRoles:   []core.NodeRole{core.RoleUnknown},
 		Address:     ac.transport.PublicAddress(),
 		Version:     version.Version,
@@ -222,15 +223,18 @@ func (ac *AuthorizationController) processAuthorizeRequest(request network.Reque
 	// 	return ac.getAuthErrorResponse(request, "Error adding to unsync list: timeout"), nil
 	// }
 
-	ac.keeper.AddActiveNodes([]core.Node{
-		nodenetwork.NewNode(
-			request.GetSender(),
-			data.NodeRoles,
-			nil,
-			core.PulseNumber(0),
-			data.Address,
-			data.Version),
-	})
+	node := nodenetwork.NewNode(
+		request.GetSender(),
+		data.NodeRoles,
+		nil,
+		core.PulseNumber(0),
+		data.Address,
+		data.Version)
+	// TODO: move short ID collision detection and correction to AddUnsync to prevent races
+	if CheckShortIDCollision(ac.keeper, node.ShortID()) {
+		CorrectShortIDCollision(ac.keeper, node)
+	}
+	ac.keeper.AddActiveNodes([]core.Node{node})
 
 	return ac.transport.BuildResponse(request, &ResponseAuthorize{ActiveNodes: ac.keeper.GetActiveNodes()}), nil
 }
@@ -240,15 +244,17 @@ func (ac *AuthorizationController) getAuthErrorResponse(request network.Request,
 	return ac.transport.BuildResponse(request, &ResponseAuthorize{Error: err})
 }
 
-func (ac *AuthorizationController) Start(components core.Components) {
-	ac.signer = NewSigner(components.Certificate, components.NetworkCoordinator)
-	ac.keeper = components.NodeNetwork.(network.NodeKeeper)
+func (ac *AuthorizationController) Start(cryptographyService core.CryptographyService,
+	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
+
+	ac.signer = NewSigner(cryptographyService, networkCoordinator)
+	ac.keeper = nodeKeeper
 
 	ac.transport.RegisterPacketHandler(types.GetNonce, ac.processNonceRequest)
 	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
 }
 
 func NewAuthorizationController(options *common.Options, bootstrapController common.BootstrapController,
-	transport hostnetwork.InternalTransport) *AuthorizationController {
+	transport network.InternalTransport) *AuthorizationController {
 	return &AuthorizationController{options: options, bootstrapController: bootstrapController, transport: transport}
 }

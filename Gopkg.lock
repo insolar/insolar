@@ -65,14 +65,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:79efb3c233322835594954b38c6878ed3778396ba55f7c3e5a24dd38c4170ecd"
-  name = "github.com/cbergoon/merkletree"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "05d5987faac48c14315189ed9c817cd312c5964f"
-
-[[projects]]
-  branch = "master"
   digest = "1:183d68d69d8681294f0b128de41c0defd54777f620cc4d1e88013136306a44d5"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
@@ -86,6 +78,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
+
+[[projects]]
+  digest = "1:5a2b13a339956ea88b7ebe692dc61115b4a1db9a862a345d82bbd43f915192d8"
+  name = "github.com/damnever/bitarray"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "194ec7c5a6fa9fea20be8fa959640749eaca6bff"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -147,6 +147,17 @@
   pruneopts = "UT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:9fe4b4f866007c9981c6c44c02d5533b1fb78ca408355eb64e767ef416eb9dfb"
+  name = "github.com/gorilla/rpc"
+  packages = [
+    "v2",
+    "v2/json2",
+  ]
+  pruneopts = "UT"
+  revision = "22c016f3df3febe0c1f6727598b6389507e03a18"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:c0d19ab64b32ce9fe5cf4ddceba78d5bc9807f0016db6b1183599da3dcc24d10"
@@ -238,6 +249,14 @@
   pruneopts = "UT"
   revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
   version = "v1.1.2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:cade3da7b9e04ef34e9ece52d91a0b76e08f478f55ecfe217854edb4603eb1f8"
+  name = "github.com/onrik/gomerkle"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ae4e74c60b38b413037256369800ddf7579a009a"
 
 [[projects]]
   digest = "1:95741de3af260a92cc5c7f3f3061e85273f5a81b5db20d4bd68da74bd521675e"
@@ -583,12 +602,15 @@
   input-imports = [
     "github.com/anacrolix/utp",
     "github.com/blang/semver",
-    "github.com/cbergoon/merkletree",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
+    "github.com/damnever/bitarray",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
+    "github.com/gorilla/rpc/v2",
+    "github.com/gorilla/rpc/v2/json2",
     "github.com/jbenet/go-base58",
+    "github.com/onrik/gomerkle",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",

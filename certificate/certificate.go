@@ -17,176 +17,151 @@
 package certificate
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
 
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
-	PublicKey string `json:"public_key"`
-	Host      string `json:"host"`
+	PublicKey   string `json:"public_key"`
+	Host        string `json:"host"`
+	NetworkSign []byte `json:"network_sign"`
+	NodeSign    []byte `json:"node_sign"`
 }
 
 // Certificate holds info about certificate
 type Certificate struct {
-	MajorityRule   int             `json:"majority_rule"`
-	PublicKey      string          `json:"public_key"`
-	Reference      string          `json:"reference"`
-	Roles          []string        `json:"roles"`
-	BootstrapNodes []BootstrapNode `json:"bootstrap_nodes"`
-
-	privateKey *ecdsa.PrivateKey
+	MajorityRule int `json:"majority_rule"`
+	MinRoles     struct {
+		Virtual       uint `json:"virtual"`
+		HeavyMaterial uint `json:"heavy_material"`
+		LightMaterial uint `json:"light_material"`
+	} `json:"min_roles"`
+	PublicKey           string          `json:"public_key"`
+	Reference           string          `json:"reference"`
+	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
+	Role                string          `json:"role"`
+	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
+	RootDomainReference string          `json:"root_domain_ref"`
 }
 
-func AreKeysTheSame(privateKey *ecdsa.PrivateKey, certPubKey string) error {
-	pubKeyString, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
+func (cert *Certificate) serializeNetworkPart() []byte {
+	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
+		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +
+		cert.RootDomainReference
+
+	sort.Strings(cert.PulsarPublicKeys)
+	out += strings.Join(cert.PulsarPublicKeys, "")
+	sort.Slice(cert.BootstrapNodes, func(i, j int) bool {
+		return strings.Compare(cert.BootstrapNodes[i].PublicKey, cert.BootstrapNodes[j].PublicKey) == -1
+	})
+
+	for _, node := range cert.BootstrapNodes {
+		out += node.PublicKey + node.Host
+	}
+
+	return []byte(out)
+}
+
+// SignNetworkPart signs network part in certificate
+func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) {
+	signer := platformpolicy.NewPlatformCryptographyScheme().Signer(key)
+	sign, err := signer.Sign(cert.serializeNetworkPart())
 	if err != nil {
-		return errors.Wrap(err, "[ AreKeysTheSame ]")
+		return nil, err
 	}
-	if pubKeyString != certPubKey {
-		msg := "[ AreKeysTheSame ] Public keys in certificate and keypath file are not the same: " +
-			"pubKeyString = " + pubKeyString +
-			"\ncertPubKey = " + certPubKey
-		return errors.New(msg)
-	}
-	return nil
+	return sign.Bytes(), nil
 }
 
-// NewCertificate constructor creates new Certificate component
-func NewCertificate(keysPath string, certPath string) (*Certificate, error) {
+func (cert *Certificate) serializeNodePart() []byte {
+	return []byte(cert.PublicKey + cert.Reference + cert.Role)
+}
+
+// SignNodePart signs node part in certificate
+func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
+	signer := platformpolicy.NewPlatformCryptographyScheme().Signer(key)
+	sign, err := signer.Sign(cert.serializeNodePart())
+	if err != nil {
+		return nil, err
+	}
+	return sign.Bytes(), nil
+}
+
+// GetBootstrapNodes return bootstrap nodes array
+func (cert *Certificate) GetBootstrapNodes() []BootstrapNode {
+	return cert.BootstrapNodes
+}
+
+// ReadCertificate constructor creates new Certificate component
+func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, certPath string) (*Certificate, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(certPath))
 	if err != nil {
-		return nil, errors.New("[ NewCertificate ] couldn't read certificate from: " + certPath)
+		return nil, errors.New("[ ReadCertificate ] failed to read certificate from: " + certPath)
 	}
 	cert := Certificate{}
 	err = json.Unmarshal(data, &cert)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NewCertificate ] failed to parse certificate json")
+		return nil, errors.Wrap(err, "[ ReadCertificate ] failed to parse certificate json")
 	}
 
-	private, err := readPrivateKey(keysPath)
+	pub, err := keyProcessor.ExportPublicKey(publicKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NewCertificate ] failed to read keys")
+		return nil, errors.Wrap(err, "[ ReadCertificate ] failed to retrieve public key from node private key")
 	}
 
-	err = AreKeysTheSame(private, cert.PublicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewCertificate ] Different public keys. Cert path: "+certPath+". Key path: "+keysPath)
+	if cert.PublicKey != string(pub) {
+		return nil, errors.New("[ ReadCertificate ] Different public keys. Cert path: " + certPath + ".")
 	}
 
-	cert.privateKey = private
 	return &cert, nil
 }
 
 func (cert *Certificate) reset() {
 	cert.PublicKey = ""
 	cert.BootstrapNodes = []BootstrapNode{}
-	cert.privateKey = nil
 	cert.Reference = ""
 	cert.MajorityRule = 0
-	cert.Roles = []string{}
+}
+
+func (cert *Certificate) GetRole() core.NodeRole {
+	return core.GetRoleFromString(cert.Role)
+}
+
+// GetRootDomainReference returns RootDomain reference
+func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
+	ref := core.NewRefFromBase58(cert.RootDomainReference)
+	return &ref
+}
+
+// SetRootDomainReference sets RootDomain reference for certificate
+func (cert *Certificate) SetRootDomainReference(ref *core.RecordRef) {
+	cert.RootDomainReference = ref.String()
 }
 
 // NewCertificatesWithKeys generate certificate from given keys
-func NewCertificatesWithKeys(keysPath string) (*Certificate, error) {
+func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*Certificate, error) {
 	cert := Certificate{}
 	cert.reset()
-	private, err := readPrivateKey(keysPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewCertificatesWithKeys ] failed to read keys")
-	}
-
-	err = cert.setKeys(private)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewCertificatesWithKeys ] Problem with setting keys.")
-	}
 
 	cert.Reference = testutils.RandomRef().String()
 
+	keyBytes, err := keyProcessor.ExportPublicKey(publicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ReadCertificate ] failed to retrieve public key from node private key")
+	}
+
+	cert.PublicKey = string(keyBytes)
 	return &cert, nil
-}
-
-// GetPublicKey returns public key as string
-func (cert *Certificate) GetPublicKey() (string, error) {
-	return ecdsahelper.ExportPublicKey(&cert.privateKey.PublicKey)
-}
-
-// GetPrivateKey returns private key as string
-func (cert *Certificate) GetPrivateKey() (string, error) {
-	return ecdsahelper.ExportPrivateKey(cert.privateKey)
-}
-
-// GetEcdsaPrivateKey returns private key in ecdsa format
-func (cert *Certificate) GetEcdsaPrivateKey() *ecdsa.PrivateKey {
-	return cert.privateKey
-}
-
-func readPrivateKey(keysPath string) (*ecdsa.PrivateKey, error) {
-	data, err := ioutil.ReadFile(filepath.Clean(keysPath))
-	if err != nil {
-		return nil, errors.Wrap(err, "[ readKeys ] couldn't read keys from: "+keysPath)
-	}
-	var keys map[string]string
-	err = json.Unmarshal(data, &keys)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ readKeys ] failed to parse json.")
-	}
-
-	private, err := ecdsahelper.ImportPrivateKey(keys["private_key"])
-	if err != nil {
-		return nil, errors.Wrap(err, "[ readKeys ] Failed to import private key.")
-	}
-
-	err = isValidPublicKey(keys["public_key"], private)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ readKeys ] public key is not valid")
-	}
-
-	return private, nil
-}
-
-func isValidPublicKey(publicKey string, privateKey *ecdsa.PrivateKey) error {
-	validPublicKeyString, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		return errors.Wrap(err, "[ isValidPublicKey ]")
-	}
-	if validPublicKeyString != publicKey {
-		return errors.New("[ isValidPublicKey ] invalid public key in config")
-	}
-	return nil
-}
-
-func (cert *Certificate) setKeys(privateKey *ecdsa.PrivateKey) error {
-	expPubKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		return errors.Wrap(err, "[ GenerateKeys ] Failed to export public key.")
-	}
-
-	cert.PublicKey = expPubKey
-	cert.privateKey = privateKey
-
-	return nil
-}
-
-// GenerateKeys generates certificate keys
-func (cert *Certificate) GenerateKeys() error {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	if err != nil {
-		return errors.Wrap(err, "[ GenerateKeys ] Failed to generate private key.")
-	}
-
-	err = cert.setKeys(privateKey)
-	if err != nil {
-		return errors.Wrap(err, "[ GenerateKeys ] Problem with setting keys.")
-	}
-
-	return nil
 }
 
 func (cert *Certificate) Dump() (string, error) {

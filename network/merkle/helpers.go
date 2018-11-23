@@ -17,109 +17,84 @@
 package merkle
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 const reserved = 0xDEADBEEF
 
-func pulseHash(pulse *core.Pulse) []byte {
-	var result []byte
-
-	pulseNumberHash := hash.SHA3Bytes256(pulse.PulseNumber.Bytes())
-	result = append(result, pulseNumberHash...)
-
-	entropyHash := hash.SHA3Bytes256(pulse.Entropy[:])
-	result = append(result, entropyHash...)
-
-	return hash.SHA3Bytes256(result)
+type merkleHelper struct {
+	scheme     core.PlatformCryptographyScheme
+	leafHasher core.Hasher
 }
 
-func nodeInfoHash(pulseHash, stateHash []byte) []byte {
-	var result []byte
-
-	result = append(result, pulseHash...)
-	result = append(result, stateHash...)
-
-	return hash.SHA3Bytes256(result)
+func newMerkleHelper(scheme core.PlatformCryptographyScheme) *merkleHelper {
+	return &merkleHelper{
+		scheme:     scheme,
+		leafHasher: scheme.IntegrityHasher(),
+	}
 }
 
-func nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
-	var result []byte
+func (mh *merkleHelper) doubleSliceHash(slice1, slice2 []byte) []byte {
+	hasher := mh.scheme.IntegrityHasher()
+	var err error
 
-	nodeSignatureHash := hash.SHA3Bytes256(nodeSignature)
-	result = append(result, nodeSignatureHash...)
+	_, err = hasher.Write(slice1)
+	if err != nil {
+		panic(fmt.Sprintf("[ doubleSliceHash ] Hash write error: %s", err.Error()))
+	}
+	_, err = hasher.Write(slice2)
+	if err != nil {
+		panic(fmt.Sprintf("[ doubleSliceHash ] Hash write error: %s", err.Error()))
+	}
 
-	result = append(result, nodeInfoHash...)
-
-	return hash.SHA3Bytes256(result)
+	return hasher.Sum(nil)
 }
 
-func bucketEntryHash(entryIndex uint32, nodeHash []byte) []byte {
-	var result []byte
+func (mh *merkleHelper) pulseHash(pulse *core.Pulse) []byte {
+	pulseNumberHash := mh.leafHasher.Hash(pulse.PulseNumber.Bytes())
+	entropyHash := mh.leafHasher.Hash(pulse.Entropy[:])
 
-	entryIndexHash := hash.SHA3Bytes256(utils.UInt32ToBytes(entryIndex))
-	result = append(result, entryIndexHash...)
-
-	result = append(result, nodeHash...)
-
-	return hash.SHA3Bytes256(result)
+	return mh.doubleSliceHash(pulseNumberHash, entropyHash)
 }
 
-func bucketInfoHash(role core.NodeRole, nodeCount uint32) []byte {
-	var result []byte
-
-	roleHash := hash.SHA3Bytes256(utils.UInt32ToBytes(uint32(role)))
-	result = append(result, roleHash...)
-
-	nodeCountHash := hash.SHA3Bytes256(utils.UInt32ToBytes(nodeCount))
-	result = append(result, nodeCountHash...)
-
-	return hash.SHA3Bytes256(result)
+func (mh *merkleHelper) nodeInfoHash(pulseHash, stateHash []byte) []byte {
+	return mh.doubleSliceHash(pulseHash, stateHash)
 }
 
-func bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
-	var result []byte
-
-	result = append(result, bucketInfoHash...)
-	result = append(result, bucketEntryHash...)
-
-	return hash.SHA3Bytes256(result)
+func (mh *merkleHelper) nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
+	nodeSignatureHash := mh.leafHasher.Hash(nodeSignature)
+	return mh.doubleSliceHash(nodeSignatureHash, nodeInfoHash)
 }
 
-func globuleInfoHash(prevCloudHash []byte, gobuleIndex, nodeCount uint32) []byte {
-	reservedHash := hash.SHA3Bytes256(utils.UInt32ToBytes(reserved))
-
-	var tmpResult1 []byte
-
-	tmpResult1 = append(tmpResult1, reservedHash...)
-	tmpResult1 = append(tmpResult1, prevCloudHash...)
-
-	var tmpResult2 []byte
-
-	globuleIndexHash := hash.SHA3Bytes256(utils.UInt32ToBytes(gobuleIndex))
-	tmpResult2 = append(tmpResult2, globuleIndexHash...)
-
-	nodeCountHash := hash.SHA3Bytes256(utils.UInt32ToBytes(nodeCount))
-	tmpResult2 = append(tmpResult2, nodeCountHash...)
-
-	var tmpResult3 []byte
-
-	tmpResult1Hash := hash.SHA3Bytes256(tmpResult1)
-	tmpResult3 = append(tmpResult3, tmpResult1Hash...)
-
-	tmpResult2Hash := hash.SHA3Bytes256(tmpResult2)
-	tmpResult3 = append(tmpResult3, tmpResult2Hash...)
-
-	return hash.SHA3Bytes256(tmpResult3)
+func (mh *merkleHelper) bucketEntryHash(entryIndex uint32, nodeHash []byte) []byte {
+	entryIndexHash := mh.leafHasher.Hash(utils.UInt32ToBytes(entryIndex))
+	return mh.doubleSliceHash(entryIndexHash, nodeHash)
 }
 
-func globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
-	var result []byte
+func (mh *merkleHelper) bucketInfoHash(role core.NodeRole, nodeCount uint32) []byte {
+	roleHash := mh.leafHasher.Hash(utils.UInt32ToBytes(uint32(role)))
+	nodeCountHash := mh.leafHasher.Hash(utils.UInt32ToBytes(nodeCount))
+	return mh.doubleSliceHash(roleHash, nodeCountHash)
+}
 
-	result = append(result, globuleInfoHash...)
-	result = append(result, globuleNodeRoot...)
+func (mh *merkleHelper) bucketHash(bucketInfoHash, bucketEntryHash []byte) []byte {
+	return mh.doubleSliceHash(bucketInfoHash, bucketEntryHash)
+}
 
-	return hash.SHA3Bytes256(result)
+func (mh *merkleHelper) globuleInfoHash(prevCloudHash []byte, globuleID, nodeCount uint32) []byte {
+	reservedHash := mh.leafHasher.Hash(utils.UInt32ToBytes(reserved))
+	globuleIDHash := mh.leafHasher.Hash(utils.UInt32ToBytes(globuleID))
+	nodeCountHash := mh.leafHasher.Hash(utils.UInt32ToBytes(nodeCount))
+
+	return mh.doubleSliceHash(
+		mh.doubleSliceHash(reservedHash, prevCloudHash),
+		mh.doubleSliceHash(globuleIDHash, nodeCountHash),
+	)
+}
+
+func (mh *merkleHelper) globuleHash(globuleInfoHash, globuleNodeRoot []byte) []byte {
+	return mh.doubleSliceHash(globuleInfoHash, globuleNodeRoot)
 }

@@ -5,6 +5,7 @@ INSGOCC = $(BIN_DIR)/insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
+EXPORTER = exporter
 
 ALL_PACKAGES = ./...
 COVERPROFILE = coverage.txt
@@ -71,6 +72,9 @@ $(INSGORUND):
 $(BENCHMARK):
 	go build -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
 
+$(EXPORTER):
+	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
+
 test:
 	go test -v $(ALL_PACKAGES)
 
@@ -93,4 +97,3 @@ docker-insgorund:
 
 
 docker: docker-insolard docker-pulsar docker-insgorund
-

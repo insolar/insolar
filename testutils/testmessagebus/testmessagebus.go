@@ -22,19 +22,49 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
 type TestMessageBus struct {
-	handlers map[core.MessageType]core.MessageHandler
+	handlers    map[core.MessageType]core.MessageHandler
+	pf          message.ParcelFactory
+	PulseNumber core.PulseNumber
 }
 
-func NewTestMessageBus() *TestMessageBus {
-	return &TestMessageBus{handlers: map[core.MessageType]core.MessageHandler{}}
+func (mb *TestMessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
+	panic("implement me")
+}
+
+func (mb *TestMessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
+	panic("implement me")
+}
+
+func (mb *TestMessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
+	panic("implement me")
+}
+
+func NewTestMessageBus(t *testing.T) *TestMessageBus {
+	mock := testutils.NewCryptographyServiceMock(t)
+	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
+	cm := &component.Manager{}
+	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
+	cm.Inject(delegationTokenFactory, parcelFactory, mock)
+
+	return &TestMessageBus{handlers: map[core.MessageType]core.MessageHandler{}, pf: parcelFactory}
 }
 
 func (mb *TestMessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
@@ -58,25 +88,16 @@ func (mb *TestMessageBus) MustRegister(p core.MessageType, handler core.MessageH
 	}
 }
 
-func (mb *TestMessageBus) Start(components core.Components) error {
-	panic("implement me")
-}
-
-func (mb *TestMessageBus) Stop() error {
-	panic("implement me")
-}
-
-func (mb *TestMessageBus) Send(ctx context.Context, m core.Message) (core.Reply, error) {
-	key, _ := ecdsa.GeneratePrivateKey()
-	signedMsg, err := message.NewSignedMessage(ctx, m, testutils.RandomRef(), key, 0)
+func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, setters ...core.SendOption) (core.Reply, error) {
+	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil)
 	if err != nil {
 		return nil, err
 	}
-	t := signedMsg.Message().Type()
+	t := parcel.Message().Type()
 	handler, ok := mb.handlers[t]
 	if !ok {
 		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
-	return handler(ctx, signedMsg)
+	return handler(ctx, parcel)
 }

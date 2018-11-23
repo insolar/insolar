@@ -102,7 +102,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		if core.CaseRecordTypeRouteCall != cr.Type {
 			return errors.New("wrong validation type on RouteCall")
 		}
-		sig := HashInterface(req)
+		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
 		if !bytes.Equal(cr.ReqSig, sig) {
 			return errors.New("wrong validation sig on RouteCall")
 		}
@@ -134,7 +134,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	rep.Result = res.(*reply.CallMethod).Result
 	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
 		Type:   core.CaseRecordTypeRouteCall,
-		ReqSig: HashInterface(req),
+		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
 		Resp:   rep.Result,
 	})
 
@@ -155,7 +155,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 		if core.CaseRecordTypeSaveAsChild != cr.Type {
 			return errors.New("wrong validation type on SaveAsChild")
 		}
-		sig := HashInterface(req)
+		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
 		if !bytes.Equal(cr.ReqSig, sig) {
 			return errors.New("wrong validation sig on SaveAsChild")
 		}
@@ -182,7 +182,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
 		Type:   core.CaseRecordTypeSaveAsChild,
-		ReqSig: HashInterface(req),
+		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
 		Resp:   rep.Reference,
 	})
 
@@ -199,7 +199,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 		if core.CaseRecordTypeGetObjChildren != cr.Type {
 			return errors.New("wrong validation type on GetObjChildren")
 		}
-		sig := HashInterface(req)
+		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
 		if !bytes.Equal(cr.ReqSig, sig) {
 			return errors.New("wrong validation sig on GetObjChildren")
 		}
@@ -236,7 +236,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 	}
 	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{ // bad idea, we can store gadzillion of children
 		Type:   core.CaseRecordTypeGetObjChildren,
-		ReqSig: HashInterface(req),
+		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
 		Resp:   rep.Children,
 	})
 	return nil
@@ -252,7 +252,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 		if core.CaseRecordTypeSaveAsDelegate != cr.Type {
 			return errors.New("wrong validation type on SaveAsDelegate")
 		}
-		sig := HashInterface(req)
+		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
 		if !bytes.Equal(cr.ReqSig, sig) {
 			return errors.New("wrong validation sig on SaveAsDelegate")
 		}
@@ -279,7 +279,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	rep.Reference = res.(*reply.CallConstructor).Object
 	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
 		Type:   core.CaseRecordTypeSaveAsDelegate,
-		ReqSig: HashInterface(req),
+		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
 		Resp:   rep.Reference,
 	})
 
@@ -296,7 +296,7 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 		if core.CaseRecordTypeGetDelegate != cr.Type {
 			return errors.New("wrong validation type on RouteCall")
 		}
-		sig := HashInterface(req)
+		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
 		if !bytes.Equal(cr.ReqSig, sig) {
 			return errors.New("wrong validation sig on RouteCall")
 		}
@@ -312,7 +312,7 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 	rep.Object = *ref
 	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
 		Type:   core.CaseRecordTypeGetDelegate,
-		ReqSig: HashInterface(req),
+		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
 		Resp:   rep.Object,
 	})
 	return nil

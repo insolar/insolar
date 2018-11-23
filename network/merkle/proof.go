@@ -17,58 +17,44 @@
 package merkle
 
 import (
-	"context"
-	ecdsa2 "crypto/ecdsa"
-
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-type PulseProof struct {
-	StateHash []byte
-	Signature []byte
+type BaseProof struct {
+	Signature core.Signature
 }
 
-func (np *PulseProof) IsValid(ctx context.Context, node core.Node, pulseHash []byte) bool {
-	nodeInfoHash := nodeInfoHash(pulseHash, np.StateHash)
-	return verifySignature(ctx, nodeInfoHash, np.Signature, node.PublicKey())
+func (bp *BaseProof) signature() core.Signature {
+	return bp.Signature
+}
+
+type PulseProof struct {
+	BaseProof
+
+	StateHash []byte
+}
+
+func (np *PulseProof) hash(pulseHash []byte, helper *merkleHelper) []byte {
+	return helper.nodeInfoHash(pulseHash, np.StateHash)
 }
 
 type GlobuleProof struct {
-	Signature     []byte
+	BaseProof
+
 	PrevCloudHash []byte
-	GlobuleIndex  uint32
+	GlobuleID     core.GlobuleID
 	NodeCount     uint32
 	NodeRoot      []byte
 }
 
-func (gp *GlobuleProof) IsValid(ctx context.Context, node core.Node, globuleHash []byte) bool {
-	return verifySignature(ctx, globuleHash, gp.Signature, node.PublicKey())
+func (gp *GlobuleProof) hash(globuleHash []byte, helper *merkleHelper) []byte {
+	return globuleHash
 }
 
 type CloudProof struct {
-	Signature []byte
+	BaseProof
 }
 
-func (cp *CloudProof) IsValid(ctx context.Context, node core.Node, cloudHash []byte) bool {
-	return verifySignature(ctx, cloudHash, cp.Signature, node.PublicKey())
-}
-
-func verifySignature(ctx context.Context, data, signature []byte, publicKey *ecdsa2.PublicKey) bool {
-	log := inslogger.FromContext(ctx)
-
-	key, err := ecdsa.ExportPublicKey(publicKey)
-	if err != nil {
-		log.Error("Failed to export a public key: ", err)
-		return false
-	}
-
-	verified, err := ecdsa.Verify(data, signature, key)
-	if err != nil {
-		log.Error("Failed to verify signature: ", err)
-		return false
-	}
-
-	return verified
+func (cp *CloudProof) hash(cloudHash []byte, helper *merkleHelper) []byte {
+	return cloudHash
 }
