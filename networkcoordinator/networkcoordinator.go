@@ -71,7 +71,7 @@ func (nc *NetworkCoordinator) routeCall(ctx context.Context, ref core.RecordRef,
 		Arguments:        args,
 	}
 
-	res, err := nc.MessageBus.Send(ctx, e)
+	res, err := nc.MessageBus.Send(ctx, e, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NetworkCoordinator::routeCall ] couldn't send message: "+ref.String())
 	}
