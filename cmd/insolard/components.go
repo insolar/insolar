@@ -181,7 +181,8 @@ func initComponents(
 		//if gen != nil {
 		//	components = append(components, gen)
 		//}
-		//components = append(components, []interface{}{genesisDataProvider,
+		//components = append(components, []interface{}{
+		genesisDataProvider,
 		gen,
 		apiRunner,
 		metricsHandler,
