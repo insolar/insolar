@@ -115,7 +115,6 @@ func (ar *Runner) IsAPIRunner() bool {
 func (ar *Runner) Start(ctx context.Context) error {
 	ar.SeedManager = seedmanager.New()
 
-	http.HandleFunc(ar.cfg.Info, ar.infoHandler())
 	http.HandleFunc(ar.cfg.Call, ar.callHandler())
 	http.Handle(ar.cfg.RPC, ar.rpcServer)
 	inslog := inslogger.FromContext(ctx)

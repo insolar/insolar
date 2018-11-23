@@ -23,7 +23,6 @@ import (
 // APIRunner holds configuration for api
 type APIRunner struct {
 	Address string
-	Info    string
 	Call    string
 	RPC     string
 }
@@ -32,7 +31,6 @@ type APIRunner struct {
 func NewAPIRunner() APIRunner {
 	return APIRunner{
 		Address: "localhost:19191",
-		Info:    "/api/v1/info",
 		Call:    "/api/v1/call",
 		RPC:     "/api/rpc",
 	}
