@@ -147,12 +147,12 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 }
 
 // CreateParcel creates signed message from provided message.
-func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, options *core.SendOptions) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), options)
+func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken) (core.Parcel, error) {
+	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), token)
 }
 
 // SendParcel sends provided message via network.
-func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel, options *core.SendOptions) (core.Reply, error) {
+func (mb *MessageBus) SendParcel(ctx context.Context, parcel core.Parcel, options *core.MessageSendOptions) (core.Reply, error) {
 	scope := newReaderScope(&mb.globalLock)
 	scope.Lock()
 	defer scope.Unlock()
@@ -181,16 +181,16 @@ func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel, options *
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
+		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
 		return nil, err
 	}
 
 	// Short path when sending to self node. Skip serialization
 	if nodes[0].Equal(mb.Service.GetNodeID()) {
-		return mb.doDeliver(msg.Context(context.Background()), msg)
+		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
-	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, msg)
+	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, parcel)
 	if err != nil {
 		return nil, err
 	}
