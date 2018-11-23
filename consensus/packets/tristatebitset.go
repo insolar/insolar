@@ -63,8 +63,8 @@ func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell) {
 }
 
 func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
-	firstByte := uint8(0)
-	secondByte := uint8(0)
+	var firstByte uint8
+	var secondByte uint8
 	if dbs.CompressedSet {
 		firstByte = 0x01
 	} else {
@@ -84,7 +84,7 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 		firstByte++
 		firstByte = firstByte << 6
 		secondByte = uint8(tmpLen)
-		totalSize += 1 // secondbyte is optional
+		totalSize++ // secondbyte is optional
 		result = allocateBuffer(totalSize)
 		err = binary.Write(result, defaultByteOrder, firstByte)
 		if err != nil {
@@ -122,7 +122,7 @@ func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "[ Deserialize ] failed to read first byte")
 	}
-	compressed, hbitFlag, length, err := parseFirstByte(firstbyte)
+	compressed, hbitFlag, length := parseFirstByte(firstbyte)
 	if hbitFlag {
 		err = binary.Read(data, defaultByteOrder, &length)
 		if err != nil {
@@ -192,7 +192,7 @@ func parseBitArray(payload []uint8, size int) (*bitArray, error) {
 	return array, nil
 }
 
-func parseFirstByte(byte uint8) (compressed bool, hbitFlag bool, lbitLength uint8, err error) {
+func parseFirstByte(byte uint8) (compressed bool, hbitFlag bool, lbitLength uint8) {
 	lbitLength = uint8(0)
 	compressed = false
 	hbitFlag = false
