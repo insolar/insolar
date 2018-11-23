@@ -19,9 +19,7 @@ package api
 import (
 	"context"
 	"crypto"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -46,50 +44,6 @@ const (
 	// BadRequest is bad formed request
 	BadRequest int = -2
 )
-
-func writeError(message string, code int) map[string]interface{} {
-	errJSON := map[string]interface{}{
-		"error": map[string]interface{}{
-			"message": message,
-			"code":    code,
-		},
-	}
-	return errJSON
-}
-
-func makeHandlerMarshalErrorJSON(ctx context.Context) []byte {
-	jsonErr := writeError("Invalid data from handler", HandlerError)
-	serJSON, err := json.Marshal(jsonErr)
-	if err != nil {
-		inslogger.FromContext(ctx).Fatal("Can't marshal base error")
-	}
-	return serJSON
-}
-
-var handlerMarshalErrorJSON = makeHandlerMarshalErrorJSON(inslogger.ContextWithTrace(context.Background(), "handlerMarshalErrorJSON"))
-
-const traceIDQueryParam = "traceID"
-
-// PreprocessRequest extracts params from requests
-func PreprocessRequest(ctx context.Context, req *http.Request) (*Params, error) {
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't read body. So strange")
-	}
-	if len(body) == 0 {
-		return nil, errors.New("[ PreprocessRequest ] Empty body")
-	}
-
-	var params Params
-	err = json.Unmarshal(body, &params)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't parse input params")
-	}
-
-	inslogger.FromContext(ctx).Infof("[ PreprocessRequest ] Query: %s. Url: %s\n", string(body), req.URL)
-
-	return &params, nil
-}
 
 // Runner implements Component for API
 type Runner struct {
