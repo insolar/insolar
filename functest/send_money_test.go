@@ -50,7 +50,7 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 	amount := 111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	require.EqualError(t, err, "Can't get public key: couldn't get object message: couldn't get object: failed to fetch object index: storage object not found")
+	require.EqualError(t, err, "Can't get public key: couldn't get object message: couldn't get object: storage object not found")
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldSecondBalance, newSecondBalance)
