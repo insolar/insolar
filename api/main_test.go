@@ -33,7 +33,7 @@ import (
 )
 
 const HOST = "http://localhost:19191"
-const TestUrl = HOST + "/api/v1/call"
+const TestUrl = HOST + "/api/call"
 
 func TestMain(m *testing.M) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")

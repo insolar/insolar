@@ -31,7 +31,7 @@ type APIRunner struct {
 func NewAPIRunner() APIRunner {
 	return APIRunner{
 		Address: "localhost:19191",
-		Call:    "/api/v1/call",
+		Call:    "/api/call",
 		RPC:     "/api/rpc",
 	}
 }
