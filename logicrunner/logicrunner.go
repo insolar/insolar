@@ -98,8 +98,8 @@ func (es *ExecutionState) ErrorWrap(err error, message string) error {
 }
 
 func (es *ExecutionState) Lock() {
-	es.queueLength++
 	es.Mutex.Lock()
+	es.queueLength++
 }
 
 func (es *ExecutionState) Unlock() {
