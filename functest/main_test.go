@@ -39,6 +39,7 @@ import (
 const HOST = "http://localhost:19191"
 const TestURL = HOST + "/api/v1"
 const TestRPC = HOST + "/api/rpc"
+const TestAPIURL = HOST + "/api"
 const insolarImportPath = "github.com/insolar/insolar"
 const insolarNodeKeys = "bootstrap_keys.json"
 const insolarRootMemberKeys = "root_member_keys.json"

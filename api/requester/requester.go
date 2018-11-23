@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
@@ -73,31 +72,9 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	return body, nil
 }
 
-// GetSeed makes get_seed request and extracts it
-func GetSeed(url string) ([]byte, error) {
-	body, err := GetResponseBody(url, PostParams{
-		"query_type": "get_seed",
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getSeed ]")
-	}
-
-	type seedResponse struct{ Seed []byte }
-	seedResp := seedResponse{}
-
-	err = json.Unmarshal(body, &seedResp)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getSeed ]")
-	}
-
-	return seedResp.Seed, nil
-}
-
 // GetRPCSeed makes rpc request to seed.Get method and extracts it
 func GetRPCSeed(url string) ([]byte, error) {
-	splitedURL := strings.Split(url, "v1")
-	baseURL := splitedURL[0]
-	body, err := GetResponseBody(baseURL+"rpc", PostParams{
+	body, err := GetResponseBody(url+"/rpc", PostParams{
 		"jsonrpc": "2.0",
 		"method":  "seed.Get",
 		"id":      "",
@@ -195,7 +172,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	}
 	verboseInfo(ctx, "GETSEED request completed. seed: "+string(seed))
 
-	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
+	response, err := SendWithSeed(ctx, url+"/v1/call", userCfg, reqCfg, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}

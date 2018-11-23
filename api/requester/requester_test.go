@@ -40,7 +40,7 @@ const TESTROOTMEMBER = "root_member_ref"
 const TESTROOTDOMAIN = "root_domain_ref"
 
 type TESTSEEDRESULT struct {
-	Seed    []byte
+	Seed    string
 	TraceID string
 }
 
@@ -94,7 +94,7 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	answer := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      "",
-		"result":  TESTSEEDRESULT{Seed: []byte("someSeed"), TraceID: "testTraceID"},
+		"result":  TESTSEEDRESULT{Seed: TESTSEED, TraceID: "testTraceID"},
 	}
 	writeReponse(response, answer)
 }
@@ -104,6 +104,7 @@ const RPCLOCATION = "/api/rpc"
 const PORT = "12221"
 const HOST = "127.0.0.1"
 const URL = "http://" + HOST + ":" + PORT + LOCATION
+const APIURL = "http://" + HOST + ":" + PORT + "/api"
 const RPCURL = "http://" + HOST + ":" + PORT + RPCLOCATION
 
 var server = &http.Server{Addr: ":" + PORT}
@@ -188,8 +189,8 @@ func TestMain(m *testing.M) {
 	os.Exit(testMainWrapper(m))
 }
 
-func TestGetSeed(t *testing.T) {
-	seed, err := GetSeed(URL)
+func TestGetRPCSeed(t *testing.T) {
+	seed, err := GetRPCSeed(APIURL)
 	require.NoError(t, err)
 	decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
 	require.NoError(t, err)
@@ -230,7 +231,7 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *RequestConfigJSON) {
 func TestSend(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
-	resp, err := Send(ctx, URL, userConf, reqConf)
+	resp, err := Send(ctx, APIURL, userConf, reqConf)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
@@ -254,13 +255,6 @@ func TestSendWithSeed_NilConfigs(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
 	_, err := SendWithSeed(ctx, URL, nil, nil, []byte(TESTSEED))
 	require.EqualError(t, err, "[ Send ] Configs must be initialized")
-}
-
-func TestSend_BadSeedUrl(t *testing.T) {
-	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend_BadSeedUrl")
-	userConf, reqConf := readConfigs(t)
-	_, err := Send(ctx, URL+"TTT", userConf, reqConf)
-	require.EqualError(t, err, "[ Send ] Problem with getting seed: [ getSeed ]: [ getResponseBody ] Bad http response code: 404")
 }
 
 func TestInfo(t *testing.T) {

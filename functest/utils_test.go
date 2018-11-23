@@ -239,7 +239,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 	if err != nil {
 		return nil, err
 	}
-	res, err := requester.Send(ctx, TestURL, rootCfg, &requester.RequestConfigJSON{
+	res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
 		Method: method,
 		Params: params,
 	})

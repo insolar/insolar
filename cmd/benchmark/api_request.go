@@ -29,6 +29,7 @@ import (
 )
 
 const URL = "http://localhost:19191/api/v1"
+const APIURL = "http://localhost:19191/api"
 const callURL = URL + "/call"
 const infoURL = URL + "/info"
 
@@ -53,7 +54,7 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
 	check("can not create user config:", err)
 
-	seed, err := requester.GetSeed(URL)
+	seed, err := requester.GetRPCSeed(APIURL)
 	check("can not get seed:", err)
 
 	body, err := requester.SendWithSeed(ctx, callURL, userCfg, reqCfg, seed)

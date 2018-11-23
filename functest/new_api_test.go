@@ -106,7 +106,7 @@ func TestCrazyJSON(t *testing.T) {
 func TestIncorrectSign(t *testing.T) {
 	args, err := core.MarshalArgs(nil)
 	require.NoError(t, err)
-	seed, err := requester.GetSeed(TestURL)
+	seed, err := requester.GetRPCSeed(TestAPIURL)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBody(TestCallUrl, requester.PostParams{
 		"params":    args,
