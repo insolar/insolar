@@ -137,21 +137,13 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, optionSetter ...core.SendOption) (core.Reply, error) {
-	var options *core.SendOptions
-	if len(optionSetter) > 0 {
-		options = &core.SendOptions{}
-		for _, setter := range optionSetter {
-			setter(options)
-		}
-	}
-
-	parcel, err := mb.CreateParcel(ctx, msg, options)
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token)
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, options)
+	return mb.SendParcel(ctx, parcel, ops)
 }
 
 // CreateParcel creates signed message from provided message.
