@@ -132,13 +132,6 @@ type registerNodeResponse struct {
 }
 
 type infoResponse struct {
-	Error      string `json:"error"`
-	RootDomain string `json:"root_domain"`
-	RootMember string `json:"root_member"`
-	NodeDomain string `json:"node_domain"`
-}
-
-type newInfoResponse struct {
 	RootDomain string `json:"RootDomain"`
 	RootMember string `json:"RootMember"`
 	NodeDomain string `json:"NodeDomain"`
@@ -147,7 +140,7 @@ type newInfoResponse struct {
 
 type rpcInfoResponse struct {
 	RPCResponse
-	Result newInfoResponse `json:"result"`
+	Result infoResponse `json:"result"`
 }
 
 func createMember(t *testing.T, name string) *user {
@@ -211,7 +204,7 @@ func getSeed(t *testing.T) string {
 	return getSeedResponse.Result.Seed
 }
 
-func getInfo(t *testing.T) newInfoResponse {
+func getInfo(t *testing.T) infoResponse {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "info.Get",
@@ -220,7 +213,6 @@ func getInfo(t *testing.T) newInfoResponse {
 	rpcInfoResponse := &rpcInfoResponse{}
 	unmarshalRPCResponse(t, body, rpcInfoResponse)
 	require.NotNil(t, rpcInfoResponse.Result)
-	// info = rpcInfoResponse.Result
 	return rpcInfoResponse.Result
 }
 

@@ -18,6 +18,7 @@ package functest
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/build"
@@ -163,18 +164,28 @@ func loadRootKeys() error {
 }
 
 func setInfo() error {
-	resp, err := http.Get(TestAPIURL + "/v1/info")
+	jsonValue, err := json.Marshal(postParams{
+		"jsonrpc": "2.0",
+		"method":  "info.Get",
+		"id":      "",
+	})
 	if err != nil {
-		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestAPIURL+"/api/info")
+		return errors.Wrap(err, "[ setInfo ] couldn't marshal post params")
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	postResp, err := http.Post(TestRPC, "application/json", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't send request to %s", TestRPC)
+	}
+	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {
 		return errors.Wrapf(err, "[ setInfo ] couldn't read answer")
 	}
-	err = json.Unmarshal(body, &info)
+	infoResp := &rpcInfoResponse{}
+	err = json.Unmarshal(body, infoResp)
 	if err != nil {
 		return errors.Wrapf(err, "[ setInfo ] couldn't unmarshall answer")
 	}
+	info = infoResp.Result
 	return nil
 }
 
