@@ -25,18 +25,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const refsCount = 70
+const hrefsCount = 70
 
 func initRefs() []core.RecordRef {
-	result := make([]core.RecordRef, refsCount)
-	for i := 0; i < refsCount; i++ {
+	result := make([]core.RecordRef, hrefsCount)
+	for i := 0; i < hrefsCount; i++ {
 		result[i] = testutils.RandomRef()
 	}
 	return result
 }
 
 func initBitCells(refs []core.RecordRef) []BitSetCell {
-	result := make([]BitSetCell, refsCount)
+	result := make([]BitSetCell, hrefsCount)
 	for i, ref := range refs {
 		result[i] = BitSetCell{NodeID: ref, State: TimedOut}
 	}
@@ -48,7 +48,7 @@ type BitSetMapperMock struct {
 }
 
 func (bsmm *BitSetMapperMock) IndexToRef(index int) (core.RecordRef, error) {
-	if index > refsCount-1 {
+	if index > hrefsCount-1 {
 		return testutils.RandomRef(), ErrBitSetOutOfRange
 	}
 	return bsmm.refs[index], nil
@@ -64,7 +64,7 @@ func (bsmm *BitSetMapperMock) RefToIndex(nodeID core.RecordRef) (int, error) {
 }
 
 func (bsmm *BitSetMapperMock) Length() int {
-	return refsCount
+	return hrefsCount
 }
 
 func TestNewTriStateBitSet(t *testing.T) {
@@ -89,10 +89,10 @@ func TestTriStateBitSet_ApplyChanges(t *testing.T) {
 
 	bitset, _ := NewBitSet(cells, &BitSetMapperMock{refs: refs})
 
-	cells[refsCount-3].State = Fraud
+	cells[hrefsCount-3].State = Fraud
 	bitset.ApplyChanges(cells)
 	assert.Equal(t, cells, bitset.GetCells())
-	cells[refsCount-4].State = Legit
+	cells[hrefsCount-4].State = Legit
 	assert.NotEqual(t, cells, bitset.GetCells())
 }
 
@@ -105,11 +105,11 @@ func TestBitSet(t *testing.T) {
 	array1, err := bitset.cellsToBitArray()
 	assert.NoError(t, err)
 
-	cells[refsCount-3].State = Fraud
+	cells[hrefsCount-3].State = Fraud
 	bitset.ApplyChanges(cells)
 	array2, err := bitset.cellsToBitArray()
 	assert.NoError(t, err)
-	err = changeBitState(array1, refsCount-3, Fraud)
+	err = changeBitState(array1, hrefsCount-3, Fraud)
 	assert.NoError(t, err)
 
 	assert.Equal(t, array1, array2)
@@ -120,22 +120,47 @@ func TestBitSet(t *testing.T) {
 
 func TestBitArray(t *testing.T) {
 	array := newBitArray(181)
-	array.put(1, 126)
-	array.put(1, 127)
+	err := array.put(1, 126)
+	assert.NoError(t, err)
+	err = array.put(1, 127)
+	assert.NoError(t, err)
 
 	expected := uint8(1)
 
-	actual, _ := array.get(126)
+	actual, err := array.get(126)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, actual)
 
-	actual, _ = array.get(127)
+	actual, err = array.get(127)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, actual)
 
-	actual, _ = array.get(2)
+	actual, err = array.get(127)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
+
+	actual, err = array.get(2)
+	assert.NoError(t, err)
 	assert.NotEqual(t, expected, actual)
 
-	err := array.put(1, 182)
-	assert.Error(t, err)
+	err = array.put(1, 126)
+	assert.NoError(t, err)
+	err = array.put(1, 127)
+	assert.NoError(t, err)
+	err = array.put(1, 125)
+	assert.NoError(t, err)
+	err = array.put(0, 126)
+	assert.NoError(t, err)
+	actual, err = array.get(125)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
+	actual, err = array.get(127)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
+	actual, err = array.get(126)
+	assert.NoError(t, err)
+	expected = 0
+	assert.Equal(t, expected, actual)
 }
 
 func TestTriStateBitSet_Serialize(t *testing.T) {
