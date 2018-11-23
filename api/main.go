@@ -37,14 +37,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 )
 
-const (
-	_ int = 0
-	// HandlerError is error in handler
-	HandlerError int = -1
-	// BadRequest is bad formed request
-	BadRequest int = -2
-)
-
 // Runner implements Component for API
 type Runner struct {
 	Certificate         core.Certificate         `inject:""`

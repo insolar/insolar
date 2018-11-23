@@ -51,7 +51,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestBadRequest(t *testing.T) {
+func TestGetRequest(t *testing.T) {
 	resp, err := http.Get(TestUrl)
 	require.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)

@@ -204,7 +204,7 @@ func TestGetRPCSeed(t *testing.T) {
 	require.Equal(t, decodedSeed, seed)
 }
 
-func TestGetResponseBodyBadRequest(t *testing.T) {
+func TestGetResponseBodyEmpty(t *testing.T) {
 	_, err := GetResponseBody("test", PostParams{})
 	require.EqualError(t, err, "[ getResponseBody ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
 }
