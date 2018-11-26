@@ -44,7 +44,6 @@ type ExecutionState struct {
 	Ref    *Ref
 	Method string
 
-	noWait      bool
 	validate    bool
 	insContext  context.Context
 	callContext *core.LogicCallContext
@@ -435,9 +434,9 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
 	ctx := es.insContext
 
-	es.noWait = false
+	delayedUnlock := false
 	defer func() {
-		if !es.noWait {
+		if !delayedUnlock {
 			es.Unlock()
 		}
 	}()
@@ -459,11 +458,6 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	}
 
 	executeFunction := func() (*reply.CallMethod, error) {
-		defer func() {
-			if es.noWait {
-				es.Unlock()
-			}
-		}()
 		newData, result, err := executor.CallMethod(
 			ctx, es.callContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
 		)
@@ -491,7 +485,6 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			if err != nil {
 				return nil, es.ErrorWrap(err, "couldn't save results")
 			}
-
 		}
 
 		es.objectbody.Object = newData
@@ -508,8 +501,9 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	case message.ReturnResult:
 		return executeFunction()
 	case message.ReturnNoWait:
-		es.noWait = true
+		delayedUnlock = true
 		go func() {
+			defer es.Unlock()
 			_, err := executeFunction()
 			if err != nil {
 				inslogger.FromContext(ctx).Error(err)
@@ -522,9 +516,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 
 func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
 	ctx := es.insContext
-	defer func() {
-		es.Unlock()
-	}()
+	defer es.Unlock()
 
 	if es.callContext.Caller.IsEmpty() {
 		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
