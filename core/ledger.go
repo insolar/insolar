@@ -261,6 +261,11 @@ type StorageExporter interface {
 	Export(ctx context.Context, fromPulse PulseNumber, size int) (*StorageExportResult, error)
 }
 
+// RecentObjectsIndexMeta contains meta about indexes
+type RecentObjectsIndexMeta struct {
+	TTL int
+}
+
 type RecentStorage interface {
 	AddObject(id RecordID)
 	AddPendingRequest(id RecordID)
