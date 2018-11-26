@@ -30,8 +30,8 @@ type bitArray struct {
 	bitsSize int
 }
 
-func round(devinded, devider int) float64 {
-	return math.Round(float64(devinded/devider) + 0.5)
+func round(dividend, divider int) float64 {
+	return math.Round(float64(dividend/divider) + 0.5)
 }
 
 func newBitArray(size int) *bitArray {

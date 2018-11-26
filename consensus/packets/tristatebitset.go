@@ -225,19 +225,19 @@ func parseBitArray(payload []uint8, size int) (*bitArray, error) {
 	return array, nil
 }
 
-func parseFirstByte(byte uint8) (compressed bool, hbitFlag bool, lbitLength uint8) {
+func parseFirstByte(b uint8) (compressed bool, hbitFlag bool, lbitLength uint8) {
 	lbitLength = uint8(0)
 	compressed = false
 	hbitFlag = false
-	if (byte & firstBitMask) == 1 { // check compressed flag bit
+	if (b & firstBitMask) == 1 { // check compressed flag bit
 		compressed = true
 	}
-	check := (byte << 1) & firstBitMask // check hBitLength flag bit
+	check := (b << 1) & firstBitMask // check hBitLength flag bit
 	if check == firstBitMask {
 		hbitFlag = true
 		return
 	}
-	lbitLength = (byte << 2) >> 2 // remove 2 first bits
+	lbitLength = (b << 2) >> 2 // remove 2 first bits
 	return
 }
 
