@@ -18,6 +18,7 @@ package certificate
 
 import (
 	"crypto"
+	"encoding/gob"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
@@ -45,6 +46,15 @@ type Certificate struct {
 	Role                string               `json:"role"`
 	BootstrapNodes      []core.BootstrapNode `json:"bootstrap_nodes"`
 	RootDomainReference string               `json:"root_domain_ref"`
+}
+
+func init() {
+	// TODO: add Serialize & Deserialize instead of this
+	gob.Register(&Certificate{})
+}
+
+func (cert *Certificate) GetPublicKey() crypto.PublicKey {
+	panic("not implemented")
 }
 
 func (cert *Certificate) serializeNetworkPart() []byte {
