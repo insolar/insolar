@@ -91,14 +91,15 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	routingTable, hostnetwork, controller, err := newNetworkComponents(n.cfg, n, n.scheme)
+	n.routingTable = &routing.Table{}
+	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg)
 	if err != nil {
-		return errors.Wrap(err, "Failed to create network components.")
+		return errors.Wrap(err, "error creating internal transport")
 	}
+	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
+	options := controller.ConfigureOptions(n.cfg.Host)
+	n.controller = controller.NewNetworkController(n, options, internalTransport, n.routingTable, n.hostNetwork, n.scheme)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
-	n.routingTable = routingTable
-	n.hostNetwork = hostnetwork
-	n.controller = controller
 	return nil
 }
 
@@ -181,18 +182,4 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 
 func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
 	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
-}
-
-// newNetworkComponents create network.HostNetwork and network.Controller for new network
-func newNetworkComponents(conf configuration.Configuration,
-	pulseHandler network.PulseHandler, scheme core.PlatformCryptographyScheme) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
-	routingTable := &routing.Table{}
-	internalTransport, err := hostnetwork.NewInternalTransport(conf)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "error creating internal transport")
-	}
-	hostNetwork := hostnetwork.NewHostTransport(internalTransport, routingTable)
-	options := controller.ConfigureOptions(conf.Host)
-	networkController := controller.NewNetworkController(pulseHandler, options, internalTransport, routingTable, hostNetwork, scheme)
-	return routingTable, hostNetwork, networkController, nil
 }
