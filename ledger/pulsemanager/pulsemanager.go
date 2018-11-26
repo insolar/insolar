@@ -218,6 +218,10 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 	var err error
 	inslog := inslogger.FromContext(ctx)
 	for {
+		if m.isstopped() {
+			// probably we won't do next syncs if got stop signal
+			return
+		}
 		for {
 			if start != 0 {
 				break
@@ -239,23 +243,27 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 				panic(err)
 			}
 		}
-		inslog.Debugf("syncronization sync pulses: [%v:%v]", start, end)
+		next := start + 1
+		inslog.Debugf("syncronization sync pulses: [%v:%v]", start, next)
 
-		lastprocessed, syncerr := m.HeavySync(ctx, start, end)
+		_, syncerr := m.HeavySync(ctx, start, next)
 		if syncerr != nil {
 			syncerr = errors.Wrap(syncerr, "HeavySync failed")
 			inslog.Error(syncerr.Error())
 			// TODO: add sleep and some retry logic here?
 			continue
 		}
-		err = m.db.SetReplicatedPulse(ctx, lastprocessed)
+		err = m.db.SetReplicatedPulse(ctx, start)
 		if err != nil {
 			err = errors.Wrap(err,
 				"SetReplicatedPulse failed after success HeavySync in Pulsemanager")
 			inslog.Error(err)
 			panic(err)
 		}
-		start = 0
+		start = next
+		if start == end {
+			start = 0
+		}
 	}
 }
 
