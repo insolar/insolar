@@ -121,4 +121,5 @@ func (r *RecentStorage) ClearObjects() {
 	defer r.objectLock.Unlock()
 
 	r.recentObjects = map[core.RecordID]*core.RecentObjectsIndexMeta{}
+	r.pendingRequests = map[core.RecordID]struct{}{}
 }
