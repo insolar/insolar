@@ -26,7 +26,7 @@ import (
 )
 
 type ParcelFactory interface {
-	Create(context.Context, core.Message, core.RecordRef, *core.SendOptions) (core.Parcel, error)
+	Create(context.Context, core.Message, core.RecordRef, core.DelegationToken) (core.Parcel, error)
 	Validate(crypto.PublicKey, core.Parcel) error
 }
 

@@ -21,7 +21,7 @@ import (
 type senderMock struct {
 	t minimock.Tester
 
-	CreateParcelFunc       func(p context.Context, p1 core.Message, p2 *core.SendOptions) (r core.Parcel, r1 error)
+	CreateParcelFunc       func(p context.Context, p1 core.Message, p2 core.DelegationToken) (r core.Parcel, r1 error)
 	CreateParcelCounter    uint64
 	CreateParcelPreCounter uint64
 	CreateParcelMock       msenderMockCreateParcel
@@ -46,12 +46,12 @@ type senderMock struct {
 	RegisterPreCounter uint64
 	RegisterMock       msenderMockRegister
 
-	SendFunc       func(p context.Context, p1 core.Message, p2 ...core.SendOption) (r core.Reply, r1 error)
+	SendFunc       func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)
 	SendCounter    uint64
 	SendPreCounter uint64
 	SendMock       msenderMockSend
 
-	SendParcelFunc       func(p context.Context, p1 core.Parcel, p2 *core.SendOptions) (r core.Reply, r1 error)
+	SendParcelFunc       func(p context.Context, p1 core.Parcel, p2 *core.MessageSendOptions) (r core.Reply, r1 error)
 	SendParcelCounter    uint64
 	SendParcelPreCounter uint64
 	SendParcelMock       msenderMockSendParcel
@@ -91,32 +91,32 @@ type msenderMockCreateParcel struct {
 type senderMockCreateParcelParams struct {
 	p  context.Context
 	p1 core.Message
-	p2 *core.SendOptions
+	p2 core.DelegationToken
 }
 
 //Expect sets up expected params for the sender.CreateParcel
-func (m *msenderMockCreateParcel) Expect(p context.Context, p1 core.Message, p2 *core.SendOptions) *msenderMockCreateParcel {
+func (m *msenderMockCreateParcel) Expect(p context.Context, p1 core.Message, p2 core.DelegationToken) *msenderMockCreateParcel {
 	m.mockExpectations = &senderMockCreateParcelParams{p, p1, p2}
 	return m
 }
 
 //Return sets up a mock for sender.CreateParcel to return Return's arguments
 func (m *msenderMockCreateParcel) Return(r core.Parcel, r1 error) *senderMock {
-	m.mock.CreateParcelFunc = func(p context.Context, p1 core.Message, p2 *core.SendOptions) (core.Parcel, error) {
+	m.mock.CreateParcelFunc = func(p context.Context, p1 core.Message, p2 core.DelegationToken) (core.Parcel, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of sender.CreateParcel method
-func (m *msenderMockCreateParcel) Set(f func(p context.Context, p1 core.Message, p2 *core.SendOptions) (r core.Parcel, r1 error)) *senderMock {
+func (m *msenderMockCreateParcel) Set(f func(p context.Context, p1 core.Message, p2 core.DelegationToken) (r core.Parcel, r1 error)) *senderMock {
 	m.mock.CreateParcelFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //CreateParcel implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) CreateParcel(p context.Context, p1 core.Message, p2 *core.SendOptions) (r core.Parcel, r1 error) {
+func (m *senderMock) CreateParcel(p context.Context, p1 core.Message, p2 core.DelegationToken) (r core.Parcel, r1 error) {
 	atomic.AddUint64(&m.CreateParcelPreCounter, 1)
 	defer atomic.AddUint64(&m.CreateParcelCounter, 1)
 
@@ -426,32 +426,32 @@ type msenderMockSend struct {
 type senderMockSendParams struct {
 	p  context.Context
 	p1 core.Message
-	p2 []core.SendOption
+	p2 *core.MessageSendOptions
 }
 
 //Expect sets up expected params for the sender.Send
-func (m *msenderMockSend) Expect(p context.Context, p1 core.Message, p2 ...core.SendOption) *msenderMockSend {
+func (m *msenderMockSend) Expect(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *msenderMockSend {
 	m.mockExpectations = &senderMockSendParams{p, p1, p2}
 	return m
 }
 
 //Return sets up a mock for sender.Send to return Return's arguments
 func (m *msenderMockSend) Return(r core.Reply, r1 error) *senderMock {
-	m.mock.SendFunc = func(p context.Context, p1 core.Message, p2 ...core.SendOption) (core.Reply, error) {
+	m.mock.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (core.Reply, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of sender.Send method
-func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 ...core.SendOption) (r core.Reply, r1 error)) *senderMock {
+func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)) *senderMock {
 	m.mock.SendFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //Send implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) Send(p context.Context, p1 core.Message, p2 ...core.SendOption) (r core.Reply, r1 error) {
+func (m *senderMock) Send(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 	atomic.AddUint64(&m.SendPreCounter, 1)
 	defer atomic.AddUint64(&m.SendCounter, 1)
 
@@ -472,7 +472,7 @@ func (m *senderMock) Send(p context.Context, p1 core.Message, p2 ...core.SendOpt
 		return
 	}
 
-	return m.SendFunc(p, p1, p2...)
+	return m.SendFunc(p, p1, p2)
 }
 
 //SendMinimockCounter returns a count of senderMock.SendFunc invocations
@@ -494,32 +494,32 @@ type msenderMockSendParcel struct {
 type senderMockSendParcelParams struct {
 	p  context.Context
 	p1 core.Parcel
-	p2 *core.SendOptions
+	p2 *core.MessageSendOptions
 }
 
 //Expect sets up expected params for the sender.SendParcel
-func (m *msenderMockSendParcel) Expect(p context.Context, p1 core.Parcel, p2 *core.SendOptions) *msenderMockSendParcel {
+func (m *msenderMockSendParcel) Expect(p context.Context, p1 core.Parcel, p2 *core.MessageSendOptions) *msenderMockSendParcel {
 	m.mockExpectations = &senderMockSendParcelParams{p, p1, p2}
 	return m
 }
 
 //Return sets up a mock for sender.SendParcel to return Return's arguments
 func (m *msenderMockSendParcel) Return(r core.Reply, r1 error) *senderMock {
-	m.mock.SendParcelFunc = func(p context.Context, p1 core.Parcel, p2 *core.SendOptions) (core.Reply, error) {
+	m.mock.SendParcelFunc = func(p context.Context, p1 core.Parcel, p2 *core.MessageSendOptions) (core.Reply, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of sender.SendParcel method
-func (m *msenderMockSendParcel) Set(f func(p context.Context, p1 core.Parcel, p2 *core.SendOptions) (r core.Reply, r1 error)) *senderMock {
+func (m *msenderMockSendParcel) Set(f func(p context.Context, p1 core.Parcel, p2 *core.MessageSendOptions) (r core.Reply, r1 error)) *senderMock {
 	m.mock.SendParcelFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //SendParcel implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) SendParcel(p context.Context, p1 core.Parcel, p2 *core.SendOptions) (r core.Reply, r1 error) {
+func (m *senderMock) SendParcel(p context.Context, p1 core.Parcel, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 	atomic.AddUint64(&m.SendParcelPreCounter, 1)
 	defer atomic.AddUint64(&m.SendParcelCounter, 1)
 
