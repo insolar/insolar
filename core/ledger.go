@@ -260,3 +260,13 @@ type StorageExporter interface {
 	// Export returns data view from storage.
 	Export(ctx context.Context, fromPulse PulseNumber, size int) (*StorageExportResult, error)
 }
+
+type RecentStorage interface {
+	AddObject(id RecordID)
+	AddPendingRequest(id RecordID)
+	RemovePendingRequest(id RecordID)
+	GetObjects() map[RecordID]*RecentObjectsIndexMeta
+	GetRequests() []RecordID
+	ClearZeroTTLObjects()
+	ClearObjects()
+}
