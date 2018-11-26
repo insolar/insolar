@@ -17,6 +17,10 @@
 package packets
 
 import (
+	"bytes"
+	"encoding/binary"
+	"io"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
@@ -27,6 +31,7 @@ type PacketType uint8
 const (
 	Phase1 = PacketType(iota + 1)
 	Phase2
+	Phase3
 )
 
 const HashLength = 64
@@ -252,4 +257,92 @@ func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) er
 	}
 
 	return errors.New("invalid proof fields len")
+}
+
+// ----------------------------------PHASE 3--------------------------------
+
+type Phase3Packet struct {
+	// -------------------- Header
+	packetHeader PacketHeader
+
+	// -------------------- Section 1
+	DeviantBitSet           BitSet
+	SignatureHeaderSection1 [SignatureLength]byte
+}
+
+// SetPacketHeader set routing information for transport level.
+func (p3p *Phase3Packet) SetPacketHeader(header *RoutingHeader) error {
+	if header.PacketType != types.Phase3 {
+		return errors.New("[ Phase3Packet.SetPacketHeader ] wrong packet type")
+	}
+
+	p3p.packetHeader.setRoutingFields(header, Phase3)
+	return nil
+}
+
+// GetPacketHeader get routing information from transport level.
+func (p3p *Phase3Packet) GetPacketHeader() (*RoutingHeader, error) {
+	header := &RoutingHeader{}
+
+	header.PacketType = types.Phase2
+	header.OriginID = p3p.packetHeader.OriginNodeID
+	header.TargetID = p3p.packetHeader.TargetNodeID
+
+	return header, nil
+}
+
+func (p3p *Phase3Packet) Serialize() ([]byte, error) {
+	header, err := p3p.packetHeader.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize p3p header")
+	}
+
+	bitset, err := p3p.DeviantBitSet.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize bitset")
+	}
+
+	var data bytes.Buffer
+
+	_, err = data.Write(header)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to write a header to buffer")
+	}
+
+	_, err = data.Write(bitset)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to write a bitset to buffer")
+	}
+
+	_, err = data.Write(p3p.SignatureHeaderSection1[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to write a signature to buffer")
+	}
+	return data.Bytes(), nil
+}
+
+func (p3p *Phase3Packet) Deserialize(data io.Reader) error {
+	err := p3p.packetHeader.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Deserialize ] failed to deserialize p3p header")
+	}
+
+	err = p3p.DeserializeWithoutHeader(data, &p3p.packetHeader)
+	if err != nil {
+		return errors.Wrap(err, "[ Deserialize ] failed to deserialize p3p data")
+	}
+	return nil
+}
+
+func (p3p *Phase3Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+	err := p3p.DeviantBitSet.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ DeserializeWithoutHeader ] failed to deserialize p3p bitset")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &p3p.SignatureHeaderSection1)
+	if err != nil {
+		return errors.Wrap(err, "[ DeserializeWithoutHeader ] failed to deserialize p3p signature")
+	}
+	return nil
 }
