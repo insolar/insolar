@@ -190,7 +190,7 @@ func initComponents(
 			// components = append(components, []interface{}{
 			genesisDataProvider,
 			gen,
-			apiRunner,
+			//apiRunner,
 			metricsHandler,
 			networkSwitcher,
 			networkCoordinator,
