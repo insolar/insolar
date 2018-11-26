@@ -175,6 +175,8 @@ const (
 	TypeValidateRecord
 	// TypeSetBlob saves blob in storage.
 	TypeSetBlob
+	// TypeHotRecords saves hot-records in storage.
+	TypeHotRecords
 
 	// Heavy replication
 

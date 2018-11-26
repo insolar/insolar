@@ -20,6 +20,7 @@ import (
 	"encoding/gob"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/index"
 )
 
 type ledgerMessage struct {
@@ -165,4 +166,19 @@ func init() {
 // Type implementation of Message interface.
 func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
+}
+
+// HotRecords contains hot-data
+type HotRecords struct {
+	ledgerMessage
+	Jet           core.RecordRef
+	Drop          []byte
+	RecentObjects map[core.RecordID]*core.RecentObjectsIndexMeta
+	Lifelines     index.ObjectLifeline
+	PulseNumber   core.PulseNumber
+}
+
+// Type implementation of Message interface.
+func (*HotRecords) Type() core.MessageType {
+	return core.TypeHotRecords
 }
