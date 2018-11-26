@@ -17,6 +17,8 @@
 package state
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -27,10 +29,16 @@ type NetworkSwitcher struct {
 
 // NewNetworkSwitcher creates new NetworkSwitcher
 func NewNetworkSwitcher() (*NetworkSwitcher, error) {
-	return &NetworkSwitcher{}, nil
+	return &NetworkSwitcher{state: core.NoNetworkState}, nil
 }
 
 // GetState method returns current network state
 func (ns *NetworkSwitcher) GetState() core.NetworkState {
 	return core.CompleteNetworkState
+}
+
+// OnPulse method checks current state and finds out reasons to update this state
+func OnPulse(ctx context.Context, pulse core.Pulse) error {
+	// TODO: check discovery nodes is equal to ActiveList
+	return nil
 }

@@ -16,6 +16,10 @@
 
 package core
 
+import (
+	"context"
+)
+
 const (
 	// NoNetworkState state means that nodes doesn`t match majority_rule
 	NoNetworkState = iota
@@ -36,4 +40,6 @@ type NetworkState int
 type NetworkSwitcher interface {
 	// GetState method returns current network state
 	GetState() NetworkState
+	// OnPulse method checks current state and finds out reasons to update this state
+	OnPulse(context.Context, Pulse) error
 }
