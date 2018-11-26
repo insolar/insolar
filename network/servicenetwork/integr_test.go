@@ -31,10 +31,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewServiceNetwork2(t *testing.T) {
-
-	address := "127.0.0.1:3007"
-	consensusAddr := "127.0.0.1:3008"
+func createServiceNetwork(t *testing.T) (*ServiceNetwork, *component.Manager) {
+	address := "127.0.0.1:0"
+	consensusAddr := "127.0.0.1:0"
 
 	origin := nodenetwork.NewNode(testutils.RandomRef(), nil, nil, 0, address, "")
 	keeper := nodenetwork.NewNodeKeeper(origin)
@@ -60,15 +59,21 @@ func TestNewServiceNetwork2(t *testing.T) {
 	netCoordinator := testutils.NewNetworkCoordinatorMock(t)
 	amMock := testutils.NewArtifactManagerMock(t)
 
-	cm := component.Manager{}
+	cm := &component.Manager{}
 	cm.Register(keeper, cert, pulseManagerMock, cs, netCoordinator, amMock)
 	cm.Inject(serviceNetwork)
 
 	serviceNetwork.NodeKeeper = keeper
 
+	return serviceNetwork, cm
+}
+
+func TestNewServiceNetwork2(t *testing.T) {
+	_, cm := createServiceNetwork(t)
+
 	ctx := context.Background()
 
-	err = cm.Init(ctx)
+	err := cm.Init(ctx)
 	assert.NoError(t, err)
 
 	err = cm.Start(ctx)
