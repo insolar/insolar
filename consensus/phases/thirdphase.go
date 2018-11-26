@@ -29,7 +29,7 @@ type ThirdPhase struct {
 	NodeNetwork  core.NodeNetwork         `inject:""`
 }
 
-func (tpr *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
+func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
 	// TODO: do something here
 	return nil
 }
