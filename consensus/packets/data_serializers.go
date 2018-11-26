@@ -538,32 +538,22 @@ func (p2p *Phase2Packet) RawSecondPart() ([]byte, error) {
 // ----------------------------------PHASE 3--------------------------------
 
 func (p3p *Phase3Packet) Serialize() ([]byte, error) {
-	header, err := p3p.packetHeader.Serialize()
+	rawBytes, err := p3p.RawBytes()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize p3p header")
-	}
-
-	bitset, err := p3p.DeviantBitSet.Serialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize bitset")
+		return nil, errors.Wrap(err, "[ Serialize ] failed to get a raw bytes")
 	}
 
 	var data bytes.Buffer
-
-	_, err = data.Write(header)
+	_, err = data.Write(rawBytes)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Serialize ] failed to write a header to buffer")
-	}
-
-	_, err = data.Write(bitset)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Serialize ] failed to write a bitset to buffer")
+		return nil, errors.Wrap(err, "[ Serialize ] failed to write a raw bytes to buffer")
 	}
 
 	_, err = data.Write(p3p.SignatureHeaderSection1[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Serialize ] failed to write a signature to buffer")
 	}
+
 	return data.Bytes(), nil
 }
 
@@ -591,4 +581,30 @@ func (p3p *Phase3Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 		return errors.Wrap(err, "[ DeserializeWithoutHeader ] failed to deserialize p3p signature")
 	}
 	return nil
+}
+
+func (p3p *Phase3Packet) RawBytes() ([]byte, error) {
+	header, err := p3p.packetHeader.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ RawBytes ] failed to serialize p3p header")
+	}
+
+	bitset, err := p3p.DeviantBitSet.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ RawBytes ] failed to serialize bitset")
+	}
+
+	var data bytes.Buffer
+
+	_, err = data.Write(header)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ RawBytes ] failed to write a header to buffer")
+	}
+
+	_, err = data.Write(bitset)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ RawBytes ] failed to write a bitset to buffer")
+	}
+
+	return data.Bytes(), nil
 }
