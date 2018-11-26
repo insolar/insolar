@@ -14,34 +14,14 @@
  *    limitations under the License.
  */
 
-package utils
+package core
 
-import (
-	"encoding/binary"
-	"os"
+import "context"
 
-	"github.com/satori/go.uuid"
-)
-
-// RandTraceID returns random traceID in uuid format
-func RandTraceID() string {
-	traceID, err := uuid.NewV4()
-	if err != nil {
-		return "createRandomTraceIDFailed:" + err.Error()
-	}
-	return traceID.String()
-}
-
-func UInt32ToBytes(n uint32) []byte {
-	buff := make([]byte, 4)
-	binary.BigEndian.PutUint32(buff, n)
-	return buff
-}
-
-func SendGracefulStopSignal() error {
-	p, err := os.FindProcess(os.Getpid())
-	if err != nil {
-		return err
-	}
-	return p.Signal(os.Interrupt)
+// HeavySync provides methods for sync on heavy node.
+//go:generate minimock -i github.com/insolar/insolar/core.HeavySync -o ../testutils -s _mock.go
+type HeavySync interface {
+	Start(ctx context.Context, pn PulseNumber) error
+	Store(ctx context.Context, pn PulseNumber, kvs []KV) error
+	Stop(ctx context.Context, pn PulseNumber) error
 }

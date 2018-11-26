@@ -46,6 +46,7 @@ type MessageHandler struct {
 	JetCoordinator             core.JetCoordinator             `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
+	HeavySync                  core.HeavySync                  `inject:""`
 }
 
 // NewMessageHandler creates new handler.
@@ -614,6 +615,10 @@ func validateState(old record.State, new record.State) error {
 	return nil
 }
 
+// TODO: check sender if it was light material in synced pulses:
+// sender := genericMsg.GetSender()
+// sender.isItWasLMInPulse(pulsenum)
+
 func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
 	inslog := inslogger.FromContext(ctx)
 	if hack.SkipValidation(ctx) {
@@ -621,8 +626,7 @@ func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core
 	}
 	msg := genericMsg.Message().(*message.HeavyPayload)
 	inslog.Debugf("Heavy sync: get start payload message with %v records", len(msg.Records))
-	err := h.db.StoreKeyValues(ctx, msg.Records)
-	if err != nil {
+	if err := h.HeavySync.Store(ctx, msg.PulseNum, msg.Records); err != nil {
 		return nil, err
 	}
 	return &reply.OK{}, nil
@@ -633,15 +637,20 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 	if hack.SkipValidation(ctx) {
 		return &reply.OK{}, nil
 	}
+
 	msg := genericMsg.Message().(*message.HeavyStartStop)
+	// stop branch
 	if msg.Finished {
-		// stop logic (unlock)
-		inslog.Debugf("Heavy sync: get stop message [%v,%v]", msg.Begin, msg.End)
+		inslog.Debugf("Heavy sync: get stop message for pulse %v", msg.PulseNum)
+		if err := h.HeavySync.Stop(ctx, msg.PulseNum); err != nil {
+			return nil, err
+		}
 		return &reply.OK{}, nil
 	}
-
-	// start logick (try to lock)
-	inslog.Debugf("Heavy sync: get start message [%v,%v]", msg.Begin, msg.End)
-	// TODO: handle start message (i.e. add lock)
+	// start
+	inslog.Debugf("Heavy sync: get start message for pulse %v", msg.PulseNum)
+	if err := h.HeavySync.Start(ctx, msg.PulseNum); err != nil {
+		return nil, err
+	}
 	return &reply.OK{}, nil
 }
