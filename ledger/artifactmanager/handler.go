@@ -261,16 +261,19 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.GetChildren)
+func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.GetChildren)
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
+	if err == storage.ErrNotFound {
+		nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse())
+		if err != nil {
+			return nil, err
+		}
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-
-	if err != nil {
-		return nil, err
 	}
 	h.recent.AddObject(*msg.Parent.Record())
 
@@ -297,6 +300,21 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 		rec, err := h.db.GetRecord(ctx, currentChild)
 		if err != nil {
 			return nil, errors.New("failed to retrieve children")
+		}
+		if err == storage.ErrNotFound {
+			var nodes []core.RecordRef
+			if pulseNumber-currentChild.Pulse() < h.conf.LightChainLimit {
+				// Find light executor that saved the state.
+				nodes, err = h.JetCoordinator.QueryRole(
+					ctx, core.RoleLightExecutor, &msg.Parent, currentChild.Pulse(),
+				)
+			} else {
+				// Find heavy that has this object.
+				nodes, err = h.JetCoordinator.QueryRole(
+					ctx, core.RoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse(),
+				)
+			}
+			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
 		}
 		childRec, ok := rec.(*record.ChildRecord)
 		if !ok {
