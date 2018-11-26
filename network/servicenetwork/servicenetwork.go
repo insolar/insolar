@@ -20,6 +20,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
@@ -29,33 +30,44 @@ import (
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/pkg/errors"
 )
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	cfg    configuration.Configuration
-	scheme core.PlatformCryptographyScheme
+	cfg configuration.Configuration
+	//scheme           core.PlatformCryptographyScheme
+	componentManager component.Manager
 
 	hostNetwork  network.HostNetwork  // TODO: should be injected
 	controller   network.Controller   // TODO: should be injected
 	routingTable network.RoutingTable // TODO: should be injected
 
-	Certificate         core.Certificate         `inject:""`
-	NodeNetwork         core.NodeNetwork         `inject:""`
-	PulseManager        core.PulseManager        `inject:""`
-	PhaseManager        phases.PhaseManager      `inject:""`
-	CryptographyService core.CryptographyService `inject:""`
-	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
-	NodeKeeper          network.NodeKeeper       `inject:""`
+	// dependencies
+	Certificate         core.Certificate                `inject:""`
+	NodeNetwork         core.NodeNetwork                `inject:""`
+	PulseManager        core.PulseManager               `inject:""`
+	CryptographyService core.CryptographyService        `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
+	ArtifactManager     core.ArtifactManager            `inject:""` //TODO
+	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
+
+	// subcomponents
+	NodeKeeper       network.NodeKeeper       // `inject:""`
+	PhaseManager     phases.PhaseManager      // `inject:""`
+	MerkleCalculator merkle.Calculator        // `inject:""`
+	ConsensusNetwork network.ConsensusNetwork // `inject:""`
+	PulseHandler     network.PulseHandler
+	Communicator     phases.Communicator
 
 	fakePulsar *fakepulsar.FakePulsar
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cfg: conf, scheme: scheme}
+	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme}
 	return serviceNetwork, nil
 }
 
@@ -91,14 +103,37 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	routingTable, hostnetwork, controller, err := newNetworkComponents(n.cfg, n, n.scheme)
+
+	n.PhaseManager = phases.NewPhaseManager()
+	n.MerkleCalculator = merkle.NewCalculator()
+	n.Communicator = phases.NewNaiveCommunicator()
+	n.PulseHandler = n // self
+
+	routingTable, hostNetwork, networkController, err := newNetworkComponents(n.cfg, n, n.CryptographyScheme)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create network components.")
 	}
+
+	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
+		n.cfg.Host.ConsensusTransport.Address,
+		n.cfg.Node.Node.ID,
+		n.NodeNetwork.GetOrigin().ShortID(),
+		routingTable,
+	)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create consensus network.")
+	}
+
+	cm := component.Manager{}
+	cm.Register(n.Certificate, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
+		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
+
+	cm.Inject(n.NodeKeeper, n.PhaseManager, n.MerkleCalculator, n.ConsensusNetwork, n.Communicator)
+
 	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	n.routingTable = routingTable
-	n.hostNetwork = hostnetwork
-	n.controller = controller
+	n.hostNetwork = hostNetwork
+	n.controller = networkController
 	return nil
 }
 
