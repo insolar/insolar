@@ -38,7 +38,12 @@ func (ns *NetworkSwitcher) GetState() core.NetworkState {
 }
 
 // OnPulse method checks current state and finds out reasons to update this state
-func OnPulse(ctx context.Context, pulse core.Pulse) error {
+func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	// TODO: check discovery nodes is equal to ActiveList
+	// Use CertificateManager here
 	return nil
+}
+
+func (ns *NetworkSwitcher) isEqualNodeLists(firstList []core.Node, secondList []core.Node) bool {
+	return false
 }
