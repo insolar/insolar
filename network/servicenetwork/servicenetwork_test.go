@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
@@ -211,7 +212,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	require.NoError(t, err)
 
 	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", parcel)
-	success := network.WaitTimeout(&wg, 100*time.Millisecond)
+	success := utils.WaitTimeout(&wg, 100*time.Millisecond)
 
 	require.True(t, success)
 }
@@ -277,7 +278,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	err = firstNode.SendCascadeMessage(c, "test", parcel)
-	success := network.WaitTimeout(&wg, 100*time.Millisecond)
+	success := utils.WaitTimeout(&wg, 100*time.Millisecond)
 
 	require.NoError(t, err)
 	require.True(t, success)
@@ -371,7 +372,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	require.NoError(t, err)
 
 	firstService.SendCascadeMessage(c, "test", parcel)
-	success := network.WaitTimeout(&wg, 100*time.Millisecond)
+	success := utils.WaitTimeout(&wg, 100*time.Millisecond)
 
 	require.True(t, success)
 }
