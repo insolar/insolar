@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
-	"math"
 	"math/bits"
 
 	"github.com/pkg/errors"
@@ -78,10 +77,10 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ Serialize ] failed to get bitarray from cells")
 	}
 
-	totalSize := int(math.Round(float64((array.Len()*2)/sizeOfBlock))+0.5) + 1 // size of result bytes
+	totalSize := int(round(array.Len()*2, sizeOfBlock)) + 1 // size of result bytes
 	var result *bytes.Buffer
 	firstByte = firstByte << 1
-	if bits.Len(array.Len()) > lowLengthSize {
+	if bits.Len(uint(array.Len())) > lowLengthSize {
 		result, err = dbs.serializeWithHLength(firstByte, array.Len(), totalSize)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
@@ -107,7 +106,7 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 
 func (dbs *TriStateBitSet) serializeWithHLength(
 	firstByte uint8,
-	tmpLen uint,
+	tmpLen int,
 	totalSize int,
 ) (res *bytes.Buffer, err error) {
 	var result *bytes.Buffer
@@ -130,7 +129,7 @@ func (dbs *TriStateBitSet) serializeWithHLength(
 
 func (dbs *TriStateBitSet) serializeWithLLength(
 	firstByte uint8,
-	tmpLen uint,
+	tmpLen int,
 	totalSize int,
 ) (res *bytes.Buffer, err error) {
 	result := allocateBuffer(totalSize)
@@ -156,7 +155,7 @@ func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
 			return errors.Wrap(err, "[ Deserialize ] failed to read second byte")
 		}
 	}
-	blockCount := uint64(float64(length/sizeOfBlock) + 0.5)
+	blockCount := uint64(round(int(length), sizeOfBlock))
 	payload := make([]uint8, blockCount)
 	for i := 0; uint64(i) < blockCount; i++ {
 		err = binary.Read(data, defaultByteOrder, &payload[i])
@@ -213,7 +212,7 @@ func parseState(array *bitArray, index int) (TriState, error) {
 }
 
 func parseBitArray(payload []uint8, size int) (*bitArray, error) {
-	array := newBitArray(uint(size))
+	array := newBitArray(size)
 	for i := 0; i < size; i++ {
 		block := getBlockInBitArray(i)
 		step := getStepToMove(i)
@@ -269,7 +268,7 @@ func changeBitState(array *bitArray, i int, state TriState) error {
 }
 
 func (dbs *TriStateBitSet) cellsToBitArray() (*bitArray, error) {
-	array := newBitArray(uint(dbs.mapper.Length() * 2))
+	array := newBitArray(dbs.mapper.Length() * 2)
 	for i := 0; i < len(dbs.cells); i++ {
 		cell := dbs.cells[i]
 		index, err := dbs.mapper.RefToIndex(cell.NodeID)

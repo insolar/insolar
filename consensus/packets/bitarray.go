@@ -27,23 +27,27 @@ const sizeOfBlock = 8
 
 type bitArray struct {
 	array    []uint8
-	bitsSize uint
+	bitsSize int
 }
 
-func newBitArray(size uint) *bitArray {
-	totalSize := math.Round(float64(size/sizeOfBlock) + 0.5)
+func round(devinded, devider int) float64 {
+	return math.Round(float64(devinded/devider) + 0.5)
+}
+
+func newBitArray(size int) *bitArray {
+	totalSize := uint64(round(size, sizeOfBlock))
 	return &bitArray{
 		array:    make([]uint8, totalSize),
-		bitsSize: uint(size),
+		bitsSize: int(size),
 	}
 }
 
-func (arr *bitArray) Len() uint {
+func (arr *bitArray) Len() int {
 	return arr.bitsSize
 }
 
 func (arr *bitArray) put(bit, index int) error {
-	if uint(index) >= arr.bitsSize {
+	if index >= arr.bitsSize {
 		return errors.New("[ put ] failed to put a bit. out of range")
 	}
 	block := getBlockInBitArray(index)
@@ -61,7 +65,7 @@ func (arr *bitArray) put(bit, index int) error {
 }
 
 func (arr *bitArray) serialize() ([]byte, error) {
-	result := allocateBuffer(int(math.Round(float64(arr.bitsSize/sizeOfBlock) + 0.5)))
+	result := allocateBuffer(int(round(arr.bitsSize, sizeOfBlock)))
 	for _, byte := range arr.array {
 		err := binary.Write(result, defaultByteOrder, byte)
 		if err != nil {
@@ -73,7 +77,7 @@ func (arr *bitArray) serialize() ([]byte, error) {
 }
 
 func (arr *bitArray) get(index int) (uint8, error) {
-	if uint(index) >= arr.bitsSize {
+	if index >= arr.bitsSize {
 		return 0, errors.New("failed to get a bit - index out of range")
 	}
 
