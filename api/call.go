@@ -33,7 +33,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-type request struct {
+// Request is a representation of request struct to api
+type Request struct {
 	Reference string `json:"reference"`
 	Method    string `json:"method"`
 	Params    []byte `json:"params"`
@@ -47,7 +48,8 @@ type answer struct {
 	TraceID string      `json:"traceID,omitempty"`
 }
 
-func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
+// UnmarshalRequest unmarshals request to api
+func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ UnmarshalRequest ] Can't read body. So strange")
@@ -63,7 +65,7 @@ func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	return body, nil
 }
 
-func (ar *Runner) verifySignature(ctx context.Context, params request) error {
+func (ar *Runner) verifySignature(ctx context.Context, params Request) error {
 	key, err := ar.getMemberPubKey(ctx, params.Reference)
 	if err != nil {
 		return err
@@ -92,7 +94,7 @@ func (ar *Runner) verifySignature(ctx context.Context, params request) error {
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
-		params := request{}
+		params := Request{}
 		resp := answer{}
 
 		traceid := utils.RandTraceID()
@@ -111,7 +113,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 
-		_, err := unmarshalRequest(req, &params)
+		_, err := UnmarshalRequest(req, &params)
 		if err != nil {
 			resp.Error = err.Error()
 			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal request"))
@@ -125,7 +127,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		if !ar.seedmanager.Exists(*seed) {
+		if !ar.SeedManager.Exists(*seed) {
 			resp.Error = "[ CallHandler ] Incorrect seed"
 			inslog.Error(resp.Error)
 			return

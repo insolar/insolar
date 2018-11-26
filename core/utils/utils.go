@@ -25,11 +25,11 @@ import (
 
 // RandTraceID returns random traceID in uuid format
 func RandTraceID() string {
-	qid, err := uuid.NewV4()
+	traceID, err := uuid.NewV4()
 	if err != nil {
 		return "createRandomTraceIDFailed:" + err.Error()
 	}
-	return qid.String()
+	return traceID.String()
 }
 
 func UInt32ToBytes(n uint32) []byte {

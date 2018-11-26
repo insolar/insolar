@@ -17,6 +17,7 @@
 package packets
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -24,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const refsCount = 5
+const refsCount = 70
 
 func initRefs() []core.RecordRef {
 	result := make([]core.RecordRef, refsCount)
@@ -95,7 +96,7 @@ func TestTriStateBitSet_ApplyChanges(t *testing.T) {
 	assert.NotEqual(t, cells, bitset.GetCells())
 }
 
-func TestBitArray(t *testing.T) {
+func TestBitSet(t *testing.T) {
 	refs := initRefs()
 	cells := initBitCells(refs)
 
@@ -112,4 +113,46 @@ func TestBitArray(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, array1, array2)
+
+	_, err = bitset.Serialize()
+	assert.NoError(t, err)
+}
+
+func TestBitArray(t *testing.T) {
+	array := newBitArray(181)
+
+	expected := uint8(1)
+	err := array.put(1, 126)
+	assert.NoError(t, err)
+	err = array.put(1, 127)
+	assert.NoError(t, err)
+	err = array.put(1, 125)
+	assert.NoError(t, err)
+	err = array.put(0, 126)
+	assert.NoError(t, err)
+	actual, err := array.get(125)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
+	actual, err = array.get(127)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
+	actual, err = array.get(126)
+	assert.NoError(t, err)
+	expected = 0
+	assert.Equal(t, expected, actual)
+}
+
+func TestTriStateBitSet_Serialize(t *testing.T) {
+	refs := initRefs()
+	cells := initBitCells(refs)
+
+	bitset, _ := NewTriStateBitSet(cells, &BitSetMapperMock{refs: refs})
+	data, err := bitset.Serialize()
+	assert.NoError(t, err)
+
+	parsedBitSet := TriStateBitSet{mapper: bitset.mapper}
+	err = parsedBitSet.Deserialize(bytes.NewReader(data))
+	assert.NoError(t, err)
+
+	assert.Equal(t, bitset.GetCells(), parsedBitSet.GetCells())
 }

@@ -17,7 +17,6 @@
 package nodenetwork
 
 import (
-	"bytes"
 	"sort"
 	"strings"
 	"sync"
@@ -108,6 +107,9 @@ type nodekeeper struct {
 	active       map[core.RecordRef]core.Node
 	indexNode    map[core.NodeRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
+
+	sync     network.UnsyncList
+	syncLock sync.Mutex
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {
@@ -143,7 +145,7 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 	// Sort active nodes to return list with determinate order on every node.
 	// If we have more than 10k nodes, we need to optimize this
 	sort.Slice(result, func(i, j int) bool {
-		return bytes.Compare(result[i].ID().Bytes(), result[j].ID().Bytes()) < 0
+		return result[i].ID().Compare(result[j].ID()) < 0
 	})
 	return result
 }
@@ -253,19 +255,30 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	panic("not implemented")
+	return newUnsyncList(nk.GetActiveNodes())
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
-	panic("not implemented")
+	return newSparseUnsyncList(length)
 }
 
 func (nk *nodekeeper) Sync(list network.UnsyncList) {
-	panic("not implemented")
+	nk.syncLock.Lock()
+	defer nk.syncLock.Unlock()
+
+	nk.sync = list
 }
 
 func (nk *nodekeeper) MoveSyncToActive() {
-	panic("not implemented")
+	nk.activeLock.Lock()
+	nk.syncLock.Lock()
+	defer func() {
+		nk.syncLock.Unlock()
+		nk.activeLock.Unlock()
+	}()
+
+	sync := nk.sync.(*unsyncList)
+	mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
 }
 
 func jetRoleToNodeRole(role core.JetRole) core.NodeRole {

@@ -22,25 +22,21 @@ import (
 
 // APIRunner holds configuration for api
 type APIRunner struct {
-	Address  string
-	Location string
-	Info     string
-	Call     string
-	RPC      string
+	Address string
+	Call    string
+	RPC     string
 }
 
 // NewAPIRunner creates new api config
 func NewAPIRunner() APIRunner {
 	return APIRunner{
-		Address:  "localhost:19191",
-		Location: "/api/v1",
-		Info:     "/api/v1/info",
-		Call:     "/api/v1/call",
-		RPC:      "/api/rpc",
+		Address: "localhost:19191",
+		Call:    "/api/call",
+		RPC:     "/api/rpc",
 	}
 }
 
 func (ar *APIRunner) String() string {
-	res := fmt.Sprintln("Addr ->", ar.Address, ", Location ->", ar.Location)
+	res := fmt.Sprintln("Addr ->", ar.Address, ", Call ->", ar.Call, ", RPC ->", ar.RPC)
 	return res
 }
