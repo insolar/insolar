@@ -40,7 +40,7 @@ const TESTSEED = "VGVzdA=="
 var testSeedResponse = seedResponse{Seed: []byte("Test"), TraceID: "testTraceID"}
 var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
 
-type RPCRequest struct {
+type rpcRequest struct {
 	RPCVersion string `json:"jsonrpc"`
 	Method     string `json:"method"`
 }
@@ -83,14 +83,14 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 		"jsonrpc": "2.0",
 		"id":      "",
 	}
-	rpcRequest := RPCRequest{}
-	_, err := api.UnmarshalRequest(req, &rpcRequest)
+	rpcReq := rpcRequest{}
+	_, err := api.UnmarshalRequest(req, &rpcReq)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
 	}
 
-	switch rpcRequest.Method {
+	switch rpcReq.Method {
 	case "info.Get":
 		answer["result"] = testInfoResponse
 	case "seed.Get":
