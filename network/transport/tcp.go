@@ -28,7 +28,8 @@ import (
 
 type tcpTransport struct {
 	baseTransport
-	l net.Listener
+	l       net.Listener
+	maxChan chan bool
 }
 
 func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
@@ -41,6 +42,7 @@ func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcp
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
 		l:             listener,
+		maxChan:       make(chan bool, 1000),
 	}
 
 	transport.sendFunc = transport.send
@@ -49,9 +51,6 @@ func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcp
 }
 
 func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
-
-	// TODO: may be try to send second time if error
-	// TODO: skip resolving every time by caching result
 	tcpAddr, err := net.ResolveTCPAddr("tcp", recvAddress)
 	if err != nil {
 		return errors.Wrap(err, "tcpTransport.send")
@@ -62,6 +61,8 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "tcpTransport.send")
 	}
+	tcp.maxChan <- true
+	defer func() { <-tcp.maxChan }()
 	defer tcpConn.Close()
 
 	log.Debug("tcpTransport.send: len = ", len(data))
@@ -72,19 +73,18 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 // Start starts networking.
 func (tcp *tcpTransport) Start(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start TCP transport")
-	maxChan := make(chan bool, 1000)
 	for {
 
-		maxChan <- true
+		tcp.maxChan <- true
 
 		conn, err := tcp.l.Accept()
 		if err != nil {
-			<-maxChan
+			<-tcp.maxChan
 			<-tcp.disconnectFinished
 			return err
 		}
 
-		go tcp.handleAcceptedConnection(conn, maxChan)
+		go tcp.handleAcceptedConnection(conn)
 	}
 }
 
@@ -102,7 +102,7 @@ func (tcp *tcpTransport) Stop() {
 	}
 }
 
-func (tcp *tcpTransport) handleAcceptedConnection(conn net.Conn, maxChan chan bool) {
+func (tcp *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 	defer conn.Close()
 	msg, err := tcp.serializer.DeserializePacket(conn)
 	if err != nil {
@@ -112,5 +112,5 @@ func (tcp *tcpTransport) handleAcceptedConnection(conn net.Conn, maxChan chan bo
 
 	tcp.handlePacket(msg)
 
-	<-maxChan
+	<-tcp.maxChan
 }
