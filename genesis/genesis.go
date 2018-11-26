@@ -355,8 +355,6 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
-	//if g.isGenesis {
-	//	inslog.Info("[ Genesis ] Run genesis ...")
 
 	_, insgocc, err := goplugintestutils.Build()
 	if err != nil {
@@ -391,9 +389,11 @@ func (g *Genesis) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
 	}
-	//}
 
-	utils.SendGracefulStopSignal()
+	err = utils.SendGracefulStopSignal()
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Couldn't stop genesis graceful")
+	}
 	return nil
 }
 
