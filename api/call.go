@@ -48,6 +48,7 @@ type answer struct {
 	TraceID string      `json:"traceID,omitempty"`
 }
 
+// UnmarshalRequest unmarshals request to api
 func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
