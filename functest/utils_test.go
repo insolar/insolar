@@ -32,40 +32,6 @@ import (
 
 type postParams map[string]interface{}
 
-type errorResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-type responseInterface interface {
-	getError() *errorResponse
-}
-
-type baseResponse struct {
-	Qid string         `json:"qid"`
-	Err *errorResponse `json:"error"`
-}
-
-func (r *baseResponse) getError() *errorResponse {
-	return r.Err
-}
-
-type createMemberResponse struct {
-	baseResponse
-	Reference string `json:"reference"`
-}
-
-type sendMoneyResponse struct {
-	baseResponse
-	Success bool `json:"success"`
-}
-
-type getBalanceResponse struct {
-	baseResponse
-	Amount   uint   `json:"amount"`
-	Currency string `json:"currency"`
-}
-
 type RPCResponseInterface interface {
 	getRPCVersion() string
 	getError() map[string]interface{}
@@ -92,43 +58,8 @@ type getSeedResponse struct {
 	} `json:"result"`
 }
 
-type isAuthorized struct {
-	baseResponse
-	PublicKey     string `json:"public_key"`
-	Role          int    `json:"role"`
-	NetCoordCheck bool   `json:"netcoord_auth_success"`
-}
-
-type userInfo struct {
-	Member string `json:"member"`
-	Wallet uint   `json:"wallet"`
-}
-
-type dumpUserInfoResponse struct {
-	baseResponse
-	DumpInfo userInfo `json:"dump_info"`
-}
-
-type dumpAllUsersResponse struct {
-	baseResponse
-	DumpInfo []userInfo `json:"dump_info"`
-}
-
 type bootstrapNode struct {
 	PublicKey string `json:"public_key"`
-}
-
-type certificate struct {
-	MajorityRule   int             `json:"majority_rule"`
-	PublicKey      string          `json:"public_key"`
-	Reference      string          `json:"reference"`
-	Roles          []string        `json:"roles"`
-	BootstrapNodes []bootstrapNode `json:"bootstrap_nodes"`
-}
-
-type registerNodeResponse struct {
-	baseResponse
-	Certificate certificate `json:"certificate"`
 }
 
 type infoResponse struct {
@@ -172,16 +103,6 @@ func getBalance(caller *user, reference string) (int, error) {
 	return int(amount), nil
 }
 
-func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
-	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestAPIURL, "application/json", bytes.NewBuffer(jsonValue))
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, postResp.StatusCode)
-	body, err := ioutil.ReadAll(postResp.Body)
-	require.NoError(t, err)
-	return body
-}
-
 func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
@@ -216,23 +137,11 @@ func getInfo(t *testing.T) infoResponse {
 	return rpcInfoResponse.Result
 }
 
-func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
-	err := json.Unmarshal(body, &response)
-	require.NoError(t, err)
-	require.Nil(t, response.getError())
-}
-
 func unmarshalRPCResponse(t *testing.T, body []byte, response RPCResponseInterface) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 	require.Equal(t, "2.0", response.getRPCVersion())
 	require.Nil(t, response.getError())
-}
-
-func unmarshalResponseWithError(t *testing.T, body []byte, response responseInterface) {
-	err := json.Unmarshal(body, &response)
-	require.NoError(t, err)
-	require.NotNil(t, response.getError())
 }
 
 func unmarshalCallResponse(t *testing.T, body []byte, response *response) {
