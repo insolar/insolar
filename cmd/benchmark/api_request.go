@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const APIURL = "http://localhost:19191/api"
+const apiurl = "http://localhost:19191/api"
 
 type response struct {
 	Error  string
@@ -51,7 +51,7 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
 	check("can not create user config:", err)
 
-	body, err := requester.Send(ctx, APIURL, userCfg, reqCfg)
+	body, err := requester.Send(ctx, apiurl, userCfg, reqCfg)
 	check("can not send request:", err)
 
 	return body
@@ -102,7 +102,7 @@ func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 }
 
 func info() *requester.InfoResponse {
-	info, err := requester.Info(APIURL)
+	info, err := requester.Info(apiurl)
 	check("problem with request to info:", err)
 	return info
 }
