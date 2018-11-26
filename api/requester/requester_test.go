@@ -255,6 +255,5 @@ func TestSendWithSeed_NilConfigs(t *testing.T) {
 func TestInfo(t *testing.T) {
 	resp, err := Info(URL)
 	require.NoError(t, err)
-	fmt.Println(resp.RootDomain)
 	require.Equal(t, resp, &testInfoResponse)
 }

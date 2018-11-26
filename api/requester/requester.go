@@ -64,7 +64,6 @@ type rpcSeedResponse struct {
 
 // GetResponseBody makes request and extracts body
 func GetResponseBody(url string, postP PostParams) ([]byte, error) {
-	fmt.Println("uuuurl", url)
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
