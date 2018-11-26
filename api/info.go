@@ -63,7 +63,7 @@ func NewInfoService(runner *Runner) *InfoService {
 // 			"RootDomain": str, // reference to RootDomain instance
 // 			"RootMember": str, // reference to RootMember instance
 // 			"NodeDomain": str, // reference to NodeDomain instance
-// 			"TraceID": str, // traceID for request
+// 			"TraceID": str // traceID for request
 // 		},
 // 		"id": str|int|null // same as in request
 // 	}

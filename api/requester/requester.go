@@ -48,7 +48,7 @@ func SetVerbose(verb bool) {
 // PostParams represents params struct
 type PostParams = map[string]interface{}
 
-type RPCResponse struct {
+type rpcResponse struct {
 	RPCVersion string                 `json:"jsonrpc"`
 	Error      map[string]interface{} `json:"error"`
 }
@@ -58,7 +58,7 @@ type seedResponse struct {
 	TraceID string `json:"TraceID"`
 }
 type rpcSeedResponse struct {
-	RPCResponse
+	rpcResponse
 	Result seedResponse `json:"result"`
 }
 
@@ -191,7 +191,7 @@ type InfoResponse struct {
 }
 
 type rpcInfoResponse struct {
-	RPCResponse
+	rpcResponse
 	Result InfoResponse `json:"result"`
 }
 
