@@ -254,6 +254,10 @@ func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) er
 	return errors.New("invalid proof fields len")
 }
 
+func (p2p *Phase2Packet) GetBitSet() BitSet {
+	return p2p.deviantBitSet
+}
+
 // ----------------------------------PHASE 3--------------------------------
 
 type Phase3Packet struct {
@@ -261,9 +265,16 @@ type Phase3Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    [HashLength]byte
+	globuleHashSignature    [SignatureLength]byte
 	deviantBitSet           BitSet
 	SignatureHeaderSection1 [SignatureLength]byte
+}
+
+func NewPhase3Packet(globuleHash [SignatureLength]byte, bitSet BitSet) Phase3Packet {
+	return Phase3Packet{
+		globuleHashSignature: globuleHash,
+		deviantBitSet:        bitSet,
+	}
 }
 
 // SetPacketHeader set routing information for transport level.
@@ -285,4 +296,8 @@ func (p3p *Phase3Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header.TargetID = p3p.packetHeader.TargetNodeID
 
 	return header, nil
+}
+
+func (p3p *Phase3Packet) GetBitset() BitSet {
+	return p3p.deviantBitSet
 }
