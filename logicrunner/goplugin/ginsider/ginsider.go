@@ -39,6 +39,11 @@ import (
 	"github.com/tylerb/gls"
 )
 
+type pluginRec struct {
+	sync.Mutex
+	plugin *plugin.Plugin
+}
+
 // GoInsider is an RPC interface to run code of plugins
 type GoInsider struct {
 	dir              string
@@ -48,7 +53,7 @@ type GoInsider struct {
 	upstreamMutex  sync.Mutex // lock UpstreamClient change
 	UpstreamClient *rpc.Client
 
-	plugins      map[string]*plugin.Plugin
+	plugins      map[core.RecordRef]*pluginRec
 	pluginsMutex sync.Mutex
 }
 
@@ -56,7 +61,7 @@ type GoInsider struct {
 func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
 	res := GoInsider{dir: path, upstreamProtocol: network, upstreamAddress: address}
-	res.plugins = make(map[string]*plugin.Plugin)
+	res.plugins = make(map[core.RecordRef]*pluginRec)
 	return &res
 }
 
@@ -228,11 +233,21 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Plugin, error) {
-	gi.pluginsMutex.Lock()
-	defer gi.pluginsMutex.Unlock()
-	key := ref.String()
-	if gi.plugins[key] != nil {
-		return gi.plugins[key], nil
+	rec := func() *pluginRec {
+		gi.pluginsMutex.Lock()
+		defer gi.pluginsMutex.Unlock()
+
+		if gi.plugins[ref] == nil {
+			gi.plugins[ref] = &pluginRec{}
+		}
+		res := gi.plugins[ref]
+		res.Lock()
+		return res
+	}()
+	defer rec.Unlock()
+
+	if rec.plugin != nil {
+		return rec.plugin, nil
 	}
 
 	path, err := gi.ObtainCode(ctx, ref)
@@ -246,7 +261,7 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 		return nil, errors.Wrap(err, "couldn't open plugin")
 	}
 
-	gi.plugins[key] = p
+	rec.plugin = p
 	return p, nil
 }
 

@@ -28,9 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const URL = "http://localhost:19191/api/v1"
-const callURL = URL + "/call"
-const infoURL = URL + "/info"
+const apiurl = "http://localhost:19191/api"
 
 type response struct {
 	Error  string
@@ -53,10 +51,7 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
 	check("can not create user config:", err)
 
-	seed, err := requester.GetSeed(URL)
-	check("can not get seed:", err)
-
-	body, err := requester.SendWithSeed(ctx, callURL, userCfg, reqCfg, seed)
+	body, err := requester.Send(ctx, apiurl, userCfg, reqCfg)
 	check("can not send request:", err)
 
 	return body
@@ -106,20 +101,8 @@ func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 	return members, nil
 }
 
-type infoResponse struct {
-	Prototypes map[string]string `json:"prototypes"`
-	RootDomain string            `json:"root_domain"`
-	RootMember string            `json:"root_member"`
-}
-
-func info() infoResponse {
-	body, err := requester.GetResponseBody(infoURL, requester.PostParams{})
-	check("problem with sending request to info:", err)
-
-	infoResp := infoResponse{}
-
-	err = json.Unmarshal(body, &infoResp)
-	check("problems with unmarshal response from info:", err)
-
-	return infoResp
+func info() *requester.InfoResponse {
+	info, err := requester.Info(apiurl)
+	check("problem with request to info:", err)
+	return info
 }

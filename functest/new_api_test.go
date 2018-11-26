@@ -30,8 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const TestCallUrl = TestURL + "/call"
-
 func contractError(body []byte) error {
 	var t map[string]interface{}
 	err := json.Unmarshal(body, &t)
@@ -106,7 +104,7 @@ func TestCrazyJSON(t *testing.T) {
 func TestIncorrectSign(t *testing.T) {
 	args, err := core.MarshalArgs(nil)
 	require.NoError(t, err)
-	seed, err := requester.GetSeed(TestURL)
+	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBody(TestCallUrl, requester.PostParams{
 		"params":    args,
