@@ -262,7 +262,8 @@ type Phase3Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	DeviantBitSet           BitSet
+	globuleHashSignature    [HashLength]byte
+	deviantBitSet           BitSet
 	SignatureHeaderSection1 [SignatureLength]byte
 }
 

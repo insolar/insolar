@@ -34,7 +34,7 @@ func (tpr *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) err
 	return nil
 }
 
-func (tp *ThirdPhase) signPhase2Packet(p *packets.Phase3Packet) error {
+func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
 	data, err := p.RawBytes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get raw bytes")
@@ -49,7 +49,7 @@ func (tp *ThirdPhase) signPhase2Packet(p *packets.Phase3Packet) error {
 	return nil
 }
 
-func (tp *ThirdPhase) isSignPhase2PacketRight(packet *packets.Phase3Packet, recordRef core.RecordRef) (bool, error) {
+func (tp *ThirdPhase) isSignPhase3PacketRight(packet *packets.Phase3Packet, recordRef core.RecordRef) (bool, error) {
 	key := tp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
 
 	raw, err := packet.RawBytes()
