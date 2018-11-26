@@ -217,6 +217,7 @@ func (i *ChildIterator) fetch() error {
 			FromChild: i.fromChild,
 			Amount:    i.chunkSize,
 		},
+		nil,
 	)
 	if err != nil {
 		return err

@@ -43,7 +43,7 @@ func TestPlayer_Send(t *testing.T) {
 	msgHash := GetMessageHash(pcs, &parcel)
 	pm := testutils.NewPulseManagerMock(mc)
 	s := NewsenderMock(mc)
-	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 *core.SendOptions) (r core.Parcel, r1 error) {
+	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 core.DelegationToken) (r core.Parcel, r1 error) {
 		return &parcel, nil
 	}
 	tape := NewtapeMock(mc)
@@ -52,14 +52,14 @@ func TestPlayer_Send(t *testing.T) {
 	t.Run("with no reply on the storageTape doesn't send the message and returns an error", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(nil, ErrNoReply)
 
-		_, err := player.Send(ctx, &msg)
+		_, err := player.Send(ctx, &msg, nil)
 		require.Equal(t, ErrNoReply, err)
 	})
 
 	t.Run("with reply on the storageTape doesn't send the message and returns reply from the storageTape", func(t *testing.T) {
 		expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		rep, err := player.Send(ctx, &msg)
+		rep, err := player.Send(ctx, &msg, nil)
 
 		require.NoError(t, err)
 		require.Equal(t, &expectedRep, rep)
