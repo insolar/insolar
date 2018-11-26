@@ -40,10 +40,7 @@ const HOST = "http://localhost:19191"
 const TestURL = HOST + "/api/v1"
 const insolarImportPath = "github.com/insolar/insolar"
 
-//const insolarNodeKeys = "bootstrap_keys.json"
 const insolarRootMemberKeys = "root_member_keys.json"
-
-//const insolarCertificate = "certificate.json"
 
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
@@ -53,11 +50,8 @@ var stderr io.ReadCloser
 var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
 
-//var insolarNodeKeysPath = filepath.Join(testdataPath(), insolarNodeKeys)
 var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
 var insolarNodesKeysPath = filepath.Join(testdataPath(), "discovery_node_")
-
-//var insolarCertificatePath = filepath.Join(testdataPath(), insolarCertificate)
 
 var info infoResponse
 var root user
@@ -114,13 +108,6 @@ func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
 }
 
-/*func generateNodeKeys() error {
-	out, err := exec.Command(
-		insolarPath, "-c", "gen_keys",
-		"-o", insolarNodeKeysPath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateNodeKeys ] could't generate node keys: %s", out)
-}*/
-
 func generateRootMemberKeys() error {
 	out, err := exec.Command(
 		insolarPath, "-c", "gen_keys",
@@ -139,13 +126,6 @@ func generateDiscoveryNodesKeys() error {
 	}
 	return nil
 }
-
-/*func generateCertificate() error {
-	out, err := exec.Command(
-		insolarPath, "-c", "gen_certificate", "-g", insolarNodeKeysPath,
-		"-o", insolarCertificatePath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateCertificate ] could't generate certificate: %s", out)
-}*/
 
 func loadRootKeys() error {
 	text, err := ioutil.ReadFile(insolarRootMemberKeysPath)
@@ -166,12 +146,6 @@ func loadRootKeys() error {
 }
 
 func setInfo() error {
-	resp1, err := http.Get("http://localhost:19191/tmp")
-	if err != nil {
-		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/tmp")
-	}
-	body1, err := ioutil.ReadAll(resp1.Body)
-	fmt.Println("BODY", string(body1))
 	resp, err := http.Get(TestURL + "/info")
 	if err != nil {
 		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/info")
@@ -241,11 +215,6 @@ func startGenesis() error {
 }
 
 func startInsolard() error {
-	// cmd = exec.Command(
-	// 	insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
-	// 	"--keyout", testdataPath(),
-	// )
-	time.Sleep(60 * time.Second)
 	cmd = exec.Command(insolardPath)
 	var err error
 
@@ -339,18 +308,6 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't build insolar: ")
 	}
 	fmt.Println("[ setup ] insolar was successfully builded")
-
-	/*err = generateNodeKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate node keys: ")
-	}
-	fmt.Println("[ setup ] node keys successfully generated")
-
-	err = generateCertificate()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate certificate: ")
-	}
-	fmt.Println("[ setup ] certificate successfully generated")*/
 
 	err = generateRootMemberKeys()
 	if err != nil {
