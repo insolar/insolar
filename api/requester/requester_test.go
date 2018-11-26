@@ -184,8 +184,8 @@ func TestMain(m *testing.M) {
 	os.Exit(testMainWrapper(m))
 }
 
-func TestGetRPCSeed(t *testing.T) {
-	seed, err := GetRPCSeed(URL)
+func TestGetSeed(t *testing.T) {
+	seed, err := GetSeed(URL)
 	require.NoError(t, err)
 	decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
 	require.NoError(t, err)

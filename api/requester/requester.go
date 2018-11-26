@@ -87,8 +87,8 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	return body, nil
 }
 
-// GetRPCSeed makes rpc request to seed.Get method and extracts it
-func GetRPCSeed(url string) ([]byte, error) {
+// GetSeed makes rpc request to seed.Get method and extracts it
+func GetSeed(url string) ([]byte, error) {
 	body, err := GetResponseBody(url+"/rpc", PostParams{
 		"jsonrpc": "2.0",
 		"method":  "seed.Get",
@@ -169,7 +169,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 // Send first gets seed and after that makes target request
 func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
 	verboseInfo(ctx, "Sending GETSEED request ...")
-	seed, err := GetRPCSeed(url)
+	seed, err := GetSeed(url)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}

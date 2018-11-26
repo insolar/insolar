@@ -54,7 +54,7 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
 	check("can not create user config:", err)
 
-	seed, err := requester.GetRPCSeed(APIURL)
+	seed, err := requester.GetSeed(APIURL)
 	check("can not get seed:", err)
 
 	body, err := requester.SendWithSeed(ctx, callURL, userCfg, reqCfg, seed)
