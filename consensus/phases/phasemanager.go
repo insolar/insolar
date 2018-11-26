@@ -32,10 +32,9 @@ type PhaseManager interface {
 }
 
 type Phases struct {
-	FirstPhase           *FirstPhase
-	SecondPhase          *SecondPhase
-	ThirdPhasePulse      *ThirdPhasePulse
-	ThirdPhaseReferendum *ThirdPhaseReferendum
+	FirstPhase      *FirstPhase
+	SecondPhase     *SecondPhase
+	ThirdPhasePulse *ThirdPhase
 
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`
