@@ -239,6 +239,7 @@ func startInsolard() error {
 	// 	insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
 	// 	"--keyout", testdataPath(),
 	// )
+	time.Sleep(60 * time.Second)
 	cmd = exec.Command(insolardPath)
 	var err error
 
