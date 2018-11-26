@@ -148,6 +148,7 @@ type ChildIterator struct {
 	buff       []core.RecordRef
 	buffIndex  int
 	canFetch   bool
+	token      core.DelegationToken
 }
 
 // NewChildIterator creates new child iterator.
@@ -166,7 +167,7 @@ func NewChildIterator(
 		chunkSize:  chunkSize,
 		canFetch:   true,
 	}
-	err := iter.fetch()
+	err := iter.fetch(true)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +183,7 @@ func (i *ChildIterator) HasNext() bool {
 func (i *ChildIterator) Next() (*core.RecordRef, error) {
 	// Get element from buffer.
 	if !i.hasInBuffer() && i.canFetch {
-		err := i.fetch()
+		err := i.fetch(false)
 		if err != nil {
 			return nil, err
 		}
@@ -205,11 +206,11 @@ func (i *ChildIterator) nextFromBuffer() *core.RecordRef {
 	return &ref
 }
 
-func (i *ChildIterator) fetch() error {
+func (i *ChildIterator) fetch(saveToken bool) error {
 	if !i.canFetch {
 		return errors.New("failed to fetch record")
 	}
-	genericReply, err := i.messageBus.Send(
+	genericReply, err := i.sendAndFollowRedirect(
 		i.ctx,
 		&message.GetChildren{
 			Parent:    i.parent,
@@ -217,7 +218,7 @@ func (i *ChildIterator) fetch() error {
 			FromChild: i.fromChild,
 			Amount:    i.chunkSize,
 		},
-		nil,
+		saveToken,
 	)
 	if err != nil {
 		return err
@@ -239,4 +240,37 @@ func (i *ChildIterator) fetch() error {
 
 func (i *ChildIterator) hasInBuffer() bool {
 	return i.buffIndex < len(i.buff)
+}
+
+func (i *ChildIterator) sendAndFollowRedirect(
+	ctx context.Context, msg core.Message, saveToken bool,
+) (core.Reply, error) {
+	rep, err := i.messageBus.Send(ctx, msg, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if redirect, ok := rep.(core.RedirectReply); ok {
+		redirected := redirect.Redirected(msg)
+		if saveToken {
+			i.token = redirect.GetToken()
+		}
+		rep, err = i.messageBus.Send(
+			ctx,
+			redirected,
+			&core.MessageSendOptions{
+				Token:    i.token,
+				Receiver: redirect.GetReceiver(),
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok = rep.(core.RedirectReply); ok {
+			return nil, errors.New("double redirects are forbidden")
+		}
+		return rep, nil
+	}
+
+	return rep, err
 }
