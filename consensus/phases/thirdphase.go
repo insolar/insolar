@@ -19,20 +19,63 @@ package phases
 import (
 	"context"
 
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 )
 
 type ThirdPhase struct {
 	Cryptography core.CryptographyService `inject:""`
 	NodeNetwork  core.NodeNetwork         `inject:""`
+	Communicator Communicator             `inject:""`
+	NodeKeeper   network.NodeKeeper       `inject:""`
+
+	newActiveNodeList []core.Node
 }
 
 func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
-	// TODO: do something here
+	var gSign [packets.SignatureLength]byte
+	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
+	packet := packets.NewPhase3Packet(gSign, state.DBitSet)
+
+	err := tp.signPhase3Packet(&packet)
+
+	if err != nil {
+		return errors.Wrap(err, "[ Execute ] failed to sign a phase 3 packet")
+	}
+
+	nodes := tp.NodeKeeper.GetActiveNodes()
+	answers, err := tp.Communicator.ExchangePhase3(ctx, nodes, packet)
+	if err != nil {
+		return errors.Wrap(err, "[ Execute ] failed to get answers on phase 3")
+	}
+
+	for _, packet := range answers {
+		bitset := packet.GetBitset().GetCells()
+		for _, cell := range bitset {
+			if cell.State == packets.Legit {
+				node, err := getNode(cell.NodeID, nodes)
+				if err != nil {
+					return errors.Wrap(err, "[ Execute ] failed to find a node on phase 3")
+				}
+				tp.newActiveNodeList = append(tp.newActiveNodeList, node)
+			}
+		}
+	}
+
 	return nil
 }
 
-/*
+func getNode(ref core.RecordRef, nodes []core.Node) (core.Node, error) {
+	for _, node := range nodes {
+		if ref == node.ID() {
+			return node, nil
+		}
+	}
+	return nil, errors.New("[ getNode] failed to find a node on phase 3")
+}
+
 func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
 	data, err := p.RawBytes()
 	if err != nil {
@@ -58,4 +101,3 @@ func (tp *ThirdPhase) isSignPhase3PacketRight(packet *packets.Phase3Packet, reco
 
 	return tp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }
-*/
