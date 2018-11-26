@@ -534,3 +534,61 @@ func (p2p *Phase2Packet) RawSecondPart() ([]byte, error) {
 	// TODO: add serialising Referendum vote
 	return nil, nil
 }
+
+// ----------------------------------PHASE 3--------------------------------
+
+func (p3p *Phase3Packet) Serialize() ([]byte, error) {
+	header, err := p3p.packetHeader.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize p3p header")
+	}
+
+	bitset, err := p3p.DeviantBitSet.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize bitset")
+	}
+
+	var data bytes.Buffer
+
+	_, err = data.Write(header)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to write a header to buffer")
+	}
+
+	_, err = data.Write(bitset)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to write a bitset to buffer")
+	}
+
+	_, err = data.Write(p3p.SignatureHeaderSection1[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to write a signature to buffer")
+	}
+	return data.Bytes(), nil
+}
+
+func (p3p *Phase3Packet) Deserialize(data io.Reader) error {
+	err := p3p.packetHeader.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Deserialize ] failed to deserialize p3p header")
+	}
+
+	err = p3p.DeserializeWithoutHeader(data, &p3p.packetHeader)
+	if err != nil {
+		return errors.Wrap(err, "[ Deserialize ] failed to deserialize p3p data")
+	}
+	return nil
+}
+
+func (p3p *Phase3Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+	err := p3p.DeviantBitSet.Deserialize(data)
+	if err != nil {
+		return errors.Wrap(err, "[ DeserializeWithoutHeader ] failed to deserialize p3p bitset")
+	}
+
+	err = binary.Read(data, defaultByteOrder, &p3p.SignatureHeaderSection1)
+	if err != nil {
+		return errors.Wrap(err, "[ DeserializeWithoutHeader ] failed to deserialize p3p signature")
+	}
+	return nil
+}
