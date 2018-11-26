@@ -36,8 +36,9 @@ type PulseManager struct {
 	Bus     core.MessageBus  `inject:""`
 	NodeNet core.NodeNetwork `inject:""`
 	// setLock locks Set method call.
-	setLock sync.Mutex
-	stopped bool
+	setLock  sync.Mutex
+	stopLock sync.RWMutex
+	stopped  bool
 	// gotpulse signals if there is something to sync to Heavy
 	gotpulse chan struct{}
 	// syncdone closes when sync is over
@@ -199,9 +200,9 @@ func (m *PulseManager) Start(ctx context.Context) error {
 // Stop stops PulseManager. Waits replication goroutine is done.
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
-	m.setLock.Lock()
+	m.stopLock.Lock()
 	m.stopped = true
-	m.setLock.Unlock()
+	m.stopLock.Unlock()
 
 	if m.options.enablesync {
 		close(m.gotpulse)
@@ -256,4 +257,11 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 		}
 		start = 0
 	}
+}
+
+func (m *PulseManager) isstopped() (stopped bool) {
+	m.stopLock.RLock()
+	stopped = m.stopped
+	m.stopLock.RUnlock()
+	return
 }
