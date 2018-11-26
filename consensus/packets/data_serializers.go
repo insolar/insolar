@@ -416,17 +416,6 @@ func (npp *NodePulseProof) Serialize() ([]byte, error) {
 
 // ----------------------------------PHASE 2--------------------------------
 
-// DeviantBitSet auxiliar constants
-const (
-	// take high bit
-	compressedSetMask   = 0x80
-	compressedSetOffset = 7
-
-	highBitLengthFlagMask   = 0x40
-	highBitLengthFlagOffset = 6
-	lowBitLengthMask        = 0x3f
-)
-
 func (p2p *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
 	if header == nil {
 		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
@@ -497,8 +486,7 @@ func (p2p *Phase2Packet) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't write SignatureHeaderSection2")
 	}
 
-	// serializing of deviantBitSet
-	// deviantBitSetRaw, err := phase2Packet.deviantBitSet.Serialize()
+	// deviantBitSetRaw, err := p2p.deviantBitSet.Serialize()
 	// if err != nil {
 	// 	return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize deviantBitSet")
 	// }

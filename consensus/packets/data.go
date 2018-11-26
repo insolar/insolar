@@ -196,9 +196,8 @@ type Phase2Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature [HashLength]byte
-	// TODO: uncomment this after impl (de)serializers
-	// deviantBitSet           BitSet
+	globuleHashSignature    [HashLength]byte
+	deviantBitSet           BitSet
 	SignatureHeaderSection1 [SignatureLength]byte
 
 	// -------------------- Section 2 (optional)

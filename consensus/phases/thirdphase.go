@@ -19,9 +19,7 @@ package phases
 import (
 	"context"
 
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 type ThirdPhase struct {
@@ -34,6 +32,7 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) erro
 	return nil
 }
 
+/*
 func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
 	data, err := p.RawBytes()
 	if err != nil {
@@ -59,3 +58,4 @@ func (tp *ThirdPhase) isSignPhase3PacketRight(packet *packets.Phase3Packet, reco
 
 	return tp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }
+*/
