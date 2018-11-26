@@ -60,7 +60,7 @@ func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 
-	params := api.APIRequest{}
+	params := api.Request{}
 	_, err := api.UnmarshalRequest(req, &params)
 	if err != nil {
 		log.Errorf("Can't read request\n")

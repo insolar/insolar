@@ -33,8 +33,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// APIRequest is a representation of request struct to api
-type APIRequest struct {
+// Request is a representation of request struct to api
+type Request struct {
 	Reference string `json:"reference"`
 	Method    string `json:"method"`
 	Params    []byte `json:"params"`
@@ -64,7 +64,7 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	return body, nil
 }
 
-func (ar *Runner) verifySignature(ctx context.Context, params APIRequest) error {
+func (ar *Runner) verifySignature(ctx context.Context, params Request) error {
 	key, err := ar.getMemberPubKey(ctx, params.Reference)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (ar *Runner) verifySignature(ctx context.Context, params APIRequest) error 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
-		params := APIRequest{}
+		params := Request{}
 		resp := answer{}
 
 		traceid := utils.RandTraceID()
