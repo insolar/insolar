@@ -39,8 +39,8 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 type MessageHandler struct {
 	db                         *storage.DB
 	jetDropHandlers            map[core.MessageType]internalHandler
-	recent                     *storage.RecentStorage
 	conf                       *configuration.ArtifactManager
+	Recent                     core.RecentStorage              `inject:""`
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
@@ -49,13 +49,10 @@ type MessageHandler struct {
 }
 
 // NewMessageHandler creates new handler.
-func NewMessageHandler(
-	db *storage.DB, recentObjects *storage.RecentStorage, conf *configuration.ArtifactManager,
-) *MessageHandler {
+func NewMessageHandler(db *storage.DB, conf *configuration.ArtifactManager) *MessageHandler {
 	return &MessageHandler{
 		db:              db,
 		jetDropHandlers: map[core.MessageType]internalHandler{},
-		recent:          recentObjects,
 		conf:            conf,
 	}
 }
@@ -115,10 +112,10 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 	}
 
 	if _, ok := rec.(record.Request); ok {
-		h.recent.AddPendingRequest(*id)
+		h.Recent.AddPendingRequest(*id)
 	}
 	if result, ok := rec.(*record.ResultRecord); ok {
-		h.recent.RemovePendingRequest(*result.Request.Record())
+		h.Recent.RemovePendingRequest(*result.Request.Record())
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -183,7 +180,7 @@ func (h *MessageHandler) handleGetObject(
 		}
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record())
 
 	state, err := getObjectStateRecord(ctx, h.db, stateID)
 	if err != nil {
@@ -232,7 +229,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	if err != nil {
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -257,7 +254,7 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 	if err != nil {
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Parent.Record())
+	h.Recent.AddObject(*msg.Parent.Record())
 
 	var (
 		refs         []core.RecordRef
@@ -323,7 +320,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
-		h.recent.AddObject(*msg.Object.Record())
+		h.Recent.AddObject(*msg.Object.Record())
 
 		id, err := tx.SetRecord(ctx, pulseNumber, rec)
 		if err != nil {
@@ -342,7 +339,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Object.Record())
+	h.Recent.AddObject(*msg.Object.Record())
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -370,7 +367,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch object index")
 		}
-		h.recent.AddObject(*msg.Parent.Record())
+		h.Recent.AddObject(*msg.Parent.Record())
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -396,7 +393,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	if err != nil {
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Parent.Record())
+	h.Recent.AddObject(*msg.Parent.Record())
 
 	return &reply.ID{ID: *child}, nil
 }
@@ -477,7 +474,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	if err != nil {
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Object.Record())
+	h.Recent.AddObject(*msg.Object.Record())
 
 	return &reply.OK{}, nil
 }
