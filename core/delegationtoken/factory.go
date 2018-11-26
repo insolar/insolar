@@ -52,7 +52,9 @@ func (f *delegationTokenFactory) IssuePendingExecution(
 	return token, nil
 }
 
-func (f *delegationTokenFactory) IssueGetObjectRedirect(sender *core.RecordRef, redirectedMessage core.Message) (core.DelegationToken, error) {
+func (f *delegationTokenFactory) IssueGetObjectRedirect(
+	sender *core.RecordRef, redirectedMessage core.Message,
+) (core.DelegationToken, error) {
 	parsedMessage := redirectedMessage.(*message.GetObject)
 	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
 	sign, err := f.Cryptography.Sign(dataForSign)
@@ -60,6 +62,18 @@ func (f *delegationTokenFactory) IssueGetObjectRedirect(sender *core.RecordRef, 
 		return nil, err
 	}
 	return &GetObjectRedirect{Signature: sign.Bytes()}, nil
+}
+
+func (f *delegationTokenFactory) IssueGetChildrenRedirect(
+	sender *core.RecordRef, redirectedMessage core.Message,
+) (core.DelegationToken, error) {
+	parsedMessage := redirectedMessage.(*message.GetChildren)
+	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
+	sign, err := f.Cryptography.Sign(dataForSign)
+	if err != nil {
+		return nil, err
+	}
+	return &GetChildrenRedirect{Signature: sign.Bytes()}, nil
 }
 
 func (f *delegationTokenFactory) Verify(parcel core.Parcel) (bool, error) {
