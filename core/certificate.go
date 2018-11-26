@@ -21,4 +21,13 @@ type Certificate interface {
 	GetRole() NodeRole
 	GetRootDomainReference() *RecordRef
 	SetRootDomainReference(ref *RecordRef)
+	GetBootstrapNodes() []BootstrapNode
+}
+
+// BootstrapNode holds info about bootstrap nodes
+type BootstrapNode struct {
+	PublicKey   string `json:"public_key"`
+	Host        string `json:"host"`
+	NetworkSign []byte `json:"network_sign"`
+	NodeSign    []byte `json:"node_sign"`
 }

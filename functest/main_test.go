@@ -18,6 +18,7 @@ package functest
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/build"
@@ -37,7 +38,9 @@ import (
 )
 
 const HOST = "http://localhost:19191"
-const TestURL = HOST + "/api/v1"
+const TestAPIURL = HOST + "/api"
+const TestRPCUrl = TestAPIURL + "/rpc"
+const TestCallUrl = TestAPIURL + "/call"
 const insolarImportPath = "github.com/insolar/insolar"
 const insolarNodeKeys = "bootstrap_keys.json"
 const insolarRootMemberKeys = "root_member_keys.json"
@@ -162,18 +165,28 @@ func loadRootKeys() error {
 }
 
 func setInfo() error {
-	resp, err := http.Get(TestURL + "/info")
+	jsonValue, err := json.Marshal(postParams{
+		"jsonrpc": "2.0",
+		"method":  "info.Get",
+		"id":      "",
+	})
 	if err != nil {
-		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/info")
+		return errors.Wrap(err, "[ setInfo ] couldn't marshal post params")
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't send request to %s", TestRPCUrl)
+	}
+	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {
 		return errors.Wrapf(err, "[ setInfo ] couldn't read answer")
 	}
-	err = json.Unmarshal(body, &info)
+	infoResp := &rpcInfoResponse{}
+	err = json.Unmarshal(body, infoResp)
 	if err != nil {
 		return errors.Wrapf(err, "[ setInfo ] couldn't unmarshall answer")
 	}
+	info = infoResp.Result
 	return nil
 }
 

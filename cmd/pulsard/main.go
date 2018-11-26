@@ -189,9 +189,9 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 
 // RandTraceID returns random traceID in uuid format
 func RandTraceID() string {
-	qid, err := uuid.NewV4()
+	traceID, err := uuid.NewV4()
 	if err != nil {
 		panic("createRandomTraceIDFailed:" + err.Error())
 	}
-	return qid.String()
+	return traceID.String()
 }
