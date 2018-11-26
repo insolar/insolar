@@ -687,7 +687,7 @@ func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg c
 
 	if redirect, ok := rep.(core.RedirectReply); ok {
 		redirected := redirect.Redirected(msg)
-		return m.bus(ctx).Send(
+		rep, err = m.bus(ctx).Send(
 			ctx,
 			redirected,
 			&core.MessageSendOptions{
@@ -695,6 +695,13 @@ func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg c
 				Receiver: redirect.GetReceiver(),
 			},
 		)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok = rep.(core.RedirectReply); ok {
+			return nil, errors.New("double redirects are forbidden")
+		}
+		return rep, nil
 	}
 
 	return rep, err
