@@ -45,7 +45,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
     self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{ S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{ S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
 	}
 
     err := ph.Deserialize(object, self)
@@ -73,7 +73,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
     self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{ S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
     err := ph.Deserialize(object, self)
