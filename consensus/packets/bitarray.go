@@ -31,7 +31,7 @@ type bitArray struct {
 }
 
 func newBitArray(size uint) *bitArray {
-	totalSize := uint64(math.Round(float64(size/sizeOfBlock) + 0.5))
+	totalSize := math.Round(float64(size/sizeOfBlock) + 0.5)
 	return &bitArray{
 		array:    make([]uint8, totalSize),
 		bitsSize: uint(size),
@@ -54,6 +54,8 @@ func (arr *bitArray) put(bit, index int) error {
 		arr.array[block] &= ^(mask) // change index bit to 0
 	} else if bit == 1 {
 		arr.array[block] |= mask // change index bit to 1
+	} else {
+		return errors.New("trying to set a wrong bit value")
 	}
 	return nil
 }

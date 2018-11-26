@@ -29,6 +29,7 @@ import (
 const lastBitMask = 0x01
 const lowLengthSize = 6
 const firstBitMask = 0x80
+const lowBitLengthSize = 6
 
 // TriStateBitSet bitset implementation.
 type TriStateBitSet struct {
@@ -112,7 +113,7 @@ func (dbs *TriStateBitSet) serializeWithHLength(
 	var result *bytes.Buffer
 	var secondByte uint8 // hBitLength
 	firstByte++
-	firstByte = firstByte << 6 // move compressed and hBitLength bits to right
+	firstByte = firstByte << lowBitLengthSize // move compressed and hBitLength bits to right
 	secondByte = uint8(tmpLen)
 	totalSize++ // secondbyte is optional
 	result = allocateBuffer(totalSize)
@@ -132,8 +133,7 @@ func (dbs *TriStateBitSet) serializeWithLLength(
 	tmpLen uint,
 	totalSize int,
 ) (res *bytes.Buffer, err error) {
-	var result *bytes.Buffer
-	result = allocateBuffer(totalSize)
+	result := allocateBuffer(totalSize)
 	firstByte = firstByte << 1 // move compressed flag to right
 	firstByte += uint8(tmpLen)
 	err = binary.Write(result, defaultByteOrder, firstByte)
@@ -170,7 +170,7 @@ func (dbs *TriStateBitSet) Deserialize(data io.Reader) error {
 	} else {
 		array, err = parseBitArray(payload, int(length))
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 	cells, err := dbs.parseCells(array)
@@ -253,9 +253,7 @@ func (dbs *TriStateBitSet) changeBucketState(cell *BitSetCell) error {
 
 func putLastBit(array *bitArray, state TriState, index int) error {
 	bit := int(state & lastBitMask)
-	err := array.put(bit, index)
-	return err
-	// return errors.Wrap(err, "[ putLastBit ] failed to put a bit ti bitset")
+	return array.put(bit, index)
 }
 
 func changeBitState(array *bitArray, i int, state TriState) error {
