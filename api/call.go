@@ -33,6 +33,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// APIRequest is a representation of request struct to api
 type APIRequest struct {
 	Reference string `json:"reference"`
 	Method    string `json:"method"`
