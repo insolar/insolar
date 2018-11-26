@@ -393,6 +393,7 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't start insolard: ")
 	}
 	fmt.Println("[ setup ] insolard was successfully started")
+	time.Sleep(60 * time.Second)
 	err = setInfo()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't receive root reference ")
