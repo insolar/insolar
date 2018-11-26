@@ -19,9 +19,7 @@ package api
 import (
 	"context"
 	"crypto"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -35,125 +33,9 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 )
-
-const (
-	_ int = 0
-	// HandlerError is error in handler
-	HandlerError int = -1
-	// BadRequest is bad formed request
-	BadRequest int = -2
-)
-
-func writeError(message string, code int) map[string]interface{} {
-	errJSON := map[string]interface{}{
-		"error": map[string]interface{}{
-			"message": message,
-			"code":    code,
-		},
-	}
-	return errJSON
-}
-
-func makeHandlerMarshalErrorJSON(ctx context.Context) []byte {
-	jsonErr := writeError("Invalid data from handler", HandlerError)
-	serJSON, err := json.Marshal(jsonErr)
-	if err != nil {
-		inslogger.FromContext(ctx).Fatal("Can't marshal base error")
-	}
-	return serJSON
-}
-
-var handlerMarshalErrorJSON = makeHandlerMarshalErrorJSON(inslogger.ContextWithTrace(context.Background(), "handlerMarshalErrorJSON"))
-
-func processQueryType(ctx context.Context, rh *RequestHandler, qTypeStr string) map[string]interface{} {
-	qtype := QTypeFromString(qTypeStr)
-	var answer map[string]interface{}
-
-	var hError error
-	switch qtype {
-	case GetSeed:
-		answer, hError = rh.ProcessGetSeed(ctx)
-	default:
-		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
-		answer = writeError(msg, BadRequest)
-		inslogger.FromContext(ctx).Warnf("[ processQueryType ] %s\n", msg)
-		return answer
-	}
-	if hError != nil {
-		errMsg := "Handler error: " + hError.Error()
-		inslogger.FromContext(ctx).Errorf("[ processQueryType ] %s\n", errMsg)
-		answer = writeError(errMsg, HandlerError)
-	}
-
-	return answer
-}
-
-const traceIDQueryParam = "traceID"
-
-// PreprocessRequest extracts params from requests
-func PreprocessRequest(ctx context.Context, req *http.Request) (*Params, error) {
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't read body. So strange")
-	}
-	if len(body) == 0 {
-		return nil, errors.New("[ PreprocessRequest ] Empty body")
-	}
-
-	var params Params
-	err = json.Unmarshal(body, &params)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't parse input params")
-	}
-
-	inslogger.FromContext(ctx).Infof("[ PreprocessRequest ] Query: %s. Url: %s\n", string(body), req.URL)
-
-	return &params, nil
-}
-
-func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
-	return func(response http.ResponseWriter, req *http.Request) {
-		traceid := utils.RandTraceID()
-		ctx, inslog := inslogger.WithTraceField(context.Background(), traceid)
-		startTime := time.Now()
-		answer := make(map[string]interface{})
-		var params *Params
-		defer func() {
-			if answer == nil {
-				answer = make(map[string]interface{})
-			}
-			if params == nil {
-				params = &Params{}
-			}
-			answer[traceIDQueryParam] = traceid
-			serJSON, err := json.MarshalIndent(answer, "", "    ")
-			if err != nil {
-				serJSON = handlerMarshalErrorJSON
-			}
-			response.Header().Add("Content-Type", "application/json")
-			var newLine byte = '\n'
-			_, err = response.Write(append(serJSON, newLine))
-			if err != nil {
-				inslog.Errorf("[ wrapAPIV1Handler ] Can't write response\n")
-			}
-			inslog.Infof("[ wrapAPIV1Handler ] Request completed. Total time: %s\n", time.Since(startTime))
-		}()
-
-		params, err := PreprocessRequest(ctx, req)
-		if err != nil {
-			answer = writeError("Bad request", BadRequest)
-			inslog.Errorf("[ wrapAPIV1Handler ] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
-			return
-		}
-		rh := NewRequestHandler(params, runner.ContractRequester, runner.NetworkCoordinator, rootDomainReference, runner.seedmanager)
-
-		answer = processQueryType(ctx, rh, params.QueryType)
-	}
-}
 
 // Runner implements Component for API
 type Runner struct {
@@ -167,7 +49,8 @@ type Runner struct {
 	cfg                 *configuration.APIRunner
 	keyCache            map[string]crypto.PublicKey
 	cacheLock           *sync.RWMutex
-	seedmanager         *seedmanager.SeedManager
+	SeedManager         *seedmanager.SeedManager
+	SeedGenerator       seedmanager.SeedGenerator
 }
 
 // NewRunner is C-tor for API Runner
@@ -178,8 +61,11 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	if cfg.Address == "" {
 		return nil, errors.New("[ NewAPIRunner ] Address must not be empty")
 	}
-	if len(cfg.Location) == 0 {
-		return nil, errors.New("[ NewAPIRunner ] Location must exist")
+	if len(cfg.Call) == 0 {
+		return nil, errors.New("[ NewAPIRunner ] Call must exist")
+	}
+	if len(cfg.RPC) == 0 {
+		return nil, errors.New("[ NewAPIRunner ] RPC must exist")
 	}
 
 	addrStr := fmt.Sprint(cfg.Address)
@@ -193,7 +79,18 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	}
 
 	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")
+
 	err := rpcServer.RegisterService(NewStorageExporterService(&ar), "exporter")
+	if err != nil {
+		return nil, err
+	}
+
+	err = rpcServer.RegisterService(NewSeedService(&ar), "seed")
+	if err != nil {
+		return nil, err
+	}
+
+	err = rpcServer.RegisterService(NewInfoService(&ar), "info")
 	if err != nil {
 		return nil, err
 	}
@@ -208,13 +105,8 @@ func (ar *Runner) IsAPIRunner() bool {
 
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
-	rootDomainReference := ar.Certificate.GetRootDomainReference()
+	ar.SeedManager = seedmanager.New()
 
-	ar.seedmanager = seedmanager.New()
-
-	fw := wrapAPIV1Handler(ar, *rootDomainReference)
-	http.HandleFunc(ar.cfg.Location, fw)
-	http.HandleFunc(ar.cfg.Info, ar.infoHandler())
 	http.HandleFunc(ar.cfg.Call, ar.callHandler())
 	http.Handle(ar.cfg.RPC, ar.rpcServer)
 	inslog := inslogger.FromContext(ctx)

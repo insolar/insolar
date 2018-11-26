@@ -14,29 +14,5 @@
  *    limitations under the License.
  */
 
-package configuration
-
-import (
-	"fmt"
-)
-
-// APIRunner holds configuration for api
-type APIRunner struct {
-	Address string
-	Call    string
-	RPC     string
-}
-
-// NewAPIRunner creates new api config
-func NewAPIRunner() APIRunner {
-	return APIRunner{
-		Address: "localhost:19191",
-		Call:    "/api/call",
-		RPC:     "/api/rpc",
-	}
-}
-
-func (ar *APIRunner) String() string {
-	res := fmt.Sprintln("Addr ->", ar.Address, ", Call ->", ar.Call, ", RPC ->", ar.RPC)
-	return res
-}
+// Package heavy contains methods for processing synchronization tasks on heavy node.
+package heavy

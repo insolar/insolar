@@ -41,6 +41,6 @@ pulsar:
 genesis:
   rootkeys: "../testdata/functional/root_member_keys.json"
   rootbalance: 10000
-keyspath: "../testdata/functional/bootstrap_keys.json"
-certificatepath: "../testdata/functional/certificate.json"
+keyspath: "./testdata/bootstrap_keys.json"
+certificatepath: "./testdata/certificate.json"
 

@@ -14,23 +14,14 @@
  *    limitations under the License.
  */
 
-package functest
+package core
 
-import (
-	"testing"
+import "context"
 
-	"github.com/stretchr/testify/require"
-)
-
-func _TestIsAuthorized(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "is_auth",
-	})
-
-	isAuthResponse := &isAuthorized{}
-	unmarshalResponse(t, body, isAuthResponse)
-
-	require.Equal(t, 1, isAuthResponse.Role)
-	require.NotEmpty(t, isAuthResponse.PublicKey)
-	require.Equal(t, true, isAuthResponse.NetCoordCheck)
+// HeavySync provides methods for sync on heavy node.
+//go:generate minimock -i github.com/insolar/insolar/core.HeavySync -o ../testutils -s _mock.go
+type HeavySync interface {
+	Start(ctx context.Context, pn PulseNumber) error
+	Store(ctx context.Context, pn PulseNumber, kvs []KV) error
+	Stop(ctx context.Context, pn PulseNumber) error
 }
