@@ -7,19 +7,27 @@ import (
 
 // GetObjectRedirectReply is a redirect-reply for get object
 type GetObjectRedirectReply struct {
-	core.Reply
+	Receiver *core.RecordRef
+	Token    core.DelegationToken
 
-	To      *core.RecordRef
 	StateID *core.RecordID
+}
 
-	Token core.DelegationToken
+// GetReceiver returns node reference to send message to.
+func (r *GetObjectRedirectReply) GetReceiver() *core.RecordRef {
+	return r.Receiver
+}
+
+// GetToken returns delegation token.
+func (r *GetObjectRedirectReply) GetToken() core.DelegationToken {
+	return r.Token
 }
 
 // NewGetObjectRedirectReply return new GetObjectRedirectReply
 func NewGetObjectRedirectReply(to *core.RecordRef, state *core.RecordID) *GetObjectRedirectReply {
 	return &GetObjectRedirectReply{
-		To:      to,
-		StateID: state,
+		Receiver: to,
+		StateID:  state,
 	}
 }
 
@@ -28,8 +36,9 @@ func (r *GetObjectRedirectReply) Type() core.ReplyType {
 	return TypeGetObjectRedirect
 }
 
-// RecreateMessage recreates the message on the base of token
-func (r *GetObjectRedirectReply) RecreateMessage(msg *message.GetObject) *message.GetObject {
+// Redirected creates redirected message from redirect data.
+func (r *GetObjectRedirectReply) Redirected(genericMsg core.Message) core.Message {
+	msg := genericMsg.(*message.GetObject)
 	return &message.GetObject{
 		State:    r.StateID,
 		Head:     msg.Head,

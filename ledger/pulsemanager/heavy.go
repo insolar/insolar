@@ -37,7 +37,7 @@ func (m *PulseManager) HeavySync(
 
 	// MAYBE we should check Message Bus replies?
 	signalMsg := &message.HeavyStartStop{Begin: start, End: end}
-	_, starterr := m.Bus.Send(ctx, signalMsg)
+	_, starterr := m.Bus.Send(ctx, signalMsg, nil)
 	// TODO: check if locked
 	if starterr != nil {
 		return 0, starterr
@@ -55,14 +55,14 @@ func (m *PulseManager) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{Records: recs}
-		_, senderr := m.Bus.Send(ctx, msg)
+		_, senderr := m.Bus.Send(ctx, msg, nil)
 		if senderr != nil {
 			return 0, senderr
 		}
 	}
 
 	signalMsg.Finished = true
-	_, stoperr := m.Bus.Send(ctx, signalMsg)
+	_, stoperr := m.Bus.Send(ctx, signalMsg, nil)
 	if stoperr != nil {
 		return 0, stoperr
 	}

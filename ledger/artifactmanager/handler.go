@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -39,6 +40,7 @@ type MessageHandler struct {
 	db                         *storage.DB
 	jetDropHandlers            map[core.MessageType]internalHandler
 	recent                     *storage.RecentStorage
+	conf                       *configuration.ArtifactManager
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
@@ -47,11 +49,14 @@ type MessageHandler struct {
 }
 
 // NewMessageHandler creates new handler.
-func NewMessageHandler(db *storage.DB, recentObjects *storage.RecentStorage) *MessageHandler {
+func NewMessageHandler(
+	db *storage.DB, recentObjects *storage.RecentStorage, conf *configuration.ArtifactManager,
+) *MessageHandler {
 	return &MessageHandler{
 		db:              db,
 		jetDropHandlers: map[core.MessageType]internalHandler{},
 		recent:          recentObjects,
+		conf:            conf,
 	}
 }
 
@@ -159,61 +164,39 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	return &rep, nil
 }
 
-func (h *MessageHandler) createRedirect(ctx context.Context, genericMsg core.Parcel, msg *message.GetObject, definedState *core.RecordID) (*reply.GetObjectRedirectReply, error) {
-	// here we need find node by pulse
-	redirect, err := h.prepareRedirect(ctx, msg, definedState, definedState.Pulse())
-	if err != nil {
-		return nil, err
-	}
-
-	sender := genericMsg.GetSender()
-	redirectedMessage := redirect.RecreateMessage(msg)
-	token, err := h.DelegationTokenFactory.IssueGetObjectRedirect(&sender, redirectedMessage)
-	if err != nil {
-		return nil, err
-	}
-
-	redirect.Token = token
-
-	return redirect, nil
-}
-
-func (h *MessageHandler) prepareRedirect(ctx context.Context, msg *message.GetObject, definedState *core.RecordID, pulse core.PulseNumber) (*reply.GetObjectRedirectReply, error) {
-	nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleLightExecutor, &msg.Head, pulse)
-	if err != nil {
-		return nil, err
-	}
-	if len(nodes) > 1 {
-		return nil, errors.New("found more than one executer")
-	}
-
-	return reply.NewGetObjectRedirectReply(&nodes[0], definedState), nil
-}
-
-func (h *MessageHandler) handleGetObject(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+func (h *MessageHandler) handleGetObject(
+	ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel,
+) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetObject)
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
+	if err == storage.ErrNotFound {
+		return h.createRedirect(ctx, parcel, msg, nil, pulseNumber)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	stateID, state, err := getObjectState(ctx, h.db, idx, msg.State, msg.Approved)
+	stateID, err := getObjectState(idx, msg.State, msg.Approved)
+	if err != nil {
+		if err == ErrStateNotAvailable {
+			return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
+		}
+		return nil, err
+	}
+	h.recent.AddObject(*msg.Head.Record())
+
+	state, err := getObjectStateRecord(ctx, h.db, stateID)
 	if err != nil {
 		switch err {
 		case ErrObjectDeactivated:
 			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-		case ErrStateNotAvailable:
-			return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
-		case ErrNotFound:
-			if stateID == nil {
-				return nil, err
-			}
-			return h.createRedirect(ctx, parcel, msg, stateID)
+		case storage.ErrNotFound:
+			// The record wasn't found on the current node. Return redirect to the node that contains it.
+			return h.createRedirect(ctx, parcel, msg, stateID, pulseNumber)
 		default:
 			return nil, err
 		}
 	}
-	h.recent.AddObject(*msg.Head.Record())
 
 	var childPointer *core.RecordID
 	if idx.ChildPointer != nil {
@@ -526,12 +509,10 @@ func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.C
 }
 
 func getObjectState(
-	ctx context.Context,
-	s storage.Store,
 	idx *index.ObjectLifeline,
 	state *core.RecordID,
 	approved bool,
-) (*core.RecordID, record.ObjectState, error) {
+) (*core.RecordID, error) {
 	var stateID *core.RecordID
 	if state != nil {
 		stateID = state
@@ -543,22 +524,73 @@ func getObjectState(
 		}
 	}
 	if stateID == nil {
-		return nil, nil, ErrStateNotAvailable
+		return nil, ErrStateNotAvailable
 	}
 
-	rec, err := s.GetRecord(ctx, stateID)
+	return stateID, nil
+}
+
+func getObjectStateRecord(
+	ctx context.Context,
+	s storage.Store,
+	state *core.RecordID,
+) (record.ObjectState, error) {
+	rec, err := s.GetRecord(ctx, state)
 	if err != nil {
-		return stateID, nil, err
+		return nil, err
 	}
 	stateRec, ok := rec.(record.ObjectState)
 	if !ok {
-		return nil, nil, errors.New("invalid object record")
+		return nil, errors.New("invalid object record")
 	}
 	if stateRec.State() == record.StateDeactivation {
-		return nil, nil, ErrObjectDeactivated
+		return nil, ErrObjectDeactivated
 	}
 
-	return stateID, stateRec, nil
+	return stateRec, nil
+}
+
+func (h *MessageHandler) createRedirect(
+	ctx context.Context,
+	genericMsg core.Parcel,
+	msg *message.GetObject,
+	state *core.RecordID,
+	pulse core.PulseNumber,
+) (*reply.GetObjectRedirectReply, error) {
+	var (
+		toNodes []core.RecordRef
+		err     error
+	)
+	if state != nil && pulse-state.Pulse() < h.conf.LightChainLimit {
+		// Find light executor that saved the state.
+		toNodes, err = h.JetCoordinator.QueryRole(ctx, core.RoleLightExecutor, &msg.Head, state.Pulse())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Find heavy that has this object.
+		toNodes, err = h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(toNodes) > 1 {
+		return nil, errors.New("found more than one executor")
+	}
+
+	redirect := reply.NewGetObjectRedirectReply(&toNodes[0], state)
+
+	sender := genericMsg.GetSender()
+	redirected := redirect.Redirected(msg)
+	token, err := h.DelegationTokenFactory.IssueGetObjectRedirect(&sender, redirected)
+	if err != nil {
+		return nil, err
+	}
+
+	redirect.Token = token
+
+	return redirect, nil
 }
 
 func getObjectIndexForUpdate(ctx context.Context, s storage.Store, head *core.RecordID) (*index.ObjectLifeline, error) {

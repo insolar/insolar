@@ -48,7 +48,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
-	handler := artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(0))
+	handler := artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(0), nil)
 	handler.PlatformCryptographyScheme = pcs
 
 	am := artifactmanager.NewArtifactManger(db)

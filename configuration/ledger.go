@@ -34,6 +34,12 @@ type JetCoordinator struct {
 	RoleCounts map[int]int
 }
 
+// ArtifactManager holds configuration for ArtifactManager.
+type ArtifactManager struct {
+	// Maximum pulse difference (NOT number of pulses) between current and the latest replicated on heavy.
+	LightChainLimit core.PulseNumber
+}
+
 // Ledger holds configuration for ledger.
 type Ledger struct {
 	// Storage defines storage configuration.
@@ -42,6 +48,8 @@ type Ledger struct {
 	JetCoordinator JetCoordinator
 	// HeavyReplication defines replication to heavy storage node.
 	HeavyReplication HeavyReplication
+	// ArtifactManager holds configuration for ArtifactManager.
+	ArtifactManager ArtifactManager
 }
 
 // HeavyReplication configures replication to heavy node
@@ -65,6 +73,10 @@ func NewLedger() Ledger {
 				int(core.RoleVirtualValidator): 1,
 				int(core.RoleLightValidator):   1,
 			},
+		},
+
+		ArtifactManager: ArtifactManager{
+			LightChainLimit: 10 * 30, // 30 pulses
 		},
 	}
 }

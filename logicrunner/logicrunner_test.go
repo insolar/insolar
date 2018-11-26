@@ -2008,3 +2008,84 @@ package main
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)), "Compare Code Prototypes")
 }
+
+// TODO - unskip when we decide how to work with NotificationCalls (NoWaitMethods)
+func TestNoLoopsWhileNotificationCall(t *testing.T) {
+	t.Skip()
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+ import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ import "github.com/insolar/insolar/application/proxy/two"
+
+ type One struct {
+	foundation.BaseContract
+ }
+ func (r *One) GetChildCode() (int, error) {
+	holder := two.New()
+	child, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	for i := 0; i < 100; i++ {
+		child.IncreaseNoWait()
+	}
+
+ 	return child.GetCounter()
+ }
+`
+	var contractTwoCode = `
+ package main
+ import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ )
+ type Two struct {
+	foundation.BaseContract
+	Counter int
+ }
+ func New() (*Two, error) {
+	return &Two{}, nil
+ }
+
+ func (r *Two) Increase() error {
+ 	r.Counter++
+	return nil
+ }
+
+ func (r *Two) GetCounter() (int, error) {
+	return r.Counter, nil
+ }
+
+`
+
+	ctx := context.Background()
+	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
+	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
+	assert.NoError(t, err)
+	obj := getRefFromID(objID)
+	_, err = am.ActivateObject(
+		ctx,
+		core.RecordRef{},
+		*obj,
+		*am.GenesisRef(),
+		*cb.Prototypes["one"],
+		false,
+		goplugintestutils.CBORMarshal(t, &struct{}{}),
+	)
+	assert.NoError(t, err)
+
+	for i := 0; i < 100; i++ {
+
+	}
+
+	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "GetChildCode", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	assert.NoError(t, err, "contract call")
+	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, []interface{}{uint64(100), nil}, r)
+}
