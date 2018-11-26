@@ -21,13 +21,15 @@ func TestHealthCheck(t *testing.T) {
 	req := rpctypes.DownCallMethodReq{
 		Context:   &core.LogicCallContext{Caller: &caller},
 		Code:      core.RecordRef{}.FromSlice(append(make([]byte, 63), 1)),
-		Data:      make([]byte, 0),
+		Data:      goplugintestutils.CBORMarshal(t, []interface{}{}),
 		Method:    "Check",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 
-	err = client.Call("RPC.CallMethod", req, res)
+	err = client.Call("RPC.CallMethod", req, &res)
 	require.NoError(t, err)
 
-	assert.Equal(t, true, res)
+	unMarshaledResponse := goplugintestutils.CBORUnMarshal(t, res.Ret)
+
+	assert.Equal(t, unMarshaledResponse, []interface{}{true, interface{}(nil)})
 }
