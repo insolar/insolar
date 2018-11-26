@@ -31,14 +31,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// BootstrapNode holds info about bootstrap nodes
-type BootstrapNode struct {
-	PublicKey   string `json:"public_key"`
-	Host        string `json:"host"`
-	NetworkSign []byte `json:"network_sign"`
-	NodeSign    []byte `json:"node_sign"`
-}
-
 // Certificate holds info about certificate
 type Certificate struct {
 	MajorityRule int `json:"majority_rule"`
@@ -47,12 +39,12 @@ type Certificate struct {
 		HeavyMaterial uint `json:"heavy_material"`
 		LightMaterial uint `json:"light_material"`
 	} `json:"min_roles"`
-	PublicKey           string          `json:"public_key"`
-	Reference           string          `json:"reference"`
-	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
-	Role                string          `json:"role"`
-	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
-	RootDomainReference string          `json:"root_domain_ref"`
+	PublicKey           string               `json:"public_key"`
+	Reference           string               `json:"reference"`
+	PulsarPublicKeys    []string             `json:"pulsar_public_keys"`
+	Role                string               `json:"role"`
+	BootstrapNodes      []core.BootstrapNode `json:"bootstrap_nodes"`
+	RootDomainReference string               `json:"root_domain_ref"`
 }
 
 func (cert *Certificate) serializeNetworkPart() []byte {
@@ -98,7 +90,7 @@ func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
 }
 
 // GetBootstrapNodes return bootstrap nodes array
-func (cert *Certificate) GetBootstrapNodes() []BootstrapNode {
+func (cert *Certificate) GetBootstrapNodes() []core.BootstrapNode {
 	return cert.BootstrapNodes
 }
 
@@ -128,7 +120,7 @@ func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor,
 
 func (cert *Certificate) reset() {
 	cert.PublicKey = ""
-	cert.BootstrapNodes = []BootstrapNode{}
+	cert.BootstrapNodes = []core.BootstrapNode{}
 	cert.Reference = ""
 	cert.MajorityRule = 0
 }

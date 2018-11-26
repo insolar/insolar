@@ -68,16 +68,16 @@ func TestReadCertificate(t *testing.T) {
 	require.Equal(t, 7, cert.MajorityRule)
 	require.Equal(t, "0987654321", cert.RootDomainReference)
 
-	bootstrapNodes := []BootstrapNode{
-		BootstrapNode{
+	bootstrapNodes := []core.BootstrapNode{
+		core.BootstrapNode{
 			PublicKey: "PUBKEY_1",
 			Host:      "localhost:22001",
 		},
-		BootstrapNode{
+		core.BootstrapNode{
 			PublicKey: "PUBKEY_2",
 			Host:      "localhost:22002",
 		},
-		BootstrapNode{
+		core.BootstrapNode{
 			PublicKey: "PUBKEY_3",
 			Host:      "localhost:22003",
 		},
