@@ -32,9 +32,10 @@ import (
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
 	db      *storage.DB
-	LR      core.LogicRunner `inject:""`
-	Bus     core.MessageBus  `inject:""`
-	NodeNet core.NodeNetwork `inject:""`
+	Recent  core.RecentStorage `inject:""`
+	LR      core.LogicRunner   `inject:""`
+	Bus     core.MessageBus    `inject:""`
+	NodeNet core.NodeNetwork   `inject:""`
 	// setLock locks Set method call.
 	setLock sync.Mutex
 	stopped bool
