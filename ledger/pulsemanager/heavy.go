@@ -30,24 +30,20 @@ import (
 // It syncs records from start to end of provided pulse numbers.
 func (m *PulseManager) HeavySync(
 	ctx context.Context,
-	start core.PulseNumber,
-	end core.PulseNumber,
+	pn core.PulseNumber,
 ) (core.PulseNumber, error) {
 	inslog := inslogger.FromContext(ctx)
 
-	// MAYBE we should check Message Bus replies?
-	signalMsg := &message.HeavyStartStop{
-		PulseRange: core.PulseRange{Begin: start, End: end},
-	}
+	signalMsg := &message.HeavyStartStop{PulseNum: pn}
 	_, starterr := m.Bus.Send(ctx, signalMsg, nil)
 	// TODO: check if locked
 	if starterr != nil {
 		return 0, starterr
 	}
-	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", start, end)
+	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", pn, pn+1)
 
 	replicator := storage.NewReplicaIter(
-		ctx, m.db, start, end, m.options.syncmessagelimit)
+		ctx, m.db, pn, pn+1, m.options.syncmessagelimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
@@ -68,11 +64,11 @@ func (m *PulseManager) HeavySync(
 	if stoperr != nil {
 		return 0, stoperr
 	}
-	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", start, end)
+	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", pn, pn+1)
 
 	lastmeetpulse := replicator.LastPulse()
 	inslog.Debugf("synchronize on [%v:%v] finised (maximum record pulse is %v)",
-		start, end, lastmeetpulse)
+		pn, pn+1, lastmeetpulse)
 	return lastmeetpulse, nil
 }
 

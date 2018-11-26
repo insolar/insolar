@@ -626,7 +626,7 @@ func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core
 	}
 	msg := genericMsg.Message().(*message.HeavyPayload)
 	inslog.Debugf("Heavy sync: get start payload message with %v records", len(msg.Records))
-	if err := h.HeavySync.Store(ctx, msg.PulseRange, msg.Records); err != nil {
+	if err := h.HeavySync.Store(ctx, msg.PulseNum, msg.Records); err != nil {
 		return nil, err
 	}
 	return &reply.OK{}, nil
@@ -641,15 +641,15 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 	msg := genericMsg.Message().(*message.HeavyStartStop)
 	// stop branch
 	if msg.Finished {
-		inslog.Debugf("Heavy sync: get stop message [%v,%v]", msg.Begin, msg.End)
-		if err := h.HeavySync.Stop(ctx, msg.PulseRange); err != nil {
+		inslog.Debugf("Heavy sync: get stop message for pulse %v", msg.PulseNum)
+		if err := h.HeavySync.Stop(ctx, msg.PulseNum); err != nil {
 			return nil, err
 		}
 		return &reply.OK{}, nil
 	}
 	// start
-	inslog.Debugf("Heavy sync: get start message [%v,%v]", msg.Begin, msg.End)
-	if err := h.HeavySync.Start(ctx, msg.PulseRange); err != nil {
+	inslog.Debugf("Heavy sync: get start message for pulse %v", msg.PulseNum)
+	if err := h.HeavySync.Start(ctx, msg.PulseNum); err != nil {
 		return nil, err
 	}
 	return &reply.OK{}, nil

@@ -32,7 +32,7 @@ func TestHeavy_Sync(t *testing.T) {
 	defer cleaner()
 
 	var err error
-	prange := core.PulseRange{}
+	var pnum core.PulseNumber
 	kvalues := []core.KV{
 		{K: []byte("100"), V: []byte("500")},
 	}
@@ -40,86 +40,75 @@ func TestHeavy_Sync(t *testing.T) {
 	// TODO: call every case in subtest
 
 	sync := NewSync(db)
-	err = sync.Start(ctx, prange)
-	require.Error(t, err, "start with zero range")
+	err = sync.Start(ctx, pnum)
+	require.Error(t, err, "start with zero pulse")
 
-	err = sync.Store(ctx, prange, kvalues)
+	err = sync.Store(ctx, pnum, kvalues)
 	require.Error(t, err, "store values on non started sync")
 
-	err = sync.Stop(ctx, prange)
+	err = sync.Stop(ctx, pnum)
 	require.Error(t, err, "stop on non started sync")
 
-	prange.Begin = 5
-	prange.End = 6
-	err = sync.Start(ctx, prange)
-	require.Error(t, err, "last synced pulse is less when first pulse number")
+	pnum = 5
+	err = sync.Start(ctx, pnum)
+	require.Error(t, err, "last synced pulse is less when 'first pulse number'")
 
-	prange.Begin = core.FirstPulseNumber + 1
-	prange.End = core.FirstPulseNumber + 2
-	err = sync.Start(ctx, prange)
+	pnum = core.FirstPulseNumber + 1
+	err = sync.Start(ctx, pnum)
 	require.Error(t, err, "start sync on empty store with non first pulse number")
 
-	prange.Begin = core.FirstPulseNumber
-	prange.End = core.FirstPulseNumber
-	err = sync.Start(ctx, prange)
-	require.Error(t, err, "case Begin<=End range")
-
-	prange.End = prange.Begin + 1
-	err = sync.Start(ctx, prange)
+	pnum = core.FirstPulseNumber
+	err = sync.Start(ctx, pnum)
 	require.NoError(t, err, "start from first pulse on empty storage")
 
-	err = sync.Start(ctx, prange)
+	err = sync.Start(ctx, pnum)
 	require.Error(t, err, "double start")
 
-	prangeNext := prange
-	prangeNext.Begin++
-	prangeNext.End++
-	err = sync.Start(ctx, prangeNext)
-	require.Error(t, err, "start next pulse when other sync already run")
+	pnumNext := pnum + 1
+	err = sync.Start(ctx, pnumNext)
+	require.Error(t, err, "start next pulse sync when previous not end")
 
 	// stop previous
-	err = sync.Stop(ctx, prange)
+	err = sync.Stop(ctx, pnum)
 	require.NoError(t, err)
 
 	// start next
-	prangeNextPlus := prangeNext
-	prangeNextPlus.Begin++
-	prangeNextPlus.End++
-	err = sync.Start(ctx, prangeNextPlus)
+	pnumNextPlus := pnumNext + 1
+	err = sync.Start(ctx, pnumNextPlus)
 	require.Error(t, err, "start when previous pulses not synced")
 
-	// prepare pulses
+	// prepare pulse helper
 	preparepulse := func(pn core.PulseNumber) {
 		pulse := core.Pulse{PulseNumber: pn}
 		// fmt.Printf("Store pulse: %v\n", pulse.PulseNumber)
 		err = db.AddPulse(ctx, pulse)
 		require.NoError(t, err)
 	}
-	preparepulse(prange.Begin)
-	preparepulse(prangeNext.Begin) // should set corret next for previous pulse
+	preparepulse(pnum)
+	preparepulse(pnumNext) // should set correct next for previous pulse
 
-	err = sync.Start(ctx, prangeNext)
+	err = sync.Start(ctx, pnumNext)
 	require.NoError(t, err, "start next pulse")
 
-	err = sync.Store(ctx, prangeNextPlus, kvalues)
+	err = sync.Store(ctx, pnumNextPlus, kvalues)
 	require.Error(t, err, "store from other pulse at the same jet")
 
-	err = sync.Stop(ctx, prangeNextPlus)
+	err = sync.Stop(ctx, pnumNextPlus)
 	require.Error(t, err, "stop from other pulse at the same jet")
 
-	err = sync.Store(ctx, prangeNext, kvalues)
+	err = sync.Store(ctx, pnumNext, kvalues)
 	require.NoError(t, err, "store on current range")
-	err = sync.Store(ctx, prangeNext, kvalues)
+	err = sync.Store(ctx, pnumNext, kvalues)
 	require.NoError(t, err, "store the same on current range")
-	err = sync.Stop(ctx, prangeNext)
+	err = sync.Stop(ctx, pnumNext)
 	require.NoError(t, err, "stop current range")
 
-	preparepulse(prangeNextPlus.Begin) // should set corret next for previous pulse
+	preparepulse(pnumNextPlus) // should set corret next for previous pulse
 	sync = NewSync(db)
-	err = sync.Start(ctx, prangeNextPlus)
+	err = sync.Start(ctx, pnumNextPlus)
 	require.NoError(t, err, "start next+1 range on new sync instance (checkpoint check)")
-	err = sync.Store(ctx, prangeNextPlus, kvalues)
+	err = sync.Store(ctx, pnumNextPlus, kvalues)
 	require.NoError(t, err, "store next+1 pulse")
-	err = sync.Stop(ctx, prangeNextPlus)
+	err = sync.Stop(ctx, pnumNextPlus)
 	require.NoError(t, err, "stop next+1 range on new sync instance")
 }

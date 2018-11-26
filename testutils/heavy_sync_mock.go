@@ -20,17 +20,17 @@ import (
 type HeavySyncMock struct {
 	t minimock.Tester
 
-	StartFunc       func(p context.Context, p1 core.PulseRange) (r error)
+	StartFunc       func(p context.Context, p1 core.PulseNumber) (r error)
 	StartCounter    uint64
 	StartPreCounter uint64
 	StartMock       mHeavySyncMockStart
 
-	StopFunc       func(p context.Context, p1 core.PulseRange) (r error)
+	StopFunc       func(p context.Context, p1 core.PulseNumber) (r error)
 	StopCounter    uint64
 	StopPreCounter uint64
 	StopMock       mHeavySyncMockStop
 
-	StoreFunc       func(p context.Context, p1 core.PulseRange, p2 []core.KV) (r error)
+	StoreFunc       func(p context.Context, p1 core.PulseNumber, p2 []core.KV) (r error)
 	StoreCounter    uint64
 	StorePreCounter uint64
 	StoreMock       mHeavySyncMockStore
@@ -59,32 +59,32 @@ type mHeavySyncMockStart struct {
 //HeavySyncMockStartParams represents input parameters of the HeavySync.Start
 type HeavySyncMockStartParams struct {
 	p  context.Context
-	p1 core.PulseRange
+	p1 core.PulseNumber
 }
 
 //Expect sets up expected params for the HeavySync.Start
-func (m *mHeavySyncMockStart) Expect(p context.Context, p1 core.PulseRange) *mHeavySyncMockStart {
+func (m *mHeavySyncMockStart) Expect(p context.Context, p1 core.PulseNumber) *mHeavySyncMockStart {
 	m.mockExpectations = &HeavySyncMockStartParams{p, p1}
 	return m
 }
 
 //Return sets up a mock for HeavySync.Start to return Return's arguments
 func (m *mHeavySyncMockStart) Return(r error) *HeavySyncMock {
-	m.mock.StartFunc = func(p context.Context, p1 core.PulseRange) error {
+	m.mock.StartFunc = func(p context.Context, p1 core.PulseNumber) error {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of HeavySync.Start method
-func (m *mHeavySyncMockStart) Set(f func(p context.Context, p1 core.PulseRange) (r error)) *HeavySyncMock {
+func (m *mHeavySyncMockStart) Set(f func(p context.Context, p1 core.PulseNumber) (r error)) *HeavySyncMock {
 	m.mock.StartFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //Start implements github.com/insolar/insolar/core.HeavySync interface
-func (m *HeavySyncMock) Start(p context.Context, p1 core.PulseRange) (r error) {
+func (m *HeavySyncMock) Start(p context.Context, p1 core.PulseNumber) (r error) {
 	atomic.AddUint64(&m.StartPreCounter, 1)
 	defer atomic.AddUint64(&m.StartCounter, 1)
 
@@ -126,32 +126,32 @@ type mHeavySyncMockStop struct {
 //HeavySyncMockStopParams represents input parameters of the HeavySync.Stop
 type HeavySyncMockStopParams struct {
 	p  context.Context
-	p1 core.PulseRange
+	p1 core.PulseNumber
 }
 
 //Expect sets up expected params for the HeavySync.Stop
-func (m *mHeavySyncMockStop) Expect(p context.Context, p1 core.PulseRange) *mHeavySyncMockStop {
+func (m *mHeavySyncMockStop) Expect(p context.Context, p1 core.PulseNumber) *mHeavySyncMockStop {
 	m.mockExpectations = &HeavySyncMockStopParams{p, p1}
 	return m
 }
 
 //Return sets up a mock for HeavySync.Stop to return Return's arguments
 func (m *mHeavySyncMockStop) Return(r error) *HeavySyncMock {
-	m.mock.StopFunc = func(p context.Context, p1 core.PulseRange) error {
+	m.mock.StopFunc = func(p context.Context, p1 core.PulseNumber) error {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of HeavySync.Stop method
-func (m *mHeavySyncMockStop) Set(f func(p context.Context, p1 core.PulseRange) (r error)) *HeavySyncMock {
+func (m *mHeavySyncMockStop) Set(f func(p context.Context, p1 core.PulseNumber) (r error)) *HeavySyncMock {
 	m.mock.StopFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //Stop implements github.com/insolar/insolar/core.HeavySync interface
-func (m *HeavySyncMock) Stop(p context.Context, p1 core.PulseRange) (r error) {
+func (m *HeavySyncMock) Stop(p context.Context, p1 core.PulseNumber) (r error) {
 	atomic.AddUint64(&m.StopPreCounter, 1)
 	defer atomic.AddUint64(&m.StopCounter, 1)
 
@@ -193,33 +193,33 @@ type mHeavySyncMockStore struct {
 //HeavySyncMockStoreParams represents input parameters of the HeavySync.Store
 type HeavySyncMockStoreParams struct {
 	p  context.Context
-	p1 core.PulseRange
+	p1 core.PulseNumber
 	p2 []core.KV
 }
 
 //Expect sets up expected params for the HeavySync.Store
-func (m *mHeavySyncMockStore) Expect(p context.Context, p1 core.PulseRange, p2 []core.KV) *mHeavySyncMockStore {
+func (m *mHeavySyncMockStore) Expect(p context.Context, p1 core.PulseNumber, p2 []core.KV) *mHeavySyncMockStore {
 	m.mockExpectations = &HeavySyncMockStoreParams{p, p1, p2}
 	return m
 }
 
 //Return sets up a mock for HeavySync.Store to return Return's arguments
 func (m *mHeavySyncMockStore) Return(r error) *HeavySyncMock {
-	m.mock.StoreFunc = func(p context.Context, p1 core.PulseRange, p2 []core.KV) error {
+	m.mock.StoreFunc = func(p context.Context, p1 core.PulseNumber, p2 []core.KV) error {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of HeavySync.Store method
-func (m *mHeavySyncMockStore) Set(f func(p context.Context, p1 core.PulseRange, p2 []core.KV) (r error)) *HeavySyncMock {
+func (m *mHeavySyncMockStore) Set(f func(p context.Context, p1 core.PulseNumber, p2 []core.KV) (r error)) *HeavySyncMock {
 	m.mock.StoreFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //Store implements github.com/insolar/insolar/core.HeavySync interface
-func (m *HeavySyncMock) Store(p context.Context, p1 core.PulseRange, p2 []core.KV) (r error) {
+func (m *HeavySyncMock) Store(p context.Context, p1 core.PulseNumber, p2 []core.KV) (r error) {
 	atomic.AddUint64(&m.StorePreCounter, 1)
 	defer atomic.AddUint64(&m.StoreCounter, 1)
 

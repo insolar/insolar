@@ -21,7 +21,7 @@ import "context"
 // HeavySync provides methods for sync on heavy node.
 //go:generate minimock -i github.com/insolar/insolar/core.HeavySync -o ../testutils -s _mock.go
 type HeavySync interface {
-	Start(ctx context.Context, prange PulseRange) error
-	Store(ctx context.Context, prange PulseRange, kvs []KV) error
-	Stop(ctx context.Context, prange PulseRange) error
+	Start(ctx context.Context, pn PulseNumber) error
+	Store(ctx context.Context, pn PulseNumber, kvs []KV) error
+	Stop(ctx context.Context, pn PulseNumber) error
 }

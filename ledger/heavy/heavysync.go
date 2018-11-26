@@ -37,7 +37,7 @@ type syncstate struct {
 	sync.Mutex
 	lastok core.PulseNumber
 	// insyncend core.PulseNumber
-	syncrange *core.PulseRange
+	syncpulse *core.PulseNumber
 	insync    bool
 }
 
@@ -92,38 +92,34 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, pn core.PulseNumber) error 
 	return nil
 }
 
-// Start try to start heavy sync in provided range of pulses.
-func (s *Sync) Start(ctx context.Context, prange core.PulseRange) error {
+// Start try to start heavy sync for provided pulse.
+func (s *Sync) Start(ctx context.Context, pn core.PulseNumber) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if prange.Begin >= prange.End {
-		return errors.New("Wrong pulse range")
-	}
-
-	if s.syncrange != nil {
+	if s.syncpulse != nil {
 		return ErrSyncInProgress
 	}
 
-	if err := s.checkIsNextPulse(ctx, prange.Begin); err != nil {
+	if err := s.checkIsNextPulse(ctx, pn); err != nil {
 		return err
 	}
 
-	s.syncrange = &prange
+	s.syncpulse = &pn
 	return nil
 }
 
 // Store stores recieved key/value pairs at heavy storage.
 //
 // TODO: check actual pulse in keys
-func (s *Sync) Store(ctx context.Context, prange core.PulseRange, kvs []core.KV) error {
+func (s *Sync) Store(ctx context.Context, pn core.PulseNumber, kvs []core.KV) error {
 	err := func() error {
 		s.Lock()
 		defer s.Unlock()
-		if s.syncrange == nil {
+		if s.syncpulse == nil {
 			return errors.New("Jet not in sync mode")
 		}
-		if *s.syncrange != prange {
+		if *s.syncpulse != pn {
 			return errors.New("Passed range doesn't match range in sync")
 		}
 		s.insync = true
@@ -144,26 +140,24 @@ func (s *Sync) Store(ctx context.Context, prange core.PulseRange, kvs []core.KV)
 // Stop stops replication with specified pulses range.
 //
 // TODO: call Stop if range sync too long
-func (s *Sync) Stop(ctx context.Context, prange core.PulseRange) error {
+func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
 	s.Lock()
 	defer s.Unlock()
-	if s.syncrange == nil {
+	if s.syncpulse == nil {
 		return errors.New("Jet not in sync mode")
 	}
-	if *s.syncrange != prange {
+	if *s.syncpulse != pn {
 		return errors.New("Passed range doesn't match range in sync")
 	}
 	if s.insync {
 		return errors.New("Can't stop heavy repliction that still in store mode")
 	}
-	s.syncrange = nil
+	s.syncpulse = nil
 
-	// TODO: store lastok
-	lastok := prange.End - 1
-	err := s.db.SetHeavySyncedPulse(ctx, lastok)
+	err := s.db.SetHeavySyncedPulse(ctx, pn)
 	if err != nil {
 		return err
 	}
-	s.lastok = lastok
+	s.lastok = pn
 	return nil
 }

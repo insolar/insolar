@@ -20,10 +20,11 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// HeavyPayload carries Key/Value records for replication to Heavy Material node.
+// HeavyPayload carries Key/Value records and pulse number
+// that replicates to Heavy Material node.
 type HeavyPayload struct {
-	core.PulseRange
-	Records []core.KV
+	PulseNum core.PulseNumber
+	Records  []core.KV
 }
 
 // GetCaller implementation of Message interface.
@@ -38,7 +39,7 @@ func (e *HeavyPayload) Type() core.MessageType {
 
 // HeavyStartStop carries heavy replication start/stop signal with pulse range.
 type HeavyStartStop struct {
-	core.PulseRange
+	PulseNum core.PulseNumber
 	Finished bool
 }
 
