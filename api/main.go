@@ -216,6 +216,9 @@ func (ar *Runner) Start(ctx context.Context) error {
 	http.HandleFunc(ar.cfg.Location, fw)
 	http.HandleFunc(ar.cfg.Info, ar.infoHandler())
 	http.HandleFunc(ar.cfg.Call, ar.callHandler())
+	http.HandleFunc("/tmp", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("OK"))
+	})
 	http.Handle(ar.cfg.RPC, ar.rpcServer)
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")

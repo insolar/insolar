@@ -166,6 +166,12 @@ func loadRootKeys() error {
 }
 
 func setInfo() error {
+	resp1, err := http.Get("http://localhost:19191/tmp")
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/tmp")
+	}
+	body1, err := ioutil.ReadAll(resp1.Body)
+	fmt.Println("BODY", string(body1))
 	resp, err := http.Get(TestURL + "/info")
 	if err != nil {
 		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/info")
