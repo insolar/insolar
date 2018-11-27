@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/controller/auth"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -34,7 +33,6 @@ type Controller struct {
 	network network.HostNetwork
 
 	bootstrapController common.BootstrapController
-	authController      *auth.AuthorizationController
 	pulseController     *PulseController
 	rpcController       *RPCController
 }
@@ -61,7 +59,7 @@ func (c *Controller) Bootstrap(ctx context.Context) error {
 
 // Authorize start authorization process on discovery node.
 func (c *Controller) Authorize(ctx context.Context) error {
-	return c.authController.Authorize(ctx)
+	return nil
 }
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
@@ -83,7 +81,6 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 		return c.network.BuildResponse(request, nil), nil
 	})
 	c.bootstrapController.Start()
-	c.authController.Start(cryptographyService, networkCoordinator, nodeKeeper)
 	c.pulseController.Start()
 	c.rpcController.Start()
 }
@@ -121,7 +118,6 @@ func NewNetworkController(
 	c.network = network
 	c.options = options
 	c.bootstrapController = NewBootstrapController(c.options, transport)
-	c.authController = auth.NewAuthorizationController(c.options, c.bootstrapController, transport)
 	c.pulseController = NewPulseController(pulseHandler, network, routingTable)
 	c.rpcController = NewRPCController(c.options, network, scheme)
 

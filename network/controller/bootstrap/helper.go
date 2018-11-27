@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package auth
+package bootstrap
 
 import (
 	"sort"
@@ -23,12 +23,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 )
-
-// MajorityRuleCheck
-func MajorityRuleCheck(activeNodesLists [][]core.Node, majorityRule int) (activeNodesList []core.Node, success bool) {
-	// TODO: fair majorityRule check keeping in mind possible discovery redirects
-	return activeNodesLists[0], true
-}
 
 // CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
 func CheckShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
