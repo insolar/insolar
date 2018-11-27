@@ -48,6 +48,16 @@ type RecentStorageMock struct {
 	GetRequestsPreCounter uint64
 	GetRequestsMock       mRecentStorageMockGetRequests
 
+	ReInitObjectsFunc       func(p map[core.RecordID]*core.RecentObjectsIndexMeta)
+	ReInitObjectsCounter    uint64
+	ReInitObjectsPreCounter uint64
+	ReInitObjectsMock       mRecentStorageMockReInitObjects
+
+	ReInitPendingRequestFunc       func(p map[core.RecordID]*core.RecentObjectsIndexMeta)
+	ReInitPendingRequestCounter    uint64
+	ReInitPendingRequestPreCounter uint64
+	ReInitPendingRequestMock       mRecentStorageMockReInitPendingRequest
+
 	RemovePendingRequestFunc       func(p core.RecordID)
 	RemovePendingRequestCounter    uint64
 	RemovePendingRequestPreCounter uint64
@@ -68,6 +78,8 @@ func NewRecentStorageMock(t minimock.Tester) *RecentStorageMock {
 	m.ClearZeroTTLObjectsMock = mRecentStorageMockClearZeroTTLObjects{mock: m}
 	m.GetObjectsMock = mRecentStorageMockGetObjects{mock: m}
 	m.GetRequestsMock = mRecentStorageMockGetRequests{mock: m}
+	m.ReInitObjectsMock = mRecentStorageMockReInitObjects{mock: m}
+	m.ReInitPendingRequestMock = mRecentStorageMockReInitPendingRequest{mock: m}
 	m.RemovePendingRequestMock = mRecentStorageMockRemovePendingRequest{mock: m}
 
 	return m
@@ -373,6 +385,138 @@ func (m *RecentStorageMock) GetRequestsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetRequestsPreCounter)
 }
 
+type mRecentStorageMockReInitObjects struct {
+	mock             *RecentStorageMock
+	mockExpectations *RecentStorageMockReInitObjectsParams
+}
+
+//RecentStorageMockReInitObjectsParams represents input parameters of the RecentStorage.ReInitObjects
+type RecentStorageMockReInitObjectsParams struct {
+	p map[core.RecordID]*core.RecentObjectsIndexMeta
+}
+
+//Expect sets up expected params for the RecentStorage.ReInitObjects
+func (m *mRecentStorageMockReInitObjects) Expect(p map[core.RecordID]*core.RecentObjectsIndexMeta) *mRecentStorageMockReInitObjects {
+	m.mockExpectations = &RecentStorageMockReInitObjectsParams{p}
+	return m
+}
+
+//Return sets up a mock for RecentStorage.ReInitObjects to return Return's arguments
+func (m *mRecentStorageMockReInitObjects) Return() *RecentStorageMock {
+	m.mock.ReInitObjectsFunc = func(p map[core.RecordID]*core.RecentObjectsIndexMeta) {
+		return
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of RecentStorage.ReInitObjects method
+func (m *mRecentStorageMockReInitObjects) Set(f func(p map[core.RecordID]*core.RecentObjectsIndexMeta)) *RecentStorageMock {
+	m.mock.ReInitObjectsFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//ReInitObjects implements github.com/insolar/insolar/core.RecentStorage interface
+func (m *RecentStorageMock) ReInitObjects(p map[core.RecordID]*core.RecentObjectsIndexMeta) {
+	atomic.AddUint64(&m.ReInitObjectsPreCounter, 1)
+	defer atomic.AddUint64(&m.ReInitObjectsCounter, 1)
+
+	if m.ReInitObjectsMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.ReInitObjectsMock.mockExpectations, RecentStorageMockReInitObjectsParams{p},
+			"RecentStorage.ReInitObjects got unexpected parameters")
+
+		if m.ReInitObjectsFunc == nil {
+
+			m.t.Fatal("No results are set for the RecentStorageMock.ReInitObjects")
+
+			return
+		}
+	}
+
+	if m.ReInitObjectsFunc == nil {
+		m.t.Fatal("Unexpected call to RecentStorageMock.ReInitObjects")
+		return
+	}
+
+	m.ReInitObjectsFunc(p)
+}
+
+//ReInitObjectsMinimockCounter returns a count of RecentStorageMock.ReInitObjectsFunc invocations
+func (m *RecentStorageMock) ReInitObjectsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ReInitObjectsCounter)
+}
+
+//ReInitObjectsMinimockPreCounter returns the value of RecentStorageMock.ReInitObjects invocations
+func (m *RecentStorageMock) ReInitObjectsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ReInitObjectsPreCounter)
+}
+
+type mRecentStorageMockReInitPendingRequest struct {
+	mock             *RecentStorageMock
+	mockExpectations *RecentStorageMockReInitPendingRequestParams
+}
+
+//RecentStorageMockReInitPendingRequestParams represents input parameters of the RecentStorage.ReInitPendingRequest
+type RecentStorageMockReInitPendingRequestParams struct {
+	p map[core.RecordID]*core.RecentObjectsIndexMeta
+}
+
+//Expect sets up expected params for the RecentStorage.ReInitPendingRequest
+func (m *mRecentStorageMockReInitPendingRequest) Expect(p map[core.RecordID]*core.RecentObjectsIndexMeta) *mRecentStorageMockReInitPendingRequest {
+	m.mockExpectations = &RecentStorageMockReInitPendingRequestParams{p}
+	return m
+}
+
+//Return sets up a mock for RecentStorage.ReInitPendingRequest to return Return's arguments
+func (m *mRecentStorageMockReInitPendingRequest) Return() *RecentStorageMock {
+	m.mock.ReInitPendingRequestFunc = func(p map[core.RecordID]*core.RecentObjectsIndexMeta) {
+		return
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of RecentStorage.ReInitPendingRequest method
+func (m *mRecentStorageMockReInitPendingRequest) Set(f func(p map[core.RecordID]*core.RecentObjectsIndexMeta)) *RecentStorageMock {
+	m.mock.ReInitPendingRequestFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//ReInitPendingRequest implements github.com/insolar/insolar/core.RecentStorage interface
+func (m *RecentStorageMock) ReInitPendingRequest(p map[core.RecordID]*core.RecentObjectsIndexMeta) {
+	atomic.AddUint64(&m.ReInitPendingRequestPreCounter, 1)
+	defer atomic.AddUint64(&m.ReInitPendingRequestCounter, 1)
+
+	if m.ReInitPendingRequestMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.ReInitPendingRequestMock.mockExpectations, RecentStorageMockReInitPendingRequestParams{p},
+			"RecentStorage.ReInitPendingRequest got unexpected parameters")
+
+		if m.ReInitPendingRequestFunc == nil {
+
+			m.t.Fatal("No results are set for the RecentStorageMock.ReInitPendingRequest")
+
+			return
+		}
+	}
+
+	if m.ReInitPendingRequestFunc == nil {
+		m.t.Fatal("Unexpected call to RecentStorageMock.ReInitPendingRequest")
+		return
+	}
+
+	m.ReInitPendingRequestFunc(p)
+}
+
+//ReInitPendingRequestMinimockCounter returns a count of RecentStorageMock.ReInitPendingRequestFunc invocations
+func (m *RecentStorageMock) ReInitPendingRequestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ReInitPendingRequestCounter)
+}
+
+//ReInitPendingRequestMinimockPreCounter returns the value of RecentStorageMock.ReInitPendingRequest invocations
+func (m *RecentStorageMock) ReInitPendingRequestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ReInitPendingRequestPreCounter)
+}
+
 type mRecentStorageMockRemovePendingRequest struct {
 	mock             *RecentStorageMock
 	mockExpectations *RecentStorageMockRemovePendingRequestParams
@@ -467,6 +611,14 @@ func (m *RecentStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RecentStorageMock.GetRequests")
 	}
 
+	if m.ReInitObjectsFunc != nil && atomic.LoadUint64(&m.ReInitObjectsCounter) == 0 {
+		m.t.Fatal("Expected call to RecentStorageMock.ReInitObjects")
+	}
+
+	if m.ReInitPendingRequestFunc != nil && atomic.LoadUint64(&m.ReInitPendingRequestCounter) == 0 {
+		m.t.Fatal("Expected call to RecentStorageMock.ReInitPendingRequest")
+	}
+
 	if m.RemovePendingRequestFunc != nil && atomic.LoadUint64(&m.RemovePendingRequestCounter) == 0 {
 		m.t.Fatal("Expected call to RecentStorageMock.RemovePendingRequest")
 	}
@@ -512,6 +664,14 @@ func (m *RecentStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RecentStorageMock.GetRequests")
 	}
 
+	if m.ReInitObjectsFunc != nil && atomic.LoadUint64(&m.ReInitObjectsCounter) == 0 {
+		m.t.Fatal("Expected call to RecentStorageMock.ReInitObjects")
+	}
+
+	if m.ReInitPendingRequestFunc != nil && atomic.LoadUint64(&m.ReInitPendingRequestCounter) == 0 {
+		m.t.Fatal("Expected call to RecentStorageMock.ReInitPendingRequest")
+	}
+
 	if m.RemovePendingRequestFunc != nil && atomic.LoadUint64(&m.RemovePendingRequestCounter) == 0 {
 		m.t.Fatal("Expected call to RecentStorageMock.RemovePendingRequest")
 	}
@@ -536,6 +696,8 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 		ok = ok && (m.ClearZeroTTLObjectsFunc == nil || atomic.LoadUint64(&m.ClearZeroTTLObjectsCounter) > 0)
 		ok = ok && (m.GetObjectsFunc == nil || atomic.LoadUint64(&m.GetObjectsCounter) > 0)
 		ok = ok && (m.GetRequestsFunc == nil || atomic.LoadUint64(&m.GetRequestsCounter) > 0)
+		ok = ok && (m.ReInitObjectsFunc == nil || atomic.LoadUint64(&m.ReInitObjectsCounter) > 0)
+		ok = ok && (m.ReInitPendingRequestFunc == nil || atomic.LoadUint64(&m.ReInitPendingRequestCounter) > 0)
 		ok = ok && (m.RemovePendingRequestFunc == nil || atomic.LoadUint64(&m.RemovePendingRequestCounter) > 0)
 
 		if ok {
@@ -567,6 +729,14 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 
 			if m.GetRequestsFunc != nil && atomic.LoadUint64(&m.GetRequestsCounter) == 0 {
 				m.t.Error("Expected call to RecentStorageMock.GetRequests")
+			}
+
+			if m.ReInitObjectsFunc != nil && atomic.LoadUint64(&m.ReInitObjectsCounter) == 0 {
+				m.t.Error("Expected call to RecentStorageMock.ReInitObjects")
+			}
+
+			if m.ReInitPendingRequestFunc != nil && atomic.LoadUint64(&m.ReInitPendingRequestCounter) == 0 {
+				m.t.Error("Expected call to RecentStorageMock.ReInitPendingRequest")
 			}
 
 			if m.RemovePendingRequestFunc != nil && atomic.LoadUint64(&m.RemovePendingRequestCounter) == 0 {
@@ -606,6 +776,14 @@ func (m *RecentStorageMock) AllMocksCalled() bool {
 	}
 
 	if m.GetRequestsFunc != nil && atomic.LoadUint64(&m.GetRequestsCounter) == 0 {
+		return false
+	}
+
+	if m.ReInitObjectsFunc != nil && atomic.LoadUint64(&m.ReInitObjectsCounter) == 0 {
+		return false
+	}
+
+	if m.ReInitPendingRequestFunc != nil && atomic.LoadUint64(&m.ReInitPendingRequestCounter) == 0 {
 		return false
 	}
 
