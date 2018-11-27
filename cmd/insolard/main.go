@@ -131,7 +131,7 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, _, err := initComponents(
+	cm, err := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
