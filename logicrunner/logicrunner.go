@@ -236,6 +236,21 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 	return reterr
 }
 
+func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.JetRole) error {
+	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
+	target := message.ExtractTarget(msg)
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
+		ctx, role, &target, lr.pulse(ctx).PulseNumber, lr.Network.GetNodeID(),
+	)
+	if err != nil {
+		return errors.Wrap(err, "authorization failed with error")
+	}
+	if !isAuthorized {
+		return errors.New("can't execute this object")
+	}
+	return nil
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg, ok := parcel.Message().(message.IBaseLogicMessage)
@@ -245,12 +260,17 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	ref := msg.GetReference()
 
 	es := lr.UpsertExecution(ref)
+
+	err := lr.CheckOurRole(ctx, msg, core.RoleVirtualExecutor)
+	if err != nil {
+		return nil, es.ErrorWrap(err, "can't play role")
+	}
+
 	if es.traceID == inslogger.TraceID(ctx) {
 		return nil, es.ErrorWrap(nil, "loop detected")
 	}
 	entryPulse := lr.pulse(ctx).PulseNumber
 
-	fuse := true
 	es.Lock()
 
 	// unlock comes from OnPulse()
@@ -259,42 +279,27 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, es.ErrorWrap(nil, "abort execution: new Pulse coming")
 	}
 
+	return lr.executeOrValidate(ctx, es, ValidationSaver{lr: lr}, parcel)
+}
+
+func (lr *LogicRunner) executeOrValidate(
+	ctx context.Context, es *ExecutionState, vb ValidationBehaviour, parcel core.Parcel,
+) (
+	core.Reply, error,
+) {
+	fuse := true
 	defer func() {
 		if fuse {
 			es.Unlock()
 		}
 	}()
 
+	msg := parcel.Message().(message.IBaseLogicMessage)
+
+	ref := *es.Ref
+
 	es.traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
-
-	lr.caseBindReplaysMutex.Lock()
-	cb, validate := lr.caseBindReplays[ref]
-	lr.caseBindReplaysMutex.Unlock()
-
-	var vb ValidationBehaviour
-	if validate {
-		vb = ValidationChecker{lr: lr, cb: cb}
-	} else {
-		vb = ValidationSaver{lr: lr}
-	}
-
-	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	target := message.ExtractTarget(msg)
-	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx,
-		vb.GetRole(),
-		&target,
-		lr.pulse(ctx).PulseNumber,
-		lr.Network.GetNodeID(),
-	)
-
-	if err != nil {
-		return nil, es.ErrorWrap(err, "authorization failed with error")
-	}
-	if !isAuthorized {
-		return nil, es.ErrorWrap(err, "can't execute this object")
-	}
 
 	es.AddCaseRequest(core.CaseRecord{
 		Type: core.CaseRecordTypeStart,
@@ -306,8 +311,8 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		Resp: inslogger.TraceID(ctx),
 	})
 
+	var err error
 	es.request, err = vb.RegisterRequest(parcel)
-
 	if err != nil {
 		return nil, es.ErrorWrap(err, "can't create request")
 	}
