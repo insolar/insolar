@@ -20,6 +20,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
