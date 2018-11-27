@@ -23,12 +23,12 @@ import (
 	"net/http"
 
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/cryptography"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
@@ -91,6 +91,43 @@ func (ar *Runner) verifySignature(ctx context.Context, params Request) error {
 	return nil
 }
 
+func (ar *Runner) checkSeed(paramsSeed []byte) error {
+	seed := seedmanager.SeedFromBytes(paramsSeed)
+	if seed == nil {
+		return errors.New("[ checkSeed ] Bad seed param")
+	}
+
+	if !ar.SeedManager.Exists(*seed) {
+		return errors.New("[ checkSeed ] Incorrect seed")
+	}
+
+	return nil
+}
+
+func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, error) {
+	reference := core.NewRefFromBase58(params.Reference)
+	res, err := ar.ContractRequester.SendRequest(
+		ctx,
+		&reference,
+		"Call",
+		[]interface{}{*ar.Certificate.GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
+	}
+
+	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
+	}
+
+	if contractErr != nil {
+		return nil, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
+	}
+
+	return result, nil
+}
+
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
@@ -120,16 +157,10 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		seed := seedmanager.SeedFromBytes(params.Seed)
-		if seed == nil {
-			resp.Error = "[ CallHandler ] Bad seed param"
-			inslog.Error(resp.Error)
-			return
-		}
-
-		if !ar.SeedManager.Exists(*seed) {
-			resp.Error = "[ CallHandler ] Incorrect seed"
-			inslog.Error(resp.Error)
+		err = ar.checkSeed(params.Seed)
+		if err != nil {
+			resp.Error = err.Error()
+			inslog.Error(resp.Error, "[ CallHandler ] Can't checkSeed")
 			return
 		}
 
@@ -140,30 +171,13 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		reference := core.NewRefFromBase58(params.Reference)
-		res, err := ar.ContractRequester.SendRequest(
-			ctx,
-			&reference,
-			"Call",
-			[]interface{}{*ar.Certificate.GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
-		)
+		result, err := ar.makeCall(ctx, params)
 		if err != nil {
 			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't send request"))
-			return
-		}
-
-		result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
-		if err != nil {
-			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't extract response"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't makeCall"))
 			return
 		}
 
 		resp.Result = result
-		if contractErr != nil {
-			resp.Error = contractErr.S
-			inslog.Error(errors.Wrap(errors.New(contractErr.S), "[ CallHandler ] Error in called method"))
-		}
 	}
 }
