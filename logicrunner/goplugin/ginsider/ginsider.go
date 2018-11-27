@@ -260,7 +260,6 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 	}
 
 	path, err := gi.ObtainCode(ctx, ref)
-	log.Debug("!!!!! PATH %+v", path)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't obtain code")
 	}
