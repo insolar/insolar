@@ -167,7 +167,15 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	// Run only on material executor.
-	var err error
+	if err := m.db.AddPulse(ctx, pulse); err != nil {
+		return errors.Wrap(err, "call of AddPulse failed")
+	}
+
+	err := m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
+	if err != nil {
+		return errors.Wrap(err, "call of SetActiveNodes failed")
+	}
+
 	// execute only on material executor
 	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
 		if err = m.processDrop(ctx); err != nil {
@@ -182,15 +190,6 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 			return errors.Wrap(err, "call of SetLastPulseAsLightMaterial failed")
 		}
 		m.SyncToHeavy()
-	}
-
-	if err = m.db.AddPulse(ctx, pulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
-	}
-
-	err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
-	if err != nil {
-		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
 	return m.LR.OnPulse(ctx, pulse)
