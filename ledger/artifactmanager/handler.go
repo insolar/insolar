@@ -663,6 +663,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		if err != nil {
 			inslog.Error(err)
 		}
+		h.Recent.AddPendingRequest(id)
 	}
 
 	for id, meta := range msg.RecentObjects {
@@ -670,6 +671,8 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		if err != nil {
 			inslog.Error(err)
 		}
+		meta.Meta.TTL --
+		h.Recent.AddObjectWithMeta(id, meta.Meta)
 	}
 
 	return &reply.OK{}, nil
