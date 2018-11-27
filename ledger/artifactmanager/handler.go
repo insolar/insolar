@@ -176,20 +176,12 @@ func (h *MessageHandler) handleGetObject(
 	)
 	idx, err = h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		// Find heavy that has this object.
-		nodes, err := h.JetCoordinator.QueryRole(
-			ctx, core.RoleHeavyExecutor, &msg.Head, pulseNumber,
-		)
-		heavyNode := nodes[0]
+		heavy, err := h.findHeavy(ctx, msg.Head, pulseNumber)
+		idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Head, heavy)
 		if err != nil {
 			return nil, err
 		}
-		// Fetch index from that heavy.
-		idx, err = h.fetchIndexFromHeavy(ctx, msg.Head, &heavyNode)
-		if err != nil {
-			return nil, err
-		}
-		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, &heavyNode, msg.State)
+		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, heavy, msg.State)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
@@ -264,16 +256,8 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	)
 	idx, err = h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		// Find heavy that has this object.
-		nodes, err := h.JetCoordinator.QueryRole(
-			ctx, core.RoleHeavyExecutor, &msg.Head, pulseNumber,
-		)
-		heavyNode := nodes[0]
-		if err != nil {
-			return nil, err
-		}
-		// Fetch index from that heavy.
-		idx, err = h.fetchIndexFromHeavy(ctx, msg.Head, &heavyNode)
+		heavy, err := h.findHeavy(ctx, msg.Head, pulseNumber)
+		idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Head, heavy)
 		if err != nil {
 			return nil, err
 		}
@@ -302,20 +286,12 @@ func (h *MessageHandler) handleGetChildren(
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
-		// Find heavy that has this object.
-		nodes, err := h.JetCoordinator.QueryRole(
-			ctx, core.RoleHeavyExecutor, &msg.Parent, pulseNumber,
-		)
-		heavyNode := nodes[0]
+		heavy, err := h.findHeavy(ctx, msg.Parent, pulseNumber)
+		idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Parent, heavy)
 		if err != nil {
 			return nil, err
 		}
-		// Fetch index from that heavy.
-		idx, err = h.fetchIndexFromHeavy(ctx, msg.Parent, &heavyNode)
-		if err != nil {
-			return nil, err
-		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, &heavyNode)
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
@@ -401,7 +377,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
 		idx, err = getObjectIndexForUpdate(ctx, tx, msg.Object.Record())
-		if err != nil {
+		if err == storage.ErrNotFound {
+		} else if err != nil {
 			return err
 		}
 		if err = validateState(idx.State, state.State()); err != nil {
@@ -573,7 +550,6 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 // TODO: check sender if it was light material in synced pulses:
 // sender := genericMsg.GetSender()
 // sender.isItWasLMInPulse(pulsenum)
-
 func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
 	inslog := inslogger.FromContext(ctx)
 	if hack.SkipValidation(ctx) {
@@ -715,8 +691,19 @@ func validateState(old record.State, new record.State) error {
 	return nil
 }
 
+func (h *MessageHandler) findHeavy(ctx context.Context, obj core.RecordRef, pulse core.PulseNumber) (*core.RecordRef, error) {
+	nodes, err := h.JetCoordinator.QueryRole(
+		ctx, core.RoleHeavyExecutor, &obj, pulse,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &nodes[0], nil
+}
+
 func (h *MessageHandler) fetchIndexFromHeavy(
-	ctx context.Context, obj core.RecordRef, heavy *core.RecordRef,
+	ctx context.Context, s storage.Store, obj core.RecordRef, heavy *core.RecordRef,
 ) (*index.ObjectLifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
 		Object: obj,
@@ -734,7 +721,7 @@ func (h *MessageHandler) fetchIndexFromHeavy(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	err = h.db.SetObjectIndex(ctx, obj.Record(), idx)
+	err = s.SetObjectIndex(ctx, obj.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
