@@ -19,6 +19,11 @@ import (
 type DelegationTokenFactoryMock struct {
 	t minimock.Tester
 
+	IssueGetChildrenRedirectFunc       func(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error)
+	IssueGetChildrenRedirectCounter    uint64
+	IssueGetChildrenRedirectPreCounter uint64
+	IssueGetChildrenRedirectMock       mDelegationTokenFactoryMockIssueGetChildrenRedirect
+
 	IssueGetObjectRedirectFunc       func(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error)
 	IssueGetObjectRedirectCounter    uint64
 	IssueGetObjectRedirectPreCounter uint64
@@ -43,11 +48,79 @@ func NewDelegationTokenFactoryMock(t minimock.Tester) *DelegationTokenFactoryMoc
 		controller.RegisterMocker(m)
 	}
 
+	m.IssueGetChildrenRedirectMock = mDelegationTokenFactoryMockIssueGetChildrenRedirect{mock: m}
 	m.IssueGetObjectRedirectMock = mDelegationTokenFactoryMockIssueGetObjectRedirect{mock: m}
 	m.IssuePendingExecutionMock = mDelegationTokenFactoryMockIssuePendingExecution{mock: m}
 	m.VerifyMock = mDelegationTokenFactoryMockVerify{mock: m}
 
 	return m
+}
+
+type mDelegationTokenFactoryMockIssueGetChildrenRedirect struct {
+	mock             *DelegationTokenFactoryMock
+	mockExpectations *DelegationTokenFactoryMockIssueGetChildrenRedirectParams
+}
+
+//DelegationTokenFactoryMockIssueGetChildrenRedirectParams represents input parameters of the DelegationTokenFactory.IssueGetChildrenRedirect
+type DelegationTokenFactoryMockIssueGetChildrenRedirectParams struct {
+	p  *core.RecordRef
+	p1 core.Message
+}
+
+//Expect sets up expected params for the DelegationTokenFactory.IssueGetChildrenRedirect
+func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Expect(p *core.RecordRef, p1 core.Message) *mDelegationTokenFactoryMockIssueGetChildrenRedirect {
+	m.mockExpectations = &DelegationTokenFactoryMockIssueGetChildrenRedirectParams{p, p1}
+	return m
+}
+
+//Return sets up a mock for DelegationTokenFactory.IssueGetChildrenRedirect to return Return's arguments
+func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Return(r core.DelegationToken, r1 error) *DelegationTokenFactoryMock {
+	m.mock.IssueGetChildrenRedirectFunc = func(p *core.RecordRef, p1 core.Message) (core.DelegationToken, error) {
+		return r, r1
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of DelegationTokenFactory.IssueGetChildrenRedirect method
+func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Set(f func(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error)) *DelegationTokenFactoryMock {
+	m.mock.IssueGetChildrenRedirectFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//IssueGetChildrenRedirect implements github.com/insolar/insolar/core.DelegationTokenFactory interface
+func (m *DelegationTokenFactoryMock) IssueGetChildrenRedirect(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error) {
+	atomic.AddUint64(&m.IssueGetChildrenRedirectPreCounter, 1)
+	defer atomic.AddUint64(&m.IssueGetChildrenRedirectCounter, 1)
+
+	if m.IssueGetChildrenRedirectMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.IssueGetChildrenRedirectMock.mockExpectations, DelegationTokenFactoryMockIssueGetChildrenRedirectParams{p, p1},
+			"DelegationTokenFactory.IssueGetChildrenRedirect got unexpected parameters")
+
+		if m.IssueGetChildrenRedirectFunc == nil {
+
+			m.t.Fatal("No results are set for the DelegationTokenFactoryMock.IssueGetChildrenRedirect")
+
+			return
+		}
+	}
+
+	if m.IssueGetChildrenRedirectFunc == nil {
+		m.t.Fatal("Unexpected call to DelegationTokenFactoryMock.IssueGetChildrenRedirect")
+		return
+	}
+
+	return m.IssueGetChildrenRedirectFunc(p, p1)
+}
+
+//IssueGetChildrenRedirectMinimockCounter returns a count of DelegationTokenFactoryMock.IssueGetChildrenRedirectFunc invocations
+func (m *DelegationTokenFactoryMock) IssueGetChildrenRedirectMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IssueGetChildrenRedirectCounter)
+}
+
+//IssueGetChildrenRedirectMinimockPreCounter returns the value of DelegationTokenFactoryMock.IssueGetChildrenRedirect invocations
+func (m *DelegationTokenFactoryMock) IssueGetChildrenRedirectMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IssueGetChildrenRedirectPreCounter)
 }
 
 type mDelegationTokenFactoryMockIssueGetObjectRedirect struct {
@@ -254,6 +327,10 @@ func (m *DelegationTokenFactoryMock) VerifyMinimockPreCounter() uint64 {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DelegationTokenFactoryMock) ValidateCallCounters() {
 
+	if m.IssueGetChildrenRedirectFunc != nil && atomic.LoadUint64(&m.IssueGetChildrenRedirectCounter) == 0 {
+		m.t.Fatal("Expected call to DelegationTokenFactoryMock.IssueGetChildrenRedirect")
+	}
+
 	if m.IssueGetObjectRedirectFunc != nil && atomic.LoadUint64(&m.IssueGetObjectRedirectCounter) == 0 {
 		m.t.Fatal("Expected call to DelegationTokenFactoryMock.IssueGetObjectRedirect")
 	}
@@ -283,6 +360,10 @@ func (m *DelegationTokenFactoryMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *DelegationTokenFactoryMock) MinimockFinish() {
 
+	if m.IssueGetChildrenRedirectFunc != nil && atomic.LoadUint64(&m.IssueGetChildrenRedirectCounter) == 0 {
+		m.t.Fatal("Expected call to DelegationTokenFactoryMock.IssueGetChildrenRedirect")
+	}
+
 	if m.IssueGetObjectRedirectFunc != nil && atomic.LoadUint64(&m.IssueGetObjectRedirectCounter) == 0 {
 		m.t.Fatal("Expected call to DelegationTokenFactoryMock.IssueGetObjectRedirect")
 	}
@@ -309,6 +390,7 @@ func (m *DelegationTokenFactoryMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && (m.IssueGetChildrenRedirectFunc == nil || atomic.LoadUint64(&m.IssueGetChildrenRedirectCounter) > 0)
 		ok = ok && (m.IssueGetObjectRedirectFunc == nil || atomic.LoadUint64(&m.IssueGetObjectRedirectCounter) > 0)
 		ok = ok && (m.IssuePendingExecutionFunc == nil || atomic.LoadUint64(&m.IssuePendingExecutionCounter) > 0)
 		ok = ok && (m.VerifyFunc == nil || atomic.LoadUint64(&m.VerifyCounter) > 0)
@@ -319,6 +401,10 @@ func (m *DelegationTokenFactoryMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if m.IssueGetChildrenRedirectFunc != nil && atomic.LoadUint64(&m.IssueGetChildrenRedirectCounter) == 0 {
+				m.t.Error("Expected call to DelegationTokenFactoryMock.IssueGetChildrenRedirect")
+			}
 
 			if m.IssueGetObjectRedirectFunc != nil && atomic.LoadUint64(&m.IssueGetObjectRedirectCounter) == 0 {
 				m.t.Error("Expected call to DelegationTokenFactoryMock.IssueGetObjectRedirect")
@@ -343,6 +429,10 @@ func (m *DelegationTokenFactoryMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *DelegationTokenFactoryMock) AllMocksCalled() bool {
+
+	if m.IssueGetChildrenRedirectFunc != nil && atomic.LoadUint64(&m.IssueGetChildrenRedirectCounter) == 0 {
+		return false
+	}
 
 	if m.IssueGetObjectRedirectFunc != nil && atomic.LoadUint64(&m.IssueGetObjectRedirectCounter) == 0 {
 		return false

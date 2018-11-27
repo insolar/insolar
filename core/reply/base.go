@@ -36,6 +36,7 @@ const (
 	TypeOK
 
 	TypeGetObjectRedirect
+	TypeGetChildrenRedirect
 
 	// Logicrunner
 
