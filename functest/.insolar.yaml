@@ -1,6 +1,6 @@
 host:
   transport:
-    protocol: UTP
+    protocol: TCP
     address: 127.0.0.1:0
     behindnat: false
   bootstraphosts: []

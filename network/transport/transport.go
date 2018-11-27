@@ -67,6 +67,10 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 	}
 
 	switch cfg.Protocol {
+	case "TCP":
+		// TODO: little hack: It's better to change interface for NewConnection
+		conn.Close()
+		return newTCPTransport(conn.LocalAddr().String(), proxy, publicAddress)
 	case "UTP":
 		return newUTPTransport(conn, proxy, publicAddress)
 	case "KCP":
