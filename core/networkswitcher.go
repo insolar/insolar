@@ -20,9 +20,13 @@ import (
 	"context"
 )
 
+// NetworkState type for bootstrapping process
+type NetworkState int
+
+//go:generate stringer -type=NetworkState
 const (
 	// NoNetworkState state means that nodes doesn`t match majority_rule
-	NoNetworkState = iota
+	NoNetworkState NetworkState = iota
 	// VoidNetworkState state means that nodes have not complete min_role_count rule for proper work
 	VoidNetworkState
 	// JetlessNetworkState state means that every Jet need proof completeness of stored data
@@ -32,9 +36,6 @@ const (
 	// CompleteNetworkState state means network is ok and ready for proper work
 	CompleteNetworkState
 )
-
-// NetworkState type for bootstrapping process
-type NetworkState int
 
 // NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher interface {
