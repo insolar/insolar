@@ -170,17 +170,31 @@ func (h *MessageHandler) handleGetObject(
 ) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetObject)
 
-	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
+	var (
+		idx *index.ObjectLifeline
+		err error
+	)
+	idx, err = h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse())
+		// Find heavy that has this object.
+		nodes, err := h.JetCoordinator.QueryRole(
+			ctx, core.RoleHeavyExecutor, &msg.Head, pulseNumber,
+		)
+		heavyNode := nodes[0]
 		if err != nil {
 			return nil, err
 		}
-		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, &nodes[0], nil)
+		// Fetch index from that heavy.
+		idx, err = h.fetchIndexFromHeavy(ctx, msg.Head, &heavyNode)
+		if err != nil {
+			return nil, err
+		}
+		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, &heavyNode, msg.State)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
+
 	stateID, err := getObjectState(idx, msg.State, msg.Approved)
 	if err != nil {
 		if err == ErrStateNotAvailable {
@@ -206,7 +220,7 @@ func (h *MessageHandler) handleGetObject(
 			} else {
 				// Find heavy that has this object.
 				nodes, err = h.JetCoordinator.QueryRole(
-					ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse(),
+					ctx, core.RoleHeavyExecutor, &msg.Head, pulseNumber,
 				)
 			}
 			if err != nil {
@@ -244,14 +258,29 @@ func (h *MessageHandler) handleGetObject(
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetDelegate)
 
-	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
-	if err != nil {
+	var (
+		idx *index.ObjectLifeline
+		err error
+	)
+	idx, err = h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
+	if err == storage.ErrNotFound {
+		// Find heavy that has this object.
+		nodes, err := h.JetCoordinator.QueryRole(
+			ctx, core.RoleHeavyExecutor, &msg.Head, pulseNumber,
+		)
+		heavyNode := nodes[0]
+		if err != nil {
+			return nil, err
+		}
+		// Fetch index from that heavy.
+		idx, err = h.fetchIndexFromHeavy(ctx, msg.Head, &heavyNode)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	h.recent.AddObject(*msg.Head.Record())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
@@ -273,11 +302,20 @@ func (h *MessageHandler) handleGetChildren(
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
-		nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse())
+		// Find heavy that has this object.
+		nodes, err := h.JetCoordinator.QueryRole(
+			ctx, core.RoleHeavyExecutor, &msg.Parent, pulseNumber,
+		)
+		heavyNode := nodes[0]
 		if err != nil {
 			return nil, err
 		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
+		// Fetch index from that heavy.
+		idx, err = h.fetchIndexFromHeavy(ctx, msg.Parent, &heavyNode)
+		if err != nil {
+			return nil, err
+		}
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, &heavyNode)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
@@ -307,7 +345,7 @@ func (h *MessageHandler) handleGetChildren(
 		} else {
 			// Find heavy that has this object.
 			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.RoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse(),
+				ctx, core.RoleHeavyExecutor, &msg.Parent, pulseNumber,
 			)
 		}
 		if err != nil {
@@ -532,6 +570,62 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	return &reply.OK{}, nil
 }
 
+// TODO: check sender if it was light material in synced pulses:
+// sender := genericMsg.GetSender()
+// sender.isItWasLMInPulse(pulsenum)
+
+func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
+	msg := genericMsg.Message().(*message.HeavyPayload)
+	inslog.Debugf("Heavy sync: get start payload message with %v records", len(msg.Records))
+	if err := h.HeavySync.Store(ctx, msg.PulseNum, msg.Records); err != nil {
+		return nil, err
+	}
+	return &reply.OK{}, nil
+}
+
+func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
+
+	msg := genericMsg.Message().(*message.HeavyStartStop)
+	// stop branch
+	if msg.Finished {
+		inslog.Debugf("Heavy sync: get stop message for pulse %v", msg.PulseNum)
+		if err := h.HeavySync.Stop(ctx, msg.PulseNum); err != nil {
+			return nil, err
+		}
+		return &reply.OK{}, nil
+	}
+	// start
+	inslog.Debugf("Heavy sync: get start message for pulse %v", msg.PulseNum)
+	if err := h.HeavySync.Start(ctx, msg.PulseNum); err != nil {
+		return nil, err
+	}
+	return &reply.OK{}, nil
+}
+
+func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetObjectIndex)
+
+	idx, err := h.db.GetObjectIndex(ctx, msg.Object.Record(), true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+
+	buf, err := index.EncodeObjectLifeline(idx)
+	if err != nil {
+		return nil, errors.Wrap(err, "faile to serialize index")
+	}
+
+	return &reply.ObjectIndex{Index: buf}, nil
+}
+
 func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Message) error {
 	lastPulse, err := db.GetLatestPulseNumber(ctx)
 	if err != nil {
@@ -621,58 +715,28 @@ func validateState(old record.State, new record.State) error {
 	return nil
 }
 
-// TODO: check sender if it was light material in synced pulses:
-// sender := genericMsg.GetSender()
-// sender.isItWasLMInPulse(pulsenum)
-
-func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
-	msg := genericMsg.Message().(*message.HeavyPayload)
-	inslog.Debugf("Heavy sync: get start payload message with %v records", len(msg.Records))
-	if err := h.HeavySync.Store(ctx, msg.PulseNum, msg.Records); err != nil {
-		return nil, err
-	}
-	return &reply.OK{}, nil
-}
-
-func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
-
-	msg := genericMsg.Message().(*message.HeavyStartStop)
-	// stop branch
-	if msg.Finished {
-		inslog.Debugf("Heavy sync: get stop message for pulse %v", msg.PulseNum)
-		if err := h.HeavySync.Stop(ctx, msg.PulseNum); err != nil {
-			return nil, err
-		}
-		return &reply.OK{}, nil
-	}
-	// start
-	inslog.Debugf("Heavy sync: get start message for pulse %v", msg.PulseNum)
-	if err := h.HeavySync.Start(ctx, msg.PulseNum); err != nil {
-		return nil, err
-	}
-	return &reply.OK{}, nil
-}
-
-func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.GetObjectIndex)
-
-	idx, err := h.db.GetObjectIndex(ctx, msg.Object.Record(), true)
+func (h *MessageHandler) fetchIndexFromHeavy(
+	ctx context.Context, obj core.RecordRef, heavy *core.RecordRef,
+) (*index.ObjectLifeline, error) {
+	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
+		Object: obj,
+	}, &core.MessageSendOptions{
+		Receiver: heavy,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-
-	buf, err := index.EncodeObjectLifeline(idx)
-	if err != nil {
-		return nil, errors.Wrap(err, "faile to serialize index")
+	rep, ok := genericReply.(*reply.ObjectIndex)
+	if !ok {
+		return nil, errors.New("failed to fetch object index: unexpected reply")
 	}
-
-	return &reply.ObjectIndex{Index: buf}, nil
+	idx, err := index.DecodeObjectLifeline(rep.Index)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+	err = h.db.SetObjectIndex(ctx, obj.Record(), idx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+	return idx, nil
 }
