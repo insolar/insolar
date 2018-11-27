@@ -378,6 +378,11 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		var err error
 		idx, err = getObjectIndexForUpdate(ctx, tx, msg.Object.Record())
 		if err == storage.ErrNotFound {
+			heavy, err := h.findHeavy(ctx, msg.Object, pulseNumber)
+			idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Object, heavy)
+			if err != nil {
+				return err
+			}
 		} else if err != nil {
 			return err
 		}
