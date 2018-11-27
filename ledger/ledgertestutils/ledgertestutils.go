@@ -27,11 +27,11 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
@@ -48,7 +48,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
-	handler := artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(0), nil)
+	handler := artifactmanager.NewMessageHandler(db, nil)
 	handler.PlatformCryptographyScheme = pcs
 
 	am := artifactmanager.NewArtifactManger(db)
@@ -72,6 +72,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm.NodeNet = c.NodeNetwork
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
+	handler.Recent = testutils.NewRecentStorageMock(t)
 
 	err := handler.Init(ctx)
 	if err != nil {
