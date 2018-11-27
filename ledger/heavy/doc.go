@@ -14,34 +14,5 @@
  *    limitations under the License.
  */
 
-package utils
-
-import (
-	"encoding/binary"
-	"os"
-
-	"github.com/satori/go.uuid"
-)
-
-// RandTraceID returns random traceID in uuid format
-func RandTraceID() string {
-	traceID, err := uuid.NewV4()
-	if err != nil {
-		return "createRandomTraceIDFailed:" + err.Error()
-	}
-	return traceID.String()
-}
-
-func UInt32ToBytes(n uint32) []byte {
-	buff := make([]byte, 4)
-	binary.BigEndian.PutUint32(buff, n)
-	return buff
-}
-
-func SendGracefulStopSignal() error {
-	p, err := os.FindProcess(os.Getpid())
-	if err != nil {
-		return err
-	}
-	return p.Signal(os.Interrupt)
-}
+// Package heavy contains methods for processing synchronization tasks on heavy node.
+package heavy
