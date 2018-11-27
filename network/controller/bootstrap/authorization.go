@@ -35,6 +35,7 @@ type AuthorizationController struct {
 	bootstrapController common.BootstrapController
 	transport           network.InternalTransport
 	keeper              network.NodeKeeper
+	coordinator         core.NetworkCoordinator
 }
 
 type OperationCode uint8
@@ -44,6 +45,11 @@ const (
 	OpRejected
 )
 
+// AuthorizationRequest
+type AuthorizationRequest struct {
+	Certificate core.Certificate
+}
+
 // RegistrationRequest
 type RegistrationRequest struct {
 	SessionID SessionID
@@ -52,24 +58,36 @@ type RegistrationRequest struct {
 
 // OperationResponse
 type OperationResponse struct {
-	RegisterCode OperationCode
-	Error        string
-}
-
-// AuthorizationRequest
-type AuthorizationRequest struct {
-	Certificate core.Certificate
+	OpCode OperationCode
+	Error  string
 }
 
 func init() {
+	gob.Register(&AuthorizationRequest{})
 	gob.Register(&RegistrationRequest{})
 	gob.Register(&OperationResponse{})
-	gob.Register(&AuthorizationRequest{})
 }
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
 func (ac *AuthorizationController) Authorize(ctx context.Context, certificate core.Certificate) error {
-	// TODO: implement
+	discovery := ac.bootstrapController.GetChosenDiscoveryNode()
+	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discovery)
+
+	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
+		Certificate: certificate,
+	}).Build()
+	future, err := ac.transport.SendRequestPacket(request, discovery)
+	if err != nil {
+		return errors.Wrapf(err, "Error sending authorize request")
+	}
+	response, err := future.GetResponse(ac.options.PacketTimeout)
+	if err != nil {
+		return errors.Wrapf(err, "Error getting response for authorize request")
+	}
+	data := response.GetData().(*OperationResponse)
+	if data.OpCode == OpRejected {
+		return errors.New("Authorize rejected: " + data.Error)
+	}
 	return nil
 }
 
@@ -91,7 +109,7 @@ func (ac *AuthorizationController) Register(ctx context.Context, sessionID Sessi
 		return errors.Wrapf(err, "Error getting response for register request")
 	}
 	data := response.GetData().(*OperationResponse)
-	if data.RegisterCode == OpRejected {
+	if data.OpCode == OpRejected {
 		return errors.New("Register rejected: " + data.Error)
 	}
 	return nil
@@ -106,18 +124,30 @@ func (ac *AuthorizationController) processRegisterRequest(request network.Reques
 	data := request.GetData().(*RegistrationRequest)
 	err := ac.checkClaim(data.SessionID, data.JoinClaim)
 	if err != nil {
-		responseAuthorize := &OperationResponse{RegisterCode: OpRejected, Error: err.Error()}
+		responseAuthorize := &OperationResponse{OpCode: OpRejected, Error: err.Error()}
 		return ac.transport.BuildResponse(request, responseAuthorize), nil
 	}
 	ac.keeper.AddPendingClaim(data.JoinClaim)
-	return ac.transport.BuildResponse(request, &OperationResponse{RegisterCode: OpConfirmed}), nil
+	return ac.transport.BuildResponse(request, &OperationResponse{OpCode: OpConfirmed}), nil
 }
 
-func (ac *AuthorizationController) Start(cryptographyService core.CryptographyService,
-	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
+func (ac *AuthorizationController) processAuthorizeRequest(request network.Request) (network.Response, error) {
+	data := request.GetData().(*AuthorizationRequest)
+	valid, err := ac.coordinator.ValidateCert(context.Background(), data.Certificate)
+	if !valid {
+		if err == nil {
+			err = errors.New("Certificate validation failed")
+		}
+		return ac.transport.BuildResponse(request, &OperationResponse{OpCode: OpRejected, Error: err.Error()}), nil
+	}
+	return ac.transport.BuildResponse(request, &OperationResponse{OpCode: OpConfirmed}), nil
+}
 
+func (ac *AuthorizationController) Start(networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
 	ac.keeper = nodeKeeper
+	ac.coordinator = networkCoordinator
 	ac.transport.RegisterPacketHandler(types.Register, ac.processRegisterRequest)
+	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
 }
 
 func NewAuthorizationController(options *common.Options, bootstrapController common.BootstrapController,
