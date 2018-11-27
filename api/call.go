@@ -139,9 +139,9 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		params := Request{}
 		resp := answer{}
 
-		traceId := utils.RandTraceID()
-		ctx, insLog := inslogger.WithTraceField(context.Background(), traceId)
-		resp.TraceID = traceId
+		traceID := utils.RandTraceID()
+		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
+		resp.TraceID = traceID
 
 		defer func() {
 			res, err := json.MarshalIndent(resp, "", "    ")
