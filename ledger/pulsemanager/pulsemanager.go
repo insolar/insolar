@@ -178,15 +178,50 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 
 	// execute only on material executor
 	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
-		if err = m.processDrop(ctx); err != nil {
-			return errors.Wrap(err, "processDrop failed")
+
+		latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
+		if err != nil {
+			return err
+		}
+		latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
+		if err != nil {
+			return err
 		}
 
-		latestPulseAsLight, err := m.db.GetLatestPulseNumber(ctx)
+		drop, dropSerialized, messages, err := m.createDrop(ctx, latestPulse)
 		if err != nil {
-			return errors.Wrap(err, "call of GetLatestPulseNumber failed")
+			return err
 		}
-		if err = m.db.SetLastPulseAsLightMaterial(ctx, latestPulseAsLight); err != nil {
+
+		wg := sync.WaitGroup{}
+		wg.Add(2)
+
+		var dropError error
+		go func() {
+			if err = m.processDrop(ctx, latestPulse, dropSerialized, messages); err != nil {
+				dropError = errors.Wrap(err, "processDrop failed")
+			}
+			wg.Done()
+		}()
+
+		var hotRecordsError error
+		go func() {
+			if hotRecordsError := m.processRecentObjects(ctx, latestPulse, drop, dropSerialized); hotRecordsError != nil {
+				hotRecordsError = errors.Wrap(err, "processRecentObjects failed")
+			}
+			wg.Done()
+		}()
+
+		wg.Wait()
+
+		if dropError != nil {
+			return dropError
+		}
+		if hotRecordsError != nil {
+			return hotRecordsError
+		}
+
+		if err = m.db.SetLastPulseAsLightMaterial(ctx, *latestPulse.Prev); err != nil {
 			return errors.Wrap(err, "call of SetLastPulseAsLightMaterial failed")
 		}
 		m.SyncToHeavy()
