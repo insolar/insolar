@@ -62,34 +62,24 @@ func ExtractRole(msg core.Message) core.JetRole {
 		*GenesisRequest,
 		*ValidationResults:
 		return core.RoleVirtualExecutor
-	case *GetChildren:
-		return core.RoleLightExecutor
-	case *GetCode:
-		return core.RoleLightExecutor
-	case *GetDelegate:
-		return core.RoleLightExecutor
-	case *GetObject:
-		return core.RoleLightExecutor
-	case *JetDrop:
-		return core.RoleLightExecutor
-	case *RegisterChild:
-		return core.RoleLightExecutor
-	case *SetBlob:
-		return core.RoleLightExecutor
-	case *SetRecord:
-		return core.RoleLightExecutor
-	case *UpdateObject:
+	case *GetChildren,
+		*GetCode,
+		*GetDelegate,
+		*GetObject,
+		*JetDrop,
+		*RegisterChild,
+		*SetBlob,
+		*SetRecord,
+		*UpdateObject,
+		*ValidateRecord,
+		*HotRecords:
 		return core.RoleLightExecutor
 	case *ValidateCaseBind:
 		return core.RoleVirtualValidator
-	case *ValidateRecord:
-		return core.RoleLightExecutor
 	case
 		*HeavyStartStop,
 		*HeavyPayload:
 		return core.RoleHeavyExecutor
-	case *HotRecords:
-		return core.RoleLightExecutor
 	case *Parcel:
 		return ExtractRole(t.Msg)
 	default:
