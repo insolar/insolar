@@ -197,4 +197,5 @@ const (
 	// DTTypePendingExecution allows to continue method calls
 	DTTypePendingExecution DelegationTokenType = iota + 1
 	DTTypeGetObjectRedirect
+	DTTypeGetChildrenRedirect
 )

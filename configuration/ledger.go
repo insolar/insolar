@@ -37,6 +37,7 @@ type JetCoordinator struct {
 // ArtifactManager holds configuration for ArtifactManager.
 type ArtifactManager struct {
 	// Maximum pulse difference (NOT number of pulses) between current and the latest replicated on heavy.
+	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit core.PulseNumber
 }
 

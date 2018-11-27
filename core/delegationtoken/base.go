@@ -47,10 +47,27 @@ type GetObjectRedirect struct {
 	Signature []byte
 }
 
+// Type implementation of Token interface.
 func (t *GetObjectRedirect) Type() core.DelegationTokenType {
 	return core.DTTypeGetObjectRedirect
 }
 
+// Verify implementation of Token interface.
 func (t *GetObjectRedirect) Verify(parcel core.Parcel) (bool, error) {
+	panic("")
+}
+
+// GetChildrenRedirect is a redirect token for the GetObject method
+type GetChildrenRedirect struct {
+	Signature []byte
+}
+
+// Type implementation of Token interface.
+func (t *GetChildrenRedirect) Type() core.DelegationTokenType {
+	return core.DTTypeGetChildrenRedirect
+}
+
+// Verify implementation of Token interface.
+func (t *GetChildrenRedirect) Verify(parcel core.Parcel) (bool, error) {
 	panic("")
 }
