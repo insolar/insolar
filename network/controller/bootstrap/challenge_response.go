@@ -17,6 +17,8 @@
 package bootstrap
 
 import (
+	"encoding/gob"
+
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
@@ -66,6 +68,13 @@ type ChallengeResponse struct {
 
 	CurrentPulse core.Pulse
 	State        core.NetworkState
+}
+
+func init() {
+	gob.Register(&ChallengeRequest{})
+	gob.Register(&SignedChallengeResponse{})
+	gob.Register(&SignedChallengeRequest{})
+	gob.Register(&ChallengeResponse{})
 }
 
 func (crc *ChallengeResponseController) SendRequest(request *ChallengeRequest) (*ChallengeResponse, error) {
