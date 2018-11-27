@@ -112,8 +112,8 @@ type nodekeeper struct {
 	syncLock sync.Mutex
 }
 
-func (nk *nodekeeper) IsBootstrapped() (bool, error) {
-	return false, nil
+func (nk *nodekeeper) IsBootstrapped() bool {
+	return false
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {
