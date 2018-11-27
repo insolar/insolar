@@ -650,15 +650,27 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 	if hack.SkipValidation(ctx) {
 		return &reply.OK{}, nil
 	}
+
 	msg := genericMsg.Message().(*message.HotIndexes)
 	inslog.Debugf(
 		"HotIndexes sync: get start payload message with %v - lifelines and %v - pending requests",
 		len(msg.RecentObjects),
 		len(msg.PendingRequests),
 	)
-	for _, recentObject := range msg.RecentObjects{
-		//recentObject.
-		h.db.SetObjectIndex(ctx, )
+
+	for id, meta := range msg.PendingRequests {
+		err := h.db.SetObjectIndex(ctx, &id, meta.Index)
+		if err != nil {
+			inslog.Error(err)
+		}
 	}
+
+	for id, meta := range msg.RecentObjects {
+		err := h.db.SetObjectIndex(ctx, &id, meta.Index)
+		if err != nil {
+			inslog.Error(err)
+		}
+	}
+
 	return &reply.OK{}, nil
 }
