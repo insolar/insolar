@@ -164,7 +164,6 @@ type ChildIterator struct {
 	buff       []core.RecordRef
 	buffIndex  int
 	canFetch   bool
-	token      core.DelegationToken
 }
 
 // NewChildIterator creates new child iterator.
