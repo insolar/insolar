@@ -147,7 +147,7 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 // 1. R (get children 0 ... ) -> AE
 // 2. AE (children 0 ... 3) -> R
 // 3. R (get children 4 ...) -> AE
-// 4. AE (redirect to LE1) -> R
+// 4. AE (redirect to LE) -> R
 // 5. R (get children 4 ...) -> LE
 // 6. LE (children 4 ... 5) -> R
 // 7. R (get children 6 ...) -> AE
