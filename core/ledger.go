@@ -270,7 +270,10 @@ type RecentObjectsIndexMeta struct {
 //go:generate minimock -i github.com/insolar/insolar/core.RecentStorage -o ../testutils -s _mock.go
 type RecentStorage interface {
 	AddObject(id RecordID)
+	AddObjectWithMeta(id RecordID, meta *RecentObjectsIndexMeta)
+
 	AddPendingRequest(id RecordID)
+
 	RemovePendingRequest(id RecordID)
 	GetObjects() map[RecordID]*RecentObjectsIndexMeta
 	GetRequests() []RecordID
