@@ -58,6 +58,19 @@ func (r *RecentStorage) AddObject(id core.RecordID) {
 	value.TTL = r.DefaultTTL
 }
 
+// AddObjectWithMeta adds object with meta to cache
+func (r *RecentStorage) AddObjectWithMeta(id core.RecordID, meta *core.RecentObjectsIndexMeta) {
+	r.objectLock.Lock()
+	defer r.objectLock.Unlock()
+	if meta == nil {
+		meta = &core.RecentObjectsIndexMeta{
+			TTL: r.DefaultTTL,
+		}
+	}
+
+	r.recentObjects[id] = meta
+}
+
 // AddPendingRequest adds request to cache.
 func (r *RecentStorage) AddPendingRequest(id core.RecordID) {
 	r.requestLock.Lock()
