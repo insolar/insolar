@@ -41,7 +41,7 @@ func NewNetworkSwitcher() (*NetworkSwitcher, error) {
 
 // GetState method returns current network state
 func (ns *NetworkSwitcher) GetState() core.NetworkState {
-	ns.stateLock.Lock()
+	ns.stateLock.RLock()
 	defer ns.stateLock.RUnlock()
 
 	return ns.state
@@ -50,15 +50,13 @@ func (ns *NetworkSwitcher) GetState() core.NetworkState {
 // OnPulse method checks current state and finds out reasons to update this state
 func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	ns.stateLock.Lock()
-	currentState := ns.state
-	ns.stateLock.RUnlock()
-	inslogger.FromContext(ctx).Info("Current NetworkSwitcher state is: %s", currentState)
+	defer ns.stateLock.Unlock()
+
+	inslogger.FromContext(ctx).Info("Current NetworkSwitcher state is: %s", ns.state)
 
 	if ns.SwitcherWorkAround.IsBootstrapped() {
-		ns.stateLock.Lock()
 		ns.state = core.CompleteNetworkState
 		inslogger.FromContext(ctx).Info("Current NetworkSwitcher state switched to: %s", ns.state)
-		ns.stateLock.Unlock()
 	}
 
 	return nil
