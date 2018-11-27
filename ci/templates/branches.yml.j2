@@ -36,7 +36,7 @@ jobs:
       platform: linux
       image_resource:
         type: docker-image
-        source: {repository: golang}
+        source: {repository: registry.ins.world/builder}
       inputs:
       - name: insolar-{{ branch }}
         path: /go/src/github.com/insolar/insolar
@@ -59,8 +59,9 @@ jobs:
              ls -alh
              env
              cd $GOPATH/src/github.com/insolar/insolar
-             make install-deps
-             make pre-build
+             #make install-deps
+             #make pre-build
+             rm -Rf /go/src/github.com/insolar/insolar/vendor/* && mv /go/vendor /go/src/github.com/insolar/insolar/
              make build
              make test_with_coverage
     ensure:
