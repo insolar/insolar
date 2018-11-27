@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/utils/backoff"
 )
 
 // PulseManager implements core.PulseManager.
@@ -45,6 +46,8 @@ type PulseManager struct {
 	gotpulse chan struct{}
 	// syncdone closes when sync is over
 	syncdone chan struct{}
+	// sync backoff instance
+	syncbackoff *backoff.Backoff
 	// stores pulse manager options
 	options pmOptions
 }
@@ -62,6 +65,14 @@ func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseMana
 	}
 	pm.options.enablesync = conf.HeavySyncEnabled
 	pm.options.syncmessagelimit = conf.HeavySyncMessageLimit
+
+	// move predefined values to config
+	pm.syncbackoff = &backoff.Backoff{
+		Jitter: true,
+		Min:    200 * time.Millisecond,
+		Max:    2 * time.Second,
+		Factor: 2,
+	}
 
 	return pm
 }
@@ -203,6 +214,7 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 	var err error
 	inslog := inslogger.FromContext(ctx)
 	var retrydelay time.Duration
+	attempt := 0
 	for {
 		select {
 		case <-time.After(retrydelay):
@@ -211,8 +223,9 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 		}
 		for {
 			if start != 0 {
+				// TODO: drop too outdated pulses
+				// if (current - start > N) { start = current - N }
 				break
-
 			}
 			inslog.Debug("syncronization waiting next chunk of work")
 			_, ok := <-m.gotpulse
@@ -237,6 +250,8 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 		if syncerr != nil {
 			syncerr = errors.Wrap(syncerr, "HeavySync failed")
 			inslog.Error(syncerr.Error())
+			retrydelay = m.syncbackoff.ForAttempt(attempt)
+			attempt++
 			continue
 		}
 
@@ -248,10 +263,13 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 			panic(err)
 		}
 
+		// set start to next pulse or reset if it already at end
 		start = next
 		if start == end {
 			start = 0
 		}
+		// reset retry variables
 		retrydelay = 0
+		attempt = 0
 	}
 }
