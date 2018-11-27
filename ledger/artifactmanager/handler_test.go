@@ -1,6 +1,7 @@
 package artifactmanager
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -27,24 +28,39 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	defer mc.Finish()
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
-	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}}, nil)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
-		LightChainLimit: 3,
-	})
-	h.JetCoordinator = jc
-	h.DelegationTokenFactory = tf
+	mb := testutils.NewMessageBusMock(mc)
 
 	msg := message.GetObject{
 		Head: *genRandomRef(0),
 	}
+	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 
-	t.Run("redirects to heavy when no index", func(t *testing.T) {
-		heavyRef := genRandomRef(0)
+	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}}, nil)
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+		LightChainLimit: 3,
+	})
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		if m, ok := gm.(*message.GetObjectIndex); ok {
+			assert.Equal(t, msg.Head, m.Object)
+			buf, err := index.EncodeObjectLifeline(&objIndex)
+			require.NoError(t, err)
+			return &reply.ObjectIndex{Index: buf}, nil
+		}
+
+		panic("unexpected call")
+	}
+
+	h.JetCoordinator = jc
+	h.DelegationTokenFactory = tf
+	h.Bus = mb
+
+	t.Run("fetches index from heavy when no index", func(t *testing.T) {
+		lightRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
 			ctx, core.RoleHeavyExecutor, &msg.Head, 0,
 		).Return(
-			[]core.RecordRef{*heavyRef}, nil,
+			[]core.RecordRef{*lightRef}, nil,
 		)
 		rep, err := h.handleGetObject(ctx, 0, &message.Parcel{
 			Msg: &msg,
@@ -54,8 +70,12 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		require.True(t, ok)
 		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirect)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, heavyRef, redirect.GetReceiver())
+		assert.Equal(t, lightRef, redirect.GetReceiver())
 		assert.Nil(t, redirect.StateID)
+
+		idx, err := db.GetObjectIndex(ctx, msg.Head.Record(), false)
+		require.NoError(t, err)
+		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
 
 	t.Run("redirect to light when has index and state later than limit", func(t *testing.T) {
@@ -91,7 +111,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Head, 0,
+			ctx, core.RoleHeavyExecutor, &msg.Head, 5,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -118,16 +138,31 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}}, nil)
+	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
 		LightChainLimit: 3,
 	})
-	h.JetCoordinator = jc
-	h.DelegationTokenFactory = tf
 
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
 	}
+	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
+
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		if m, ok := gm.(*message.GetObjectIndex); ok {
+			assert.Equal(t, msg.Parent, m.Object)
+			buf, err := index.EncodeObjectLifeline(&objIndex)
+			require.NoError(t, err)
+			return &reply.ObjectIndex{Index: buf}, nil
+		}
+
+		panic("unexpected call")
+	}
+
+	h.JetCoordinator = jc
+	h.DelegationTokenFactory = tf
+	h.Bus = mb
 
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
@@ -145,6 +180,10 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirect)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
+
+		idx, err := db.GetObjectIndex(ctx, msg.Parent.Record(), false)
+		require.NoError(t, err)
+		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
 
 	t.Run("redirect to light when has index and child later than limit", func(t *testing.T) {
@@ -176,7 +215,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Parent, 0,
+			ctx, core.RoleHeavyExecutor, &msg.Parent, 5,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
