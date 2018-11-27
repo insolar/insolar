@@ -230,3 +230,57 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 	})
 }
+
+func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	mb := testutils.NewMessageBusMock(mc)
+	jc := testutils.NewJetCoordinatorMock(mc)
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+		LightChainLimit: 3,
+	})
+
+	delegateType := *genRandomRef(0)
+	delegate := *genRandomRef(0)
+	objIndex := index.ObjectLifeline{Delegates: map[core.RecordRef]core.RecordRef{delegateType: delegate}}
+	msg := message.GetDelegate{
+		Head:   *genRandomRef(0),
+		AsType: delegateType,
+	}
+
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		if m, ok := gm.(*message.GetObjectIndex); ok {
+			assert.Equal(t, msg.Head, m.Object)
+			buf, err := index.EncodeObjectLifeline(&objIndex)
+			require.NoError(t, err)
+			return &reply.ObjectIndex{Index: buf}, nil
+		}
+
+		panic("unexpected call")
+	}
+
+	h.JetCoordinator = jc
+	h.Bus = mb
+	heavyRef := genRandomRef(0)
+	jc.QueryRoleMock.Expect(
+		ctx, core.RoleHeavyExecutor, &msg.Head, 0,
+	).Return(
+		[]core.RecordRef{*heavyRef}, nil,
+	)
+	rep, err := h.handleGetDelegate(ctx, 0, &message.Parcel{
+		Msg: &msg,
+	})
+	require.NoError(t, err)
+	relegateRep, ok := rep.(*reply.Delegate)
+	require.True(t, ok)
+	assert.Equal(t, delegate, relegateRep.Head)
+
+	idx, err := db.GetObjectIndex(ctx, msg.Head.Record(), false)
+	require.NoError(t, err)
+	assert.Equal(t, objIndex.Delegates, idx.Delegates)
+}
