@@ -32,6 +32,8 @@ type ThirdPhase struct {
 	NodeKeeper   network.NodeKeeper       `inject:""`
 
 	newActiveNodeList []core.Node
+	// TODO: insert it from somewhere
+	mapper packets.BitSetMapper
 }
 
 func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
@@ -58,8 +60,8 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) erro
 		} else if !signed {
 			return errors.New("recv not signed packet")
 		}
-		bitset := packet.GetBitset().GetCells()
-		for _, cell := range bitset {
+		cells, err := packet.GetBitset().GetCells(tp.mapper)
+		for _, cell := range cells {
 			if cell.State == packets.Legit {
 				node, err := getNode(cell.NodeID, nodes)
 				if err != nil {
