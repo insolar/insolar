@@ -39,7 +39,7 @@ import (
 type Ref = core.RecordRef
 
 // Context of one contract execution
-type ExecutionState struct {
+type ObjectState struct {
 	sync.Mutex
 	Ref *Ref
 
@@ -81,7 +81,7 @@ func (lre Error) Error() string {
 	return buffer.String()
 }
 
-func (es *ExecutionState) ErrorWrap(err error, message string) error {
+func (es *ObjectState) ErrorWrap(err error, message string) error {
 	if err == nil {
 		err = errors.New(message)
 	} else {
@@ -94,24 +94,24 @@ func (es *ExecutionState) ErrorWrap(err error, message string) error {
 	}
 }
 
-func (es *ExecutionState) Lock() {
+func (es *ObjectState) Lock() {
 	es.queueLength++
 	es.Mutex.Lock()
 }
 
-func (es *ExecutionState) Unlock() {
+func (es *ObjectState) Unlock() {
 	es.queueLength--
 	es.Mutex.Unlock()
 	es.traceID = "Done"
 }
 
-func (es *ExecutionState) ReleaseQueue() {
+func (es *ObjectState) ReleaseQueue() {
 	for es.queueLength > 1 {
 		es.Unlock()
 	}
 }
 
-func (es *ExecutionState) AddCaseRequest(record core.CaseRecord) {
+func (es *ObjectState) AddCaseRequest(record core.CaseRecord) {
 	es.caseBindMutex.Lock()
 	defer es.caseBindMutex.Unlock()
 
@@ -121,7 +121,7 @@ func (es *ExecutionState) AddCaseRequest(record core.CaseRecord) {
 	})
 }
 
-func (es *ExecutionState) AddCaseRecord(record core.CaseRecord) {
+func (es *ObjectState) AddCaseRecord(record core.CaseRecord) {
 	es.caseBindMutex.Lock()
 	defer es.caseBindMutex.Unlock()
 
@@ -151,7 +151,7 @@ type LogicRunner struct {
 	Executors      [core.MachineTypesLastID]core.MachineLogicExecutor
 	machinePrefs   []core.MachineType
 	Cfg            *configuration.LogicRunner
-	execution      map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
+	execution      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	executionMutex sync.Mutex
 
 	caseBindReplays      map[Ref]core.CaseBindReplay
@@ -168,7 +168,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	}
 	res := LogicRunner{
 		Cfg:             cfg,
-		execution:       make(map[Ref]*ExecutionState),
+		execution:       make(map[Ref]*ObjectState),
 		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
 	return &res, nil
@@ -281,7 +281,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 }
 
 func (lr *LogicRunner) executeOrValidate(
-	ctx context.Context, es *ExecutionState, vb ValidationBehaviour, parcel core.Parcel,
+	ctx context.Context, es *ObjectState, vb ValidationBehaviour, parcel core.Parcel,
 ) (
 	core.Reply, error,
 ) {
@@ -357,7 +357,7 @@ func init() {
 	gob.Register(&ObjectBody{})
 }
 
-func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
+func (lr *LogicRunner) getObjectMessage(es *ObjectState, objref Ref) error {
 	ctx := es.insContext
 	inslogger.FromContext(ctx).Debug("LogicRunner.getObjectMessage starts ...")
 	cr, step := lr.nextValidationStep(objref)
@@ -434,7 +434,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	return nil
 }
 
-func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
+func (lr *LogicRunner) executeMethodCall(es *ObjectState, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
 	ctx := es.insContext
 	inslogger.FromContext(ctx).Info("LogicRunner.executeMethodCall starts")
 
@@ -524,7 +524,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	return nil, errors.Errorf("Invalid ReturnMode #%d", m.ReturnMode)
 }
 
-func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
+func (lr *LogicRunner) executeConstructorCall(es *ObjectState, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
 	ctx := es.insContext
 	defer es.Unlock()
 
@@ -599,7 +599,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	// TODO: this not exactly correct
-	lr.execution = make(map[Ref]*ExecutionState)
+	lr.execution = make(map[Ref]*ObjectState)
 
 	for _, msg := range messages {
 		_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)

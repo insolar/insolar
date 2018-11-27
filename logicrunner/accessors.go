@@ -41,7 +41,7 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
-func (lr *LogicRunner) GetExecution(ref Ref) *ExecutionState {
+func (lr *LogicRunner) GetExecution(ref Ref) *ObjectState {
 	lr.executionMutex.Lock()
 	defer lr.executionMutex.Unlock()
 	res, ok := lr.execution[ref]
@@ -51,11 +51,11 @@ func (lr *LogicRunner) GetExecution(ref Ref) *ExecutionState {
 	return res
 }
 
-func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
+func (lr *LogicRunner) UpsertExecution(ref Ref) *ObjectState {
 	lr.executionMutex.Lock()
 	defer lr.executionMutex.Unlock()
 	if _, ok := lr.execution[ref]; !ok {
-		lr.execution[ref] = &ExecutionState{
+		lr.execution[ref] = &ObjectState{
 			Ref: &ref,
 			caseBind: core.CaseBind{
 				Requests: make([]core.CaseRequest, 0),
@@ -65,7 +65,7 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 	return lr.execution[ref]
 }
 
-func (lr *LogicRunner) MustExecutionState(ref Ref) *ExecutionState {
+func (lr *LogicRunner) MustExecutionState(ref Ref) *ObjectState {
 	lr.executionMutex.Lock()
 	defer lr.executionMutex.Unlock()
 	res, ok := lr.execution[ref]
