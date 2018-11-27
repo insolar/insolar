@@ -326,7 +326,7 @@ func (h *MessageHandler) handleGetChildren(
 		rec, err := h.db.GetRecord(ctx, currentChild)
 		// We don't have this child reference. Return what was collected.
 		if err == storage.ErrNotFound {
-			break
+			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
 		}
 		if err != nil {
 			return nil, errors.New("failed to retrieve children")
