@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -89,7 +90,6 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 	options := &common.Options{}
 	options.BootstrapHosts = config.BootstrapHosts
-	options.MajorityRule = config.MajorityRule
 	if options.PingTimeout == 0 {
 		options.PingTimeout = time.Second * 1
 	}
@@ -98,9 +98,6 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 	}
 	if options.BootstrapTimeout == 0 {
 		options.BootstrapTimeout = time.Second * 10
-	}
-	if options.AuthorizeTimeout == 0 {
-		options.AuthorizeTimeout = time.Second * 30
 	}
 	return options
 }
@@ -117,7 +114,7 @@ func NewNetworkController(
 	c := Controller{}
 	c.network = network
 	c.options = options
-	c.bootstrapController = NewBootstrapController(c.options, transport)
+	c.bootstrapController = bootstrap.NewBootstrapController(c.options, transport)
 	c.pulseController = NewPulseController(pulseHandler, network, routingTable)
 	c.rpcController = NewRPCController(c.options, network, scheme)
 
