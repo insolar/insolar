@@ -17,7 +17,6 @@
 package merkle
 
 import (
-	"bytes"
 	"sort"
 
 	"github.com/insolar/insolar/core"
@@ -120,9 +119,7 @@ func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[core.Node]*PulseProo
 
 func sortEntries(roleEntries []*nodeEntry) {
 	sort.SliceStable(roleEntries, func(i, j int) bool {
-		return bytes.Compare(
-			roleEntries[i].Node.ID().Bytes(),
-			roleEntries[j].Node.ID().Bytes()) < 0
+		return roleEntries[i].Node.ID().Compare(roleEntries[j].Node.ID()) < 0
 	})
 }
 

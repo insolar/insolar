@@ -148,9 +148,6 @@ func main() {
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	err = cm.Start(ctx)
-	checkError(ctx, err, "failed to start components")
-
 	defer func() {
 		inslog.Warn("DEFER STOP APP")
 		err = cm.Stop(ctx)
@@ -171,6 +168,9 @@ func main() {
 		checkError(ctx, err, "failed to graceful stop components")
 		os.Exit(0)
 	}()
+
+	err = cm.Start(ctx)
+	checkError(ctx, err, "failed to start components")
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")

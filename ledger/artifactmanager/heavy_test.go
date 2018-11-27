@@ -17,13 +17,14 @@
 package artifactmanager
 
 import (
+	"context"
 	"testing"
 
 	"github.com/dgraph-io/badger"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +34,17 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	ctx, db, _, cleaner := getTestData(t)
 	defer cleaner()
 
-	mh := NewMessageHandler(db, storage.NewRecentStorage(0))
+	// prepare mock
+	heavysync := testutils.NewHeavySyncMock(t)
+	heavysync.StartMock.Return(nil)
+	heavysync.StoreMock.Set(func(ctx context.Context, pn core.PulseNumber, kvs []core.KV) error {
+		return db.StoreKeyValues(ctx, kvs)
+	})
+	heavysync.StopMock.Return(nil)
+
+	// message hanler with mok
+	mh := NewMessageHandler(db, storage.NewRecentStorage(0), nil)
+	mh.HeavySync = heavysync
 
 	payload := []core.KV{
 		{K: []byte("ABC"), V: []byte("CDE")},

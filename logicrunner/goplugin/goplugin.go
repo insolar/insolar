@@ -108,6 +108,7 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 	var client *rpc.Client
 
 	for {
+		inslogger.FromContext(ctx).Debug("Connect to insgorund")
 		client, err = gp.Downstream(ctx)
 		if err == nil {
 			call := <-client.Go(method, req, res, nil).Done
@@ -120,6 +121,9 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 				gp.CloseDownstream()
 				inslogger.FromContext(ctx).Debug("Reconnecting...")
 			}
+		} else {
+			inslogger.FromContext(ctx).Debugf("Can't connect to to insgorund, err: $+v", err)
+			inslogger.FromContext(ctx).Debug("Reconnecting...")
 		}
 	}
 

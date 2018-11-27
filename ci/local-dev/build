@@ -44,7 +44,7 @@ start-dev () {
   echo start dev
   kubectl apply -f $K8S/environments.yaml
   kubectl -n dev apply -f $K8S/bootstrap.yaml
-  (kubectl -n dev get pods -w & echo $! >$PID ) | tee $LOG - &
+  (kubectl -n dev get pods -w & echo $! >$PID ) | tee $LOG &
   pause 'seed-0.*Running'
   kubectl -n dev apply -f $K8S/pulsar.yaml
   kubectl -n dev apply -f $K8S/virtual.yaml

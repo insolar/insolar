@@ -18,6 +18,7 @@ package core
 
 import (
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/core/utils"
@@ -49,6 +50,16 @@ func NewPulseNumber(buf []byte) PulseNumber {
 // Bytes serializes pulse number.
 func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
+}
+
+// PulseRange represents range of pulses.
+type PulseRange struct {
+	Begin PulseNumber
+	End   PulseNumber
+}
+
+func (pr *PulseRange) String() string {
+	return fmt.Sprintf("[%v:%v]", pr.Begin, pr.End)
 }
 
 // Pulse is base data structure for a pulse.

@@ -88,7 +88,7 @@ func (mb *TestMessageBus) MustRegister(p core.MessageType, handler core.MessageH
 	}
 }
 
-func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, setters ...core.SendOption) (core.Reply, error) {
+func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
 	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil)
 	if err != nil {
 		return nil, err
