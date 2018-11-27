@@ -51,7 +51,13 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) erro
 		return errors.Wrap(err, "[ Execute ] failed to get answers on phase 3")
 	}
 
-	for _, packet := range answers {
+	for ref, packet := range answers {
+		signed, err := tp.isSignPhase3PacketRight(packet, ref)
+		if err != nil {
+			return errors.Wrap(err, "[ Execute ] failed to check a packet sign")
+		} else if !signed {
+			return errors.New("recv not signed packet")
+		}
 		bitset := packet.GetBitset().GetCells()
 		for _, cell := range bitset {
 			if cell.State == packets.Legit {
