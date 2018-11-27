@@ -305,6 +305,9 @@ func (h *MessageHandler) handleGetChildren(
 				ctx, core.RoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse(),
 			)
 		}
+		if err != nil {
+			return nil, err
+		}
 		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
 	}
 
