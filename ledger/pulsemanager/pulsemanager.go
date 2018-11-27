@@ -96,15 +96,12 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	return &pulse.Pulse, nil
 }
 
-func (m *PulseManager) processDrop(ctx context.Context) error {
-	latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
-	if err != nil {
-		return err
-	}
-	latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
-	if err != nil {
-		return err
-	}
+func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Pulse) (
+	drop *jetdrop.JetDrop,
+	dropSerialized []byte,
+	messages [][]byte,
+	err error,
+) {
 	// latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 	// if err != nil {
 	// 	return nil, nil, err
@@ -113,28 +110,41 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 	// if err != nil {
 	// 	return  nil, nil, err
 	// }
+
 	prevDrop, err := m.db.GetDrop(ctx, *latestPulse.Prev)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
-	drop, messages, err := m.db.CreateDrop(ctx, latestPulseNumber, prevDrop.Hash)
+	drop, messages, err = m.db.CreateDrop(ctx, latestPulse.Pulse.PulseNumber, prevDrop.Hash)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 	err = m.db.SetDrop(ctx, drop)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
-	dropSerialized, err := jetdrop.Encode(drop)
+	dropSerialized, err = jetdrop.Encode(drop)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
+	return
+}
+
+func (m *PulseManager) processDrop(ctx context.Context, latestPulse *storage.Pulse, dropSerialized []byte, messages [][]byte) error {
 	msg := &message.JetDrop{
 		Drop:        dropSerialized,
 		Messages:    messages,
-		PulseNumber: latestPulseNumber,
+		PulseNumber: *latestPulse.Prev,
+	}
+	_, err := m.Bus.Send(ctx, msg, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *PulseManager) processRecentObjects(
 	ctx context.Context,
 	latestPulse *storage.Pulse,
@@ -182,6 +192,7 @@ func (m *PulseManager) getIndexes(ctx context.Context, ids []core.RecordID) []*i
 
 	return recentObjects
 }
+
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	// Ensure this does not execute in parallel.
