@@ -246,10 +246,10 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 		next := start + 1
 		inslog.Debugf("syncronization sync pulses: [%v:%v]", start, next)
 
-		syncerr := m.HeavySync(ctx, start)
+		syncerr := m.HeavySync(ctx, start, attempt > 0)
 		if syncerr != nil {
 			syncerr = errors.Wrap(syncerr, "HeavySync failed")
-			inslog.Error(syncerr.Error())
+			inslog.Errorf("%v (on attempt=%v)", syncerr.Error(), attempt)
 			retrydelay = m.syncbackoff.ForAttempt(attempt)
 			attempt++
 			continue

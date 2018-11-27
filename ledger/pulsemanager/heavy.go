@@ -31,8 +31,17 @@ import (
 func (m *PulseManager) HeavySync(
 	ctx context.Context,
 	pn core.PulseNumber,
+	retry bool,
 ) error {
 	inslog := inslogger.FromContext(ctx)
+
+	if retry {
+		inslog.Infof("send reset message for pulse %v (retry sync)", pn)
+		resetMsg := &message.HeavyReset{PulseNum: pn}
+		if _, reseterr := m.Bus.Send(ctx, resetMsg, nil); reseterr != nil {
+			return reseterr
+		}
+	}
 
 	signalMsg := &message.HeavyStartStop{PulseNum: pn}
 	_, starterr := m.Bus.Send(ctx, signalMsg, nil)
