@@ -56,13 +56,11 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 
 func ExtractRole(msg core.Message) core.JetRole {
 	switch t := msg.(type) {
-	case *GenesisRequest:
-		return core.RoleLightExecutor
-	case *CallConstructor:
-		return core.RoleVirtualExecutor
-	case *CallMethod:
-		return core.RoleVirtualExecutor
-	case *ExecutorResults:
+	case *ExecutorResults,
+		*CallMethod,
+		*CallConstructor,
+		*GenesisRequest,
+		*ValidationResults:
 		return core.RoleVirtualExecutor
 	case *GetChildren:
 		return core.RoleLightExecutor
@@ -86,8 +84,6 @@ func ExtractRole(msg core.Message) core.JetRole {
 		return core.RoleVirtualValidator
 	case *ValidateRecord:
 		return core.RoleLightExecutor
-	case *ValidationResults:
-		return core.RoleVirtualExecutor
 	case
 		*HeavyStartStop,
 		*HeavyPayload:
