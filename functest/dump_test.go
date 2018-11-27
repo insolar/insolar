@@ -54,14 +54,14 @@ func TestDumpUser(t *testing.T) {
 
 func TestDumpUserWrongRef(t *testing.T) {
 	_, err := signedRequest(&root, "DumpUserInfo", testutils.RandomRef())
-	require.EqualError(t, err, "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
 }
 
 func TestDumpAllUsersNoRoot(t *testing.T) {
 	member := createMember(t, "Member")
 
 	_, err := signedRequest(member, "DumpAllUsers")
-	require.EqualError(t, err, "[ DumpUserInfo ] Only root can call this method")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ DumpUserInfo ] Only root can call this method")
 }
 
 // todo fix this deadlock
@@ -77,5 +77,5 @@ func TestDumpUserOther(t *testing.T) {
 	member2 := createMember(t, "Member2")
 
 	_, err := signedRequest(member1, "DumpUserInfo", member2.ref)
-	require.EqualError(t, err, "[ DumpUserInfo ] You can dump only yourself")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ DumpUserInfo ] You can dump only yourself")
 }
