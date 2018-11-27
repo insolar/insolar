@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/controller/pinger"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
@@ -32,7 +33,7 @@ import (
 type BootstrapController struct {
 	options   *common.Options
 	transport network.InternalTransport
-	pinger    *Pinger
+	pinger    *pinger.Pinger
 
 	bootstrapHosts []*host.Host
 }
@@ -147,5 +148,5 @@ func (bc *BootstrapController) Start() {
 }
 
 func NewBootstrapController(options *common.Options, transport network.InternalTransport) *BootstrapController {
-	return &BootstrapController{options: options, transport: transport, pinger: NewPinger(transport)}
+	return &BootstrapController{options: options, transport: transport, pinger: pinger.NewPinger(transport)}
 }

@@ -122,7 +122,6 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	ctx := context.TODO()
 	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, testutils.RandomRef(), "", true)
 
-	serviceNetwork.NodeNetwork, _ = nodenetwork.NewNodeNetwork(cfg)
 	err = serviceNetwork.Init(context.Background())
 	require.NoError(t, err)
 	err = serviceNetwork.Start(ctx)
@@ -182,7 +181,6 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	require.NoError(t, err)
 	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
 
-	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
 	err = firstNode.Init(context.Background())
 	require.NoError(t, err)
 	err = firstNode.Start(ctx)
@@ -242,7 +240,6 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 
 	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
 
-	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
 	err = firstNode.Init(context.Background())
 	require.NoError(t, err)
 	err = firstNode.Start(ctx)

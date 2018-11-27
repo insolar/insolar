@@ -43,7 +43,6 @@ type ServiceNetwork struct {
 	routingTable network.RoutingTable // TODO: should be injected
 
 	Certificate         core.Certificate         `inject:""`
-	NodeNetwork         core.NodeNetwork         `inject:""`
 	PulseManager        core.PulseManager        `inject:""`
 	PhaseManager        phases.PhaseManager      `inject:""`
 	CryptographyService core.CryptographyService `inject:""`
@@ -66,7 +65,7 @@ func (n *ServiceNetwork) GetAddress() string {
 
 // GetNodeID returns current node id.
 func (n *ServiceNetwork) GetNodeID() core.RecordRef {
-	return n.NodeNetwork.GetOrigin().ID()
+	return n.NodeKeeper.GetOrigin().ID()
 }
 
 // GetGlobuleID returns current globule id.
@@ -164,7 +163,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			if network.NetworkCoordinator == nil {
 				return
 			}
-			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
+			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeKeeper.GetActiveNodes())
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
