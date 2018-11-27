@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -52,35 +53,15 @@ type pmOptions struct {
 	syncmessagelimit int
 }
 
-// Option provides functional option for TmpDB.
-type Option func(*pmOptions)
-
-// EnableSync defines is sync to heavy enabled or not.
-// (suitable for tests)
-func EnableSync(flag bool) Option {
-	return func(opts *pmOptions) {
-		opts.enablesync = flag
-	}
-}
-
-// SyncMessageLimit sets soft limit in bytes for sync message size.
-func SyncMessageLimit(size int) Option {
-	return func(opts *pmOptions) {
-		opts.syncmessagelimit = size
-	}
-}
-
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB, options ...Option) *PulseManager {
-	opts := &pmOptions{}
-	for _, o := range options {
-		o(opts)
-	}
-	return &PulseManager{
+func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseManager {
+	pm := &PulseManager{
 		db:       db,
 		gotpulse: make(chan struct{}, 1),
-		options:  *opts,
 	}
+	pm.options.enablesync = conf.HeavySyncEnabled
+	pm.options.syncmessagelimit = conf.HeavySyncMessageLimit
+	return pm
 }
 
 // Current returns current pulse structure.

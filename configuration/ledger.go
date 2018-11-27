@@ -37,7 +37,16 @@ type JetCoordinator struct {
 // ArtifactManager holds configuration for ArtifactManager.
 type ArtifactManager struct {
 	// Maximum pulse difference (NOT number of pulses) between current and the latest replicated on heavy.
+	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit core.PulseNumber
+}
+
+// PulseManager holds configuration for PulseManager.
+type PulseManager struct {
+	// HeavySyncEnabled enables replication to heavy (could be disabled for testing purposes)
+	HeavySyncEnabled bool
+	// HeavySyncMessageLimit soft limit of single message for replication to heavy.
+	HeavySyncMessageLimit int
 }
 
 // Ledger holds configuration for ledger.
@@ -46,15 +55,10 @@ type Ledger struct {
 	Storage Storage
 	// JetCoordinator defines jet coordinator configuration.
 	JetCoordinator JetCoordinator
-	// HeavyReplication defines replication to heavy storage node.
-	HeavyReplication HeavyReplication
 	// ArtifactManager holds configuration for ArtifactManager.
 	ArtifactManager ArtifactManager
-}
-
-// HeavyReplication configures replication to heavy node
-type HeavyReplication struct {
-	SyncMessageLimit int
+	// PulseManager holds configuration for PulseManager.
+	PulseManager PulseManager
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -77,6 +81,11 @@ func NewLedger() Ledger {
 
 		ArtifactManager: ArtifactManager{
 			LightChainLimit: 10 * 30, // 30 pulses
+		},
+
+		PulseManager: PulseManager{
+			HeavySyncEnabled:      true,
+			HeavySyncMessageLimit: 1 << 20, // 1Mb
 		},
 	}
 }
