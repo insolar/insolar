@@ -18,6 +18,7 @@ package state
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -29,7 +30,8 @@ type NetworkSwitcher struct {
 	Certificate        core.Certificate        `inject:""`
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
 
-	state core.NetworkState
+	state     core.NetworkState
+	stateLock *sync.RWMutex
 }
 
 // NewNetworkSwitcher creates new NetworkSwitcher
@@ -39,7 +41,9 @@ func NewNetworkSwitcher() (*NetworkSwitcher, error) {
 
 // GetState method returns current network state
 func (ns *NetworkSwitcher) GetState() core.NetworkState {
-	// TODO: RWLock
+	ns.stateLock.Lock()
+	defer ns.stateLock.RUnlock()
+
 	return ns.state
 }
 
@@ -48,7 +52,9 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 	inslogger.FromContext(ctx).Info("Current NetworkSwitcher state is: %s", ns.state)
 
 	if ns.SwitcherWorkAround.IsBootstrapped() {
+		ns.stateLock.Lock()
 		ns.state = core.CompleteNetworkState
+		ns.stateLock.Unlock()
 		inslogger.FromContext(ctx).Info("Current NetworkSwitcher state switched to: %s", ns.state)
 	}
 
