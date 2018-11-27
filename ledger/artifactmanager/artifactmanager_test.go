@@ -71,7 +71,17 @@ func getTestData(t *testing.T) (
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	mb := testmessagebus.NewTestMessageBus(t)
-	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, PlatformCryptographyScheme: scheme, recent: storage.NewRecentStorage(1)}
+	handler := MessageHandler{
+		db:                         db,
+		jetDropHandlers:            map[core.MessageType]internalHandler{},
+		PlatformCryptographyScheme: scheme,
+	}
+
+	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+	handler.Recent = recentStorageMock
 
 	handler.Bus = mb
 	err := handler.Init(ctx)
