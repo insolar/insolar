@@ -167,7 +167,7 @@ func NewChildIterator(
 		chunkSize:  chunkSize,
 		canFetch:   true,
 	}
-	err := iter.fetch(true)
+	err := iter.fetch()
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (i *ChildIterator) HasNext() bool {
 func (i *ChildIterator) Next() (*core.RecordRef, error) {
 	// Get element from buffer.
 	if !i.hasInBuffer() && i.canFetch {
-		err := i.fetch(false)
+		err := i.fetch()
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +206,7 @@ func (i *ChildIterator) nextFromBuffer() *core.RecordRef {
 	return &ref
 }
 
-func (i *ChildIterator) fetch(saveToken bool) error {
+func (i *ChildIterator) fetch() error {
 	if !i.canFetch {
 		return errors.New("failed to fetch record")
 	}
@@ -218,7 +218,6 @@ func (i *ChildIterator) fetch(saveToken bool) error {
 			FromChild: i.fromChild,
 			Amount:    i.chunkSize,
 		},
-		saveToken,
 	)
 	if err != nil {
 		return err
@@ -242,9 +241,7 @@ func (i *ChildIterator) hasInBuffer() bool {
 	return i.buffIndex < len(i.buff)
 }
 
-func (i *ChildIterator) sendAndFollowRedirect(
-	ctx context.Context, msg core.Message, saveToken bool,
-) (core.Reply, error) {
+func (i *ChildIterator) sendAndFollowRedirect(ctx context.Context, msg core.Message) (core.Reply, error) {
 	rep, err := i.messageBus.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, err
@@ -252,14 +249,11 @@ func (i *ChildIterator) sendAndFollowRedirect(
 
 	if redirect, ok := rep.(core.RedirectReply); ok {
 		redirected := redirect.Redirected(msg)
-		if saveToken {
-			i.token = redirect.GetToken()
-		}
 		rep, err = i.messageBus.Send(
 			ctx,
 			redirected,
 			&core.MessageSendOptions{
-				Token:    i.token,
+				Token:    redirect.GetToken(),
 				Receiver: redirect.GetReceiver(),
 			},
 		)

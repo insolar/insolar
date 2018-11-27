@@ -199,10 +199,14 @@ func (h *MessageHandler) handleGetObject(
 			var nodes []core.RecordRef
 			if stateID != nil && pulseNumber-stateID.Pulse() < h.conf.LightChainLimit {
 				// Find light executor that saved the state.
-				nodes, err = h.JetCoordinator.QueryRole(ctx, core.RoleLightExecutor, &msg.Head, stateID.Pulse())
+				nodes, err = h.JetCoordinator.QueryRole(
+					ctx, core.RoleLightExecutor, &msg.Head, stateID.Pulse(),
+				)
 			} else {
 				// Find heavy that has this object.
-				nodes, err = h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse())
+				nodes, err = h.JetCoordinator.QueryRole(
+					ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse(),
+				)
 			}
 			if err != nil {
 				return nil, err
