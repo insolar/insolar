@@ -73,7 +73,7 @@ func (ac *AuthorizationController) AuthorizeOnHost(ctx context.Context, sessionI
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending authorize request")
 	}
-	response, err := future.GetResponse(ac.options.AuthorizeTimeout)
+	response, err := future.GetResponse(ac.options.PacketTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting response for authorize request")
 	}

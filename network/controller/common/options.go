@@ -36,9 +36,4 @@ type Options struct {
 
 	// Bootstrap reconnect timeout
 	BootstrapTimeout time.Duration
-
-	// The maximum time to wait for authorization response
-	AuthorizeTimeout time.Duration
-
-	MajorityRule int
 }
