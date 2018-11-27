@@ -28,10 +28,12 @@ type delegationTokenFactory struct {
 	Cryptography core.CryptographyService `inject:""`
 }
 
+// NewDelegationTokenFactory creates new token factory instance.
 func NewDelegationTokenFactory() core.DelegationTokenFactory {
 	return &delegationTokenFactory{}
 }
 
+// IssuePendingExecution creates new token for provided message.
 func (f *delegationTokenFactory) IssuePendingExecution(
 	msg core.Message, pulse core.PulseNumber,
 ) (core.DelegationToken, error) {
@@ -52,6 +54,7 @@ func (f *delegationTokenFactory) IssuePendingExecution(
 	return token, nil
 }
 
+// IssueGetObjectRedirect creates new token for provided message.
 func (f *delegationTokenFactory) IssueGetObjectRedirect(
 	sender *core.RecordRef, redirectedMessage core.Message,
 ) (core.DelegationToken, error) {
@@ -64,6 +67,7 @@ func (f *delegationTokenFactory) IssueGetObjectRedirect(
 	return &GetObjectRedirect{Signature: sign.Bytes()}, nil
 }
 
+// IssueGetChildrenRedirect creates new token for provided message.
 func (f *delegationTokenFactory) IssueGetChildrenRedirect(
 	sender *core.RecordRef, redirectedMessage core.Message,
 ) (core.DelegationToken, error) {
@@ -76,6 +80,7 @@ func (f *delegationTokenFactory) IssueGetChildrenRedirect(
 	return &GetChildrenRedirect{Signature: sign.Bytes()}, nil
 }
 
+// Verify performs token validation.
 func (f *delegationTokenFactory) Verify(parcel core.Parcel) (bool, error) {
 	if parcel.DelegationToken() == nil {
 		return false, nil
