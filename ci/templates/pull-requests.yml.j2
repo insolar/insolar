@@ -93,7 +93,7 @@ jobs:
              env
              cd $GOPATH/src/github.com/insolar/insolar
              #make install-deps
-             #make pre-build
+             make pre-build
              rm -Rf $GOPATH/src/github.com/insolar/insolar/vendor/* && mv /go/vendor $GOPATH/src/github.com/insolar/insolar/
              make build
              make test_with_coverage
