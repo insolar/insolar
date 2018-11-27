@@ -128,15 +128,20 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	return result, nil
 }
 
+func processError(err error, extraMsg string, resp *answer, insLog core.Logger) {
+	resp.Error = err.Error()
+	insLog.Error(errors.Wrap(err, "[ CallHandler ] "+extraMsg))
+}
+
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
 		params := Request{}
 		resp := answer{}
 
-		traceid := utils.RandTraceID()
-		ctx, inslog := inslogger.WithTraceField(context.Background(), traceid)
-		resp.TraceID = traceid
+		traceId := utils.RandTraceID()
+		ctx, insLog := inslogger.WithTraceField(context.Background(), traceId)
+		resp.TraceID = traceId
 
 		defer func() {
 			res, err := json.MarshalIndent(resp, "", "    ")
@@ -146,35 +151,31 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			response.Header().Add("Content-Type", "application/json")
 			_, err = response.Write(res)
 			if err != nil {
-				inslog.Errorf("Can't write response\n")
+				insLog.Errorf("Can't write response\n")
 			}
 		}()
 
 		_, err := UnmarshalRequest(req, &params)
 		if err != nil {
-			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal request"))
+			processError(err, "Can't unmarshal request", &resp, insLog)
 			return
 		}
 
 		err = ar.checkSeed(params.Seed)
 		if err != nil {
-			resp.Error = err.Error()
-			inslog.Error(resp.Error, "[ CallHandler ] Can't checkSeed")
+			processError(err, "Can't checkSeed", &resp, insLog)
 			return
 		}
 
 		err = ar.verifySignature(ctx, params)
 		if err != nil {
-			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't verify signature"))
+			processError(err, "Can't verify signature", &resp, insLog)
 			return
 		}
 
 		result, err := ar.makeCall(ctx, params)
 		if err != nil {
-			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't makeCall"))
+			processError(err, "Can't makeCall", &resp, insLog)
 			return
 		}
 
