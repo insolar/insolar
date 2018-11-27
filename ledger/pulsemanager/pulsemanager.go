@@ -152,25 +152,43 @@ func (m *PulseManager) processRecentObjects(
 	drop *jetdrop.JetDrop,
 	dropSerialized []byte,
 ) error {
-
 	m.Recent.ClearZeroTTLObjects()
 	recentObjectsIds := m.Recent.GetObjects()
-	recentRequestsIds := m.Recent.GetRequests()
+	pendingRequestsIds := m.Recent.GetRequests()
 	m.Recent.ClearObjects()
 
-	var recentObjectsIdsConverted []core.RecordID
-	for k := range recentObjectsIds {
-		recentObjectsIdsConverted = append(recentObjectsIdsConverted, k)
+	recentObjects := map[core.RecordID]*message.HotIndex{}
+	pendingRequests := map[core.RecordID]*message.HotIndex{}
+
+	for id, meta := range recentObjectsIds {
+		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
+		recentObjects[id] = &message.HotIndex{
+			Meta:  meta,
+			Index: lifeline,
+		}
 	}
 
-	recentRequests := m.getIndexes(ctx, recentRequestsIds)
-	recentObjects := m.getIndexes(ctx, recentObjectsIdsConverted)
+	for _, id := range pendingRequestsIds {
+		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
+		pendingRequests[id] = &message.HotIndex{
+			Meta:  nil,
+			Index: lifeline,
+		}
+	}
 
 	msg := &message.HotIndexes{
 		Drop:            dropSerialized,
 		PulseNumber:     *latestPulse.Prev,
 		RecentObjects:   recentObjects,
-		PendingRequests: recentRequests,
+		PendingRequests: pendingRequests,
 	}
 	_, err := m.Bus.Send(ctx, msg, nil)
 	if err != nil {
