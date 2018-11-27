@@ -23,6 +23,11 @@ type RecentStorageMock struct {
 	AddObjectPreCounter uint64
 	AddObjectMock       mRecentStorageMockAddObject
 
+	AddObjectWithMetaFunc       func(p core.RecordID, p1 *core.RecentObjectsIndexMeta)
+	AddObjectWithMetaCounter    uint64
+	AddObjectWithMetaPreCounter uint64
+	AddObjectWithMetaMock       mRecentStorageMockAddObjectWithMeta
+
 	AddPendingRequestFunc       func(p core.RecordID)
 	AddPendingRequestCounter    uint64
 	AddPendingRequestPreCounter uint64
@@ -63,6 +68,7 @@ func NewRecentStorageMock(t minimock.Tester) *RecentStorageMock {
 	}
 
 	m.AddObjectMock = mRecentStorageMockAddObject{mock: m}
+	m.AddObjectWithMetaMock = mRecentStorageMockAddObjectWithMeta{mock: m}
 	m.AddPendingRequestMock = mRecentStorageMockAddPendingRequest{mock: m}
 	m.ClearObjectsMock = mRecentStorageMockClearObjects{mock: m}
 	m.ClearZeroTTLObjectsMock = mRecentStorageMockClearZeroTTLObjects{mock: m}
@@ -137,6 +143,73 @@ func (m *RecentStorageMock) AddObjectMinimockCounter() uint64 {
 //AddObjectMinimockPreCounter returns the value of RecentStorageMock.AddObject invocations
 func (m *RecentStorageMock) AddObjectMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.AddObjectPreCounter)
+}
+
+type mRecentStorageMockAddObjectWithMeta struct {
+	mock             *RecentStorageMock
+	mockExpectations *RecentStorageMockAddObjectWithMetaParams
+}
+
+//RecentStorageMockAddObjectWithMetaParams represents input parameters of the RecentStorage.AddObjectWithMeta
+type RecentStorageMockAddObjectWithMetaParams struct {
+	p  core.RecordID
+	p1 *core.RecentObjectsIndexMeta
+}
+
+//Expect sets up expected params for the RecentStorage.AddObjectWithMeta
+func (m *mRecentStorageMockAddObjectWithMeta) Expect(p core.RecordID, p1 *core.RecentObjectsIndexMeta) *mRecentStorageMockAddObjectWithMeta {
+	m.mockExpectations = &RecentStorageMockAddObjectWithMetaParams{p, p1}
+	return m
+}
+
+//Return sets up a mock for RecentStorage.AddObjectWithMeta to return Return's arguments
+func (m *mRecentStorageMockAddObjectWithMeta) Return() *RecentStorageMock {
+	m.mock.AddObjectWithMetaFunc = func(p core.RecordID, p1 *core.RecentObjectsIndexMeta) {
+		return
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of RecentStorage.AddObjectWithMeta method
+func (m *mRecentStorageMockAddObjectWithMeta) Set(f func(p core.RecordID, p1 *core.RecentObjectsIndexMeta)) *RecentStorageMock {
+	m.mock.AddObjectWithMetaFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//AddObjectWithMeta implements github.com/insolar/insolar/core.RecentStorage interface
+func (m *RecentStorageMock) AddObjectWithMeta(p core.RecordID, p1 *core.RecentObjectsIndexMeta) {
+	atomic.AddUint64(&m.AddObjectWithMetaPreCounter, 1)
+	defer atomic.AddUint64(&m.AddObjectWithMetaCounter, 1)
+
+	if m.AddObjectWithMetaMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.AddObjectWithMetaMock.mockExpectations, RecentStorageMockAddObjectWithMetaParams{p, p1},
+			"RecentStorage.AddObjectWithMeta got unexpected parameters")
+
+		if m.AddObjectWithMetaFunc == nil {
+
+			m.t.Fatal("No results are set for the RecentStorageMock.AddObjectWithMeta")
+
+			return
+		}
+	}
+
+	if m.AddObjectWithMetaFunc == nil {
+		m.t.Fatal("Unexpected call to RecentStorageMock.AddObjectWithMeta")
+		return
+	}
+
+	m.AddObjectWithMetaFunc(p, p1)
+}
+
+//AddObjectWithMetaMinimockCounter returns a count of RecentStorageMock.AddObjectWithMetaFunc invocations
+func (m *RecentStorageMock) AddObjectWithMetaMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AddObjectWithMetaCounter)
+}
+
+//AddObjectWithMetaMinimockPreCounter returns the value of RecentStorageMock.AddObjectWithMeta invocations
+func (m *RecentStorageMock) AddObjectWithMetaMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AddObjectWithMetaPreCounter)
 }
 
 type mRecentStorageMockAddPendingRequest struct {
@@ -447,6 +520,10 @@ func (m *RecentStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RecentStorageMock.AddObject")
 	}
 
+	if m.AddObjectWithMetaFunc != nil && atomic.LoadUint64(&m.AddObjectWithMetaCounter) == 0 {
+		m.t.Fatal("Expected call to RecentStorageMock.AddObjectWithMeta")
+	}
+
 	if m.AddPendingRequestFunc != nil && atomic.LoadUint64(&m.AddPendingRequestCounter) == 0 {
 		m.t.Fatal("Expected call to RecentStorageMock.AddPendingRequest")
 	}
@@ -492,6 +569,10 @@ func (m *RecentStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RecentStorageMock.AddObject")
 	}
 
+	if m.AddObjectWithMetaFunc != nil && atomic.LoadUint64(&m.AddObjectWithMetaCounter) == 0 {
+		m.t.Fatal("Expected call to RecentStorageMock.AddObjectWithMeta")
+	}
+
 	if m.AddPendingRequestFunc != nil && atomic.LoadUint64(&m.AddPendingRequestCounter) == 0 {
 		m.t.Fatal("Expected call to RecentStorageMock.AddPendingRequest")
 	}
@@ -531,6 +612,7 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && (m.AddObjectFunc == nil || atomic.LoadUint64(&m.AddObjectCounter) > 0)
+		ok = ok && (m.AddObjectWithMetaFunc == nil || atomic.LoadUint64(&m.AddObjectWithMetaCounter) > 0)
 		ok = ok && (m.AddPendingRequestFunc == nil || atomic.LoadUint64(&m.AddPendingRequestCounter) > 0)
 		ok = ok && (m.ClearObjectsFunc == nil || atomic.LoadUint64(&m.ClearObjectsCounter) > 0)
 		ok = ok && (m.ClearZeroTTLObjectsFunc == nil || atomic.LoadUint64(&m.ClearZeroTTLObjectsCounter) > 0)
@@ -547,6 +629,10 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 
 			if m.AddObjectFunc != nil && atomic.LoadUint64(&m.AddObjectCounter) == 0 {
 				m.t.Error("Expected call to RecentStorageMock.AddObject")
+			}
+
+			if m.AddObjectWithMetaFunc != nil && atomic.LoadUint64(&m.AddObjectWithMetaCounter) == 0 {
+				m.t.Error("Expected call to RecentStorageMock.AddObjectWithMeta")
 			}
 
 			if m.AddPendingRequestFunc != nil && atomic.LoadUint64(&m.AddPendingRequestCounter) == 0 {
@@ -586,6 +672,10 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 func (m *RecentStorageMock) AllMocksCalled() bool {
 
 	if m.AddObjectFunc != nil && atomic.LoadUint64(&m.AddObjectCounter) == 0 {
+		return false
+	}
+
+	if m.AddObjectWithMetaFunc != nil && atomic.LoadUint64(&m.AddObjectWithMetaCounter) == 0 {
 		return false
 	}
 
