@@ -112,6 +112,10 @@ type nodekeeper struct {
 	syncLock sync.Mutex
 }
 
+func (nk *nodekeeper) IsBootstrapped() (bool, error) {
+	return false, nil
+}
+
 func (nk *nodekeeper) GetOrigin() core.Node {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
