@@ -179,6 +179,8 @@ func init() {
 	gob.Register(&JetDrop{})
 	gob.Register(&SetRecord{})
 	gob.Register(&GetObjectIndex{})
+	gob.Register(&SetBlob{})
+	gob.Register(&ValidateRecord{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
