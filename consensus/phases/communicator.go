@@ -274,4 +274,9 @@ func (nc *NaiveCommunicator) phase3DataHandler(request network.Request) {
 		log.Warn("Wrong handler for request type: ", request.GetType().String())
 		return
 	}
+	packet, ok := request.GetData().(*packets.Phase3Packet)
+	if !ok {
+		log.Warn("failed to cast a type 3 packet to phase3packet")
+	}
+	nc.phase3result <- phase3Result{request.GetSender(), packet}
 }
