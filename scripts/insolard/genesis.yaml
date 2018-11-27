@@ -11,12 +11,12 @@ discovery_nodes:
   -
     host: "127.0.0.1:53837"
     role: "virtual"
-    keys_file: "testdata/scripts/first/keys.json"
+    keys_file: "scripts/insolard/nodes/first/keys.json"
   -
     host: "127.0.0.1:53835"
     role: "heavy_material"
-    keys_file: "testdata/scripts/second/keys.json"
+    keys_file: "scripts/insolard/nodes/second/keys.json"
   -
     host: "127.0.0.1:53839"
     role: "light_material"
-    keys_file: "testdata/scripts/third/keys.json"
+    keys_file: "scripts/insolard/nodes/third/keys.json"
