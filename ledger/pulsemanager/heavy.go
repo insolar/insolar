@@ -31,14 +31,14 @@ import (
 func (m *PulseManager) HeavySync(
 	ctx context.Context,
 	pn core.PulseNumber,
-) (core.PulseNumber, error) {
+) error {
 	inslog := inslogger.FromContext(ctx)
 
 	signalMsg := &message.HeavyStartStop{PulseNum: pn}
 	_, starterr := m.Bus.Send(ctx, signalMsg, nil)
 	// TODO: check if locked
 	if starterr != nil {
-		return 0, starterr
+		return starterr
 	}
 	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", pn, pn+1)
 
@@ -55,21 +55,21 @@ func (m *PulseManager) HeavySync(
 		msg := &message.HeavyPayload{Records: recs}
 		_, senderr := m.Bus.Send(ctx, msg, nil)
 		if senderr != nil {
-			return 0, senderr
+			return senderr
 		}
 	}
 
 	signalMsg.Finished = true
 	_, stoperr := m.Bus.Send(ctx, signalMsg, nil)
 	if stoperr != nil {
-		return 0, stoperr
+		return stoperr
 	}
 	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", pn, pn+1)
 
 	lastmeetpulse := replicator.LastPulse()
 	inslog.Debugf("synchronize on [%v:%v] finised (maximum record pulse is %v)",
 		pn, pn+1, lastmeetpulse)
-	return lastmeetpulse, nil
+	return nil
 }
 
 // NextSyncPulses returns pulse numbers range for syncing to heavy node.
