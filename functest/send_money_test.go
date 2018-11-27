@@ -63,7 +63,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	amount := 111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, testutils.RandomRef())
-	require.EqualError(t, err, "[ Transfer ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ Transfer ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)
@@ -78,7 +78,7 @@ func TestTransferNegativeAmount(t *testing.T) {
 	amount := -111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	require.EqualError(t, err, "[ transferCall ] Amount must be positive")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ transferCall ] Amount must be positive")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
@@ -112,7 +112,7 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 	amount := oldFirstBalance + 100
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	require.EqualError(t, err, "[ Transfer ] Not enough balance for transfer: subtrahend must be smaller than minuend")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ Transfer ] Not enough balance for transfer: subtrahend must be smaller than minuend")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
@@ -127,7 +127,7 @@ func TestTransferToMyself(t *testing.T) {
 	amount := 100
 
 	_, err := signedRequest(member, "Transfer", amount, member.ref)
-	require.EqualError(t, err, "[ transferCall ] Recipient must be different from the sender")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ transferCall ] Recipient must be different from the sender")
 
 	newMemberBalance := getBalanceNoErr(t, member, member.ref)
 	require.Equal(t, oldMemberBalance, newMemberBalance)
