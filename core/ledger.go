@@ -269,8 +269,7 @@ type RecentObjectsIndexMeta struct {
 // RecentStorage is a base interface for the storage of recent objects and indexes
 //go:generate minimock -i github.com/insolar/insolar/core.RecentStorage -o ../testutils -s _mock.go
 type RecentStorage interface {
-	ReInitObjects(map[RecordID]*RecentObjectsIndexMeta)
-	ReInitPendingRequest(map[RecordID]*RecentObjectsIndexMeta)
+	ReInitStorage(recentObjects map[RecordID]*RecentObjectsIndexMeta, pendingRequests map[RecordID]*RecentObjectsIndexMeta)
 
 	AddObject(id RecordID)
 	AddPendingRequest(id RecordID)
