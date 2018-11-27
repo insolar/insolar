@@ -29,6 +29,8 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -63,6 +65,7 @@ func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
 	res := GoInsider{dir: path, upstreamProtocol: network, upstreamAddress: address}
 	res.plugins = make(map[core.RecordRef]*pluginRec)
+	proxyctx.Current = &res
 	return &res
 }
 

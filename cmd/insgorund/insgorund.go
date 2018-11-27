@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 func main() {
@@ -53,7 +52,6 @@ func main() {
 	}
 
 	insider := ginsider.NewGoInsider(*path, *rpcProtocol, *rpcAddress)
-	proxyctx.Current = insider
 
 	err = rpc.Register(&ginsider.RPC{GI: insider})
 	if err != nil {
