@@ -135,8 +135,33 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 		Drop:        dropSerialized,
 		Messages:    messages,
 		PulseNumber: latestPulseNumber,
+func (m *PulseManager) processRecentObjects(
+	ctx context.Context,
+	latestPulse *storage.Pulse,
+	drop *jetdrop.JetDrop,
+	dropSerialized []byte,
+) error {
+
+	m.Recent.ClearZeroTTLObjects()
+	recentObjectsIds := m.Recent.GetObjects()
+	recentRequestsIds := m.Recent.GetRequests()
+	m.Recent.ClearObjects()
+
+	var recentObjectsIdsConverted []core.RecordID
+	for k := range recentObjectsIds {
+		recentObjectsIdsConverted = append(recentObjectsIdsConverted, k)
 	}
-	_, err = m.Bus.Send(ctx, msg, nil)
+
+	recentRequests := m.getIndexes(ctx, recentRequestsIds)
+	recentObjects := m.getIndexes(ctx, recentObjectsIdsConverted)
+
+	msg := &message.HotRecords{
+		Drop:            dropSerialized,
+		PulseNumber:     *latestPulse.Prev,
+		RecentObjects:   recentObjects,
+		PendingRequests: recentRequests,
+	}
+	_, err := m.Bus.Send(ctx, msg, nil)
 	if err != nil {
 		return err
 	}
