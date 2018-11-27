@@ -171,11 +171,11 @@ func (*SetBlob) Type() core.MessageType {
 // HotRecords contains hot-data
 type HotRecords struct {
 	ledgerMessage
-	Jet           core.RecordRef
-	Drop          []byte
-	RecentObjects map[core.RecordID]*core.RecentObjectsIndexMeta
-	Lifelines     index.ObjectLifeline
-	PulseNumber   core.PulseNumber
+	Jet             core.RecordRef
+	Drop            []byte
+	RecentObjects   []*index.ObjectLifeline
+	PendingRequests []*index.ObjectLifeline
+	PulseNumber     core.PulseNumber
 }
 
 // Type implementation of Message interface.
