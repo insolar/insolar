@@ -137,7 +137,7 @@ func (s *Sync) Store(ctx context.Context, pn core.PulseNumber, kvs []core.KV) er
 	return s.db.StoreKeyValues(ctx, kvs)
 }
 
-// Stop stops replication with specified pulses range.
+// Stop successfully stops replication for specified pulse.
 //
 // TODO: call Stop if range sync too long
 func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
@@ -150,7 +150,7 @@ func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
 		return errors.New("Passed range doesn't match range in sync")
 	}
 	if s.insync {
-		return errors.New("Can't stop heavy repliction that still in store mode")
+		return errors.New("Can't stop heavy replication that still in syncing mode")
 	}
 	s.syncpulse = nil
 
@@ -159,5 +159,18 @@ func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
 		return err
 	}
 	s.lastok = pn
+	return nil
+}
+
+// Reset resets sync for provided pulse.
+func (s *Sync) Reset(ctx context.Context, pn core.PulseNumber) error {
+	s.Lock()
+	defer s.Unlock()
+
+	if s.insync {
+		return errors.New("Can't rest heavy repliction that still in syncing mode")
+	}
+
+	s.syncpulse = nil
 	return nil
 }

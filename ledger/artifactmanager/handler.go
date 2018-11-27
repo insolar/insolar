@@ -772,3 +772,17 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 	return idx, nil
 }
+
+func (h *MessageHandler) handleHeavyReset(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
+
+	msg := genericMsg.Message().(*message.HeavyReset)
+	inslog.Debugf("Heavy sync: get reset message for pulse %v", msg.PulseNum)
+	if err := h.HeavySync.Reset(ctx, msg.PulseNum); err != nil {
+		return nil, err
+	}
+	return &reply.OK{}, nil
+}
