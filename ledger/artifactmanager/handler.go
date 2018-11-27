@@ -660,3 +660,19 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 	}
 	return &reply.OK{}, nil
 }
+
+func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.GetObjectIndex)
+
+	idx, err := h.db.GetObjectIndex(ctx, msg.Object.Record(), true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+
+	buf, err := index.EncodeObjectLifeline(idx)
+	if err != nil {
+		return nil, errors.Wrap(err, "faile to serialize index")
+	}
+
+	return &reply.ObjectIndex{Index: buf}, nil
+}
