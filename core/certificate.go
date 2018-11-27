@@ -27,6 +27,7 @@ type Certificate interface {
 	SetRootDomainReference(ref *RecordRef)
 	GetBootstrapNodes() []BootstrapNode
 	GetPublicKey() crypto.PublicKey
+	IsDiscoveryNode() bool
 }
 
 // BootstrapNode holds info about bootstrap nodes

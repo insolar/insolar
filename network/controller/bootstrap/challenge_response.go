@@ -31,10 +31,10 @@ type SignedNonce []byte
 type SessionID uint64
 
 // Node                           Discovery Node
-//  | ------ ChallengeRequest -----> |
-//  | <-- SignedChallengeResponse -- |
-//  | --- SignedChallengeRequest --> |
-//  | <----- ChallengeResponse ----- |
+//  1| ------ ChallengeRequest -----> |
+//  2| <-- SignedChallengeResponse -- |
+//  3| --- SignedChallengeRequest --> |
+//  4| <----- ChallengeResponse ----- |
 // ------------------------------------
 
 type SessionHeader struct {
@@ -44,6 +44,8 @@ type SessionHeader struct {
 }
 
 type ChallengeRequest struct {
+	SessionID SessionID
+
 	Certificate core.Certificate
 	Nonce       Nonce
 }
@@ -66,8 +68,13 @@ type SignedChallengeRequest struct {
 type ChallengeResponse struct {
 	SessionHeader SessionHeader
 
-	CurrentPulse core.Pulse
-	State        core.NetworkState
+	ChallengePayload *ChallengePayload
+}
+
+type ChallengePayload struct {
+	CurrentPulse  core.Pulse
+	State         core.NetworkState
+	AssignShortID core.ShortNodeID
 }
 
 func init() {
@@ -77,7 +84,8 @@ func init() {
 	gob.Register(&ChallengeResponse{})
 }
 
-func (crc *ChallengeResponseController) SendRequest(request *ChallengeRequest) (*ChallengeResponse, error) {
+// Execute double challenge response between the node and the discovery node (step 3 of the bootstrap process)
+func (crc *ChallengeResponseController) Execute(SessionID SessionID, Certificate core.Certificate) (*ChallengePayload, error) {
 	// TODO: double challenge response
 	return nil, errors.New("not implemented")
 }

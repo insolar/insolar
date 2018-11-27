@@ -47,6 +47,7 @@ const (
 
 // AuthorizationRequest
 type AuthorizationRequest struct {
+	SessionID   SessionID
 	Certificate core.Certificate
 }
 
@@ -69,11 +70,12 @@ func init() {
 }
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
-func (ac *AuthorizationController) Authorize(ctx context.Context, certificate core.Certificate) error {
+func (ac *AuthorizationController) Authorize(ctx context.Context, sessionID SessionID, certificate core.Certificate) error {
 	discovery := ac.bootstrapController.GetChosenDiscoveryNode()
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discovery)
 
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
+		SessionID:   sessionID,
 		Certificate: certificate,
 	}).Build()
 	future, err := ac.transport.SendRequestPacket(request, discovery)

@@ -57,6 +57,10 @@ func (cert *Certificate) GetPublicKey() crypto.PublicKey {
 	panic("not implemented")
 }
 
+func (cert *Certificate) IsDiscoveryNode() bool {
+	panic("not implemented")
+}
+
 func (cert *Certificate) serializeNetworkPart() []byte {
 	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
 		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +

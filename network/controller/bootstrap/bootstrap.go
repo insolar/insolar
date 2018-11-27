@@ -30,7 +30,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type BootstrapController struct {
+type Bootstrapper struct {
 	options   *common.Options
 	transport network.InternalTransport
 	pinger    *pinger.Pinger
@@ -38,40 +38,45 @@ type BootstrapController struct {
 	chosenDiscoveryNode *host.Host
 }
 
-type BootstrapRequest struct {
+type NodeBootstrapRequest struct {
 	// pass node certificate, i guess
 }
 
-type BootstrapResponse struct {
-	Code         BootstrapCode
+type NodeBootstrapResponse struct {
+	Code         Code
 	RedirectHost string
 	RejectReason string
 }
 
-type BootstrapCode uint8
+type StartSessionRequest struct{}
+
+type StartSessionResponse struct {
+	SessionID SessionID
+}
+
+type Code uint8
 
 const (
-	BootstrapAccepted = BootstrapCode(iota + 1)
-	BootstrapRejected
-	BootstrapRedirected
+	Accepted = Code(iota + 1)
+	Rejected
+	Redirected
 )
 
 func init() {
-	gob.Register(&BootstrapRequest{})
-	gob.Register(&BootstrapResponse{})
+	gob.Register(&NodeBootstrapRequest{})
+	gob.Register(&NodeBootstrapResponse{})
 }
 
-func (bc *BootstrapController) GetChosenDiscoveryNode() *host.Host {
+func (bc *Bootstrapper) GetChosenDiscoveryNode() *host.Host {
 	return bc.chosenDiscoveryNode
 }
 
-func (bc *BootstrapController) Bootstrap(ctx context.Context) error {
+func (bc *Bootstrapper) Bootstrap(ctx context.Context) error {
 	if len(bc.options.BootstrapHosts) == 0 {
 		return nil
 	}
 	ch := bc.getBootstrapHostsChannel(ctx)
 	host := bc.waitResultFromChannel(ctx, ch)
-
 	if host == nil {
 		return errors.New("Failed to bootstrap to any of discovery nodes")
 	}
@@ -79,7 +84,21 @@ func (bc *BootstrapController) Bootstrap(ctx context.Context) error {
 	return nil
 }
 
-func (bc *BootstrapController) getBootstrapHostsChannel(ctx context.Context) <-chan *host.Host {
+func (bc *Bootstrapper) StartSession(ctx context.Context) (SessionID, error) {
+	request := bc.transport.NewRequestBuilder().Type(types.StartSession).Data(nil).Build()
+	future, err := bc.transport.SendRequestPacket(request, bc.chosenDiscoveryNode)
+	if err != nil {
+		return 0, errors.Wrapf(err, "Failed to send StartSession request to discovery node %s", bc.chosenDiscoveryNode)
+	}
+	response, err := future.GetResponse(bc.options.BootstrapTimeout)
+	if err != nil {
+		return 0, errors.Wrapf(err, "Failed to get StartSession response from discovery node %s", bc.chosenDiscoveryNode)
+	}
+	data := response.GetData().(*StartSessionResponse)
+	return data.SessionID, nil
+}
+
+func (bc *Bootstrapper) getBootstrapHostsChannel(ctx context.Context) <-chan *host.Host {
 	// we need only one host to bootstrap
 	bootstrapHosts := make(chan *host.Host, 1)
 	for _, bootstrapAddress := range bc.options.BootstrapHosts {
@@ -96,7 +115,7 @@ func (bc *BootstrapController) getBootstrapHostsChannel(ctx context.Context) <-c
 	return bootstrapHosts
 }
 
-func (bc *BootstrapController) waitResultFromChannel(ctx context.Context, ch <-chan *host.Host) *host.Host {
+func (bc *Bootstrapper) waitResultFromChannel(ctx context.Context, ch <-chan *host.Host) *host.Host {
 	for {
 		select {
 		case bootstrapHost := <-ch:
@@ -108,40 +127,40 @@ func (bc *BootstrapController) waitResultFromChannel(ctx context.Context, ch <-c
 	}
 }
 
-func (bc *BootstrapController) bootstrap(address string) (*host.Host, error) {
+func (bc *Bootstrapper) bootstrap(address string) (*host.Host, error) {
 	// TODO: add infinite bootstrap
 	bootstrapHost, err := bc.pinger.Ping(address, bc.options.PingTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
 	}
-	request := bc.transport.NewRequestBuilder().Type(types.Bootstrap).Data(&BootstrapRequest{}).Build()
+	request := bc.transport.NewRequestBuilder().Type(types.Bootstrap).Data(&NodeBootstrapRequest{}).Build()
 	future, err := bc.transport.SendRequestPacket(request, bootstrapHost)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
+		return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
 	}
 	response, err := future.GetResponse(bc.options.BootstrapTimeout)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get response to bootstrap request")
+		return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
 	}
-	data := response.GetData().(*BootstrapResponse)
-	if data.Code == BootstrapRejected {
+	data := response.GetData().(*NodeBootstrapResponse)
+	if data.Code == Rejected {
 		return nil, errors.New("Rejected: " + data.RejectReason)
 	}
-	if data.Code == BootstrapRedirected {
+	if data.Code == Redirected {
 		return bc.bootstrap(data.RedirectHost)
 	}
 	return response.GetSenderHost(), nil
 }
 
-func (bc *BootstrapController) processBootstrap(request network.Request) (network.Response, error) {
+func (bc *Bootstrapper) processBootstrap(request network.Request) (network.Response, error) {
 	// TODO: check certificate and redirect logic
-	return bc.transport.BuildResponse(request, &BootstrapResponse{Code: BootstrapAccepted}), nil
+	return bc.transport.BuildResponse(request, &NodeBootstrapResponse{Code: Accepted}), nil
 }
 
-func (bc *BootstrapController) Start() {
+func (bc *Bootstrapper) Start() {
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 }
 
-func NewBootstrapController(options *common.Options, transport network.InternalTransport) *BootstrapController {
-	return &BootstrapController{options: options, transport: transport, pinger: pinger.NewPinger(transport)}
+func NewBootstrapController(options *common.Options, transport network.InternalTransport) *Bootstrapper {
+	return &Bootstrapper{options: options, transport: transport, pinger: pinger.NewPinger(transport)}
 }

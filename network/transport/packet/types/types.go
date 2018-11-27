@@ -32,8 +32,8 @@ const (
 	GetRandomHosts
 	// Bootstrap is packet type for the node bootstrap process.
 	Bootstrap
-	// GetNonce is packet type to get nonce from discovery node during authorization process.
-	GetNonce
+	// StartSession is packet type to start session between connecting node and discovery node
+	StartSession
 	// Authorize is packet type to authorize bootstrapping node on discovery node.
 	Authorize
 	// Register is packet type to connect node to discovery node and add join claim to consensus
