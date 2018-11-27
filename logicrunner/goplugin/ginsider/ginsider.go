@@ -461,3 +461,30 @@ func (gi *GoInsider) MakeErrorSerializable(e error) error {
 	}
 	return &foundation.Error{S: e.Error()}
 }
+
+func (gi *GoInsider) registerCustomPlugin(ref core.RecordRef, pluginPath string) error {
+	rec := func() *pluginRec {
+		gi.pluginsMutex.Lock()
+		defer gi.pluginsMutex.Unlock()
+
+		if gi.plugins[ref] == nil {
+			gi.plugins[ref] = &pluginRec{}
+		}
+		res := gi.plugins[ref]
+		res.Lock()
+		return res
+	}()
+	defer rec.Unlock()
+
+	if rec.plugin != nil {
+		return errors.New("plugin already registered")
+	}
+
+	p, err := plugin.Open(pluginPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't open plugin")
+	}
+
+	rec.plugin = p
+	return nil
+}
