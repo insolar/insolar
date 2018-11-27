@@ -166,3 +166,15 @@ func init() {
 func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
 }
+
+// GetObjectIndex fetches objects index.
+type GetObjectIndex struct {
+	ledgerMessage
+
+	Object core.RecordRef
+}
+
+// Type implementation of Message interface.
+func (*GetObjectIndex) Type() core.MessageType {
+	return core.TypeGetObjectIndex
+}
