@@ -13,10 +13,10 @@ CONFIGS_DIR=configs
 KEYS_FILE=scripts/insolard/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=scripts/insolard/$CONFIGS_DIR/root_member_keys.json
 CERTIFICATE_FILE=scripts/insolard/$CONFIGS_DIR/certificate.json
-TEST_DATA_SCRIPTS=scripts/insolard/nodes/
-FIRST_NODE=$TEST_DATA_SCRIPTS/first
-SECOND_NODE=$TEST_DATA_SCRIPTS/second
-THIRD_NODE=$TEST_DATA_SCRIPTS/third
+NODES_DATA=scripts/insolard/nodes/
+FIRST_NODE=$NODES_DATA/first
+SECOND_NODE=$NODES_DATA/second
+THIRD_NODE=$NODES_DATA/third
 
 DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
@@ -46,8 +46,8 @@ create_required_dirs()
     mkdir -p $TEST_DATA/functional
     mkdir -p $CONTRACT_STORAGE
     mkdir -p $LEDGER_DIR
-    mkdir -p $TEST_DATA_SCRIPTS
-    mkdir -p $TEST_DATA_SCRIPTS/certs
+    mkdir -p $NODES_DATA
+    mkdir -p $NODES_DATA/certs
     mkdir -p $FIRST_NODE
     mkdir -p $FIRST_NODE/data
     mkdir -p $SECOND_NODE
@@ -141,9 +141,9 @@ copy_data()
 
 copy_serts()
 {
-    cp $TEST_DATA_SCRIPTS/certs/discovery_cert_1.json $FIRST_NODE/cert.json
-    cp $TEST_DATA_SCRIPTS/certs/discovery_cert_2.json $SECOND_NODE/cert.json
-    cp $TEST_DATA_SCRIPTS/certs/discovery_cert_3.json $THIRD_NODE/cert.json
+    cp $NODES_DATA/certs/discovery_cert_1.json $FIRST_NODE/cert.json
+    cp $NODES_DATA/certs/discovery_cert_2.json $SECOND_NODE/cert.json
+    cp $NODES_DATA/certs/discovery_cert_3.json $THIRD_NODE/cert.json
 }
 
 trap stop_listening EXIT
@@ -161,7 +161,7 @@ generate_discovery_nodes_keys
 
 
 run_insgorund &
-$INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $TEST_DATA_SCRIPTS/certs
+$INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
 printf "genesis is done\n"
 
 copy_data
