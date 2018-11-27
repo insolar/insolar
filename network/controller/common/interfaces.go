@@ -25,5 +25,5 @@ import (
 type BootstrapController interface {
 	Start()
 	Bootstrap(ctx context.Context) error
-	GetBootstrapHosts() []*host.Host
+	GetChosenDiscoveryNode() *host.Host
 }

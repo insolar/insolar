@@ -35,7 +35,7 @@ type BootstrapController struct {
 	transport network.InternalTransport
 	pinger    *pinger.Pinger
 
-	bootstrapHosts []*host.Host
+	chosenDiscoveryNode *host.Host
 }
 
 type BootstrapRequest struct {
@@ -61,27 +61,27 @@ func init() {
 	gob.Register(&BootstrapResponse{})
 }
 
-func (bc *BootstrapController) GetBootstrapHosts() []*host.Host {
-	return bc.bootstrapHosts
+func (bc *BootstrapController) GetChosenDiscoveryNode() *host.Host {
+	return bc.chosenDiscoveryNode
 }
 
 func (bc *BootstrapController) Bootstrap(ctx context.Context) error {
 	if len(bc.options.BootstrapHosts) == 0 {
-		bc.bootstrapHosts = make([]*host.Host, 0)
 		return nil
 	}
 	ch := bc.getBootstrapHostsChannel(ctx)
-	hosts := bc.waitResultsFromChannel(ctx, ch)
+	host := bc.waitResultFromChannel(ctx, ch)
 
-	if len(hosts) == 0 {
+	if host == nil {
 		return errors.New("Failed to bootstrap to any of discovery nodes")
 	}
-	bc.bootstrapHosts = hosts
+	bc.chosenDiscoveryNode = host
 	return nil
 }
 
 func (bc *BootstrapController) getBootstrapHostsChannel(ctx context.Context) <-chan *host.Host {
-	bootstrapHosts := make(chan *host.Host, len(bc.options.BootstrapHosts))
+	// we need only one host to bootstrap
+	bootstrapHosts := make(chan *host.Host, 1)
 	for _, bootstrapAddress := range bc.options.BootstrapHosts {
 		go func(ctx context.Context, address string, ch chan<- *host.Host) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
@@ -96,19 +96,14 @@ func (bc *BootstrapController) getBootstrapHostsChannel(ctx context.Context) <-c
 	return bootstrapHosts
 }
 
-func (bc *BootstrapController) waitResultsFromChannel(ctx context.Context, ch <-chan *host.Host) []*host.Host {
-	result := make([]*host.Host, 0)
+func (bc *BootstrapController) waitResultFromChannel(ctx context.Context, ch <-chan *host.Host) *host.Host {
 	for {
 		select {
 		case bootstrapHost := <-ch:
-			result = append(result, bootstrapHost)
-			if len(result) == len(bc.options.BootstrapHosts) {
-				return result
-			}
+			return bootstrapHost
 		case <-time.After(bc.options.BootstrapTimeout):
-			inslogger.FromContext(ctx).Warnf("Bootstrap timeout, successful bootstraps: %d/%d",
-				len(result), len(bc.options.BootstrapHosts))
-			return result
+			inslogger.FromContext(ctx).Warnf("Bootstrap timeout")
+			return nil
 		}
 	}
 }
