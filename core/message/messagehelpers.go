@@ -45,7 +45,7 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.RecordRef
 	case *HeavyPayload:
 		return core.RecordRef{}
-	case *HotRecords:
+	case *HotIndexes:
 		return t.Jet
 	case *Parcel:
 		return ExtractTarget(t.Msg)
@@ -72,7 +72,7 @@ func ExtractRole(msg core.Message) core.JetRole {
 		*SetRecord,
 		*UpdateObject,
 		*ValidateRecord,
-		*HotRecords:
+		*HotIndexes:
 		return core.RoleLightExecutor
 	case *ValidateCaseBind:
 		return core.RoleVirtualValidator
@@ -133,7 +133,7 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		return nil, 0
 	case *ValidationResults:
 		return &t.RecordRef, core.RoleVirtualValidator
-	case *HotRecords:
+	case *HotIndexes:
 		return nil, 0
 	case *Parcel:
 		return ExtractAllowedSenderObjectAndRole(t.Msg)

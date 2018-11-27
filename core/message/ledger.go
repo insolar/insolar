@@ -168,17 +168,23 @@ func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
 }
 
-// HotRecords contains hot-data
-type HotRecords struct {
+// HotIndexes contains hot-data
+type HotIndexes struct {
 	ledgerMessage
 	Jet             core.RecordRef
 	Drop            []byte
-	RecentObjects   []*index.ObjectLifeline
-	PendingRequests []*index.ObjectLifeline
+	RecentObjects   map[core.RecordID]*HotIndex
+	PendingRequests map[core.RecordID]*HotIndex
 	PulseNumber     core.PulseNumber
 }
 
+// HotIndex contains meat about hot-data
+type HotIndex struct {
+	Meta core.RecentObjectsIndexMeta
+	Index *index.ObjectLifeline
+}
+
 // Type implementation of Message interface.
-func (*HotRecords) Type() core.MessageType {
+func (*HotIndexes) Type() core.MessageType {
 	return core.TypeHotRecords
 }

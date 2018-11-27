@@ -166,7 +166,7 @@ func (m *PulseManager) processRecentObjects(
 	recentRequests := m.getIndexes(ctx, recentRequestsIds)
 	recentObjects := m.getIndexes(ctx, recentObjectsIdsConverted)
 
-	msg := &message.HotRecords{
+	msg := &message.HotIndexes{
 		Drop:            dropSerialized,
 		PulseNumber:     *latestPulse.Prev,
 		RecentObjects:   recentObjects,
