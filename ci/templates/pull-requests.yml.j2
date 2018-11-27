@@ -66,7 +66,10 @@ jobs:
       platform: linux
       image_resource:
         type: docker-image
-        source: {repository: registry.ins.world/builder}
+        source: 
+          repository: registry.ins.world/builder
+          username: ((meta.registry.username))
+          password: ((meta.registry.password))
       inputs:
       - name: pull-request-{{ pull.number }}
         path: /go/src/github.com/insolar/insolar
