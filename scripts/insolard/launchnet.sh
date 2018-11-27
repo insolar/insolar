@@ -5,6 +5,7 @@ BIN_DIR=bin
 TEST_DATA=testdata
 INSOLARD=$BIN_DIR/insolard
 INSGORUND=$BIN_DIR/insgorund
+PULSARD=$BIN_DIR/pulsard
 CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
 INSGORUND_LISTEN_PORT=18181
@@ -159,8 +160,13 @@ generate_root_member_keys
 generate_certificate
 generate_discovery_nodes_keys
 
+printf "start pulsar ... \n"
+$PULSARD -c scripts/insolard/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
 
+printf "start insgorund ... \n"
 run_insgorund &
+
+printf "start genesis ... \n"
 $INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
 printf "genesis is done\n"
 
