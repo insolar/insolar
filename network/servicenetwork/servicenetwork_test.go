@@ -41,13 +41,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
+func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) (network.NodeKeeper, core.Node) {
 	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
 	keeper := nodenetwork.NewNodeKeeper(origin)
 	if isBootstrap {
 		keeper.AddActiveNodes([]core.Node{origin})
 	}
-	return keeper
+	return keeper, origin
 }
 
 func mockCryptographyService(t *testing.T) core.CryptographyService {
@@ -72,7 +72,7 @@ func mockParcelFactory(t *testing.T) message.ParcelFactory {
 	return parcelFactory
 }
 
-func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) (core.CryptographyService, network.NodeKeeper) {
+func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) (core.CryptographyService, network.NodeKeeper, core.Node) {
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 	cs := cryptography.NewKeyBoundCryptographyService(key)
@@ -81,10 +81,10 @@ func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBoots
 	_, err := certificate.NewCertificatesWithKeys(pk, kp)
 
 	require.NoError(t, err)
-	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
+	keeper, origin := newTestNodeKeeper(nodeID, address, isBootstrap)
 
 	mock := mockCryptographyService(t)
-	return mock, keeper
+	return mock, keeper, origin
 }
 
 func TestNewServiceNetwork(t *testing.T) {
@@ -120,7 +120,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.TODO()
-	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, testutils.RandomRef(), "", true)
+	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper, _ = initComponents(t, testutils.RandomRef(), "", true)
 
 	err = serviceNetwork.Init(context.Background())
 	require.NoError(t, err)
@@ -174,12 +174,15 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		secondNodeId), scheme)
 	require.NoError(t, err)
 
-	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
+	var fNode, sNode core.Node
+	secondNode.CryptographyService, secondNode.NodeKeeper, fNode = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
 	err = secondNode.Init(context.Background())
 	require.NoError(t, err)
 	err = secondNode.Start(ctx)
 	require.NoError(t, err)
-	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
+	firstNode.CryptographyService, firstNode.NodeKeeper, sNode = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
+	firstNode.NodeKeeper.AddActiveNodes([]core.Node{fNode, sNode})
+	secondNode.NodeKeeper.AddActiveNodes([]core.Node{fNode, sNode})
 
 	err = firstNode.Init(context.Background())
 	require.NoError(t, err)
@@ -232,14 +235,15 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		secondNodeId), scheme)
 	require.NoError(t, err)
 
-	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
+	var fNode, sNode core.Node
+	secondNode.CryptographyService, secondNode.NodeKeeper, fNode = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
 	err = secondNode.Init(context.Background())
 	require.NoError(t, err)
 	err = secondNode.Start(ctx)
 	require.NoError(t, err)
-
-	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
-
+	firstNode.CryptographyService, firstNode.NodeKeeper, sNode = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
+	firstNode.NodeKeeper.AddActiveNodes([]core.Node{fNode, sNode})
+	secondNode.NodeKeeper.AddActiveNodes([]core.Node{fNode, sNode})
 	err = firstNode.Init(context.Background())
 	require.NoError(t, err)
 	err = firstNode.Start(ctx)
