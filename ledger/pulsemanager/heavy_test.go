@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -98,8 +99,10 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	kb := 1 << 10
 	pm := pulsemanager.NewPulseManager(
 		db,
-		pulsemanager.EnableSync(true),
-		pulsemanager.SyncMessageLimit(2*kb),
+		configuration.PulseManager{
+			HeavySyncEnabled:      true,
+			HeavySyncMessageLimit: 2 * kb,
+		},
 	)
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
