@@ -20,10 +20,10 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/testutils"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +33,12 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	ctx, db, _, cleaner := getTestData(t)
 	defer cleaner()
 
-	mh := NewMessageHandler(db, storage.NewRecentStorage(0), nil)
+	mh := NewMessageHandler(db, nil)
+	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+	mh.Recent = recentStorageMock
 
 	payload := []core.KV{
 		{K: []byte("ABC"), V: []byte("CDE")},

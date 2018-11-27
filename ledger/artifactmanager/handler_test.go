@@ -11,7 +11,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -29,9 +28,14 @@ func TestMessageHandler_HandleGetObject(t *testing.T) {
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}}, nil)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, &configuration.ArtifactManager{
 		LightChainLimit: 3,
 	})
+	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+	h.Recent = recentStorageMock
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 
