@@ -72,7 +72,11 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm.NodeNet = c.NodeNetwork
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
-	handler.Recent = testutils.NewRecentStorageMock(t)
+
+	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	handler.Recent = recentStorageMock
 
 	err := handler.Init(ctx)
 	if err != nil {
