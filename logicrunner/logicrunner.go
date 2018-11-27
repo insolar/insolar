@@ -41,8 +41,7 @@ type Ref = core.RecordRef
 // Context of one contract execution
 type ExecutionState struct {
 	sync.Mutex
-	Ref    *Ref
-	Method string
+	Ref *Ref
 
 	validate    bool
 	insContext  context.Context
@@ -92,7 +91,6 @@ func (es *ExecutionState) ErrorWrap(err error, message string) error {
 		Err:      err,
 		Request:  es.request,
 		Contract: es.Ref,
-		Method:   es.Method,
 	}
 }
 
@@ -330,13 +328,11 @@ func (lr *LogicRunner) executeOrValidate(
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
-		es.Method = m.Method
 		fuse = false
 		re, err := lr.executeMethodCall(es, m, vb)
 		return re, err
 
 	case *message.CallConstructor:
-		es.Method = m.Name
 		fuse = false
 		re, err := lr.executeConstructorCall(es, m, vb)
 		return re, err
