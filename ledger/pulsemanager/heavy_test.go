@@ -22,7 +22,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/dgraph-io/badger"
 	"github.com/stretchr/testify/assert"
@@ -71,9 +73,14 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 		keys []key
 	}
 	syncmessagesPerMessage := map[int]*messageStat{}
+	var bussendfailed int32
 	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
+			if atomic.AddInt32(&bussendfailed, 1) < 2 {
+				return nil, fmt.Errorf("BusMock one send should be failed (test retry)")
+			}
+
 			syncsended++
 			var size int
 			var keys []key
@@ -137,6 +144,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	time.Sleep(300 * time.Millisecond)
 	err = pm.Stop(ctx)
 	assert.NoError(t, err)
 
