@@ -261,7 +261,9 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+func (h *MessageHandler) handleGetChildren(
+	ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel,
+) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
@@ -289,6 +291,23 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 		currentChild = idx.ChildPointer
 	}
 
+	// We don't have this child reference.
+	if currentChild != nil && currentChild.Pulse() != pulseNumber {
+		var nodes []core.RecordRef
+		if pulseNumber-currentChild.Pulse() < h.conf.LightChainLimit {
+			// Find light executor that saved the state.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.RoleLightExecutor, &msg.Parent, currentChild.Pulse(),
+			)
+		} else {
+			// Find heavy that has this object.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.RoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse(),
+			)
+		}
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
+	}
+
 	counter := 0
 	for currentChild != nil {
 		// We have enough results.
@@ -298,24 +317,14 @@ func (h *MessageHandler) handleGetChildren(ctx context.Context, pulseNumber core
 		counter++
 
 		rec, err := h.db.GetRecord(ctx, currentChild)
+		// We don't have this child reference. Return what was collected.
+		if err == storage.ErrNotFound {
+			break
+		}
 		if err != nil {
 			return nil, errors.New("failed to retrieve children")
 		}
-		if err == storage.ErrNotFound {
-			var nodes []core.RecordRef
-			if pulseNumber-currentChild.Pulse() < h.conf.LightChainLimit {
-				// Find light executor that saved the state.
-				nodes, err = h.JetCoordinator.QueryRole(
-					ctx, core.RoleLightExecutor, &msg.Parent, currentChild.Pulse(),
-				)
-			} else {
-				// Find heavy that has this object.
-				nodes, err = h.JetCoordinator.QueryRole(
-					ctx, core.RoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse(),
-				)
-			}
-			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
-		}
+
 		childRec, ok := rec.(*record.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
