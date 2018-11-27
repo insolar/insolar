@@ -143,6 +143,20 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 	return nil
 }
 
+func (m *PulseManager) getIndexes(ctx context.Context, ids []core.RecordID) []*index.ObjectLifeline {
+	recentObjects := make([]*index.ObjectLifeline, 0, len(ids))
+	for _, id := range ids {
+		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
+
+		recentObjects = append(recentObjects, lifeline)
+	}
+
+	return recentObjects
+}
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	// Ensure this does not execute in parallel.
