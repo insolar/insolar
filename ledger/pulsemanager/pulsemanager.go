@@ -19,6 +19,7 @@ package pulsemanager
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -37,9 +38,9 @@ type PulseManager struct {
 	Bus     core.MessageBus  `inject:""`
 	NodeNet core.NodeNetwork `inject:""`
 	// setLock locks Set method call.
-	setLock  sync.Mutex
-	stopLock sync.RWMutex
-	stopped  bool
+	setLock sync.Mutex
+	stopped bool
+	stop    chan struct{}
 	// gotpulse signals if there is something to sync to Heavy
 	gotpulse chan struct{}
 	// syncdone closes when sync is over
@@ -61,6 +62,7 @@ func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseMana
 	}
 	pm.options.enablesync = conf.HeavySyncEnabled
 	pm.options.syncmessagelimit = conf.HeavySyncMessageLimit
+
 	return pm
 }
 
@@ -172,6 +174,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		return err
 	}
 	m.syncdone = make(chan struct{})
+	m.stop = make(chan struct{})
 	if m.options.enablesync {
 		go m.syncloop(ctx, startPN, endPN)
 	}
@@ -181,9 +184,10 @@ func (m *PulseManager) Start(ctx context.Context) error {
 // Stop stops PulseManager. Waits replication goroutine is done.
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
-	m.stopLock.Lock()
+	m.setLock.Lock()
 	m.stopped = true
-	m.stopLock.Unlock()
+	m.setLock.Unlock()
+	close(m.stop)
 
 	if m.options.enablesync {
 		close(m.gotpulse)
@@ -198,9 +202,11 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 
 	var err error
 	inslog := inslogger.FromContext(ctx)
+	var retrydelay time.Duration
 	for {
-		if m.isstopped() {
-			// probably we won't do next syncs if got stop signal
+		select {
+		case <-time.After(retrydelay):
+		case <-m.stop:
 			return
 		}
 		for {
@@ -231,9 +237,9 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 		if syncerr != nil {
 			syncerr = errors.Wrap(syncerr, "HeavySync failed")
 			inslog.Error(syncerr.Error())
-			// TODO: add sleep and some retry logic here?
 			continue
 		}
+
 		err = m.db.SetReplicatedPulse(ctx, start)
 		if err != nil {
 			err = errors.Wrap(err,
@@ -241,16 +247,11 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 			inslog.Error(err)
 			panic(err)
 		}
+
 		start = next
 		if start == end {
 			start = 0
 		}
+		retrydelay = 0
 	}
-}
-
-func (m *PulseManager) isstopped() (stopped bool) {
-	m.stopLock.RLock()
-	stopped = m.stopped
-	m.stopLock.RUnlock()
-	return
 }
