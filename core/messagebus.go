@@ -51,7 +51,8 @@ type Parcel interface {
 
 	Message() Message
 	Context(context.Context) context.Context
-	DelegationToken() []byte
+
+	DelegationToken() DelegationToken
 }
 
 // Reply for an `Message`
@@ -60,11 +61,35 @@ type Reply interface {
 	Type() ReplyType
 }
 
+// RedirectReply is used to create redirected messages.
+type RedirectReply interface {
+	// Redirected creates redirected message from redirect data.
+	Redirected(genericMsg Message) Message
+	// GetReceiver returns node reference to send message to.
+	GetReceiver() *RecordRef
+	// GetToken returns delegation token.
+	GetToken() DelegationToken
+}
+
+// MessageSendOptions represents options for message sending.
+type MessageSendOptions struct {
+	Receiver *RecordRef
+	Token    DelegationToken
+}
+
+// Safe returns original options, falling back on defaults if nil.
+func (o *MessageSendOptions) Safe() *MessageSendOptions {
+	if o == nil {
+		return &MessageSendOptions{}
+	}
+	return o
+}
+
 // MessageBus interface
 //go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(context.Context, Message) (Reply, error)
+	Send(context.Context, Message, *MessageSendOptions) (Reply, error)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.
@@ -82,6 +107,11 @@ type MessageBus interface {
 
 	// WriteTape writes recorder's tape to the provided writer.
 	WriteTape(ctx context.Context, writer io.Writer) error
+}
+
+type GlobalInsolarLock interface {
+	Acquire(context.Context)
+	Release(context.Context)
 }
 
 type messageBusKey struct{}
@@ -146,6 +176,13 @@ const (
 	// TypeSetBlob saves blob in storage.
 	TypeSetBlob
 
+	// Heavy replication
+
+	// TypeHeavyStartStop carries start/stop signal for heavy replication.
+	TypeHeavyStartStop
+	// TypeHeavyPayload carries Key/Value records for replication to Heavy Material node.
+	TypeHeavyPayload
+
 	// Bootstrap
 
 	// TypeBootstrapRequest used for bootstrap object generation.
@@ -158,5 +195,7 @@ type DelegationTokenType byte
 //go:generate stringer -type=DelegationTokenType
 const (
 	// DTTypePendingExecution allows to continue method calls
-	DTTypePendingExecution DelegationTokenType = iota
+	DTTypePendingExecution DelegationTokenType = iota + 1
+	DTTypeGetObjectRedirect
+	DTTypeGetChildrenRedirect
 )

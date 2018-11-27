@@ -46,15 +46,16 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	db, dbcancel := storagetest.TmpDB(ctx, t, dir)
+	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
-	handler := artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(0))
+	handler := artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(0), nil)
 	handler.PlatformCryptographyScheme = pcs
+
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
 	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	jc.PlatformCryptographyScheme = pcs
-	pm := pulsemanager.NewPulseManager(db)
+	pm := pulsemanager.NewPulseManager(db, conf.PulseManager)
 	ls := localstorage.NewLocalStorage(db)
 
 	// Init components.

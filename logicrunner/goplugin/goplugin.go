@@ -74,8 +74,8 @@ func (gp *GoPlugin) Stop() error {
 
 const timeout = time.Minute * 10
 
-// downstream returns a connection to `ginsider`
-func (gp *GoPlugin) downstream(ctx context.Context) (*rpc.Client, error) {
+// Downstream returns a connection to `ginsider`
+func (gp *GoPlugin) Downstream(ctx context.Context) (*rpc.Client, error) {
 	gp.clientMutex.Lock()
 	defer gp.clientMutex.Unlock()
 
@@ -95,7 +95,7 @@ func (gp *GoPlugin) downstream(ctx context.Context) (*rpc.Client, error) {
 	return gp.client, nil
 }
 
-func (gp *GoPlugin) closeDownstream() {
+func (gp *GoPlugin) CloseDownstream() {
 	gp.clientMutex.Lock()
 	defer gp.clientMutex.Unlock()
 
@@ -108,7 +108,8 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 	var client *rpc.Client
 
 	for {
-		client, err = gp.downstream(ctx)
+		inslogger.FromContext(ctx).Debug("Connect to insgorund")
+		client, err = gp.Downstream(ctx)
 		if err == nil {
 			call := <-client.Go(method, req, res, nil).Done
 			err = call.Error
@@ -116,23 +117,28 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 			if err != rpc.ErrShutdown {
 				break
 			} else {
-				gp.closeDownstream()
+				inslogger.FromContext(ctx).Debug("Connection to insgorund is closed, need to reconnect")
+				gp.CloseDownstream()
+				inslogger.FromContext(ctx).Debug("Reconnecting...")
 			}
+		} else {
+			inslogger.FromContext(ctx).Debugf("Can't connect to to insgorund, err: $+v", err)
+			inslogger.FromContext(ctx).Debug("Reconnecting...")
 		}
 	}
 
 	return err
 }
 
-type callMethodResult struct {
+type CallMethodResult struct {
 	Response rpctypes.DownCallMethodResp
 	Error    error
 }
 
-func (gp *GoPlugin) callMethodRPC(ctx context.Context, req rpctypes.DownCallMethodReq, res rpctypes.DownCallMethodResp, resultChan chan callMethodResult) {
+func (gp *GoPlugin) CallMethodRPC(ctx context.Context, req rpctypes.DownCallMethodReq, res rpctypes.DownCallMethodResp, resultChan chan CallMethodResult) {
 	method := "RPC.CallMethod"
 	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
-	resultChan <- callMethodResult{Response: res, Error: callClientError}
+	resultChan <- CallMethodResult{Response: res, Error: callClientError}
 }
 
 // CallMethod runs a method on an object in controlled environment
@@ -154,8 +160,8 @@ func (gp *GoPlugin) CallMethod(
 		Arguments: args,
 	}
 
-	resultChan := make(chan callMethodResult)
-	go gp.callMethodRPC(ctx, req, res, resultChan)
+	resultChan := make(chan CallMethodResult)
+	go gp.CallMethodRPC(ctx, req, res, resultChan)
 
 	select {
 	case callResult := <-resultChan:
@@ -169,15 +175,15 @@ func (gp *GoPlugin) CallMethod(
 	}
 }
 
-type callConstructorResult struct {
+type CallConstructorResult struct {
 	Response rpctypes.DownCallConstructorResp
 	Error    error
 }
 
-func (gp *GoPlugin) callConstructorRPC(ctx context.Context, req rpctypes.DownCallConstructorReq, res rpctypes.DownCallConstructorResp, resultChan chan callConstructorResult) {
+func (gp *GoPlugin) CallConstructorRPC(ctx context.Context, req rpctypes.DownCallConstructorReq, res rpctypes.DownCallConstructorResp, resultChan chan CallConstructorResult) {
 	method := "RPC.CallConstructor"
 	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
-	resultChan <- callConstructorResult{Response: res, Error: callClientError}
+	resultChan <- CallConstructorResult{Response: res, Error: callClientError}
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
@@ -196,8 +202,8 @@ func (gp *GoPlugin) CallConstructor(
 		Arguments: args,
 	}
 
-	resultChan := make(chan callConstructorResult)
-	go gp.callConstructorRPC(ctx, req, res, resultChan)
+	resultChan := make(chan CallConstructorResult)
+	go gp.CallConstructorRPC(ctx, req, res, resultChan)
 
 	select {
 	case callResult := <-resultChan:

@@ -26,7 +26,7 @@ import (
 )
 
 type ParcelFactory interface {
-	Create(context.Context, core.Message, core.RecordRef) (core.Parcel, error)
+	Create(context.Context, core.Message, core.RecordRef, core.DelegationToken) (core.Parcel, error)
 	Validate(crypto.PublicKey, core.Parcel) error
 }
 
@@ -37,7 +37,7 @@ type Parcel struct {
 	Signature     []byte
 	LogTraceID    string
 	TraceSpanData []byte
-	Token         []byte
+	Token         core.DelegationToken
 }
 
 // Message returns current instance's message
@@ -52,7 +52,7 @@ func (sm *Parcel) Context(ctx context.Context) context.Context {
 	return instracer.WithParentSpan(ctx, parentspan)
 }
 
-func (sm *Parcel) DelegationToken() []byte {
+func (sm *Parcel) DelegationToken() core.DelegationToken {
 	return sm.Token
 }
 
@@ -74,6 +74,6 @@ func (sm *Parcel) GetSender() core.RecordRef {
 	return sm.Sender
 }
 
-func (sm *Parcel) AddDelegationToken(token []byte) {
+func (sm *Parcel) AddDelegationToken(token core.DelegationToken) {
 	sm.Token = token
 }

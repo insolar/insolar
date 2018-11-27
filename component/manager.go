@@ -65,7 +65,7 @@ func (m *Manager) mustInject(component reflect.Value, fieldMeta reflect.StructFi
 			field := component.FieldByName(fieldMeta.Name)
 			field.Set(reflect.ValueOf(componentMeta))
 
-			log.Infof(
+			log.Debugf(
 				"ComponentManager: Inject interface %s with %s: ",
 				field.Type().String(),
 				componentType.String(),
@@ -87,13 +87,13 @@ func (m *Manager) Start(ctx context.Context) error {
 	for _, c := range m.components {
 		name := reflect.TypeOf(c).Elem().String()
 		if s, ok := c.(Starter); ok {
-			log.Infoln("ComponentManager: Start component: ", name)
+			log.Debugln("ComponentManager: Start component: ", name)
 			err := s.Start(ctx)
 			if err != nil {
 				return errors.Wrap(err, "Failed to start components.")
 			}
 		} else {
-			log.Warnf("ComponentManager: Component %s has no Start method", name)
+			log.Debug("ComponentManager: Component %s has no Start method", name)
 		}
 	}
 	return nil
@@ -108,7 +108,7 @@ func (m *Manager) Init(ctx context.Context) error {
 			log.Debugf("ComponentManager: Component %s has no Init method", name)
 			continue
 		}
-		log.Infoln("ComponentManager: Init component: ", name)
+		log.Debugln("ComponentManager: Init component: ", name)
 		err := s.Init(ctx)
 		if err != nil {
 			return errors.Wrap(err, "Failed to init components.")
@@ -123,14 +123,14 @@ func (m *Manager) Stop(ctx context.Context) error {
 	for i := len(m.components) - 1; i >= 0; i-- {
 		name := reflect.TypeOf(m.components[i]).Elem().String()
 		if s, ok := m.components[i].(Stopper); ok {
-			log.Infoln("ComponentManager: Stop component: ", name)
+			log.Debugln("ComponentManager: Stop component: ", name)
 
 			err := s.Stop(ctx)
 			if err != nil {
 				return errors.Wrap(err, "Failed to stop components.")
 			}
 		} else {
-			log.Warnf("ComponentManager: Component %s has no Stop method", name)
+			log.Debugf("ComponentManager: Component %s has no Stop method", name)
 		}
 	}
 	return nil

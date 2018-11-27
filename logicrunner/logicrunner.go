@@ -44,7 +44,6 @@ type ExecutionState struct {
 	Ref    *Ref
 	Method string
 
-	noWait      bool
 	validate    bool
 	insContext  context.Context
 	callContext *core.LogicCallContext
@@ -52,6 +51,9 @@ type ExecutionState struct {
 	request     *Ref
 	traceID     string
 	queueLength int
+
+	caseBind      core.CaseBind
+	caseBindMutex sync.Mutex
 
 	objectbody *ObjectBody
 }
@@ -111,6 +113,31 @@ func (es *ExecutionState) ReleaseQueue() {
 	}
 }
 
+func (es *ExecutionState) AddCaseRequest(record core.CaseRecord) {
+	es.caseBindMutex.Lock()
+	defer es.caseBindMutex.Unlock()
+
+	es.caseBind.Requests = append(es.caseBind.Requests, core.CaseRequest{
+		Request: record,
+		Records: make([]core.CaseRecord, 0),
+	})
+}
+
+func (es *ExecutionState) AddCaseRecord(record core.CaseRecord) {
+	es.caseBindMutex.Lock()
+	defer es.caseBindMutex.Unlock()
+
+	requests := es.caseBind.Requests
+	if len(requests) == 0 {
+		panic("attempt to add record into case bind before any requests were added")
+	}
+
+	lastRequest := requests[len(requests)-1]
+	lastRequest.Records = append(lastRequest.Records, record)
+	requests[len(requests)-1] = lastRequest
+	es.caseBind.Requests = requests
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
@@ -129,10 +156,6 @@ type LogicRunner struct {
 	execution      map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
 	executionMutex sync.Mutex
 
-	// TODO move caseBind to context
-	caseBind      core.CaseBind
-	caseBindMutex sync.Mutex
-
 	caseBindReplays      map[Ref]core.CaseBindReplay
 	caseBindReplaysMutex sync.Mutex
 	consensus            map[Ref]*Consensus
@@ -148,7 +171,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		Cfg:             cfg,
 		execution:       make(map[Ref]*ExecutionState),
-		caseBind:        core.CaseBind{Records: make(map[Ref][]core.CaseRecord)},
 		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
 	return &res, nil
@@ -179,25 +201,17 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 		lr.machinePrefs = append(lr.machinePrefs, core.MachineTypeGoPlugin)
 	}
 
-	// TODO: use separate handlers
-	if err := lr.MessageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
-		return err
-	}
-	if err := lr.MessageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
-		return err
-	}
-
-	if err := lr.MessageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
-		return err
-	}
-	if err := lr.MessageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
-		return err
-	}
-	if err := lr.MessageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
-		return err
-	}
+	lr.RegisterHandlers()
 
 	return nil
+}
+
+func (lr *LogicRunner) RegisterHandlers() {
+	lr.MessageBus.MustRegister(core.TypeCallMethod, lr.Execute)
+	lr.MessageBus.MustRegister(core.TypeCallConstructor, lr.Execute)
+	lr.MessageBus.MustRegister(core.TypeExecutorResults, lr.ExecutorResults)
+	lr.MessageBus.MustRegister(core.TypeValidateCaseBind, lr.ValidateCaseBind)
+	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.ProcessValidationResults)
 }
 
 // Stop stops logic runner component and its executors
@@ -222,6 +236,21 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 	return reterr
 }
 
+func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.JetRole) error {
+	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
+	target := message.ExtractTarget(msg)
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
+		ctx, role, &target, lr.pulse(ctx).PulseNumber, lr.Network.GetNodeID(),
+	)
+	if err != nil {
+		return errors.Wrap(err, "authorization failed with error")
+	}
+	if !isAuthorized {
+		return errors.New("can't execute this object")
+	}
+	return nil
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg, ok := parcel.Message().(message.IBaseLogicMessage)
@@ -231,12 +260,17 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	ref := msg.GetReference()
 
 	es := lr.UpsertExecution(ref)
+
+	err := lr.CheckOurRole(ctx, msg, core.RoleVirtualExecutor)
+	if err != nil {
+		return nil, es.ErrorWrap(err, "can't play role")
+	}
+
 	if es.traceID == inslogger.TraceID(ctx) {
 		return nil, es.ErrorWrap(nil, "loop detected")
 	}
 	entryPulse := lr.pulse(ctx).PulseNumber
 
-	fuse := true
 	es.Lock()
 
 	// unlock comes from OnPulse()
@@ -245,43 +279,29 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, es.ErrorWrap(nil, "abort execution: new Pulse coming")
 	}
 
+	return lr.executeOrValidate(ctx, es, ValidationSaver{lr: lr}, parcel)
+}
+
+func (lr *LogicRunner) executeOrValidate(
+	ctx context.Context, es *ExecutionState, vb ValidationBehaviour, parcel core.Parcel,
+) (
+	core.Reply, error,
+) {
+	fuse := true
 	defer func() {
 		if fuse {
 			es.Unlock()
 		}
 	}()
+
+	msg := parcel.Message().(message.IBaseLogicMessage)
+
+	ref := *es.Ref
+
 	es.traceID = inslogger.TraceID(ctx)
 	es.insContext = ctx
 
-	lr.caseBindReplaysMutex.Lock()
-	cb, validate := lr.caseBindReplays[ref]
-	lr.caseBindReplaysMutex.Unlock()
-
-	var vb ValidationBehaviour
-	if validate {
-		vb = ValidationChecker{lr: lr, cb: cb}
-	} else {
-		vb = ValidationSaver{lr: lr}
-	}
-
-	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	target := message.ExtractTarget(msg)
-	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx,
-		vb.GetRole(),
-		&target,
-		lr.pulse(ctx).PulseNumber,
-		lr.Network.GetNodeID(),
-	)
-
-	if err != nil {
-		return nil, es.ErrorWrap(err, "authorization failed with error")
-	}
-	if !isAuthorized {
-		return nil, es.ErrorWrap(err, "can't execute this object")
-	}
-
-	vb.Begin(ref, core.CaseRecord{
+	es.AddCaseRequest(core.CaseRecord{
 		Type: core.CaseRecordTypeStart,
 		Resp: msg,
 	})
@@ -291,8 +311,8 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		Resp: inslogger.TraceID(ctx),
 	})
 
+	var err error
 	es.request, err = vb.RegisterRequest(parcel)
-
 	if err != nil {
 		return nil, es.ErrorWrap(err, "can't create request")
 	}
@@ -419,9 +439,9 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
 	ctx := es.insContext
 
-	es.noWait = false
+	delayedUnlock := false
 	defer func() {
-		if !es.noWait {
+		if !delayedUnlock {
 			es.Unlock()
 		}
 	}()
@@ -432,6 +452,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	}
 
 	es.callContext.Prototype = es.objectbody.ClassHeadRef
+	es.callContext.Code = es.objectbody.CodeRef
 	es.callContext.Parent = es.objectbody.Parent
 
 	vb.ModifyContext(es.callContext)
@@ -441,12 +462,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, es.ErrorWrap(err, "no executor registered")
 	}
 
-	executer := func() (*reply.CallMethod, error) {
-		defer func() {
-			if es.noWait {
-				es.Unlock()
-			}
-		}()
+	executeFunction := func() (*reply.CallMethod, error) {
 		newData, result, err := executor.CallMethod(
 			ctx, es.callContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
 		)
@@ -461,9 +477,11 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 					ctx, Ref{}, *es.request, es.objectbody.objDescriptor,
 				)
 			} else {
-				es.objectbody.objDescriptor, err = am.UpdateObject(
-					ctx, Ref{}, *es.request, es.objectbody.objDescriptor, newData,
-				)
+				od, e := am.UpdateObject(ctx, Ref{}, *es.request, es.objectbody.objDescriptor, newData)
+				err = e
+				if od != nil && e == nil {
+					es.objectbody.objDescriptor = od
+				}
 			}
 			if err != nil {
 				return nil, es.ErrorWrap(err, "couldn't update object")
@@ -472,7 +490,6 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			if err != nil {
 				return nil, es.ErrorWrap(err, "couldn't save results")
 			}
-
 		}
 
 		es.objectbody.Object = newData
@@ -487,11 +504,12 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 
 	switch m.ReturnMode {
 	case message.ReturnResult:
-		return executer()
+		return executeFunction()
 	case message.ReturnNoWait:
-		es.noWait = true
+		delayedUnlock = true
 		go func() {
-			_, err := executer()
+			defer es.Unlock()
+			_, err := executeFunction()
 			if err != nil {
 				inslogger.FromContext(ctx).Error(err)
 			}
@@ -503,11 +521,9 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 
 func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
 	ctx := es.insContext
-	defer func() {
-		es.Unlock()
-	}()
+	defer es.Unlock()
 
-	if es.callContext.Caller.Equal(Ref{}) {
+	if es.callContext.Caller.IsEmpty() {
 		return nil, es.ErrorWrap(nil, "Call constructor from nowhere")
 	}
 
@@ -525,6 +541,8 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	if err != nil {
 		return nil, es.ErrorWrap(err, "couldn't code")
 	}
+	es.callContext.Code = codeDesc.Ref()
+
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, es.ErrorWrap(err, "no executer registered")
@@ -555,31 +573,34 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	lr.RefreshConsensus()
-	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
-	objectsRecords := lr.refreshCaseBind()
 
-	if len(objectsRecords) == 0 {
-		return nil
-	}
+	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
+
+	lr.executionMutex.Lock()
+	defer lr.executionMutex.Unlock()
+
+	messages := make([]core.Message, 0)
 
 	// send copy for validation
-	for ref, records := range objectsRecords {
-		_, err := lr.MessageBus.Send(
-			ctx,
-			&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse},
+	for ref, state := range lr.execution {
+		messages = append(
+			messages,
+			&message.ValidateCaseBind{RecordRef: ref, CaseBind: state.caseBind, Pulse: pulse},
+			&message.ExecutorResults{RecordRef: ref, CaseBind: state.caseBind},
 		)
-		if err != nil {
-			panic("Error while sending caseBind data to validators: " + err.Error())
-		}
 
-		results := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
-		_, err = lr.MessageBus.Send(ctx, &results)
+		// release unprocessed request
+		state.ReleaseQueue()
+	}
+
+	// TODO: this not exactly correct
+	lr.execution = make(map[Ref]*ExecutionState)
+
+	for _, msg := range messages {
+		_, err := lr.MessageBus.Send(ctx, msg, nil)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}
-
-		// release unprocessed request
-		lr.execution[ref].ReleaseQueue()
 	}
 
 	return nil

@@ -18,7 +18,11 @@ package genesis
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
+	"io/ioutil"
+	"log"
+	"path"
 	"strconv"
 
 	"github.com/insolar/insolar/application/contract/member"
@@ -26,8 +30,10 @@ import (
 	"github.com/insolar/insolar/application/contract/noderecord"
 	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/application/contract/wallet"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
@@ -52,38 +58,23 @@ type Genesis struct {
 	prototypeRefs   map[string]*core.RecordRef
 	isGenesis       bool
 	config          *genesisConfig
+	keyOut          string
 	ArtifactManager core.ArtifactManager `inject:""`
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
 	Network         core.Network         `inject:""`
-}
-
-// Info returns json with references for info api endpoint
-func (g *Genesis) Info() ([]byte, error) {
-	prototypes := map[string]string{}
-	for prototype, ref := range g.prototypeRefs {
-		prototypes[prototype] = ref.String()
-	}
-	return json.MarshalIndent(map[string]interface{}{
-		"root_domain": g.rootDomainRef.String(),
-		"root_member": g.rootMemberRef.String(),
-		"prototypes":  prototypes,
-	}, "", "   ")
-}
-
-// GetRootDomainRef returns reference to RootDomain instance
-func (g *Genesis) GetRootDomainRef() *core.RecordRef {
-	return g.rootDomainRef
+	Certificate     core.Certificate     `inject:""`
 }
 
 // NewGenesis creates new Genesis
-func NewGenesis(isGenesis bool, genesisConfigPath string) (*Genesis, error) {
+func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) (*Genesis, error) {
 	var err error
 	genesis := &Genesis{}
 	genesis.rootDomainRef = &core.RecordRef{}
 	genesis.isGenesis = isGenesis
 	if isGenesis {
 		genesis.config, err = parseGenesisConfig(genesisConfigPath)
+		genesis.keyOut = genesisKeyOut
 	}
 	return genesis, err
 }
@@ -138,6 +129,7 @@ func (g *Genesis) activateRootDomain(
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	g.rootDomainRef = contract
+	g.Certificate.SetRootDomainReference(contract)
 
 	return contractID, desc, nil
 }
@@ -300,14 +292,22 @@ func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestut
 	return nil
 }
 
-func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
+type genesisNode struct {
+	node    core.BootstrapNode
+	privKey crypto.PrivateKey
+	ref     *core.RecordRef
+	role    string
+}
+
+func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestutils.ContractsBuilder) ([]genesisNode, error) {
+
+	nodes := make([]genesisNode, len(g.config.DiscoveryNodes))
 
 	for i, discoverNode := range g.config.DiscoveryNodes {
-		/*_, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
+		privKey, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
 		if err != nil {
 			log.Fatal(err)
-		}*/
-		nodePubKey := ""
+		}
 
 		nodeState := &noderecord.NodeRecord{
 			Record: noderecord.RecordInfo{
@@ -317,12 +317,12 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 		}
 		nodeData, err := serializeInstance(nodeState)
 		if err != nil {
-			return errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't serialize discovery node instance")
+			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't serialize discovery node instance")
 		}
 
 		nodeID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)}})
 		if err != nil {
-			return errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't register request to artifact manager")
+			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't register request to artifact manager")
 		}
 		contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
 		_, err = g.ArtifactManager.ActivateObject(
@@ -335,42 +335,26 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 			nodeData,
 		)
 		if err != nil {
-			return errors.Wrap(err, "[ registerDiscoveryNodes ] Could'n activate discovery node object")
+			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Could'n activate discovery node object")
+		}
+
+		nodes[i] = genesisNode{
+			node: core.BootstrapNode{
+				PublicKey: nodePubKey,
+				Host:      discoverNode.Host,
+			},
+			privKey: privKey,
+			ref:     contract,
+			role:    discoverNode.Role,
 		}
 	}
-	return nil
+	return nodes, nil
 }
 
 // Start creates types and RootDomain instance
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
-
-	rootDomainRef, err := g.getRootDomainRef(ctx)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't get ref of rootDomain")
-	}
-	if rootDomainRef != nil {
-		g.rootDomainRef = rootDomainRef
-
-		rootMemberRef, err := g.getRootMemberRef(ctx, *g.rootDomainRef)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't get ref of rootMember")
-		}
-
-		g.rootMemberRef = rootMemberRef
-		inslog.Info("[ Genesis ] RootDomain was found in ledger. Don't run genesis")
-		return nil
-	}
-
-	isLightExecutor, err := g.isLightExecutor(ctx)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't check if node is light executor")
-	}
-	if !isLightExecutor {
-		inslog.Info("[ Genesis ] Node is not light executor. Don't run genesis")
-		return nil
-	}
 
 	_, insgocc, err := goplugintestutils.Build()
 	if err != nil {
@@ -386,89 +370,72 @@ func (g *Genesis) Start(ctx context.Context) error {
 		return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
 	}
 
-	if g.isGenesis {
-		_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
-		}
-
-		err = g.activateSmartContracts(ctx, cb, rootPubKey)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ]")
-		}
-
-		err = g.registerDiscoveryNodes(ctx, cb)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ]")
-		}
+	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 	}
 
+	err = g.activateSmartContracts(ctx, cb, rootPubKey)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ]")
+	}
+
+	nodes, err := g.registerDiscoveryNodes(ctx, cb)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ]")
+	}
+
+	err = g.makeCertificates(nodes)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
+	}
+
+	err = utils.SendGracefulStopSignal()
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Couldn't stop genesis graceful")
+	}
 	return nil
 }
 
-func (g *Genesis) isLightExecutor(ctx context.Context) (bool, error) {
-	currentPulse, err := g.PulseManager.Current(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
-	}
-
-	nodeID := g.Network.GetNodeID()
-
-	isLightExecutor, err := g.JetCoordinator.IsAuthorized(
-		ctx,
-		core.RoleLightExecutor,
-		g.ArtifactManager.GenesisRef(),
-		currentPulse.PulseNumber,
-		nodeID,
-	)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
-	}
-	if !isLightExecutor {
-		inslogger.FromContext(ctx).Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
-		return false, nil
-	}
-	return true, nil
-}
-
-func (g *Genesis) getRootDomainRef(ctx context.Context) (*core.RecordRef, error) {
-	genesisRef := g.ArtifactManager.GenesisRef()
-	if genesisRef == nil {
-		return nil, errors.New("[ getRootDomainRef ] Genesis ref is nil")
-	}
-	rootObj, err := g.ArtifactManager.GetObject(ctx, *genesisRef, nil, true)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
-	}
-	rootRefChildren, err := rootObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootRefChildren.HasNext() {
-		rootDomainRef, err := rootRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
+func (g *Genesis) makeCertificates(nodes []genesisNode) error {
+	certs := make([]certificate.Certificate, len(nodes))
+	for i, node := range nodes {
+		certs[i].Role = node.role
+		certs[i].Reference = node.ref.String()
+		certs[i].PublicKey = node.node.PublicKey
+		certs[i].RootDomainReference = g.rootDomainRef.String()
+		certs[i].MajorityRule = g.config.MajorityRule
+		certs[i].MinRoles.Virtual = g.config.MinRoles.Virtual
+		certs[i].MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial
+		certs[i].MinRoles.LightMaterial = g.config.MinRoles.LightMaterial
+		certs[i].BootstrapNodes = make([]core.BootstrapNode, len(nodes))
+		for j, node := range nodes {
+			certs[i].BootstrapNodes[j] = node.node
 		}
-		return rootDomainRef, nil
 	}
-	return nil, nil
-}
 
-func (g *Genesis) getRootMemberRef(ctx context.Context, rootDomainRef core.RecordRef) (*core.RecordRef, error) {
-	rootDomainObj, err := g.ArtifactManager.GetObject(ctx, rootDomainRef, nil, false)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get children of RootDomain object")
-	}
-	rootDomainRefChildren, err := rootDomainObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootDomainRefChildren.HasNext() {
-		rootMemberRef, err := rootDomainRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootMemberRef ] couldn't get next child of RootDomain object")
+	var err error
+	for i := range nodes {
+		for j, node := range nodes {
+			certs[i].BootstrapNodes[j].NetworkSign, err = certs[i].SignNetworkPart(node.privKey)
+			if err != nil {
+				return err
+			}
+			certs[i].BootstrapNodes[j].NodeSign, err = certs[i].SignNodePart(node.privKey)
+			if err != nil {
+				return err
+			}
 		}
-		return rootMemberRef, nil
+
+		// save cert to disk
+		cert, err := json.MarshalIndent(certs[i], "", "  ")
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(path.Join(g.keyOut, "discovery_cert_"+strconv.Itoa(i+1)+".json"), cert, 0644)
+		if err != nil {
+			return err
+		}
 	}
-	return nil, nil
+	return nil
 }

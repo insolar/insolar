@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,20 +22,19 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/cryptography"
 
 	"github.com/insolar/insolar/api/seedmanager"
-	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
-type request struct {
+// Request is a representation of request struct to api
+type Request struct {
 	Reference string `json:"reference"`
 	Method    string `json:"method"`
 	Params    []byte `json:"params"`
@@ -49,7 +48,8 @@ type answer struct {
 	TraceID string      `json:"traceID,omitempty"`
 }
 
-func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
+// UnmarshalRequest unmarshals request to api
+func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ UnmarshalRequest ] Can't read body. So strange")
@@ -65,7 +65,7 @@ func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	return body, nil
 }
 
-func (ar *Runner) verifySignature(ctx context.Context, params request) error {
+func (ar *Runner) verifySignature(ctx context.Context, params Request) error {
 	key, err := ar.getMemberPubKey(ctx, params.Reference)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (ar *Runner) verifySignature(ctx context.Context, params request) error {
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
-		params := request{}
+		params := Request{}
 		resp := answer{}
 
 		traceid := utils.RandTraceID()
@@ -113,7 +113,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 
-		_, err := unmarshalRequest(req, &params)
+		_, err := UnmarshalRequest(req, &params)
 		if err != nil {
 			resp.Error = err.Error()
 			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal request"))
@@ -127,7 +127,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		if !ar.seedmanager.Exists(*seed) {
+		if !ar.SeedManager.Exists(*seed) {
 			resp.Error = "[ CallHandler ] Incorrect seed"
 			inslog.Error(resp.Error)
 			return
@@ -140,32 +140,23 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		args, err := core.MarshalArgs(*ar.Genesis.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
-		if err != nil {
-			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't marshal args"))
-			return
-		}
-		res, err := ar.MessageBus.Send(
+		reference := core.NewRefFromBase58(params.Reference)
+		res, err := ar.ContractRequester.SendRequest(
 			ctx,
-			&message.CallMethod{
-				ObjectRef: core.NewRefFromBase58(params.Reference),
-				Method:    "Call",
-				Arguments: args,
-			},
+			&reference,
+			"Call",
+			[]interface{}{*ar.Certificate.GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
 		)
 		if err != nil {
 			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't send message to message bus"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't send request"))
 			return
 		}
 
-		var result interface{}
-		var contractErr *foundation.Error
-		err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
+		result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
 		if err != nil {
 			resp.Error = err.Error()
-			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal params"))
+			inslog.Error(errors.Wrap(err, "[ CallHandler ] Can't extract response"))
 			return
 		}
 

@@ -18,6 +18,7 @@ package core
 
 import (
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/core/utils"
@@ -41,14 +42,24 @@ type Entropy [EntropySize]byte
 // If PulseNum <65536 it is a relative PulseNum
 type PulseNumber uint32
 
+// NewPulseNumber creates pulse number from bytes.
+func NewPulseNumber(buf []byte) PulseNumber {
+	return PulseNumber(binary.BigEndian.Uint32(buf))
+}
+
 // Bytes serializes pulse number.
 func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
 }
 
-// NewPulseNumber creates pulse number from bytes.
-func NewPulseNumber(buf []byte) PulseNumber {
-	return PulseNumber(binary.BigEndian.Uint32(buf))
+// PulseRange represents range of pulses.
+type PulseRange struct {
+	Begin PulseNumber
+	End   PulseNumber
+}
+
+func (pr *PulseRange) String() string {
+	return fmt.Sprintf("[%v:%v]", pr.Begin, pr.End)
 }
 
 // Pulse is base data structure for a pulse.

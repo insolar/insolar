@@ -17,7 +17,6 @@
 package jetcoordinator_test
 
 import (
-	"bytes"
 	"sort"
 	"testing"
 
@@ -70,7 +69,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 
 	sorted := func(list []core.RecordRef) []core.RecordRef {
 		sort.Slice(list, func(i, j int) bool {
-			return bytes.Compare(list[i][:], list[j][:]) < 0
+			return list[i].Compare(list[j]) < 0
 		})
 		return list
 	}

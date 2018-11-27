@@ -35,17 +35,40 @@ import (
 	"github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
 	"github.com/satori/go.uuid"
+	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
+type inputParams struct {
+	configPath string
+}
+
+func parseInputParams() inputParams {
+	var rootCmd = &cobra.Command{Use: "insolard"}
+	var result inputParams
+	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	err := rootCmd.Execute()
+	if err != nil {
+		fmt.Println("Wrong input params:", err.Error())
+	}
+
+	return result
+}
+
 // Need to fix problem with start pulsar
 func main() {
+	params := parseInputParams()
 	uniqueID := RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), uniqueID)
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
-	err := cfgHolder.Load()
+	var err error
+	if len(params.configPath) != 0 {
+		err = cfgHolder.LoadFromFile(params.configPath)
+	} else {
+		err = cfgHolder.Load()
+	}
 	if err != nil {
 		inslog.Warnln("failed to load configuration from file: ", err.Error())
 	}
@@ -95,9 +118,10 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	}
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 	cryptographyService := cryptography.NewCryptographyService()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 
 	cm := &component.Manager{}
-	cm.Register(cryptographyScheme, keyStore)
+	cm.Register(cryptographyScheme, keyStore, keyProcessor)
 	cm.Inject(cryptographyService)
 
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
@@ -110,7 +134,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 		cfg.Pulsar,
 		cryptographyService,
 		cryptographyScheme,
-		platformpolicy.NewKeyProcessor(),
+		keyProcessor,
 		storage,
 		&pulsar.RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
@@ -165,9 +189,9 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 
 // RandTraceID returns random traceID in uuid format
 func RandTraceID() string {
-	qid, err := uuid.NewV4()
+	traceID, err := uuid.NewV4()
 	if err != nil {
 		panic("createRandomTraceIDFailed:" + err.Error())
 	}
-	return qid.String()
+	return traceID.String()
 }

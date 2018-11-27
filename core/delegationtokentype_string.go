@@ -4,13 +4,14 @@ package core
 
 import "strconv"
 
-const _DelegationTokenType_name = "DTTypePendingExecution"
+const _DelegationTokenType_name = "DTTypePendingExecutionDTTypeGetObjectRedirect"
 
-var _DelegationTokenType_index = [...]uint8{0, 22}
+var _DelegationTokenType_index = [...]uint8{0, 22, 45}
 
 func (i DelegationTokenType) String() string {
+	i -= 1
 	if i >= DelegationTokenType(len(_DelegationTokenType_index)-1) {
-		return "DelegationTokenType(" + strconv.FormatInt(int64(i), 10) + ")"
+		return "DelegationTokenType(" + strconv.FormatInt(int64(i+1), 10) + ")"
 	}
 	return _DelegationTokenType_name[_DelegationTokenType_index[i]:_DelegationTokenType_index[i+1]]
 }

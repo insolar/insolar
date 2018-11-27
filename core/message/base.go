@@ -119,11 +119,11 @@ func Deserialize(buff io.Reader) (core.Parcel, error) {
 func ToBytes(msg core.Message) []byte {
 	reqBuff, err := Serialize(msg)
 	if err != nil {
-		panic("failed to serialize message")
+		panic(errors.Wrap(err, "failed to serialize message"))
 	}
 	buff, err := ioutil.ReadAll(reqBuff)
 	if err != nil {
-		panic("failed to serialize message")
+		panic(errors.Wrap(err, "failed to serialize message"))
 	}
 	return buff
 }
@@ -148,11 +148,11 @@ func DeserializeParcel(buff io.Reader) (core.Parcel, error) {
 func ParcelToBytes(msg core.Parcel) []byte {
 	reqBuff, err := SerializeParcel(msg)
 	if err != nil {
-		panic("failed to serialize message")
+		panic("failed to serialize message: " + err.Error())
 	}
 	buf, err := ioutil.ReadAll(reqBuff)
 	if err != nil {
-		panic("failed to serialize message")
+		panic("failed to serialize message: " + err.Error())
 	}
 	return buf
 }

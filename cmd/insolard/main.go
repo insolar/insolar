@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"reflect"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
@@ -38,37 +37,11 @@ import (
 	"github.com/insolar/insolar/version"
 )
 
-// ComponentManager is deprecated and will be removed after completly switching to component.Manager
-type ComponentManager struct {
-	components core.Components
-}
-
-func (cm *ComponentManager) GetAll() core.Components {
-	return cm.components
-}
-
-// LinkAll - link dependency for all components
-func (cm *ComponentManager) LinkAll(ctx context.Context) {
-	inslog := inslogger.FromContext(ctx)
-	v := reflect.ValueOf(cm.components)
-	for i := 0; i < v.NumField(); i++ {
-
-		if component, ok := v.Field(i).Interface().(core.Component); ok {
-			componentName := v.Field(i).String()
-			inslog.Infof("==== Old ComponentManager: Starting component `%s` ...", componentName)
-			err := component.Start(ctx, cm.components)
-			if err != nil {
-				inslog.Fatalf("==== Old ComponentManager: failed to start component %s : %s", componentName, err.Error())
-			}
-			inslog.Infof("==== Old ComponentManager: Component `%s` successfully started", componentName)
-		}
-	}
-}
-
 type inputParams struct {
 	configPath        string
 	isGenesis         bool
 	genesisConfigPath string
+	genesisKeyOut     string
 	traceEnabled      bool
 }
 
@@ -77,6 +50,7 @@ func parseInputParams() inputParams {
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
 	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "genesis", "g", "", "path to genesis config file")
+	rootCmd.Flags().StringVarP(&result.genesisKeyOut, "keyout", "", ".", "genesis certificates path")
 	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
@@ -133,8 +107,8 @@ func main() {
 	traceid := utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
 
-	bootstrapComponents := InitBootstrapComponents(ctx, *cfg)
-	cert := InitCertificate(
+	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
+	cert := initCertificate(
 		ctx,
 		*cfg,
 		params.isGenesis,
@@ -157,7 +131,7 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, cmOld, repl, err := InitComponents(
+	cm, repl, err := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
@@ -167,16 +141,12 @@ func main() {
 		cert,
 		params.isGenesis,
 		params.genesisConfigPath,
+		params.genesisKeyOut,
 	)
 	checkError(ctx, err, "failed to init components")
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
-
-	cmOld.LinkAll(ctx)
-
-	err = cm.Start(ctx)
-	checkError(ctx, err, "failed to start components")
 
 	defer func() {
 		inslog.Warn("DEFER STOP APP")
@@ -198,6 +168,9 @@ func main() {
 		checkError(ctx, err, "failed to graceful stop components")
 		os.Exit(0)
 	}()
+
+	err = cm.Start(ctx)
+	checkError(ctx, err, "failed to start components")
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")

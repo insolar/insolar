@@ -41,10 +41,12 @@ func (pf *parcelFactory) Create(
 	ctx context.Context,
 	msg core.Message,
 	sender core.RecordRef,
+	token core.DelegationToken,
 ) (core.Parcel, error) {
 	if msg == nil {
 		return nil, errors.New("failed to signature a nil message")
 	}
+
 	serialized := message.ToBytes(msg)
 	signature, err := pf.Cryptography.Sign(serialized)
 	if err != nil {
@@ -57,6 +59,7 @@ func (pf *parcelFactory) Create(
 		LogTraceID:    inslogger.TraceID(ctx),
 		TraceSpanData: instracer.MustSerialize(ctx),
 		Sender:        sender,
+		Token:         token,
 	}, nil
 }
 

@@ -22,5 +22,15 @@ import (
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator interface {
+	// GetCert returns certificate object by node reference, using discovery nodes for signing
+	GetCert(context.Context, RecordRef) (Certificate, error)
+
+	// ValidateCert checks certificate signature
+	ValidateCert(context.Context, Certificate) (bool, error)
+
+	// TODO: Remove this method, use SetPulse instead
 	WriteActiveNodes(ctx context.Context, number PulseNumber, activeNodes []Node) error
+
+	// SetPulse uses PulseManager component for saving pulse info
+	SetPulse(ctx context.Context, pulse Pulse) error
 }

@@ -21,16 +21,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
-const URL = "http://localhost:19191/api/v1"
-const callURL = URL + "/call"
-const infoURL = URL + "/info"
+const apiurl = "http://localhost:19191/api"
 
 type response struct {
 	Error  string
@@ -45,18 +43,15 @@ func getResponse(body []byte) *response {
 }
 
 func sendRequest(ctx context.Context, method string, params []interface{}, member memberInfo) []byte {
-	reqCfg := &requesters.RequestConfigJSON{
+	reqCfg := &requester.RequestConfigJSON{
 		Params: params,
 		Method: method,
 	}
 
-	userCfg, err := requesters.CreateUserConfig(member.ref, member.privateKey)
+	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
 	check("can not create user config:", err)
 
-	seed, err := requesters.GetSeed(URL)
-	check("can not get seed:", err)
-
-	body, err := requesters.SendWithSeed(ctx, callURL, userCfg, reqCfg, seed)
+	body, err := requester.Send(ctx, apiurl, userCfg, reqCfg)
 	check("can not send request:", err)
 
 	return body
@@ -106,20 +101,8 @@ func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 	return members, nil
 }
 
-type infoResponse struct {
-	Prototypes map[string]string `json:"prototypes"`
-	RootDomain string            `json:"root_domain"`
-	RootMember string            `json:"root_member"`
-}
-
-func info() infoResponse {
-	body, err := requesters.GetResponseBody(infoURL, requesters.PostParams{})
-	check("problem with sending request to info:", err)
-
-	infoResp := infoResponse{}
-
-	err = json.Unmarshal(body, &infoResp)
-	check("problems with unmarshal response from info:", err)
-
-	return infoResp
+func info() *requester.InfoResponse {
+	info, err := requester.Info(apiurl)
+	check("problem with request to info:", err)
+	return info
 }

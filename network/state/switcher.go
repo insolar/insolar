@@ -17,29 +17,47 @@
 package state
 
 import (
-	"github.com/insolar/insolar/network"
+	"context"
+	"sync"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-const (
-	// NoNetwork state means that nodes doesn`t match majority_rule
-	NoNetwork = iota
-	// VoidNetwork state means that nodes have not complete min_role_count rule for proper work
-	VoidNetwork
-	// JetlessNetwork state means that every Jet need proof completeness of stored data
-	JetlessNetwork
-	// AuthorizationNetwork state means that every node need to validate ActiveNodeList using NodeDomain
-	AuthorizationNetwork
-	// CompleteNetwork state means network is ok and ready for proper work
-	CompleteNetwork
-)
+// NetworkSwitcher is a network FSM using for bootstrapping
+type NetworkSwitcher struct {
+	NodeNetwork        core.NodeNetwork        `inject:""`
+	Certificate        core.Certificate        `inject:""`
+	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
 
-type NetworkSwitcherImpl struct {
+	state     core.NetworkState
+	stateLock *sync.RWMutex
 }
 
-func NewNetworkSwitcherImpl() *NetworkSwitcherImpl {
-	return &NetworkSwitcherImpl{}
+// NewNetworkSwitcher creates new NetworkSwitcher
+func NewNetworkSwitcher() (*NetworkSwitcher, error) {
+	return &NetworkSwitcher{state: core.NoNetworkState}, nil
 }
 
-func (ns *NetworkSwitcherImpl) GetState() network.State {
-	return CompleteNetwork
+// GetState method returns current network state
+func (ns *NetworkSwitcher) GetState() core.NetworkState {
+	ns.stateLock.RLock()
+	defer ns.stateLock.RUnlock()
+
+	return ns.state
+}
+
+// OnPulse method checks current state and finds out reasons to update this state
+func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error {
+	ns.stateLock.Lock()
+	defer ns.stateLock.Unlock()
+
+	inslogger.FromContext(ctx).Info("Current NetworkSwitcher state is: %s", ns.state)
+
+	if ns.SwitcherWorkAround.IsBootstrapped() {
+		ns.state = core.CompleteNetworkState
+		inslogger.FromContext(ctx).Info("Current NetworkSwitcher state switched to: %s", ns.state)
+	}
+
+	return nil
 }

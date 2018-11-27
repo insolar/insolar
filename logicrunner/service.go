@@ -126,7 +126,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		Arguments:        req.Arguments,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg)
+	res, err := gpr.lr.MessageBus.Send(ctx, msg, nil)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -173,7 +173,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 		SaveAs:           message.Child,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg)
+	res, err := gpr.lr.MessageBus.Send(ctx, msg, nil)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as child")
 	}
@@ -270,7 +270,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 		SaveAs:           message.Delegate,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg)
+	res, err := gpr.lr.MessageBus.Send(ctx, msg, nil)
 
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as delegate")

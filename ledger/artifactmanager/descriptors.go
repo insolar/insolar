@@ -135,9 +135,25 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 	return &d.parent
 }
 
-// ChildIterator is used to iterate over objects children.
+// ChildIterator is used to iterate over objects children. During iteration children refs will be fetched from remote
+// source (parent object).
 //
-// During iteration children refs will be fetched from remote source (parent object).
+// Data can be fetched only from Active Executor (AE), although children references can be stored on other nodes.
+// To cope with this, we have a token system. Every time AE doesn't have data and asked for it, it will issue a token
+// that will allow requester to fetch data from a different node. This node will return all children references it has,
+// after which the requester has to go to AE again to fetch a new token. It will then be redirected to another node.
+// E.i. children fetching happens like this:
+// [R = requester, AE = active executor, LE = any light executor that has data, H = heavy executor]
+// 1. R (get children 0 ... ) -> AE
+// 2. AE (children 0 ... 3) -> R
+// 3. R (get children 4 ...) -> AE
+// 4. AE (redirect to LE) -> R
+// 5. R (get children 4 ...) -> LE
+// 6. LE (children 4 ... 5) -> R
+// 7. R (get children 6 ...) -> AE
+// 8. AE (redirect to H) -> R
+// 9. R (get children 6 ...) -> H
+// 10. H (children 6 ... 15 EOF) -> R
 type ChildIterator struct {
 	ctx        context.Context
 	messageBus core.MessageBus
@@ -209,7 +225,7 @@ func (i *ChildIterator) fetch() error {
 	if !i.canFetch {
 		return errors.New("failed to fetch record")
 	}
-	genericReply, err := i.messageBus.Send(
+	genericReply, err := i.sendAndFollowRedirect(
 		i.ctx,
 		&message.GetChildren{
 			Parent:    i.parent,
@@ -238,4 +254,32 @@ func (i *ChildIterator) fetch() error {
 
 func (i *ChildIterator) hasInBuffer() bool {
 	return i.buffIndex < len(i.buff)
+}
+
+func (i *ChildIterator) sendAndFollowRedirect(ctx context.Context, msg core.Message) (core.Reply, error) {
+	rep, err := i.messageBus.Send(ctx, msg, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if redirect, ok := rep.(core.RedirectReply); ok {
+		redirected := redirect.Redirected(msg)
+		rep, err = i.messageBus.Send(
+			ctx,
+			redirected,
+			&core.MessageSendOptions{
+				Token:    redirect.GetToken(),
+				Receiver: redirect.GetReceiver(),
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok = rep.(core.RedirectReply); ok {
+			return nil, errors.New("double redirects are forbidden")
+		}
+		return rep, nil
+	}
+
+	return rep, err
 }

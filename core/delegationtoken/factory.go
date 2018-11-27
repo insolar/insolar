@@ -21,70 +21,70 @@ import (
 	"encoding/gob"
 
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/core/message"
 )
 
 type delegationTokenFactory struct {
 	Cryptography core.CryptographyService `inject:""`
 }
 
+// NewDelegationTokenFactory creates new token factory instance.
 func NewDelegationTokenFactory() core.DelegationTokenFactory {
 	return &delegationTokenFactory{}
 }
 
+// IssuePendingExecution creates new token for provided message.
 func (f *delegationTokenFactory) IssuePendingExecution(
 	msg core.Message, pulse core.PulseNumber,
-) ([]byte, error) {
+) (core.DelegationToken, error) {
 	var buff bytes.Buffer
 	enc := gob.NewEncoder(&buff)
 	err := enc.Encode(msg)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
 	sign, err := f.Cryptography.Sign(buff.Bytes())
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
+	token := &PendingExecution{}
+	token.Signature = sign.Bytes()
 
-	return append([]byte{byte(core.DTTypePendingExecution)}, sign.Bytes()...), nil
+	return token, nil
 }
 
-func (f *delegationTokenFactory) Verify(data []byte, msg core.Message) (bool, error) {
-	token, err := f.newFromBytes(data)
+// IssueGetObjectRedirect creates new token for provided message.
+func (f *delegationTokenFactory) IssueGetObjectRedirect(
+	sender *core.RecordRef, redirectedMessage core.Message,
+) (core.DelegationToken, error) {
+	parsedMessage := redirectedMessage.(*message.GetObject)
+	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
+	sign, err := f.Cryptography.Sign(dataForSign)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	if token == nil {
+	return &GetObjectRedirect{Signature: sign.Bytes()}, nil
+}
+
+// IssueGetChildrenRedirect creates new token for provided message.
+func (f *delegationTokenFactory) IssueGetChildrenRedirect(
+	sender *core.RecordRef, redirectedMessage core.Message,
+) (core.DelegationToken, error) {
+	parsedMessage := redirectedMessage.(*message.GetChildren)
+	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
+	sign, err := f.Cryptography.Sign(dataForSign)
+	if err != nil {
+		return nil, err
+	}
+	return &GetChildrenRedirect{Signature: sign.Bytes()}, nil
+}
+
+// Verify performs token validation.
+func (f *delegationTokenFactory) Verify(parcel core.Parcel) (bool, error) {
+	if parcel.DelegationToken() == nil {
 		return false, nil
 	}
 
-	return token.Verify(msg)
-}
-
-func (f *delegationTokenFactory) newFromBytes(data []byte) (core.DelegationToken, error) {
-	if len(data) == 0 {
-		return nil, nil
-	}
-
-	res, err := empty(core.DelegationTokenType(data[0]))
-	if err != nil {
-		return nil, err
-	}
-
-	err = gob.NewDecoder(bytes.NewReader(data[1:])).Decode(res)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func empty(t core.DelegationTokenType) (core.DelegationToken, error) {
-	switch t {
-
-	case core.DTTypePendingExecution:
-		return &PendingExecution{}, nil
-	default:
-		return nil, errors.Errorf("unimplemented delegation token type %d", t)
-	}
+	return parcel.DelegationToken().Verify(parcel)
 }

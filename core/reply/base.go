@@ -35,6 +35,9 @@ const (
 	// TypeOK is a generic reply for success calls without returned value.
 	TypeOK
 
+	TypeGetObjectRedirect
+	TypeGetChildrenRedirect
+
 	// Logicrunner
 
 	// TypeCallMethod - two binary fields: data and results.

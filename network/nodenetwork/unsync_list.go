@@ -17,120 +17,143 @@
 package nodenetwork
 
 import (
-	"errors"
-	"sync"
-	"time"
+	"sort"
 
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network"
 )
 
-type UnsyncList struct {
-	unsync []core.Node
-	pulse  core.PulseNumber
-	hash   []*network.NodeUnsyncHash
-
-	waiters     []chan []*network.NodeUnsyncHash
-	waitersLock sync.Mutex
-
-	unsyncListCache map[core.RecordRef][]core.Node
-	unsyncListLock  sync.Mutex
-	unsyncHashCache map[core.RecordRef][]*network.NodeUnsyncHash
-	unsyncHashLock  sync.Mutex
-}
-
-// NewUnsyncHolder create new object to hold data for consensus
-func NewUnsyncHolder(pulse core.PulseNumber, unsync []core.Node) *UnsyncList {
-	return &UnsyncList{
-		pulse:           pulse,
-		unsync:          unsync,
-		waiters:         make([]chan []*network.NodeUnsyncHash, 0),
-		unsyncListCache: make(map[core.RecordRef][]core.Node),
-		unsyncHashCache: make(map[core.RecordRef][]*network.NodeUnsyncHash),
+func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
+	result := make(map[core.RecordRef]core.Node, len(m))
+	for k, v := range m {
+		result[k] = v
 	}
+	return result
 }
 
-// GetUnsync returns list of local unsync nodes. This list is created
-func (u *UnsyncList) GetUnsync() []core.Node {
-	return u.unsync
+type unsyncList struct {
+	activeNodes map[core.RecordRef]core.Node
+	claims      map[core.RecordRef][]consensus.ReferendumClaim
+	refToIndex  map[core.RecordRef]int
+	indexToRef  map[int]core.RecordRef
+	cache       []byte
 }
 
-// GetPulse returns actual pulse for current consensus process.
-func (u *UnsyncList) GetPulse() core.PulseNumber {
-	return u.pulse
-}
-
-// SetHash sets hash of unsync lists for each node of consensus.
-func (u *UnsyncList) SetHash(hash []*network.NodeUnsyncHash) {
-	u.waitersLock.Lock()
-	defer u.waitersLock.Unlock()
-
-	u.hash = hash
-	if len(u.waiters) == 0 {
-		return
+func newUnsyncList(activeNodesSorted []core.Node) *unsyncList {
+	indexToRef := make(map[int]core.RecordRef, len(activeNodesSorted))
+	refToIndex := make(map[core.RecordRef]int, len(activeNodesSorted))
+	activeNodes := make(map[core.RecordRef]core.Node, len(activeNodesSorted))
+	for i, node := range activeNodesSorted {
+		indexToRef[i] = node.ID()
+		refToIndex[node.ID()] = i
+		activeNodes[node.ID()] = node
 	}
-	for _, ch := range u.waiters {
-		ch <- u.hash
-		close(ch)
-	}
-	u.waiters = make([]chan []*network.NodeUnsyncHash, 0)
+	claims := make(map[core.RecordRef][]consensus.ReferendumClaim)
+
+	return &unsyncList{activeNodes: activeNodes, claims: claims, refToIndex: refToIndex, indexToRef: indexToRef}
 }
 
-// GetHash get hash of unsync lists for each node of consensus. If hash is not calculated yet, then this call blocks
-// until the hash is calculated with SetHash() call
-func (u *UnsyncList) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyncHash, error) {
-	u.waitersLock.Lock()
-	if u.hash != nil {
-		result := u.hash
-		u.waitersLock.Unlock()
-		return result, nil
+func (ul *unsyncList) RemoveClaims(from core.RecordRef) {
+	delete(ul.claims, from)
+	ul.cache = nil
+}
+
+func (ul *unsyncList) AddClaims(from core.RecordRef, claims []consensus.ReferendumClaim) {
+	ul.claims[from] = claims
+	ul.cache = nil
+}
+
+func (ul *unsyncList) CalculateHash() ([]byte, error) {
+	if ul.cache != nil {
+		return ul.cache, nil
 	}
-	ch := make(chan []*network.NodeUnsyncHash, 1)
-	u.waiters = append(u.waiters, ch)
-	u.waitersLock.Unlock()
-	var result []*network.NodeUnsyncHash
-	select {
-	case data := <-ch:
-		if data == nil {
-			return nil, errors.New("GetHash: channel closed")
+	m := copyMap(ul.activeNodes)
+	merge(m, ul.claims)
+	sorted := sortedNodeList(m)
+	var err error
+	ul.cache, err = CalculateHash(nil, sorted)
+	return ul.cache, err
+}
+
+type adder func(core.Node)
+type deleter func(core.RecordRef)
+
+func merge(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]consensus.ReferendumClaim) {
+	addNode := func(node core.Node) {
+		nodes[node.ID()] = node
+	}
+	delNode := func(ref core.RecordRef) {
+		delete(nodes, ref)
+	}
+	mergeWith(claims, addNode, delNode)
+}
+
+func mergeWith(claims map[core.RecordRef][]consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
+	for _, claimList := range claims {
+		for _, claim := range claimList {
+			mergeClaim(claim, addFunc, delFunc)
 		}
-		result = data
-	case <-time.After(blockTimeout):
-		return nil, errors.New("GetHash: timeout")
+	}
+}
+
+func mergeClaim(claim consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
+	switch t := claim.(type) {
+	case *consensus.NodeAnnounceClaim:
+		addFunc(t.Node())
+	case *consensus.NodeJoinClaim:
+		addFunc(t.Node())
+	case *consensus.NodeLeaveClaim:
+		// TODO: add node ID to node leave claim (only to struct, not packet)
+		// delFunc()
+		break
+	}
+}
+
+func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
+	result := make([]core.Node, len(nodes))
+	i := 0
+	for _, node := range nodes {
+		result[i] = node
+		i++
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ID().Compare(result[j].ID()) < 0
+	})
+	return result
+}
+
+func (ul *unsyncList) IndexToRef(index int) (core.RecordRef, error) {
+	if index < 0 || index >= len(ul.indexToRef) {
+		return core.RecordRef{}, consensus.ErrBitSetOutOfRange
+	}
+	result, ok := ul.indexToRef[index]
+	if !ok {
+		return core.RecordRef{}, consensus.ErrBitSetNodeIsMissing
 	}
 	return result, nil
 }
 
-// AddUnsyncList add unsync list for remote ref
-func (u *UnsyncList) AddUnsyncList(ref core.RecordRef, unsync []core.Node) {
-	u.unsyncListLock.Lock()
-	defer u.unsyncListLock.Unlock()
-
-	u.unsyncListCache[ref] = unsync
+func (ul *unsyncList) RefToIndex(nodeID core.RecordRef) (int, error) {
+	index, ok := ul.refToIndex[nodeID]
+	if !ok {
+		return 0, consensus.ErrBitSetIncorrectNode
+	}
+	return index, nil
 }
 
-// AddUnsyncHash add unsync hash for remote ref
-func (u *UnsyncList) AddUnsyncHash(ref core.RecordRef, hash []*network.NodeUnsyncHash) {
-	u.unsyncHashLock.Lock()
-	defer u.unsyncHashLock.Unlock()
-
-	u.unsyncHashCache[ref] = hash
+func (ul *unsyncList) Length() int {
+	return len(ul.activeNodes)
 }
 
-// GetUnsyncList get unsync list for remote ref
-func (u *UnsyncList) GetUnsyncList(ref core.RecordRef) ([]core.Node, bool) {
-	u.unsyncListLock.Lock()
-	defer u.unsyncListLock.Unlock()
-
-	result, ok := u.unsyncListCache[ref]
-	return result, ok
+type sparseUnsyncList struct {
+	unsyncList
+	capacity int
 }
 
-// GetUnsyncHash get unsync hash for remote ref
-func (u *UnsyncList) GetUnsyncHash(ref core.RecordRef) ([]*network.NodeUnsyncHash, bool) {
-	u.unsyncHashLock.Lock()
-	defer u.unsyncHashLock.Unlock()
+func newSparseUnsyncList(capacity int) *sparseUnsyncList {
+	return &sparseUnsyncList{unsyncList: *newUnsyncList(nil), capacity: capacity}
+}
 
-	result, ok := u.unsyncHashCache[ref]
-	return result, ok
+func (ul *sparseUnsyncList) Length() int {
+	return ul.capacity
 }

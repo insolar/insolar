@@ -17,33 +17,31 @@
 package api
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"reflect"
 	"testing"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 const HOST = "http://localhost:19191"
-const TestUrl = HOST + "/api/v1?query_type=LOL"
+const TestUrl = HOST + "/api/call"
 
 func TestMain(m *testing.M) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
 	api, _ := NewRunner(&cfg)
 
-	b, _ := genesis.NewGenesis(false, "")
-	api.Genesis = b
+	c := certificate.Certificate{}
+	api.Certificate = &c
 	api.Start(ctx)
 
 	code := m.Run()
@@ -53,22 +51,12 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestWrongQueryParam(t *testing.T) {
-	postParams := map[string]string{"query_type": "TEST", "reference": "test"}
-	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	require.NoError(t, err)
-	body, err := ioutil.ReadAll(postResp.Body)
-	require.NoError(t, err)
-	require.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
-}
-
-func TestBadRequest(t *testing.T) {
+func TestGetRequest(t *testing.T) {
 	resp, err := http.Get(TestUrl)
 	require.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Contains(t, string(body[:]), `"message": "Bad request"`)
+	require.Contains(t, string(body[:]), `"[ UnmarshalRequest ] Empty body"`)
 }
 
 func TestSerialization(t *testing.T) {
@@ -106,9 +94,13 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 
 	cfg.Address = "address:100"
 	_, err = NewRunner(&cfg)
-	require.EqualError(t, err, "[ NewAPIRunner ] Location must exist")
+	require.EqualError(t, err, "[ NewAPIRunner ] Call must exist")
 
-	cfg.Location = "test"
+	cfg.Call = "test"
+	_, err = NewRunner(&cfg)
+	require.EqualError(t, err, "[ NewAPIRunner ] RPC must exist")
+
+	cfg.RPC = "test"
 	_, err = NewRunner(&cfg)
 	require.NoError(t, err)
 }

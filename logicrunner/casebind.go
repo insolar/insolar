@@ -38,8 +38,8 @@ func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byt
 	return scheme.IntegrityHasher().Hash(s)
 }
 
-func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
-	if len(cr) < 1 {
+func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb core.CaseBind) (int, error) {
+	if len(cb.Requests) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
 
@@ -47,6 +47,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 	es.insContext = ctx
 	es.validate = true
 	es.objectbody = nil
+	var cbr core.CaseBindReplay
 	err := func() error {
 		lr.caseBindReplaysMutex.Lock()
 		defer lr.caseBindReplaysMutex.Unlock()
@@ -54,11 +55,13 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 			return errors.New("already validating this ref")
 		}
 		lr.caseBindReplays[ref] = core.CaseBindReplay{
-			Pulse:      p,
-			Records:    cr,
-			RecordsLen: len(cr),
-			Step:       0,
+			Pulse:    p,
+			CaseBind: cb,
+			Request:  0,
+			Record:   -1,
+			Steps:    0,
 		}
+		cbr = lr.caseBindReplays[ref]
 		return nil
 	}()
 	if err != nil {
@@ -84,7 +87,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 
 		msg := start.Resp.(core.Message)
 		parcel, err := lr.ParcelFactory.Create(
-			ctx, msg, ref,
+			ctx, msg, ref, nil,
 		)
 		if err != nil {
 			return 0, errors.New("failed to create a parcel message")
@@ -101,7 +104,8 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 		}
 
 		es.insContext = inslogger.ContextWithTrace(es.insContext, traceID)
-		ret, err := lr.Execute(es.insContext, parcel)
+		es.Lock()
+		ret, err := lr.executeOrValidate(es.insContext, es, ValidationChecker{lr: lr, cb: cbr}, parcel)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -132,22 +136,34 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cr [
 		}
 	}
 }
+
 func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
-	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
-	_, err := lr.MessageBus.Send(
+
+	err := lr.CheckOurRole(ctx, msg, core.RoleVirtualValidator)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't play role")
+	}
+
+	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.CaseBind)
+	errstr := ""
+	if validationError != nil {
+		errstr = validationError.Error()
+	}
+	_, err = lr.MessageBus.Send(
 		ctx,
 		&message.ValidationResults{
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
-			Error:            validationError.Error(),
+			Error:            errstr,
 		},
+		nil,
 	)
 
-	return nil, err
+	return &reply.OK{}, err
 }
 
 func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
@@ -159,7 +175,7 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return &reply.OK{}, nil
 }
 
 func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
@@ -169,7 +185,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 	}
 	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
 	c.AddExecutor(ctx, inmsg, msg)
-	return nil, nil
+	return &reply.OK{}, nil
 }
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.

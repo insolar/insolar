@@ -20,8 +20,12 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -32,8 +36,32 @@ type PulseManager struct {
 	LR      core.LogicRunner `inject:""`
 	Bus     core.MessageBus  `inject:""`
 	NodeNet core.NodeNetwork `inject:""`
+	// setLock locks Set method call.
+	setLock  sync.Mutex
+	stopLock sync.RWMutex
+	stopped  bool
+	// gotpulse signals if there is something to sync to Heavy
+	gotpulse chan struct{}
+	// syncdone closes when sync is over
+	syncdone chan struct{}
+	// stores pulse manager options
+	options pmOptions
+}
 
-	setLock sync.Mutex
+type pmOptions struct {
+	enablesync       bool
+	syncmessagelimit int
+}
+
+// NewPulseManager creates PulseManager instance.
+func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseManager {
+	pm := &PulseManager{
+		db:       db,
+		gotpulse: make(chan struct{}, 1),
+	}
+	pm.options.enablesync = conf.HeavySyncEnabled
+	pm.options.syncmessagelimit = conf.HeavySyncMessageLimit
+	return pm
 }
 
 // Current returns current pulse structure.
@@ -46,12 +74,7 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	if err != nil {
 		return nil, err
 	}
-	data := core.Pulse{
-		PulseNumber:     latestPulse,
-		Entropy:         pulse.Entropy,
-		NextPulseNumber: pulse.PredictedNextPulse,
-	}
-	return &data, nil
+	return &pulse.Pulse, nil
 }
 
 func (m *PulseManager) processDrop(ctx context.Context) error {
@@ -63,7 +86,7 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	prevDrop, err := m.db.GetDrop(ctx, latestPulse.PrevPulse)
+	prevDrop, err := m.db.GetDrop(ctx, *latestPulse.Prev)
 	if err != nil {
 		return err
 	}
@@ -86,7 +109,7 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 		Messages:    messages,
 		PulseNumber: latestPulseNumber,
 	}
-	_, err = m.Bus.Send(ctx, msg)
+	_, err = m.Bus.Send(ctx, msg, nil)
 	if err != nil {
 		return err
 	}
@@ -98,29 +121,136 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
-
-	// Run only on material executor.
-	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
-		err := m.processDrop(ctx)
-		if err != nil {
-			return err
-		}
+	if m.stopped {
+		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
-	err := m.db.AddPulse(ctx, pulse)
-	if err != nil {
-		return err
+	// Run only on material executor.
+	var err error
+	// execute only on material executor
+	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
+		if err = m.processDrop(ctx); err != nil {
+			return errors.Wrap(err, "processDrop failed")
+		}
+
+		latestPulseAsLight, err := m.db.GetLatestPulseNumber(ctx)
+		if err != nil {
+			return errors.Wrap(err, "call of GetLatestPulseNumber failed")
+		}
+		if err = m.db.SetLastPulseAsLightMaterial(ctx, latestPulseAsLight); err != nil {
+			return errors.Wrap(err, "call of SetLastPulseAsLightMaterial failed")
+		}
+		m.SyncToHeavy()
+	}
+
+	if err = m.db.AddPulse(ctx, pulse); err != nil {
+		return errors.Wrap(err, "call of AddPulse failed")
 	}
 
 	err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
 	return m.LR.OnPulse(ctx, pulse)
 }
 
-// NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB) *PulseManager {
-	return &PulseManager{db: db}
+// SyncToHeavy signals to sync loop there is something to sync.
+//
+// Should never be called after Stop.
+func (m *PulseManager) SyncToHeavy() {
+	// TODO: save current pulse as
+	if len(m.gotpulse) == 0 {
+		m.gotpulse <- struct{}{}
+	}
+}
+
+// Start starts pulse manager, spawns replication goroutine under a hood.
+func (m *PulseManager) Start(ctx context.Context) error {
+	startPN, endPN, err := m.NextSyncPulses(ctx)
+	if err != nil {
+		return err
+	}
+	m.syncdone = make(chan struct{})
+	if m.options.enablesync {
+		go m.syncloop(ctx, startPN, endPN)
+	}
+	return nil
+}
+
+// Stop stops PulseManager. Waits replication goroutine is done.
+func (m *PulseManager) Stop(ctx context.Context) error {
+	// There should not to be any Set call after Stop call
+	m.stopLock.Lock()
+	m.stopped = true
+	m.stopLock.Unlock()
+
+	if m.options.enablesync {
+		close(m.gotpulse)
+		inslogger.FromContext(ctx).Info("waiting finish of replication to heavy node...")
+		<-m.syncdone
+	}
+	return nil
+}
+
+func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber) {
+	defer close(m.syncdone)
+
+	var err error
+	inslog := inslogger.FromContext(ctx)
+	for {
+		if m.isstopped() {
+			// probably we won't do next syncs if got stop signal
+			return
+		}
+		for {
+			if start != 0 {
+				break
+
+			}
+			inslog.Debug("syncronization waiting next chunk of work")
+			_, ok := <-m.gotpulse
+			if !ok {
+				inslog.Debug("stop is called, so we are should just stop syncronization loop")
+				return
+			}
+			inslog.Debug("syncronization got next chunk of work")
+			// get latest RP
+			start, end, err = m.NextSyncPulses(ctx)
+			if err != nil {
+				err = errors.Wrap(err,
+					"PulseManager syncloop failed on NextSyncPulseNumber call")
+				inslog.Error(err)
+				panic(err)
+			}
+		}
+		next := start + 1
+		inslog.Debugf("syncronization sync pulses: [%v:%v]", start, next)
+
+		_, syncerr := m.HeavySync(ctx, start)
+		if syncerr != nil {
+			syncerr = errors.Wrap(syncerr, "HeavySync failed")
+			inslog.Error(syncerr.Error())
+			// TODO: add sleep and some retry logic here?
+			continue
+		}
+		err = m.db.SetReplicatedPulse(ctx, start)
+		if err != nil {
+			err = errors.Wrap(err,
+				"SetReplicatedPulse failed after success HeavySync in Pulsemanager")
+			inslog.Error(err)
+			panic(err)
+		}
+		start = next
+		if start == end {
+			start = 0
+		}
+	}
+}
+
+func (m *PulseManager) isstopped() (stopped bool) {
+	m.stopLock.RLock()
+	stopped = m.stopped
+	m.stopLock.RUnlock()
+	return
 }

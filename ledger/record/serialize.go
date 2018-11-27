@@ -29,6 +29,7 @@ import (
 // in use mostly for hashing and deserialization
 // (we don't use iota for clarity and predictable ids,
 // not depended on definition order)
+//go:generate stringer -type=TypeID
 const (
 	// meta
 	typeGenesis TypeID = 10
@@ -38,12 +39,12 @@ const (
 	typeCallRequest TypeID = 20
 
 	// result
-	typeResult         TypeID = 30
-	typeType           TypeID = 31
-	typeCode           TypeID = 32
-	typeObjectActivate TypeID = 33
-	typeObjectAmend    TypeID = 34
-	typeDeactivate     TypeID = 35
+	typeResult     TypeID = 30
+	typeType       TypeID = 31
+	typeCode       TypeID = 32
+	typeActivate   TypeID = 33
+	typeAmend      TypeID = 34
+	typeDeactivate TypeID = 35
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -53,13 +54,13 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 	// request records
 	case typeCallRequest:
 		return &CallRequest{}
-	case typeObjectActivate:
+	case typeActivate:
 		return &ObjectActivateRecord{}
 	case typeCode:
 		return &CodeRecord{}
 	case typeDeactivate:
 		return &DeactivationRecord{}
-	case typeObjectAmend:
+	case typeAmend:
 		return &ObjectAmendRecord{}
 	case typeType:
 		return &TypeRecord{}

@@ -21,7 +21,9 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -30,6 +32,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,9 +69,10 @@ func getTestData(t *testing.T) (
 ) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, "")
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	mb := testmessagebus.NewTestMessageBus(t)
 	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, PlatformCryptographyScheme: scheme, recent: storage.NewRecentStorage(1)}
+
 	handler.Bus = mb
 	err := handler.Init(ctx)
 	require.NoError(t, err)
@@ -287,25 +291,6 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 	})
 }
 
-func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
-	t.Parallel()
-	ctx, db, am, cleaner := getTestData(t)
-	defer cleaner()
-
-	objID := genRandomID(0)
-	_, err := am.GetObject(ctx, *genRefWithID(objID), nil, false)
-	assert.NotNil(t, err)
-
-	deactivateID, _ := db.SetRecord(ctx, core.GenesisPulse.PulseNumber, &record.DeactivationRecord{})
-	objectIndex := index.ObjectLifeline{
-		LatestState: deactivateID,
-	}
-	db.SetObjectIndex(ctx, objID, &objectIndex)
-
-	_, err = am.GetObject(ctx, *genRefWithID(objID), nil, false)
-	assert.Equal(t, core.ErrDeactivated, err)
-}
-
 func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
@@ -361,6 +346,37 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	}
 
 	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
+}
+
+func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	am := NewArtifactManger(nil)
+	mb := testutils.NewMessageBusMock(mc)
+
+	objRef := genRandomRef(0)
+	nodeRef := genRandomRef(0)
+	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		o = o.Safe()
+		if o.Receiver == nil {
+			return &reply.GetObjectRedirectReply{
+				Receiver: nodeRef,
+				Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
+			}, nil
+		} else {
+			token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
+			assert.True(t, ok)
+			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+			assert.Equal(t, nodeRef, o.Receiver)
+		}
+
+		return &reply.Object{}, nil
+	}
+	am.DefaultBus = mb
+
+	_, err := am.GetObject(ctx, *objRef, nil, false)
+	require.NoError(t, err)
 }
 
 func TestLedgerArtifactManager_GetChildren(t *testing.T) {
@@ -487,6 +503,37 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	})
 }
 
+func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	am := NewArtifactManger(nil)
+	mb := testutils.NewMessageBusMock(mc)
+
+	objRef := genRandomRef(0)
+	nodeRef := genRandomRef(0)
+	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		o = o.Safe()
+		if o.Receiver == nil {
+			return &reply.GetChildrenRedirect{
+				Receiver: nodeRef,
+				Token:    &delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}},
+			}, nil
+		} else {
+			token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
+			assert.True(t, ok)
+			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+			assert.Equal(t, nodeRef, o.Receiver)
+		}
+
+		return &reply.Children{}, nil
+	}
+	am.DefaultBus = mb
+
+	_, err := am.GetChildren(ctx, *objRef, nil)
+	require.NoError(t, err)
+}
+
 func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
@@ -514,6 +561,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 			},
 			PulseNumber: core.GenesisPulse.PulseNumber,
 		},
+		nil,
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
