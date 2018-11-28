@@ -31,12 +31,15 @@ type NetworkSwitcher struct {
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
 
 	state     core.NetworkState
-	stateLock *sync.RWMutex
+	stateLock sync.RWMutex
 }
 
 // NewNetworkSwitcher creates new NetworkSwitcher
 func NewNetworkSwitcher() (*NetworkSwitcher, error) {
-	return &NetworkSwitcher{state: core.NoNetworkState}, nil
+	return &NetworkSwitcher{
+		state:     core.NoNetworkState,
+		stateLock: sync.RWMutex{},
+	}, nil
 }
 
 // GetState method returns current network state
