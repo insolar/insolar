@@ -116,12 +116,6 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	log.Infoln("Authorizing network...")
-	err = n.controller.Authorize(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Failed to authorize network")
-	}
-
 	n.fakePulsar.Start(ctx)
 
 	return nil
@@ -158,8 +152,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		}
 		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
 		go func(logger core.Logger, network *ServiceNetwork) {
-			// FIXME: we need to resend pulse only to nodes outside the globe, we send pulse to nodes inside the globe on phase1 of the consensus
-			// network.controller.ResendPulseToKnownHosts(pulse)
 			if network.NetworkCoordinator == nil {
 				return
 			}
@@ -173,8 +165,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			// 	logger.Warn("phase manager fail: " + err.Error())
 			// }
 		}(logger, n)
-
-		// TODO: PLACE NEW CONSENSUS HERE
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
 	}

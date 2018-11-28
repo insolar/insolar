@@ -58,22 +58,6 @@ func (c *Controller) Bootstrap(ctx context.Context) error {
 	return c.bootstrapper.Bootstrap(ctx)
 }
 
-// Authorize start authorization process on discovery node.
-func (c *Controller) Authorize(ctx context.Context) error {
-	return nil
-}
-
-// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
-// DEPRECATED
-func (c *Controller) ResendPulseToKnownHosts(pulse core.Pulse) {
-	c.pulseController.ResendPulse(pulse)
-}
-
-// GetNodeID get self node id (should be removed in far future).
-func (c *Controller) GetNodeID() core.RecordRef {
-	return core.RecordRef{}
-}
-
 // Inject inject components.
 func (c *Controller) Inject(cryptographyService core.CryptographyService,
 	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
