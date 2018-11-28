@@ -153,7 +153,10 @@ func TestTriStateBitSet_Serialize(t *testing.T) {
 	refs := initRefs()
 	cells := initBitCells(refs)
 
+	mapper := &BitSetMapperMock{refs: refs}
+
 	bitset, _ := NewTriStateBitSet(len(cells))
+	bitset.ApplyChanges(cells, mapper)
 	data, err := bitset.Serialize()
 	assert.NoError(t, err)
 
@@ -161,8 +164,6 @@ func TestTriStateBitSet_Serialize(t *testing.T) {
 	assert.NoError(t, err)
 	parsedBitSet, err = DeserializeBitSet(bytes.NewReader(data))
 	assert.NoError(t, err)
-
-	mapper := &BitSetMapperMock{refs: refs}
 
 	expected, err := bitset.GetCells(mapper)
 	assert.NoError(t, err)
