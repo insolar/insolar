@@ -79,7 +79,8 @@ func getRootMemberInfo(fileName string) memberInfo {
 func main() {
 	parseInputParams()
 
-	log.SetLevel("error")
+	err := log.SetLevel("error")
+	check("can not set 'error' level on logger:", err)
 	rootMember = getRootMemberInfo(rootmemberkeys)
 
 	oneSimpleRequest()
