@@ -20,11 +20,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
-
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
@@ -82,6 +82,14 @@ func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configura
 		len(cfg.Host.BootstrapHosts), cfg.Node.Node.ID, cfg.Host.MajorityRule)
 }
 
+func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) {
+	_, err := exec.Command(
+		"rm", "-rfv",
+		cfg.Ledger.Storage.DataDirectory,
+	).CombinedOutput()
+	checkError(ctx, err, "failed to delete ledger storage data directory")
+}
+
 func main() {
 	params := parseInputParams()
 
@@ -106,6 +114,10 @@ func main() {
 
 	traceid := utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
+
+	if params.isGenesis {
+		removeLedgerDataDir(ctx, cfg)
+	}
 
 	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
 	cert := initCertificate(
