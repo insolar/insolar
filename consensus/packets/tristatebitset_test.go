@@ -171,3 +171,27 @@ func TestTriStateBitSet_Serialize(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expected, actual)
 }
+
+func TestTriStateBitSet_SerializeCompressed(t *testing.T) {
+	refs := initRefs()
+	cells := initBitCells(refs)
+
+	mapper := &BitSetMapperMock{refs: refs}
+
+	bitset, _ := NewTriStateBitSet(len(cells))
+	bitset.CompressedSet = true
+	bitset.ApplyChanges(cells, mapper)
+	data, err := bitset.Serialize()
+	assert.NoError(t, err)
+
+	parsedBitSet, err := NewBitSet(len(cells))
+	assert.NoError(t, err)
+	parsedBitSet, err = DeserializeBitSet(bytes.NewReader(data))
+	assert.NoError(t, err)
+
+	expected, err := bitset.GetCells(mapper)
+	assert.NoError(t, err)
+	actual, err := parsedBitSet.GetCells(mapper)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
+}
