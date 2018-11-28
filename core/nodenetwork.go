@@ -52,7 +52,7 @@ type NodeNetwork interface {
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
-	GetActiveNodesByRole(role JetRole) []RecordRef
+	GetActiveNodesByRole(role DynamicRole) []RecordRef
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte
 }

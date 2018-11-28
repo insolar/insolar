@@ -172,7 +172,7 @@ func (h *MessageHandler) handleGetObject(
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse())
+		nodes, err := h.JetCoordinator.QueryRole(ctx, core.DynamicRoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -201,12 +201,12 @@ func (h *MessageHandler) handleGetObject(
 			if stateID != nil && pulseNumber-stateID.Pulse() < h.conf.LightChainLimit {
 				// Find light executor that saved the state.
 				nodes, err = h.JetCoordinator.QueryRole(
-					ctx, core.RoleLightExecutor, &msg.Head, stateID.Pulse(),
+					ctx, core.DynamicRoleLightExecutor, &msg.Head, stateID.Pulse(),
 				)
 			} else {
 				// Find heavy that has this object.
 				nodes, err = h.JetCoordinator.QueryRole(
-					ctx, core.RoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse(),
+					ctx, core.DynamicRoleHeavyExecutor, &msg.Head, msg.Head.Record().Pulse(),
 				)
 			}
 			if err != nil {
@@ -273,7 +273,7 @@ func (h *MessageHandler) handleGetChildren(
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
-		nodes, err := h.JetCoordinator.QueryRole(ctx, core.RoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse())
+		nodes, err := h.JetCoordinator.QueryRole(ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -302,12 +302,12 @@ func (h *MessageHandler) handleGetChildren(
 		if pulseNumber-currentChild.Pulse() < h.conf.LightChainLimit {
 			// Find light executor that saved the state.
 			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.RoleLightExecutor, &msg.Parent, currentChild.Pulse(),
+				ctx, core.DynamicRoleLightExecutor, &msg.Parent, currentChild.Pulse(),
 			)
 		} else {
 			// Find heavy that has this object.
 			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.RoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse(),
+				ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, msg.Parent.Record().Pulse(),
 			)
 		}
 		if err != nil {

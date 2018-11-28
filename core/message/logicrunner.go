@@ -56,7 +56,7 @@ func (m *BaseLogicMessage) GetCallerPrototype() *core.RecordRef {
 	return &m.CallerPrototype
 }
 
-// GetRequest returns RoleVirtualExecutor as routing target role.
+// GetRequest returns DynamicRoleVirtualExecutor as routing target role.
 func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 	return m.Request
 }

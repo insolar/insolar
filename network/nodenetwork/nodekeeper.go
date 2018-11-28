@@ -156,7 +156,7 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 	return result
 }
 
-func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
+func (nk *nodekeeper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
@@ -287,18 +287,18 @@ func (nk *nodekeeper) MoveSyncToActive() {
 	mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
 }
 
-func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
+func jetRoleToNodeRole(role core.DynamicRole) core.StaticRole {
 	switch role {
-	case core.RoleVirtualExecutor:
-		return core.RoleVirtual
-	case core.RoleVirtualValidator:
-		return core.RoleVirtual
-	case core.RoleLightExecutor:
-		return core.RoleLightMaterial
-	case core.RoleLightValidator:
-		return core.RoleLightMaterial
-	case core.RoleHeavyExecutor:
-		return core.RoleHeavyMaterial
+	case core.DynamicRoleVirtualExecutor:
+		return core.StaticRoleVirtual
+	case core.DynamicRoleVirtualValidator:
+		return core.StaticRoleVirtual
+	case core.DynamicRoleLightExecutor:
+		return core.StaticRoleLightMaterial
+	case core.DynamicRoleLightValidator:
+		return core.StaticRoleLightMaterial
+	case core.DynamicRoleHeavyExecutor:
+		return core.StaticRoleHeavyMaterial
 	default:
 		return core.StaticRoleUnknown
 	}

@@ -42,7 +42,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Head, 0,
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Head, 0,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -66,7 +66,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleLightExecutor, &msg.Head, 0,
+			ctx, core.DynamicRoleLightExecutor, &msg.Head, 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -91,7 +91,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Head, 0,
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Head, 0,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -132,7 +132,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Parent, 0,
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, 0,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -154,7 +154,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleLightExecutor, &msg.Parent, 0,
+			ctx, core.DynamicRoleLightExecutor, &msg.Parent, 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -176,7 +176,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Parent, 0,
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, 0,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
