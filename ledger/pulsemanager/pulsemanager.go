@@ -151,24 +151,14 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 		if err = m.processDrop(ctx); err != nil {
 			return errors.Wrap(err, "processDrop failed")
 		}
-
-		latestPulseAsLight, err := m.db.GetLatestPulseNumber(ctx)
-		if err != nil {
-			return errors.Wrap(err, "call of GetLatestPulseNumber failed")
-		}
-		if err = m.db.SetLastPulseAsLightMaterial(ctx, latestPulseAsLight); err != nil {
-			return errors.Wrap(err, "call of SetLastPulseAsLightMaterial failed")
-		}
 	}
 
 	if err = m.db.AddPulse(ctx, pulse); err != nil {
 		return errors.Wrap(err, "call of AddPulse failed")
 	}
 
-	if isLight {
-		if m.options.enablesync {
-			m.SyncToHeavy(pulse.PulseNumber)
-		}
+	if isLight && m.options.enablesync {
+		m.SyncToHeavy(pulse.PulseNumber)
 	}
 
 	err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
