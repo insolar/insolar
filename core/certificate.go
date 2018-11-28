@@ -21,7 +21,7 @@ import (
 )
 
 type NetworkNode interface {
-	GetRef() *RecordRef
+	GetNodeRef() *RecordRef
 	GetPublicKey() crypto.PublicKey
 }
 
