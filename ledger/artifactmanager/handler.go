@@ -395,6 +395,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 			} else {
 				// We are updating object. Index should be on the heavy executor.
 				heavy, err := h.findHeavy(ctx, msg.Object, pulseNumber)
+				if err != nil {
+					return err
+				}
 				idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Object, heavy)
 				if err != nil {
 					return err
