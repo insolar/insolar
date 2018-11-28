@@ -251,7 +251,7 @@ func (bc *Bootstrapper) Start() {
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
 }
 
-func NewBootstrapController(options *common.Options, certificate core.Certificate, transport network.InternalTransport) *Bootstrapper {
+func NewBootstrapper(options *common.Options, certificate core.Certificate, transport network.InternalTransport) *Bootstrapper {
 	return &Bootstrapper{
 		options:   options,
 		cert:      certificate,

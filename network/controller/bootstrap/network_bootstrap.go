@@ -20,11 +20,14 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/controller/common"
 	"github.com/pkg/errors"
 )
 
 type NetworkBootstrapper struct {
 	certificate         core.Certificate
+	sessionManager      *SessionManager
 	bootstrapper        *Bootstrapper
 	authController      *AuthorizationController
 	challengeController *ChallengeResponseController
@@ -35,6 +38,10 @@ func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
 		return nb.bootstrapDiscovery(ctx)
 	}
 	return nb.bootstrapJoiner(ctx)
+}
+
+func (nb *NetworkBootstrapper) Start() {
+	nb.bootstrapper.Start()
 }
 
 func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
@@ -57,4 +64,14 @@ func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
 
 func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
 	return nb.bootstrapper.BootstrapDiscovery(ctx)
+}
+
+func NewNetworkBootstrapper(options *common.Options, cert core.Certificate, transport network.InternalTransport) *NetworkBootstrapper {
+	nb := &NetworkBootstrapper{}
+	nb.certificate = cert
+	nb.sessionManager = NewSessionManager()
+	nb.bootstrapper = NewBootstrapper(options, cert, transport)
+	nb.authController = NewAuthorizationController(options, nb.bootstrapper, transport, nb.sessionManager)
+	// nb.challengeController = NewChallengeController()
+	return nb
 }

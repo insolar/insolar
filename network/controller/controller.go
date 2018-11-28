@@ -33,9 +33,9 @@ type Controller struct {
 	options *common.Options
 	network network.HostNetwork
 
-	bootstrapController common.BootstrapController
-	pulseController     *PulseController
-	rpcController       *RPCController
+	bootstrapper    *bootstrap.NetworkBootstrapper
+	pulseController *PulseController
+	rpcController   *RPCController
 }
 
 // SendParcel send message to nodeID.
@@ -55,7 +55,7 @@ func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg co
 
 // Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
 func (c *Controller) Bootstrap(ctx context.Context) error {
-	return c.bootstrapController.Bootstrap(ctx)
+	return c.bootstrapper.Bootstrap(ctx)
 }
 
 // Authorize start authorization process on discovery node.
@@ -81,7 +81,7 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 	c.network.RegisterRequestHandler(types.Ping, func(request network.Request) (network.Response, error) {
 		return c.network.BuildResponse(request, nil), nil
 	})
-	c.bootstrapController.Start()
+	c.bootstrapper.Start()
 	c.pulseController.Start()
 	c.rpcController.Start()
 }
@@ -114,7 +114,7 @@ func NewNetworkController(
 	c := Controller{}
 	c.network = network
 	c.options = options
-	c.bootstrapController = bootstrap.NewBootstrapController(c.options, certificate, transport)
+	c.bootstrapper = bootstrap.NewNetworkBootstrapper(c.options, certificate, transport)
 	c.pulseController = NewPulseController(pulseHandler, network, routingTable)
 	c.rpcController = NewRPCController(c.options, network, scheme)
 

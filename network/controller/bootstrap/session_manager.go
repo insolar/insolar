@@ -31,8 +31,8 @@ const (
 )
 
 type Session struct {
-	ID     SessionID
 	NodeID core.RecordRef
+	Cert   core.Certificate
 	State  SessionState
 
 	// TODO: expiry time
@@ -41,25 +41,25 @@ type Session struct {
 type SessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
-	sessions map[core.RecordRef]*Session
+	sessions map[SessionID]*Session
 }
 
 func NewSessionManager() *SessionManager {
-	return &SessionManager{sessions: make(map[core.RecordRef]*Session)}
+	return &SessionManager{sessions: make(map[SessionID]*Session)}
 }
 
 func (sm *SessionManager) NewSession(ref core.RecordRef) *Session {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
-	result := &Session{ID: SessionID(id), NodeID: ref, State: SessionStarted}
+	result := &Session{NodeID: ref, State: SessionStarted}
 	sm.lock.Lock()
-	sm.sessions[ref] = result
+	sm.sessions[SessionID(id)] = result
 	sm.lock.Unlock()
 	return result
 }
 
-func (sm *SessionManager) GetSession(ref core.RecordRef) *Session {
+func (sm *SessionManager) GetSession(id SessionID) *Session {
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
 
-	return sm.sessions[ref]
+	return sm.sessions[id]
 }
