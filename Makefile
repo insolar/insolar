@@ -78,8 +78,14 @@ $(EXPORTER):
 test:
 	go test -v $(ALL_PACKAGES)
 
+test_fast:
+	go test -count 1 -v $(ALL_PACKAGES)
+
 test_with_coverage:
 	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+
+test_with_coverage_fast:
+	CGO_ENABLED=1 go test -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
 
 CONTRACTS = $(wildcard application/contract/*)

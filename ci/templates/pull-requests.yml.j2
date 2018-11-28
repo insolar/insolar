@@ -81,7 +81,7 @@ jobs:
              echo tests
              pwd
              ls -alh go
-             export CGO_ENABLED=0
+             export CGO_ENABLED=1
              export GORACE="halt_on_error=1"
              export GOMAXPROCS=2
              export INSOLAR_LOG_LEVEL=debug
@@ -95,8 +95,9 @@ jobs:
              #make install-deps
              rm -Rf $GOPATH/src/github.com/insolar/insolar/vendor/* && mv /go/vendor $GOPATH/src/github.com/insolar/insolar/
              make pre-build
-             make build
-             make test_with_coverage
+             #make build
+             #make test_with_coverage
+             CGO_ENABLED=1 go test -count 1 --coverprofile=coverage.txt --covermode=atomic ./...
     on_success:
       aggregate:
       - put: pull-request-{{ pull.number }}
