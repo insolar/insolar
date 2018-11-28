@@ -146,10 +146,29 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 	return &reply.ID{ID: *id}, nil
 }
 
-func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.GetCode)
+func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.GetCode)
 
 	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
+	if err == storage.ErrNotFound {
+		// The record wasn't found on the current node. Return redirect to the node that contains it.
+		var nodes []core.RecordRef
+		if pulseNumber-msg.Code.Record().Pulse() < h.conf.LightChainLimit {
+			// Find light executor that saved the code.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.RoleLightExecutor, &msg.Code, msg.Code.Record().Pulse(),
+			)
+		} else {
+			// Find heavy that has this code.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.RoleHeavyExecutor, &msg.Code, pulseNumber,
+			)
+		}
+		if err != nil {
+			return nil, err
+		}
+		return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -643,7 +662,7 @@ func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Mes
 func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
 	rec, err := s.GetRecord(ctx, id)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code record")
+		return nil, err
 	}
 	codeRec, ok := rec.(*record.CodeRecord)
 	if !ok {
