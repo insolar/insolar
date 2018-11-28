@@ -30,7 +30,7 @@ func TestHealthCheck(t *testing.T) {
 	require.NoError(t, err)
 
 	cmd := exec.Command(currentPath+"/../../../bin/healthcheck",
-		"-c", currentPath+"healthcheck/healthcheck.go",
+		"-c", currentPath+"/healthcheck/healthcheck.go",
 		"-d", tmpDir,
 		"-a", socket,
 		"-p", protocol)

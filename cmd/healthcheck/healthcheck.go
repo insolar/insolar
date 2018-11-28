@@ -50,13 +50,9 @@ func main() {
 	ref := core.RecordRef{}.FromSlice(append(make([]byte, 63), 1))
 	destination := filepath.Join(*cacheDir, ref.String())
 
-	currentPath, err := os.Getwd()
-	if err != nil {
-		log.Errorln(err.Error())
-		os.Exit(2)
-	}
-
-	insgoccPath := currentPath + "../../bin/insgocc"
+	currentFile := os.Args[0]
+	currentPath := filepath.Dir(currentFile)
+	insgoccPath := currentPath + "/insgocc"
 
 	_, err = exec.Command(insgoccPath, "compile", "-o", destination, *contractPath).CombinedOutput()
 	if err != nil {
