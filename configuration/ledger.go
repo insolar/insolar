@@ -17,6 +17,8 @@
 package configuration
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -47,6 +49,17 @@ type PulseManager struct {
 	HeavySyncEnabled bool
 	// HeavySyncMessageLimit soft limit of single message for replication to heavy.
 	HeavySyncMessageLimit int
+	// Backoff configures retry backoff algorithm for Heavy Sync
+	HeavyBackoff Backoff
+}
+
+// Backoff configures retry backoff algorithm
+type Backoff struct {
+	Factor float64
+	//Jitter eases contention by randomizing backoff steps
+	Jitter bool
+	//Min and Max are the minimum and maximum values of the counter
+	Min, Max time.Duration
 }
 
 // Ledger holds configuration for ledger.
@@ -86,6 +99,12 @@ func NewLedger() Ledger {
 		PulseManager: PulseManager{
 			HeavySyncEnabled:      true,
 			HeavySyncMessageLimit: 1 << 20, // 1Mb
+			HeavyBackoff: Backoff{
+				Jitter: true,
+				Min:    200 * time.Millisecond,
+				Max:    2 * time.Second,
+				Factor: 2,
+			},
 		},
 	}
 }

@@ -61,6 +61,15 @@ type pmOptions struct {
 	syncmessagelimit int
 }
 
+func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
+	return &backoff.Backoff{
+		Jitter: bconf.Jitter,
+		Min:    bconf.Min,
+		Max:    bconf.Max,
+		Factor: bconf.Factor,
+	}
+}
+
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseManager {
 	pm := &PulseManager{
@@ -69,15 +78,7 @@ func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseMana
 	}
 	pm.options.enablesync = conf.HeavySyncEnabled
 	pm.options.syncmessagelimit = conf.HeavySyncMessageLimit
-
-	// move predefined values to config
-	pm.syncbackoff = &backoff.Backoff{
-		Jitter: true,
-		Min:    200 * time.Millisecond,
-		Max:    2 * time.Second,
-		Factor: 2,
-	}
-
+	pm.syncbackoff = backoffFromConfig(conf.HeavyBackoff)
 	return pm
 }
 
