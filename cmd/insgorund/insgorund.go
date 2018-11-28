@@ -49,6 +49,7 @@ func main() {
 		}
 		defer os.RemoveAll(tmpDir)
 		*path = tmpDir
+		log.Debug("ginsider cache dir is " + tmpDir)
 	}
 
 	insider := ginsider.NewGoInsider(*path, *rpcProtocol, *rpcAddress)
