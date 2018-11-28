@@ -196,6 +196,10 @@ func (m *CommunicatorMock) ValidateCallCounters() {
 
 }
 
+func (m *CommunicatorMock) ExchangePhase3(p context.Context, p1 []core.Node, p2 packets.Phase3Packet) (r map[core.RecordRef]*packets.Phase3Packet, r1 error) {
+	return nil, nil
+}
+
 //CheckMocksCalled checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CommunicatorMock) CheckMocksCalled() {
