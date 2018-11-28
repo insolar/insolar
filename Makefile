@@ -6,6 +6,7 @@ PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 EXPORTER = exporter
+HEALTHCHECK = healthcheck
 
 ALL_PACKAGES = ./...
 COVERPROFILE = coverage.txt
@@ -24,7 +25,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
 .PHONY: all lint ci-lint metalint clean install-deps pre-build build test test_with_coverage regen-proxies
 
-all: clean install-deps pre-build build test
+all: clean install-deps pre-build build healthcheck test
 
 lint: ci-lint
 
@@ -74,6 +75,9 @@ $(BENCHMARK):
 
 $(EXPORTER):
 	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
+
+$(HEALTHCHECK):
+	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
 
 test:
 	go test -v $(ALL_PACKAGES)
