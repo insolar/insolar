@@ -240,7 +240,8 @@ func (bc *Bootstrapper) processGenesis(request network.Request) (network.Respons
 	return bc.transport.BuildResponse(request, &GenesisResponse{Discovery: bc.keeper.GetOrigin()}), nil
 }
 
-func (bc *Bootstrapper) Start() {
+func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
+	bc.keeper = keeper
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
 }

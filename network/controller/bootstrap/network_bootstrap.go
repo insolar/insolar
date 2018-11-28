@@ -41,8 +41,12 @@ func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
 	return nb.bootstrapJoiner(ctx)
 }
 
-func (nb *NetworkBootstrapper) Start() {
-	nb.bootstrapper.Start()
+func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyService,
+	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
+
+	nb.bootstrapper.Start(nodeKeeper)
+	nb.authController.Start(networkCoordinator, nodeKeeper)
+	nb.challengeController.Start(cryptographyService, nodeKeeper)
 }
 
 type DiscoveryNode struct {
@@ -78,6 +82,6 @@ func NewNetworkBootstrapper(options *common.Options, cert core.Certificate, tran
 	nb.sessionManager = NewSessionManager()
 	nb.bootstrapper = NewBootstrapper(options, cert, transport)
 	nb.authController = NewAuthorizationController(options, transport, nb.sessionManager)
-	// nb.challengeController = NewChallengeController()
+	nb.challengeController = NewChallengeResponseController(options, transport, nb.sessionManager)
 	return nb
 }

@@ -144,7 +144,6 @@ func (cr *ChallengeResponseController) buildChallenge1ErrorResponse(request netw
 
 func (cr *ChallengeResponseController) processChallenge2(request network.Request) (network.Response, error) {
 	data := request.GetData().(*SignedChallengeRequest)
-	// CheckSession is performed in ChallengePassed too, but we want to return early if the request is invalid
 	cert, discoveryNonce, err := cr.sessionManager.GetChallengeData(data.SessionID)
 	if err != nil {
 		return cr.buildChallenge2ErrorResponse(request, err.Error()), nil
@@ -176,7 +175,9 @@ func (cr *ChallengeResponseController) buildChallenge2ErrorResponse(request netw
 	})
 }
 
-func (cr *ChallengeResponseController) Start() {
+func (cr *ChallengeResponseController) Start(cryptoSrv core.CryptographyService, keeper network.NodeKeeper) {
+	cr.keeper = keeper
+	cr.cryptoSrv = cryptoSrv
 	cr.transport.RegisterPacketHandler(types.Challenge1, cr.processChallenge1)
 	cr.transport.RegisterPacketHandler(types.Challenge2, cr.processChallenge2)
 }
@@ -257,4 +258,14 @@ func (cr *ChallengeResponseController) Execute(ctx context.Context, discoveryNod
 		return nil, errors.Wrap(err, "error executing challenge response (step 2)")
 	}
 	return payload, nil
+}
+
+func NewChallengeResponseController(options *common.Options, transport network.InternalTransport,
+	sessionManager *SessionManager) *ChallengeResponseController {
+
+	return &ChallengeResponseController{
+		options:        options,
+		transport:      transport,
+		sessionManager: sessionManager,
+	}
 }
