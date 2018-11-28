@@ -20,12 +20,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
-	"reflect"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
-
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
@@ -37,33 +36,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/version"
 )
-
-// ComponentManager is deprecated and will be removed after completly switching to component.Manager
-type ComponentManager struct {
-	components core.Components
-}
-
-func (cm *ComponentManager) GetAll() core.Components {
-	return cm.components
-}
-
-// LinkAll - link dependency for all components
-func (cm *ComponentManager) LinkAll(ctx context.Context) {
-	inslog := inslogger.FromContext(ctx)
-	v := reflect.ValueOf(cm.components)
-	for i := 0; i < v.NumField(); i++ {
-
-		if component, ok := v.Field(i).Interface().(core.Component); ok {
-			componentName := v.Field(i).String()
-			inslog.Infof("==== Old ComponentManager: Starting component `%s` ...", componentName)
-			err := component.Start(ctx, cm.components)
-			if err != nil {
-				inslog.Fatalf("==== Old ComponentManager: failed to start component %s : %s", componentName, err.Error())
-			}
-			inslog.Infof("==== Old ComponentManager: Component `%s` successfully started", componentName)
-		}
-	}
-}
 
 type inputParams struct {
 	configPath        string
@@ -110,6 +82,14 @@ func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configura
 		len(cfg.Host.BootstrapHosts), cfg.Node.Node.ID, cfg.Host.MajorityRule)
 }
 
+func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) {
+	_, err := exec.Command(
+		"rm", "-rfv",
+		cfg.Ledger.Storage.DataDirectory,
+	).CombinedOutput()
+	checkError(ctx, err, "failed to delete ledger storage data directory")
+}
+
 func main() {
 	params := parseInputParams()
 
@@ -135,8 +115,12 @@ func main() {
 	traceid := utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
 
-	bootstrapComponents := InitBootstrapComponents(ctx, *cfg)
-	cert := InitCertificate(
+	if params.isGenesis {
+		removeLedgerDataDir(ctx, cfg)
+	}
+
+	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
+	cert := initCertificate(
 		ctx,
 		*cfg,
 		params.isGenesis,
@@ -159,7 +143,7 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, cmOld, repl, err := InitComponents(
+	cm, err := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
@@ -176,20 +160,11 @@ func main() {
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	cmOld.LinkAll(ctx)
-
-	err = cm.Start(ctx)
-	checkError(ctx, err, "failed to start components")
-
-	defer func() {
-		inslog.Warn("DEFER STOP APP")
-		err = cm.Stop(ctx)
-		checkError(ctx, err, "failed to stop components")
-	}()
-
-	var gracefulStop = make(chan os.Signal)
+	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
+
+	var waitChannel = make(chan bool)
 
 	go func() {
 		sig := <-gracefulStop
@@ -202,9 +177,11 @@ func main() {
 		os.Exit(0)
 	}()
 
+	err = cm.Start(ctx)
+	checkError(ctx, err, "failed to start components")
 	fmt.Println("Version: ", version.GetFullVersion())
-	fmt.Println("Running interactive mode:")
-	repl.Start(ctx)
+	fmt.Println("All components were started")
+	<-waitChannel
 }
 
 func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, core.Logger) {

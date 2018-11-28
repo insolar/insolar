@@ -25,12 +25,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
 )
-
-const TestCallUrl = TestURL + "/call"
 
 func contractError(body []byte) error {
 	var t map[string]interface{}
@@ -48,9 +46,9 @@ func contractError(body []byte) error {
 
 func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requesters.CreateUserConfig(root.ref, root.privKey)
+	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
 	require.NoError(t, err)
-	res, err := requesters.SendWithSeed(ctx, TestCallUrl, rootCfg, &requesters.RequestConfigJSON{
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
 		Method: "CreateMember",
 		Params: nil,
 	}, []byte("111"))
@@ -60,9 +58,9 @@ func TestBadSeed(t *testing.T) {
 
 func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requesters.CreateUserConfig(root.ref, root.privKey)
+	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
 	require.NoError(t, err)
-	res, err := requesters.SendWithSeed(ctx, TestCallUrl, rootCfg, &requesters.RequestConfigJSON{
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
 		Method: "CreateMember",
 		Params: nil,
 	}, []byte("12345678901234567890123456789012"))
@@ -106,9 +104,9 @@ func TestCrazyJSON(t *testing.T) {
 func TestIncorrectSign(t *testing.T) {
 	args, err := core.MarshalArgs(nil)
 	require.NoError(t, err)
-	seed, err := requesters.GetSeed(TestURL)
+	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
-	body, err := requesters.GetResponseBody(TestCallUrl, requesters.PostParams{
+	body, err := requester.GetResponseBody(TestCallUrl, requester.PostParams{
 		"params":    args,
 		"method":    "SomeMethod",
 		"reference": root.ref,

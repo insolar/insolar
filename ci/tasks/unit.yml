@@ -1,0 +1,33 @@
+---
+platform: linux
+image_resource:
+  type: docker-image
+  source: {repository: golang}
+inputs:
+- name: master
+  path: /go/src/github.com/insolar/insolar
+run:
+  path: sh
+  args:
+    - -exc
+    - |
+       echo tests
+       pwd
+       ls -alh go
+       export CGO_ENABLED=0
+       export GORACE="halt_on_error=1"
+       export GOMAXPROCS=2
+       export INSOLAR_LOG_LEVEL=debug
+       export GOPATH=$(pwd)/go
+
+       mkdir $GOPATH/bin
+       export PATH=$PATH:$GOPATH/bin
+       ls -alh
+       env
+       cd $GOPATH/src/github.com/insolar/insolar
+       make install-deps
+       make pre-build
+       go test crypto/ecdsa -bench .
+       go test ./cryptohelpers/...
+       #make build
+       #make test_with_coverage

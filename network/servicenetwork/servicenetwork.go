@@ -35,14 +35,16 @@ import (
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	hostNetwork  network.HostNetwork
-	controller   network.Controller
-	routingTable network.RoutingTable
+	cfg    configuration.Configuration
+	scheme core.PlatformCryptographyScheme
+
+	hostNetwork  network.HostNetwork  // TODO: should be injected
+	controller   network.Controller   // TODO: should be injected
+	routingTable network.RoutingTable // TODO: should be injected
 
 	Certificate         core.Certificate         `inject:""`
 	NodeNetwork         core.NodeNetwork         `inject:""`
 	PulseManager        core.PulseManager        `inject:""`
-	Coordinator         core.NetworkCoordinator  `inject:""`
 	PhaseManager        phases.PhaseManager      `inject:""`
 	CryptographyService core.CryptographyService `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
@@ -53,15 +55,7 @@ type ServiceNetwork struct {
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{}
-	routingTable, hostnetwork, controller, err := NewNetworkComponents(conf, serviceNetwork, scheme)
-	if err != nil {
-		log.Error("failed to create network components: %s", err.Error())
-	}
-	serviceNetwork.fakePulsar = fakepulsar.NewFakePulsar(serviceNetwork.HandlePulse, conf.Pulsar.PulseTime)
-	serviceNetwork.routingTable = routingTable
-	serviceNetwork.hostNetwork = hostnetwork
-	serviceNetwork.controller = controller
+	serviceNetwork := &ServiceNetwork{cfg: conf, scheme: scheme}
 	return serviceNetwork, nil
 }
 
@@ -95,12 +89,25 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 	n.controller.RemoteProcedureRegister(name, method)
 }
 
-// Init implements core.Component
+// Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
+	routingTable, hostnetwork, controller, err := newNetworkComponents(n.cfg, n, n.scheme)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create network components.")
+	}
+	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
+	n.routingTable = routingTable
+	n.hostNetwork = hostnetwork
+	n.controller = controller
+	return nil
+}
+
+// Start implements component.Starter
+func (n *ServiceNetwork) Start(ctx context.Context) error {
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
 
-	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper /*components.NodeNetwork.(network.NodeKeeper)*/)
+	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper)
 	n.routingTable.Inject(n.NodeKeeper)
 
 	log.Infoln("Bootstrapping network...")
@@ -153,17 +160,18 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		go func(logger core.Logger, network *ServiceNetwork) {
 			// FIXME: we need to resend pulse only to nodes outside the globe, we send pulse to nodes inside the globe on phase1 of the consensus
 			// network.controller.ResendPulseToKnownHosts(pulse)
-			if network.Coordinator == nil {
+			if network.NetworkCoordinator == nil {
 				return
 			}
-			err := network.Coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
+			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
-			err = n.PhaseManager.OnPulse(ctx, &pulse)
-			if err != nil {
-				logger.Warn("phase manager fail: " + err.Error())
-			}
+			// TODO: make PhaseManager works and uncomment this
+			// err = n.PhaseManager.OnPulse(ctx, &pulse)
+			// if err != nil {
+			// 	logger.Warn("phase manager fail: " + err.Error())
+			// }
 		}(logger, n)
 
 		// TODO: PLACE NEW CONSENSUS HERE
@@ -176,8 +184,8 @@ func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
 	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
 }
 
-// NewNetworkComponents create network.HostNetwork and network.Controller for new network
-func NewNetworkComponents(conf configuration.Configuration,
+// newNetworkComponents create network.HostNetwork and network.Controller for new network
+func newNetworkComponents(conf configuration.Configuration,
 	pulseHandler network.PulseHandler, scheme core.PlatformCryptographyScheme) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
 	routingTable := &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(conf)

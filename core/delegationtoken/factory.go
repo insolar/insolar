@@ -28,10 +28,12 @@ type delegationTokenFactory struct {
 	Cryptography core.CryptographyService `inject:""`
 }
 
+// NewDelegationTokenFactory creates new token factory instance.
 func NewDelegationTokenFactory() core.DelegationTokenFactory {
 	return &delegationTokenFactory{}
 }
 
+// IssuePendingExecution creates new token for provided message.
 func (f *delegationTokenFactory) IssuePendingExecution(
 	msg core.Message, pulse core.PulseNumber,
 ) (core.DelegationToken, error) {
@@ -52,7 +54,10 @@ func (f *delegationTokenFactory) IssuePendingExecution(
 	return token, nil
 }
 
-func (f *delegationTokenFactory) IssueGetObjectRedirect(sender *core.RecordRef, redirectedMessage core.Message) (core.DelegationToken, error) {
+// IssueGetObjectRedirect creates new token for provided message.
+func (f *delegationTokenFactory) IssueGetObjectRedirect(
+	sender *core.RecordRef, redirectedMessage core.Message,
+) (core.DelegationToken, error) {
 	parsedMessage := redirectedMessage.(*message.GetObject)
 	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
 	sign, err := f.Cryptography.Sign(dataForSign)
@@ -62,6 +67,20 @@ func (f *delegationTokenFactory) IssueGetObjectRedirect(sender *core.RecordRef, 
 	return &GetObjectRedirect{Signature: sign.Bytes()}, nil
 }
 
+// IssueGetChildrenRedirect creates new token for provided message.
+func (f *delegationTokenFactory) IssueGetChildrenRedirect(
+	sender *core.RecordRef, redirectedMessage core.Message,
+) (core.DelegationToken, error) {
+	parsedMessage := redirectedMessage.(*message.GetChildren)
+	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
+	sign, err := f.Cryptography.Sign(dataForSign)
+	if err != nil {
+		return nil, err
+	}
+	return &GetChildrenRedirect{Signature: sign.Bytes()}, nil
+}
+
+// Verify performs token validation.
 func (f *delegationTokenFactory) Verify(parcel core.Parcel) (bool, error) {
 	if parcel.DelegationToken() == nil {
 		return false, nil

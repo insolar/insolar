@@ -18,6 +18,7 @@ package functest
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/build"
@@ -37,11 +38,12 @@ import (
 )
 
 const HOST = "http://localhost:19191"
-const TestURL = HOST + "/api/v1"
+const TestAPIURL = HOST + "/api"
+const TestRPCUrl = TestAPIURL + "/rpc"
+const TestCallUrl = TestAPIURL + "/call"
 const insolarImportPath = "github.com/insolar/insolar"
-const insolarNodeKeys = "bootstrap_keys.json"
+
 const insolarRootMemberKeys = "root_member_keys.json"
-const insolarCertificate = "certificate.json"
 
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
@@ -50,10 +52,9 @@ var stdout io.ReadCloser
 var stderr io.ReadCloser
 var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
-var insolarNodeKeysPath = filepath.Join(testdataPath(), insolarNodeKeys)
+
 var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
 var insolarNodesKeysPath = filepath.Join(testdataPath(), "discovery_node_")
-var insolarCertificatePath = filepath.Join(testdataPath(), insolarCertificate)
 
 var info infoResponse
 var root user
@@ -110,13 +111,6 @@ func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
 }
 
-func generateNodeKeys() error {
-	out, err := exec.Command(
-		insolarPath, "-c", "gen_keys",
-		"-o", insolarNodeKeysPath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateNodeKeys ] could't generate node keys: %s", out)
-}
-
 func generateRootMemberKeys() error {
 	out, err := exec.Command(
 		insolarPath, "-c", "gen_keys",
@@ -134,13 +128,6 @@ func generateDiscoveryNodesKeys() error {
 		}
 	}
 	return nil
-}
-
-func generateCertificate() error {
-	out, err := exec.Command(
-		insolarPath, "-c", "gen_certificate", "-g", insolarNodeKeysPath,
-		"-o", insolarCertificatePath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateCertificate ] could't generate certificate: %s", out)
 }
 
 func loadRootKeys() error {
@@ -162,18 +149,28 @@ func loadRootKeys() error {
 }
 
 func setInfo() error {
-	resp, err := http.Get(TestURL + "/info")
+	jsonValue, err := json.Marshal(postParams{
+		"jsonrpc": "2.0",
+		"method":  "info.Get",
+		"id":      "",
+	})
 	if err != nil {
-		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/info")
+		return errors.Wrap(err, "[ setInfo ] couldn't marshal post params")
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't send request to %s", TestRPCUrl)
+	}
+	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {
 		return errors.Wrapf(err, "[ setInfo ] couldn't read answer")
 	}
-	err = json.Unmarshal(body, &info)
+	infoResp := &rpcInfoResponse{}
+	err = json.Unmarshal(body, infoResp)
 	if err != nil {
 		return errors.Wrapf(err, "[ setInfo ] couldn't unmarshall answer")
 	}
+	info = infoResp.Result
 	return nil
 }
 
@@ -194,7 +191,7 @@ func waitForLaunch() error {
 		for scanner.Scan() {
 			line := scanner.Text()
 			fmt.Println(line)
-			if strings.Contains(line, "======= Host info ======") {
+			if strings.Contains(line, "All components were started") {
 				done <- true
 			}
 		}
@@ -219,11 +216,19 @@ func waitForLaunch() error {
 	}
 }
 
+func startGenesis() error {
+	out, err :=
+		exec.Command(
+			insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
+			"--keyout", testdataPath()).CombinedOutput()
+	if err != nil {
+		return errors.Wrapf(err, "[ startGenesis ] could't run genesis: %s", out)
+	}
+	return nil
+}
+
 func startInsolard() error {
-	cmd = exec.Command(
-		insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
-		"--keyout", testdataPath(),
-	)
+	cmd = exec.Command(insolardPath)
 	var err error
 
 	stdin, err = cmd.StdinPipe()
@@ -263,14 +268,9 @@ func stopInsolard() error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
-	io.WriteString(stdin, "exit\n")
-	err := <-cmdCompleted
+	err := cmd.Process.Kill()
 	if err != nil {
-		fmt.Println("[ stopInsolard ] try to kill, wait done with error: ", err)
-		err := cmd.Process.Kill()
-		if err != nil {
-			return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
-		}
+		return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
 	}
 	return nil
 }
@@ -317,18 +317,6 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolar was successfully builded")
 
-	err = generateNodeKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate node keys: ")
-	}
-	fmt.Println("[ setup ] node keys successfully generated")
-
-	err = generateCertificate()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate certificate: ")
-	}
-	fmt.Println("[ setup ] certificate successfully generated")
-
 	err = generateRootMemberKeys()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't generate root member keys: ")
@@ -353,6 +341,12 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolard was successfully builded")
 
+	err = startGenesis()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't start genesis: ")
+	}
+	fmt.Println("[ setup ] genesis was successfully started")
+
 	err = startInsgorund()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
@@ -364,6 +358,7 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't start insolard: ")
 	}
 	fmt.Println("[ setup ] insolard was successfully started")
+	time.Sleep(60 * time.Second)
 	err = setInfo()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't receive root reference ")

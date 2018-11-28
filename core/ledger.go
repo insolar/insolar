@@ -64,6 +64,7 @@ type PulseManager interface {
 
 // JetCoordinator provides methods for calculating Jet affinity
 // (e.g. to which Jet a message should be sent).
+//go:generate minimock -i github.com/insolar/insolar/core.JetCoordinator -o ../testutils -s _mock.go
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
 	IsAuthorized(ctx context.Context, role JetRole, obj *RecordRef, pulse PulseNumber, node RecordRef) (bool, error)

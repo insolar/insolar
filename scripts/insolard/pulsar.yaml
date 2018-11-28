@@ -1,0 +1,21 @@
+pulsar:
+  connectiontype: tcp
+  mainlisteneraddress: 0.0.0.0:58090
+  storage:
+    datadirectory: ./data_pulsar
+    txretriesonconflict: 0
+  pulsetime: 10000
+  receivingsigntimeout: 1000
+  receivingnumbertimeout: 1000
+  receivingvectortimeout: 1000
+  receivingsignsforchosentimeout: 0
+  neighbours: []
+  numberofrandomhosts: 1
+  numberdelta: 10
+  bootstraplistener:
+    protocol: UTP
+    address: 0.0.0.0:58091
+    behindnat: false
+  bootstrapnodes:
+  - localhost:53837
+keyspath: "scripts/insolard/configs/bootstrap_keys.json"

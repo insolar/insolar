@@ -38,6 +38,7 @@ vm/wasm/test/data/*.wat
 
 /testdata
 data
+data_pulsar
 
 /bin
 
@@ -45,3 +46,4 @@ data
 /dist
 
 /scripts/insolard/configs
+/scripts/insolard/nodes

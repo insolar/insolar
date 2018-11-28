@@ -141,6 +141,16 @@ func (ref RecordRef) Equal(other RecordRef) bool {
 	return ref == other
 }
 
+// IsEmpty - check for void
+func (ref RecordRef) IsEmpty() bool {
+	return ref.Equal(RecordRef{})
+}
+
+// Compare compares two record references
+func (ref RecordRef) Compare(other RecordRef) int {
+	return bytes.Compare(ref.Bytes(), other.Bytes())
+}
+
 // NewRefFromBase58 deserializes reference from base58 encoded string.
 func NewRefFromBase58(str string) RecordRef {
 	// TODO: if str < 20 bytes, always returns 0. need to check this.

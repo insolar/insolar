@@ -4,9 +4,9 @@ package core
 
 import "strconv"
 
-const _DelegationTokenType_name = "DTTypePendingExecutionDTTypeGetObjectRedirect"
+const _DelegationTokenType_name = "DTTypePendingExecutionDTTypeGetObjectRedirectDTTypeGetChildrenRedirect"
 
-var _DelegationTokenType_index = [...]uint8{0, 22, 45}
+var _DelegationTokenType_index = [...]uint8{0, 22, 45, 70}
 
 func (i DelegationTokenType) String() string {
 	i -= 1

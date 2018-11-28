@@ -1,0 +1,232 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: bootstrap-tcp
+  namespace: dev
+  labels:
+    app: bootstrap
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    name: prometheus
+  - port: 19191
+    name: api
+    protocol: TCP
+  type: LoadBalancer
+  selector:
+    app: bootstrap
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bootstrap-udp
+  namespace: dev
+  labels:
+    app: bootstrap
+spec:
+  ports:
+  - port: 7900
+    name: dht
+    protocol: UDP
+  type: LoadBalancer
+  selector:
+    app: bootstrap
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: bootstrap
+  namespace: dev
+  labels:
+    app: bootstrap
+spec:
+  ports:
+  - port: 8080
+    name: prometheus
+  - port: 7900
+    name: dht
+    protocol: UDP
+  - port: 19191
+    name: api
+    protocol: TCP
+  clusterIP: None
+  selector:
+    app: bootstrap
+---
+
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: seed
+  namespace: dev
+  labels:
+    app: bootstrap
+spec:
+  serviceName: bootstrap
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: bootstrap
+    spec:
+      terminationGracePeriodSeconds: 0
+      initContainers:
+        - name: init-bootstrap
+          imagePullPolicy: Never
+          image: "base"
+          tty: true
+          stdin: true
+          command: 
+            - /bin/sh
+            - -c
+            - |
+              /go/bin/insolar -c default_config > /opt/insolar/config/config.yaml;
+              /go/bin/insolar -c gen_keys > /opt/insolar/config/keys.json;
+              #/go/bin/insolar -c gen_keys > /opt/insolar/config/rootkeys.json;
+              /go/bin/insgorund -d "/tmp/code" -l "127.0.0.1:7777" & PID=$!;
+              /go/bin/insolard -c /opt/insolar/config/config.yaml --bootstrap --cert_out=/opt/insolar/config/cert.json ;
+              kill -9 $PID ;
+          env:
+            - name: HOME
+              value: /opt/insolar
+            - name: INSOLAR_KEYSPATH
+              value: "/opt/insolar/config/keys.json"
+            - name: INSOLAR_GENESIS_ROOTKEYS
+              value: "/opt/insolar/config/rootkeys.json"
+            - name: INSOLAR_PULSAR_STORAGE_DATADIRECTORY
+              value: "/opt/insolar/pulsar"
+            - name: INSOLAR_LEDGER_STORAGE_DATADIRECTORY
+              value: "/opt/insolar/data"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: INSOLAR_HOST_TRANSPORT_ADDRESS
+              value: "$(POD_IP):7900"
+            - name: INSOLAR_CERTIFICATEPATH
+              value: "/opt/insolar/config/cert.json"
+          volumeMounts:
+            - name: bootstrap-config
+              mountPath: /opt/insolar/config
+            - name: data
+              mountPath: /opt/insolar/data
+            - name: pulsar
+              mountPath: /opt/insolar/pulsar
+            - name: code
+              mountPath: /tmp/code
+            - name: root-keys
+              mountPath: /opt/insolar/config/rootkeys.json
+              subPath: rootkeys.json
+      containers:
+        - name: insgorund
+          imagePullPolicy: Never
+          image: "base"
+          workingDir: "/opt/insolar"
+          tty: true
+          stdin: true
+          command: 
+            - /go/bin/insgorund
+            - -d
+            - "/tmp/code"
+            - -l
+            - "127.0.0.1:7777"
+          env:
+            - name: HOME
+              value: /opt/insolar
+            - name: INSOLAR_KEYSPATH
+              value: "/opt/insolar/config/keys.json"
+            - name: INSOLAR_GENESIS_ROOTKEYS
+              value: "/opt/insolar/config/rootkeys.json"
+            - name: INSOLAR_PULSAR_STORAGE_DATADIRECTORY
+              value: "/opt/insolar/pulsar"
+            - name: INSOLAR_LEDGER_STORAGE_DATADIRECTORY
+              value: "/opt/insolar/data"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: INSOLAR_HOST_TRANSPORT_ADDRESS
+              value: "$(POD_IP):7900"
+          resources:
+            requests:
+              cpu: 300m
+              memory: 200M
+          volumeMounts:
+            - name: bootstrap-config
+              mountPath: /opt/insolar/config
+            - name: data
+              mountPath: /opt/insolar/data
+            - name: pulsar
+              mountPath: /opt/insolar/pulsar
+            - name: code
+              mountPath: /tmp/code
+            - name: root-keys
+              mountPath: /opt/insolar/config/rootkeys.json
+              subPath: rootkeys.json
+        - name: insolard
+          imagePullPolicy: Never
+          image: "base"
+          workingDir: "/opt/insolar"
+          tty: true
+          stdin: true
+          command: 
+            - /go/bin/insolard
+            - -c
+            - /opt/insolar/config/config.yaml
+          env:
+            - name: HOME
+              value: /opt/insolar
+            - name: INSOLAR_KEYSPATH
+              value: "/opt/insolar/config/keys.json"
+            - name: INSOLAR_GENESIS_ROOTKEYS
+              value: "/opt/insolar/config/rootkeys.json"
+            - name: INSOLAR_PULSAR_STORAGE_DATADIRECTORY
+              value: "/opt/insolar/pulsar"
+            - name: INSOLAR_LEDGER_STORAGE_DATADIRECTORY
+              value: "/opt/insolar/data"
+            - name: INSOLAR_CERTIFICATEPATH
+              value: "/opt/insolar/config/cert.json"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: INSOLAR_HOST_TRANSPORT_ADDRESS
+              value: "$(POD_IP):7900"
+            - name: INSOLAR_APIRUNNER_ADDRESS
+              value: "$(POD_IP):19191"
+          resources:
+            requests:
+              cpu: 300m
+              memory: 200M
+          volumeMounts:
+            - name: bootstrap-config
+              mountPath: /opt/insolar/config
+            - name: data
+              mountPath: /opt/insolar/data
+            - name: pulsar
+              mountPath: /opt/insolar/pulsar
+            - name: code
+              mountPath: /tmp/code
+            - name: root-keys
+              mountPath: /opt/insolar/config/rootkeys.json
+              subPath: rootkeys.json
+      volumes:
+      - name: bootstrap-config
+        emptyDir: {}
+      - name: data
+        emptyDir: {}
+      - name: pulsar
+        emptyDir: {}
+      - name: code
+        emptyDir: {}
+      - name: root-keys
+        configMap:
+          name: root-keys
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: Parallel
+
