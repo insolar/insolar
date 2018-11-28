@@ -26,6 +26,7 @@ type NetworkNode interface {
 }
 
 // Certificate interface provides methods to manage keys
+//go:generate minimock -i github.com/insolar/insolar/core.Certificate -o ../testutils -s _mock.go
 type Certificate interface {
 	NetworkNode
 
@@ -35,6 +36,7 @@ type Certificate interface {
 	GetBootstrapNodes() []BootstrapNode
 }
 
+//go:generate minimock -i github.com/insolar/insolar/core.BootstrapNode -o ../testutils -s _mock.go
 type BootstrapNode interface {
 	NetworkNode
 
