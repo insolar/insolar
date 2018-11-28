@@ -39,8 +39,6 @@ func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
-//var INSATTR_RegisterNode_API = true
-
 // RegisterNode registers node in system
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
 
