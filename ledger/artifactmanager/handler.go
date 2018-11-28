@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
@@ -76,6 +75,8 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
+	h.Bus.MustRegister(core.TypeHeavyReset, h.handleHeavyReset)
+
 	h.Bus.MustRegister(core.TypeGetObjectIndex, h.handleGetObjectIndex)
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
@@ -600,45 +601,6 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	return &reply.OK{}, nil
 }
 
-// TODO: check sender if it was light material in synced pulses:
-// sender := genericMsg.GetSender()
-// sender.isItWasLMInPulse(pulsenum)
-func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
-	msg := genericMsg.Message().(*message.HeavyPayload)
-	inslog.Debugf("Heavy sync: get start payload message with %v records", len(msg.Records))
-	if err := h.HeavySync.Store(ctx, msg.PulseNum, msg.Records); err != nil {
-		return nil, err
-	}
-	return &reply.OK{}, nil
-}
-
-func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
-
-	msg := genericMsg.Message().(*message.HeavyStartStop)
-	// stop branch
-	if msg.Finished {
-		inslog.Debugf("Heavy sync: get stop message for pulse %v", msg.PulseNum)
-		if err := h.HeavySync.Stop(ctx, msg.PulseNum); err != nil {
-			return nil, err
-		}
-		return &reply.OK{}, nil
-	}
-	// start
-	inslog.Debugf("Heavy sync: get start message for pulse %v", msg.PulseNum)
-	if err := h.HeavySync.Start(ctx, msg.PulseNum); err != nil {
-		return nil, err
-	}
-	return &reply.OK{}, nil
-}
-
 func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetObjectIndex)
 
@@ -771,18 +733,4 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	return idx, nil
-}
-
-func (h *MessageHandler) handleHeavyReset(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
-
-	msg := genericMsg.Message().(*message.HeavyReset)
-	inslog.Debugf("Heavy sync: get reset message for pulse %v", msg.PulseNum)
-	if err := h.HeavySync.Reset(ctx, msg.PulseNum); err != nil {
-		return nil, err
-	}
-	return &reply.OK{}, nil
 }
