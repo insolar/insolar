@@ -113,12 +113,19 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	}
 
 	// build PulseManager
+	minretry := 20 * time.Millisecond
 	kb := 1 << 10
 	pm := pulsemanager.NewPulseManager(
 		db,
 		configuration.PulseManager{
 			HeavySyncEnabled:      true,
 			HeavySyncMessageLimit: 2 * kb,
+			HeavyBackoff: configuration.Backoff{
+				Jitter: true,
+				Min:    minretry,
+				Max:    minretry * 2,
+				Factor: 2,
+			},
 		},
 	)
 	pm.LR = lrMock
@@ -162,10 +169,9 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	err = setpulse(ctx, pm, lastpulse)
 	require.NoError(t, err)
 
-	// TODO: comment sleep
-	if withretry {
-		time.Sleep(1000 * time.Millisecond)
-	}
+	// give sync chance to complete and start sync loop again
+	time.Sleep(2 * minretry)
+
 	err = pm.Stop(ctx)
 	assert.NoError(t, err)
 

@@ -173,14 +173,11 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 //
 // Should never be called after Stop.
 func (m *PulseManager) SyncToHeavy(pn core.PulseNumber) {
-	fmt.Printf("CALL SyncToHeavy pulse: %v\n", pn)
 	// TODO: save current pulse as
 	if len(m.gotpulse) == 0 {
-		fmt.Println("...send signal to m.gotpulse")
 		m.gotpulse <- struct{}{}
 		return
 	}
-	fmt.Println("...skip signal to m.gotpulse")
 }
 
 // Start starts pulse manager, spawns replication goroutine under a hood.
