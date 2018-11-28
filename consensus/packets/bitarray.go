@@ -17,6 +17,7 @@
 package packets
 
 import (
+	"bytes"
 	"encoding/binary"
 	"math"
 
@@ -64,15 +65,48 @@ func (arr *bitArray) put(bit, index int) error {
 	return nil
 }
 
-func (arr *bitArray) serialize() ([]byte, error) {
-	result := allocateBuffer(int(round(arr.bitsSize, sizeOfBlock)))
-	for _, byte := range arr.array {
-		err := binary.Write(result, defaultByteOrder, byte)
+func (arr *bitArray) serialize(compressed bool) ([]byte, error) {
+	if compressed {
+		return arr.serializeCompressed()
+	}
+	var result bytes.Buffer
+	for _, b := range arr.array {
+		err := binary.Write(&result, defaultByteOrder, b)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ serialize] failed to serialize a bitarray")
 		}
 	}
 
+	return result.Bytes(), nil
+}
+
+func (arr *bitArray) serializeCompressed() ([]byte, error) {
+	var result bytes.Buffer
+	last, err := arr.getState(0)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
+	}
+	count := uint8(1)
+	for i := 1; i <= len(arr.array); i++ {
+		current, err := arr.getState(i)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
+		}
+		if last == current {
+			count++
+		} else {
+			err := binary.Write(&result, binary.BigEndian, count)
+			if err != nil {
+				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
+			}
+			err = binary.Write(&result, binary.BigEndian, last)
+			if err != nil {
+				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
+			}
+			count = 1
+			last = current
+		}
+	}
 	return result.Bytes(), nil
 }
 
