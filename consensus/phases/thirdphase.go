@@ -61,6 +61,9 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) erro
 			return errors.New("recv not signed packet")
 		}
 		cells, err := packet.GetBitset().GetCells(tp.mapper)
+		if err != nil {
+			return errors.Wrap(err, "[ Execute ] failed to get a cells")
+		}
 		for _, cell := range cells {
 			if cell.State == packets.Legit {
 				node, err := getNode(cell.NodeID, nodes)
