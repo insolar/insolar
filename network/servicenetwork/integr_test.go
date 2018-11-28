@@ -23,21 +23,52 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func createServiceNetwork(t *testing.T) (*ServiceNetwork, *component.Manager) {
-	address := "127.0.0.1:0"
-	consensusAddr := "127.0.0.1:0"
+type testSuite struct {
+	suite.Suite
+	ctx          context.Context
+	networkNodes []networkNode
+}
 
-	origin := nodenetwork.NewNode(testutils.RandomRef(), nil, nil, 0, address, "")
-	keeper := nodenetwork.NewNodeKeeper(origin)
+func NewTestSuite() *testSuite {
+	return &testSuite{
+		Suite:        suite.Suite{},
+		ctx:          context.Background(),
+		networkNodes: make([]networkNode, 0),
+	}
+}
 
+func (s *testSuite) StartNodes() {
+	for _, n := range s.networkNodes {
+		err := n.componentManager.Init(s.ctx)
+		s.NoError(err)
+		err = n.componentManager.Start(s.ctx)
+		s.NoError(err)
+	}
+}
+
+func (s *testSuite) StopNodes() {
+	for _, n := range s.networkNodes {
+		err := n.componentManager.Stop(s.ctx)
+		s.NoError(err)
+	}
+}
+
+type networkNode struct {
+	componentManager *component.Manager
+	serviceNetwork   *ServiceNetwork
+}
+
+func initCrypto(t *testing.T) (*certificate.Certificate, core.CryptographyService) {
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 	cs := cryptography.NewKeyBoundCryptographyService(key)
@@ -46,10 +77,22 @@ func createServiceNetwork(t *testing.T) (*ServiceNetwork, *component.Manager) {
 	cert, err := certificate.NewCertificatesWithKeys(pk, kp)
 	require.NoError(t, err)
 
+	return cert, cs
+}
+
+func createNetworkNode(t *testing.T) networkNode {
+	address := "127.0.0.1:0"
+	consensusAddr := "127.0.0.1:0"
+
+	origin := nodenetwork.NewNode(testutils.RandomRef(), nil, nil, 0, address, "")
+	keeper := nodenetwork.NewNodeKeeper(origin)
+
 	cfg := configuration.NewConfiguration()
 	cfg.Node.Node.ID = origin.ID().String()
 	cfg.Host.Transport.Address = address
 	cfg.Host.ConsensusTransport.Address = consensusAddr
+
+	//cfg.Host.BootstrapHosts = append(cfg.Host.BootstrapHosts, "127.0.0.1:0")
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	serviceNetwork, err := NewServiceNetwork(cfg, scheme)
@@ -60,25 +103,30 @@ func createServiceNetwork(t *testing.T) (*ServiceNetwork, *component.Manager) {
 	amMock := testutils.NewArtifactManagerMock(t)
 
 	cm := &component.Manager{}
-	cm.Register(keeper, cert, pulseManagerMock, cs, netCoordinator, amMock)
+	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock)
+	cm.Register(initCrypto(t))
 	cm.Inject(serviceNetwork)
 
 	serviceNetwork.NodeKeeper = keeper
 
-	return serviceNetwork, cm
+	return networkNode{cm, serviceNetwork}
+}
+
+func (s *testSuite) TestSendConsensusPhase() {
+	s.StartNodes()
+	s.StopNodes()
+	//activeNodes := s.networkNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	//s.Equal(1, len(activeNodes))
 }
 
 func TestNewServiceNetwork2(t *testing.T) {
-	_, cm := createServiceNetwork(t)
+	s := NewTestSuite()
+	node1 := createNetworkNode(t)
+	node2 := createNetworkNode(t)
+	node3 := createNetworkNode(t)
 
-	ctx := context.Background()
+	s.networkNodes = append(s.networkNodes, node1, node2, node3)
 
-	err := cm.Init(ctx)
-	assert.NoError(t, err)
+	suite.Run(t, s)
 
-	err = cm.Start(ctx)
-	assert.NoError(t, err)
-
-	err = cm.Stop(ctx)
-	assert.NoError(t, err)
 }
