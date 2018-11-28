@@ -29,13 +29,12 @@ func TestHealthCheck(t *testing.T) {
 	currentPath, err := os.Getwd()
 	require.NoError(t, err)
 
-	cmd := exec.Command("./bin/healthcheck",
+	cmd := exec.Command(currentPath+"/../../../bin/healthcheck",
 		"-c", currentPath+"healthcheck/healthcheck.go",
 		"-d", tmpDir,
 		"-a", socket,
 		"-p", protocol)
 
-	cmd.Dir = "../../.."
 	_, err = cmd.CombinedOutput()
 
 	assert.Equal(t, "exit status 0", err.Error())
