@@ -25,15 +25,15 @@ type CertificateMock struct {
 	GetBootstrapNodesPreCounter uint64
 	GetBootstrapNodesMock       mCertificateMockGetBootstrapNodes
 
+	GetNodeRefFunc       func() (r *core.RecordRef)
+	GetNodeRefCounter    uint64
+	GetNodeRefPreCounter uint64
+	GetNodeRefMock       mCertificateMockGetNodeRef
+
 	GetPublicKeyFunc       func() (r crypto.PublicKey)
 	GetPublicKeyCounter    uint64
 	GetPublicKeyPreCounter uint64
 	GetPublicKeyMock       mCertificateMockGetPublicKey
-
-	GetRefFunc       func() (r *core.RecordRef)
-	GetRefCounter    uint64
-	GetRefPreCounter uint64
-	GetRefMock       mCertificateMockGetRef
 
 	GetRoleFunc       func() (r core.NodeRole)
 	GetRoleCounter    uint64
@@ -60,8 +60,8 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	}
 
 	m.GetBootstrapNodesMock = mCertificateMockGetBootstrapNodes{mock: m}
+	m.GetNodeRefMock = mCertificateMockGetNodeRef{mock: m}
 	m.GetPublicKeyMock = mCertificateMockGetPublicKey{mock: m}
-	m.GetRefMock = mCertificateMockGetRef{mock: m}
 	m.GetRoleMock = mCertificateMockGetRole{mock: m}
 	m.GetRootDomainReferenceMock = mCertificateMockGetRootDomainReference{mock: m}
 	m.SetRootDomainReferenceMock = mCertificateMockSetRootDomainReference{mock: m}
@@ -111,6 +111,48 @@ func (m *CertificateMock) GetBootstrapNodesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetBootstrapNodesPreCounter)
 }
 
+type mCertificateMockGetNodeRef struct {
+	mock *CertificateMock
+}
+
+//Return sets up a mock for Certificate.GetNodeRef to return Return's arguments
+func (m *mCertificateMockGetNodeRef) Return(r *core.RecordRef) *CertificateMock {
+	m.mock.GetNodeRefFunc = func() *core.RecordRef {
+		return r
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of Certificate.GetNodeRef method
+func (m *mCertificateMockGetNodeRef) Set(f func() (r *core.RecordRef)) *CertificateMock {
+	m.mock.GetNodeRefFunc = f
+
+	return m.mock
+}
+
+//GetNodeRef implements github.com/insolar/insolar/core.Certificate interface
+func (m *CertificateMock) GetNodeRef() (r *core.RecordRef) {
+	atomic.AddUint64(&m.GetNodeRefPreCounter, 1)
+	defer atomic.AddUint64(&m.GetNodeRefCounter, 1)
+
+	if m.GetNodeRefFunc == nil {
+		m.t.Fatal("Unexpected call to CertificateMock.GetNodeRef")
+		return
+	}
+
+	return m.GetNodeRefFunc()
+}
+
+//GetNodeRefMinimockCounter returns a count of CertificateMock.GetNodeRefFunc invocations
+func (m *CertificateMock) GetNodeRefMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNodeRefCounter)
+}
+
+//GetNodeRefMinimockPreCounter returns the value of CertificateMock.GetNodeRef invocations
+func (m *CertificateMock) GetNodeRefMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNodeRefPreCounter)
+}
+
 type mCertificateMockGetPublicKey struct {
 	mock *CertificateMock
 }
@@ -151,48 +193,6 @@ func (m *CertificateMock) GetPublicKeyMinimockCounter() uint64 {
 //GetPublicKeyMinimockPreCounter returns the value of CertificateMock.GetPublicKey invocations
 func (m *CertificateMock) GetPublicKeyMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyPreCounter)
-}
-
-type mCertificateMockGetRef struct {
-	mock *CertificateMock
-}
-
-//Return sets up a mock for Certificate.GetRef to return Return's arguments
-func (m *mCertificateMockGetRef) Return(r *core.RecordRef) *CertificateMock {
-	m.mock.GetRefFunc = func() *core.RecordRef {
-		return r
-	}
-	return m.mock
-}
-
-//Set uses given function f as a mock of Certificate.GetRef method
-func (m *mCertificateMockGetRef) Set(f func() (r *core.RecordRef)) *CertificateMock {
-	m.mock.GetRefFunc = f
-
-	return m.mock
-}
-
-//GetRef implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) GetRef() (r *core.RecordRef) {
-	atomic.AddUint64(&m.GetRefPreCounter, 1)
-	defer atomic.AddUint64(&m.GetRefCounter, 1)
-
-	if m.GetRefFunc == nil {
-		m.t.Fatal("Unexpected call to CertificateMock.GetRef")
-		return
-	}
-
-	return m.GetRefFunc()
-}
-
-//GetRefMinimockCounter returns a count of CertificateMock.GetRefFunc invocations
-func (m *CertificateMock) GetRefMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetRefCounter)
-}
-
-//GetRefMinimockPreCounter returns the value of CertificateMock.GetRef invocations
-func (m *CertificateMock) GetRefMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetRefPreCounter)
 }
 
 type mCertificateMockGetRole struct {
@@ -353,12 +353,12 @@ func (m *CertificateMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CertificateMock.GetBootstrapNodes")
 	}
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
-		m.t.Fatal("Expected call to CertificateMock.GetPublicKey")
+	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
 
-	if m.GetRefFunc != nil && atomic.LoadUint64(&m.GetRefCounter) == 0 {
-		m.t.Fatal("Expected call to CertificateMock.GetRef")
+	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.GetPublicKey")
 	}
 
 	if m.GetRoleFunc != nil && atomic.LoadUint64(&m.GetRoleCounter) == 0 {
@@ -394,12 +394,12 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.GetBootstrapNodes")
 	}
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
-		m.t.Fatal("Expected call to CertificateMock.GetPublicKey")
+	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
 
-	if m.GetRefFunc != nil && atomic.LoadUint64(&m.GetRefCounter) == 0 {
-		m.t.Fatal("Expected call to CertificateMock.GetRef")
+	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.GetPublicKey")
 	}
 
 	if m.GetRoleFunc != nil && atomic.LoadUint64(&m.GetRoleCounter) == 0 {
@@ -429,8 +429,8 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && (m.GetBootstrapNodesFunc == nil || atomic.LoadUint64(&m.GetBootstrapNodesCounter) > 0)
+		ok = ok && (m.GetNodeRefFunc == nil || atomic.LoadUint64(&m.GetNodeRefCounter) > 0)
 		ok = ok && (m.GetPublicKeyFunc == nil || atomic.LoadUint64(&m.GetPublicKeyCounter) > 0)
-		ok = ok && (m.GetRefFunc == nil || atomic.LoadUint64(&m.GetRefCounter) > 0)
 		ok = ok && (m.GetRoleFunc == nil || atomic.LoadUint64(&m.GetRoleCounter) > 0)
 		ok = ok && (m.GetRootDomainReferenceFunc == nil || atomic.LoadUint64(&m.GetRootDomainReferenceCounter) > 0)
 		ok = ok && (m.SetRootDomainReferenceFunc == nil || atomic.LoadUint64(&m.SetRootDomainReferenceCounter) > 0)
@@ -446,12 +446,12 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to CertificateMock.GetBootstrapNodes")
 			}
 
-			if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
-				m.t.Error("Expected call to CertificateMock.GetPublicKey")
+			if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+				m.t.Error("Expected call to CertificateMock.GetNodeRef")
 			}
 
-			if m.GetRefFunc != nil && atomic.LoadUint64(&m.GetRefCounter) == 0 {
-				m.t.Error("Expected call to CertificateMock.GetRef")
+			if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+				m.t.Error("Expected call to CertificateMock.GetPublicKey")
 			}
 
 			if m.GetRoleFunc != nil && atomic.LoadUint64(&m.GetRoleCounter) == 0 {
@@ -482,11 +482,11 @@ func (m *CertificateMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
 		return false
 	}
 
-	if m.GetRefFunc != nil && atomic.LoadUint64(&m.GetRefCounter) == 0 {
+	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
 		return false
 	}
 
