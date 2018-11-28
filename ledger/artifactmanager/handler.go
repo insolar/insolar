@@ -76,6 +76,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
+	h.Bus.MustRegister(core.TypeGetObjectIndex, h.handleGetObjectIndex)
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
 	h.jetDropHandlers[core.TypeGetObject] = h.handleGetObject
@@ -598,8 +599,8 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.GetObjectIndex)
+func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.GetObjectIndex)
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Object.Record(), true)
 	if err != nil {
