@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/pkg/errors"
 )
 
 // CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
@@ -57,4 +58,13 @@ func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core
 		}
 	}
 	// TODO: handle uint32 overflow
+}
+
+func RemoveOrigin(discoveryNodes []core.BootstrapNode, origin core.RecordRef) ([]core.BootstrapNode, error) {
+	for i, discoveryNode := range discoveryNodes {
+		if origin.Equal(*discoveryNode.GetRef()) {
+			return append(discoveryNodes[:i], discoveryNodes[i+1:]...), nil
+		}
+	}
+	return nil, errors.New("Origin not found in discovery nodes list")
 }
