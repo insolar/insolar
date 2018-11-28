@@ -72,14 +72,6 @@
   revision = "be486d185f3dfcb2dbf8429332da50a0da7f95a6"
 
 [[projects]]
-  branch = "master"
-  digest = "1:454adc7f974228ff789428b6dc098638c57a64aa0718f0bd61e53d3cd39d7a75"
-  name = "github.com/chzyer/readline"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
-
-[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -595,7 +587,6 @@
     "github.com/anacrolix/utp",
     "github.com/blang/semver",
     "github.com/ccding/go-stun/stun",
-    "github.com/chzyer/readline",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
     "github.com/gorilla/rpc/v2",

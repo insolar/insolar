@@ -38,10 +38,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/chzyer/readline"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/jbenet/go-base58"
 
 [[constraint]]
