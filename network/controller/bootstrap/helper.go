@@ -81,7 +81,7 @@ func OriginIsDiscovery(cert core.Certificate) bool {
 
 func FindDiscovery(cert core.Certificate, ref core.RecordRef) core.BootstrapNode {
 	for _, discoveryNode := range cert.GetBootstrapNodes() {
-		if ref.Equal(*discoveryNode.GetRef()) {
+		if ref.Equal(*discoveryNode.GetNodeRef()) {
 			return discoveryNode
 		}
 	}
