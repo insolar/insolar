@@ -55,6 +55,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	// Mock N2: we are light material
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeMock.IDMock.Return(core.RecordRef{})
 
 	// Mock N3: nodenet returns mocked node (above)
 	// and add stub for GetActiveNodes
@@ -64,6 +65,11 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 
 	// Mock N4: message bus for Send method
 	busMock := testutils.NewMessageBusMock(t)
+
+	// Mock5: JetCoordinatorMock
+	jcMock := testutils.NewJetCoordinatorMock(t)
+	// always return true
+	jcMock.IsAuthorizedMock.Return(true, nil)
 
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var synckeys []key
@@ -114,7 +120,9 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
 	pm.Bus = busMock
+	pm.JetCoordinator = jcMock
 
+	// Actial test logic
 	// start PulseManager
 	err := pm.Start(ctx)
 	assert.NoError(t, err)
@@ -126,15 +134,17 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(ctx, t, db, core.PulseNumber(lastpulse))
-		lastpulse++
+		addRecords(ctx, t, db, core.PulseNumber(lastpulse+i))
 	}
 
-	// fmt.Println("Case1: sync after db fill and with new received pulses")
-	err = setpulse(ctx, pm, lastpulse)
-	require.NoError(t, err)
+	fmt.Println("Case1: sync after db fill and with new received pulses")
+	for i := 0; i < 2; i++ {
+		lastpulse++
+		err = setpulse(ctx, pm, lastpulse)
+		require.NoError(t, err)
+	}
 
-	// fmt.Println("Case2: sync during db fill")
+	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
 		addRecords(ctx, t, db, core.PulseNumber(lastpulse))
@@ -143,6 +153,10 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 		err = setpulse(ctx, pm, lastpulse)
 		require.NoError(t, err)
 	}
+	// set last pulse
+	lastpulse++
+	err = setpulse(ctx, pm, lastpulse)
+	require.NoError(t, err)
 
 	time.Sleep(300 * time.Millisecond)
 	err = pm.Stop(ctx)
@@ -206,6 +220,9 @@ func getallkeys(db *badger.DB) (records []key) {
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		k := item.KeyCopy(nil)
+		if key(k).pulse() == 0 {
+			continue
+		}
 		switch k[0] {
 		case
 			scopeIDRecord,

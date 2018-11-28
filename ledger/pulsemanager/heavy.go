@@ -19,6 +19,8 @@ package pulsemanager
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -81,33 +83,45 @@ func (m *PulseManager) HeavySync(
 	return nil
 }
 
-// NextSyncPulses returns pulse numbers range for syncing to heavy node.
-// If nothing to sync it returns 0, 0, nil.
-func (m *PulseManager) NextSyncPulses(ctx context.Context) (start, end core.PulseNumber, err error) {
+// NextSyncPulses returns next pulse number for syncing to heavy node.
+// If nothing to sync it returns 0, nil.
+func (m *PulseManager) NextSyncPulses(ctx context.Context) (core.PulseNumber, error) {
 	var (
 		replicated core.PulseNumber
-		last       core.PulseNumber
+		err        error
 	)
 	if replicated, err = m.db.GetReplicatedPulse(ctx); err != nil {
-		return
-	}
-	if last, err = m.db.GetLastPulseAsLightMaterial(ctx); err != nil {
-		return
-	}
-	// if replicated pulse is not less than "last light material pulse", nothing to sync
-	if replicated >= last {
-		return
+		return 0, err
 	}
 
-	// start should be after replicated pulse or at least from FirstPulseNumber (for zero case)
-	start = replicated + 1
 	if replicated == 0 {
-		start = core.FirstPulseNumber
+		return core.FirstPulseNumber, nil
 	}
-	// end should be after "last light material pulse" + 1 or at least next pulse after start
-	end = last + 1
-	if last == 0 {
-		end = start + 1
+	return m.findnext(ctx, replicated)
+}
+
+func (m *PulseManager) findnext(ctx context.Context, from core.PulseNumber) (core.PulseNumber, error) {
+	// start should be after replicated pulse or at least from FirstPulseNumber (for zero case)
+	pulse, err := m.db.GetPulse(ctx, from)
+	if err != nil {
+		return 0, errors.Wrapf(err, "GetPulse with pulse num %v failed", from)
 	}
-	return
+	if pulse.Next == nil {
+		return 0, nil
+	}
+
+	iwasalight, err := m.JetCoordinator.IsAuthorized(
+		ctx,
+		core.RoleLightExecutor,
+		nil,
+		*pulse.Next,
+		m.NodeNet.GetOrigin().ID(),
+	)
+	if err != nil {
+		return 0, errors.Wrapf(err, "Light checking failed")
+	}
+	if iwasalight {
+		return *pulse.Next, nil
+	}
+	return m.findnext(ctx, *pulse.Next)
 }
