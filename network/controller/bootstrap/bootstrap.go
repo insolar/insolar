@@ -41,9 +41,7 @@ type Bootstrapper struct {
 	chosenDiscoveryNode *host.Host
 }
 
-type NodeBootstrapRequest struct {
-	// pass node certificate, i guess
-}
+type NodeBootstrapRequest struct{}
 
 type NodeBootstrapResponse struct {
 	Code         Code
@@ -154,7 +152,22 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (core.Node, error) {
-	return nil, errors.New("not implemented")
+	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
+		Certificate: bc.cert,
+	}).Build()
+	future, err := bc.transport.SendRequestPacket(request, h)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to send genesis request to address %s", h)
+	}
+	response, err := future.GetResponse(bc.options.BootstrapTimeout)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to get response to genesis request from address %s", h)
+	}
+	data := response.GetData().(*GenesisResponse)
+	if data.Discovery == nil {
+		return nil, errors.New("Error genesis response from discovery node: " + data.Error)
+	}
+	return data.Discovery, nil
 }
 
 func (bc *Bootstrapper) getBootstrapHostsChannel(ctx context.Context, capacity int) <-chan *host.Host {
@@ -228,12 +241,22 @@ func (bc *Bootstrapper) bootstrap(address string) (*host.Host, error) {
 }
 
 func (bc *Bootstrapper) processBootstrap(request network.Request) (network.Response, error) {
-	// TODO: check certificate and redirect logic
+	// TODO: redirect logic
 	return bc.transport.BuildResponse(request, &NodeBootstrapResponse{Code: Accepted}), nil
 }
 
+func (bc *Bootstrapper) checkGenesisCert(cert core.Certificate) error {
+	// TODO: check certificate
+	return nil
+}
+
 func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
-	return nil, errors.New("not implemented")
+	data := request.GetData().(*GenesisRequest)
+	err := bc.checkGenesisCert(data.Certificate)
+	if err != nil {
+		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
+	}
+	return bc.transport.BuildResponse(request, &GenesisResponse{Discovery: bc.keeper.GetOrigin()}), nil
 }
 
 func (bc *Bootstrapper) Start() {
