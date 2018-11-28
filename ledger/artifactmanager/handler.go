@@ -682,15 +682,6 @@ func getObjectStateRecord(
 	return stateRec, nil
 }
 
-func getObjectIndexForUpdate(ctx context.Context, s storage.Store, head *core.RecordID) (*index.ObjectLifeline, error) {
-	idx, err := s.GetObjectIndex(ctx, head, true)
-	if err == storage.ErrNotFound {
-		return &index.ObjectLifeline{State: record.StateUndefined}, nil
-	}
-
-	return idx, err
-}
-
 func validateState(old record.State, new record.State) error {
 	if old == record.StateDeactivation {
 		return ErrObjectDeactivated
