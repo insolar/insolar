@@ -47,8 +47,13 @@ const (
 
 // AuthorizationRequest
 type AuthorizationRequest struct {
-	SessionID   SessionID
 	Certificate core.Certificate
+}
+
+type AuthorizationResponse struct {
+	OperationResponse
+
+	SessionID SessionID
 }
 
 // RegistrationRequest
@@ -65,32 +70,32 @@ type OperationResponse struct {
 
 func init() {
 	gob.Register(&AuthorizationRequest{})
+	gob.Register(&AuthorizationResponse{})
 	gob.Register(&RegistrationRequest{})
 	gob.Register(&OperationResponse{})
 }
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
-func (ac *AuthorizationController) Authorize(ctx context.Context, sessionID SessionID, certificate core.Certificate) error {
+func (ac *AuthorizationController) Authorize(ctx context.Context, certificate core.Certificate) (SessionID, error) {
 	discovery := ac.bootstrapController.GetChosenDiscoveryNode()
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discovery)
 
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
-		SessionID:   sessionID,
 		Certificate: certificate,
 	}).Build()
 	future, err := ac.transport.SendRequestPacket(request, discovery)
 	if err != nil {
-		return errors.Wrapf(err, "Error sending authorize request")
+		return 0, errors.Wrapf(err, "Error sending authorize request")
 	}
 	response, err := future.GetResponse(ac.options.PacketTimeout)
 	if err != nil {
-		return errors.Wrapf(err, "Error getting response for authorize request")
+		return 0, errors.Wrapf(err, "Error getting response for authorize request")
 	}
-	data := response.GetData().(*OperationResponse)
+	data := response.GetData().(*AuthorizationResponse)
 	if data.OpCode == OpRejected {
-		return errors.New("Authorize rejected: " + data.Error)
+		return 0, errors.New("Authorize rejected: " + data.Error)
 	}
-	return nil
+	return data.SessionID, nil
 }
 
 // Register node on the discovery node (step 4 of the bootstrap process)

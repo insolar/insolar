@@ -45,8 +45,7 @@ type SessionHeader struct {
 type ChallengeRequest struct {
 	SessionID SessionID
 
-	Certificate core.Certificate
-	Nonce       Nonce
+	Nonce Nonce
 }
 
 type SignedChallengeResponse struct {
@@ -84,7 +83,7 @@ func init() {
 }
 
 // Execute double challenge response between the node and the discovery node (step 3 of the bootstrap process)
-func (crc *ChallengeResponseController) Execute(SessionID SessionID, Certificate core.Certificate) (*ChallengePayload, error) {
+func (crc *ChallengeResponseController) Execute(SessionID SessionID) (*ChallengePayload, error) {
 	// TODO: double challenge response
 	return nil, errors.New("not implemented")
 }

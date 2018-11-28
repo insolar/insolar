@@ -42,15 +42,11 @@ func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Error bootstrapping to discovery node")
 	}
-	sessionID, err := nb.bootstrapper.StartSession(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Error starting connection session to discovery node")
-	}
-	err = nb.authController.Authorize(ctx, sessionID, nb.certificate)
+	sessionID, err := nb.authController.Authorize(ctx, nb.certificate)
 	if err != nil {
 		return errors.Wrap(err, "Error authorizing on discovery node")
 	}
-	data, err := nb.challengeController.Execute(sessionID, nb.certificate)
+	data, err := nb.challengeController.Execute(sessionID)
 	if err != nil {
 		return errors.Wrap(err, "Error executing double challenge response")
 	}
