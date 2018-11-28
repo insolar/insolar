@@ -89,7 +89,6 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 // ConfigureOptions convert daemon configuration to controller options
 func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 	options := &common.Options{}
-	options.BootstrapHosts = config.BootstrapHosts
 	if options.PingTimeout == 0 {
 		options.PingTimeout = time.Second * 1
 	}
@@ -106,6 +105,7 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 func NewNetworkController(
 	pulseHandler network.PulseHandler,
 	options *common.Options,
+	certificate core.Certificate,
 	transport network.InternalTransport,
 	routingTable network.RoutingTable,
 	network network.HostNetwork,
@@ -114,7 +114,7 @@ func NewNetworkController(
 	c := Controller{}
 	c.network = network
 	c.options = options
-	c.bootstrapController = bootstrap.NewBootstrapController(c.options, transport)
+	c.bootstrapController = bootstrap.NewBootstrapController(c.options, certificate, transport)
 	c.pulseController = NewPulseController(pulseHandler, network, routingTable)
 	c.rpcController = NewRPCController(c.options, network, scheme)
 

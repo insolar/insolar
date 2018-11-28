@@ -293,7 +293,7 @@ func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestut
 }
 
 type genesisNode struct {
-	node    core.BootstrapNode
+	node    certificate.BootstrapNode
 	privKey crypto.PrivateKey
 	ref     *core.RecordRef
 	role    string
@@ -339,7 +339,7 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 		}
 
 		nodes[i] = genesisNode{
-			node: core.BootstrapNode{
+			node: certificate.BootstrapNode{
 				PublicKey: nodePubKey,
 				Host:      discoverNode.Host,
 			},
@@ -408,7 +408,7 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 		certs[i].MinRoles.Virtual = g.config.MinRoles.Virtual
 		certs[i].MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial
 		certs[i].MinRoles.LightMaterial = g.config.MinRoles.LightMaterial
-		certs[i].BootstrapNodes = make([]core.BootstrapNode, len(nodes))
+		certs[i].BootstrapNodes = make([]certificate.BootstrapNode, len(nodes))
 		for j, node := range nodes {
 			certs[i].BootstrapNodes[j] = node.node
 		}

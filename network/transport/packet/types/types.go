@@ -38,6 +38,8 @@ const (
 	Authorize
 	// Register is packet type to connect node to discovery node and add join claim to consensus
 	Register
+	// Genesis is packet type for active list exchange between discovery nodes
+	Genesis
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
 

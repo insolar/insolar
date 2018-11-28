@@ -22,10 +22,6 @@ import (
 
 // Options contains configuration options for the local host.
 type Options struct {
-	// The hosts being used to bootstrap the network. Without a bootstrap
-	// host there is no way to connect to the network.
-	BootstrapHosts []string
-
 	// The maximum time to wait for a response to ping request.
 	PingTimeout time.Duration
 
