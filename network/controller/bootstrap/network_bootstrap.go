@@ -31,7 +31,7 @@ type NetworkBootstrapper struct {
 }
 
 func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
-	if nb.certificate.IsDiscoveryNode() {
+	if OriginIsDiscovery(nb.certificate) {
 		return nb.bootstrapDiscovery(ctx)
 	}
 	return nb.bootstrapJoiner(ctx)

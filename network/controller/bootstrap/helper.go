@@ -68,3 +68,12 @@ func RemoveOrigin(discoveryNodes []core.BootstrapNode, origin core.RecordRef) ([
 	}
 	return nil, errors.New("Origin not found in discovery nodes list")
 }
+
+func OriginIsDiscovery(cert core.Certificate) bool {
+	for _, discoveryNode := range cert.GetBootstrapNodes() {
+		if cert.GetRef().Equal(*discoveryNode.GetRef()) {
+			return true
+		}
+	}
+	return false
+}

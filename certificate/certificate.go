@@ -82,10 +82,6 @@ func (cert *Certificate) GetPublicKey() crypto.PublicKey {
 	panic("not implemented")
 }
 
-func (cert *Certificate) IsDiscoveryNode() bool {
-	panic("not implemented")
-}
-
 func (cert *Certificate) serializeNetworkPart() []byte {
 	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
 		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +
@@ -132,7 +128,7 @@ func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
 func (cert *Certificate) GetBootstrapNodes() []core.BootstrapNode {
 	result := make([]core.BootstrapNode, 0)
 	for _, node := range cert.BootstrapNodes {
-		result = append(result, node)
+		result = append(result, &node)
 	}
 	return result
 }

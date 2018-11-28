@@ -33,7 +33,6 @@ type Certificate interface {
 	GetRootDomainReference() *RecordRef
 	SetRootDomainReference(ref *RecordRef)
 	GetBootstrapNodes() []BootstrapNode
-	IsDiscoveryNode() bool
 }
 
 type BootstrapNode interface {
