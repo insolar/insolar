@@ -91,13 +91,9 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 			var size int
 			var keys []key
 
-			// fmt.Printf("[%v] prepared message with keys:\n", syncsended)
 			for _, rec := range heavymsg.Records {
 				keys = append(keys, rec.K)
 				size += len(rec.K) + len(rec.V)
-
-				// k := key(rec.K)
-				// fmt.Printf("  [%v] %v (pulse=%v)\n", syncsended, k, k.pulse())
 			}
 			synckeys = append(synckeys, keys...)
 			syncmessagesPerMessage[syncsended] = &messageStat{
@@ -158,17 +154,28 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	err = setpulse(ctx, pm, lastpulse)
 	require.NoError(t, err)
 
-	time.Sleep(300 * time.Millisecond)
+	// TODO: comment sleep
+	time.Sleep(1000 * time.Millisecond)
 	err = pm.Stop(ctx)
 	assert.NoError(t, err)
 
 	synckeys = uniqkeys(sortkeys(synckeys))
 
 	recs := getallkeys(db.GetBadgerDB())
-	assert.Equal(t, recs, synckeys, "synced keys count are the same as records in storage")
+	recs = filterkeys(recs, func(k key) bool {
+		return k.pulse() != 0
+	})
+
+	// fmt.Println("synckeys")
+	// printkeys(synckeys, "  ")
+	// fmt.Println("getallkeys")
+	// printkeys(recs, "  ")
+	assert.Equal(t, recs, synckeys, "synced keys are the same as records in storage")
+	// assert.Equal(t, len(recs), len(synckeys), "synced keys count are the same as records count in storage")
 }
 
 func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {
+	// fmt.Printf("CALL setpulse %v\n", pulsenum)
 	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)})
 }
 
@@ -176,12 +183,13 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	db *storage.DB,
-	pulsenum core.PulseNumber,
+	pn core.PulseNumber,
 ) {
+	// fmt.Printf("CALL addRecords for pulse %v\n", pn)
 	// set record
 	parentID, err := db.SetRecord(
 		ctx,
-		pulsenum,
+		pn,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
 				Domain: testutils.RandomRef(),
@@ -190,7 +198,7 @@ func addRecords(
 	)
 	require.NoError(t, err)
 
-	_, err = db.SetBlob(ctx, pulsenum, []byte("100500"))
+	_, err = db.SetBlob(ctx, pn, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
@@ -214,7 +222,6 @@ func getallkeys(db *badger.DB) (records []key) {
 	txn := db.NewTransaction(true)
 	defer txn.Discard()
 
-	var emptypulse core.PulseNumber
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
 	for it.Rewind(); it.Valid(); it.Next() {
@@ -229,9 +236,7 @@ func getallkeys(db *badger.DB) (records []key) {
 			scopeIDJetDrop,
 			scopeIDLifeline,
 			scopeIDBlob:
-			if !bytes.HasPrefix(k[1:], emptypulse.Bytes()) {
-				records = append(records, k)
-			}
+			records = append(records, k)
 		}
 	}
 	return
@@ -249,6 +254,15 @@ func printkeys(keys []key, prefix string) {
 	for _, k := range keys {
 		fmt.Printf("%v%v (%v)\n", prefix, k, k.pulse())
 	}
+}
+
+func filterkeys(keys []key, check func(key) bool) (keyout []key) {
+	for _, k := range keys {
+		if check(k) {
+			keyout = append(keyout, k)
+		}
+	}
+	return
 }
 
 func uniqkeys(keys []key) (keyout []key) {
