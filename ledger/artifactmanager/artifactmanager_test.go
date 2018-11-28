@@ -513,6 +513,37 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	})
 }
 
+func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	am := NewArtifactManger(nil)
+	mb := testutils.NewMessageBusMock(mc)
+
+	objRef := genRandomRef(0)
+	nodeRef := genRandomRef(0)
+	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		o = o.Safe()
+		if o.Receiver == nil {
+			return &reply.GetChildrenRedirect{
+				Receiver: nodeRef,
+				Token:    &delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}},
+			}, nil
+		} else {
+			token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
+			assert.True(t, ok)
+			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+			assert.Equal(t, nodeRef, o.Receiver)
+		}
+
+		return &reply.Children{}, nil
+	}
+	am.DefaultBus = mb
+
+	_, err := am.GetChildren(ctx, *objRef, nil)
+	require.NoError(t, err)
+}
+
 func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)

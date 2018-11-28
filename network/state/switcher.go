@@ -17,19 +17,50 @@
 package state
 
 import (
+	"context"
+	"sync"
+
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher struct {
+	NodeNetwork        core.NodeNetwork        `inject:""`
+	Certificate        core.Certificate        `inject:""`
+	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
+
+	state     core.NetworkState
+	stateLock sync.RWMutex
 }
 
 // NewNetworkSwitcher creates new NetworkSwitcher
 func NewNetworkSwitcher() (*NetworkSwitcher, error) {
-	return &NetworkSwitcher{}, nil
+	return &NetworkSwitcher{
+		state:     core.NoNetworkState,
+		stateLock: sync.RWMutex{},
+	}, nil
 }
 
 // GetState method returns current network state
 func (ns *NetworkSwitcher) GetState() core.NetworkState {
-	return core.CompleteNetworkState
+	ns.stateLock.RLock()
+	defer ns.stateLock.RUnlock()
+
+	return ns.state
+}
+
+// OnPulse method checks current state and finds out reasons to update this state
+func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error {
+	ns.stateLock.Lock()
+	defer ns.stateLock.Unlock()
+
+	inslogger.FromContext(ctx).Info("Current NetworkSwitcher state is: %s", ns.state)
+
+	if ns.SwitcherWorkAround.IsBootstrapped() {
+		ns.state = core.CompleteNetworkState
+		inslogger.FromContext(ctx).Info("Current NetworkSwitcher state switched to: %s", ns.state)
+	}
+
+	return nil
 }

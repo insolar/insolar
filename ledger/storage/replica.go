@@ -59,3 +59,22 @@ func (db *DB) GetLastPulseAsLightMaterial(ctx context.Context) (core.PulseNumber
 	}
 	return core.NewPulseNumber(buf), nil
 }
+
+// SetHeavySyncedPulse saves last successfuly synced pulse number on heavy node.
+func (db *DB) SetHeavySyncedPulse(ctx context.Context, pulsenum core.PulseNumber) error {
+	return db.Update(ctx, func(tx *TransactionManager) error {
+		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysLastSyncedPulseOnHeavy}), pulsenum.Bytes())
+	})
+}
+
+// GetHeavySyncedPulse returns last successfuly synced pulse number on heavy node.
+func (db *DB) GetHeavySyncedPulse(ctx context.Context) (pn core.PulseNumber, err error) {
+	var buf []byte
+	buf, err = db.get(ctx, prefixkey(scopeIDSystem, []byte{sysLastSyncedPulseOnHeavy}))
+	if err == nil {
+		pn = core.NewPulseNumber(buf)
+	} else if err == ErrNotFound {
+		err = nil
+	}
+	return
+}

@@ -1,0 +1,22 @@
+root_keys_file: "scripts/insolard/configs/root_member_keys.json"
+root_balance: 10000
+majority_rule: 0
+min_roles:
+  virtual:  1
+  heavy_material: 1
+  light_material: 1
+pulsar_public_keys:
+  - "pulsar_public_key"
+discovery_nodes:
+  -
+    host: "127.0.0.1:53837"
+    role: "virtual"
+    keys_file: "scripts/insolard/nodes/first/keys.json"
+  -
+    host: "127.0.0.1:53835"
+    role: "heavy_material"
+    keys_file: "scripts/insolard/nodes/second/keys.json"
+  -
+    host: "127.0.0.1:53839"
+    role: "light_material"
+    keys_file: "scripts/insolard/nodes/third/keys.json"

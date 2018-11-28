@@ -175,6 +175,8 @@ const (
 	TypeValidateRecord
 	// TypeSetBlob saves blob in storage.
 	TypeSetBlob
+	// TypeGetObjectIndex fetches object index from storage.
+	TypeGetObjectIndex
 	// TypeHotRecords saves hot-records in storage.
 	TypeHotRecords
 
@@ -199,4 +201,5 @@ const (
 	// DTTypePendingExecution allows to continue method calls
 	DTTypePendingExecution DelegationTokenType = iota + 1
 	DTTypeGetObjectRedirect
+	DTTypeGetChildrenRedirect
 )

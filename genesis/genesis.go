@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
@@ -292,7 +293,7 @@ func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestut
 }
 
 type genesisNode struct {
-	node    certificate.BootstrapNode
+	node    core.BootstrapNode
 	privKey crypto.PrivateKey
 	ref     *core.RecordRef
 	role    string
@@ -338,7 +339,7 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 		}
 
 		nodes[i] = genesisNode{
-			node: certificate.BootstrapNode{
+			node: core.BootstrapNode{
 				PublicKey: nodePubKey,
 				Host:      discoverNode.Host,
 			},
@@ -354,44 +355,45 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
-	if g.isGenesis {
-		inslog.Info("[ Genesis ] Run genesis ...")
 
-		_, insgocc, err := goplugintestutils.Build()
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
-		}
-
-		cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
-		g.prototypeRefs = cb.Prototypes
-		defer cb.Clean()
-
-		err = buildSmartContracts(ctx, cb)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
-		}
-
-		_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
-		}
-
-		err = g.activateSmartContracts(ctx, cb, rootPubKey)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ]")
-		}
-
-		nodes, err := g.registerDiscoveryNodes(ctx, cb)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ]")
-		}
-
-		err = g.makeCertificates(nodes)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
-		}
+	_, insgocc, err := goplugintestutils.Build()
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
 	}
 
+	cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
+	g.prototypeRefs = cb.Prototypes
+	defer cb.Clean()
+
+	err = buildSmartContracts(ctx, cb)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
+	}
+
+	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
+	}
+
+	err = g.activateSmartContracts(ctx, cb, rootPubKey)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ]")
+	}
+
+	nodes, err := g.registerDiscoveryNodes(ctx, cb)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ]")
+	}
+
+	err = g.makeCertificates(nodes)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
+	}
+
+	err = utils.SendGracefulStopSignal()
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Couldn't stop genesis graceful")
+	}
 	return nil
 }
 
@@ -406,7 +408,7 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 		certs[i].MinRoles.Virtual = g.config.MinRoles.Virtual
 		certs[i].MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial
 		certs[i].MinRoles.LightMaterial = g.config.MinRoles.LightMaterial
-		certs[i].BootstrapNodes = make([]certificate.BootstrapNode, len(nodes))
+		certs[i].BootstrapNodes = make([]core.BootstrapNode, len(nodes))
 		for j, node := range nodes {
 			certs[i].BootstrapNodes[j] = node.node
 		}

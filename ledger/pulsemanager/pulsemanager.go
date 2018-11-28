@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -38,8 +39,9 @@ type PulseManager struct {
 	Bus     core.MessageBus    `inject:""`
 	NodeNet core.NodeNetwork   `inject:""`
 	// setLock locks Set method call.
-	setLock sync.Mutex
-	stopped bool
+	setLock  sync.Mutex
+	stopLock sync.RWMutex
+	stopped  bool
 	// gotpulse signals if there is something to sync to Heavy
 	gotpulse chan struct{}
 	// syncdone closes when sync is over
@@ -53,35 +55,15 @@ type pmOptions struct {
 	syncmessagelimit int
 }
 
-// Option provides functional option for TmpDB.
-type Option func(*pmOptions)
-
-// EnableSync defines is sync to heavy enabled or not.
-// (suitable for tests)
-func EnableSync(flag bool) Option {
-	return func(opts *pmOptions) {
-		opts.enablesync = flag
-	}
-}
-
-// SyncMessageLimit sets soft limit in bytes for sync message size.
-func SyncMessageLimit(size int) Option {
-	return func(opts *pmOptions) {
-		opts.syncmessagelimit = size
-	}
-}
-
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB, options ...Option) *PulseManager {
-	opts := &pmOptions{}
-	for _, o := range options {
-		o(opts)
-	}
-	return &PulseManager{
+func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseManager {
+	pm := &PulseManager{
 		db:       db,
 		gotpulse: make(chan struct{}, 1),
-		options:  *opts,
 	}
+	pm.options.enablesync = conf.HeavySyncEnabled
+	pm.options.syncmessagelimit = conf.HeavySyncMessageLimit
+	return pm
 }
 
 // Current returns current pulse structure.
@@ -302,9 +284,9 @@ func (m *PulseManager) Start(ctx context.Context) error {
 // Stop stops PulseManager. Waits replication goroutine is done.
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
-	m.setLock.Lock()
+	m.stopLock.Lock()
 	m.stopped = true
-	m.setLock.Unlock()
+	m.stopLock.Unlock()
 
 	if m.options.enablesync {
 		close(m.gotpulse)
@@ -320,6 +302,10 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 	var err error
 	inslog := inslogger.FromContext(ctx)
 	for {
+		if m.isstopped() {
+			// probably we won't do next syncs if got stop signal
+			return
+		}
 		for {
 			if start != 0 {
 				break
@@ -341,22 +327,33 @@ func (m *PulseManager) syncloop(ctx context.Context, start, end core.PulseNumber
 				panic(err)
 			}
 		}
-		inslog.Debugf("syncronization sync pulses: [%v:%v]", start, end)
+		next := start + 1
+		inslog.Debugf("syncronization sync pulses: [%v:%v]", start, next)
 
-		lastprocessed, syncerr := m.HeavySync(ctx, start, end)
+		_, syncerr := m.HeavySync(ctx, start)
 		if syncerr != nil {
 			syncerr = errors.Wrap(syncerr, "HeavySync failed")
 			inslog.Error(syncerr.Error())
 			// TODO: add sleep and some retry logic here?
 			continue
 		}
-		err = m.db.SetReplicatedPulse(ctx, lastprocessed)
+		err = m.db.SetReplicatedPulse(ctx, start)
 		if err != nil {
 			err = errors.Wrap(err,
 				"SetReplicatedPulse failed after success HeavySync in Pulsemanager")
 			inslog.Error(err)
 			panic(err)
 		}
-		start = 0
+		start = next
+		if start == end {
+			start = 0
+		}
 	}
+}
+
+func (m *PulseManager) isstopped() (stopped bool) {
+	m.stopLock.RLock()
+	stopped = m.stopped
+	m.stopLock.RUnlock()
+	return
 }

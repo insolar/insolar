@@ -17,8 +17,6 @@
 package message
 
 import (
-	"encoding/gob"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
 )
@@ -158,14 +156,21 @@ type SetBlob struct {
 	Memory    []byte
 }
 
-func init() {
-	gob.Register(&SetBlob{})
-	gob.Register(&ValidateRecord{})
-}
-
 // Type implementation of Message interface.
 func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
+}
+
+// GetObjectIndex fetches objects index.
+type GetObjectIndex struct {
+	ledgerMessage
+
+	Object core.RecordRef
+}
+
+// Type implementation of Message interface.
+func (*GetObjectIndex) Type() core.MessageType {
+	return core.TypeGetObjectIndex
 }
 
 // HotIndexes contains hot-data

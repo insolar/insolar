@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"context"
 	"testing"
 
 	"github.com/dgraph-io/badger"
@@ -33,12 +34,23 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	ctx, db, _, cleaner := getTestData(t)
 	defer cleaner()
 
-	mh := NewMessageHandler(db, nil)
+	// prepare mock
+	heavysync := testutils.NewHeavySyncMock(t)
+	heavysync.StartMock.Return(nil)
+	heavysync.StoreMock.Set(func(ctx context.Context, pn core.PulseNumber, kvs []core.KV) error {
+		return db.StoreKeyValues(ctx, kvs)
+	})
+	heavysync.StopMock.Return(nil)
+
 	recentStorageMock := testutils.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
+
+	// message hanler with mok
+	mh := NewMessageHandler(db, nil)
 	mh.Recent = recentStorageMock
+	mh.HeavySync = heavysync
 
 	payload := []core.KV{
 		{K: []byte("ABC"), V: []byte("CDE")},

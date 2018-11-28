@@ -47,6 +47,8 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return core.RecordRef{}
 	case *HotIndexes:
 		return t.Jet
+	case *GetObjectIndex:
+		return t.Object
 	case *Parcel:
 		return ExtractTarget(t.Msg)
 	default:
@@ -78,7 +80,8 @@ func ExtractRole(msg core.Message) core.JetRole {
 		return core.RoleVirtualValidator
 	case
 		*HeavyStartStop,
-		*HeavyPayload:
+		*HeavyPayload,
+		*GetObjectIndex:
 		return core.RoleHeavyExecutor
 	case *Parcel:
 		return ExtractRole(t.Msg)
@@ -88,7 +91,7 @@ func ExtractRole(msg core.Message) core.JetRole {
 }
 
 // ExtractAllowedSenderObjectAndRole extracts information from message
-// verify senderrequired to 's "caller" for sender
+// verify sender required to 's "caller" for sender
 // verification purpose. If nil then check of sender's role is not
 // provided by the message bus
 func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.JetRole) {
@@ -110,34 +113,37 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 	case *ExecutorResults:
 		return nil, 0
 	case *GetChildren:
-		return nil, 0
+		return &t.Parent, core.RoleVirtualExecutor
 	case *GetCode:
-		return nil, 0
+		return &t.Code, core.RoleVirtualExecutor
 	case *GetDelegate:
-		return nil, 0
+		return &t.Head, core.RoleVirtualExecutor
 	case *GetObject:
-		return nil, 0
+		return &t.Head, core.RoleVirtualExecutor
 	case *JetDrop:
-		return nil, 0
+		// This check is not needed, because JetDrop sender is explicitly checked in handler.
+		return nil, core.RoleUndefined
 	case *RegisterChild:
-		return nil, 0
+		return &t.Child, core.RoleVirtualExecutor
 	case *SetBlob:
-		return nil, 0
+		return &t.TargetRef, core.RoleVirtualExecutor
 	case *SetRecord:
-		return nil, 0
+		return &t.TargetRef, core.RoleVirtualExecutor
 	case *UpdateObject:
-		return nil, 0
+		return &t.Object, core.RoleVirtualExecutor
 	case *ValidateCaseBind:
 		return &t.RecordRef, core.RoleVirtualExecutor
 	case *ValidateRecord:
-		return nil, 0
+		return &t.Object, core.RoleVirtualExecutor
 	case *ValidationResults:
 		return &t.RecordRef, core.RoleVirtualValidator
+	case *GetObjectIndex:
+		return &t.Object, core.RoleLightExecutor
 	case *HotIndexes:
 		return nil, 0
 	case *Parcel:
 		return ExtractAllowedSenderObjectAndRole(t.Msg)
 	default:
-		panic(fmt.Sprintf("unknow message type - %v", t))
+		panic(fmt.Sprintf("unknown message type - %v", t))
 	}
 }

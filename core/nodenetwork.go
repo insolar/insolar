@@ -56,3 +56,10 @@ type NodeNetwork interface {
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte
 }
+
+// TODO: remove this interface when bootstrap mechanism completed
+// SwitcherWorkAround temp interface for NetworkSwitcher interaction
+type SwitcherWorkAround interface {
+	// IsBootstrapped method shows that all DiscoveryNodes finds each other
+	IsBootstrapped() bool
+}

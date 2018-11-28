@@ -113,7 +113,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
-	pm := pulsemanager.NewPulseManager(db)
+	pm := pulsemanager.NewPulseManager(db, configuration.PulseManager{})
 	pm.LR = lr
 	pm.Recent = recentMock
 	pm.Bus = mbMock

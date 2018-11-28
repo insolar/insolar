@@ -111,7 +111,7 @@ func initComponents(
 	genesisConfigPath string,
 	genesisKeyOut string,
 
-) (*component.Manager, *Repl, error) {
+) (*component.Manager, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
 	checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -131,9 +131,6 @@ func initComponents(
 	if isGenesis {
 		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
-	} else {
-		gen, err = genesis.NewGenesis(isGenesis, "", "")
-		checkError(ctx, err, "failed to start Bootstrapper")
 	}
 
 	contractRequester, err := contractrequester.New()
@@ -173,6 +170,7 @@ func initComponents(
 
 	components := ledger.GetLedgerComponents(cfg.Ledger)
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
+
 	components = append(components, []interface{}{
 		nw,
 		messageBus,
@@ -181,7 +179,11 @@ func initComponents(
 		logicRunner,
 		delegationTokenFactory,
 		parcelFactory,
-		gen,
+	}...)
+	if gen != nil {
+		components = append(components, gen)
+	}
+	components = append(components, []interface{}{
 		genesisDataProvider,
 		apiRunner,
 		metricsHandler,
@@ -193,5 +195,5 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	return &cm, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
+	return &cm, nil
 }

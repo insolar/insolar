@@ -14,7 +14,5 @@
  *    limitations under the License.
  */
 
-/*
-Package consensus provides BFT-like algorithm to distribute list of records between participants
-*/
-package consensus
+// Package heavy contains methods for processing synchronization tasks on heavy node.
+package heavy

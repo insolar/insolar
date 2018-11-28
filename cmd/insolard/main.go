@@ -20,11 +20,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
-
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
@@ -82,6 +82,14 @@ func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configura
 		len(cfg.Host.BootstrapHosts), cfg.Node.Node.ID, cfg.Host.MajorityRule)
 }
 
+func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) {
+	_, err := exec.Command(
+		"rm", "-rfv",
+		cfg.Ledger.Storage.DataDirectory,
+	).CombinedOutput()
+	checkError(ctx, err, "failed to delete ledger storage data directory")
+}
+
 func main() {
 	params := parseInputParams()
 
@@ -107,6 +115,10 @@ func main() {
 	traceid := utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
 
+	if params.isGenesis {
+		removeLedgerDataDir(ctx, cfg)
+	}
+
 	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
 	cert := initCertificate(
 		ctx,
@@ -131,7 +143,7 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, repl, err := initComponents(
+	cm, err := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
@@ -148,18 +160,11 @@ func main() {
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	err = cm.Start(ctx)
-	checkError(ctx, err, "failed to start components")
-
-	defer func() {
-		inslog.Warn("DEFER STOP APP")
-		err = cm.Stop(ctx)
-		checkError(ctx, err, "failed to stop components")
-	}()
-
-	var gracefulStop = make(chan os.Signal)
+	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
+
+	var waitChannel = make(chan bool)
 
 	go func() {
 		sig := <-gracefulStop
@@ -172,9 +177,11 @@ func main() {
 		os.Exit(0)
 	}()
 
+	err = cm.Start(ctx)
+	checkError(ctx, err, "failed to start components")
 	fmt.Println("Version: ", version.GetFullVersion())
-	fmt.Println("Running interactive mode:")
-	repl.Start(ctx)
+	fmt.Println("All components were started")
+	<-waitChannel
 }
 
 func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, core.Logger) {
