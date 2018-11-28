@@ -103,15 +103,6 @@ func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Puls
 	messages [][]byte,
 	err error,
 ) {
-	// latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-	// latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
-	// if err != nil {
-	// 	return  nil, nil, err
-	// }
-
 	prevDrop, err := m.db.GetDrop(ctx, *latestPulse.Prev)
 	if err != nil {
 		return nil, nil, nil, err

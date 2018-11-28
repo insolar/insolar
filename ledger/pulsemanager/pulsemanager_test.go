@@ -17,14 +17,23 @@
 package pulsemanager_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
+	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPulseManager_Current(t *testing.T) {
@@ -43,4 +52,76 @@ func TestPulseManager_Current(t *testing.T) {
 	pulse, err := pm.Current(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Pulse{PulseNumber: core.FirstPulseNumber}, *pulse)
+}
+
+func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
+	// Arrange
+	ctx := inslogger.TestContext(t)
+
+	lr := testutils.NewLogicRunnerMock(t)
+	lr.OnPulseMock.Return(nil)
+
+	db, dbcancel := storagetest.TmpDB(ctx, t)
+	defer dbcancel()
+	firstID, _ := db.SetRecord(
+		ctx,
+		core.GenesisPulse.PulseNumber,
+		&record.ObjectActivateRecord{})
+	firstIndex := index.ObjectLifeline{
+		LatestState: firstID,
+	}
+	db.SetObjectIndex(ctx, firstID, &firstIndex)
+	secondID, _ := db.SetRecord(
+		ctx,
+		core.GenesisPulse.PulseNumber,
+		&record.CodeRecord{})
+	secondIndex := index.ObjectLifeline{
+		LatestState: secondID,
+	}
+	db.SetObjectIndex(ctx, secondID, &secondIndex)
+
+	recentMock := testutils.NewRecentStorageMock(t)
+	recentMock.ClearZeroTTLObjectsMock.Return()
+	recentMock.ClearObjectsMock.Return()
+	recentMock.GetObjectsMock.Return(map[core.RecordID]*core.RecentObjectsIndexMeta{
+		*firstID: {TTL: 1},
+	})
+	recentMock.GetRequestsMock.Return([]core.RecordID{*secondID})
+
+	mbMock := testutils.NewMessageBusMock(t)
+	mbMock.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		val, ok := p1.(*message.HotIndexes)
+		if !ok {
+			return nil, nil
+		}
+
+		// Assert
+		require.Equal(t, 1, len(val.PendingRequests))
+		require.Equal(t, secondIndex, *val.PendingRequests[*secondID].Index)
+
+		require.Equal(t, 1, len(val.RecentObjects))
+		require.Equal(t, firstIndex, *val.RecentObjects[*firstID].Index)
+		require.Equal(t, 1, val.RecentObjects[*firstID].Meta.TTL)
+
+		return nil, nil
+	}
+
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.RoleLightMaterial)
+
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
+	pm := pulsemanager.NewPulseManager(db)
+	pm.LR = lr
+	pm.Recent = recentMock
+	pm.Bus = mbMock
+	pm.NodeNet = nodeNetworkMock
+
+	// Act
+	pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
+
+	// Assert
+	recentMock.MinimockFinish()
 }
