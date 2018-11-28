@@ -51,11 +51,11 @@ type ServiceNetwork struct {
 	PulseManager        core.PulseManager               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
-	ArtifactManager     core.ArtifactManager            `inject:""` //TODO
+	ArtifactManager     core.ArtifactManager            `inject:""`
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
 
 	// subcomponents
-	NodeKeeper       network.NodeKeeper       // `inject:""`
+	NodeKeeper       network.NodeKeeper       `inject:""`
 	PhaseManager     phases.PhaseManager      // `inject:""`
 	MerkleCalculator merkle.Calculator        // `inject:""`
 	ConsensusNetwork network.ConsensusNetwork // `inject:""`
