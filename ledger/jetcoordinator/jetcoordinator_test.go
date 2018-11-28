@@ -29,11 +29,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newActiveNode(ref core.RecordRef, role core.NodeRole) core.Node {
+func newActiveNode(ref core.RecordRef, role core.StaticRole) core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
 	return nodenetwork.NewNode(
 		ref,
-		[]core.NodeRole{role},
+		[]core.StaticRole{role},
 		nil, // TODO publicKey
 		core.PulseNumber(0),
 		"",
@@ -63,8 +63,8 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	ref := func(r string) core.RecordRef { return core.NewRefFromBase58(r) }
 
 	keeper.AddActiveNodes([]core.Node{
-		newActiveNode(ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"), core.RoleVirtual),
-		newActiveNode(ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"), core.RoleLightMaterial),
+		newActiveNode(ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"), core.StaticRoleVirtual),
+		newActiveNode(ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"), core.StaticRoleLightMaterial),
 	})
 
 	sorted := func(list []core.RecordRef) []core.RecordRef {

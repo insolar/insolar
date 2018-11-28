@@ -55,7 +55,7 @@ type ResponseGetNonce struct {
 // RequestAuthorize
 type RequestAuthorize struct {
 	SignedNonce []byte
-	NodeRoles   []core.NodeRole
+	NodeRoles   []core.StaticRole
 	Address     string
 	Version     string
 }
@@ -160,7 +160,7 @@ func (ac *AuthorizationController) sendNonceRequest(h *host.Host) (Nonce, error)
 func (ac *AuthorizationController) sendAuthorizeRequest(signature core.Signature, h *host.Host) ([]core.Node, error) {
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&RequestAuthorize{
 		SignedNonce: signature.Bytes(),
-		NodeRoles:   []core.NodeRole{core.RoleUnknown},
+		NodeRoles:   []core.StaticRole{core.StaticRoleUnknown},
 		Address:     ac.transport.PublicAddress(),
 		Version:     version.Version,
 	}).Build()

@@ -59,7 +59,7 @@ func createOrigin(configuration configuration.Configuration) (MutableNode, error
 	// TODO: pass public key
 	return newMutableNode(
 		nodeID,
-		[]core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
 		nil,
 		0,
 		publicAddress,
@@ -86,7 +86,7 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		state:        network.Undefined,
 		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
-		indexNode:    make(map[core.NodeRole]*recordRefSet),
+		indexNode:    make(map[core.StaticRole]*recordRefSet),
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 	}
 }
@@ -105,7 +105,7 @@ type nodekeeper struct {
 
 	activeLock   sync.RWMutex
 	active       map[core.RecordRef]core.Node
-	indexNode    map[core.NodeRole]*recordRefSet
+	indexNode    map[core.StaticRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
 
 	sync     network.UnsyncList
@@ -300,6 +300,6 @@ func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
 	case core.RoleHeavyExecutor:
 		return core.RoleHeavyMaterial
 	default:
-		return core.RoleUnknown
+		return core.StaticRoleUnknown
 	}
 }
