@@ -65,7 +65,7 @@ func (r *outputFlag) Type() string {
 
 func main() {
 
-	var reference, outfile string
+	var reference, outdir string
 	output := newOutputFlag("-")
 	proxyOut := newOutputFlag("")
 
@@ -227,26 +227,19 @@ func main() {
 				os.Exit(1)
 			}
 
-			fmt.Println("outfile: %+v", outfile)
-
-			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", outfile).CombinedOutput()
+			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(outdir)).CombinedOutput()
+			fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
 				os.Exit(1)
 			}
 		},
 	}
-
-	dir, err := os.Getwd()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	cmdCompile.Flags().StringVarP(&outfile, "output-dir", "o", dir, "output dir (default .)")
+	cmdCompile.Flags().StringVarP(&outdir, "output-dir", "o", "", "output dir (default .)")
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(cmdProxy, cmdWrapper, cmdImports, cmdCompile)
-	err = rootCmd.Execute()
+	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
