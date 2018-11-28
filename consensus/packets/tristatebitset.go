@@ -168,7 +168,7 @@ func DeserializeBitSet(data io.Reader) (BitSet, error) {
 				return nil, errors.Wrap(err, "[ Deserialize ] failed to read first byte")
 			}
 		}
-		array, err = parseBitArray(payload, int(length))
+		array, err = parseBitArray(payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Deserialize ] failed to parse a bitarray")
 		}
