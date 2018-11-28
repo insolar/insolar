@@ -95,7 +95,7 @@ jobs:
              #make install-deps
              rm -Rf $GOPATH/src/github.com/insolar/insolar/vendor/* && mv /go/vendor $GOPATH/src/github.com/insolar/insolar/
              make pre-build
-             #make build
+             make build
              #make test_with_coverage
              CGO_ENABLED=1 go test -count 1 --coverprofile=coverage.txt --covermode=atomic ./...
     on_success:
