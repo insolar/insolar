@@ -1,4 +1,4 @@
-package main
+package healthcheck
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
