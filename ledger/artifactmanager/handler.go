@@ -390,7 +390,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		// No index on our node.
 		if err == storage.ErrNotFound {
 			if state.State() == record.StateActivation {
-				// We are activating the object. There is not index for it anywhere.
+				// We are activating the object. There is no index for it anywhere.
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
 				// We are updating object. Index should be on the heavy executor.
