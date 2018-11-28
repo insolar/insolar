@@ -51,7 +51,7 @@ func (m *PulseManager) HeavySync(
 	if starterr != nil {
 		return starterr
 	}
-	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", pn, pn+1)
+	inslog.Infof("synchronize, sucessfully send start message for pulse %v", pn)
 
 	replicator := storage.NewReplicaIter(
 		ctx, m.db, pn, pn+1, m.options.syncmessagelimit)
@@ -75,53 +75,74 @@ func (m *PulseManager) HeavySync(
 	if stoperr != nil {
 		return stoperr
 	}
-	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", pn, pn+1)
+	inslog.Infof("synchronize, sucessfully send finish message for pulse %v", pn)
 
 	lastmeetpulse := replicator.LastPulse()
-	inslog.Debugf("synchronize on [%v:%v] finised (maximum record pulse is %v)",
-		pn, pn+1, lastmeetpulse)
+	inslog.Infof("synchronize on %v finised (maximum record pulse is %v)",
+		pn, lastmeetpulse)
 	return nil
 }
 
-// NextSyncPulses returns next pulse number for syncing to heavy node.
-// If nothing to sync it returns 0, nil.
-func (m *PulseManager) NextSyncPulses(ctx context.Context) (core.PulseNumber, error) {
+// NextSyncPulses returns next pulse numbers for syncing to heavy node.
+// If nothing to sync it returns nil, nil.
+func (m *PulseManager) NextSyncPulses(ctx context.Context) ([]core.PulseNumber, error) {
 	var (
 		replicated core.PulseNumber
 		err        error
 	)
 	if replicated, err = m.db.GetReplicatedPulse(ctx); err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	if replicated == 0 {
-		return core.FirstPulseNumber, nil
+		return m.findallcompleted(ctx, core.FirstPulseNumber)
 	}
-	return m.findnext(ctx, replicated)
+	next, nexterr := m.findnext(ctx, replicated)
+	if nexterr != nil {
+		return nil, nexterr
+	}
+	if next == nil {
+		return nil, nil
+	}
+	return m.findallcompleted(ctx, *next)
 }
 
-func (m *PulseManager) findnext(ctx context.Context, from core.PulseNumber) (core.PulseNumber, error) {
-	// start should be after replicated pulse or at least from FirstPulseNumber (for zero case)
-	pulse, err := m.db.GetPulse(ctx, from)
-	if err != nil {
-		return 0, errors.Wrapf(err, "GetPulse with pulse num %v failed", from)
-	}
-	if pulse.Next == nil {
-		return 0, nil
-	}
-
-	iwasalight, err := m.JetCoordinator.IsAuthorized(
+func (m *PulseManager) findallcompleted(ctx context.Context, from core.PulseNumber) ([]core.PulseNumber, error) {
+	wasalight, err := m.JetCoordinator.IsAuthorized(
 		ctx,
 		core.RoleLightExecutor,
 		nil,
-		*pulse.Next,
+		from,
 		m.NodeNet.GetOrigin().ID(),
 	)
 	if err != nil {
-		return 0, errors.Wrapf(err, "Light checking failed")
+		return nil, errors.Wrapf(err, "Light checking failed")
 	}
-	if iwasalight {
-		return *pulse.Next, nil
+	next, err := m.findnext(ctx, from)
+	if err != nil {
+		return nil, err
 	}
-	return m.findnext(ctx, *pulse.Next)
+	if next == nil {
+		// if next is not found, we haven't got next pulse
+		// in such case we don't want to replicate unfinished pulse
+		return nil, nil
+	}
+
+	var found []core.PulseNumber
+	if wasalight {
+		found = append(found, from)
+	}
+	extra, err := m.findallcompleted(ctx, *next)
+	if err != nil {
+		return nil, err
+	}
+	return append(found, extra...), nil
+}
+
+func (m *PulseManager) findnext(ctx context.Context, from core.PulseNumber) (*core.PulseNumber, error) {
+	pulse, err := m.db.GetPulse(ctx, from)
+	if err != nil {
+		return nil, errors.Wrapf(err, "GetPulse with pulse num %v failed", from)
+	}
+	return pulse.Next, nil
 }
