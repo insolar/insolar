@@ -77,3 +77,13 @@ type Children struct {
 func (e *Children) Type() core.ReplyType {
 	return TypeChildren
 }
+
+// ObjectIndex contains serialized object index. It can be stored in DB without processing.
+type ObjectIndex struct {
+	Index []byte
+}
+
+// Type implementation of Reply interface.
+func (e *ObjectIndex) Type() core.ReplyType {
+	return TypeObjectIndex
+}

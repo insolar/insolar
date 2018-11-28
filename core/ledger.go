@@ -24,8 +24,10 @@ import (
 type JetRole int
 
 const (
+	// RoleUndefined is used for special cases.
+	RoleUndefined = JetRole(iota)
 	// RoleVirtualExecutor is responsible for current pulse CPU operations.
-	RoleVirtualExecutor = JetRole(iota + 1)
+	RoleVirtualExecutor
 	// RoleVirtualValidator is responsible for previous pulse CPU operations.
 	RoleVirtualValidator
 	// RoleLightExecutor is responsible for current pulse Disk operations.
