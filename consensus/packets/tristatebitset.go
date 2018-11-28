@@ -191,16 +191,36 @@ func (dbs *TriStateBitSet) parseCells(mapper BitSetMapper) ([]BitSetCell, error)
 	return cells, nil
 }
 
-func parseState(array *bitArray, index int) (TriState, error) {
-	stateFirstBit, err := array.get(2 * index)
-	if err != nil {
-		return 0, err
-	}
-	stateSecondBit, err := array.get(2*index + 1)
-	if err != nil {
-		return 0, err
+func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
+	count := uint8(0)
+	value := uint8(0)
+	var payload []uint8
+	blockSize := 0
+	block := uint8(0)
+	var err error
+	for i := 0; i < size; i = i + 2 {
+		err = binary.Read(data, binary.BigEndian, &count)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
+		}
+		err = binary.Read(data, binary.BigEndian, &value)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
+		}
+		for j := uint8(0); j < count; j++ {
+			block += value
+			block = block << 2
+			blockSize += 2
+			if blockSize >= sizeOfBlock {
+				payload = append(payload, block)
+				blockSize = 0
+			}
+		}
 	}
 	return TriState((stateFirstBit << 1) + stateSecondBit), nil
+func parseState(array *bitArray, index int) (TriState, error) {
+	state, err := array.getState(index)
+	return TriState(state), err
 }
 
 func parseBitArray(payload []uint8) (*bitArray, error) {
