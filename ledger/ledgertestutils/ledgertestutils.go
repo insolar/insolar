@@ -70,6 +70,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	am.DefaultBus = c.MessageBus
 	jc.NodeNet = c.NodeNetwork
 	pm.NodeNet = c.NodeNetwork
+	pm.GIL = c.MessageBus.(core.GlobalInsolarLock)
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 
