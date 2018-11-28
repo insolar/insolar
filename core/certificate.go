@@ -16,18 +16,27 @@
 
 package core
 
+import (
+	"crypto"
+)
+
+type NetworkNode interface {
+	GetRef() *RecordRef
+	GetPublicKey() crypto.PublicKey
+}
+
 // Certificate interface provides methods to manage keys
 type Certificate interface {
+	NetworkNode
+
 	GetRole() NodeRole
 	GetRootDomainReference() *RecordRef
 	SetRootDomainReference(ref *RecordRef)
 	GetBootstrapNodes() []BootstrapNode
 }
 
-// BootstrapNode holds info about bootstrap nodes
-type BootstrapNode struct {
-	PublicKey   string `json:"public_key"`
-	Host        string `json:"host"`
-	NetworkSign []byte `json:"network_sign"`
-	NodeSign    []byte `json:"node_sign"`
+type BootstrapNode interface {
+	NetworkNode
+
+	GetHost() string
 }

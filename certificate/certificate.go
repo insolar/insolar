@@ -18,6 +18,7 @@ package certificate
 
 import (
 	"crypto"
+	"encoding/gob"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
@@ -39,12 +40,46 @@ type Certificate struct {
 		HeavyMaterial uint `json:"heavy_material"`
 		LightMaterial uint `json:"light_material"`
 	} `json:"min_roles"`
-	PublicKey           string               `json:"public_key"`
-	Reference           string               `json:"reference"`
-	PulsarPublicKeys    []string             `json:"pulsar_public_keys"`
-	Role                string               `json:"role"`
-	BootstrapNodes      []core.BootstrapNode `json:"bootstrap_nodes"`
-	RootDomainReference string               `json:"root_domain_ref"`
+	PublicKey           string          `json:"public_key"`
+	Reference           string          `json:"reference"`
+	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
+	Role                string          `json:"role"`
+	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
+	RootDomainReference string          `json:"root_domain_ref"`
+}
+
+// BootstrapNode holds info about bootstrap nodes
+type BootstrapNode struct {
+	PublicKey   string `json:"public_key"`
+	Host        string `json:"host"`
+	NetworkSign []byte `json:"network_sign"`
+	NodeSign    []byte `json:"node_sign"`
+}
+
+func (bn *BootstrapNode) GetRef() *core.RecordRef {
+	panic("not implemented")
+}
+
+func (bn *BootstrapNode) GetPublicKey() crypto.PublicKey {
+	panic("not implemented")
+}
+
+func (bn *BootstrapNode) GetHost() string {
+	return bn.Host
+}
+
+func init() {
+	// TODO: add Serialize & Deserialize instead of this
+	gob.Register(&Certificate{})
+}
+
+func (cert *Certificate) GetRef() *core.RecordRef {
+	ref := core.NewRefFromBase58(cert.Reference)
+	return &ref
+}
+
+func (cert *Certificate) GetPublicKey() crypto.PublicKey {
+	panic("not implemented")
 }
 
 func (cert *Certificate) serializeNetworkPart() []byte {
@@ -91,7 +126,11 @@ func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
 
 // GetBootstrapNodes return bootstrap nodes array
 func (cert *Certificate) GetBootstrapNodes() []core.BootstrapNode {
-	return cert.BootstrapNodes
+	result := make([]core.BootstrapNode, 0)
+	for _, node := range cert.BootstrapNodes {
+		result = append(result, &node)
+	}
+	return result
 }
 
 // ReadCertificate constructor creates new Certificate component
@@ -120,7 +159,7 @@ func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor,
 
 func (cert *Certificate) reset() {
 	cert.PublicKey = ""
-	cert.BootstrapNodes = []core.BootstrapNode{}
+	cert.BootstrapNodes = []BootstrapNode{}
 	cert.Reference = ""
 	cert.MajorityRule = 0
 }

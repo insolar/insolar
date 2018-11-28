@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package auth
+package bootstrap
 
 import (
 	"sort"
@@ -22,13 +22,8 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/pkg/errors"
 )
-
-// MajorityRuleCheck
-func MajorityRuleCheck(activeNodesLists [][]core.Node, majorityRule int) (activeNodesList []core.Node, success bool) {
-	// TODO: fair majorityRule check keeping in mind possible discovery redirects
-	return activeNodesLists[0], true
-}
 
 // CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
 func CheckShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
@@ -63,4 +58,22 @@ func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core
 		}
 	}
 	// TODO: handle uint32 overflow
+}
+
+func RemoveOrigin(discoveryNodes []core.BootstrapNode, origin core.RecordRef) ([]core.BootstrapNode, error) {
+	for i, discoveryNode := range discoveryNodes {
+		if origin.Equal(*discoveryNode.GetRef()) {
+			return append(discoveryNodes[:i], discoveryNodes[i+1:]...), nil
+		}
+	}
+	return nil, errors.New("Origin not found in discovery nodes list")
+}
+
+func OriginIsDiscovery(cert core.Certificate) bool {
+	for _, discoveryNode := range cert.GetBootstrapNodes() {
+		if cert.GetRef().Equal(*discoveryNode.GetRef()) {
+			return true
+		}
+	}
+	return false
 }

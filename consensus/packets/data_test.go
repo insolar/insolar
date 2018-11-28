@@ -355,3 +355,26 @@ func TestPhase1Packet_AddClaim(t *testing.T) {
 	}
 	assert.EqualError(t, err, "No space for claim")
 }
+
+func TestPhase3Packet_Serialize(t *testing.T) {
+	checkSerializationDeserialization(t, getPhase3Packet(t))
+}
+
+func getPhase3Packet(t *testing.T) *Phase3Packet {
+	packet := &Phase3Packet{}
+	packet.packetHeader = *makeDefaultPacketHeader(Phase3)
+	packet.globuleHashSignature = randomArray71()
+	packet.SignatureHeaderSection1 = randomArray71()
+	var err error
+	packet.deviantBitSet, err = NewBitSet(100)
+	assert.NoError(t, err)
+
+	refs := initRefs()
+	cells := initBitCells(refs)
+	bitset, err := NewBitSet(len(cells))
+	assert.NoError(t, err)
+
+	packet.deviantBitSet = bitset
+
+	return packet
+}

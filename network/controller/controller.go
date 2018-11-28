@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/controller/auth"
+	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -34,7 +34,6 @@ type Controller struct {
 	network network.HostNetwork
 
 	bootstrapController common.BootstrapController
-	authController      *auth.AuthorizationController
 	pulseController     *PulseController
 	rpcController       *RPCController
 }
@@ -61,7 +60,7 @@ func (c *Controller) Bootstrap(ctx context.Context) error {
 
 // Authorize start authorization process on discovery node.
 func (c *Controller) Authorize(ctx context.Context) error {
-	return c.authController.Authorize(ctx)
+	return nil
 }
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
@@ -83,7 +82,6 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 		return c.network.BuildResponse(request, nil), nil
 	})
 	c.bootstrapController.Start()
-	c.authController.Start(cryptographyService, networkCoordinator, nodeKeeper)
 	c.pulseController.Start()
 	c.rpcController.Start()
 }
@@ -91,8 +89,6 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 // ConfigureOptions convert daemon configuration to controller options
 func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 	options := &common.Options{}
-	options.BootstrapHosts = config.BootstrapHosts
-	options.MajorityRule = config.MajorityRule
 	if options.PingTimeout == 0 {
 		options.PingTimeout = time.Second * 1
 	}
@@ -102,9 +98,6 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 	if options.BootstrapTimeout == 0 {
 		options.BootstrapTimeout = time.Second * 10
 	}
-	if options.AuthorizeTimeout == 0 {
-		options.AuthorizeTimeout = time.Second * 30
-	}
 	return options
 }
 
@@ -112,6 +105,7 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 func NewNetworkController(
 	pulseHandler network.PulseHandler,
 	options *common.Options,
+	certificate core.Certificate,
 	transport network.InternalTransport,
 	routingTable network.RoutingTable,
 	network network.HostNetwork,
@@ -120,8 +114,7 @@ func NewNetworkController(
 	c := Controller{}
 	c.network = network
 	c.options = options
-	c.bootstrapController = NewBootstrapController(c.options, transport)
-	c.authController = auth.NewAuthorizationController(c.options, c.bootstrapController, transport)
+	c.bootstrapController = bootstrap.NewBootstrapController(c.options, certificate, transport)
 	c.pulseController = NewPulseController(pulseHandler, network, routingTable)
 	c.rpcController = NewRPCController(c.options, network, scheme)
 

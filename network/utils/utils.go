@@ -14,22 +14,34 @@
  *    limitations under the License.
  */
 
-package common
+package utils
 
 import (
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
-// Options contains configuration options for the local host.
-type Options struct {
-	// The maximum time to wait for a response to ping request.
-	PingTimeout time.Duration
+func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return true // completed normally
+	case <-time.After(timeout):
+		return false // timed out
+	}
+}
 
-	// The maximum time to wait for a response to any packet.
-	PacketTimeout time.Duration
-
-	// InfiniteBootstrap bool
-
-	// Bootstrap reconnect timeout
-	BootstrapTimeout time.Duration
+// AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
+func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
+	for {
+		val := atomic.LoadUint64(addr)
+		if atomic.CompareAndSwapUint64(addr, val, val+1) {
+			return val
+		}
+	}
 }

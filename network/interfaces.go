@@ -236,6 +236,7 @@ type InternalTransport interface {
 }
 
 // ClaimQueue is the queue that contains consensus claims.
+//go:generate minimock -i github.com/insolar/insolar/network.ClaimQueue -o ../testutils/network -s _mock.go
 type ClaimQueue interface {
 	// Pop takes claim from the queue.
 	Pop() consensus.ReferendumClaim

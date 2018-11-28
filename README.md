@@ -74,6 +74,12 @@ Example
     # Start node
     ./scripts/insolard/launch.sh
 
+    or
+    
+    # Start net of nodes
+    ./scripts/insolard/launchnet.sh
+
+
     # In other terminal:
     
     # Build insolar

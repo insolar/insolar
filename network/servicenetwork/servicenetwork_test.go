@@ -35,18 +35,19 @@ import (
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
-func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
+func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) (network.NodeKeeper, core.Node) {
 	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
 	keeper := nodenetwork.NewNodeKeeper(origin)
 	if isBootstrap {
 		keeper.AddActiveNodes([]core.Node{origin})
 	}
-	return keeper
+	return keeper, origin
 }
 
 func mockCryptographyService(t *testing.T) core.CryptographyService {
@@ -71,7 +72,7 @@ func mockParcelFactory(t *testing.T) message.ParcelFactory {
 	return parcelFactory
 }
 
-func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) (core.CryptographyService, network.NodeKeeper) {
+func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBootstrap bool) (core.CryptographyService, network.NodeKeeper, core.Node) {
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 	cs := cryptography.NewKeyBoundCryptographyService(key)
@@ -80,10 +81,10 @@ func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBoots
 	_, err := certificate.NewCertificatesWithKeys(pk, kp)
 
 	require.NoError(t, err)
-	keeper := newTestNodeKeeper(nodeID, address, isBootstrap)
+	keeper, origin := newTestNodeKeeper(nodeID, address, isBootstrap)
 
 	mock := mockCryptographyService(t)
-	return mock, keeper
+	return mock, keeper, origin
 }
 
 func TestNewServiceNetwork(t *testing.T) {
@@ -119,9 +120,8 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.TODO()
-	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, testutils.RandomRef(), "", true)
+	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper, _ = initComponents(t, testutils.RandomRef(), "", true)
 
-	serviceNetwork.NodeNetwork, _ = nodenetwork.NewNodeNetwork(cfg)
 	err = serviceNetwork.Init(context.Background())
 	require.NoError(t, err)
 	err = serviceNetwork.Start(ctx)
@@ -174,14 +174,16 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		secondNodeId), scheme)
 	require.NoError(t, err)
 
-	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
+	var fNode, sNode core.Node
+	secondNode.CryptographyService, secondNode.NodeKeeper, fNode = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10001", true)
 	err = secondNode.Init(context.Background())
 	require.NoError(t, err)
 	err = secondNode.Start(ctx)
 	require.NoError(t, err)
-	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
+	firstNode.CryptographyService, firstNode.NodeKeeper, sNode = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10000", false)
+	firstNode.NodeKeeper.AddActiveNodes([]core.Node{fNode, sNode})
+	secondNode.NodeKeeper.AddActiveNodes([]core.Node{fNode, sNode})
 
-	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
 	err = firstNode.Init(context.Background())
 	require.NoError(t, err)
 	err = firstNode.Start(ctx)
@@ -211,7 +213,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	require.NoError(t, err)
 
 	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", parcel)
-	success := network.WaitTimeout(&wg, 100*time.Millisecond)
+	success := utils.WaitTimeout(&wg, 100*time.Millisecond)
 
 	require.True(t, success)
 }
@@ -233,15 +235,15 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		secondNodeId), scheme)
 	require.NoError(t, err)
 
-	secondNode.CryptographyService, secondNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
+	var fNode, sNode core.Node
+	secondNode.CryptographyService, secondNode.NodeKeeper, fNode = initComponents(t, core.NewRefFromBase58(secondNodeId), "127.0.0.1:10101", true)
 	err = secondNode.Init(context.Background())
 	require.NoError(t, err)
 	err = secondNode.Start(ctx)
 	require.NoError(t, err)
-
-	firstNode.CryptographyService, firstNode.NodeKeeper = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
-
-	firstNode.NodeNetwork, _ = nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
+	firstNode.CryptographyService, firstNode.NodeKeeper, sNode = initComponents(t, core.NewRefFromBase58(firstNodeId), "127.0.0.1:10100", false)
+	firstNode.NodeKeeper.AddActiveNodes([]core.Node{fNode, sNode})
+	secondNode.NodeKeeper.AddActiveNodes([]core.Node{fNode, sNode})
 	err = firstNode.Init(context.Background())
 	require.NoError(t, err)
 	err = firstNode.Start(ctx)
@@ -277,7 +279,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	err = firstNode.SendCascadeMessage(c, "test", parcel)
-	success := network.WaitTimeout(&wg, 100*time.Millisecond)
+	success := utils.WaitTimeout(&wg, 100*time.Millisecond)
 
 	require.NoError(t, err)
 	require.True(t, success)
@@ -371,156 +373,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	require.NoError(t, err)
 
 	firstService.SendCascadeMessage(c, "test", parcel)
-	success := network.WaitTimeout(&wg, 100*time.Millisecond)
+	success := utils.WaitTimeout(&wg, 100*time.Millisecond)
 
 	require.True(t, success)
 }
-
-// func Test_processPulse(t *testing.T) {
-// 	ctx := context.TODO()
-// 	t.Skip("rewrite test with multiple pulses and respecting logic of adding active nodes")
-// 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
-// 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
-//
-// 	firstNode, _ := NewServiceNetwork(mockServiceConfiguration(
-// 		"127.0.0.1:10000",
-// 		[]string{"127.0.0.1:10001"},
-// 		firstNodeId))
-// 	secondNode, _ := NewServiceNetwork(mockServiceConfiguration(
-// 		"127.0.0.1:10001",
-// 		nil,
-// 		secondNodeId))
-// 	firstLedger := &mockLedger{PM: &dhtnetwork.MockPulseManager{}}
-// 	mpm := dhtnetwork.MockPulseManager{}
-// 	var wg sync.WaitGroup
-// 	wg.Add(1)
-// 	mpm.SetCallback(func(pulse core.Pulse) {
-// 		if pulse.PulseNumber == core.PulseNumber(1) {
-// 			wg.Done()
-// 		}
-// 	})
-// 	secondLedger := &mockLedger{PM: &mpm}
-//
-// 	secondNode.Start(ctx, core.Components{Ledger: secondLedger})
-// 	firstNode.Start(ctx, core.Components{Ledger: firstLedger})
-//
-// 	defer func() {
-// 		firstNode.Stop(ctx)
-// 		secondNode.Stop(ctx)
-// 	}()
-//
-// 	// pulse number is zero in MockPulseManager before receiving any pulses (default)
-// 	firstStoredPulse, _ := firstLedger.GetPulseManager().Current(ctx)
-// 	require.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
-//
-// 	hh := firstNode.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
-// 	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
-// 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
-// 		Build()
-// 	// imitate receiving pulse from the pulsar
-// 	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
-// 	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
-//
-// 	// pulse is stored on the first node
-// 	firstStoredPulse, _ = firstLedger.GetPulseManager().Current(ctx)
-// 	require.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
-//
-// 	// pulse is passed to the second node and stored there, too
-// 	success := WaitTimeout(&wg, time.Millisecond*100)
-// 	require.True(t, success)
-// 	secondStoredPulse, _ := secondLedger.GetPulseManager().Current(ctx)
-// 	require.Equal(t, core.PulseNumber(1), secondStoredPulse.PulseNumber)
-// }
-//
-// func Test_processPulse2(t *testing.T) {
-// 	ctx := context.TODO()
-// 	t.Skip("fix data race INS-534")
-// 	nodeIds := []core.RecordRef{
-// 		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
-// 		core.NewRefFromBase58("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"),
-// 		core.NewRefFromBase58("9uE5MEWQB2yfKY8kTgTNovWii88D4anmf7GAiovgcxx6Uc6EBmZ212mpyMa1L22u9TcUUd94i8LvULdsdBoG8ed"),
-// 		core.NewRefFromBase58("4qXdYkfL9U4tL3qRPthdbdajtafR4KArcXjpyQSEgEMtpuin3t8aZYmMzKGRnXHBauytaPQ6bfwZyKZzRPpR6gyX"),
-// 		core.NewRefFromBase58("5q5rnvayXyKszoWofxp4YyK7FnLDwhsqAXKxj6H7B5sdEsNn4HKNFoByph4Aj8rGptdWL54ucwMQrySMJgKavxX1"),
-// 		core.NewRefFromBase58("5tsFDwNLMW4GRHxSbBjjxvKpR99G4CSBLRqZAcpqdSk5SaeVcDL3hCiyjjidCRJ7Lu4VZoANWQJN2AgPvSRgCghn"),
-// 		core.NewRefFromBase58("48UWM6w7YKYCHoP7GHhogLvbravvJ6bs4FGETqXfgdhF9aPxiuwDWwHipeiuNBQvx7zyCN9wFxbuRrDYRoAiw5Fj"),
-// 		core.NewRefFromBase58("5owQeqWyHcobFaJqS2BZU2o2ZRQ33GojXkQK6f8vNLgvNx6xeWRwenJMc53eEsS7MCxrpXvAhtpTaNMPr3rjMHA"),
-// 		core.NewRefFromBase58("xF12WfbkcWrjrPXvauSYpEGhkZT2Zha53xpYh5KQdmGHMywJNNgnemfDN2JfPV45aNQobkdma4dsx1N7Xf5wCJ9"),
-// 		core.NewRefFromBase58("4VgDz9o23wmYXN9mEiLnnsGqCEEARGByx1oys2MXtC6M94K85ZpB9sEJwiGDER61gHkBxkwfJqtg9mAFR7PQcssq"),
-// 		core.NewRefFromBase58("48g7C8QnH2CGMa62sNaL1gVVyygkto8EbMRHv168psCBuFR2FXkpTfwk4ZwpY8awFFXKSnWspYWWQ7sMMk5W7s3T"),
-// 		core.NewRefFromBase58("Lvssptdwq7tatd567LUfx2AgsrWZfo4u9q6FJgJ9BgZK8cVooZv2A7F7rrs1FS5VpnTmXhr6XihXuKWVZ8i5YX9"),
-// 	}
-//
-// 	prefix := "127.0.0.1:"
-// 	port := 10000
-// 	bootstrapNodes := nodeIds[len(nodeIds)-2:]
-// 	bootstrapHosts := make([]string, 0)
-// 	services := make([]*ServiceNetwork, 0)
-// 	ledgers := make([]core.Ledger, 0)
-//
-// 	var wg sync.WaitGroup
-// 	wg.Add(len(nodeIds))
-//
-// 	defer func() {
-// 		for _, service := range services {
-// 			service.Stop(ctx)
-// 		}
-// 	}()
-//
-// 	// init node and register test function
-// 	initService := func(node string, bHosts []string) (host string) {
-// 		mpm := dhtnetwork.MockPulseManager{}
-// 		mpm.SetCallback(func(pulse core.Pulse) {
-// 			if pulse.PulseNumber == core.PulseNumber(1) {
-// 				wg.Done()
-// 			}
-// 		})
-// 		ledger := &mockLedger{PM: &mpm}
-// 		ledgers = append(ledgers, ledger)
-//
-// 		host = prefix + strconv.Itoa(port)
-// 		service, _ := NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
-// 		service.Start(ctx, core.Components{Ledger: ledger})
-// 		port++
-// 		services = append(services, service)
-// 		return
-// 	}
-//
-// 	for _, node := range bootstrapNodes {
-// 		host := initService(node.String(), nil)
-// 		bootstrapHosts = append(bootstrapHosts, host)
-// 	}
-// 	nodes := nodeIds[:len(nodeIds)-2]
-// 	for _, node := range nodes {
-// 		initService(node.String(), bootstrapHosts)
-// 	}
-//
-// 	lastIndex := len(services) - 1
-//
-// 	// pulse number is zero in MockPulseManager before receiving any pulses (default)
-// 	ll := ledgers[lastIndex]
-// 	firstStoredPulse, _ := ll.GetPulseManager().Current(ctx)
-// 	require.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
-//
-// 	// time.Sleep(time.Millisecond * 100)
-//
-// 	hh := services[lastIndex].hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
-// 	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
-// 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
-// 		Build()
-// 	// imitate receiving pulse from the pulsar on the last started service
-// 	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
-// 	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
-//
-// 	// pulse is stored on the first node
-// 	firstStoredPulse, _ = ll.GetPulseManager().Current(ctx)
-// 	require.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
-//
-// 	// pulse is passed to the other 4 nodes and stored there, too
-// 	success := WaitTimeout(&wg, time.Second)
-// 	require.True(t, success)
-//
-// 	for _, ldgr := range ledgers {
-// 		pulse, _ := ldgr.GetPulseManager().Current(ctx)
-// 		require.Equal(t, core.PulseNumber(1), pulse.PulseNumber)
-// 	}
-// }

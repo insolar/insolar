@@ -14,14 +14,16 @@
  *    limitations under the License.
  */
 
-package auth
+package bootstrap
 
 import (
+	"crypto"
 	"testing"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,4 +67,51 @@ func TestCorrectShortIDCollision(t *testing.T) {
 	node = newTestNodeWithShortID(64)
 	CorrectShortIDCollision(keeper, node)
 	require.Equal(t, core.ShortNodeID(65), node.ShortID())
+}
+
+type testNode struct {
+	ref core.RecordRef
+}
+
+func (t *testNode) GetRef() *core.RecordRef {
+	return &t.ref
+}
+
+func (t *testNode) GetPublicKey() crypto.PublicKey {
+	return nil
+}
+
+func (t *testNode) GetHost() string {
+	return ""
+}
+
+func TestRemoveOrigin(t *testing.T) {
+	origin := testutils.RandomRef()
+	originNode := &testNode{origin}
+	first := &testNode{testutils.RandomRef()}
+	second := &testNode{testutils.RandomRef()}
+
+	discoveryNodes := []core.BootstrapNode{first, originNode, second}
+	result, err := RemoveOrigin(discoveryNodes, origin)
+	require.NoError(t, err)
+	assert.Equal(t, []core.BootstrapNode{first, second}, result)
+
+	discoveryNodes = []core.BootstrapNode{first, second}
+	_, err = RemoveOrigin(discoveryNodes, origin)
+	assert.Error(t, err)
+
+	discoveryNodes = []core.BootstrapNode{first, originNode}
+	result, err = RemoveOrigin(discoveryNodes, origin)
+	require.NoError(t, err)
+	assert.Equal(t, []core.BootstrapNode{first}, result)
+
+	discoveryNodes = []core.BootstrapNode{originNode, first}
+	result, err = RemoveOrigin(discoveryNodes, origin)
+	require.NoError(t, err)
+	assert.Equal(t, []core.BootstrapNode{first}, result)
+
+	discoveryNodes = []core.BootstrapNode{originNode}
+	result, err = RemoveOrigin(discoveryNodes, origin)
+	require.NoError(t, err)
+	assert.Empty(t, result)
 }
