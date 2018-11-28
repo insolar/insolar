@@ -203,16 +203,11 @@ func parseState(array *bitArray, index int) (TriState, error) {
 	return TriState((stateFirstBit << 1) + stateSecondBit), nil
 }
 
-func parseBitArray(payload []uint8, size int) (*bitArray, error) {
-	array := newBitArray(size)
-	for i := 0; i < size; i++ {
-		block := getBlockInBitArray(i)
-		step := getStepToMove(i)
-		bit := (payload[block] >> step) & lastBitMask
-		err := array.put(int(bit), i)
-		if err != nil {
-			return nil, err
-		}
+func parseBitArray(payload []uint8) (*bitArray, error) {
+	len := len(payload)
+	array := newBitArray(len*sizeOfBlock - 4) // bits count from bytes size
+	for i := 0; i < len; i++ {
+		array.array[i] = payload[i]
 	}
 	return array, nil
 }
