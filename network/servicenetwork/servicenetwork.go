@@ -38,8 +38,6 @@ import (
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
 	cfg configuration.Configuration
-	//scheme           core.PlatformCryptographyScheme
-	componentManager component.Manager
 
 	hostNetwork  network.HostNetwork  // TODO: should be injected
 	controller   network.Controller   // TODO: should be injected
