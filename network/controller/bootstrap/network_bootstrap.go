@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/pkg/errors"
 )
 
@@ -44,22 +45,27 @@ func (nb *NetworkBootstrapper) Start() {
 	nb.bootstrapper.Start()
 }
 
+type DiscoveryNode struct {
+	Host *host.Host
+	Node core.BootstrapNode
+}
+
 func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
-	err := nb.bootstrapper.Bootstrap(ctx)
+	discoveryNode, err := nb.bootstrapper.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Error bootstrapping to discovery node")
 	}
-	sessionID, err := nb.authController.Authorize(ctx, nb.certificate)
+	sessionID, err := nb.authController.Authorize(ctx, discoveryNode, nb.certificate)
 	if err != nil {
 		return errors.Wrap(err, "Error authorizing on discovery node")
 	}
-	data, err := nb.challengeController.Execute(sessionID)
+	data, err := nb.challengeController.Execute(ctx, discoveryNode, sessionID)
 	if err != nil {
 		return errors.Wrap(err, "Error executing double challenge response")
 	}
 	// TODO: use data
 	print(data.AssignShortID)
-	return nb.authController.Register(ctx, sessionID)
+	return nb.authController.Register(ctx, discoveryNode, sessionID)
 }
 
 func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
@@ -71,7 +77,7 @@ func NewNetworkBootstrapper(options *common.Options, cert core.Certificate, tran
 	nb.certificate = cert
 	nb.sessionManager = NewSessionManager()
 	nb.bootstrapper = NewBootstrapper(options, cert, transport)
-	nb.authController = NewAuthorizationController(options, nb.bootstrapper, transport, nb.sessionManager)
+	nb.authController = NewAuthorizationController(options, transport, nb.sessionManager)
 	// nb.challengeController = NewChallengeController()
 	return nb
 }

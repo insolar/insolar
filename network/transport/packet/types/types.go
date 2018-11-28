@@ -38,6 +38,10 @@ const (
 	Register
 	// Genesis is packet type for active list exchange between discovery nodes
 	Genesis
+	// Challenge1 is packet type for first phase of double challenge response
+	Challenge1
+	// Challenge2 is packet type for first phase of double challenge response
+	Challenge2
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
 

@@ -32,7 +32,6 @@ import (
 // AuthorizationController is intended
 type AuthorizationController struct {
 	options        *common.Options
-	bootstrapper   *Bootstrapper
 	transport      network.InternalTransport
 	keeper         network.NodeKeeper
 	coordinator    core.NetworkCoordinator
@@ -78,14 +77,13 @@ func init() {
 }
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
-func (ac *AuthorizationController) Authorize(ctx context.Context, certificate core.Certificate) (SessionID, error) {
-	discovery := ac.bootstrapper.GetChosenDiscoveryNode()
-	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discovery)
+func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, certificate core.Certificate) (SessionID, error) {
+	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode)
 
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
 		Certificate: certificate,
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(request, discovery)
+	future, err := ac.transport.SendRequestPacket(request, discoveryNode.Host)
 	if err != nil {
 		return 0, errors.Wrapf(err, "Error sending authorize request")
 	}
@@ -101,15 +99,14 @@ func (ac *AuthorizationController) Authorize(ctx context.Context, certificate co
 }
 
 // Register node on the discovery node (step 4 of the bootstrap process)
-func (ac *AuthorizationController) Register(ctx context.Context, sessionID SessionID) error {
-	discovery := ac.bootstrapper.GetChosenDiscoveryNode()
-	inslogger.FromContext(ctx).Infof("Registering on host: %s", discovery)
+func (ac *AuthorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
+	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode)
 
 	request := ac.transport.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
 		SessionID: sessionID,
 		JoinClaim: ac.keeper.GetOriginClaim(),
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(request, discovery)
+	future, err := ac.transport.SendRequestPacket(request, discoveryNode.Host)
 	if err != nil {
 		return errors.Wrapf(err, "Error sending register request")
 	}
@@ -163,11 +160,9 @@ func (ac *AuthorizationController) Start(networkCoordinator core.NetworkCoordina
 	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
 }
 
-func NewAuthorizationController(options *common.Options, bootstrapper *Bootstrapper,
-	transport network.InternalTransport, sessionManager *SessionManager) *AuthorizationController {
+func NewAuthorizationController(options *common.Options, transport network.InternalTransport, sessionManager *SessionManager) *AuthorizationController {
 	return &AuthorizationController{
 		options:        options,
-		bootstrapper:   bootstrapper,
 		transport:      transport,
 		sessionManager: sessionManager,
 	}

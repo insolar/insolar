@@ -37,8 +37,6 @@ type Bootstrapper struct {
 	pinger    *pinger.Pinger
 	cert      core.Certificate
 	keeper    network.NodeKeeper
-
-	chosenDiscoveryNode *host.Host
 }
 
 type NodeBootstrapRequest struct{}
@@ -81,19 +79,15 @@ func init() {
 	gob.Register(&GenesisResponse{})
 }
 
-func (bc *Bootstrapper) GetChosenDiscoveryNode() *host.Host {
-	return bc.chosenDiscoveryNode
-}
-
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
-func (bc *Bootstrapper) Bootstrap(ctx context.Context) error {
+func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 	ch := bc.getBootstrapHostsChannel(ctx, 1)
 	host := bc.waitResultFromChannel(ctx, ch)
 	if host == nil {
-		return errors.New("Failed to bootstrap to any of discovery nodes")
+		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
 	}
-	bc.chosenDiscoveryNode = host
-	return nil
+	discovery := FindDiscovery(bc.cert, host.NodeID)
+	return &DiscoveryNode{Host: host, Node: discovery}, nil
 }
 
 func (bc *Bootstrapper) checkActiveNode(node core.Node) error {

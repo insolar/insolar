@@ -18,6 +18,7 @@ package bootstrap
 
 import (
 	"sort"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
@@ -76,4 +77,31 @@ func OriginIsDiscovery(cert core.Certificate) bool {
 		}
 	}
 	return false
+}
+
+func FindDiscovery(cert core.Certificate, ref core.RecordRef) core.BootstrapNode {
+	for _, discoveryNode := range cert.GetBootstrapNodes() {
+		if ref.Equal(*discoveryNode.GetRef()) {
+			return discoveryNode
+		}
+	}
+	return nil
+}
+
+func Xor(first, second []byte) []byte {
+	if len(second) < len(first) {
+		temp := second
+		second = first
+		first = temp
+	}
+	result := make([]byte, len(second))
+	for i, d := range second {
+		result[i] = first[i%len(first)] ^ d
+	}
+	return result
+}
+
+func GenerateNonce() (Nonce, error) {
+	// TODO: generate nonce based on entropy
+	return time.Now().MarshalBinary()
 }
