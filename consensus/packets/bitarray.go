@@ -87,14 +87,13 @@ func (arr *bitArray) serializeCompressed() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
 	}
 	count := uint8(1)
-	for i := 1; i <= len(arr.array); i++ {
+	for i := 1; i < arr.bitsSize/2; i++ { // cuz 2 bits == 1 state
 		current, err := arr.getState(i)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
 		}
-		if last == current {
+		if (last != current) || (i+1 >= arr.bitsSize/2) {
 			count++
-		} else {
 			err := binary.Write(&result, binary.BigEndian, count)
 			if err != nil {
 				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
@@ -103,8 +102,10 @@ func (arr *bitArray) serializeCompressed() ([]byte, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
 			}
-			count = 1
+			count = 0
 			last = current
+		} else {
+			count++
 		}
 	}
 	return result.Bytes(), nil

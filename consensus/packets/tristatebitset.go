@@ -76,23 +76,22 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize a bitarray")
 	}
 
-	totalSize := int(round(dbs.array.Len()*2, sizeOfBlock)) + 1 // size of result bytes
-	var result *bytes.Buffer
-	firstByte = firstByte << 1
 	length := len(data)
+	var result bytes.Buffer
+	firstByte = firstByte << 1
 	if bits.Len(uint(length)) > lowLengthSize {
-		result, err = dbs.serializeWithHLength(firstByte, length, totalSize)
+		err = dbs.serializeWithHLength(firstByte, length, &result)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
 	} else {
-		result, err = dbs.serializeWithLLength(firstByte, length, totalSize)
+		err = dbs.serializeWithLLength(firstByte, length, &result)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
 	}
 
-	err = binary.Write(result, defaultByteOrder, data)
+	err = binary.Write(&result, defaultByteOrder, data)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
 	}
@@ -103,39 +102,35 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 func (dbs *TriStateBitSet) serializeWithHLength(
 	firstByte uint8,
 	tmpLen int,
-	totalSize int,
-) (res *bytes.Buffer, err error) {
-	var result *bytes.Buffer
+	result *bytes.Buffer,
+) error {
 	var secondByte uint8 // hBitLength
 	firstByte++
 	firstByte = firstByte << lowBitLengthSize // move compressed and hBitLength bits to right
 	secondByte = uint8(tmpLen)
-	totalSize++ // secondbyte is optional
-	result = allocateBuffer(totalSize)
-	err = binary.Write(result, defaultByteOrder, firstByte)
+	err := binary.Write(result, defaultByteOrder, firstByte)
 	if err != nil {
-		return result, errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
+		return errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
 	}
 	err = binary.Write(result, defaultByteOrder, secondByte)
 	if err != nil {
-		return result, errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
+		return errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
 	}
-	return result, nil
+	return nil
 }
 
 func (dbs *TriStateBitSet) serializeWithLLength(
 	firstByte uint8,
 	tmpLen int,
-	totalSize int,
-) (res *bytes.Buffer, err error) {
-	result := allocateBuffer(totalSize)
-	firstByte = firstByte << 1 // move compressed flag to right
+	result *bytes.Buffer,
+) error {
+	firstByte = firstByte << lowLengthSize // move compressed and hbit flags to right
 	firstByte += uint8(tmpLen)
-	err = binary.Write(result, defaultByteOrder, firstByte)
+	err := binary.Write(result, defaultByteOrder, firstByte)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ serializeWithLLength ] failed to write binary")
+		return errors.Wrap(err, "[ serializeWithLLength ] failed to write binary")
 	}
-	return result, nil
+	return nil
 }
 
 func DeserializeBitSet(data io.Reader) (BitSet, error) {
@@ -165,7 +160,7 @@ func DeserializeBitSet(data io.Reader) (BitSet, error) {
 		for i := uint8(0); i < length; i++ {
 			err := binary.Read(data, defaultByteOrder, &payload[i])
 			if err != nil {
-				return nil, errors.Wrap(err, "[ Deserialize ] failed to read first byte")
+				return nil, errors.Wrap(err, "[ Deserialize ] failed to read payload")
 			}
 		}
 		array, err = parseBitArray(payload)
@@ -214,12 +209,15 @@ func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
 		}
 		for j := uint8(0); j < count; j++ {
 			block += value
-			block = block << 2
 			blockSize += 2
-			if blockSize >= sizeOfBlock {
+			if (blockSize >= sizeOfBlock) || (j+1 >= count) {
+				if j+1 >= count {
+					block = block << uint(sizeOfBlock-blockSize)
+				}
 				payload = append(payload, block)
 				blockSize = 0
 			}
+			block = block << 2
 		}
 	}
 	return parseBitArray(payload)
@@ -264,7 +262,7 @@ func parseFirstByte(b uint8) (compressed bool, hbitFlag bool, lbitLength uint8) 
 	lbitLength = uint8(0)
 	compressed = false
 	hbitFlag = false
-	if (b & firstBitMask) == 1 { // check compressed flag bit
+	if (b & firstBitMask) == firstBitMask { // check compressed flag bit
 		compressed = true
 	}
 	check := (b << 1) & firstBitMask // check hBitLength flag bit
