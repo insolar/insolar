@@ -64,7 +64,7 @@ func (pm *MockPulseManager) Current(context.Context) (*core.Pulse, error) {
 	return &pm.currentPulse, nil
 }
 
-func (pm *MockPulseManager) Set(ctx context.Context, pulse core.Pulse) error {
+func (pm *MockPulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) error {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
 
