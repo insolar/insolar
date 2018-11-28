@@ -17,6 +17,7 @@
 package phases
 
 import (
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
@@ -48,6 +49,8 @@ type SecondPhaseState struct {
 
 	NodeListCount uint16
 	NodeListHash  []byte
+
+	DBitSet packets.BitSet
 }
 
 type ThirdPhasePulseState struct {

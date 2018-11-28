@@ -48,7 +48,5 @@ const (
 	// Phase1 is packet type for phase 2
 	Phase2
 	// Phase3Pulse is packet type for phase 3 ( pulse )
-	Phase3Pulse
-	// Phase3Referendum is packet type for phase 3 ( referendum )
-	Phase3Referendum
+	Phase3
 )
