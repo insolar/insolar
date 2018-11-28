@@ -17,7 +17,6 @@
 package functest
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -53,32 +52,26 @@ func _TestRegisterNodeNoEnoughNodes(t *testing.T) {
 
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
-	z, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
-	fmt.Println("ZZ", z)
-	//fmt.Println(err.Error())
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
 	require.NoError(t, err)
 
-	//require.Equal(t, testRole, cert.Role)
-	//require.Equal(t, TESTPUBLICKEY, cert.PublicKey)
-	//require.Empty(t, cert.BootstrapNodes)
+	require.NotNil(t, cert)
 }
 
 func _TestRegisterNodeHeavyMaterial(t *testing.T) {
 	const testRole = "heavy_material"
-	// cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
-	// require.NoError(t, err)
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
+	require.NoError(t, err)
 
-	// require.Equal(t, testRole, cert.Role)
-	// require.Equal(t, TESTPUBLICKEY, cert.PublicKey)
+	require.NotNil(t, cert)
 }
 
 func _TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
-	// cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
-	// require.NoError(t, err)
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	require.NoError(t, err)
 
-	// require.Equal(t, testRole, cert.Role)
-	// require.Equal(t, TESTPUBLICKEY, cert.PublicKey)
+	require.NotNil(t, cert)
 }
 
 func _TestRegisterNodeNotExistRole(t *testing.T) {
