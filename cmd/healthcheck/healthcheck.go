@@ -22,10 +22,11 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/testutils"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/spf13/pflag"
 )
 
