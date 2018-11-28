@@ -50,9 +50,6 @@ func main() {
 	ref := core.RecordRef{}.FromSlice(append(make([]byte, 63), 1))
 	destination := filepath.Join(*cacheDir, ref.String())
 
-	log.Error("destination: " + destination)
-	log.Error("contractPath: " + *contractPath)
-
 	_, err = exec.Command("./bin/insgocc", "compile", "-o", destination, *contractPath).CombinedOutput()
 	if err != nil {
 		log.Errorln(err.Error())
@@ -84,5 +81,6 @@ func main() {
 		os.Exit(2)
 	}
 
+	log.Debug("i'm alive!")
 	os.Exit(0)
 }
