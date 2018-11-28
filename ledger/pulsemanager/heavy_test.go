@@ -64,9 +64,9 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	busMock := testutils.NewMessageBusMock(t)
 
 	// Mock N5: GIL mock
-	gilMocl := testutils.NewGlobalInsolarLockMock(t)
-	gilMocl.AcquireFunc = func(context.Context) {}
-	gilMocl.ReleaseFunc = func(context.Context) {}
+	gilMock := testutils.NewGlobalInsolarLockMock(t)
+	gilMock.AcquireFunc = func(context.Context) {}
+	gilMock.ReleaseFunc = func(context.Context) {}
 
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var synckeys []key
@@ -112,7 +112,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
 	pm.Bus = busMock
-	pm.GIL = gilMocl
+	pm.GIL = gilMock
 
 	// start PulseManager
 	err := pm.Start(ctx)
