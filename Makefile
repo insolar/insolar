@@ -6,6 +6,7 @@ PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 EXPORTER = exporter
+APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 
 ALL_PACKAGES = ./...
@@ -72,6 +73,9 @@ $(INSGORUND):
 
 $(BENCHMARK):
 	go build -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
+
+$(APIREQUESTER):
+	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
 
 $(EXPORTER):
 	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go

@@ -2,7 +2,7 @@ versionmanager:
   minalowedversion: v0.3.0
 host:
   transport:
-    protocol: TCP
+    protocol: UTP
     address: 127.0.0.1:53837
     behindnat: false
   bootstraphosts: []
@@ -11,12 +11,12 @@ host:
   timeout: 4
 node:
   node:
-    id: "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
+    id: "62RqeuAcp24yXiKPCUXCo4yVTWGowxbiarnSgUT8oLHrawSEcm6Z4d6G7FnykVLupNRzYot8yXtzt5HFmAQ5dsy9"
 service:
   service: {}
 ledger:
   storage:
-    datadirectory: ./data
+    datadirectory: scripts/insolard/nodes/first/data
     txretriesonconflict: 3
   jetcoordinator:
     rolecounts:
@@ -36,12 +36,13 @@ logicrunner:
   builtin: {}
   goplugin:
     runnerlisten: 127.0.0.1:18181
+apirunner:
+  address: 127.0.0.1:19191
 pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
   nodesaddresses: []
-genesis:
-  rootkeys: "scripts/insolard/configs/root_member_keys.json"
-  rootbalance: 10000
-keyspath: "scripts/insolard/configs/bootstrap_keys.json"
-certificatepath: "scripts/insolard/configs/certificate.json"
+keyspath: "scripts/insolard/nodes/first/keys.json"
+certificatepath: "scripts/insolard/nodes/first/cert.json"
+metrics:
+  listenaddress: 0.0.0.0:8080
