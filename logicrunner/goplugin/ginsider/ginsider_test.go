@@ -27,7 +27,7 @@ func TestHealthCheck(t *testing.T) {
 	startGoInsider(t, gi, protocol, socket)
 
 	cmd := exec.Command("./bin/healthcheck",
-		"-c", "./logicrunner/goplugin/ginsider/healthcheck/main.go",
+		"-c", "./logicrunner/goplugin/ginsider/healthcheck/healthcheck.go",
 		"-d", tmpDir,
 		"-a", socket,
 		"-p", protocol)
