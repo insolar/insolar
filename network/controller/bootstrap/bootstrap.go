@@ -32,11 +32,12 @@ import (
 )
 
 type Bootstrapper struct {
-	options   *common.Options
-	transport network.InternalTransport
-	pinger    *pinger.Pinger
-	cert      core.Certificate
-	keeper    network.NodeKeeper
+	options        *common.Options
+	transport      network.InternalTransport
+	pinger         *pinger.Pinger
+	cert           core.Certificate
+	keeper         network.NodeKeeper
+	sessionManager *SessionManager
 
 	chosenDiscoveryNode *host.Host
 }
@@ -85,6 +86,7 @@ func (bc *Bootstrapper) GetChosenDiscoveryNode() *host.Host {
 	return bc.chosenDiscoveryNode
 }
 
+// Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *Bootstrapper) Bootstrap(ctx context.Context) error {
 	ch := bc.getBootstrapHostsChannel(ctx, 1)
 	host := bc.waitResultFromChannel(ctx, ch)
@@ -95,6 +97,7 @@ func (bc *Bootstrapper) Bootstrap(ctx context.Context) error {
 	return nil
 }
 
+// StartSession initiate connecting session between connecting node and discovery node (step 2 of the bootstrap process)
 func (bc *Bootstrapper) StartSession(ctx context.Context) (SessionID, error) {
 	request := bc.transport.NewRequestBuilder().Type(types.StartSession).Data(nil).Build()
 	future, err := bc.transport.SendRequestPacket(request, bc.chosenDiscoveryNode)
@@ -259,11 +262,23 @@ func (bc *Bootstrapper) processGenesis(request network.Request) (network.Respons
 	return bc.transport.BuildResponse(request, &GenesisResponse{Discovery: bc.keeper.GetOrigin()}), nil
 }
 
+func (bc *Bootstrapper) processStartSession(request network.Request) (network.Response, error) {
+	session := bc.sessionManager.NewSession(request.GetSender())
+	return bc.transport.BuildResponse(request, &StartSessionResponse{SessionID: session.ID}), nil
+}
+
 func (bc *Bootstrapper) Start() {
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
+	bc.transport.RegisterPacketHandler(types.StartSession, bc.processStartSession)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
 }
 
 func NewBootstrapController(options *common.Options, certificate core.Certificate, transport network.InternalTransport) *Bootstrapper {
-	return &Bootstrapper{options: options, cert: certificate, transport: transport, pinger: pinger.NewPinger(transport)}
+	return &Bootstrapper{
+		options:        options,
+		cert:           certificate,
+		transport:      transport,
+		pinger:         pinger.NewPinger(transport),
+		sessionManager: NewSessionManager(),
+	}
 }
