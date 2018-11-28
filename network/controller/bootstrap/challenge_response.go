@@ -28,7 +28,6 @@ type ChallengeResponseController struct {
 
 type Nonce []byte
 type SignedNonce []byte
-type SessionID uint64
 
 // Node                           Discovery Node
 //  1| ------ ChallengeRequest -----> |

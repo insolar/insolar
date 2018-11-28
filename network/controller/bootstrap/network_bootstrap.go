@@ -60,5 +60,5 @@ func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
 }
 
 func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
-	panic("not implemented")
+	return nb.bootstrapper.BootstrapDiscovery(ctx)
 }
