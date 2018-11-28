@@ -345,3 +345,33 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, amendID, idx.LatestState)
 }
+
+func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+		LightChainLimit: 3,
+	})
+
+	msg := message.GetObjectIndex{
+		Object: *genRandomRef(0),
+	}
+	objectIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
+	err := db.SetObjectIndex(ctx, msg.Object.Record(), &objectIndex)
+	require.NoError(t, err)
+
+	rep, err := h.handleGetObjectIndex(ctx, &message.Parcel{
+		Msg: &msg,
+	})
+	require.NoError(t, err)
+	indexRep, ok := rep.(*reply.ObjectIndex)
+	require.True(t, ok)
+	decodedIndex, err := index.DecodeObjectLifeline(indexRep.Index)
+	require.NoError(t, err)
+	assert.Equal(t, objectIndex, *decodedIndex)
+}
