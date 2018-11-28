@@ -53,6 +53,10 @@ func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 	return m.GetReference().String(), nil
 }
 
+func (rd *RootDomain) GetRootMemberRef() (*core.RecordRef, error) {
+	return &rd.RootMember, nil
+}
+
 func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, error) {
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
