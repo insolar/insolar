@@ -117,7 +117,7 @@ func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
 func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 	discoveryNodes := bc.cert.GetBootstrapNodes()
 	var err error
-	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.cert.GetRef())
+	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.cert.GetNodeRef())
 	if err != nil {
 		return errors.Wrapf(err, "Discovery bootstrap failed")
 	}

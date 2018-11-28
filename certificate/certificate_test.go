@@ -34,7 +34,8 @@ const TestDifferentKeys = "testdata/different_keys.json"
 
 func TestNewCertificate_NoCert(t *testing.T) {
 	_, err := ReadCertificate(nil, nil, TestInvalidFileCert)
-	require.EqualError(t, err, "[ ReadCertificate ] failed to read certificate from: "+TestInvalidFileCert)
+	require.EqualError(t, err, "[ ReadCertificate ] failed to read certificate from: "+
+		"testdata/bad_cert11111.json: open testdata/bad_cert11111.json: no such file or directory")
 }
 
 func TestNewCertificate_BadCert(t *testing.T) {
@@ -68,23 +69,41 @@ func TestReadCertificate(t *testing.T) {
 	require.Equal(t, 7, cert.MajorityRule)
 	require.Equal(t, "0987654321", cert.RootDomainReference)
 
+	testPubKey := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n"
+	key, err := kp.ImportPublicKey([]byte(testPubKey))
+	require.NoError(t, err)
+
 	bootstrapNodes := []BootstrapNode{
 		BootstrapNode{
-			PublicKey: "PUBKEY_1",
-			Host:      "localhost:22001",
+			PublicKey:     testPubKey,
+			Host:          "localhost:22001",
+			nodePublicKey: key,
 		},
 		BootstrapNode{
-			PublicKey: "PUBKEY_2",
-			Host:      "localhost:22002",
+			PublicKey:     testPubKey,
+			Host:          "localhost:22002",
+			nodePublicKey: key,
 		},
 		BootstrapNode{
-			PublicKey: "PUBKEY_3",
-			Host:      "localhost:22003",
+			PublicKey:     testPubKey,
+			Host:          "localhost:22003",
+			nodePublicKey: key,
 		},
 	}
+
 	require.Equal(t, bootstrapNodes, cert.BootstrapNodes)
 
 	checkKeys(cert, cs, t)
+}
+
+func TestReadCertificate_BadBootstrapPublicKey(t *testing.T) {
+	cs, _ := cryptography.NewStorageBoundCryptographyService(TestKeys)
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
+
+	_, err := ReadCertificate(pk, kp, "testdata/cert_bad_bootstrap_key.json")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "Incorrect fields: [ fillExtraFields ] Bad Bootstrap PublicKey")
 }
 
 func TestReadPrivateKey_BadJson(t *testing.T) {

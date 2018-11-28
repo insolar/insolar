@@ -73,7 +73,7 @@ type testNode struct {
 	ref core.RecordRef
 }
 
-func (t *testNode) GetRef() *core.RecordRef {
+func (t *testNode) GetNodeRef() *core.RecordRef {
 	return &t.ref
 }
 
