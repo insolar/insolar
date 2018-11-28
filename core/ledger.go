@@ -24,8 +24,10 @@ import (
 type DynamicRole int
 
 const (
+	// DynamicRoleUndefined is used for special cases.
+	DynamicRoleUndefined = DynamicRole(iota)
 	// DynamicRoleVirtualExecutor is responsible for current pulse CPU operations.
-	DynamicRoleVirtualExecutor = DynamicRole(iota + 1)
+	DynamicRoleVirtualExecutor
 	// DynamicRoleVirtualValidator is responsible for previous pulse CPU operations.
 	DynamicRoleVirtualValidator
 	// DynamicRoleLightExecutor is responsible for current pulse Disk operations.
