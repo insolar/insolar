@@ -51,9 +51,9 @@ type ServiceNetwork struct {
 	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
 	ArtifactManager     core.ArtifactManager            `inject:""`
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
+	NodeKeeper          network.NodeKeeper              `inject:""`
 
 	// subcomponents
-	NodeKeeper       network.NodeKeeper       `inject:""`
 	PhaseManager     phases.PhaseManager      // `inject:""`
 	MerkleCalculator merkle.Calculator        // `inject:""`
 	ConsensusNetwork network.ConsensusNetwork // `inject:""`
