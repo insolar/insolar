@@ -111,3 +111,51 @@ func TestMessageHandler_HandleGetObject(t *testing.T) {
 		assert.Equal(t, stateID, redirect.StateID)
 	})
 }
+
+func TestMessageHandler_HandleHotRecords(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
+	require.NoError(t, err)
+
+	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
+	secondId := core.NewRecordID(core.FirstPulseNumber, []byte{3, 2, 1})
+
+	hotIndexes := &message.HotIndexes{
+		PulseNumber: core.FirstPulseNumber,
+		RecentObjects: map[core.RecordID]*message.HotIndex{
+			*firstID: {
+				Index: &index.ObjectLifeline{
+					LatestState: firstID,
+				},
+				Meta: &core.RecentObjectsIndexMeta{
+					TTL: 321,
+				}},
+		},
+		PendingRequests: map[core.RecordID]*message.HotIndex{
+			*secondId: {Index: &index.ObjectLifeline{
+				LatestState: secondId,
+			}},
+		},
+	}
+
+	recentMock := testutils.NewRecentStorageMock(t)
+	recentMock.AddPendingRequestFunc = func(p core.RecordID) {
+		require.Equal(t, p, *secondId)
+	}
+	recentMock.AddObjectWithMetaFunc = func(p core.RecordID, p1 *core.RecentObjectsIndexMeta) {
+		require.Equal(t, p, *firstID)
+		require.Equal(t, 320, p1.TTL)
+	}
+
+	h := NewMessageHandler(db, &configuration.ArtifactManager{})
+	h.Recent = recentMock
+
+	res, err := h.handleHotRecords(ctx, &message.Parcel{Msg: hotIndexes})
+
+	require.Equal(t, res, &reply.OK{})
+	require.NoError(t, err)
+	recentMock.MinimockFinish()
+}
