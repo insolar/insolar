@@ -376,12 +376,19 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	var idx *index.ObjectLifeline
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		idx, err = getObjectIndexForUpdate(ctx, tx, msg.Object.Record())
+		idx, err = tx.GetObjectIndex(ctx, msg.Object.Record(), true)
+		// No index on our node.
 		if err == storage.ErrNotFound {
-			heavy, err := h.findHeavy(ctx, msg.Object, pulseNumber)
-			idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Object, heavy)
-			if err != nil {
-				return err
+			if state.State() == record.StateActivation {
+				// We are activating the object. There is not index for it anywhere.
+				idx = &index.ObjectLifeline{State: record.StateUndefined}
+			} else {
+				// We are updating object. Index should be on the heavy executor.
+				heavy, err := h.findHeavy(ctx, msg.Object, pulseNumber)
+				idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Object, heavy)
+				if err != nil {
+					return err
+				}
 			}
 		} else if err != nil {
 			return err
@@ -680,6 +687,7 @@ func getObjectIndexForUpdate(ctx context.Context, s storage.Store, head *core.Re
 	if err == storage.ErrNotFound {
 		return &index.ObjectLifeline{State: record.StateUndefined}, nil
 	}
+
 	return idx, err
 }
 
