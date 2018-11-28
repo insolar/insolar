@@ -31,5 +31,5 @@ func TestGetBalance(t *testing.T) {
 
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
-	require.EqualError(t, err, "[ makeCall ] Error in called method: [ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
+	require.Contains(t, err.Error(), "[ getBalance ] : on calling main API")
 }
