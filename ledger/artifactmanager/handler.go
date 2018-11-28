@@ -609,7 +609,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 
 	buf, err := index.EncodeObjectLifeline(idx)
 	if err != nil {
-		return nil, errors.Wrap(err, "faile to serialize index")
+		return nil, errors.Wrap(err, "failed to serialize index")
 	}
 
 	return &reply.ObjectIndex{Index: buf}, nil
