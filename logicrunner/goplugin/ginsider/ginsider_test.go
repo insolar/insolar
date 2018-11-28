@@ -26,8 +26,11 @@ func TestHealthCheck(t *testing.T) {
 	gi := NewGoInsider(tmpDir, protocol, socket)
 	startGoInsider(t, gi, protocol, socket)
 
+	currentPath, err := os.Getwd()
+	require.NoError(t, err)
+
 	cmd := exec.Command("./bin/healthcheck",
-		"-c", "./logicrunner/goplugin/ginsider/healthcheck/healthcheck.go",
+		"-c", currentPath+"healthcheck/healthcheck.go",
 		"-d", tmpDir,
 		"-a", socket,
 		"-p", protocol)
