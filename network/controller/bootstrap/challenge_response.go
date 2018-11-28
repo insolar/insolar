@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/host"
@@ -94,7 +95,40 @@ func init() {
 }
 
 func (cr *ChallengeResponseController) processChallenge1(request network.Request) (network.Response, error) {
-	panic("not implemented")
+	data := request.GetData().(*ChallengeRequest)
+	xorNonce, err := GenerateNonce()
+	if err != nil {
+		return cr.buildChallenge1ErrorResponse(request, "error generating discovery xor nonce: "+err.Error()), nil
+	}
+	sign, err := cr.cryptoSrv.Sign(Xor(data.Nonce, xorNonce))
+	if err != nil {
+		return cr.buildChallenge1ErrorResponse(request, "error signing nonce: "+err.Error()), nil
+	}
+	discoveryNonce, err := GenerateNonce()
+	if err != nil {
+		return cr.buildChallenge1ErrorResponse(request, "error generating discovery nonce: "+err.Error()), nil
+	}
+	response := cr.transport.BuildResponse(request, &SignedChallengeResponse{
+		Header: ChallengeResponseHeader{
+			Success: true,
+		},
+		Payload: &SignedChallengePayload{
+			SignedNonce:       sign.Bytes(),
+			XorDiscoveryNonce: xorNonce,
+			DiscoveryNonce:    discoveryNonce,
+		},
+	})
+	return response, nil
+}
+
+func (cr *ChallengeResponseController) buildChallenge1ErrorResponse(request network.Request, err string) network.Response {
+	log.Warn(err)
+	return cr.transport.BuildResponse(request, &SignedChallengeResponse{
+		Header: ChallengeResponseHeader{
+			Success: false,
+			Error:   err,
+		},
+	})
 }
 
 func (cr *ChallengeResponseController) processChallenge2(request network.Request) (network.Response, error) {
