@@ -42,7 +42,14 @@ func NewExporter(db *storage.DB) *Exporter {
 	return &Exporter{db: db}
 }
 
-type payload = map[string]interface{}
+type payload map[string]interface{}
+
+// MarshalJSON serializes payload into JSON.
+func (p payload) MarshalJSON() ([]byte, error) {
+	var buf []byte
+	err := codec.NewEncoderBytes(&buf, &codec.JsonHandle{}).Encode(&p)
+	return buf, err
+}
 
 type recordData struct {
 	Type    string
