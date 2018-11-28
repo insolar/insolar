@@ -43,7 +43,15 @@ import (
 	"github.com/insolar/insolar/testutils/network"
 )
 
-func TestPulseManager_SendToHeavy(t *testing.T) {
+func TestPulseManager_SendToHeavyHappyPath(t *testing.T) {
+	sendToHeavy(t, false)
+}
+
+func TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
+	sendToHeavy(t, true)
+}
+
+func sendToHeavy(t *testing.T, withretry bool) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
@@ -83,7 +91,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
-			if atomic.AddInt32(&bussendfailed, 1) < 2 {
+			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
 				return nil, fmt.Errorf("BusMock one send should be failed (test retry)")
 			}
 
@@ -155,7 +163,9 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	require.NoError(t, err)
 
 	// TODO: comment sleep
-	time.Sleep(1000 * time.Millisecond)
+	if withretry {
+		time.Sleep(1000 * time.Millisecond)
+	}
 	err = pm.Stop(ctx)
 	assert.NoError(t, err)
 
