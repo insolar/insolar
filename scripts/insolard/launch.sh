@@ -10,9 +10,7 @@ LEDGER_DIR=data
 INSGORUND_LISTEN_PORT=18181
 INSGORUND_RPS_PORT=18182
 CONFIGS_DIR=configs
-KEYS_FILE=scripts/insolard/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=scripts/insolard/$CONFIGS_DIR/root_member_keys.json
-CERTIFICATE_FILE=scripts/insolard/$CONFIGS_DIR/certificate.json
 
 stop_listening()
 {
@@ -67,19 +65,9 @@ rebuild_binaries()
     build_binaries
 }
 
-generate_bootstrap_keys()
-{
-	bin/insolar -c gen_keys > $KEYS_FILE
-}
-
 generate_root_member_keys()
 {
 	bin/insolar -c gen_keys > $ROOT_MEMBER_KEYS_FILE
-}
-
-generate_certificate()
-{
-    bin/insolar -c gen_certificate -g $KEYS_FILE > $CERTIFICATE_FILE 
 }
 
 check_working_dir()
@@ -139,9 +127,7 @@ process_input_params $param
 
 prepare
 build_binaries
-generate_bootstrap_keys
 generate_root_member_keys
-generate_certificate
 
 if [ "$gorund_only" == "1" ]
 then
