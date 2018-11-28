@@ -140,7 +140,7 @@ func (db *DB) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		err = db.SetDrop(ctx, &jetdrop.JetDrop{})
+		err = db.SetDrop(ctx, &jetdrop.JetDrop{Pulse: core.FirstPulseNumber})
 		if err != nil {
 			return nil, err
 		}
@@ -363,7 +363,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 		recordPrefix[0] = scopeIDRecord
 		copy(recordPrefix[1:], pulse.Bytes())
 
-		messagesError = db.db.View(func(txn *badger.Txn) error {
+		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
 			defer it.Close()
 

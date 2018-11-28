@@ -41,6 +41,7 @@ import (
 )
 
 func TestPulseManager_SendToHeavy(t *testing.T) {
+	t.Skip("@nordicdyno is rewriting it")
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
@@ -62,6 +63,12 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	// Mock N4: message bus for Send method
 	busMock := testutils.NewMessageBusMock(t)
 
+	recentMock := testutils.NewRecentStorageMock(t)
+	recentMock.ClearZeroTTLObjectsMock.Return()
+	recentMock.GetObjectsMock.Return(map[core.RecordID]*core.RecentObjectsIndexMeta{})
+	recentMock.GetRequestsMock.Return([]core.RecordID{})
+	recentMock.ClearObjectsMock.Return()
+
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var synckeys []key
 	var syncsended int
@@ -71,6 +78,11 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	}
 	syncmessagesPerMessage := map[int]*messageStat{}
 	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+		_, ok := msg.(*message.HotIndexes)
+		if ok {
+			return nil, nil
+		}
+
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			syncsended++
@@ -104,6 +116,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
 	pm.Bus = busMock
+	pm.Recent = recentMock
 
 	// start PulseManager
 	err := pm.Start(ctx)
