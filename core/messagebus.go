@@ -61,11 +61,35 @@ type Reply interface {
 	Type() ReplyType
 }
 
+// RedirectReply is used to create redirected messages.
+type RedirectReply interface {
+	// Redirected creates redirected message from redirect data.
+	Redirected(genericMsg Message) Message
+	// GetReceiver returns node reference to send message to.
+	GetReceiver() *RecordRef
+	// GetToken returns delegation token.
+	GetToken() DelegationToken
+}
+
+// MessageSendOptions represents options for message sending.
+type MessageSendOptions struct {
+	Receiver *RecordRef
+	Token    DelegationToken
+}
+
+// Safe returns original options, falling back on defaults if nil.
+func (o *MessageSendOptions) Safe() *MessageSendOptions {
+	if o == nil {
+		return &MessageSendOptions{}
+	}
+	return o
+}
+
 // MessageBus interface
 //go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(context.Context, Message, ...SendOption) (Reply, error)
+	Send(context.Context, Message, *MessageSendOptions) (Reply, error)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.

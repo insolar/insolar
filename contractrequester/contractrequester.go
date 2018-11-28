@@ -58,7 +58,7 @@ func (cr *ContractRequester) routeCall(ctx context.Context, ref core.RecordRef, 
 		Arguments:        args,
 	}
 
-	res, err := cr.MessageBus.Send(ctx, e)
+	res, err := cr.MessageBus.Send(ctx, e, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::routeCall ] couldn't send message: "+ref.String())
 	}

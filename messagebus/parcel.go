@@ -41,15 +41,10 @@ func (pf *parcelFactory) Create(
 	ctx context.Context,
 	msg core.Message,
 	sender core.RecordRef,
-	sendOptions *core.SendOptions,
+	token core.DelegationToken,
 ) (core.Parcel, error) {
 	if msg == nil {
 		return nil, errors.New("failed to signature a nil message")
-	}
-
-	var token core.DelegationToken
-	if sendOptions != nil {
-		token = sendOptions.Token
 	}
 
 	serialized := message.ToBytes(msg)
