@@ -145,7 +145,7 @@ func DeserializeBitSet(data io.Reader) (BitSet, error) {
 	}
 	compressed, hbitFlag, length := parseFirstByte(firstbyte)
 	if compressed {
-		panic("[ DeserializeWithoutHeader ] not implemented yet")
+		panic("[ DeserializeBitSet ] not implemented yet")
 	}
 	if hbitFlag {
 		err = binary.Read(data, defaultByteOrder, &length)
