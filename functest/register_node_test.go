@@ -17,7 +17,6 @@
 package functest
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,23 +32,6 @@ func registerNodeSignedCall(params ...interface{}) (string, error) {
 	return res.(string), nil
 }
 
-func sendNoEnoughNodesRequest(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 5, 0, "virtual")
-	require.EqualError(t, err, "[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ] : Can't make bootstrap nodes config: [ makeBootstrapNodesConfig ] There no enough nodes")
-}
-
-// TODO: This test must be first!! Somehow fix it
-// This test tests that in case of error new node isn't added to NodeDomain
-func _TestRegisterDontAddIfError(t *testing.T) {
-	for i := 0; i < 10; i++ {
-		sendNoEnoughNodesRequest(t)
-	}
-}
-
-func _TestRegisterNodeNoEnoughNodes(t *testing.T) {
-	sendNoEnoughNodesRequest(t)
-}
-
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
 	cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
@@ -58,15 +40,15 @@ func TestRegisterNodeVirtual(t *testing.T) {
 	require.NotNil(t, cert)
 }
 
-func _TestRegisterNodeHeavyMaterial(t *testing.T) {
+func TestRegisterNodeHeavyMaterial(t *testing.T) {
 	const testRole = "heavy_material"
-	cert, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, testRole)
+	cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
 	require.NoError(t, err)
 
 	require.NotNil(t, cert)
 }
 
-func _TestRegisterNodeLightMaterial(t *testing.T) {
+func TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
 	cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
 	require.NoError(t, err)
@@ -74,63 +56,8 @@ func _TestRegisterNodeLightMaterial(t *testing.T) {
 	require.NotNil(t, cert)
 }
 
-func _TestRegisterNodeNotExistRole(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, "some_not_fancy_role")
+func TestRegisterNodeNotExistRole(t *testing.T) {
+	_, err := registerNodeSignedCall(TESTPUBLICKEY, "some_not_fancy_role")
 	require.Contains(t, err.Error(),
-		"[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ]: on calling main API: couldn't save new object as child: executer error: problem with API call: Can't call constructor NewNodeRecord: Role is not supported: some_not_fancy_role")
-}
-
-// TODO An error is expected but got nil.
-func _TestRegisterNodeWithoutRole(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, nil)
-	require.Error(t, err)
-}
-
-// TODO An error is expected but got nil.
-func _TestRegisterNodeWithoutPulicKey(t *testing.T) {
-	_, err := registerNodeSignedCall("", 0, 0, "virtual")
-	require.Error(t, err)
-}
-
-// TODO An error is expected but got nil.
-func _TestRegisterNodeWithoutHost(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 0, 0, "virtual")
-	require.Error(t, err)
-}
-
-func _TestRegisterNodeBadMajorityRule(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, 10, 3, "virtual")
-	require.EqualError(t, err, "[ registerNodeCall ] Problems with RegisterNode: majorityRule must be more than 0.51 * numberOfBootstrapNodes")
-}
-
-func findPublicKey(publicKey string, bNodes []bootstrapNode) bool {
-	for _, node := range bNodes {
-		if node.PublicKey == publicKey {
-			return true
-		}
-	}
-
-	return false
-}
-
-func _TestRegisterNodeWithBootstrapNodes(t *testing.T) {
-	const testRole = "virtual"
-	const numNodes = 5
-	// Adding nodes
-	for i := 0; i < numNodes; i++ {
-		_, err := registerNodeSignedCall(TESTPUBLICKEY+strconv.Itoa(i), 0, 0, testRole)
-		require.NoError(t, err)
-	}
-
-	// cert, err := registerNodeSignedCall("FFFF", numNodes, numNodes, "heavy_material")
-	// require.NoError(t, err)
-
-	// require.Equal(t, "heavy_material", cert.Role)
-	// require.Equal(t, "FFFF", cert.PublicKey)
-	// require.Len(t, cert.BootstrapNodes, numNodes)
-
-	// for i := 0; i < numNodes; i++ {
-	// 	tPK := TESTPUBLICKEY + strconv.Itoa(i)
-	// 	require.True(t, findPublicKey(tPK, cert.BootstrapNodes), "Couldn't find PublicKey: %s", tPK)
-	// }
+		"[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ] Can't save as child: on calling main API: couldn't save new object as child: executer error: problem with API call: Can't call constructor NewNodeRecord: Role is not supported: some_not_fancy_role")
 }
