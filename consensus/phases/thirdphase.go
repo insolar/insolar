@@ -22,24 +22,40 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// ThirdPhasePulse.
-type ThirdPhasePulse struct {
-	NodeNetwork core.NodeNetwork `inject:""`
-	State       *ThirdPhasePulseState
+type ThirdPhase struct {
+	Cryptography core.CryptographyService `inject:""`
+	NodeNetwork  core.NodeNetwork         `inject:""`
 }
 
-func (tpp *ThirdPhasePulse) Execute(ctx context.Context, state *SecondPhaseState) error {
+func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
 	// TODO: do something here
 	return nil
 }
 
-// ThirdPhaseReferendum.
-type ThirdPhaseReferendum struct {
-	NodeNetwork core.NodeNetwork `inject:""`
-	State       *ThirdPhaseReferendumState
-}
+/*
+func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
+	data, err := p.RawBytes()
+	if err != nil {
+		return errors.Wrap(err, "failed to get raw bytes")
+	}
+	sign, err := tp.Cryptography.Sign(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a phase 2 packet")
+	}
 
-func (tpr *ThirdPhaseReferendum) Execute(ctx context.Context, state *SecondPhaseState) error {
-	// TODO: do something here
+	copy(p.SignatureHeaderSection1[:], sign.Bytes())
+	// TODO: sign a second part after claim addition
 	return nil
 }
+
+func (tp *ThirdPhase) isSignPhase3PacketRight(packet *packets.Phase3Packet, recordRef core.RecordRef) (bool, error) {
+	key := tp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+
+	raw, err := packet.RawBytes()
+	if err != nil {
+		return false, errors.Wrap(err, "failed to serialize")
+	}
+
+	return tp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+}
+*/

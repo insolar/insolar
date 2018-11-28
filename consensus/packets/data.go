@@ -27,6 +27,7 @@ type PacketType uint8
 const (
 	Phase1 = PacketType(iota + 1)
 	Phase2
+	Phase3
 )
 
 const HashLength = 64
@@ -195,9 +196,8 @@ type Phase2Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature [HashLength]byte
-	// TODO: uncomment this after impl (de)serializers
-	// deviantBitSet           BitSet
+	globuleHashSignature    [HashLength]byte
+	deviantBitSet           BitSet
 	SignatureHeaderSection1 [SignatureLength]byte
 
 	// -------------------- Section 2 (optional)
@@ -252,4 +252,37 @@ func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) er
 	}
 
 	return errors.New("invalid proof fields len")
+}
+
+// ----------------------------------PHASE 3--------------------------------
+
+type Phase3Packet struct {
+	// -------------------- Header
+	packetHeader PacketHeader
+
+	// -------------------- Section 1
+	globuleHashSignature    [HashLength]byte
+	deviantBitSet           BitSet
+	SignatureHeaderSection1 [SignatureLength]byte
+}
+
+// SetPacketHeader set routing information for transport level.
+func (p3p *Phase3Packet) SetPacketHeader(header *RoutingHeader) error {
+	if header.PacketType != types.Phase3 {
+		return errors.New("[ Phase3Packet.SetPacketHeader ] wrong packet type")
+	}
+
+	p3p.packetHeader.setRoutingFields(header, Phase3)
+	return nil
+}
+
+// GetPacketHeader get routing information from transport level.
+func (p3p *Phase3Packet) GetPacketHeader() (*RoutingHeader, error) {
+	header := &RoutingHeader{}
+
+	header.PacketType = types.Phase2
+	header.OriginID = p3p.packetHeader.OriginNodeID
+	header.TargetID = p3p.packetHeader.TargetNodeID
+
+	return header, nil
 }
