@@ -17,17 +17,11 @@
 package servicenetwork
 
 import (
-	"context"
 	"crypto"
-	"strconv"
-	"strings"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
@@ -86,6 +80,7 @@ func initComponents(t *testing.T, nodeID core.RecordRef, address string, isBoots
 	return mock, keeper
 }
 
+/*
 func TestServiceNetwork_GetAddress(t *testing.T) {
 	serviceNetwork, cm := createServiceNetwork(t)
 	err := cm.Init(context.Background())
@@ -356,7 +351,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 
 	require.True(t, success)
 }
-
+*/
 // func Test_processPulse(t *testing.T) {
 // 	ctx := context.TODO()
 // 	t.Skip("rewrite test with multiple pulses and respecting logic of adding active nodes")
