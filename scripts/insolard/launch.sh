@@ -41,6 +41,7 @@ create_required_dirs()
     mkdir -p $CONTRACT_STORAGE
     mkdir -p $LEDGER_DIR
     mkdir -p scripts/insolard/$CONFIGS_DIR
+    mkdir -p scripts/insolard/$CONFIGS_DIR/certs
 }
 
 prepare()
@@ -147,5 +148,6 @@ then
     run_insgorund
 else
     run_insgorund &
-    $INSOLARD --config scripts/insolard/insolar.yaml
+    $INSOLARD --config scripts/insolard/one_node_insolar.yaml --genesis scripts/insolard/one_node_genesis.yaml --keyout scripts/insolard/$CONFIGS_DIR/certs
+    $INSOLARD --config scripts/insolard/one_node_insolar.yaml
 fi

@@ -11,20 +11,20 @@ discovery_nodes:
   -
     host: "HOST1"
     role: ""
-    keys_file: "../testdata/functional/discovery_node_1.json"
+    keys_file: "scripts/insolard/configs/root_member_keys.json"
   -
     host: "HOST2"
     role: ""
-    keys_file: "../testdata/functional/discovery_node_2.json"
+    keys_file: "scripts/insolard/configs/root_member_keys.json"
   -
     host: "HOST3"
     role: ""
-    keys_file: "../testdata/functional/discovery_node_3.json"
+    keys_file: "scripts/insolard/configs/root_member_keys.json"
   -
     host: "HOST4"
     role: ""
-    keys_file: "../testdata/functional/discovery_node_4.json"
+    keys_file: "scripts/insolard/configs/root_member_keys.json"
   -
     host: "HOST5"
     role: ""
-    keys_file: "../testdata/functional/discovery_node_5.json"
+    keys_file: "scripts/insolard/configs/root_member_keys.json"
