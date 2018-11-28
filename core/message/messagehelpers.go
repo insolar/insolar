@@ -45,6 +45,8 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.RecordRef
 	case *HeavyPayload:
 		return core.RecordRef{}
+	case *GetObjectIndex:
+		return t.Object
 	case *Parcel:
 		return ExtractTarget(t.Msg)
 	default:
@@ -88,7 +90,8 @@ func ExtractRole(msg core.Message) core.JetRole {
 		return core.RoleVirtualExecutor
 	case
 		*HeavyStartStop,
-		*HeavyPayload:
+		*HeavyPayload,
+		*GetObjectIndex:
 		return core.RoleHeavyExecutor
 	case *Parcel:
 		return ExtractRole(t.Msg)
@@ -129,7 +132,7 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		return &t.Head, core.RoleVirtualExecutor
 	case *JetDrop:
 		// This check is not needed, because JetDrop sender is explicitly checked in handler.
-		return nil, 0
+		return nil, core.RoleUndefined
 	case *RegisterChild:
 		return &t.Child, core.RoleVirtualExecutor
 	case *SetBlob:
@@ -144,6 +147,8 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		return &t.Object, core.RoleVirtualExecutor
 	case *ValidationResults:
 		return &t.RecordRef, core.RoleVirtualValidator
+	case *GetObjectIndex:
+		return &t.Object, core.RoleLightExecutor
 	case *Parcel:
 		return ExtractAllowedSenderObjectAndRole(t.Msg)
 	default:
