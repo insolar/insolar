@@ -122,6 +122,23 @@ func (arr *bitArray) get(index int) (uint8, error) {
 	return res & lastBitMask, nil
 }
 
+func (arr *bitArray) getState(index int) (uint8, error) {
+	if index >= arr.bitsSize {
+		return 0, errors.New("failed to get a bit - index out of range")
+	}
+
+	stateFirstBit, err := arr.get(2 * index)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ getState ] failed to get a bit from bitarray")
+	}
+	stateSecondBit, err := arr.get(2*index + 1)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ getState ] failed to get a bit from bitarray")
+	}
+
+	return (stateFirstBit << 1) + stateSecondBit, nil
+}
+
 func getStepToMove(index int) uint8 {
 	return uint8(sizeOfBlock - index%sizeOfBlock - 1)
 }
