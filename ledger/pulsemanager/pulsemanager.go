@@ -224,7 +224,10 @@ func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) 
 		select {
 		case <-time.After(retrydelay):
 		case <-m.stop:
-			return
+			if len(pulses) == 0 {
+				// fmt.Println("Got stop signal and have nothing to do")
+				return
+			}
 		}
 		for {
 			if len(pulses) != 0 {
