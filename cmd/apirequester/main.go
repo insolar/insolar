@@ -83,9 +83,20 @@ func main() {
 	check("can not set 'error' level on logger:", err)
 	rootMember = getRootMemberInfo(rootmemberkeys)
 
+	// you can modify this manual tests by commenting any of this functions or/and add some new functions if necessary
+
+	// make one request to create new member
 	oneSimpleRequest()
+
+	// make several (10) requests to create new member (every request make call to RootMember instance)
 	severalSimpleRequestToRootMember()
+
+	// make several (10) requests to transfer money (every request make call to different members instances)
 	severalSimpleRequestToDifferentMembers()
+
+	// make several (10) requests in parallel to create new member (every request make call to RootMember instance)
 	severalParallelRequestToRootMember()
+
+	// make several (10) requests in parallel to transfer money (every request make call to different members instances)
 	severalParallelRequestToDifferentMembers()
 }
