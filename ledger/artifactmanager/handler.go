@@ -178,7 +178,10 @@ func (h *MessageHandler) handleGetObject(
 	idx, err = h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
 		heavy, err := h.findHeavy(ctx, msg.Head, pulseNumber)
-		idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Head, heavy)
+		if err != nil {
+			return nil, err
+		}
+		_, err = h.saveIndexFromHeavy(ctx, h.db, msg.Head, heavy)
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +261,10 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 	idx, err = h.db.GetObjectIndex(ctx, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
 		heavy, err := h.findHeavy(ctx, msg.Head, pulseNumber)
-		idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Head, heavy)
+		if err != nil {
+			return nil, err
+		}
+		idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Head, heavy)
 		if err != nil {
 			return nil, err
 		}
@@ -288,7 +294,10 @@ func (h *MessageHandler) handleGetChildren(
 	idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
 		heavy, err := h.findHeavy(ctx, msg.Parent, pulseNumber)
-		idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Parent, heavy)
+		if err != nil {
+			return nil, err
+		}
+		_, err = h.saveIndexFromHeavy(ctx, h.db, msg.Parent, heavy)
 		if err != nil {
 			return nil, err
 		}
@@ -386,7 +395,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 			} else {
 				// We are updating object. Index should be on the heavy executor.
 				heavy, err := h.findHeavy(ctx, msg.Object, pulseNumber)
-				idx, err = h.fetchIndexFromHeavy(ctx, h.db, msg.Object, heavy)
+				idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Object, heavy)
 				if err != nil {
 					return err
 				}
@@ -707,7 +716,7 @@ func (h *MessageHandler) findHeavy(ctx context.Context, obj core.RecordRef, puls
 	return &nodes[0], nil
 }
 
-func (h *MessageHandler) fetchIndexFromHeavy(
+func (h *MessageHandler) saveIndexFromHeavy(
 	ctx context.Context, s storage.Store, obj core.RecordRef, heavy *core.RecordRef,
 ) (*index.ObjectLifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
