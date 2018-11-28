@@ -109,6 +109,15 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.Communicator = phases.NewNaiveCommunicator()
 	n.PulseHandler = n // self
 
+	firstPhase := &phases.FirstPhase{}
+	secondPhase := &phases.SecondPhase{}
+	thirdPhase := &phases.ThirdPhase{}
+
+	// inject workaround
+	n.PhaseManager.(*phases.Phases).FirstPhase = firstPhase
+	n.PhaseManager.(*phases.Phases).SecondPhase = secondPhase
+	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
+
 	routingTable, hostNetwork, networkController, err := newNetworkComponents(n.cfg, n, n.CryptographyScheme)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create network components.")
@@ -128,7 +137,15 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	cm.Register(n.Certificate, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
 		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
 
-	cm.Inject(n.NodeKeeper, n.PhaseManager, n.MerkleCalculator, n.ConsensusNetwork, n.Communicator)
+	cm.Inject(n.NodeKeeper,
+		n.PhaseManager,
+		n.MerkleCalculator,
+		n.ConsensusNetwork,
+		n.Communicator,
+		firstPhase,
+		secondPhase,
+		thirdPhase,
+	)
 
 	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	n.routingTable = routingTable
