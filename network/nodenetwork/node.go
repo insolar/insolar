@@ -19,9 +19,9 @@ package nodenetwork
 import (
 	"crypto"
 	"encoding/gob"
-	"hash/crc32"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/utils"
 )
 
 type MutableNode interface {
@@ -52,7 +52,7 @@ func newMutableNode(
 	version string) MutableNode {
 	return &node{
 		NodeID:              id,
-		NodeShortID:         generateShortID(id),
+		NodeShortID:         utils.GenerateShortID(id),
 		NodeRoles:           roles,
 		NodePublicKey:       publicKey,
 		NodePulseNum:        pulseNum,
@@ -119,11 +119,6 @@ func (mn mutableNodes) Export() []core.Node {
 		nodes[i] = mn[i]
 	}
 	return nodes
-}
-
-func generateShortID(ref core.RecordRef) core.ShortNodeID {
-	result := crc32.ChecksumIEEE(ref[:])
-	return core.ShortNodeID(result)
 }
 
 func init() {

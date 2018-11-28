@@ -48,25 +48,19 @@ func TestCorrectShortIDCollision(t *testing.T) {
 		newTestNodeWithShortID(64),
 	})
 
-	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(0)))
-	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(31)))
-	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(35)))
-	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(65)))
+	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(0)))
+	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(31)))
+	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(35)))
+	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(65)))
 
-	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(30)))
-	node := newTestNodeWithShortID(30)
-	CorrectShortIDCollision(keeper, node)
-	require.Equal(t, core.ShortNodeID(31), node.ShortID())
+	require.True(t, checkShortIDCollision(keeper, core.ShortNodeID(30)))
+	require.Equal(t, core.ShortNodeID(31), regenerateShortID(keeper, core.ShortNodeID(30)))
 
-	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(32)))
-	node = newTestNodeWithShortID(32)
-	CorrectShortIDCollision(keeper, node)
-	require.Equal(t, core.ShortNodeID(35), node.ShortID())
+	require.True(t, checkShortIDCollision(keeper, core.ShortNodeID(32)))
+	require.Equal(t, core.ShortNodeID(35), regenerateShortID(keeper, core.ShortNodeID(32)))
 
-	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(64)))
-	node = newTestNodeWithShortID(64)
-	CorrectShortIDCollision(keeper, node)
-	require.Equal(t, core.ShortNodeID(65), node.ShortID())
+	require.True(t, checkShortIDCollision(keeper, core.ShortNodeID(64)))
+	require.Equal(t, core.ShortNodeID(65), regenerateShortID(keeper, core.ShortNodeID(64)))
 }
 
 type testNode struct {

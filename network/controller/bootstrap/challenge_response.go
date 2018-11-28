@@ -32,9 +32,11 @@ import (
 )
 
 type ChallengeResponseController struct {
-	options   *common.Options
-	transport network.InternalTransport
-	cryptoSrv core.CryptographyService
+	options        *common.Options
+	transport      network.InternalTransport
+	cryptoSrv      core.CryptographyService
+	sessionManager *SessionManager
+	keeper         network.NodeKeeper
 }
 
 type Nonce []byte
@@ -82,8 +84,8 @@ type ChallengeResponse struct {
 }
 
 type ChallengePayload struct {
-	CurrentPulse  core.Pulse
-	State         core.NetworkState
+	// CurrentPulse  core.Pulse
+	// State         core.NetworkState
 	AssignShortID core.ShortNodeID
 }
 
@@ -96,6 +98,11 @@ func init() {
 
 func (cr *ChallengeResponseController) processChallenge1(request network.Request) (network.Response, error) {
 	data := request.GetData().(*ChallengeRequest)
+	// CheckSession is performed in SetDiscoveryNonce too, but we want to return early if the request is invalid
+	err := cr.sessionManager.CheckSession(data.SessionID, Authorized)
+	if err != nil {
+		return cr.buildChallenge1ErrorResponse(request, err.Error()), nil
+	}
 	xorNonce, err := GenerateNonce()
 	if err != nil {
 		return cr.buildChallenge1ErrorResponse(request, "error generating discovery xor nonce: "+err.Error()), nil
@@ -107,6 +114,10 @@ func (cr *ChallengeResponseController) processChallenge1(request network.Request
 	discoveryNonce, err := GenerateNonce()
 	if err != nil {
 		return cr.buildChallenge1ErrorResponse(request, "error generating discovery nonce: "+err.Error()), nil
+	}
+	err = cr.sessionManager.SetDiscoveryNonce(data.SessionID, discoveryNonce)
+	if err != nil {
+		return cr.buildChallenge1ErrorResponse(request, err.Error()), nil
 	}
 	response := cr.transport.BuildResponse(request, &SignedChallengeResponse{
 		Header: ChallengeResponseHeader{
@@ -123,7 +134,7 @@ func (cr *ChallengeResponseController) processChallenge1(request network.Request
 
 func (cr *ChallengeResponseController) buildChallenge1ErrorResponse(request network.Request, err string) network.Response {
 	log.Warn(err)
-	return cr.transport.BuildResponse(request, &SignedChallengeResponse{
+	return cr.transport.BuildResponse(request, &ChallengeResponse{
 		Header: ChallengeResponseHeader{
 			Success: false,
 			Error:   err,
@@ -132,7 +143,37 @@ func (cr *ChallengeResponseController) buildChallenge1ErrorResponse(request netw
 }
 
 func (cr *ChallengeResponseController) processChallenge2(request network.Request) (network.Response, error) {
-	panic("not implemented")
+	data := request.GetData().(*SignedChallengeRequest)
+	// CheckSession is performed in ChallengePassed too, but we want to return early if the request is invalid
+	cert, discoveryNonce, err := cr.sessionManager.GetChallengeData(data.SessionID)
+	if err != nil {
+		return cr.buildChallenge2ErrorResponse(request, err.Error()), nil
+	}
+	sign := core.SignatureFromBytes(data.SignedDiscoveryNonce)
+	success := cr.cryptoSrv.Verify(cert.GetPublicKey(), sign, Xor(data.XorNonce, discoveryNonce))
+	if success != true {
+		return cr.buildChallenge2ErrorResponse(request, "node %s signature check failed"), nil
+	}
+	cr.sessionManager.ChallengePassed(data.SessionID)
+	response := cr.transport.BuildResponse(request, &ChallengeResponse{
+		Header: ChallengeResponseHeader{
+			Success: true,
+		},
+		Payload: &ChallengePayload{
+			AssignShortID: GenerateShortID(cr.keeper, *cert.GetNodeRef()),
+		},
+	})
+	return response, nil
+}
+
+func (cr *ChallengeResponseController) buildChallenge2ErrorResponse(request network.Request, err string) network.Response {
+	log.Warn(err)
+	return cr.transport.BuildResponse(request, &SignedChallengeResponse{
+		Header: ChallengeResponseHeader{
+			Success: false,
+			Error:   err,
+		},
+	})
 }
 
 func (cr *ChallengeResponseController) Start() {

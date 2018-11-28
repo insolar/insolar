@@ -122,7 +122,10 @@ func (ac *AuthorizationController) Register(ctx context.Context, discoveryNode *
 }
 
 func (ac *AuthorizationController) checkClaim(sessionID SessionID, claim *packets.NodeJoinClaim) error {
-	session := ac.sessionManager.GetSession(sessionID)
+	session, err := ac.sessionManager.ReleaseSession(sessionID)
+	if err != nil {
+		return errors.Wrapf(err, "Error getting section %d for authorization", sessionID)
+	}
 	if !claim.NodeRef.Equal(session.NodeID) {
 		return errors.New("Claim node ID is not equal to session node ID")
 	}
@@ -150,7 +153,8 @@ func (ac *AuthorizationController) processAuthorizeRequest(request network.Reque
 		}
 		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
-	return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpConfirmed}), nil
+	session := ac.sessionManager.NewSession(request.GetSender(), data.Certificate)
+	return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
 func (ac *AuthorizationController) Start(networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {

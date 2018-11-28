@@ -22,17 +22,25 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
-// CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
-func CheckShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
+// checkShortIDCollision returns true if NodeKeeper already contains node with such ShortID
+func checkShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
 	return keeper.GetActiveNodeByShortID(id) != nil
 }
 
-// CorrectShortIDCollision correct ShortID of the node so it does not conflict with existing active node list
-func CorrectShortIDCollision(keeper network.NodeKeeper, node core.Node) {
+// GenerateShortID correct ShortID of the node so it does not conflict with existing active node list
+func GenerateShortID(keeper network.NodeKeeper, nodeID core.RecordRef) core.ShortNodeID {
+	shortID := utils.GenerateShortID(nodeID)
+	if !checkShortIDCollision(keeper, shortID) {
+		return shortID
+	}
+	return regenerateShortID(keeper, shortID)
+}
+
+func regenerateShortID(keeper network.NodeKeeper, shortID core.ShortNodeID) core.ShortNodeID {
 	activeNodes := keeper.GetActiveNodes()
 	shortIDs := make([]core.ShortNodeID, len(activeNodes))
 	for i, activeNode := range activeNodes {
@@ -41,9 +49,7 @@ func CorrectShortIDCollision(keeper network.NodeKeeper, node core.Node) {
 	sort.Slice(shortIDs, func(i, j int) bool {
 		return shortIDs[i] < shortIDs[j]
 	})
-	shortID := generateNonConflictingID(shortIDs, node.ShortID())
-	mutable := node.(nodenetwork.MutableNode)
-	mutable.SetShortID(shortID)
+	return generateNonConflictingID(shortIDs, shortID)
 }
 
 func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core.ShortNodeID) core.ShortNodeID {
