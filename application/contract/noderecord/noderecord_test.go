@@ -29,8 +29,8 @@ var TestRole = "virtual"
 
 func TestNewNodeRecord(t *testing.T) {
 
-	r := core.GetRoleFromString(TestRole)
-	require.NotEqual(t, core.RoleUnknown, r)
+	r := core.GetStaticRoleFromString(TestRole)
+	require.NotEqual(t, core.StaticRoleUnknown, r)
 	record, err := NewNodeRecord(TestPubKey, TestRole)
 	require.NoError(t, err)
 	require.Equal(t, r, record.Record.Role)
@@ -38,8 +38,8 @@ func TestNewNodeRecord(t *testing.T) {
 }
 
 func TestFromString(t *testing.T) {
-	role := core.GetRoleFromString("ZZZ")
-	require.Equal(t, core.RoleUnknown, role)
+	role := core.GetStaticRoleFromString("ZZZ")
+	require.Equal(t, core.StaticRoleUnknown, role)
 }
 
 func TestNodeRecord_GetPublicKey(t *testing.T) {
@@ -56,7 +56,7 @@ func TestNodeRecord_GetNodeInfo(t *testing.T) {
 	info, err := record.GetNodeInfo()
 	require.NoError(t, err)
 	require.Equal(t, TestPubKey, info.PublicKey)
-	r := core.GetRoleFromString(TestRole)
+	r := core.GetStaticRoleFromString(TestRole)
 	require.Equal(t, r, info.Role)
 }
 
@@ -65,6 +65,6 @@ func TestNodeRecord_GetRole(t *testing.T) {
 	require.NoError(t, err)
 	role, err := record.GetRole()
 	require.NoError(t, err)
-	r := core.GetRoleFromString(TestRole)
+	r := core.GetStaticRoleFromString(TestRole)
 	require.Equal(t, r, role)
 }

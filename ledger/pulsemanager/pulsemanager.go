@@ -128,7 +128,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	// Run only on material executor.
 	var err error
 	// execute only on material executor
-	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		if err = m.processDrop(ctx); err != nil {
 			return errors.Wrap(err, "processDrop failed")
 		}

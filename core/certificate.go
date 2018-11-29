@@ -18,7 +18,7 @@ package core
 
 // Certificate interface provides methods to manage keys
 type Certificate interface {
-	GetRole() NodeRole
+	GetRole() StaticRole
 	GetRootDomainReference() *RecordRef
 	SetRootDomainReference(ref *RecordRef)
 	GetBootstrapNodes() []BootstrapNode

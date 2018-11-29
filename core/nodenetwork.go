@@ -32,9 +32,9 @@ type Node interface {
 	// Pulse is the pulse number after which the new state is assigned to the node
 	Pulse() PulseNumber
 	// Roles is the set of candidate Roles for the node
-	Roles() []NodeRole
+	Roles() []StaticRole
 	// Role is the candidate Role for the node
-	Role() NodeRole
+	Role() StaticRole
 	// PublicKey is the public key of the node
 	PublicKey() crypto.PublicKey
 	// PhysicalAddress is the network address of the node
@@ -52,7 +52,7 @@ type NodeNetwork interface {
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
-	GetActiveNodesByRole(role JetRole) []RecordRef
+	GetActiveNodesByRole(role DynamicRole) []RecordRef
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte
 }

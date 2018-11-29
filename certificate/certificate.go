@@ -125,8 +125,8 @@ func (cert *Certificate) reset() {
 	cert.MajorityRule = 0
 }
 
-func (cert *Certificate) GetRole() core.NodeRole {
-	return core.GetRoleFromString(cert.Role)
+func (cert *Certificate) GetRole() core.StaticRole {
+	return core.GetStaticRoleFromString(cert.Role)
 }
 
 // GetRootDomainReference returns RootDomain reference
