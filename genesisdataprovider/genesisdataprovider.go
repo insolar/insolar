@@ -18,6 +18,7 @@ package genesisdataprovider
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core"
@@ -29,9 +30,15 @@ import (
 type GenesisDataProvider struct {
 	Certificate       core.Certificate       `inject:""`
 	ContractRequester core.ContractRequester `inject:""`
+
 	nodeDomainRef     *core.RecordRef
+	nodeDomainRefLock sync.RWMutex
+
 	rootDomainRef     *core.RecordRef
+	rootDomainRefLock sync.RWMutex
+
 	rootMemberRef     *core.RecordRef
+	rootMemberRefLock sync.RWMutex
 }
 
 // New creates new GenesisDataProvider
@@ -49,26 +56,42 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Can't extract response")
 	}
+
 	rootMemberRef := core.NewRefFromBase58(info.RootMember)
+	gdp.rootMemberRefLock.Lock()
 	gdp.rootMemberRef = &rootMemberRef
+	gdp.rootMemberRefLock.Unlock()
+
 	nodeDomainRef := core.NewRefFromBase58(info.NodeDomain)
+	gdp.nodeDomainRefLock.Lock()
 	gdp.nodeDomainRef = &nodeDomainRef
+	gdp.nodeDomainRefLock.Unlock()
 
 	return nil
 }
 
 // GetRootDomain returns reference to RootDomain
 func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordRef {
+	gdp.rootDomainRefLock.RLock()
+	defer gdp.rootDomainRefLock.RUnlock()
 	if gdp.rootDomainRef == nil {
+		gdp.rootDomainRefLock.RUnlock()
+		gdp.rootDomainRefLock.Lock()
 		gdp.rootDomainRef = gdp.Certificate.GetRootDomainReference()
+		gdp.rootDomainRefLock.Unlock()
+		gdp.rootDomainRefLock.RLock()
 	}
 	return gdp.rootDomainRef
 }
 
 // GetNodeDomain returns reference to NodeDomain
 func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.RecordRef, error) {
+	gdp.nodeDomainRefLock.RLock()
+	defer gdp.nodeDomainRefLock.RUnlock()
 	if gdp.nodeDomainRef == nil {
+		gdp.nodeDomainRefLock.RUnlock()
 		err := gdp.setInfo(ctx)
+		gdp.nodeDomainRefLock.RLock()
 		if err != nil {
 			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetNodeDomain ] Can't get info")
 		}
@@ -78,8 +101,12 @@ func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.Record
 
 // GetRootMember returns reference to RootMember
 func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*core.RecordRef, error) {
+	gdp.rootMemberRefLock.RLock()
+	defer gdp.rootMemberRefLock.RUnlock()
 	if gdp.rootMemberRef == nil {
+		gdp.rootMemberRefLock.RUnlock()
 		err := gdp.setInfo(ctx)
+		gdp.rootMemberRefLock.RLock()
 		if err != nil {
 			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetRootMember ] Can't get info")
 		}
