@@ -262,8 +262,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	h := NewMessageHandler(db, &configuration.ArtifactManager{
 		LightChainLimit: 3,
 	})
-	h.Recent = recentStorageMock;
-
+	h.Recent = recentStorageMock
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
 	objIndex := index.ObjectLifeline{Delegates: map[core.RecordRef]core.RecordRef{delegateType: delegate}}
@@ -409,29 +408,30 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
+	idCreator, idCreatorCleaner := storagetest.TmpDB(ctx, t)
+	defer idCreatorCleaner()
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
 	require.NoError(t, err)
 
 	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
-	secondId := core.NewRecordID(core.FirstPulseNumber, []byte{3, 2, 1})
+	secondId, _ := idCreator.SetRecord(ctx, core.FirstPulseNumber, &record.CodeRecord{})
 
+	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
+		LatestState: firstID,
+	})
 	hotIndexes := &message.HotIndexes{
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {
-				Index: &index.ObjectLifeline{
-					LatestState: firstID,
-				},
+				Index: firstIndex,
 				Meta: &core.RecentObjectsIndexMeta{
 					TTL: 321,
 				}},
 		},
-		PendingRequests: map[core.RecordID]*message.HotIndex{
-			*secondId: {Index: &index.ObjectLifeline{
-				LatestState: secondId,
-			}},
+		PendingRequests: map[core.RecordID][]byte{
+			*secondId: record.SerializeRecord(&record.CodeRecord{}),
 		},
 	}
 
