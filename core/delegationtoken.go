@@ -21,6 +21,7 @@ type DelegationTokenFactory interface {
 	IssuePendingExecution(msg Message, pulse PulseNumber) (DelegationToken, error)
 	IssueGetObjectRedirect(sender *RecordRef, redirectedMessage Message) (DelegationToken, error)
 	IssueGetChildrenRedirect(sender *RecordRef, redirectedMessage Message) (DelegationToken, error)
+	IssueGetCodeRedirect(sender *RecordRef, redirectedMessage Message) (DelegationToken, error)
 	Verify(parcel Parcel) (bool, error)
 }
 
