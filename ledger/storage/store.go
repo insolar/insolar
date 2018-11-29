@@ -32,6 +32,6 @@ type Store interface {
 	SetBlob(ctx context.Context, number core.PulseNumber, blob []byte) (*core.RecordID, error)
 	GetObjectIndex(ctx context.Context, ref *core.RecordID, forupdate bool) (*index.ObjectLifeline, error)
 	SetObjectIndex(ctx context.Context, ref *core.RecordID, idx *index.ObjectLifeline) error
-	GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error)
+	GetLatestPulse(ctx context.Context) (*core.Pulse, error)
 	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
 }

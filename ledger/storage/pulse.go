@@ -39,8 +39,8 @@ func (p *Pulse) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// GetLatestPulseNumber returns current pulse number.
-func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
+// GetLatestPulse returns current pulse number.
+func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*core.Pulse, error){
 	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
 	if err != nil {
 		return 0, err
@@ -116,8 +116,8 @@ func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error
 	return pulse, nil
 }
 
-// GetLatestPulseNumber returns current pulse number.
-func (db *DB) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
+// GetLatestPulse returns current pulse.
+func (db *DB) GetLatestPulse(ctx context.Context) (*core.Pulse, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
