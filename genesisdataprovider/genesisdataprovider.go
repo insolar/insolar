@@ -31,14 +31,11 @@ type GenesisDataProvider struct {
 	Certificate       core.Certificate       `inject:""`
 	ContractRequester core.ContractRequester `inject:""`
 
-	nodeDomainRef     *core.RecordRef
-	nodeDomainRefLock sync.RWMutex
-
-	rootDomainRef     *core.RecordRef
-	rootDomainRefLock sync.RWMutex
-
-	rootMemberRef     *core.RecordRef
-	rootMemberRefLock sync.RWMutex
+	rootDomainRef  *core.RecordRef
+	rootMemberRef  *core.RecordRef
+	nodeDomainRef  *core.RecordRef
+	rootDomainLock sync.RWMutex
+	infoLock       sync.RWMutex
 }
 
 // New creates new GenesisDataProvider
@@ -66,8 +63,8 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 
 // GetRootDomain returns reference to RootDomain
 func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordRef {
-	gdp.rootDomainRefLock.Lock()
-	defer gdp.rootDomainRefLock.Unlock()
+	gdp.rootDomainLock.Lock()
+	defer gdp.rootDomainLock.Unlock()
 	if gdp.rootDomainRef == nil {
 		gdp.rootDomainRef = gdp.Certificate.GetRootDomainReference()
 	}
@@ -76,10 +73,8 @@ func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordR
 
 // GetNodeDomain returns reference to NodeDomain
 func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.RecordRef, error) {
-	gdp.rootMemberRefLock.Lock()
-	gdp.nodeDomainRefLock.Lock()
-	defer gdp.rootMemberRefLock.Unlock()
-	defer gdp.nodeDomainRefLock.Unlock()
+	gdp.infoLock.Lock()
+	defer gdp.infoLock.Unlock()
 	if gdp.nodeDomainRef == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {
@@ -91,10 +86,8 @@ func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.Record
 
 // GetRootMember returns reference to RootMember
 func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*core.RecordRef, error) {
-	gdp.rootMemberRefLock.Lock()
-	gdp.nodeDomainRefLock.Lock()
-	defer gdp.rootMemberRefLock.Unlock()
-	defer gdp.nodeDomainRefLock.Unlock()
+	gdp.infoLock.Lock()
+	defer gdp.infoLock.Unlock()
 	if gdp.rootMemberRef == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {
