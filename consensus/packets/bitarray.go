@@ -17,6 +17,7 @@
 package packets
 
 import (
+	"bytes"
 	"encoding/binary"
 	"math"
 
@@ -64,15 +65,49 @@ func (arr *bitArray) put(bit, index int) error {
 	return nil
 }
 
-func (arr *bitArray) serialize() ([]byte, error) {
-	result := allocateBuffer(int(round(arr.bitsSize, sizeOfBlock)))
-	for _, byte := range arr.array {
-		err := binary.Write(result, defaultByteOrder, byte)
+func (arr *bitArray) serialize(compressed bool) ([]byte, error) {
+	if compressed {
+		return arr.serializeCompressed()
+	}
+	var result bytes.Buffer
+	for _, b := range arr.array {
+		err := binary.Write(&result, defaultByteOrder, b)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ serialize] failed to serialize a bitarray")
 		}
 	}
 
+	return result.Bytes(), nil
+}
+
+func (arr *bitArray) serializeCompressed() ([]byte, error) {
+	var result bytes.Buffer
+	last, err := arr.getState(0)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
+	}
+	count := uint8(1)
+	for i := 1; i < arr.bitsSize/2; i++ { // cuz 2 bits == 1 state
+		current, err := arr.getState(i)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
+		}
+		if (last != current) || (i+1 >= arr.bitsSize/2) {
+			count++
+			err := binary.Write(&result, binary.BigEndian, count)
+			if err != nil {
+				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
+			}
+			err = binary.Write(&result, binary.BigEndian, last)
+			if err != nil {
+				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
+			}
+			count = 0
+			last = current
+		} else {
+			count++
+		}
+	}
 	return result.Bytes(), nil
 }
 
@@ -86,6 +121,23 @@ func (arr *bitArray) get(index int) (uint8, error) {
 	res := arr.array[block] >> step // get bit by index from block
 
 	return res & lastBitMask, nil
+}
+
+func (arr *bitArray) getState(index int) (uint8, error) {
+	if index >= arr.bitsSize {
+		return 0, errors.New("failed to get a bit - index out of range")
+	}
+
+	stateFirstBit, err := arr.get(2 * index)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ getState ] failed to get a bit from bitarray")
+	}
+	stateSecondBit, err := arr.get(2*index + 1)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ getState ] failed to get a bit from bitarray")
+	}
+
+	return (stateFirstBit << 1) + stateSecondBit, nil
 }
 
 func getStepToMove(index int) uint8 {

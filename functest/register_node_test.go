@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *

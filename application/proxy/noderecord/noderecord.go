@@ -8,7 +8,7 @@ import (
 
 type RecordInfo struct {
 	PublicKey string
-	Role      core.NodeRole
+	Role      core.StaticRole
 }
 
 // PrototypeReference to prototype of this contract
@@ -248,13 +248,13 @@ func (r *NodeRecord) GetPublicKeyNoWait() error {
 }
 
 // GetRole is proxy generated method
-func (r *NodeRecord) GetRole() (core.NodeRole, error) {
+func (r *NodeRecord) GetRole() (core.StaticRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 core.NodeRole
+	var ret0 core.StaticRole
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
