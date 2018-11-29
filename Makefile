@@ -7,6 +7,7 @@ INSGORUND = insgorund
 BENCHMARK = benchmark
 EXPORTER = exporter
 APIREQUESTER = apirequester
+HEALTHCHECK = healthcheck
 
 ALL_PACKAGES = ./...
 COVERPROFILE = coverage.txt
@@ -53,7 +54,7 @@ pre-build:
 
 build: 
 	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK)
 
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
@@ -78,6 +79,9 @@ $(APIREQUESTER):
 
 $(EXPORTER):
 	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
+
+$(HEALTHCHECK):
+	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
 
 functest:
 	CGO_ENABLED=1 go test -tags functest -v ./functest

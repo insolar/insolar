@@ -25,13 +25,15 @@ import (
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
+
+var scheme = platformpolicy.NewPlatformCryptographyScheme()
 
 // Request is a representation of request struct to api
 type Request struct {
@@ -82,9 +84,8 @@ func (ar *Runner) verifySignature(ctx context.Context, params Request) error {
 	if err != nil {
 		return errors.Wrap(err, "[ VerifySignature ] Can't marshal arguments for verify signature")
 	}
-
-	cs := cryptography.NewKeyBoundCryptographyService(nil)
-	verified := cs.Verify(key, core.SignatureFromBytes(params.Signature), args)
+	verifier := scheme.Verifier(key)
+	verified := verifier.Verify(core.SignatureFromBytes(params.Signature), args)
 	if !verified {
 		return errors.New("[ VerifySignature ] Incorrect signature")
 	}

@@ -91,6 +91,8 @@ func (cert *Certificate) GetPublicKey() crypto.PublicKey {
 	return cert.nodePublicKey
 }
 
+var scheme = platformpolicy.NewPlatformCryptographyScheme()
+
 func (cert *Certificate) serializeNetworkPart() []byte {
 	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
 		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +
@@ -111,7 +113,7 @@ func (cert *Certificate) serializeNetworkPart() []byte {
 
 // SignNetworkPart signs network part in certificate
 func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) {
-	signer := platformpolicy.NewPlatformCryptographyScheme().Signer(key)
+	signer := scheme.Signer(key)
 	sign, err := signer.Sign(cert.serializeNetworkPart())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignNetworkPart ] Can't Sign")
@@ -125,7 +127,7 @@ func (cert *Certificate) serializeNodePart() []byte {
 
 // SignNodePart signs node part in certificate
 func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
-	signer := platformpolicy.NewPlatformCryptographyScheme().Signer(key)
+	signer := scheme.Signer(key)
 	sign, err := signer.Sign(cert.serializeNodePart())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignNodePart ] Can't Sign")
