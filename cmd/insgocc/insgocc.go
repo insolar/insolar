@@ -227,7 +227,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(outdir, "main.so")).CombinedOutput()
+			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(outdir, name+".so")).CombinedOutput()
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
 				os.Exit(1)
