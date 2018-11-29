@@ -197,3 +197,56 @@ func TestGenesisDataProvider_GetRootMember_Error(t *testing.T) {
 	require.EqualError(t, err, "[ GenesisDataProvider::GetRootMember ] Can't get info: [ setInfo ] Can't send request: test reasons")
 	require.Nil(t, res)
 }
+
+func TestGenesisDataProvider_GetNodeDomain(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	rootMemberRef := testutils.RandomRef()
+	nodeDomainRef := testutils.RandomRef()
+
+	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, nil),
+		ContractRequester: mockContractRequester(t, infoRes),
+	}
+
+	res, err := gdp.GetNodeDomain(ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, &nodeDomainRef, res)
+}
+
+func TestGenesisDataProvider_GetNodeDomain_AlreadySet(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	rootMemberRef := testutils.RandomRef()
+	nodeDomainRef := testutils.RandomRef()
+
+	newNodeDomainRef := testutils.RandomRef()
+	infoRes := mockInfoResult(rootMemberRef, newNodeDomainRef)
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, nil),
+		ContractRequester: mockContractRequester(t, infoRes),
+	}
+	gdp.nodeDomainRef = &nodeDomainRef
+
+	res, err := gdp.GetNodeDomain(ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, &nodeDomainRef, res)
+	require.NotEqual(t, &newNodeDomainRef, res)
+}
+
+func TestGenesisDataProvider_GetNodeDomain_Error(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, nil),
+		ContractRequester: mockContractRequesterWithError(t),
+	}
+
+	res, err := gdp.GetNodeDomain(ctx)
+
+	require.EqualError(t, err, "[ GenesisDataProvider::GetNodeDomain ] Can't get info: [ setInfo ] Can't send request: test reasons")
+	require.Nil(t, res)
+}
