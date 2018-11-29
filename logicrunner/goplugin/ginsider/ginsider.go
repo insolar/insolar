@@ -237,9 +237,6 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Plugin, error) {
-
-	// TODO remove debug
-	inslogger.FromContext(ctx).Debugf("plugins before locks %+v", gi.plugins)
 	rec := func() *pluginRec {
 		gi.pluginsMutex.Lock()
 		defer gi.pluginsMutex.Unlock()
@@ -254,22 +251,15 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 	}()
 	defer rec.Unlock()
 
-	// TODO remove debug
-	inslogger.FromContext(ctx).Debugf("1")
-	inslogger.FromContext(ctx).Debugf("plugins %+v", gi.plugins)
-	inslogger.FromContext(ctx).Debugf("ref %+v", ref)
-	inslogger.FromContext(ctx).Debugf("rec.plugin %+v", rec.plugin)
 	if rec.plugin != nil {
 		return rec.plugin, nil
 	}
 
-	inslogger.FromContext(ctx).Debugf("2")
 	path, err := gi.ObtainCode(ctx, ref)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't obtain code")
 	}
 
-	inslogger.FromContext(ctx).Debugf("3")
 	inslogger.FromContext(ctx).Debugf("Opening plugin %q from file %q", ref, path)
 	p, err := plugin.Open(path)
 	if err != nil {

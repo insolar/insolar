@@ -31,12 +31,6 @@ func TestHealthCheck(t *testing.T) {
 	insgoccPath := currentPath + "/../../../bin/insgocc"
 	contractPath := currentPath + "/healthcheck/healthcheck.go"
 
-	// TODO remove debug
-	log.Warnf(currentPath)
-	log.Warnf(insgoccPath)
-	log.Warnf(contractPath)
-	log.Warnf(tmpDir)
-
 	execResult, err := exec.Command(insgoccPath, "compile", "-o", tmpDir, contractPath).CombinedOutput()
 	log.Warnf("%s", execResult)
 	require.NoError(t, err, "failed to compile contract")

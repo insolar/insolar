@@ -49,9 +49,6 @@ func main() {
 
 	ref := core.NewRefFromBase58(*refString)
 
-	// TODO remove
-	log.Error(ref)
-
 	empty, _ := core.Serialize([]interface{}{})
 
 	caller := testutils.RandomRef()
