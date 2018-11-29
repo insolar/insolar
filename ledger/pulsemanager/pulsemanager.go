@@ -182,13 +182,13 @@ func (m *PulseManager) SyncToHeavy(pn core.PulseNumber) {
 
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
-	synclist, err := m.NextSyncPulses(ctx)
-	if err != nil {
-		return err
-	}
 	m.syncdone = make(chan struct{})
 	m.stop = make(chan struct{})
 	if m.options.enablesync {
+		synclist, err := m.NextSyncPulses(ctx)
+		if err != nil {
+			return err
+		}
 		go m.syncloop(ctx, synclist)
 	}
 	return nil

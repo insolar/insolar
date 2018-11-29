@@ -111,6 +111,7 @@ func (m *PulseManager) findallcompleted(ctx context.Context, from core.PulseNumb
 	wasalight, err := m.JetCoordinator.IsAuthorized(
 		ctx,
 		core.RoleLightExecutor,
+		// TODO: pass JetID RecordRef here, when it would be ready
 		nil,
 		from,
 		m.NodeNet.GetOrigin().ID(),

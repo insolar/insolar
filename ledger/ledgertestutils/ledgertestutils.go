@@ -55,6 +55,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	am.PlatformCryptographyScheme = pcs
 	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	jc.PlatformCryptographyScheme = pcs
+	conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager(db, conf.PulseManager)
 	ls := localstorage.NewLocalStorage(db)
 
