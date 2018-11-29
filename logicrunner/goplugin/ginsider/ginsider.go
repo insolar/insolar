@@ -237,18 +237,7 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Plugin, error) {
-	rec := func() *pluginRec {
-		gi.pluginsMutex.Lock()
-		defer gi.pluginsMutex.Unlock()
-
-		if gi.plugins[ref] == nil {
-			inslogger.FromContext(ctx).Debugf("initialize new element")
-			gi.plugins[ref] = &pluginRec{}
-		}
-		res := gi.plugins[ref]
-		res.Lock()
-		return res
-	}()
+	rec := gi.getPluginWithLock(ref)
 	defer rec.Unlock()
 
 	if rec.plugin != nil {
@@ -268,6 +257,20 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 
 	rec.plugin = p
 	return p, nil
+}
+
+// getPluginWithLock return existed gi.plugins[ref] or create a new one
+// also set gi.plugins[ref].Lock()
+func (gi *GoInsider) getPluginWithLock(ref core.RecordRef) *pluginRec {
+	gi.pluginsMutex.Lock()
+	defer gi.pluginsMutex.Unlock()
+
+	if gi.plugins[ref] == nil {
+		gi.plugins[ref] = &pluginRec{}
+	}
+	res := gi.plugins[ref]
+	res.Lock()
+	return res
 }
 
 // MakeUpBaseReq makes base of request from current CallContext
@@ -458,18 +461,9 @@ func (gi *GoInsider) MakeErrorSerializable(e error) error {
 	return &foundation.Error{S: e.Error()}
 }
 
+// AddPlugin inject plugin by ref in gi memory
 func (gi *GoInsider) AddPlugin(ref core.RecordRef, path string) error {
-	rec := func() *pluginRec {
-		gi.pluginsMutex.Lock()
-		defer gi.pluginsMutex.Unlock()
-
-		if gi.plugins[ref] == nil {
-			gi.plugins[ref] = &pluginRec{}
-		}
-		res := gi.plugins[ref]
-		res.Lock()
-		return res
-	}()
+	rec := gi.getPluginWithLock(ref)
 	defer rec.Unlock()
 
 	if rec.plugin != nil {
