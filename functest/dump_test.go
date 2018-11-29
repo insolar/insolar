@@ -63,7 +63,7 @@ func TestDumpAllUsersNoRoot(t *testing.T) {
 	member := createMember(t, "Member")
 
 	_, err := signedRequest(member, "DumpAllUsers")
-	require.EqualError(t, err, "[ DumpUserInfo ] Only root can call this method")
+	require.Contains(t, err.Error(), "[ DumpUserInfo ] Only root can call this method")
 }
 
 // todo fix this deadlock
@@ -79,5 +79,5 @@ func TestDumpUserOther(t *testing.T) {
 	member2 := createMember(t, "Member2")
 
 	_, err := signedRequest(member1, "DumpUserInfo", member2.ref)
-	require.EqualError(t, err, "[ DumpUserInfo ] You can dump only yourself")
+	require.Contains(t, err.Error(), "[ DumpUserInfo ] You can dump only yourself")
 }
