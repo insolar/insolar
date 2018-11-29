@@ -20,6 +20,8 @@ import (
 	"net/rpc"
 	"os"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/testutils"
 
@@ -31,7 +33,13 @@ import (
 func main() {
 	rpcAddress := pflag.StringP("rpc", "a", "", "address and port of RPC API")
 	rpcProtocol := pflag.StringP("rpc-proto", "p", "", "protocol of RPC API")
+	refString := pflag.StringP("ref", "r", "", "ref of healthcheck contract")
 	pflag.Parse()
+
+	if *rpcAddress == "" || *rpcProtocol == "" || *refString == "" {
+		log.Errorln(errors.New("need to provide all params"))
+		os.Exit(2)
+	}
 
 	client, err := rpc.Dial(*rpcProtocol, *rpcAddress)
 	if err != nil {
@@ -39,7 +47,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	ref := core.RecordRef{}.FromSlice(append(make([]byte, 63), 1))
+	ref := core.NewRefFromBase58(*refString)
 
 	// TODO remove
 	log.Error(ref)

@@ -68,15 +68,16 @@ func main() {
 			log.Fatal("code param format is <ref>:</path/to/plugin.so>", err)
 			os.Exit(1)
 		}
-		ref := codeSlice[0]
+		ref := core.NewRefFromBase58(codeSlice[0])
 		pluginPath := codeSlice[1]
 
 		// TODO remove
-		log.Warnf("ref from param: %s", ref)
-		log.Warnf("ref as core.RecordRef %s", core.RecordRef{}.FromSlice([]byte(ref)))
+		log.Warnf("ref from param: %s", codeSlice[0])
+		log.Warnf("ref after convert: %s", ref)
+		//log.Warnf("ref as core.RecordRef %s", core.RecordRef{}.FromSlice([]byte(ref)))
 		log.Warnf(pluginPath)
 
-		err := insider.AddPlugin(core.RecordRef{}.FromSlice([]byte(ref)), pluginPath)
+		err := insider.AddPlugin(ref, pluginPath)
 		if err != nil {
 			log.Fatalf("Couldn't add plugin by ref %s with .so from %s, err: %s ", ref, pluginPath, err.Error())
 			os.Exit(1)

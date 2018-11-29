@@ -44,7 +44,8 @@ func TestHealthCheck(t *testing.T) {
 	//start GoInsider
 	gi := NewGoInsider(tmpDir, protocol, socket)
 
-	ref := core.RecordRef{}.FromSlice(append(make([]byte, 63), 1))
+	refString := "1111111111111111111111111111111111111111111111111111111111111112"
+	ref := core.NewRefFromBase58(refString)
 	err = gi.AddPlugin(ref, tmpDir+"/main.so")
 	require.NoError(t, err, "failed to add plugin")
 
@@ -52,9 +53,12 @@ func TestHealthCheck(t *testing.T) {
 
 	cmd := exec.Command(currentPath+"/../../../bin/healthcheck",
 		"-a", socket,
-		"-p", protocol)
+		"-p", protocol,
+		"-r", refString)
 
-	_, err = cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
+
+	log.Warnf("%+v", output)
 
 	assert.NoError(t, err)
 }
