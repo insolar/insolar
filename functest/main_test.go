@@ -359,11 +359,11 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolard was successfully started")
 
-	NUM_ATTEMPTS := 60
-	for i := 0; i < NUM_ATTEMPTS; i++ {
+	numAttempts := 60
+	for i := 0; i < numAttempts; i++ {
 		err = setInfo()
 		if err != nil {
-			fmt.Printf("[ setup ] Couldn't setInfo. Attempt %d/%d. Err: %s", i, NUM_ATTEMPTS, err)
+			fmt.Printf("[ setup ] Couldn't setInfo. Attempt %d/%d. Err: %s", i, numAttempts, err)
 		} else {
 			break
 		}
