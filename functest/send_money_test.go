@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *
@@ -63,7 +65,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	amount := 111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, testutils.RandomRef())
-	require.EqualError(t, err, "[ Transfer ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
+	require.Contains(t, err.Error(), "[ Transfer ] Can't get implementation: on calling main API")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)
