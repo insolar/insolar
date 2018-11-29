@@ -70,15 +70,13 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	firstIndex := index.ObjectLifeline{
 		LatestState: firstID,
 	}
-	db.SetObjectIndex(ctx, firstID, &firstIndex)
+	_ = db.SetObjectIndex(ctx, firstID, &firstIndex)
+	codeRecord := &record.CodeRecord{}
 	secondID, _ := db.SetRecord(
 		ctx,
 		core.GenesisPulse.PulseNumber,
-		&record.CodeRecord{})
-	secondIndex := index.ObjectLifeline{
-		LatestState: secondID,
-	}
-	db.SetObjectIndex(ctx, secondID, &secondIndex)
+		codeRecord,
+	)
 
 	recentMock := testutils.NewRecentStorageMock(t)
 	recentMock.ClearZeroTTLObjectsMock.Return()
@@ -97,10 +95,12 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 		// Assert
 		require.Equal(t, 1, len(val.PendingRequests))
-		require.Equal(t, secondIndex, *val.PendingRequests[*secondID].Index)
+		require.Equal(t, codeRecord, record.DeserializeRecord(val.PendingRequests[*secondID]))
 
 		require.Equal(t, 1, len(val.RecentObjects))
-		require.Equal(t, firstIndex, *val.RecentObjects[*firstID].Index)
+		decodedIndex, err := index.DecodeObjectLifeline(val.RecentObjects[*firstID].Index)
+		require.NoError(t, err)
+		require.Equal(t, firstIndex, *decodedIndex)
 		require.Equal(t, 1, val.RecentObjects[*firstID].Meta.TTL)
 
 		return nil, nil
