@@ -133,9 +133,9 @@ func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
 	return sign.Bytes(), nil
 }
 
-// GetBootstrapNodes return bootstrap nodes array
-func (cert *Certificate) GetBootstrapNodes() []core.BootstrapNode {
-	result := make([]core.BootstrapNode, 0)
+// GetDiscoveryNodes return bootstrap nodes array
+func (cert *Certificate) GetDiscoveryNodes() []core.DiscoveryNode {
+	result := make([]core.DiscoveryNode, 0)
 	for i := 0; i < len(cert.BootstrapNodes); i++ {
 		// we get node by pointer, so ranged for loop does not suite
 		result = append(result, &cert.BootstrapNodes[i])

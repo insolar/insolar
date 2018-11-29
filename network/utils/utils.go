@@ -54,3 +54,13 @@ func GenerateShortID(ref core.RecordRef) core.ShortNodeID {
 	result := crc32.ChecksumIEEE(ref[:])
 	return core.ShortNodeID(result)
 }
+
+func OriginIsDiscovery(cert core.Certificate) bool {
+	bNodes := cert.GetDiscoveryNodes()
+	for _, discoveryNode := range bNodes {
+		if cert.GetNodeRef().Equal(*discoveryNode.GetNodeRef()) {
+			return true
+		}
+	}
+	return false
+}

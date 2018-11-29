@@ -106,8 +106,8 @@ func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
 }
 
 func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
-	log.Info("Network bootstrap between discovery nodes")
-	discoveryNodes := bc.cert.GetBootstrapNodes()
+	inslogger.FromContext(ctx).Info("Network bootstrap between discovery nodes")
+	discoveryNodes := bc.cert.GetDiscoveryNodes()
 	var err error
 	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.cert.GetNodeRef())
 	if err != nil {
@@ -128,6 +128,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 		}
 	}
 	activeNodes := make([]core.Node, 0)
+	activeNodesStr := make([]string, 0)
 	for _, h := range hosts {
 		activeNode, err := bc.sendGenesisRequest(ctx, h)
 		if err != nil {
@@ -138,8 +139,10 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 			return errors.Wrapf(err, "Discovery check of host %s failed", h)
 		}
 		activeNodes = append(activeNodes, activeNode)
+		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
 	bc.keeper.AddActiveNodes(activeNodes)
+	inslogger.FromContext(ctx).Infof("Added active nodes: %s")
 	return nil
 }
 
@@ -165,7 +168,7 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (c
 func (bc *Bootstrapper) getBootstrapHostsChannel(ctx context.Context, capacity int) <-chan *host.Host {
 	// we need only one host to bootstrap
 	bootstrapHosts := make(chan *host.Host, capacity)
-	for _, bootstrapNode := range bc.cert.GetBootstrapNodes() {
+	for _, bootstrapNode := range bc.cert.GetDiscoveryNodes() {
 		go func(ctx context.Context, address string, ch chan<- *host.Host) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
 			bootstrapHost, err := bc.bootstrap(address)

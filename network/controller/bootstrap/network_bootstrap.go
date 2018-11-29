@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -38,11 +39,11 @@ type NetworkBootstrapper struct {
 }
 
 func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
-	if len(nb.certificate.GetBootstrapNodes()) == 0 {
+	if len(nb.certificate.GetDiscoveryNodes()) == 0 {
 		log.Info("Zero bootstrap")
 		return nil
 	}
-	if OriginIsDiscovery(nb.certificate) {
+	if utils.OriginIsDiscovery(nb.certificate) {
 		return nb.bootstrapDiscovery(ctx)
 	}
 	return nb.bootstrapJoiner(ctx)
@@ -59,7 +60,7 @@ func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyServic
 
 type DiscoveryNode struct {
 	Host *host.Host
-	Node core.BootstrapNode
+	Node core.DiscoveryNode
 }
 
 func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {

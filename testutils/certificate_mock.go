@@ -20,10 +20,10 @@ import (
 type CertificateMock struct {
 	t minimock.Tester
 
-	GetBootstrapNodesFunc       func() (r []core.BootstrapNode)
-	GetBootstrapNodesCounter    uint64
-	GetBootstrapNodesPreCounter uint64
-	GetBootstrapNodesMock       mCertificateMockGetBootstrapNodes
+	GetDiscoveryNodesFunc       func() (r []core.DiscoveryNode)
+	GetDiscoveryNodesCounter    uint64
+	GetDiscoveryNodesPreCounter uint64
+	GetDiscoveryNodesMock       mCertificateMockGetDiscoveryNodes
 
 	GetNodeRefFunc       func() (r *core.RecordRef)
 	GetNodeRefCounter    uint64
@@ -59,7 +59,7 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.GetBootstrapNodesMock = mCertificateMockGetBootstrapNodes{mock: m}
+	m.GetDiscoveryNodesMock = mCertificateMockGetDiscoveryNodes{mock: m}
 	m.GetNodeRefMock = mCertificateMockGetNodeRef{mock: m}
 	m.GetPublicKeyMock = mCertificateMockGetPublicKey{mock: m}
 	m.GetRoleMock = mCertificateMockGetRole{mock: m}
@@ -69,46 +69,46 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	return m
 }
 
-type mCertificateMockGetBootstrapNodes struct {
+type mCertificateMockGetDiscoveryNodes struct {
 	mock *CertificateMock
 }
 
-//Return sets up a mock for Certificate.GetBootstrapNodes to return Return's arguments
-func (m *mCertificateMockGetBootstrapNodes) Return(r []core.BootstrapNode) *CertificateMock {
-	m.mock.GetBootstrapNodesFunc = func() []core.BootstrapNode {
+//Return sets up a mock for Certificate.GetDiscoveryNodes to return Return's arguments
+func (m *mCertificateMockGetDiscoveryNodes) Return(r []core.DiscoveryNode) *CertificateMock {
+	m.mock.GetDiscoveryNodesFunc = func() []core.DiscoveryNode {
 		return r
 	}
 	return m.mock
 }
 
-//Set uses given function f as a mock of Certificate.GetBootstrapNodes method
-func (m *mCertificateMockGetBootstrapNodes) Set(f func() (r []core.BootstrapNode)) *CertificateMock {
-	m.mock.GetBootstrapNodesFunc = f
+//Set uses given function f as a mock of Certificate.GetDiscoveryNodes method
+func (m *mCertificateMockGetDiscoveryNodes) Set(f func() (r []core.DiscoveryNode)) *CertificateMock {
+	m.mock.GetDiscoveryNodesFunc = f
 
 	return m.mock
 }
 
-//GetBootstrapNodes implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) GetBootstrapNodes() (r []core.BootstrapNode) {
-	atomic.AddUint64(&m.GetBootstrapNodesPreCounter, 1)
-	defer atomic.AddUint64(&m.GetBootstrapNodesCounter, 1)
+//GetDiscoveryNodes implements github.com/insolar/insolar/core.Certificate interface
+func (m *CertificateMock) GetDiscoveryNodes() (r []core.DiscoveryNode) {
+	atomic.AddUint64(&m.GetDiscoveryNodesPreCounter, 1)
+	defer atomic.AddUint64(&m.GetDiscoveryNodesCounter, 1)
 
-	if m.GetBootstrapNodesFunc == nil {
-		m.t.Fatal("Unexpected call to CertificateMock.GetBootstrapNodes")
+	if m.GetDiscoveryNodesFunc == nil {
+		m.t.Fatal("Unexpected call to CertificateMock.GetDiscoveryNodes")
 		return
 	}
 
-	return m.GetBootstrapNodesFunc()
+	return m.GetDiscoveryNodesFunc()
 }
 
-//GetBootstrapNodesMinimockCounter returns a count of CertificateMock.GetBootstrapNodesFunc invocations
-func (m *CertificateMock) GetBootstrapNodesMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetBootstrapNodesCounter)
+//GetDiscoveryNodesMinimockCounter returns a count of CertificateMock.GetDiscoveryNodesFunc invocations
+func (m *CertificateMock) GetDiscoveryNodesMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDiscoveryNodesCounter)
 }
 
-//GetBootstrapNodesMinimockPreCounter returns the value of CertificateMock.GetBootstrapNodes invocations
-func (m *CertificateMock) GetBootstrapNodesMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetBootstrapNodesPreCounter)
+//GetDiscoveryNodesMinimockPreCounter returns the value of CertificateMock.GetDiscoveryNodes invocations
+func (m *CertificateMock) GetDiscoveryNodesMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDiscoveryNodesPreCounter)
 }
 
 type mCertificateMockGetNodeRef struct {
@@ -349,8 +349,8 @@ func (m *CertificateMock) SetRootDomainReferenceMinimockPreCounter() uint64 {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CertificateMock) ValidateCallCounters() {
 
-	if m.GetBootstrapNodesFunc != nil && atomic.LoadUint64(&m.GetBootstrapNodesCounter) == 0 {
-		m.t.Fatal("Expected call to CertificateMock.GetBootstrapNodes")
+	if m.GetDiscoveryNodesFunc != nil && atomic.LoadUint64(&m.GetDiscoveryNodesCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.GetDiscoveryNodes")
 	}
 
 	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
@@ -390,8 +390,8 @@ func (m *CertificateMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CertificateMock) MinimockFinish() {
 
-	if m.GetBootstrapNodesFunc != nil && atomic.LoadUint64(&m.GetBootstrapNodesCounter) == 0 {
-		m.t.Fatal("Expected call to CertificateMock.GetBootstrapNodes")
+	if m.GetDiscoveryNodesFunc != nil && atomic.LoadUint64(&m.GetDiscoveryNodesCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.GetDiscoveryNodes")
 	}
 
 	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
@@ -428,7 +428,7 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.GetBootstrapNodesFunc == nil || atomic.LoadUint64(&m.GetBootstrapNodesCounter) > 0)
+		ok = ok && (m.GetDiscoveryNodesFunc == nil || atomic.LoadUint64(&m.GetDiscoveryNodesCounter) > 0)
 		ok = ok && (m.GetNodeRefFunc == nil || atomic.LoadUint64(&m.GetNodeRefCounter) > 0)
 		ok = ok && (m.GetPublicKeyFunc == nil || atomic.LoadUint64(&m.GetPublicKeyCounter) > 0)
 		ok = ok && (m.GetRoleFunc == nil || atomic.LoadUint64(&m.GetRoleCounter) > 0)
@@ -442,8 +442,8 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.GetBootstrapNodesFunc != nil && atomic.LoadUint64(&m.GetBootstrapNodesCounter) == 0 {
-				m.t.Error("Expected call to CertificateMock.GetBootstrapNodes")
+			if m.GetDiscoveryNodesFunc != nil && atomic.LoadUint64(&m.GetDiscoveryNodesCounter) == 0 {
+				m.t.Error("Expected call to CertificateMock.GetDiscoveryNodes")
 			}
 
 			if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
@@ -478,7 +478,7 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CertificateMock) AllMocksCalled() bool {
 
-	if m.GetBootstrapNodesFunc != nil && atomic.LoadUint64(&m.GetBootstrapNodesCounter) == 0 {
+	if m.GetDiscoveryNodesFunc != nil && atomic.LoadUint64(&m.GetDiscoveryNodesCounter) == 0 {
 		return false
 	}
 

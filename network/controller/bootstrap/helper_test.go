@@ -85,26 +85,26 @@ func TestRemoveOrigin(t *testing.T) {
 	first := &testNode{testutils.RandomRef()}
 	second := &testNode{testutils.RandomRef()}
 
-	discoveryNodes := []core.BootstrapNode{first, originNode, second}
+	discoveryNodes := []core.DiscoveryNode{first, originNode, second}
 	result, err := RemoveOrigin(discoveryNodes, origin)
 	require.NoError(t, err)
-	assert.Equal(t, []core.BootstrapNode{first, second}, result)
+	assert.Equal(t, []core.DiscoveryNode{first, second}, result)
 
-	discoveryNodes = []core.BootstrapNode{first, second}
+	discoveryNodes = []core.DiscoveryNode{first, second}
 	_, err = RemoveOrigin(discoveryNodes, origin)
 	assert.Error(t, err)
 
-	discoveryNodes = []core.BootstrapNode{first, originNode}
+	discoveryNodes = []core.DiscoveryNode{first, originNode}
 	result, err = RemoveOrigin(discoveryNodes, origin)
 	require.NoError(t, err)
-	assert.Equal(t, []core.BootstrapNode{first}, result)
+	assert.Equal(t, []core.DiscoveryNode{first}, result)
 
-	discoveryNodes = []core.BootstrapNode{originNode, first}
+	discoveryNodes = []core.DiscoveryNode{originNode, first}
 	result, err = RemoveOrigin(discoveryNodes, origin)
 	require.NoError(t, err)
-	assert.Equal(t, []core.BootstrapNode{first}, result)
+	assert.Equal(t, []core.DiscoveryNode{first}, result)
 
-	discoveryNodes = []core.BootstrapNode{originNode}
+	discoveryNodes = []core.DiscoveryNode{originNode}
 	result, err = RemoveOrigin(discoveryNodes, origin)
 	require.NoError(t, err)
 	assert.Empty(t, result)

@@ -33,11 +33,11 @@ type Certificate interface {
 	GetRole() StaticRole
 	GetRootDomainReference() *RecordRef
 	SetRootDomainReference(ref *RecordRef)
-	GetBootstrapNodes() []BootstrapNode
+	GetDiscoveryNodes() []DiscoveryNode
 }
 
-//go:generate minimock -i github.com/insolar/insolar/core.BootstrapNode -o ../testutils -s _mock.go
-type BootstrapNode interface {
+//go:generate minimock -i github.com/insolar/insolar/core.DiscoveryNode -o ../testutils -s _mock.go
+type DiscoveryNode interface {
 	NodeMeta
 
 	GetHost() string

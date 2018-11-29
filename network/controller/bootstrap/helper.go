@@ -70,7 +70,7 @@ func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core
 	// TODO: handle uint32 overflow
 }
 
-func RemoveOrigin(discoveryNodes []core.BootstrapNode, origin core.RecordRef) ([]core.BootstrapNode, error) {
+func RemoveOrigin(discoveryNodes []core.DiscoveryNode, origin core.RecordRef) ([]core.DiscoveryNode, error) {
 	for i, discoveryNode := range discoveryNodes {
 		if origin.Equal(*discoveryNode.GetNodeRef()) {
 			return append(discoveryNodes[:i], discoveryNodes[i+1:]...), nil
@@ -79,18 +79,8 @@ func RemoveOrigin(discoveryNodes []core.BootstrapNode, origin core.RecordRef) ([
 	return nil, errors.New("Origin not found in discovery nodes list")
 }
 
-func OriginIsDiscovery(cert core.Certificate) bool {
-	bNodes := cert.GetBootstrapNodes()
-	for _, discoveryNode := range bNodes {
-		if cert.GetNodeRef().Equal(*discoveryNode.GetNodeRef()) {
-			return true
-		}
-	}
-	return false
-}
-
-func FindDiscovery(cert core.Certificate, ref core.RecordRef) core.BootstrapNode {
-	bNodes := cert.GetBootstrapNodes()
+func FindDiscovery(cert core.Certificate, ref core.RecordRef) core.DiscoveryNode {
+	bNodes := cert.GetDiscoveryNodes()
 	for _, discoveryNode := range bNodes {
 		if ref.Equal(*discoveryNode.GetNodeRef()) {
 			return discoveryNode
