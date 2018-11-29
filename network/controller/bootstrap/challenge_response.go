@@ -150,10 +150,13 @@ func (cr *ChallengeResponseController) processChallenge2(request network.Request
 	}
 	sign := core.SignatureFromBytes(data.SignedDiscoveryNonce)
 	success := cr.cryptoSrv.Verify(cert.GetPublicKey(), sign, Xor(data.XorNonce, discoveryNonce))
-	if success != true {
+	if !success {
 		return cr.buildChallenge2ErrorResponse(request, "node %s signature check failed"), nil
 	}
-	cr.sessionManager.ChallengePassed(data.SessionID)
+	err = cr.sessionManager.ChallengePassed(data.SessionID)
+	if err != nil {
+		return cr.buildChallenge2ErrorResponse(request, err.Error()), nil
+	}
 	response := cr.transport.BuildResponse(request, &ChallengeResponse{
 		Header: ChallengeResponseHeader{
 			Success: true,
