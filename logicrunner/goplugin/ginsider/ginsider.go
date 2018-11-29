@@ -96,14 +96,19 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	gls.Set("callCtx", args.Context)
 	defer gls.Cleanup()
 
+	inslogger.FromContext(ctx).Debugf("123")
 	p, err := t.GI.Plugin(ctx, args.Code)
+	inslogger.FromContext(ctx).Debugf("456")
 	if err != nil {
+		log.Debugf("Couldn't get plugin by code reference %s", args.Code.String())
 		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
 	}
 
 	if args.Context.Caller.IsEmpty() {
 		attr, err := p.Lookup("INSATTR_" + args.Method + "_API")
 		if err != nil {
+			log.Debugf("Calling non INSATTRAPI method %s (code ref: %s)",
+				args.Method, args.Code.String())
 			return errors.Wrapf(
 				err, "Calling non INSATTRAPI method %s (code ref: %s)",
 				args.Method, args.Code.String(),
@@ -111,15 +116,19 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		}
 		api, ok := attr.(*bool)
 		if !ok {
+			log.Debugf("INSATTRAPI attribute for method %s is not boolean", args.Method)
 			return errors.Errorf("INSATTRAPI attribute for method %s is not boolean", args.Method)
 		}
 		if !*api {
+			log.Debugf("Calling non INSATTRAPI method ")
 			return errors.Errorf("Calling non INSATTRAPI method ")
 		}
 	}
 
 	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
 	if err != nil {
+		log.Debugf("Can't find wrapper for %s (code ref: %s)",
+			args.Method, args.Code.String())
 		return errors.Wrapf(
 			err, "Can't find wrapper for %s (code ref: %s)",
 			args.Method, args.Code.String(),
@@ -128,12 +137,14 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 
 	wrapper, ok := symbol.(func(object []byte, data []byte) ([]byte, []byte, error))
 	if !ok {
+		log.Debugf("Wrapper with wrong signature")
 		return errors.New("Wrapper with wrong signature")
 	}
 
 	state, result, err := wrapper(args.Data, args.Arguments) // may be entire args???
 
 	if err != nil {
+		log.Debugf("Method call returned error")
 		return errors.Wrapf(err, "Method call returned error")
 	}
 	reply.Data = state
@@ -186,6 +197,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 
 	client, err := rpc.Dial(gi.upstreamProtocol, gi.upstreamAddress)
 	if err != nil {
+		log.Fatalf("can't connect to upstream, protocol: %s, address: %s", gi.upstreamProtocol, gi.upstreamAddress)
 		os.Exit(0)
 	}
 
@@ -199,17 +211,21 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 	path := filepath.Join(gi.dir, ref.String())
 	_, err := os.Stat(path)
 
+	inslogger.FromContext(ctx).Debugf("oc 1")
+	inslogger.FromContext(ctx).Debugf(err.Error())
 	if err == nil {
 		return path, nil
 	} else if !os.IsNotExist(err) {
 		return "", errors.Wrap(err, "file !notexists()")
 	}
 
+	inslogger.FromContext(ctx).Debugf("oc 2")
 	client, err := gi.Upstream()
 	if err != nil {
 		return "", err
 	}
 
+	inslogger.FromContext(ctx).Debugf("oc 3")
 	inslogger.FromContext(ctx).Debugf("obtaining code %q", ref)
 	req := rpctypes.UpGetCodeReq{
 		UpBaseReq: MakeUpBaseReq(),
@@ -225,10 +241,14 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 		return "", errors.Wrap(err, "on calling main API")
 	}
 
+	inslogger.FromContext(ctx).Debugf("oc 4")
+
 	err = ioutil.WriteFile(path, res.Code, 0666)
 	if err != nil {
 		return "", errors.Wrap(err, "on writing file down")
 	}
+
+	inslogger.FromContext(ctx).Debugf("oc 5")
 
 	return path, nil
 }
@@ -236,11 +256,13 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Plugin, error) {
+	inslogger.FromContext(ctx).Debugf("plugins before locks %+v", gi.plugins)
 	rec := func() *pluginRec {
 		gi.pluginsMutex.Lock()
 		defer gi.pluginsMutex.Unlock()
 
 		if gi.plugins[ref] == nil {
+			inslogger.FromContext(ctx).Debugf("initialize new element")
 			gi.plugins[ref] = &pluginRec{}
 		}
 		res := gi.plugins[ref]
@@ -249,15 +271,21 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 	}()
 	defer rec.Unlock()
 
+	inslogger.FromContext(ctx).Debugf("1")
+	inslogger.FromContext(ctx).Debugf("plugins %+v", gi.plugins)
+	inslogger.FromContext(ctx).Debugf("ref %+v", ref)
+	inslogger.FromContext(ctx).Debugf("rec.plugin %+v", rec.plugin)
 	if rec.plugin != nil {
 		return rec.plugin, nil
 	}
 
+	inslogger.FromContext(ctx).Debugf("2")
 	path, err := gi.ObtainCode(ctx, ref)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't obtain code")
 	}
 
+	inslogger.FromContext(ctx).Debugf("3")
 	inslogger.FromContext(ctx).Debugf("Opening plugin %q from file %q", ref, path)
 	p, err := plugin.Open(path)
 	if err != nil {
@@ -454,4 +482,32 @@ func (gi *GoInsider) MakeErrorSerializable(e error) error {
 		return nil
 	}
 	return &foundation.Error{S: e.Error()}
+}
+
+func (gi *GoInsider) AddPlugin(ref core.RecordRef, path string) error {
+	rec := func() *pluginRec {
+		gi.pluginsMutex.Lock()
+		defer gi.pluginsMutex.Unlock()
+
+		if gi.plugins[ref] == nil {
+			gi.plugins[ref] = &pluginRec{}
+		}
+		res := gi.plugins[ref]
+		res.Lock()
+		return res
+	}()
+	defer rec.Unlock()
+
+	if rec.plugin != nil {
+		return errors.New("ref already in use")
+	}
+
+	p, err := plugin.Open(path)
+	if err != nil {
+		return errors.Wrap(err, "couldn't open plugin")
+	}
+
+	inslogger.FromContext(context.TODO()).Debugf("AddPlugin plugins %+v", gi.plugins)
+	rec.plugin = p
+	return nil
 }

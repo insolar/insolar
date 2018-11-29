@@ -174,6 +174,12 @@ func main() {
 		Use:   "compile [flags] <file name to compile>",
 		Short: "Compile contract",
 		Run: func(cmd *cobra.Command, args []string) {
+			dir, err := os.Getwd()
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
 			if len(args) != 1 {
 				fmt.Println("compile command should be followed by exactly one file name to compile")
 				os.Exit(1)
@@ -227,7 +233,8 @@ func main() {
 				os.Exit(1)
 			}
 
-			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(outdir)).CombinedOutput()
+			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, outdir, "main.so")).CombinedOutput()
+			//out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(outdir)).CombinedOutput()
 			fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))

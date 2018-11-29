@@ -19,8 +19,6 @@ package main
 import (
 	"net/rpc"
 	"os"
-	"os/exec"
-	"path/filepath"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/testutils"
@@ -31,42 +29,18 @@ import (
 )
 
 func main() {
-	contractPath := pflag.StringP("contract-path", "c", "", "path to healthcheck contract")
-	cacheDir := pflag.StringP("cache-dir", "d", "", "path to insgorund cache directory")
 	rpcAddress := pflag.StringP("rpc", "a", "", "address and port of RPC API")
 	rpcProtocol := pflag.StringP("rpc-proto", "p", "", "protocol of RPC API")
 	pflag.Parse()
 
-	err := log.SetLevel("Debug")
+	client, err := rpc.Dial(*rpcProtocol, *rpcAddress)
 	if err != nil {
 		log.Errorln(err.Error())
-	}
-
-	if *cacheDir == "" {
-		log.Error("need to provide path to insgorund cache directory")
 		os.Exit(2)
 	}
 
 	ref := core.RecordRef{}.FromSlice(append(make([]byte, 63), 1))
-	destination := filepath.Join(*cacheDir, ref.String())
-
-	currentFile := os.Args[0]
-	currentPath := filepath.Dir(currentFile)
-	insgoccPath := currentPath + "/insgocc"
-
-	_, err = exec.Command(insgoccPath, "compile", "-o", destination, *contractPath).CombinedOutput()
-	if err != nil {
-		log.Errorln(err.Error())
-		os.Exit(2)
-	}
-
-	client, err := rpc.Dial(*rpcProtocol, *rpcAddress)
-	//_, err = rpc.Dial(*rpcProtocol, *rpcAddress)
-	if err != nil {
-		log.Errorln(err.Error())
-		os.Exit(2)
-	}
-
+	log.Error(ref)
 	empty, _ := core.Serialize([]interface{}{})
 
 	caller := testutils.RandomRef()
@@ -84,7 +58,4 @@ func main() {
 		log.Errorln(err.Error())
 		os.Exit(2)
 	}
-
-	log.Debug("i'm alive!")
-	os.Exit(0)
 }

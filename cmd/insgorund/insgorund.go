@@ -21,6 +21,9 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strings"
+
+	"github.com/insolar/insolar/core"
 
 	"github.com/insolar/insolar/log"
 	"github.com/spf13/pflag"
@@ -34,6 +37,10 @@ func main() {
 	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
 	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
 	rpcProtocol := pflag.String("rpc-proto", "tcp", "protocol of RPC API")
+	code := pflag.String("code", "", "add pre-compiled code to cache (<ref>:</path/to/plugin.so>)")
+
+	hardCode := pflag.String("hard-code", "", "add pre-compiled code to cache </path/to/plugin.so>")
+
 	pflag.Parse()
 
 	err := log.SetLevel("Debug")
@@ -53,6 +60,41 @@ func main() {
 	}
 
 	insider := ginsider.NewGoInsider(*path, *rpcProtocol, *rpcAddress)
+
+	if *code != "" {
+		codeSlice := strings.Split(*code, ":")
+		if len(codeSlice) != 2 {
+			log.Fatal("code param format is <ref>:</path/to/plugin.so>", err)
+			os.Exit(1)
+		}
+		ref := codeSlice[0]
+		pluginPath := codeSlice[1]
+
+		log.Warnf("ref from param: %s", ref)
+		log.Warnf("ref as core.RecordRef %s", core.RecordRef{}.FromSlice([]byte(ref)))
+		log.Warnf(pluginPath)
+
+		err := insider.AddPlugin(core.RecordRef{}.FromSlice([]byte(ref)), pluginPath)
+		if err != nil {
+			log.Fatalf("Couldn't add plugin by ref %s with .so from %s, err: %s ", ref, pluginPath, err.Error())
+			os.Exit(1)
+		}
+	}
+
+	if *hardCode != "" {
+		pluginPath := *hardCode
+		ref := core.RecordRef{}.FromSlice(append(make([]byte, 63), 1))
+
+		log.Warnf("ref from param: %s", ref)
+		log.Warnf("ref as core.RecordRef %s", ref.String())
+		log.Warnf(pluginPath)
+
+		err := insider.AddPlugin(ref, pluginPath)
+		if err != nil {
+			log.Fatalf("Couldn't add plugin by ref %s with .so from %s, err: %s ", ref, pluginPath, err.Error())
+			os.Exit(1)
+		}
+	}
 
 	err = rpc.Register(&ginsider.RPC{GI: insider})
 	if err != nil {
