@@ -476,8 +476,17 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	var child *core.RecordID
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
-		if err != nil {
-			return errors.Wrap(err, "failed to fetch object index")
+		if err == storage.ErrNotFound {
+			heavy, err := h.findHeavy(ctx, msg.Parent, pulseNumber)
+			if err != nil {
+				return err
+			}
+			idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Parent, heavy)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
 		}
 		h.recent.AddObject(*msg.Parent.Record())
 
