@@ -237,7 +237,9 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Plugin, error) {
-	rec := gi.getPluginWithLock(ref)
+	rec := gi.getPluginRec(ref)
+
+	rec.Lock()
 	defer rec.Unlock()
 
 	if rec.plugin != nil {
@@ -259,9 +261,9 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 	return p, nil
 }
 
-// getPluginWithLock return existed gi.plugins[ref] or create a new one
+// getPluginRec return existed gi.plugins[ref] or create a new one
 // also set gi.plugins[ref].Lock()
-func (gi *GoInsider) getPluginWithLock(ref core.RecordRef) *pluginRec {
+func (gi *GoInsider) getPluginRec(ref core.RecordRef) *pluginRec {
 	gi.pluginsMutex.Lock()
 	defer gi.pluginsMutex.Unlock()
 
@@ -269,7 +271,6 @@ func (gi *GoInsider) getPluginWithLock(ref core.RecordRef) *pluginRec {
 		gi.plugins[ref] = &pluginRec{}
 	}
 	res := gi.plugins[ref]
-	res.Lock()
 	return res
 }
 
@@ -463,7 +464,9 @@ func (gi *GoInsider) MakeErrorSerializable(e error) error {
 
 // AddPlugin inject plugin by ref in gi memory
 func (gi *GoInsider) AddPlugin(ref core.RecordRef, path string) error {
-	rec := gi.getPluginWithLock(ref)
+	rec := gi.getPluginRec(ref)
+
+	rec.Lock()
 	defer rec.Unlock()
 
 	if rec.plugin != nil {
