@@ -18,10 +18,10 @@ package networkcoordinator
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/pkg/errors"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
@@ -82,7 +82,7 @@ func (nc *NetworkCoordinator) CreateNodeCert(ctx context.Context, ref string) (c
 	}
 	z, err := core.UnMarshalResponse(res.(*reply.CallMethod).Result, []interface{}{nil})
 	if err != nil {
-		fmt.Println(err)
+		errors.Wrap(err, "[ CreateNodeCert ] Couldn't unmarshall response")
 	}
 	answer := z[0].(map[interface{}]interface{})
 
