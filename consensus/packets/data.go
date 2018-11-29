@@ -18,8 +18,6 @@ package packets
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
 )
 
 type PacketType uint8
@@ -73,48 +71,4 @@ func (npp *NodePulseProof) StateHash() []byte {
 
 func (npp *NodePulseProof) Signature() []byte {
 	return npp.NodeSignature[:]
-}
-
-// ----------------------------------PHASE 3--------------------------------
-
-type Phase3Packet struct {
-	// -------------------- Header
-	packetHeader PacketHeader
-
-	// -------------------- Section 1
-	globuleHashSignature    [SignatureLength]byte
-	deviantBitSet           BitSet
-	SignatureHeaderSection1 [SignatureLength]byte
-}
-
-func NewPhase3Packet(globuleHash [SignatureLength]byte, bitSet BitSet) Phase3Packet {
-	return Phase3Packet{
-		globuleHashSignature: globuleHash,
-		deviantBitSet:        bitSet,
-	}
-}
-
-// SetPacketHeader set routing information for transport level.
-func (p3p *Phase3Packet) SetPacketHeader(header *RoutingHeader) error {
-	if header.PacketType != types.Phase3 {
-		return errors.New("[ Phase3Packet.SetPacketHeader ] wrong packet type")
-	}
-
-	p3p.packetHeader.setRoutingFields(header, Phase3)
-	return nil
-}
-
-// GetPacketHeader get routing information from transport level.
-func (p3p *Phase3Packet) GetPacketHeader() (*RoutingHeader, error) {
-	header := &RoutingHeader{}
-
-	header.PacketType = types.Phase2
-	header.OriginID = p3p.packetHeader.OriginNodeID
-	header.TargetID = p3p.packetHeader.TargetNodeID
-
-	return header, nil
-}
-
-func (p3p *Phase3Packet) GetBitset() BitSet {
-	return p3p.deviantBitSet
 }

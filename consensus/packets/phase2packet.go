@@ -22,8 +22,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ----------------------------------PHASE 2--------------------------------
-
 type Phase2Packet struct {
 	// -------------------- Header
 	packetHeader PacketHeader
