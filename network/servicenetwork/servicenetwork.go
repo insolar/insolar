@@ -119,7 +119,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.routingTable = &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg)
 	if err != nil {
-		return errors.Wrap(err, "error creating internal transport")
+		return errors.Wrap(err, "Failed to create internal transport")
 	}
 
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(

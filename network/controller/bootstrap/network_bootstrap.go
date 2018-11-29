@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/pkg/errors"
 )
@@ -33,6 +34,7 @@ type NetworkBootstrapper struct {
 	bootstrapper        *Bootstrapper
 	authController      *AuthorizationController
 	challengeController *ChallengeResponseController
+	nodeKeeper          network.NodeKeeper
 }
 
 func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
@@ -49,6 +51,7 @@ func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
 func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyService,
 	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
 
+	nb.nodeKeeper = nodeKeeper
 	nb.bootstrapper.Start(nodeKeeper)
 	nb.authController.Start(networkCoordinator, nodeKeeper)
 	nb.challengeController.Start(cryptographyService, nodeKeeper)
@@ -72,8 +75,9 @@ func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Error executing double challenge response")
 	}
-	// TODO: use data
-	print(data.AssignShortID)
+	origin := nb.nodeKeeper.GetOrigin()
+	mutableOrigin := origin.(nodenetwork.MutableNode)
+	mutableOrigin.SetShortID(data.AssignShortID)
 	return nb.authController.Register(ctx, discoveryNode, sessionID)
 }
 
