@@ -437,3 +437,64 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 	})
 }
+
+func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	mb := testutils.NewMessageBusMock(mc)
+	jc := testutils.NewJetCoordinatorMock(mc)
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+		LightChainLimit: 3,
+	})
+
+	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
+	childRecord := record.ChildRecord{
+		Ref:       *genRandomRef(0),
+		PrevChild: nil,
+	}
+	amendHash := db.PlatformCryptographyScheme.ReferenceHasher()
+	_, err := childRecord.WriteHashData(amendHash)
+	require.NoError(t, err)
+	childID := core.NewRecordID(0, amendHash.Sum(nil))
+
+	msg := message.RegisterChild{
+		Record: record.SerializeRecord(&childRecord),
+		Parent: *genRandomRef(0),
+	}
+
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		if m, ok := gm.(*message.GetObjectIndex); ok {
+			assert.Equal(t, msg.Parent, m.Object)
+			buf, err := index.EncodeObjectLifeline(&objIndex)
+			require.NoError(t, err)
+			return &reply.ObjectIndex{Index: buf}, nil
+		}
+
+		panic("unexpected call")
+	}
+
+	h.JetCoordinator = jc
+	h.Bus = mb
+	heavyRef := genRandomRef(0)
+	jc.QueryRoleMock.Expect(
+		ctx, core.RoleHeavyExecutor, &msg.Parent, 0,
+	).Return(
+		[]core.RecordRef{*heavyRef}, nil,
+	)
+	rep, err := h.handleRegisterChild(ctx, 0, &message.Parcel{
+		Msg: &msg,
+	})
+	require.NoError(t, err)
+	objRep, ok := rep.(*reply.ID)
+	require.True(t, ok)
+	assert.Equal(t, *childID, objRep.ID)
+
+	idx, err := db.GetObjectIndex(ctx, msg.Parent.Record(), false)
+	require.NoError(t, err)
+	assert.Equal(t, childID, idx.ChildPointer)
+}
