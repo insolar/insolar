@@ -144,3 +144,56 @@ func TestGenesisDataProvider_GetRootDomain_AlreadySet(t *testing.T) {
 	require.Equal(t, &rootDomainRef, res)
 	require.NotEqual(t, &newRootDomainRef, res)
 }
+
+func TestGenesisDataProvider_GetRootMember(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	rootMemberRef := testutils.RandomRef()
+	nodeDomainRef := testutils.RandomRef()
+
+	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, nil),
+		ContractRequester: mockContractRequester(t, infoRes),
+	}
+
+	res, err := gdp.GetRootMember(ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, &rootMemberRef, res)
+}
+
+func TestGenesisDataProvider_GetRootMember_AlreadySet(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	rootMemberRef := testutils.RandomRef()
+	nodeDomainRef := testutils.RandomRef()
+
+	newRootMemberRef := testutils.RandomRef()
+	infoRes := mockInfoResult(newRootMemberRef, nodeDomainRef)
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, nil),
+		ContractRequester: mockContractRequester(t, infoRes),
+	}
+	gdp.rootMemberRef = &rootMemberRef
+
+	res, err := gdp.GetRootMember(ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, &rootMemberRef, res)
+	require.NotEqual(t, &newRootMemberRef, res)
+}
+
+func TestGenesisDataProvider_GetRootMember_Error(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, nil),
+		ContractRequester: mockContractRequesterWithError(t),
+	}
+
+	res, err := gdp.GetRootMember(ctx)
+
+	require.EqualError(t, err, "[ GenesisDataProvider::GetRootMember ] Can't get info: [ setInfo ] Can't send request: test reasons")
+	require.Nil(t, res)
+}
