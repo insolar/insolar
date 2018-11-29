@@ -23,15 +23,15 @@ type BootstrapNodeMock struct {
 	GetHostPreCounter uint64
 	GetHostMock       mBootstrapNodeMockGetHost
 
+	GetNodeRefFunc       func() (r *core.RecordRef)
+	GetNodeRefCounter    uint64
+	GetNodeRefPreCounter uint64
+	GetNodeRefMock       mBootstrapNodeMockGetNodeRef
+
 	GetPublicKeyFunc       func() (r crypto.PublicKey)
 	GetPublicKeyCounter    uint64
 	GetPublicKeyPreCounter uint64
 	GetPublicKeyMock       mBootstrapNodeMockGetPublicKey
-
-	GetRefFunc       func() (r *core.RecordRef)
-	GetRefCounter    uint64
-	GetRefPreCounter uint64
-	GetRefMock       mBootstrapNodeMockGetRef
 }
 
 //NewBootstrapNodeMock returns a mock for github.com/insolar/insolar/core.BootstrapNode
@@ -43,8 +43,8 @@ func NewBootstrapNodeMock(t minimock.Tester) *BootstrapNodeMock {
 	}
 
 	m.GetHostMock = mBootstrapNodeMockGetHost{mock: m}
+	m.GetNodeRefMock = mBootstrapNodeMockGetNodeRef{mock: m}
 	m.GetPublicKeyMock = mBootstrapNodeMockGetPublicKey{mock: m}
-	m.GetRefMock = mBootstrapNodeMockGetRef{mock: m}
 
 	return m
 }
@@ -91,6 +91,48 @@ func (m *BootstrapNodeMock) GetHostMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetHostPreCounter)
 }
 
+type mBootstrapNodeMockGetNodeRef struct {
+	mock *BootstrapNodeMock
+}
+
+//Return sets up a mock for BootstrapNode.GetNodeRef to return Return's arguments
+func (m *mBootstrapNodeMockGetNodeRef) Return(r *core.RecordRef) *BootstrapNodeMock {
+	m.mock.GetNodeRefFunc = func() *core.RecordRef {
+		return r
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of BootstrapNode.GetNodeRef method
+func (m *mBootstrapNodeMockGetNodeRef) Set(f func() (r *core.RecordRef)) *BootstrapNodeMock {
+	m.mock.GetNodeRefFunc = f
+
+	return m.mock
+}
+
+//GetNodeRef implements github.com/insolar/insolar/core.BootstrapNode interface
+func (m *BootstrapNodeMock) GetNodeRef() (r *core.RecordRef) {
+	atomic.AddUint64(&m.GetNodeRefPreCounter, 1)
+	defer atomic.AddUint64(&m.GetNodeRefCounter, 1)
+
+	if m.GetNodeRefFunc == nil {
+		m.t.Fatal("Unexpected call to BootstrapNodeMock.GetNodeRef")
+		return
+	}
+
+	return m.GetNodeRefFunc()
+}
+
+//GetNodeRefMinimockCounter returns a count of BootstrapNodeMock.GetNodeRefFunc invocations
+func (m *BootstrapNodeMock) GetNodeRefMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNodeRefCounter)
+}
+
+//GetNodeRefMinimockPreCounter returns the value of BootstrapNodeMock.GetNodeRef invocations
+func (m *BootstrapNodeMock) GetNodeRefMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNodeRefPreCounter)
+}
+
 type mBootstrapNodeMockGetPublicKey struct {
 	mock *BootstrapNodeMock
 }
@@ -133,48 +175,6 @@ func (m *BootstrapNodeMock) GetPublicKeyMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyPreCounter)
 }
 
-type mBootstrapNodeMockGetRef struct {
-	mock *BootstrapNodeMock
-}
-
-//Return sets up a mock for BootstrapNode.GetRef to return Return's arguments
-func (m *mBootstrapNodeMockGetRef) Return(r *core.RecordRef) *BootstrapNodeMock {
-	m.mock.GetRefFunc = func() *core.RecordRef {
-		return r
-	}
-	return m.mock
-}
-
-//Set uses given function f as a mock of BootstrapNode.GetRef method
-func (m *mBootstrapNodeMockGetRef) Set(f func() (r *core.RecordRef)) *BootstrapNodeMock {
-	m.mock.GetRefFunc = f
-
-	return m.mock
-}
-
-//GetRef implements github.com/insolar/insolar/core.BootstrapNode interface
-func (m *BootstrapNodeMock) GetRef() (r *core.RecordRef) {
-	atomic.AddUint64(&m.GetRefPreCounter, 1)
-	defer atomic.AddUint64(&m.GetRefCounter, 1)
-
-	if m.GetRefFunc == nil {
-		m.t.Fatal("Unexpected call to BootstrapNodeMock.GetRef")
-		return
-	}
-
-	return m.GetRefFunc()
-}
-
-//GetRefMinimockCounter returns a count of BootstrapNodeMock.GetRefFunc invocations
-func (m *BootstrapNodeMock) GetRefMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetRefCounter)
-}
-
-//GetRefMinimockPreCounter returns the value of BootstrapNodeMock.GetRef invocations
-func (m *BootstrapNodeMock) GetRefMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetRefPreCounter)
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *BootstrapNodeMock) ValidateCallCounters() {
@@ -183,12 +183,12 @@ func (m *BootstrapNodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to BootstrapNodeMock.GetHost")
 	}
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
-		m.t.Fatal("Expected call to BootstrapNodeMock.GetPublicKey")
+	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+		m.t.Fatal("Expected call to BootstrapNodeMock.GetNodeRef")
 	}
 
-	if m.GetRefFunc != nil && atomic.LoadUint64(&m.GetRefCounter) == 0 {
-		m.t.Fatal("Expected call to BootstrapNodeMock.GetRef")
+	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+		m.t.Fatal("Expected call to BootstrapNodeMock.GetPublicKey")
 	}
 
 }
@@ -212,12 +212,12 @@ func (m *BootstrapNodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to BootstrapNodeMock.GetHost")
 	}
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
-		m.t.Fatal("Expected call to BootstrapNodeMock.GetPublicKey")
+	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+		m.t.Fatal("Expected call to BootstrapNodeMock.GetNodeRef")
 	}
 
-	if m.GetRefFunc != nil && atomic.LoadUint64(&m.GetRefCounter) == 0 {
-		m.t.Fatal("Expected call to BootstrapNodeMock.GetRef")
+	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+		m.t.Fatal("Expected call to BootstrapNodeMock.GetPublicKey")
 	}
 
 }
@@ -235,8 +235,8 @@ func (m *BootstrapNodeMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && (m.GetHostFunc == nil || atomic.LoadUint64(&m.GetHostCounter) > 0)
+		ok = ok && (m.GetNodeRefFunc == nil || atomic.LoadUint64(&m.GetNodeRefCounter) > 0)
 		ok = ok && (m.GetPublicKeyFunc == nil || atomic.LoadUint64(&m.GetPublicKeyCounter) > 0)
-		ok = ok && (m.GetRefFunc == nil || atomic.LoadUint64(&m.GetRefCounter) > 0)
 
 		if ok {
 			return
@@ -249,12 +249,12 @@ func (m *BootstrapNodeMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to BootstrapNodeMock.GetHost")
 			}
 
-			if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
-				m.t.Error("Expected call to BootstrapNodeMock.GetPublicKey")
+			if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+				m.t.Error("Expected call to BootstrapNodeMock.GetNodeRef")
 			}
 
-			if m.GetRefFunc != nil && atomic.LoadUint64(&m.GetRefCounter) == 0 {
-				m.t.Error("Expected call to BootstrapNodeMock.GetRef")
+			if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+				m.t.Error("Expected call to BootstrapNodeMock.GetPublicKey")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -273,11 +273,11 @@ func (m *BootstrapNodeMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
 		return false
 	}
 
-	if m.GetRefFunc != nil && atomic.LoadUint64(&m.GetRefCounter) == 0 {
+	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
 		return false
 	}
 

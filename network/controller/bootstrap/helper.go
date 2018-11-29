@@ -17,21 +17,33 @@
 package bootstrap
 
 import (
+	"crypto/rand"
+	"fmt"
 	"sort"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
-// CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
-func CheckShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
+const nonceSize int = 128
+
+// checkShortIDCollision returns true if NodeKeeper already contains node with such ShortID
+func checkShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
 	return keeper.GetActiveNodeByShortID(id) != nil
 }
 
-// CorrectShortIDCollision correct ShortID of the node so it does not conflict with existing active node list
-func CorrectShortIDCollision(keeper network.NodeKeeper, node core.Node) {
+// GenerateShortID correct ShortID of the node so it does not conflict with existing active node list
+func GenerateShortID(keeper network.NodeKeeper, nodeID core.RecordRef) core.ShortNodeID {
+	shortID := utils.GenerateShortID(nodeID)
+	if !checkShortIDCollision(keeper, shortID) {
+		return shortID
+	}
+	return regenerateShortID(keeper, shortID)
+}
+
+func regenerateShortID(keeper network.NodeKeeper, shortID core.ShortNodeID) core.ShortNodeID {
 	activeNodes := keeper.GetActiveNodes()
 	shortIDs := make([]core.ShortNodeID, len(activeNodes))
 	for i, activeNode := range activeNodes {
@@ -40,9 +52,7 @@ func CorrectShortIDCollision(keeper network.NodeKeeper, node core.Node) {
 	sort.Slice(shortIDs, func(i, j int) bool {
 		return shortIDs[i] < shortIDs[j]
 	})
-	shortID := generateNonConflictingID(shortIDs, node.ShortID())
-	mutable := node.(nodenetwork.MutableNode)
-	mutable.SetShortID(shortID)
+	return generateNonConflictingID(shortIDs, shortID)
 }
 
 func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core.ShortNodeID) core.ShortNodeID {
@@ -70,10 +80,46 @@ func RemoveOrigin(discoveryNodes []core.BootstrapNode, origin core.RecordRef) ([
 }
 
 func OriginIsDiscovery(cert core.Certificate) bool {
-	for _, discoveryNode := range cert.GetBootstrapNodes() {
+	bNodes := cert.GetBootstrapNodes()
+	for _, discoveryNode := range bNodes {
 		if cert.GetNodeRef().Equal(*discoveryNode.GetNodeRef()) {
 			return true
 		}
 	}
 	return false
+}
+
+func FindDiscovery(cert core.Certificate, ref core.RecordRef) core.BootstrapNode {
+	bNodes := cert.GetBootstrapNodes()
+	for _, discoveryNode := range bNodes {
+		if ref.Equal(*discoveryNode.GetNodeRef()) {
+			return discoveryNode
+		}
+	}
+	return nil
+}
+
+func Xor(first, second []byte) []byte {
+	if len(second) < len(first) {
+		temp := second
+		second = first
+		first = temp
+	}
+	result := make([]byte, len(second))
+	for i, d := range second {
+		result[i] = first[i%len(first)] ^ d
+	}
+	return result
+}
+
+func GenerateNonce() (Nonce, error) {
+	buffer := [nonceSize]byte{}
+	l, err := rand.Read(buffer[:])
+	if err != nil {
+		return nil, errors.Wrapf(err, "error generating nonce")
+	}
+	if l != nonceSize {
+		return nil, errors.New(fmt.Sprintf("GenerateNonce: generated size %d does equal to required size %d", l, nonceSize))
+	}
+	return buffer[:], nil
 }

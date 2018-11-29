@@ -17,9 +17,12 @@
 package utils
 
 import (
+	"hash/crc32"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/insolar/insolar/core"
 )
 
 func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
@@ -44,4 +47,10 @@ func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 			return val
 		}
 	}
+}
+
+// GenerateShortID generate short ID for node without checking collisions
+func GenerateShortID(ref core.RecordRef) core.ShortNodeID {
+	result := crc32.ChecksumIEEE(ref[:])
+	return core.ShortNodeID(result)
 }

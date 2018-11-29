@@ -57,6 +57,8 @@ const (
 	TypeID
 	// TypeChildren is a reply for fetching objects children in chunks.
 	TypeChildren
+	// TypeObjectIndex contains serialized object index. It can be stored in DB without processing.
+	TypeObjectIndex
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -88,6 +90,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &Error{}, nil
 	case TypeOK:
 		return &OK{}, nil
+	case TypeObjectIndex:
+		return &ObjectIndex{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -146,4 +150,5 @@ func init() {
 	gob.Register(&Children{})
 	gob.Register(&Error{})
 	gob.Register(&OK{})
+	gob.Register(&ObjectIndex{})
 }

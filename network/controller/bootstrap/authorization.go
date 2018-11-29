@@ -31,11 +31,11 @@ import (
 
 // AuthorizationController is intended
 type AuthorizationController struct {
-	options             *common.Options
-	bootstrapController common.BootstrapController
-	transport           network.InternalTransport
-	keeper              network.NodeKeeper
-	coordinator         core.NetworkCoordinator
+	options        *common.Options
+	transport      network.InternalTransport
+	keeper         network.NodeKeeper
+	coordinator    core.NetworkCoordinator
+	sessionManager *SessionManager
 }
 
 type OperationCode uint8
@@ -47,8 +47,14 @@ const (
 
 // AuthorizationRequest
 type AuthorizationRequest struct {
-	SessionID   SessionID
 	Certificate core.Certificate
+}
+
+// AuthorizationResponse
+type AuthorizationResponse struct {
+	Code      OperationCode
+	Error     string
+	SessionID SessionID
 }
 
 // RegistrationRequest
@@ -57,52 +63,50 @@ type RegistrationRequest struct {
 	JoinClaim *packets.NodeJoinClaim
 }
 
-// OperationResponse
-type OperationResponse struct {
-	OpCode OperationCode
-	Error  string
+// RegistrationResponse
+type RegistrationResponse struct {
+	Code  OperationCode
+	Error string
 }
 
 func init() {
 	gob.Register(&AuthorizationRequest{})
+	gob.Register(&AuthorizationResponse{})
 	gob.Register(&RegistrationRequest{})
-	gob.Register(&OperationResponse{})
+	gob.Register(&RegistrationResponse{})
 }
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
-func (ac *AuthorizationController) Authorize(ctx context.Context, sessionID SessionID, certificate core.Certificate) error {
-	discovery := ac.bootstrapController.GetChosenDiscoveryNode()
-	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discovery)
+func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, certificate core.Certificate) (SessionID, error) {
+	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode)
 
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
-		SessionID:   sessionID,
 		Certificate: certificate,
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(request, discovery)
+	future, err := ac.transport.SendRequestPacket(request, discoveryNode.Host)
 	if err != nil {
-		return errors.Wrapf(err, "Error sending authorize request")
+		return 0, errors.Wrapf(err, "Error sending authorize request")
 	}
 	response, err := future.GetResponse(ac.options.PacketTimeout)
 	if err != nil {
-		return errors.Wrapf(err, "Error getting response for authorize request")
+		return 0, errors.Wrapf(err, "Error getting response for authorize request")
 	}
-	data := response.GetData().(*OperationResponse)
-	if data.OpCode == OpRejected {
-		return errors.New("Authorize rejected: " + data.Error)
+	data := response.GetData().(*AuthorizationResponse)
+	if data.Code == OpRejected {
+		return 0, errors.New("Authorize rejected: " + data.Error)
 	}
-	return nil
+	return data.SessionID, nil
 }
 
 // Register node on the discovery node (step 4 of the bootstrap process)
-func (ac *AuthorizationController) Register(ctx context.Context, sessionID SessionID) error {
-	discovery := ac.bootstrapController.GetChosenDiscoveryNode()
-	inslogger.FromContext(ctx).Infof("Registering on host: %s", discovery)
+func (ac *AuthorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
+	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode)
 
 	request := ac.transport.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
 		SessionID: sessionID,
 		JoinClaim: ac.keeper.GetOriginClaim(),
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(request, discovery)
+	future, err := ac.transport.SendRequestPacket(request, discoveryNode.Host)
 	if err != nil {
 		return errors.Wrapf(err, "Error sending register request")
 	}
@@ -110,15 +114,22 @@ func (ac *AuthorizationController) Register(ctx context.Context, sessionID Sessi
 	if err != nil {
 		return errors.Wrapf(err, "Error getting response for register request")
 	}
-	data := response.GetData().(*OperationResponse)
-	if data.OpCode == OpRejected {
+	data := response.GetData().(*RegistrationResponse)
+	if data.Code == OpRejected {
 		return errors.New("Register rejected: " + data.Error)
 	}
 	return nil
 }
 
 func (ac *AuthorizationController) checkClaim(sessionID SessionID, claim *packets.NodeJoinClaim) error {
-	// TODO: check ID, signature and sessionID
+	session, err := ac.sessionManager.ReleaseSession(sessionID)
+	if err != nil {
+		return errors.Wrapf(err, "Error getting section %d for authorization", sessionID)
+	}
+	if !claim.NodeRef.Equal(session.NodeID) {
+		return errors.New("Claim node ID is not equal to session node ID")
+	}
+	// TODO: check claim signature
 	return nil
 }
 
@@ -126,11 +137,11 @@ func (ac *AuthorizationController) processRegisterRequest(request network.Reques
 	data := request.GetData().(*RegistrationRequest)
 	err := ac.checkClaim(data.SessionID, data.JoinClaim)
 	if err != nil {
-		responseAuthorize := &OperationResponse{OpCode: OpRejected, Error: err.Error()}
+		responseAuthorize := &RegistrationResponse{Code: OpRejected, Error: err.Error()}
 		return ac.transport.BuildResponse(request, responseAuthorize), nil
 	}
 	ac.keeper.AddPendingClaim(data.JoinClaim)
-	return ac.transport.BuildResponse(request, &OperationResponse{OpCode: OpConfirmed}), nil
+	return ac.transport.BuildResponse(request, &RegistrationResponse{Code: OpConfirmed}), nil
 }
 
 func (ac *AuthorizationController) processAuthorizeRequest(request network.Request) (network.Response, error) {
@@ -140,9 +151,10 @@ func (ac *AuthorizationController) processAuthorizeRequest(request network.Reque
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
-		return ac.transport.BuildResponse(request, &OperationResponse{OpCode: OpRejected, Error: err.Error()}), nil
+		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
-	return ac.transport.BuildResponse(request, &OperationResponse{OpCode: OpConfirmed}), nil
+	session := ac.sessionManager.NewSession(request.GetSender(), data.Certificate)
+	return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
 func (ac *AuthorizationController) Start(networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
@@ -152,7 +164,10 @@ func (ac *AuthorizationController) Start(networkCoordinator core.NetworkCoordina
 	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
 }
 
-func NewAuthorizationController(options *common.Options, bootstrapController common.BootstrapController,
-	transport network.InternalTransport) *AuthorizationController {
-	return &AuthorizationController{options: options, bootstrapController: bootstrapController, transport: transport}
+func NewAuthorizationController(options *common.Options, transport network.InternalTransport, sessionManager *SessionManager) *AuthorizationController {
+	return &AuthorizationController{
+		options:        options,
+		transport:      transport,
+		sessionManager: sessionManager,
+	}
 }

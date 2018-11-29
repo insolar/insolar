@@ -17,23 +17,31 @@
 package bootstrap
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/pkg/errors"
 )
 
 type SessionID uint64
+
+//go:generate stringer -type=SessionState
 type SessionState uint8
 
 const (
-	SessionStarted SessionState = iota + 1
+	Authorized SessionState = iota + 1
+	Challenge1
+	Challenge2
 )
 
 type Session struct {
-	ID     SessionID
 	NodeID core.RecordRef
+	Cert   core.Certificate
 	State  SessionState
+
+	DiscoveryNonce Nonce
 
 	// TODO: expiry time
 }
@@ -41,25 +49,86 @@ type Session struct {
 type SessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
-	sessions map[core.RecordRef]*Session
+	sessions map[SessionID]*Session
 }
 
 func NewSessionManager() *SessionManager {
-	return &SessionManager{sessions: make(map[core.RecordRef]*Session)}
+	return &SessionManager{sessions: make(map[SessionID]*Session)}
 }
 
-func (sm *SessionManager) NewSession(ref core.RecordRef) *Session {
+func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.Certificate) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
-	result := &Session{ID: SessionID(id), NodeID: ref, State: SessionStarted}
+	result := &Session{NodeID: ref, State: Authorized, Cert: cert}
+	sessionID := SessionID(id)
 	sm.lock.Lock()
-	sm.sessions[ref] = result
+	sm.sessions[sessionID] = result
 	sm.lock.Unlock()
-	return result
+	return sessionID
 }
 
-func (sm *SessionManager) GetSession(ref core.RecordRef) *Session {
+func (sm *SessionManager) CheckSession(id SessionID, expected SessionState) error {
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
 
-	return sm.sessions[ref]
+	_, err := sm.checkSession(id, expected)
+	return err
+}
+
+func (sm *SessionManager) checkSession(id SessionID, expected SessionState) (*Session, error) {
+	session := sm.sessions[id]
+	if session == nil {
+		return nil, errors.New(fmt.Sprintf("no such session ID: %d", id))
+	}
+	if session.State != expected {
+		return nil, errors.New(fmt.Sprintf("session %d should have state %s but has %s", id, expected, session.State))
+	}
+	return session, nil
+}
+
+func (sm *SessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error {
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	session, err := sm.checkSession(id, Authorized)
+	if err != nil {
+		return err
+	}
+	session.DiscoveryNonce = discoveryNonce
+	session.State = Challenge1
+	return nil
+}
+
+func (sm *SessionManager) GetChallengeData(id SessionID) (core.Certificate, Nonce, error) {
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	session, err := sm.checkSession(id, Challenge1)
+	if err != nil {
+		return nil, nil, err
+	}
+	return session.Cert, session.DiscoveryNonce, nil
+}
+
+func (sm *SessionManager) ChallengePassed(id SessionID) error {
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	session, err := sm.checkSession(id, Challenge1)
+	if err != nil {
+		return err
+	}
+	session.State = Challenge2
+	return nil
+}
+
+func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	session, err := sm.checkSession(id, Challenge2)
+	if err != nil {
+		return nil, err
+	}
+	delete(sm.sessions, id)
+	return session, nil
 }

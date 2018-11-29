@@ -59,7 +59,7 @@ func createOrigin(configuration configuration.Configuration) (MutableNode, error
 	// TODO: pass public key
 	return newMutableNode(
 		nodeID,
-		[]core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
 		nil,
 		0,
 		publicAddress,
@@ -86,7 +86,7 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		state:        network.Undefined,
 		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
-		indexNode:    make(map[core.NodeRole]*recordRefSet),
+		indexNode:    make(map[core.StaticRole]*recordRefSet),
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 	}
 }
@@ -105,7 +105,7 @@ type nodekeeper struct {
 
 	activeLock   sync.RWMutex
 	active       map[core.RecordRef]core.Node
-	indexNode    map[core.NodeRole]*recordRefSet
+	indexNode    map[core.StaticRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
 
 	sync     network.UnsyncList
@@ -156,7 +156,7 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 	return result
 }
 
-func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
+func (nk *nodekeeper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
@@ -287,19 +287,19 @@ func (nk *nodekeeper) MoveSyncToActive() {
 	mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
 }
 
-func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
+func jetRoleToNodeRole(role core.DynamicRole) core.StaticRole {
 	switch role {
-	case core.RoleVirtualExecutor:
-		return core.RoleVirtual
-	case core.RoleVirtualValidator:
-		return core.RoleVirtual
-	case core.RoleLightExecutor:
-		return core.RoleLightMaterial
-	case core.RoleLightValidator:
-		return core.RoleLightMaterial
-	case core.RoleHeavyExecutor:
-		return core.RoleHeavyMaterial
+	case core.DynamicRoleVirtualExecutor:
+		return core.StaticRoleVirtual
+	case core.DynamicRoleVirtualValidator:
+		return core.StaticRoleVirtual
+	case core.DynamicRoleLightExecutor:
+		return core.StaticRoleLightMaterial
+	case core.DynamicRoleLightValidator:
+		return core.StaticRoleLightMaterial
+	case core.DynamicRoleHeavyExecutor:
+		return core.StaticRoleHeavyMaterial
 	default:
-		return core.RoleUnknown
+		return core.StaticRoleUnknown
 	}
 }

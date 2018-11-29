@@ -34,16 +34,8 @@ type Controller interface {
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
 	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
-	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
+	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
 	Bootstrap(ctx context.Context) error
-	// Authorize start authorization process on discovery node.
-	Authorize(ctx context.Context) error
-	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
-	// DEPRECATED
-	ResendPulseToKnownHosts(pulse core.Pulse)
-
-	// GetNodeID get self node id (should be removed in far future).
-	GetNodeID() core.RecordRef
 
 	// Inject inject components.
 	Inject(cryptographyService core.CryptographyService,
@@ -208,8 +200,6 @@ type RoutingTable interface {
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
 	Rebalance(PartitionPolicy)
-	// GetLocalNodes get all nodes from the local globe.
-	GetLocalNodes() []core.RecordRef
 	// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
 	GetRandomNodes(count int) []host.Host
 }

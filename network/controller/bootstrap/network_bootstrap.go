@@ -20,45 +20,77 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/pkg/errors"
 )
 
 type NetworkBootstrapper struct {
 	certificate         core.Certificate
+	sessionManager      *SessionManager
 	bootstrapper        *Bootstrapper
 	authController      *AuthorizationController
 	challengeController *ChallengeResponseController
+	nodeKeeper          network.NodeKeeper
 }
 
 func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
+	if len(nb.certificate.GetBootstrapNodes()) == 0 {
+		log.Info("Zero bootstrap")
+		return nil
+	}
 	if OriginIsDiscovery(nb.certificate) {
 		return nb.bootstrapDiscovery(ctx)
 	}
 	return nb.bootstrapJoiner(ctx)
 }
 
+func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyService,
+	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
+
+	nb.nodeKeeper = nodeKeeper
+	nb.bootstrapper.Start(nodeKeeper)
+	nb.authController.Start(networkCoordinator, nodeKeeper)
+	nb.challengeController.Start(cryptographyService, nodeKeeper)
+}
+
+type DiscoveryNode struct {
+	Host *host.Host
+	Node core.BootstrapNode
+}
+
 func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
-	err := nb.bootstrapper.Bootstrap(ctx)
+	discoveryNode, err := nb.bootstrapper.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Error bootstrapping to discovery node")
 	}
-	sessionID, err := nb.bootstrapper.StartSession(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Error starting connection session to discovery node")
-	}
-	err = nb.authController.Authorize(ctx, sessionID, nb.certificate)
+	sessionID, err := nb.authController.Authorize(ctx, discoveryNode, nb.certificate)
 	if err != nil {
 		return errors.Wrap(err, "Error authorizing on discovery node")
 	}
-	data, err := nb.challengeController.Execute(sessionID, nb.certificate)
+	data, err := nb.challengeController.Execute(ctx, discoveryNode, sessionID)
 	if err != nil {
 		return errors.Wrap(err, "Error executing double challenge response")
 	}
-	// TODO: use data
-	print(data.AssignShortID)
-	return nb.authController.Register(ctx, sessionID)
+	origin := nb.nodeKeeper.GetOrigin()
+	mutableOrigin := origin.(nodenetwork.MutableNode)
+	mutableOrigin.SetShortID(data.AssignShortID)
+	return nb.authController.Register(ctx, discoveryNode, sessionID)
 }
 
 func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
 	return nb.bootstrapper.BootstrapDiscovery(ctx)
+}
+
+func NewNetworkBootstrapper(options *common.Options, cert core.Certificate, transport network.InternalTransport) *NetworkBootstrapper {
+	nb := &NetworkBootstrapper{}
+	nb.certificate = cert
+	nb.sessionManager = NewSessionManager()
+	nb.bootstrapper = NewBootstrapper(options, cert, transport)
+	nb.authController = NewAuthorizationController(options, transport, nb.sessionManager)
+	nb.challengeController = NewChallengeResponseController(options, transport, nb.sessionManager)
+	return nb
 }

@@ -71,11 +71,11 @@ func NewLedger() Ledger {
 
 		JetCoordinator: JetCoordinator{
 			RoleCounts: map[int]int{
-				int(core.RoleVirtualExecutor):  1,
-				int(core.RoleHeavyExecutor):    1,
-				int(core.RoleLightExecutor):    1,
-				int(core.RoleVirtualValidator): 1,
-				int(core.RoleLightValidator):   1,
+				int(core.DynamicRoleVirtualExecutor):  1,
+				int(core.DynamicRoleHeavyExecutor):    1,
+				int(core.DynamicRoleLightExecutor):    1,
+				int(core.DynamicRoleVirtualValidator): 1,
+				int(core.DynamicRoleLightValidator):   1,
 			},
 		},
 

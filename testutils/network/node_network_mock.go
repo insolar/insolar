@@ -29,7 +29,7 @@ type NodeNetworkMock struct {
 	GetActiveNodesPreCounter uint64
 	GetActiveNodesMock       mNodeNetworkMockGetActiveNodes
 
-	GetActiveNodesByRoleFunc       func(p core.JetRole) (r []core.RecordRef)
+	GetActiveNodesByRoleFunc       func(p core.DynamicRole) (r []core.RecordRef)
 	GetActiveNodesByRoleCounter    uint64
 	GetActiveNodesByRolePreCounter uint64
 	GetActiveNodesByRoleMock       mNodeNetworkMockGetActiveNodesByRole
@@ -177,32 +177,32 @@ type mNodeNetworkMockGetActiveNodesByRole struct {
 
 //NodeNetworkMockGetActiveNodesByRoleParams represents input parameters of the NodeNetwork.GetActiveNodesByRole
 type NodeNetworkMockGetActiveNodesByRoleParams struct {
-	p core.JetRole
+	p core.DynamicRole
 }
 
 //Expect sets up expected params for the NodeNetwork.GetActiveNodesByRole
-func (m *mNodeNetworkMockGetActiveNodesByRole) Expect(p core.JetRole) *mNodeNetworkMockGetActiveNodesByRole {
+func (m *mNodeNetworkMockGetActiveNodesByRole) Expect(p core.DynamicRole) *mNodeNetworkMockGetActiveNodesByRole {
 	m.mockExpectations = &NodeNetworkMockGetActiveNodesByRoleParams{p}
 	return m
 }
 
 //Return sets up a mock for NodeNetwork.GetActiveNodesByRole to return Return's arguments
 func (m *mNodeNetworkMockGetActiveNodesByRole) Return(r []core.RecordRef) *NodeNetworkMock {
-	m.mock.GetActiveNodesByRoleFunc = func(p core.JetRole) []core.RecordRef {
+	m.mock.GetActiveNodesByRoleFunc = func(p core.DynamicRole) []core.RecordRef {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of NodeNetwork.GetActiveNodesByRole method
-func (m *mNodeNetworkMockGetActiveNodesByRole) Set(f func(p core.JetRole) (r []core.RecordRef)) *NodeNetworkMock {
+func (m *mNodeNetworkMockGetActiveNodesByRole) Set(f func(p core.DynamicRole) (r []core.RecordRef)) *NodeNetworkMock {
 	m.mock.GetActiveNodesByRoleFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetActiveNodesByRole implements github.com/insolar/insolar/core.NodeNetwork interface
-func (m *NodeNetworkMock) GetActiveNodesByRole(p core.JetRole) (r []core.RecordRef) {
+func (m *NodeNetworkMock) GetActiveNodesByRole(p core.DynamicRole) (r []core.RecordRef) {
 	atomic.AddUint64(&m.GetActiveNodesByRolePreCounter, 1)
 	defer atomic.AddUint64(&m.GetActiveNodesByRoleCounter, 1)
 

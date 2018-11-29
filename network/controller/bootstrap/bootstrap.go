@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/controller/pinger"
@@ -32,14 +33,11 @@ import (
 )
 
 type Bootstrapper struct {
-	options        *common.Options
-	transport      network.InternalTransport
-	pinger         *pinger.Pinger
-	cert           core.Certificate
-	keeper         network.NodeKeeper
-	sessionManager *SessionManager
-
-	chosenDiscoveryNode *host.Host
+	options   *common.Options
+	transport network.InternalTransport
+	pinger    *pinger.Pinger
+	cert      core.Certificate
+	keeper    network.NodeKeeper
 }
 
 type NodeBootstrapRequest struct{}
@@ -82,34 +80,16 @@ func init() {
 	gob.Register(&GenesisResponse{})
 }
 
-func (bc *Bootstrapper) GetChosenDiscoveryNode() *host.Host {
-	return bc.chosenDiscoveryNode
-}
-
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
-func (bc *Bootstrapper) Bootstrap(ctx context.Context) error {
+func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
+	log.Info("Bootstrapping to discovery node")
 	ch := bc.getBootstrapHostsChannel(ctx, 1)
 	host := bc.waitResultFromChannel(ctx, ch)
 	if host == nil {
-		return errors.New("Failed to bootstrap to any of discovery nodes")
+		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
 	}
-	bc.chosenDiscoveryNode = host
-	return nil
-}
-
-// StartSession initiate connecting session between connecting node and discovery node (step 2 of the bootstrap process)
-func (bc *Bootstrapper) StartSession(ctx context.Context) (SessionID, error) {
-	request := bc.transport.NewRequestBuilder().Type(types.StartSession).Data(nil).Build()
-	future, err := bc.transport.SendRequestPacket(request, bc.chosenDiscoveryNode)
-	if err != nil {
-		return 0, errors.Wrapf(err, "Failed to send StartSession request to discovery node %s", bc.chosenDiscoveryNode)
-	}
-	response, err := future.GetResponse(bc.options.BootstrapTimeout)
-	if err != nil {
-		return 0, errors.Wrapf(err, "Failed to get StartSession response from discovery node %s", bc.chosenDiscoveryNode)
-	}
-	data := response.GetData().(*StartSessionResponse)
-	return data.SessionID, nil
+	discovery := FindDiscovery(bc.cert, host.NodeID)
+	return &DiscoveryNode{Host: host, Node: discovery}, nil
 }
 
 func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
@@ -118,6 +98,7 @@ func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
 }
 
 func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
+	log.Info("Network bootstrap between discovery nodes")
 	discoveryNodes := bc.cert.GetBootstrapNodes()
 	var err error
 	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.cert.GetNodeRef())
@@ -262,23 +243,17 @@ func (bc *Bootstrapper) processGenesis(request network.Request) (network.Respons
 	return bc.transport.BuildResponse(request, &GenesisResponse{Discovery: bc.keeper.GetOrigin()}), nil
 }
 
-func (bc *Bootstrapper) processStartSession(request network.Request) (network.Response, error) {
-	session := bc.sessionManager.NewSession(request.GetSender())
-	return bc.transport.BuildResponse(request, &StartSessionResponse{SessionID: session.ID}), nil
-}
-
-func (bc *Bootstrapper) Start() {
+func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
+	bc.keeper = keeper
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
-	bc.transport.RegisterPacketHandler(types.StartSession, bc.processStartSession)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
 }
 
-func NewBootstrapController(options *common.Options, certificate core.Certificate, transport network.InternalTransport) *Bootstrapper {
+func NewBootstrapper(options *common.Options, certificate core.Certificate, transport network.InternalTransport) *Bootstrapper {
 	return &Bootstrapper{
-		options:        options,
-		cert:           certificate,
-		transport:      transport,
-		pinger:         pinger.NewPinger(transport),
-		sessionManager: NewSessionManager(),
+		options:   options,
+		cert:      certificate,
+		transport: transport,
+		pinger:    pinger.NewPinger(transport),
 	}
 }

@@ -312,7 +312,7 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 		nodeState := &noderecord.NodeRecord{
 			Record: noderecord.RecordInfo{
 				PublicKey: nodePubKey,
-				Role:      core.GetRoleFromString(discoverNode.Role),
+				Role:      core.GetStaticRoleFromString(discoverNode.Role),
 			},
 		}
 		nodeData, err := serializeInstance(nodeState)
@@ -342,6 +342,7 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 			node: certificate.BootstrapNode{
 				PublicKey: nodePubKey,
 				Host:      discoverNode.Host,
+				NodeRef:   contract.String(),
 			},
 			privKey: privKey,
 			ref:     contract,

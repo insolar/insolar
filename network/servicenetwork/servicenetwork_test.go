@@ -16,31 +16,7 @@
 
 package servicenetwork
 
-import (
-	"context"
-	"crypto"
-	"strconv"
-	"strings"
-	"sync"
-	"testing"
-	"time"
-
-	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/delegationtoken"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/utils"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
-)
-
+/*
 func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) (network.NodeKeeper, core.Node) {
 	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
 	keeper := nodenetwork.NewNodeKeeper(origin)
@@ -377,3 +353,4 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 
 	require.True(t, success)
 }
+*/
