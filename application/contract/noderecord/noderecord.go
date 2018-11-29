@@ -59,6 +59,8 @@ func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 	}, nil
 }
 
+var INSATTR_GetNodeInfo_API = true
+
 // GetNodeInfo returns RecordInfo
 func (nr *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	return nr.Record, nil

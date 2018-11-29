@@ -33,4 +33,6 @@ type NetworkCoordinator interface {
 
 	// SetPulse uses PulseManager component for saving pulse info
 	SetPulse(ctx context.Context, pulse Pulse) error
+
+	CreateNodeCert(context.Context, string) (Certificate, error)
 }

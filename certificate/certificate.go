@@ -164,3 +164,22 @@ func (cert *Certificate) Dump() (string, error) {
 
 	return string(result), nil
 }
+
+func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (core.Certificate, error) {
+	newCert := Certificate{
+		MajorityRule:        cert.MajorityRule,
+		MinRoles:            cert.MinRoles,
+		PublicKey:           pKey,
+		Reference:           ref,
+		PulsarPublicKeys:    cert.PulsarPublicKeys,
+		Role:                role,
+		BootstrapNodes:      make([]core.BootstrapNode, len(cert.BootstrapNodes)),
+		RootDomainReference: cert.RootDomainReference,
+	}
+	for i := range cert.BootstrapNodes {
+		newCert.BootstrapNodes[i].Host = cert.BootstrapNodes[i].Host
+		newCert.BootstrapNodes[i].PublicKey = cert.BootstrapNodes[i].PublicKey
+		newCert.BootstrapNodes[i].NetworkSign = cert.BootstrapNodes[i].NetworkSign
+	}
+	return &newCert, nil
+}

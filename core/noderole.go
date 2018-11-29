@@ -45,3 +45,16 @@ func GetRoleFromString(role string) NodeRole {
 
 	return RoleUnknown
 }
+
+func (nr NodeRole) String() string {
+	switch nr {
+	case RoleVirtual:
+		return "virtual"
+	case RoleHeavyMaterial:
+		return "heavy_material"
+	case RoleLightMaterial:
+		return "light_material"
+	}
+
+	return "unknown"
+}

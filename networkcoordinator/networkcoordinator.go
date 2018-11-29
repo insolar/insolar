@@ -18,8 +18,10 @@ package networkcoordinator
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
@@ -70,4 +72,23 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 // SetPulse writes pulse data on local storage
 func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return nc.getCoordinator().SetPulse(ctx, pulse)
+}
+
+func (nc *NetworkCoordinator) CreateNodeCert(ctx context.Context, ref string) (core.Certificate, error) {
+	rr := core.NewRefFromBase58(ref)
+	res, err := nc.ContractRequester.SendRequest(ctx, &rr, "GetNodeInfo", []interface{}{})
+	if err != nil {
+		return nil, err
+	}
+	z, err := core.UnMarshalResponse(res.(*reply.CallMethod).Result, []interface{}{nil})
+	if err != nil {
+		fmt.Println(err)
+	}
+	answer := z[0].(map[interface{}]interface{})
+
+	cert, err := nc.Certificate.NewCertForHost(
+		answer["PublicKey"].(string),
+		core.NodeRole(answer["Role"].(uint64)).String(),
+		ref)
+	return cert, nil
 }

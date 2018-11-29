@@ -22,6 +22,7 @@ type Certificate interface {
 	GetRootDomainReference() *RecordRef
 	SetRootDomainReference(ref *RecordRef)
 	GetBootstrapNodes() []BootstrapNode
+	NewCertForHost(string, string, string) (Certificate, error)
 }
 
 // BootstrapNode holds info about bootstrap nodes
