@@ -40,7 +40,10 @@ func main() {
 	}
 
 	ref := core.RecordRef{}.FromSlice(append(make([]byte, 63), 1))
+
+	// TODO remove
 	log.Error(ref)
+
 	empty, _ := core.Serialize([]interface{}{})
 
 	caller := testutils.RandomRef()

@@ -31,6 +31,7 @@ func TestHealthCheck(t *testing.T) {
 	insgoccPath := currentPath + "/../../../bin/insgocc"
 	contractPath := currentPath + "/healthcheck/healthcheck.go"
 
+	// TODO remove debug
 	log.Warnf(currentPath)
 	log.Warnf(insgoccPath)
 	log.Warnf(contractPath)

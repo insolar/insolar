@@ -61,6 +61,7 @@ func main() {
 
 	insider := ginsider.NewGoInsider(*path, *rpcProtocol, *rpcAddress)
 
+	// TODO fix
 	if *code != "" {
 		codeSlice := strings.Split(*code, ":")
 		if len(codeSlice) != 2 {
@@ -70,6 +71,7 @@ func main() {
 		ref := codeSlice[0]
 		pluginPath := codeSlice[1]
 
+		// TODO remove
 		log.Warnf("ref from param: %s", ref)
 		log.Warnf("ref as core.RecordRef %s", core.RecordRef{}.FromSlice([]byte(ref)))
 		log.Warnf(pluginPath)
