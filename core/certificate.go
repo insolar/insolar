@@ -16,6 +16,7 @@
 
 package core
 
+//go:generate minimock -i github.com/insolar/insolar/core.Certificate -o ../testutils -s _mock.go
 // Certificate interface provides methods to manage keys
 type Certificate interface {
 	GetRole() NodeRole
