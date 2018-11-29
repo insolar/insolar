@@ -545,13 +545,22 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.ValidateRecord)
+func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.ValidateRecord)
 
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(ctx, msg.Object.Record(), true)
-		if err != nil {
-			return errors.Wrap(err, "failed to fetch object index")
+		if err == storage.ErrNotFound {
+			heavy, err := h.findHeavy(ctx, msg.Object, pulseNumber)
+			if err != nil {
+				return err
+			}
+			idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Object, heavy)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
 		}
 
 		// Rewinding to validated record.
