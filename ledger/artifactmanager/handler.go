@@ -757,15 +757,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		len(msg.PendingRequests),
 	)
 
-	latestPulse, err := h.db.GetLatestPulseNumber(ctx)
-	if err != nil {
-		return nil, err
-	}
-	lastPulse, err := h.db.GetPulse(ctx, latestPulse)
-	if err != nil {
-		return nil, err
-	}
-
 	for id, meta := range msg.PendingRequests {
 		err := h.db.SetObjectIndex(ctx, &id, meta.Index)
 		if err != nil {
