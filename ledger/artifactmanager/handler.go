@@ -764,7 +764,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 			continue
 		}
 		if !bytes.Equal(id.Bytes(), newId.Bytes()) {
-			inslog.Errorf("Problems with saving the pending request, ids don't match - %v", meta)
+			inslog.Errorf("Problems with saving the pending request, ids don't match - %v  %v", id.Bytes(), newId.Bytes())
 			continue
 		}
 		h.Recent.AddPendingRequest(id)
