@@ -110,7 +110,7 @@ func TestGenesisDataProvider_setInfo_ErrorSendRequest(t *testing.T) {
 
 	err := gdp.setInfo(ctx)
 
-	require.EqualError(t, err, "[ setInfo ] Can't send request: test reasons")
+	require.Contains(t, err.Error(), "test reasons")
 	require.Equal(t, &rootDomainRef, gdp.rootDomainRef)
 }
 
@@ -194,7 +194,7 @@ func TestGenesisDataProvider_GetRootMember_Error(t *testing.T) {
 
 	res, err := gdp.GetRootMember(ctx)
 
-	require.EqualError(t, err, "[ GenesisDataProvider::GetRootMember ] Can't get info: [ setInfo ] Can't send request: test reasons")
+	require.Contains(t, err.Error(), "test reasons")
 	require.Nil(t, res)
 }
 
@@ -247,6 +247,6 @@ func TestGenesisDataProvider_GetNodeDomain_Error(t *testing.T) {
 
 	res, err := gdp.GetNodeDomain(ctx)
 
-	require.EqualError(t, err, "[ GenesisDataProvider::GetNodeDomain ] Can't get info: [ setInfo ] Can't send request: test reasons")
+	require.Contains(t, err.Error(), "test reasons")
 	require.Nil(t, res)
 }
