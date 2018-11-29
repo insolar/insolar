@@ -42,7 +42,7 @@ func (m *Manager) Register(components ...interface{}) {
 func (m *Manager) Inject(components ...interface{}) {
 	m.Register(components...)
 
-	for _, componentMeta := range components {
+	for _, componentMeta := range m.components {
 		component := reflect.ValueOf(componentMeta).Elem()
 		componentType := component.Type()
 		log.Debugf("ComponentManager: Inject component: %s", componentType.String())
