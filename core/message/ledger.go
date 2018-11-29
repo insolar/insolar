@@ -18,7 +18,6 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/index"
 )
 
 type ledgerMessage struct {
@@ -179,14 +178,14 @@ type HotIndexes struct {
 	Jet             core.RecordRef
 	Drop            []byte
 	RecentObjects   map[core.RecordID]*HotIndex
-	PendingRequests map[core.RecordID]*HotIndex
+	PendingRequests map[core.RecordID][]byte
 	PulseNumber     core.PulseNumber
 }
 
 // HotIndex contains meat about hot-data
 type HotIndex struct {
 	Meta *core.RecentObjectsIndexMeta
-	Index *index.ObjectLifeline
+	Index []byte
 }
 
 // Type implementation of Message interface.
