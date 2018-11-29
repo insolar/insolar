@@ -113,3 +113,34 @@ func TestGenesisDataProvider_setInfo_ErrorSendRequest(t *testing.T) {
 	require.EqualError(t, err, "[ setInfo ] Can't send request: test reasons")
 	require.Equal(t, &rootDomainRef, gdp.rootDomainRef)
 }
+
+func TestGenesisDataProvider_GetRootDomain(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	rootDomainRef := testutils.RandomRef()
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, &rootDomainRef),
+		ContractRequester: mockContractRequester(t, nil),
+	}
+
+	res := gdp.GetRootDomain(ctx)
+
+	require.Equal(t, &rootDomainRef, res)
+}
+
+func TestGenesisDataProvider_GetRootDomain_AlreadySet(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	rootDomainRef := testutils.RandomRef()
+	newRootDomainRef := testutils.RandomRef()
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, &newRootDomainRef),
+		ContractRequester: mockContractRequester(t, nil),
+	}
+	gdp.rootDomainRef = &rootDomainRef
+
+	res := gdp.GetRootDomain(ctx)
+
+	require.Equal(t, &rootDomainRef, res)
+	require.NotEqual(t, &newRootDomainRef, res)
+}
