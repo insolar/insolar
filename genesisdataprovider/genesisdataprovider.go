@@ -76,7 +76,9 @@ func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordR
 
 // GetNodeDomain returns reference to NodeDomain
 func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.RecordRef, error) {
+	gdp.rootMemberRefLock.Lock()
 	gdp.nodeDomainRefLock.Lock()
+	defer gdp.rootMemberRefLock.Unlock()
 	defer gdp.nodeDomainRefLock.Unlock()
 	if gdp.nodeDomainRef == nil {
 		err := gdp.setInfo(ctx)
@@ -90,7 +92,9 @@ func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.Record
 // GetRootMember returns reference to RootMember
 func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*core.RecordRef, error) {
 	gdp.rootMemberRefLock.Lock()
+	gdp.nodeDomainRefLock.Lock()
 	defer gdp.rootMemberRefLock.Unlock()
+	defer gdp.nodeDomainRefLock.Unlock()
 	if gdp.rootMemberRef == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {
