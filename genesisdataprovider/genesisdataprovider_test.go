@@ -15,3 +15,28 @@
  */
 
 package genesisdataprovider
+
+import (
+	"context"
+	"testing"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
+)
+
+func mockContractRequesterWithError(t *testing.T) *testutils.ContractRequesterMock {
+	contractRequesterMock := testutils.NewContractRequesterMock(t)
+	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (r core.Reply, r1 error) {
+		return nil, errors.New("test reasons")
+	}
+	return contractRequesterMock
+}
+
+func mockContractRequester(t *testing.T, res core.Reply) *testutils.ContractRequesterMock {
+	contractRequesterMock := testutils.NewContractRequesterMock(t)
+	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (r core.Reply, r1 error) {
+		return res, nil
+	}
+	return contractRequesterMock
+}
