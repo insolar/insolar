@@ -78,11 +78,11 @@ func (nc *NetworkCoordinator) CreateNodeCert(ctx context.Context, ref string) (c
 	rr := core.NewRefFromBase58(ref)
 	res, err := nc.ContractRequester.SendRequest(ctx, &rr, "GetNodeInfo", []interface{}{})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "[ CreateNodeCert ] Couldn't call GetNodeInfo")
 	}
 	z, err := core.UnMarshalResponse(res.(*reply.CallMethod).Result, []interface{}{nil})
 	if err != nil {
-		errors.Wrap(err, "[ CreateNodeCert ] Couldn't unmarshall response")
+		return nil, errors.Wrap(err, "[ CreateNodeCert ] Couldn't unmarshall response")
 	}
 	answer := z[0].(map[interface{}]interface{})
 
@@ -90,5 +90,8 @@ func (nc *NetworkCoordinator) CreateNodeCert(ctx context.Context, ref string) (c
 		answer["PublicKey"].(string),
 		core.NodeRole(answer["Role"].(uint64)).String(),
 		ref)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ CreateNodeCert ] Couldn't create certificate")
+	}
 	return cert, nil
 }
