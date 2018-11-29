@@ -20,7 +20,7 @@ import (
 	"crypto"
 )
 
-type NetworkNode interface {
+type NodeMeta interface {
 	GetNodeRef() *RecordRef
 	GetPublicKey() crypto.PublicKey
 }
@@ -28,7 +28,7 @@ type NetworkNode interface {
 // Certificate interface provides methods to manage keys
 //go:generate minimock -i github.com/insolar/insolar/core.Certificate -o ../testutils -s _mock.go
 type Certificate interface {
-	NetworkNode
+	NodeMeta
 
 	GetRole() NodeRole
 	GetRootDomainReference() *RecordRef
@@ -38,7 +38,7 @@ type Certificate interface {
 
 //go:generate minimock -i github.com/insolar/insolar/core.BootstrapNode -o ../testutils -s _mock.go
 type BootstrapNode interface {
-	NetworkNode
+	NodeMeta
 
 	GetHost() string
 }
