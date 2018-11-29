@@ -32,7 +32,7 @@ import (
 
 func main() {
 	rpcAddress := pflag.StringP("rpc", "a", "", "address and port of RPC API")
-	rpcProtocol := pflag.StringP("rpc-proto", "p", "", "protocol of RPC API")
+	rpcProtocol := pflag.StringP("rpc-proto", "p", "tcp", "protocol of RPC API, tcp by default")
 	refString := pflag.StringP("ref", "r", "", "ref of healthcheck contract")
 	pflag.Parse()
 
