@@ -758,9 +758,14 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 	)
 
 	for id, meta := range msg.PendingRequests {
-		err := h.db.SetObjectIndex(ctx, &id, meta.Index)
+		newId, err := h.db.SetRecord(ctx, id.Pulse(), record.DeserializeRecord(meta))
 		if err != nil {
 			inslog.Error(err)
+			continue
+		}
+		if !bytes.Equal(id.Bytes(), newId.Bytes()) {
+			inslog.Errorf("Problems with saving the pending request, ids don't match - %v", meta)
+			continue
 		}
 		h.Recent.AddPendingRequest(id)
 	}
