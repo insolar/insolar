@@ -771,9 +771,15 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 	}
 
 	for id, meta := range msg.RecentObjects {
-		err := h.db.SetObjectIndex(ctx, &id, meta.Index)
+		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
 			inslog.Error(err)
+			continue
+		}
+		err = h.db.SetObjectIndex(ctx, &id, decodedIndex)
+		if err != nil {
+			inslog.Error(err)
+			continue
 		}
 		meta.Meta.TTL--
 		h.Recent.AddObjectWithMeta(id, meta.Meta)
