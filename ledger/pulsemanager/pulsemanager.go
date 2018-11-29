@@ -221,32 +221,12 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 			return err
 		}
 
-		wg := sync.WaitGroup{}
-		wg.Add(2)
-
-		var dropError error
-		go func() {
-			if err = m.processDrop(ctx, latestPulse, dropSerialized, messages); err != nil {
-				dropError = errors.Wrap(err, "processDrop failed")
-			}
-			wg.Done()
-		}()
-
-		var hotRecordsError error
-		go func() {
-			if hotRecordsError := m.processRecentObjects(ctx, latestPulse, drop, dropSerialized); hotRecordsError != nil {
-				hotRecordsError = errors.Wrap(err, "processRecentObjects failed")
-			}
-			wg.Done()
-		}()
-
-		wg.Wait()
-
-		if dropError != nil {
-			return dropError
+		if hotRecordsError := m.processRecentObjects(ctx, latestPulse, drop, dropSerialized); hotRecordsError != nil {
+			return errors.Wrap(err, "processRecentObjects failed")
 		}
-		if hotRecordsError != nil {
-			return hotRecordsError
+
+		if err = m.processDrop(ctx, latestPulse, dropSerialized, messages); err != nil {
+			return errors.Wrap(err, "processDrop failed")
 		}
 
 		if err = m.db.SetLastPulseAsLightMaterial(ctx, *latestPulse.Prev); err != nil {
