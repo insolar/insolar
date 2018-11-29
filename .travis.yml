@@ -14,15 +14,15 @@ env:
 # https://docs.travis-ci.com/user/common-build-problems/#my-build-script-is-killed-without-any-error
     - GOMAXPROCS=2
 # debug logging by default
-    - INSOLAR_LOG_LEVEL=debug
+    - INSOLAR_LOG_LEVEL=info
 
 before_install:
   - make install-deps
 install:
   - make pre-build
 script:
-  - make build
   - make functest
+  - make build
   - make test_with_coverage
 
 after_success:
