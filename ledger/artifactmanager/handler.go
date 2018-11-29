@@ -211,12 +211,12 @@ func (h *MessageHandler) handleGetObject(
 			if stateID != nil && pulseNumber-stateID.Pulse() < h.conf.LightChainLimit {
 				// Find light executor that saved the state.
 				nodes, err = h.JetCoordinator.QueryRole(
-					ctx, core.RoleLightExecutor, &msg.Head, stateID.Pulse(),
+					ctx, core.DynamicRoleLightExecutor, &msg.Head, stateID.Pulse(),
 				)
 			} else {
 				// Find heavy that has this object.
 				nodes, err = h.JetCoordinator.QueryRole(
-					ctx, core.RoleHeavyExecutor, &msg.Head, pulseNumber,
+					ctx, core.DynamicRoleHeavyExecutor, &msg.Head, pulseNumber,
 				)
 			}
 			if err != nil {
@@ -326,12 +326,12 @@ func (h *MessageHandler) handleGetChildren(
 		if pulseNumber-currentChild.Pulse() < h.conf.LightChainLimit {
 			// Find light executor that saved the state.
 			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.RoleLightExecutor, &msg.Parent, currentChild.Pulse(),
+				ctx, core.DynamicRoleLightExecutor, &msg.Parent, currentChild.Pulse(),
 			)
 		} else {
 			// Find heavy that has this object.
 			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.RoleHeavyExecutor, &msg.Parent, pulseNumber,
+				ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, pulseNumber,
 			)
 		}
 		if err != nil {
@@ -710,7 +710,7 @@ func validateState(old record.State, new record.State) error {
 
 func (h *MessageHandler) findHeavy(ctx context.Context, obj core.RecordRef, pulse core.PulseNumber) (*core.RecordRef, error) {
 	nodes, err := h.JetCoordinator.QueryRole(
-		ctx, core.RoleHeavyExecutor, &obj, pulse,
+		ctx, core.DynamicRoleHeavyExecutor, &obj, pulse,
 	)
 	if err != nil {
 		return nil, err
