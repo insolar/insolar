@@ -31,7 +31,6 @@ type GenesisDataProvider struct {
 	Certificate       core.Certificate       `inject:""`
 	ContractRequester core.ContractRequester `inject:""`
 
-	rootDomainRef *core.RecordRef
 	rootMemberRef *core.RecordRef
 	nodeDomainRef *core.RecordRef
 	lock          sync.RWMutex

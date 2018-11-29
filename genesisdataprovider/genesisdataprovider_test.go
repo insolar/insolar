@@ -80,38 +80,34 @@ func TestNew(t *testing.T) {
 
 func TestGenesisDataProvider_setInfo(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	rootDomainRef := testutils.RandomRef()
 	rootMemberRef := testutils.RandomRef()
 	nodeDomainRef := testutils.RandomRef()
 
 	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, &rootDomainRef),
+		Certificate:       mockCertificate(t, nil),
 		ContractRequester: mockContractRequester(t, infoRes),
 	}
 
 	err := gdp.setInfo(ctx)
 
 	require.NoError(t, err)
-	require.Equal(t, &rootDomainRef, gdp.rootDomainRef)
 	require.Equal(t, &rootMemberRef, gdp.rootMemberRef)
 	require.Equal(t, &nodeDomainRef, gdp.nodeDomainRef)
 }
 
 func TestGenesisDataProvider_setInfo_ErrorSendRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	rootDomainRef := testutils.RandomRef()
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, &rootDomainRef),
+		Certificate:       mockCertificate(t, nil),
 		ContractRequester: mockContractRequesterWithError(t),
 	}
 
 	err := gdp.setInfo(ctx)
 
 	require.Contains(t, err.Error(), "test reasons")
-	require.Equal(t, &rootDomainRef, gdp.rootDomainRef)
 }
 
 func TestGenesisDataProvider_GetRootDomain(t *testing.T) {
@@ -119,30 +115,12 @@ func TestGenesisDataProvider_GetRootDomain(t *testing.T) {
 	rootDomainRef := testutils.RandomRef()
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, &rootDomainRef),
-		ContractRequester: mockContractRequester(t, nil),
+		Certificate: mockCertificate(t, &rootDomainRef),
 	}
 
 	res := gdp.GetRootDomain(ctx)
 
 	require.Equal(t, &rootDomainRef, res)
-}
-
-func TestGenesisDataProvider_GetRootDomain_AlreadySet(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	rootDomainRef := testutils.RandomRef()
-	newRootDomainRef := testutils.RandomRef()
-
-	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, &newRootDomainRef),
-		ContractRequester: mockContractRequester(t, nil),
-	}
-	gdp.rootDomainRef = &rootDomainRef
-
-	res := gdp.GetRootDomain(ctx)
-
-	require.Equal(t, &rootDomainRef, res)
-	require.NotEqual(t, &newRootDomainRef, res)
 }
 
 func TestGenesisDataProvider_GetRootMember(t *testing.T) {
