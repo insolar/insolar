@@ -18,10 +18,13 @@ package genesisdataprovider
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -51,6 +54,16 @@ func mockCertificate(t *testing.T, rootDomainRef *core.RecordRef) *testutils.Cer
 	return certificateMock
 }
 
+func mockInfoResult(rootMemberRef core.RecordRef, nodeDomainRef core.RecordRef) core.Reply {
+	result := map[string]interface{}{
+		"root_member": rootMemberRef.String(),
+		"node_domain": nodeDomainRef.String(),
+	}
+	resJSON, _ := json.Marshal(result)
+	resSer, _ := core.MarshalArgs(resJSON, nil)
+	return &reply.CallMethod{Result: resSer}
+}
+
 func TestNew(t *testing.T) {
 	contractRequester := mockContractRequester(t, nil)
 	certificate := mockCertificate(t, nil)
@@ -63,4 +76,40 @@ func TestNew(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, result.Certificate, certificate)
 	require.Equal(t, result.ContractRequester, contractRequester)
+}
+
+func TestGenesisDataProvider_setInfo(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	rootDomainRef := testutils.RandomRef()
+	rootMemberRef := testutils.RandomRef()
+	nodeDomainRef := testutils.RandomRef()
+
+	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, &rootDomainRef),
+		ContractRequester: mockContractRequester(t, infoRes),
+	}
+
+	err := gdp.setInfo(ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, &rootDomainRef, gdp.rootDomainRef)
+	require.Equal(t, &rootMemberRef, gdp.rootMemberRef)
+	require.Equal(t, &nodeDomainRef, gdp.nodeDomainRef)
+}
+
+func TestGenesisDataProvider_setInfo_ErrorSendRequest(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	rootDomainRef := testutils.RandomRef()
+
+	gdp := &GenesisDataProvider{
+		Certificate:       mockCertificate(t, &rootDomainRef),
+		ContractRequester: mockContractRequesterWithError(t),
+	}
+
+	err := gdp.setInfo(ctx)
+
+	require.EqualError(t, err, "[ setInfo ] Can't send request: test reasons")
+	require.Equal(t, &rootDomainRef, gdp.rootDomainRef)
 }
