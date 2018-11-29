@@ -29,17 +29,11 @@ type Component interface {
 
 // Components is a registry for other core interfaces
 // Fields order are important and represent start and stop order in the daemon
-// DEPRECATED and should be removed
+// DEPRECATED and should be removed after drop TmpLedger, DO NOT EDIT
 type Components struct {
-	Certificate                Certificate
-	NodeNetwork                NodeNetwork
-	LogicRunner                LogicRunner
-	Ledger                     Ledger
-	Network                    Network
-	MessageBus                 MessageBus
-	Metrics                    Component
-	Genesis                    Genesis
-	APIRunner                  APIRunner
-	PlatformCryptographyScheme PlatformCryptographyScheme
-	CryptographyService        CryptographyService
+	NodeNetwork NodeNetwork
+	LogicRunner LogicRunner
+	Ledger      Ledger
+	Network     Network
+	MessageBus  MessageBus
 }
