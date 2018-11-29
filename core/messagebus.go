@@ -175,6 +175,8 @@ const (
 	TypeValidateRecord
 	// TypeSetBlob saves blob in storage.
 	TypeSetBlob
+	// TypeGetObjectIndex fetches object index from storage.
+	TypeGetObjectIndex
 
 	// Heavy replication
 

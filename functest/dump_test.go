@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *
@@ -54,7 +56,7 @@ func TestDumpUser(t *testing.T) {
 
 func TestDumpUserWrongRef(t *testing.T) {
 	_, err := signedRequest(&root, "DumpUserInfo", testutils.RandomRef())
-	require.EqualError(t, err, "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation: on calling main API: failed to fetch object index: storage object not found")
+	require.Contains(t, err.Error(), "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation")
 }
 
 func TestDumpAllUsersNoRoot(t *testing.T) {

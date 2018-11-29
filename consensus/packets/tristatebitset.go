@@ -71,27 +71,27 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 		firstByte = 0x00
 	}
 
-	totalSize := int(round(dbs.array.Len()*2, sizeOfBlock)) + 1 // size of result bytes
-	var result *bytes.Buffer
-	var err error
+	data, err := dbs.array.serialize(dbs.CompressedSet)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize a bitarray")
+	}
+
+	length := len(data)
+	var result bytes.Buffer
 	firstByte = firstByte << 1
-	if bits.Len(uint(dbs.array.Len())) > lowLengthSize {
-		result, err = dbs.serializeWithHLength(firstByte, dbs.array.Len(), totalSize)
+	if bits.Len(uint(length)) > lowLengthSize {
+		err = dbs.serializeWithHLength(firstByte, length, &result)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
 	} else {
-		result, err = dbs.serializeWithLLength(firstByte, dbs.array.Len(), totalSize)
+		err = dbs.serializeWithLLength(firstByte, length, &result)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
 		}
 	}
 
-	data, err := dbs.array.serialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize a bitarray")
-	}
-	err = binary.Write(result, defaultByteOrder, data)
+	err = binary.Write(&result, defaultByteOrder, data)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
 	}
@@ -102,51 +102,45 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 func (dbs *TriStateBitSet) serializeWithHLength(
 	firstByte uint8,
 	tmpLen int,
-	totalSize int,
-) (res *bytes.Buffer, err error) {
-	var result *bytes.Buffer
+	result *bytes.Buffer,
+) error {
 	var secondByte uint8 // hBitLength
 	firstByte++
 	firstByte = firstByte << lowBitLengthSize // move compressed and hBitLength bits to right
 	secondByte = uint8(tmpLen)
-	totalSize++ // secondbyte is optional
-	result = allocateBuffer(totalSize)
-	err = binary.Write(result, defaultByteOrder, firstByte)
+	err := binary.Write(result, defaultByteOrder, firstByte)
 	if err != nil {
-		return result, errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
+		return errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
 	}
 	err = binary.Write(result, defaultByteOrder, secondByte)
 	if err != nil {
-		return result, errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
+		return errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
 	}
-	return result, nil
+	return nil
 }
 
 func (dbs *TriStateBitSet) serializeWithLLength(
 	firstByte uint8,
 	tmpLen int,
-	totalSize int,
-) (res *bytes.Buffer, err error) {
-	result := allocateBuffer(totalSize)
-	firstByte = firstByte << 1 // move compressed flag to right
+	result *bytes.Buffer,
+) error {
+	firstByte = firstByte << lowLengthSize // move compressed and hbit flags to right
 	firstByte += uint8(tmpLen)
-	err = binary.Write(result, defaultByteOrder, firstByte)
+	err := binary.Write(result, defaultByteOrder, firstByte)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ serializeWithLLength ] failed to write binary")
+		return errors.Wrap(err, "[ serializeWithLLength ] failed to write binary")
 	}
-	return result, nil
+	return nil
 }
 
 func DeserializeBitSet(data io.Reader) (BitSet, error) {
 	firstbyte := uint8(0)
 	err := binary.Read(data, defaultByteOrder, &firstbyte)
+	var array *bitArray
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Deserialize ] failed to read first byte")
 	}
 	compressed, hbitFlag, length := parseFirstByte(firstbyte)
-	if compressed {
-		panic("[ DeserializeBitSet ] not implemented yet")
-	}
 	if hbitFlag {
 		err = binary.Read(data, defaultByteOrder, &length)
 		if err != nil {
@@ -156,17 +150,23 @@ func DeserializeBitSet(data io.Reader) (BitSet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Deserialize ] failed to create a bitset")
 	}
-	blockCount := uint64(round(int(length), sizeOfBlock))
-	payload := make([]uint8, blockCount)
-	for i := 0; uint64(i) < blockCount; i++ {
-		err := binary.Read(data, defaultByteOrder, &payload[i])
+	if compressed {
+		array, err = deserializeCompressed(data, int(length))
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Deserialize ] failed to read first byte")
+			return nil, errors.Wrap(err, "[ DeserializeBitSet ] failed to deserialize a compressed bitarray")
 		}
-	}
-	array, err := parseBitArray(payload, int(length))
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Deserialize ] failed to parse a bitarray")
+	} else {
+		payload := make([]uint8, length)
+		for i := uint8(0); i < length; i++ {
+			err := binary.Read(data, defaultByteOrder, &payload[i])
+			if err != nil {
+				return nil, errors.Wrap(err, "[ Deserialize ] failed to read payload")
+			}
+		}
+		array, err = parseBitArray(payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Deserialize ] failed to parse a bitarray")
+		}
 	}
 	bitset := &TriStateBitSet{
 		array: array,
@@ -191,28 +191,48 @@ func (dbs *TriStateBitSet) parseCells(mapper BitSetMapper) ([]BitSetCell, error)
 	return cells, nil
 }
 
-func parseState(array *bitArray, index int) (TriState, error) {
-	stateFirstBit, err := array.get(2 * index)
-	if err != nil {
-		return 0, err
+func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
+	count := uint8(0)
+	value := uint8(0)
+	var payload []uint8
+	blockSize := 0
+	block := uint8(0)
+	var err error
+	for i := 0; i < size; i = i + 2 {
+		err = binary.Read(data, binary.BigEndian, &count)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
+		}
+		err = binary.Read(data, binary.BigEndian, &value)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
+		}
+		for j := uint8(0); j < count; j++ {
+			block += value
+			blockSize += 2
+			if (blockSize >= sizeOfBlock) || (j+1 >= count) {
+				if j+1 >= count {
+					block = block << uint(sizeOfBlock-blockSize)
+				}
+				payload = append(payload, block)
+				blockSize = 0
+			}
+			block = block << 2
+		}
 	}
-	stateSecondBit, err := array.get(2*index + 1)
-	if err != nil {
-		return 0, err
-	}
-	return TriState((stateFirstBit << 1) + stateSecondBit), nil
+	return parseBitArray(payload)
 }
 
-func parseBitArray(payload []uint8, size int) (*bitArray, error) {
-	array := newBitArray(size)
-	for i := 0; i < size; i++ {
-		block := getBlockInBitArray(i)
-		step := getStepToMove(i)
-		bit := (payload[block] >> step) & lastBitMask
-		err := array.put(int(bit), i)
-		if err != nil {
-			return nil, err
-		}
+func parseState(array *bitArray, index int) (TriState, error) {
+	state, err := array.getState(index)
+	return TriState(state), err
+}
+
+func parseBitArray(payload []uint8) (*bitArray, error) {
+	len := len(payload)
+	array := newBitArray(len*sizeOfBlock - 4) // bits count from bytes size
+	for i := 0; i < len; i++ {
+		array.array[i] = payload[i]
 	}
 	return array, nil
 }
@@ -242,7 +262,7 @@ func parseFirstByte(b uint8) (compressed bool, hbitFlag bool, lbitLength uint8) 
 	lbitLength = uint8(0)
 	compressed = false
 	hbitFlag = false
-	if (b & firstBitMask) == 1 { // check compressed flag bit
+	if (b & firstBitMask) == firstBitMask { // check compressed flag bit
 		compressed = true
 	}
 	check := (b << 1) & firstBitMask // check hBitLength flag bit
