@@ -80,6 +80,19 @@ func (f *delegationTokenFactory) IssueGetChildrenRedirect(
 	return &GetChildrenRedirect{Signature: sign.Bytes()}, nil
 }
 
+// IssueGetCodeRedirect creates new token for provided message.
+func (f *delegationTokenFactory) IssueGetCodeRedirect(
+	sender *core.RecordRef, redirectedMessage core.Message,
+) (core.DelegationToken, error) {
+	parsedMessage := redirectedMessage.(*message.GetCode)
+	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
+	sign, err := f.Cryptography.Sign(dataForSign)
+	if err != nil {
+		return nil, err
+	}
+	return &GetCodeRedirect{Signature: sign.Bytes()}, nil
+}
+
 // Verify performs token validation.
 func (f *delegationTokenFactory) Verify(parcel core.Parcel) (bool, error) {
 	if parcel.DelegationToken() == nil {
