@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -131,7 +132,7 @@ func (m *PulseManager) processRecentObjects(
 	m.Recent.ClearObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
-	pendingRequests := map[core.RecordID]*message.HotIndex{}
+	pendingRequests := map[core.RecordID][]byte{}
 
 	for id, meta := range recentObjectsIds {
 		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
@@ -139,22 +140,24 @@ func (m *PulseManager) processRecentObjects(
 			inslogger.FromContext(ctx).Error(err)
 			continue
 		}
-		recentObjects[id] = &message.HotIndex{
-			Meta:  meta,
-			Index: lifeline,
-		}
-	}
-
-	for _, id := range pendingRequestsIds {
-		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
+		encoded, err := index.EncodeObjectLifeline(lifeline)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 			continue
 		}
-		pendingRequests[id] = &message.HotIndex{
-			Meta:  nil,
-			Index: lifeline,
+		recentObjects[id] = &message.HotIndex{
+			Meta:  meta,
+			Index: encoded,
 		}
+	}
+
+	for _, id := range pendingRequestsIds {
+		pendingRecord, err := m.db.GetRecord(ctx, &id)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
+		pendingRequests[id] = record.SerializeRecord(pendingRecord)
 	}
 
 	msg := &message.HotIndexes{
