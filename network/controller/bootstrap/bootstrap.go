@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -142,7 +143,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
 	bc.keeper.AddActiveNodes(activeNodes)
-	inslogger.FromContext(ctx).Infof("Added active nodes: %s")
+	inslogger.FromContext(ctx).Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 	return nil
 }
 
