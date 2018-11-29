@@ -184,7 +184,7 @@ type HotIndexes struct {
 
 // HotIndex contains meat about hot-data
 type HotIndex struct {
-	Meta *core.RecentObjectsIndexMeta
+	Meta  *core.RecentObjectsIndexMeta
 	Index []byte
 }
 
