@@ -143,7 +143,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 
-	err := lr.CheckOurRole(ctx, msg, core.RoleVirtualValidator)
+	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't play role")
 	}
@@ -192,7 +192,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 type ValidationBehaviour interface {
 	Begin(refs Ref, record core.CaseRecord)
 	End(refs Ref, record core.CaseRecord)
-	GetRole() core.JetRole
+	GetRole() core.DynamicRole
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
 	RegisterRequest(p core.Parcel) (*Ref, error)
@@ -237,8 +237,8 @@ func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
-func (vb ValidationSaver) GetRole() core.JetRole {
-	return core.RoleVirtualExecutor
+func (vb ValidationSaver) GetRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
 }
 
 type ValidationChecker struct {
@@ -278,6 +278,6 @@ func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
 }
 
-func (vb ValidationChecker) GetRole() core.JetRole {
-	return core.RoleVirtualValidator
+func (vb ValidationChecker) GetRole() core.DynamicRole {
+	return core.DynamicRoleVirtualValidator
 }

@@ -19,9 +19,9 @@ package nodenetwork
 import (
 	"crypto"
 	"encoding/gob"
-	"hash/crc32"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/utils"
 )
 
 type MutableNode interface {
@@ -34,7 +34,7 @@ type MutableNode interface {
 type node struct {
 	NodeID        core.RecordRef
 	NodeShortID   core.ShortNodeID
-	NodeRole      core.NodeRole
+	NodeRole      core.StaticRole
 	NodePublicKey crypto.PublicKey
 
 	NodePulseNum core.PulseNumber
@@ -45,14 +45,14 @@ type node struct {
 
 func newMutableNode(
 	id core.RecordRef,
-	role core.NodeRole,
+	role core.StaticRole,
 	publicKey crypto.PublicKey,
 	pulseNum core.PulseNumber,
 	physicalAddress,
 	version string) MutableNode {
 	return &node{
 		NodeID:              id,
-		NodeShortID:         generateShortID(id),
+		NodeShortID:         utils.GenerateShortID(id),
 		NodeRole:            role,
 		NodePublicKey:       publicKey,
 		NodePulseNum:        pulseNum,
@@ -63,7 +63,7 @@ func newMutableNode(
 
 func NewNode(
 	id core.RecordRef,
-	role core.NodeRole,
+	role core.StaticRole,
 	publicKey crypto.PublicKey,
 
 	pulseNum core.PulseNumber,
@@ -84,7 +84,7 @@ func (n *node) Pulse() core.PulseNumber {
 	return n.NodePulseNum
 }
 
-func (n *node) Role() core.NodeRole {
+func (n *node) Role() core.StaticRole {
 	return n.NodeRole
 }
 
@@ -116,11 +116,6 @@ func (mn mutableNodes) Export() []core.Node {
 		nodes[i] = mn[i]
 	}
 	return nodes
-}
-
-func generateShortID(ref core.RecordRef) core.ShortNodeID {
-	result := crc32.ChecksumIEEE(ref[:])
-	return core.ShortNodeID(result)
 }
 
 func init() {

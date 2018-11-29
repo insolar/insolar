@@ -32,10 +32,16 @@ const (
 	GetRandomHosts
 	// Bootstrap is packet type for the node bootstrap process.
 	Bootstrap
-	// GetNonce is packet type to get nonce from discovery node during authorization process.
-	GetNonce
 	// Authorize is packet type to authorize bootstrapping node on discovery node.
 	Authorize
+	// Register is packet type to connect node to discovery node and add join claim to consensus
+	Register
+	// Genesis is packet type for active list exchange between discovery nodes
+	Genesis
+	// Challenge1 is packet type for first phase of double challenge response
+	Challenge1
+	// Challenge2 is packet type for first phase of double challenge response
+	Challenge2
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
 
@@ -44,7 +50,5 @@ const (
 	// Phase1 is packet type for phase 2
 	Phase2
 	// Phase3Pulse is packet type for phase 3 ( pulse )
-	Phase3Pulse
-	// Phase3Referendum is packet type for phase 3 ( referendum )
-	Phase3Referendum
+	Phase3
 )

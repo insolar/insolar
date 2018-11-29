@@ -47,7 +47,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 
 	nodeKeeperMock.GetActiveNodesMock.Set(func() (r []core.Node) {
 
-		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, core.RoleUnknown,
+		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown,
 			nil, 0, "", "")}
 	})
 

@@ -111,8 +111,8 @@ func initComponents(
 	genesisConfigPath string,
 	genesisKeyOut string,
 
-) (*component.Manager, *Repl, error) {
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
+) (*component.Manager, error) {
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, cert)
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
@@ -195,5 +195,5 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	return &cm, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
+	return &cm, nil
 }

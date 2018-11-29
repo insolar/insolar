@@ -236,7 +236,7 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 	return reterr
 }
 
-func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.JetRole) error {
+func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.DynamicRole) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := message.ExtractTarget(msg)
 	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
@@ -261,7 +261,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	es := lr.UpsertExecution(ref)
 
-	err := lr.CheckOurRole(ctx, msg, core.RoleVirtualExecutor)
+	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
 	if err != nil {
 		return nil, es.ErrorWrap(err, "can't play role")
 	}

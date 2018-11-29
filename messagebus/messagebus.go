@@ -92,8 +92,8 @@ func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) 
 	return rec, nil
 }
 
-// Init initializes message bus.
-func (mb *MessageBus) Init(ctx context.Context) error {
+// Start initializes message bus.
+func (mb *MessageBus) Start(ctx context.Context) error {
 	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 
 	return nil

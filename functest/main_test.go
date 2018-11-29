@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *
@@ -191,7 +193,7 @@ func waitForLaunch() error {
 		for scanner.Scan() {
 			line := scanner.Text()
 			fmt.Println(line)
-			if strings.Contains(line, "======= Host info ======") {
+			if strings.Contains(line, "All components were started") {
 				done <- true
 			}
 		}
@@ -268,14 +270,9 @@ func stopInsolard() error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
-	io.WriteString(stdin, "exit\n")
-	err := <-cmdCompleted
+	err := cmd.Process.Kill()
 	if err != nil {
-		fmt.Println("[ stopInsolard ] try to kill, wait done with error: ", err)
-		err := cmd.Process.Kill()
-		if err != nil {
-			return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
-		}
+		return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
 	}
 	return nil
 }
@@ -363,11 +360,21 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't start insolard: ")
 	}
 	fmt.Println("[ setup ] insolard was successfully started")
-	time.Sleep(60 * time.Second)
-	err = setInfo()
+
+	numAttempts := 60
+	for i := 0; i < numAttempts; i++ {
+		err = setInfo()
+		if err != nil {
+			fmt.Printf("[ setup ] Couldn't setInfo. Attempt %d/%d. Err: %s", i, numAttempts, err)
+		} else {
+			break
+		}
+		time.Sleep(time.Second)
+	}
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't receive root reference ")
 	}
+
 	fmt.Println("[ setup ] root reference successfully received")
 	root.ref = info.RootMember
 

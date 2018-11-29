@@ -42,7 +42,7 @@ func (c *calculator) Init(ctx context.Context) error {
 	return nil
 }
 
-func (c *calculator) getStateHash(role core.NodeRole) (OriginHash, error) {
+func (c *calculator) getStateHash(role core.StaticRole) (OriginHash, error) {
 	// TODO: do something with role
 	return c.ArtifactManager.State()
 }

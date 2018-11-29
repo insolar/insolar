@@ -28,6 +28,8 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -62,6 +64,7 @@ func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
 	res := GoInsider{dir: path, upstreamProtocol: network, upstreamAddress: address}
 	res.plugins = make(map[core.RecordRef]*pluginRec)
+	proxyctx.Current = &res
 	return &res
 }
 
@@ -183,6 +186,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 
 	client, err := rpc.Dial(gi.upstreamProtocol, gi.upstreamAddress)
 	if err != nil {
+		log.Fatalf("can't connect to upstream, protocol: %s, address: %s", gi.upstreamProtocol, gi.upstreamAddress)
 		os.Exit(0)
 	}
 
@@ -233,17 +237,9 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Plugin, error) {
-	rec := func() *pluginRec {
-		gi.pluginsMutex.Lock()
-		defer gi.pluginsMutex.Unlock()
+	rec := gi.getPluginRec(ref)
 
-		if gi.plugins[ref] == nil {
-			gi.plugins[ref] = &pluginRec{}
-		}
-		res := gi.plugins[ref]
-		res.Lock()
-		return res
-	}()
+	rec.Lock()
 	defer rec.Unlock()
 
 	if rec.plugin != nil {
@@ -263,6 +259,19 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 
 	rec.plugin = p
 	return p, nil
+}
+
+// getPluginRec return existed gi.plugins[ref] or create a new one
+// also set gi.plugins[ref].Lock()
+func (gi *GoInsider) getPluginRec(ref core.RecordRef) *pluginRec {
+	gi.pluginsMutex.Lock()
+	defer gi.pluginsMutex.Unlock()
+
+	if gi.plugins[ref] == nil {
+		gi.plugins[ref] = &pluginRec{}
+	}
+	res := gi.plugins[ref]
+	return res
 }
 
 // MakeUpBaseReq makes base of request from current CallContext
@@ -451,4 +460,25 @@ func (gi *GoInsider) MakeErrorSerializable(e error) error {
 		return nil
 	}
 	return &foundation.Error{S: e.Error()}
+}
+
+// AddPlugin inject plugin by ref in gi memory
+func (gi *GoInsider) AddPlugin(ref core.RecordRef, path string) error {
+	rec := gi.getPluginRec(ref)
+
+	rec.Lock()
+	defer rec.Unlock()
+
+	if rec.plugin != nil {
+		return errors.New("ref already in use")
+	}
+
+	p, err := plugin.Open(path)
+	if err != nil {
+		return errors.Wrap(err, "couldn't open plugin")
+	}
+
+	inslogger.FromContext(context.TODO()).Debugf("AddPlugin plugins %+v", gi.plugins)
+	rec.plugin = p
+	return nil
 }

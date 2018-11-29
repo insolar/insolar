@@ -30,6 +30,11 @@ type CommunicatorMock struct {
 	ExchangePhase2Counter    uint64
 	ExchangePhase2PreCounter uint64
 	ExchangePhase2Mock       mCommunicatorMockExchangePhase2
+
+	ExchangePhase3Func       func(p context.Context, p1 []core.Node, p2 packets.Phase3Packet) (r map[core.RecordRef]*packets.Phase3Packet, r1 error)
+	ExchangePhase3Counter    uint64
+	ExchangePhase3PreCounter uint64
+	ExchangePhase3Mock       mCommunicatorMockExchangePhase3
 }
 
 //NewCommunicatorMock returns a mock for github.com/insolar/insolar/consensus/phases.Communicator
@@ -42,6 +47,7 @@ func NewCommunicatorMock(t minimock.Tester) *CommunicatorMock {
 
 	m.ExchangePhase1Mock = mCommunicatorMockExchangePhase1{mock: m}
 	m.ExchangePhase2Mock = mCommunicatorMockExchangePhase2{mock: m}
+	m.ExchangePhase3Mock = mCommunicatorMockExchangePhase3{mock: m}
 
 	return m
 }
@@ -182,6 +188,74 @@ func (m *CommunicatorMock) ExchangePhase2MinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ExchangePhase2PreCounter)
 }
 
+type mCommunicatorMockExchangePhase3 struct {
+	mock             *CommunicatorMock
+	mockExpectations *CommunicatorMockExchangePhase3Params
+}
+
+//CommunicatorMockExchangePhase3Params represents input parameters of the Communicator.ExchangePhase3
+type CommunicatorMockExchangePhase3Params struct {
+	p  context.Context
+	p1 []core.Node
+	p2 packets.Phase3Packet
+}
+
+//Expect sets up expected params for the Communicator.ExchangePhase3
+func (m *mCommunicatorMockExchangePhase3) Expect(p context.Context, p1 []core.Node, p2 packets.Phase3Packet) *mCommunicatorMockExchangePhase3 {
+	m.mockExpectations = &CommunicatorMockExchangePhase3Params{p, p1, p2}
+	return m
+}
+
+//Return sets up a mock for Communicator.ExchangePhase3 to return Return's arguments
+func (m *mCommunicatorMockExchangePhase3) Return(r map[core.RecordRef]*packets.Phase3Packet, r1 error) *CommunicatorMock {
+	m.mock.ExchangePhase3Func = func(p context.Context, p1 []core.Node, p2 packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
+		return r, r1
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of Communicator.ExchangePhase3 method
+func (m *mCommunicatorMockExchangePhase3) Set(f func(p context.Context, p1 []core.Node, p2 packets.Phase3Packet) (r map[core.RecordRef]*packets.Phase3Packet, r1 error)) *CommunicatorMock {
+	m.mock.ExchangePhase3Func = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//ExchangePhase3 implements github.com/insolar/insolar/consensus/phases.Communicator interface
+func (m *CommunicatorMock) ExchangePhase3(p context.Context, p1 []core.Node, p2 packets.Phase3Packet) (r map[core.RecordRef]*packets.Phase3Packet, r1 error) {
+	atomic.AddUint64(&m.ExchangePhase3PreCounter, 1)
+	defer atomic.AddUint64(&m.ExchangePhase3Counter, 1)
+
+	if m.ExchangePhase3Mock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.ExchangePhase3Mock.mockExpectations, CommunicatorMockExchangePhase3Params{p, p1, p2},
+			"Communicator.ExchangePhase3 got unexpected parameters")
+
+		if m.ExchangePhase3Func == nil {
+
+			m.t.Fatal("No results are set for the CommunicatorMock.ExchangePhase3")
+
+			return
+		}
+	}
+
+	if m.ExchangePhase3Func == nil {
+		m.t.Fatal("Unexpected call to CommunicatorMock.ExchangePhase3")
+		return
+	}
+
+	return m.ExchangePhase3Func(p, p1, p2)
+}
+
+//ExchangePhase3MinimockCounter returns a count of CommunicatorMock.ExchangePhase3Func invocations
+func (m *CommunicatorMock) ExchangePhase3MinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ExchangePhase3Counter)
+}
+
+//ExchangePhase3MinimockPreCounter returns the value of CommunicatorMock.ExchangePhase3 invocations
+func (m *CommunicatorMock) ExchangePhase3MinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ExchangePhase3PreCounter)
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CommunicatorMock) ValidateCallCounters() {
@@ -192,6 +266,10 @@ func (m *CommunicatorMock) ValidateCallCounters() {
 
 	if m.ExchangePhase2Func != nil && atomic.LoadUint64(&m.ExchangePhase2Counter) == 0 {
 		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase2")
+	}
+
+	if m.ExchangePhase3Func != nil && atomic.LoadUint64(&m.ExchangePhase3Counter) == 0 {
+		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase3")
 	}
 
 }
@@ -219,6 +297,10 @@ func (m *CommunicatorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase2")
 	}
 
+	if m.ExchangePhase3Func != nil && atomic.LoadUint64(&m.ExchangePhase3Counter) == 0 {
+		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase3")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -235,6 +317,7 @@ func (m *CommunicatorMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && (m.ExchangePhase1Func == nil || atomic.LoadUint64(&m.ExchangePhase1Counter) > 0)
 		ok = ok && (m.ExchangePhase2Func == nil || atomic.LoadUint64(&m.ExchangePhase2Counter) > 0)
+		ok = ok && (m.ExchangePhase3Func == nil || atomic.LoadUint64(&m.ExchangePhase3Counter) > 0)
 
 		if ok {
 			return
@@ -249,6 +332,10 @@ func (m *CommunicatorMock) MinimockWait(timeout time.Duration) {
 
 			if m.ExchangePhase2Func != nil && atomic.LoadUint64(&m.ExchangePhase2Counter) == 0 {
 				m.t.Error("Expected call to CommunicatorMock.ExchangePhase2")
+			}
+
+			if m.ExchangePhase3Func != nil && atomic.LoadUint64(&m.ExchangePhase3Counter) == 0 {
+				m.t.Error("Expected call to CommunicatorMock.ExchangePhase3")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -268,6 +355,10 @@ func (m *CommunicatorMock) AllMocksCalled() bool {
 	}
 
 	if m.ExchangePhase2Func != nil && atomic.LoadUint64(&m.ExchangePhase2Counter) == 0 {
+		return false
+	}
+
+	if m.ExchangePhase3Func != nil && atomic.LoadUint64(&m.ExchangePhase3Counter) == 0 {
 		return false
 	}
 

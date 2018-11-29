@@ -38,15 +38,10 @@ type NodeMock struct {
 	PulsePreCounter uint64
 	PulseMock       mNodeMockPulse
 
-	RoleFunc       func() (r core.NodeRole)
+	RoleFunc       func() (r core.StaticRole)
 	RoleCounter    uint64
 	RolePreCounter uint64
 	RoleMock       mNodeMockRole
-
-	RolesFunc       func() (r []core.NodeRole)
-	RolesCounter    uint64
-	RolesPreCounter uint64
-	RolesMock       mNodeMockRoles
 
 	ShortIDFunc       func() (r core.ShortNodeID)
 	ShortIDCounter    uint64
@@ -72,7 +67,6 @@ func NewNodeMock(t minimock.Tester) *NodeMock {
 	m.PublicKeyMock = mNodeMockPublicKey{mock: m}
 	m.PulseMock = mNodeMockPulse{mock: m}
 	m.RoleMock = mNodeMockRole{mock: m}
-	m.RolesMock = mNodeMockRoles{mock: m}
 	m.ShortIDMock = mNodeMockShortID{mock: m}
 	m.VersionMock = mNodeMockVersion{mock: m}
 
@@ -252,22 +246,22 @@ type mNodeMockRole struct {
 }
 
 //Return sets up a mock for Node.Role to return Return's arguments
-func (m *mNodeMockRole) Return(r core.NodeRole) *NodeMock {
-	m.mock.RoleFunc = func() core.NodeRole {
+func (m *mNodeMockRole) Return(r core.StaticRole) *NodeMock {
+	m.mock.RoleFunc = func() core.StaticRole {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Node.Role method
-func (m *mNodeMockRole) Set(f func() (r core.NodeRole)) *NodeMock {
+func (m *mNodeMockRole) Set(f func() (r core.StaticRole)) *NodeMock {
 	m.mock.RoleFunc = f
 
 	return m.mock
 }
 
 //Role implements github.com/insolar/insolar/core.Node interface
-func (m *NodeMock) Role() (r core.NodeRole) {
+func (m *NodeMock) Role() (r core.StaticRole) {
 	atomic.AddUint64(&m.RolePreCounter, 1)
 	defer atomic.AddUint64(&m.RoleCounter, 1)
 
@@ -287,48 +281,6 @@ func (m *NodeMock) RoleMinimockCounter() uint64 {
 //RoleMinimockPreCounter returns the value of NodeMock.Role invocations
 func (m *NodeMock) RoleMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RolePreCounter)
-}
-
-type mNodeMockRoles struct {
-	mock *NodeMock
-}
-
-//Return sets up a mock for Node.Roles to return Return's arguments
-func (m *mNodeMockRoles) Return(r []core.NodeRole) *NodeMock {
-	m.mock.RolesFunc = func() []core.NodeRole {
-		return r
-	}
-	return m.mock
-}
-
-//Set uses given function f as a mock of Node.Roles method
-func (m *mNodeMockRoles) Set(f func() (r []core.NodeRole)) *NodeMock {
-	m.mock.RolesFunc = f
-
-	return m.mock
-}
-
-//Roles implements github.com/insolar/insolar/core.Node interface
-func (m *NodeMock) Roles() (r []core.NodeRole) {
-	atomic.AddUint64(&m.RolesPreCounter, 1)
-	defer atomic.AddUint64(&m.RolesCounter, 1)
-
-	if m.RolesFunc == nil {
-		m.t.Fatal("Unexpected call to NodeMock.Roles")
-		return
-	}
-
-	return m.RolesFunc()
-}
-
-//RolesMinimockCounter returns a count of NodeMock.RolesFunc invocations
-func (m *NodeMock) RolesMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RolesCounter)
-}
-
-//RolesMinimockPreCounter returns the value of NodeMock.Roles invocations
-func (m *NodeMock) RolesMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RolesPreCounter)
 }
 
 type mNodeMockShortID struct {
@@ -439,10 +391,6 @@ func (m *NodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeMock.Role")
 	}
 
-	if m.RolesFunc != nil && atomic.LoadUint64(&m.RolesCounter) == 0 {
-		m.t.Fatal("Expected call to NodeMock.Roles")
-	}
-
 	if m.ShortIDFunc != nil && atomic.LoadUint64(&m.ShortIDCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.ShortID")
 	}
@@ -488,10 +436,6 @@ func (m *NodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeMock.Role")
 	}
 
-	if m.RolesFunc != nil && atomic.LoadUint64(&m.RolesCounter) == 0 {
-		m.t.Fatal("Expected call to NodeMock.Roles")
-	}
-
 	if m.ShortIDFunc != nil && atomic.LoadUint64(&m.ShortIDCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.ShortID")
 	}
@@ -519,7 +463,6 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 		ok = ok && (m.PublicKeyFunc == nil || atomic.LoadUint64(&m.PublicKeyCounter) > 0)
 		ok = ok && (m.PulseFunc == nil || atomic.LoadUint64(&m.PulseCounter) > 0)
 		ok = ok && (m.RoleFunc == nil || atomic.LoadUint64(&m.RoleCounter) > 0)
-		ok = ok && (m.RolesFunc == nil || atomic.LoadUint64(&m.RolesCounter) > 0)
 		ok = ok && (m.ShortIDFunc == nil || atomic.LoadUint64(&m.ShortIDCounter) > 0)
 		ok = ok && (m.VersionFunc == nil || atomic.LoadUint64(&m.VersionCounter) > 0)
 
@@ -548,10 +491,6 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 
 			if m.RoleFunc != nil && atomic.LoadUint64(&m.RoleCounter) == 0 {
 				m.t.Error("Expected call to NodeMock.Role")
-			}
-
-			if m.RolesFunc != nil && atomic.LoadUint64(&m.RolesCounter) == 0 {
-				m.t.Error("Expected call to NodeMock.Roles")
 			}
 
 			if m.ShortIDFunc != nil && atomic.LoadUint64(&m.ShortIDCounter) == 0 {
@@ -591,10 +530,6 @@ func (m *NodeMock) AllMocksCalled() bool {
 	}
 
 	if m.RoleFunc != nil && atomic.LoadUint64(&m.RoleCounter) == 0 {
-		return false
-	}
-
-	if m.RolesFunc != nil && atomic.LoadUint64(&m.RolesCounter) == 0 {
 		return false
 	}
 
