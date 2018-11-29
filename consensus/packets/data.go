@@ -32,6 +32,8 @@ const HashLength = 64
 const SignatureLength = 71
 const ReferenceLength = 64
 
+// ------------------------------PACKET HEADER------------------------------
+
 type PacketHeader struct {
 	PacketT    PacketType
 	HasRouting bool
@@ -43,6 +45,8 @@ type PacketHeader struct {
 	OriginNodeID core.ShortNodeID
 	TargetNodeID core.ShortNodeID
 }
+
+// ------------------------------PULSE DATA------------------------------
 
 // PulseDataExt is a pulse data extension.
 type PulseDataExt struct {
