@@ -40,3 +40,11 @@ func mockContractRequester(t *testing.T, res core.Reply) *testutils.ContractRequ
 	}
 	return contractRequesterMock
 }
+
+func mockCertificate(t *testing.T, rootDomainRef *core.RecordRef) *testutils.CertificateMock {
+	certificateMock := testutils.NewCertificateMock(t)
+	certificateMock.GetRootDomainReferenceFunc = func() (r *core.RecordRef) {
+		return rootDomainRef
+	}
+	return certificateMock
+}
