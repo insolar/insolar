@@ -208,7 +208,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	// execute only on material executor
-	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 
 		latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
 		if err != nil {

@@ -24,12 +24,12 @@ type JetCoordinatorMock struct {
 	GetActiveNodesPreCounter uint64
 	GetActiveNodesMock       mJetCoordinatorMockGetActiveNodes
 
-	IsAuthorizedFunc       func(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error)
+	IsAuthorizedFunc       func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error)
 	IsAuthorizedCounter    uint64
 	IsAuthorizedPreCounter uint64
 	IsAuthorizedMock       mJetCoordinatorMockIsAuthorized
 
-	QueryRoleFunc       func(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber) (r []core.RecordRef, r1 error)
+	QueryRoleFunc       func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) (r []core.RecordRef, r1 error)
 	QueryRoleCounter    uint64
 	QueryRolePreCounter uint64
 	QueryRoleMock       mJetCoordinatorMockQueryRole
@@ -124,35 +124,35 @@ type mJetCoordinatorMockIsAuthorized struct {
 //JetCoordinatorMockIsAuthorizedParams represents input parameters of the JetCoordinator.IsAuthorized
 type JetCoordinatorMockIsAuthorizedParams struct {
 	p  context.Context
-	p1 core.JetRole
+	p1 core.DynamicRole
 	p2 *core.RecordRef
 	p3 core.PulseNumber
 	p4 core.RecordRef
 }
 
 //Expect sets up expected params for the JetCoordinator.IsAuthorized
-func (m *mJetCoordinatorMockIsAuthorized) Expect(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) *mJetCoordinatorMockIsAuthorized {
+func (m *mJetCoordinatorMockIsAuthorized) Expect(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) *mJetCoordinatorMockIsAuthorized {
 	m.mockExpectations = &JetCoordinatorMockIsAuthorizedParams{p, p1, p2, p3, p4}
 	return m
 }
 
 //Return sets up a mock for JetCoordinator.IsAuthorized to return Return's arguments
 func (m *mJetCoordinatorMockIsAuthorized) Return(r bool, r1 error) *JetCoordinatorMock {
-	m.mock.IsAuthorizedFunc = func(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (bool, error) {
+	m.mock.IsAuthorizedFunc = func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (bool, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of JetCoordinator.IsAuthorized method
-func (m *mJetCoordinatorMockIsAuthorized) Set(f func(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockIsAuthorized) Set(f func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error)) *JetCoordinatorMock {
 	m.mock.IsAuthorizedFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //IsAuthorized implements github.com/insolar/insolar/core.JetCoordinator interface
-func (m *JetCoordinatorMock) IsAuthorized(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error) {
+func (m *JetCoordinatorMock) IsAuthorized(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error) {
 	atomic.AddUint64(&m.IsAuthorizedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsAuthorizedCounter, 1)
 
@@ -194,34 +194,34 @@ type mJetCoordinatorMockQueryRole struct {
 //JetCoordinatorMockQueryRoleParams represents input parameters of the JetCoordinator.QueryRole
 type JetCoordinatorMockQueryRoleParams struct {
 	p  context.Context
-	p1 core.JetRole
+	p1 core.DynamicRole
 	p2 *core.RecordRef
 	p3 core.PulseNumber
 }
 
 //Expect sets up expected params for the JetCoordinator.QueryRole
-func (m *mJetCoordinatorMockQueryRole) Expect(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber) *mJetCoordinatorMockQueryRole {
+func (m *mJetCoordinatorMockQueryRole) Expect(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) *mJetCoordinatorMockQueryRole {
 	m.mockExpectations = &JetCoordinatorMockQueryRoleParams{p, p1, p2, p3}
 	return m
 }
 
 //Return sets up a mock for JetCoordinator.QueryRole to return Return's arguments
 func (m *mJetCoordinatorMockQueryRole) Return(r []core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.QueryRoleFunc = func(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber) ([]core.RecordRef, error) {
+	m.mock.QueryRoleFunc = func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) ([]core.RecordRef, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of JetCoordinator.QueryRole method
-func (m *mJetCoordinatorMockQueryRole) Set(f func(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber) (r []core.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockQueryRole) Set(f func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) (r []core.RecordRef, r1 error)) *JetCoordinatorMock {
 	m.mock.QueryRoleFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //QueryRole implements github.com/insolar/insolar/core.JetCoordinator interface
-func (m *JetCoordinatorMock) QueryRole(p context.Context, p1 core.JetRole, p2 *core.RecordRef, p3 core.PulseNumber) (r []core.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) QueryRole(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) (r []core.RecordRef, r1 error) {
 	atomic.AddUint64(&m.QueryRolePreCounter, 1)
 	defer atomic.AddUint64(&m.QueryRoleCounter, 1)
 

@@ -145,10 +145,29 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 	return &reply.ID{ID: *id}, nil
 }
 
-func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.GetCode)
+func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.GetCode)
 
 	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
+	if err == storage.ErrNotFound {
+		// The record wasn't found on the current node. Return redirect to the node that contains it.
+		var nodes []core.RecordRef
+		if pulseNumber-msg.Code.Record().Pulse() < h.conf.LightChainLimit {
+			// Find light executor that saved the code.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.RoleLightExecutor, &msg.Code, msg.Code.Record().Pulse(),
+			)
+		} else {
+			// Find heavy that has this code.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.RoleHeavyExecutor, &msg.Code, pulseNumber,
+			)
+		}
+		if err != nil {
+			return nil, err
+		}
+		return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -210,12 +229,12 @@ func (h *MessageHandler) handleGetObject(
 			if stateID != nil && pulseNumber-stateID.Pulse() < h.conf.LightChainLimit {
 				// Find light executor that saved the state.
 				nodes, err = h.JetCoordinator.QueryRole(
-					ctx, core.RoleLightExecutor, &msg.Head, stateID.Pulse(),
+					ctx, core.DynamicRoleLightExecutor, &msg.Head, stateID.Pulse(),
 				)
 			} else {
 				// Find heavy that has this object.
 				nodes, err = h.JetCoordinator.QueryRole(
-					ctx, core.RoleHeavyExecutor, &msg.Head, pulseNumber,
+					ctx, core.DynamicRoleHeavyExecutor, &msg.Head, pulseNumber,
 				)
 			}
 			if err != nil {
@@ -325,12 +344,12 @@ func (h *MessageHandler) handleGetChildren(
 		if pulseNumber-currentChild.Pulse() < h.conf.LightChainLimit {
 			// Find light executor that saved the state.
 			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.RoleLightExecutor, &msg.Parent, currentChild.Pulse(),
+				ctx, core.DynamicRoleLightExecutor, &msg.Parent, currentChild.Pulse(),
 			)
 		} else {
 			// Find heavy that has this object.
 			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.RoleHeavyExecutor, &msg.Parent, pulseNumber,
+				ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, pulseNumber,
 			)
 		}
 		if err != nil {
@@ -456,8 +475,17 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	var child *core.RecordID
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
-		if err != nil {
-			return errors.Wrap(err, "failed to fetch object index")
+		if err == storage.ErrNotFound {
+			heavy, err := h.findHeavy(ctx, msg.Parent, pulseNumber)
+			if err != nil {
+				return err
+			}
+			idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Parent, heavy)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
 		}
 		h.Recent.AddObject(*msg.Parent.Record())
 
@@ -642,7 +670,7 @@ func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Mes
 func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
 	rec, err := s.GetRecord(ctx, id)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code record")
+		return nil, err
 	}
 	codeRec, ok := rec.(*record.CodeRecord)
 	if !ok {
@@ -709,7 +737,7 @@ func validateState(old record.State, new record.State) error {
 
 func (h *MessageHandler) findHeavy(ctx context.Context, obj core.RecordRef, pulse core.PulseNumber) (*core.RecordRef, error) {
 	nodes, err := h.JetCoordinator.QueryRole(
-		ctx, core.RoleHeavyExecutor, &obj, pulse,
+		ctx, core.DynamicRoleHeavyExecutor, &obj, pulse,
 	)
 	if err != nil {
 		return nil, err

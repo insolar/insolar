@@ -53,7 +53,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 
 	// Mock N2: we are light material
 	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.RoleLightMaterial)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
 
 	// Mock N3: nodenet returns mocked node (above)
 	// and add stub for GetActiveNodes

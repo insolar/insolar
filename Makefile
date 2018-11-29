@@ -23,7 +23,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps pre-build build test test_with_coverage regen-proxies
+.PHONY: all lint ci-lint metalint clean install-deps pre-build build functest test test_with_coverage regen-proxies
 
 all: clean install-deps pre-build build test
 
@@ -78,6 +78,9 @@ $(APIREQUESTER):
 
 $(EXPORTER):
 	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
+
+functest:
+	go test -tags functest -v ./functest
 
 test:
 	go test -v $(ALL_PACKAGES)

@@ -56,14 +56,14 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 	}
 }
 
-func ExtractRole(msg core.Message) core.JetRole {
+func ExtractRole(msg core.Message) core.DynamicRole {
 	switch t := msg.(type) {
 	case *ExecutorResults,
 		*CallMethod,
 		*CallConstructor,
 		*GenesisRequest,
 		*ValidationResults:
-		return core.RoleVirtualExecutor
+		return core.DynamicRoleVirtualExecutor
 	case *GetChildren,
 		*GetCode,
 		*GetDelegate,
@@ -75,14 +75,14 @@ func ExtractRole(msg core.Message) core.JetRole {
 		*UpdateObject,
 		*ValidateRecord,
 		*HotIndexes:
-		return core.RoleLightExecutor
+		return core.DynamicRoleLightExecutor
 	case *ValidateCaseBind:
-		return core.RoleVirtualValidator
+		return core.DynamicRoleVirtualValidator
 	case
 		*HeavyStartStop,
 		*HeavyPayload,
 		*GetObjectIndex:
-		return core.RoleHeavyExecutor
+		return core.DynamicRoleHeavyExecutor
 	case *Parcel:
 		return ExtractRole(t.Msg)
 	default:
@@ -94,7 +94,7 @@ func ExtractRole(msg core.Message) core.JetRole {
 // verify sender required to 's "caller" for sender
 // verification purpose. If nil then check of sender's role is not
 // provided by the message bus
-func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.JetRole) {
+func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.DynamicRole) {
 	switch t := msg.(type) {
 	case *GenesisRequest:
 		return nil, 0
@@ -103,42 +103,42 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		if c.IsEmpty() {
 			return nil, 0
 		}
-		return c, core.RoleVirtualExecutor
+		return c, core.DynamicRoleVirtualExecutor
 	case *CallMethod:
 		c := t.GetCaller()
 		if c.IsEmpty() {
 			return nil, 0
 		}
-		return c, core.RoleVirtualExecutor
+		return c, core.DynamicRoleVirtualExecutor
 	case *ExecutorResults:
 		return nil, 0
 	case *GetChildren:
-		return &t.Parent, core.RoleVirtualExecutor
+		return &t.Parent, core.DynamicRoleVirtualExecutor
 	case *GetCode:
-		return &t.Code, core.RoleVirtualExecutor
+		return &t.Code, core.DynamicRoleVirtualExecutor
 	case *GetDelegate:
-		return &t.Head, core.RoleVirtualExecutor
+		return &t.Head, core.DynamicRoleVirtualExecutor
 	case *GetObject:
-		return &t.Head, core.RoleVirtualExecutor
+		return &t.Head, core.DynamicRoleVirtualExecutor
 	case *JetDrop:
 		// This check is not needed, because JetDrop sender is explicitly checked in handler.
-		return nil, core.RoleUndefined
+		return nil, core.DynamicRoleUndefined
 	case *RegisterChild:
-		return &t.Child, core.RoleVirtualExecutor
+		return &t.Child, core.DynamicRoleVirtualExecutor
 	case *SetBlob:
-		return &t.TargetRef, core.RoleVirtualExecutor
+		return &t.TargetRef, core.DynamicRoleVirtualExecutor
 	case *SetRecord:
-		return &t.TargetRef, core.RoleVirtualExecutor
+		return &t.TargetRef, core.DynamicRoleVirtualExecutor
 	case *UpdateObject:
-		return &t.Object, core.RoleVirtualExecutor
+		return &t.Object, core.DynamicRoleVirtualExecutor
 	case *ValidateCaseBind:
-		return &t.RecordRef, core.RoleVirtualExecutor
+		return &t.RecordRef, core.DynamicRoleVirtualExecutor
 	case *ValidateRecord:
-		return &t.Object, core.RoleVirtualExecutor
+		return &t.Object, core.DynamicRoleVirtualExecutor
 	case *ValidationResults:
-		return &t.RecordRef, core.RoleVirtualValidator
+		return &t.RecordRef, core.DynamicRoleVirtualValidator
 	case *GetObjectIndex:
-		return &t.Object, core.RoleLightExecutor
+		return &t.Object, core.DynamicRoleLightExecutor
 	case *HotIndexes:
 		return nil, 0
 	case *Parcel:

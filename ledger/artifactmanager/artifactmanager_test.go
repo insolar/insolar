@@ -370,7 +370,7 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
-			return &reply.GetObjectRedirectReply{
+			return &reply.GetObjectRedirect{
 				Receiver: nodeRef,
 				Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
 			}, nil
