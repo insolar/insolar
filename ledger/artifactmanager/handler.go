@@ -766,10 +766,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		return nil, err
 	}
 
-	if *lastPulse.Prev != msg.PulseNumber {
-		return nil, errors.New("Invalid pulse number")
-	}
-
 	for id, meta := range msg.PendingRequests {
 		err := h.db.SetObjectIndex(ctx, &id, meta.Index)
 		if err != nil {
