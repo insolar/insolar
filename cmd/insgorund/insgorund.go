@@ -62,7 +62,7 @@ func main() {
 	if *code != "" {
 		codeSlice := strings.Split(*code, ":")
 		if len(codeSlice) != 2 {
-			log.Fatal("code param format is <ref>:</path/to/plugin.so>", err)
+			log.Fatal("code param format is <ref>:</path/to/plugin.so>")
 			os.Exit(1)
 		}
 		ref := core.NewRefFromBase58(codeSlice[0])
