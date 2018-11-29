@@ -20,22 +20,22 @@ import (
 	"context"
 )
 
-// JetRole is number representing a node role.
-type JetRole int
+// DynamicRole is number representing a node role.
+type DynamicRole int
 
 const (
-	// RoleUndefined is used for special cases.
-	RoleUndefined = JetRole(iota)
-	// RoleVirtualExecutor is responsible for current pulse CPU operations.
-	RoleVirtualExecutor
-	// RoleVirtualValidator is responsible for previous pulse CPU operations.
-	RoleVirtualValidator
-	// RoleLightExecutor is responsible for current pulse Disk operations.
-	RoleLightExecutor
-	// RoleLightValidator is responsible for previous pulse Disk operations.
-	RoleLightValidator
-	// RoleHeavyExecutor is responsible for permanent Disk operations.
-	RoleHeavyExecutor
+	// DynamicRoleUndefined is used for special cases.
+	DynamicRoleUndefined = DynamicRole(iota)
+	// DynamicRoleVirtualExecutor is responsible for current pulse CPU operations.
+	DynamicRoleVirtualExecutor
+	// DynamicRoleVirtualValidator is responsible for previous pulse CPU operations.
+	DynamicRoleVirtualValidator
+	// DynamicRoleLightExecutor is responsible for current pulse Disk operations.
+	DynamicRoleLightExecutor
+	// DynamicRoleLightValidator is responsible for previous pulse Disk operations.
+	DynamicRoleLightValidator
+	// DynamicRoleHeavyExecutor is responsible for permanent Disk operations.
+	DynamicRoleHeavyExecutor
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
@@ -69,10 +69,10 @@ type PulseManager interface {
 //go:generate minimock -i github.com/insolar/insolar/core.JetCoordinator -o ../testutils -s _mock.go
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(ctx context.Context, role JetRole, obj *RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
+	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(ctx context.Context, role JetRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
+	QueryRole(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
 
 	// GetActiveNodes return active nodes for specified pulse.
 	GetActiveNodes(pulse PulseNumber) ([]Node, error)

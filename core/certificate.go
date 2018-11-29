@@ -30,7 +30,7 @@ type NodeMeta interface {
 type Certificate interface {
 	NodeMeta
 
-	GetRole() NodeRole
+	GetRole() StaticRole
 	GetRootDomainReference() *RecordRef
 	SetRootDomainReference(ref *RecordRef)
 	GetBootstrapNodes() []BootstrapNode

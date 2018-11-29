@@ -35,7 +35,7 @@ type CertificateMock struct {
 	GetPublicKeyPreCounter uint64
 	GetPublicKeyMock       mCertificateMockGetPublicKey
 
-	GetRoleFunc       func() (r core.NodeRole)
+	GetRoleFunc       func() (r core.StaticRole)
 	GetRoleCounter    uint64
 	GetRolePreCounter uint64
 	GetRoleMock       mCertificateMockGetRole
@@ -200,22 +200,22 @@ type mCertificateMockGetRole struct {
 }
 
 //Return sets up a mock for Certificate.GetRole to return Return's arguments
-func (m *mCertificateMockGetRole) Return(r core.NodeRole) *CertificateMock {
-	m.mock.GetRoleFunc = func() core.NodeRole {
+func (m *mCertificateMockGetRole) Return(r core.StaticRole) *CertificateMock {
+	m.mock.GetRoleFunc = func() core.StaticRole {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Certificate.GetRole method
-func (m *mCertificateMockGetRole) Set(f func() (r core.NodeRole)) *CertificateMock {
+func (m *mCertificateMockGetRole) Set(f func() (r core.StaticRole)) *CertificateMock {
 	m.mock.GetRoleFunc = f
 
 	return m.mock
 }
 
 //GetRole implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) GetRole() (r core.NodeRole) {
+func (m *CertificateMock) GetRole() (r core.StaticRole) {
 	atomic.AddUint64(&m.GetRolePreCounter, 1)
 	defer atomic.AddUint64(&m.GetRoleCounter, 1)
 

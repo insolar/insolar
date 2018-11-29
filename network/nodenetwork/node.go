@@ -34,7 +34,7 @@ type MutableNode interface {
 type node struct {
 	NodeID        core.RecordRef
 	NodeShortID   core.ShortNodeID
-	NodeRoles     []core.NodeRole
+	NodeRoles     []core.StaticRole
 	NodePublicKey crypto.PublicKey
 
 	NodePulseNum core.PulseNumber
@@ -45,7 +45,7 @@ type node struct {
 
 func newMutableNode(
 	id core.RecordRef,
-	roles []core.NodeRole,
+	roles []core.StaticRole,
 	publicKey crypto.PublicKey,
 	pulseNum core.PulseNumber,
 	physicalAddress,
@@ -63,7 +63,7 @@ func newMutableNode(
 
 func NewNode(
 	id core.RecordRef,
-	roles []core.NodeRole,
+	roles []core.StaticRole,
 	publicKey crypto.PublicKey,
 	pulseNum core.PulseNumber,
 	physicalAddress,
@@ -83,11 +83,11 @@ func (n *node) Pulse() core.PulseNumber {
 	return n.NodePulseNum
 }
 
-func (n *node) Roles() []core.NodeRole {
+func (n *node) Roles() []core.StaticRole {
 	return n.NodeRoles
 }
 
-func (n *node) Role() core.NodeRole {
+func (n *node) Role() core.StaticRole {
 	return n.NodeRoles[0]
 }
 

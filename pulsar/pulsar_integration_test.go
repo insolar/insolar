@@ -124,7 +124,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 
 	c := core.Components{LogicRunner: lr}
 	c.MessageBus = testmessagebus.NewTestMessageBus(t)
-	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, []core.NodeRole{core.RoleVirtual}, nil, 0, "", ""))
+	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, []core.StaticRole{core.StaticRoleVirtual}, nil, 0, "", ""))
 	c.CryptographyService = mockCryptographyService(t)
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
