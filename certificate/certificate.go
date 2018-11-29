@@ -146,14 +146,14 @@ func (cert *Certificate) GetBootstrapNodes() []core.BootstrapNode {
 func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 	importedNodePubKey, err := keyProcessor.ImportPublicKey([]byte(cert.PublicKey))
 	if err != nil {
-		return errors.Wrap(err, "[ fillExtraFields ] Bad PublicKey: "+cert.PublicKey)
+		return errors.Wrapf(err, "[ fillExtraFields ] Bad PublicKey: %s", cert.PublicKey)
 	}
 	cert.nodePublicKey = importedNodePubKey
 
 	for _, pulsarKey := range cert.PulsarPublicKeys {
 		importedPulsarPubKey, err := keyProcessor.ImportPublicKey([]byte(pulsarKey))
 		if err != nil {
-			return errors.Wrap(err, "[ fillExtraFields ] Bad pulsarKey: "+pulsarKey)
+			return errors.Wrapf(err, "[ fillExtraFields ] Bad pulsarKey: %s", pulsarKey)
 		}
 		cert.pulsarPublicKey = append(cert.pulsarPublicKey, importedPulsarPubKey)
 	}
@@ -162,7 +162,7 @@ func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 		currentNode := &cert.BootstrapNodes[i]
 		importedBNodePubKey, err := keyProcessor.ImportPublicKey([]byte(currentNode.PublicKey))
 		if err != nil {
-			return errors.Wrap(err, "[ fillExtraFields ] Bad Bootstrap PublicKey: "+currentNode.PublicKey)
+			return errors.Wrapf(err, "[ fillExtraFields ] Bad Bootstrap PublicKey: %s", currentNode.PublicKey)
 		}
 		currentNode.nodePublicKey = importedBNodePubKey
 	}
@@ -174,7 +174,7 @@ func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, certPath string) (*Certificate, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(certPath))
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ReadCertificate ] failed to read certificate from: "+certPath)
+		return nil, errors.Wrapf(err, "[ ReadCertificate ] failed to read certificate from: %s", certPath)
 	}
 	cert := Certificate{}
 	err = json.Unmarshal(data, &cert)
