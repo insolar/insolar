@@ -31,11 +31,10 @@ type GenesisDataProvider struct {
 	Certificate       core.Certificate       `inject:""`
 	ContractRequester core.ContractRequester `inject:""`
 
-	rootDomainRef  *core.RecordRef
-	rootMemberRef  *core.RecordRef
-	nodeDomainRef  *core.RecordRef
-	rootDomainLock sync.RWMutex
-	infoLock       sync.RWMutex
+	rootDomainRef *core.RecordRef
+	rootMemberRef *core.RecordRef
+	nodeDomainRef *core.RecordRef
+	lock          sync.RWMutex
 }
 
 // New creates new GenesisDataProvider
@@ -63,18 +62,13 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 
 // GetRootDomain returns reference to RootDomain
 func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordRef {
-	gdp.rootDomainLock.Lock()
-	defer gdp.rootDomainLock.Unlock()
-	if gdp.rootDomainRef == nil {
-		gdp.rootDomainRef = gdp.Certificate.GetRootDomainReference()
-	}
-	return gdp.rootDomainRef
+	return gdp.Certificate.GetRootDomainReference()
 }
 
 // GetNodeDomain returns reference to NodeDomain
 func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.RecordRef, error) {
-	gdp.infoLock.Lock()
-	defer gdp.infoLock.Unlock()
+	gdp.lock.Lock()
+	defer gdp.lock.Unlock()
 	if gdp.nodeDomainRef == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {
@@ -86,8 +80,8 @@ func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.Record
 
 // GetRootMember returns reference to RootMember
 func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*core.RecordRef, error) {
-	gdp.infoLock.Lock()
-	defer gdp.infoLock.Unlock()
+	gdp.lock.Lock()
+	defer gdp.lock.Unlock()
 	if gdp.rootMemberRef == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {
