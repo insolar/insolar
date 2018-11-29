@@ -235,7 +235,7 @@ func main() {
 			}
 		},
 	}
-	cmdCompile.Flags().StringVarP(&outdir, "output-dir", "o", "", "output dir (default .)")
+	cmdCompile.Flags().StringVarP(&outdir, "output-dir", "o", ".", "output dir (default .)")
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(cmdProxy, cmdWrapper, cmdImports, cmdCompile)
