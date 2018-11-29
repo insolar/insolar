@@ -8,7 +8,7 @@ go:
 
 env:
   global:
-    - CGO_ENABLED=1
+    - CGO_ENABLED=0
     - GORACE="halt_on_error=1"
 # «For parallel processes running at the same time, try to reduce the number. More than two to four processes should be fine, beyond that, resources are likely to be exhausted.»
 # https://docs.travis-ci.com/user/common-build-problems/#my-build-script-is-killed-without-any-error

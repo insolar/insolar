@@ -80,7 +80,7 @@ $(EXPORTER):
 	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
 
 functest:
-	go test -tags functest -v ./functest
+	CGO_ENABLED=1 go test -tags functest -v ./functest
 
 test:
 	go test -v $(ALL_PACKAGES)
