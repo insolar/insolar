@@ -342,6 +342,7 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 			node: certificate.BootstrapNode{
 				PublicKey: nodePubKey,
 				Host:      discoverNode.Host,
+				NodeRef:   contract.String(),
 			},
 			privKey: privKey,
 			ref:     contract,
