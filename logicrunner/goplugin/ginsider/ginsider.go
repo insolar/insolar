@@ -211,6 +211,7 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 		return "", err
 	}
 
+	inslogger.FromContext(ctx).Debugf("obtaining code %q", ref)
 	req := rpctypes.UpGetCodeReq{
 		UpBaseReq: MakeUpBaseReq(),
 		Code:      ref,
