@@ -26,7 +26,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
 .PHONY: all lint ci-lint metalint clean install-deps pre-build build test test_with_coverage regen-proxies
 
-all: clean install-deps pre-build build healthcheck test
+all: clean install-deps pre-build build test
 
 lint: ci-lint
 
@@ -54,7 +54,7 @@ pre-build:
 
 build: 
 	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK)
 
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
