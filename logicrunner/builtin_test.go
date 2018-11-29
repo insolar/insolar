@@ -74,6 +74,8 @@ func TestBareHelloworld(t *testing.T) {
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 
+	recent := testutils.NewRecentStorageMock(t)
+
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseNumber = 0
 
@@ -88,7 +90,7 @@ func TestBareHelloworld(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Register(scheme)
 	cm.Register(l.GetPulseManager(), l.GetArtifactManager(), l.GetJetCoordinator())
-	cm.Inject(nk, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 

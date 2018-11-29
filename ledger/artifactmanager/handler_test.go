@@ -420,20 +420,25 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	msg := message.GetCode{
 		Code: *genRandomRef(0),
 	}
+	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
 
 	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirect{Signature: []byte{1, 2, 3}}, nil)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, &configuration.ArtifactManager{
 		LightChainLimit: 3,
 	})
 
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	h.Recent = recentStorageMock
 
 	t.Run("redirects to light when created after limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleLightExecutor, &msg.Code, 0,
+			ctx, core.DynamicRoleLightExecutor, &msg.Code, 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -451,7 +456,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	t.Run("redirects to heavy when created before limit", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Code, 5,
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Code, 5,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -475,11 +480,17 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	defer cleaner()
 	defer mc.Finish()
 
+	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, &configuration.ArtifactManager{
 		LightChainLimit: 3,
 	})
+	h.Recent = recentStorageMock
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
 	childRecord := record.ChildRecord{
@@ -511,7 +522,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	h.Bus = mb
 	heavyRef := genRandomRef(0)
 	jc.QueryRoleMock.Expect(
-		ctx, core.RoleHeavyExecutor, &msg.Parent, 0,
+		ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, 0,
 	).Return(
 		[]core.RecordRef{*heavyRef}, nil,
 	)

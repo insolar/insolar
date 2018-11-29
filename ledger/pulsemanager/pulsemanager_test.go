@@ -107,7 +107,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	}
 
 	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.RoleLightMaterial)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
 
 	nodeNetworkMock := network.NewNodeNetworkMock(t)
 	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})

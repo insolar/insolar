@@ -6,12 +6,11 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "KeyProcessor" can be found in github.com/insolar/insolar/core
 */
 import (
-	crypto "crypto"
+	"crypto"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 

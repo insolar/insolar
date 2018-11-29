@@ -155,12 +155,12 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 		if pulseNumber-msg.Code.Record().Pulse() < h.conf.LightChainLimit {
 			// Find light executor that saved the code.
 			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.RoleLightExecutor, &msg.Code, msg.Code.Record().Pulse(),
+				ctx, core.DynamicRoleLightExecutor, &msg.Code, msg.Code.Record().Pulse(),
 			)
 		} else {
 			// Find heavy that has this code.
 			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.RoleHeavyExecutor, &msg.Code, pulseNumber,
+				ctx, core.DynamicRoleHeavyExecutor, &msg.Code, pulseNumber,
 			)
 		}
 		if err != nil {
