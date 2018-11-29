@@ -77,7 +77,8 @@ func RemoveOrigin(discoveryNodes []core.BootstrapNode, origin core.RecordRef) ([
 }
 
 func OriginIsDiscovery(cert core.Certificate) bool {
-	for _, discoveryNode := range cert.GetBootstrapNodes() {
+	bNodes := cert.GetBootstrapNodes()
+	for _, discoveryNode := range bNodes {
 		if cert.GetNodeRef().Equal(*discoveryNode.GetNodeRef()) {
 			return true
 		}
@@ -86,7 +87,8 @@ func OriginIsDiscovery(cert core.Certificate) bool {
 }
 
 func FindDiscovery(cert core.Certificate, ref core.RecordRef) core.BootstrapNode {
-	for _, discoveryNode := range cert.GetBootstrapNodes() {
+	bNodes := cert.GetBootstrapNodes()
+	for _, discoveryNode := range bNodes {
 		if ref.Equal(*discoveryNode.GetNodeRef()) {
 			return discoveryNode
 		}
