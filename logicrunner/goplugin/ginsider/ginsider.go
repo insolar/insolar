@@ -200,7 +200,6 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 	path := filepath.Join(gi.dir, ref.String())
 	_, err := os.Stat(path)
 
-	inslogger.FromContext(ctx).Debugf(err.Error())
 	if err == nil {
 		return path, nil
 	} else if !os.IsNotExist(err) {
