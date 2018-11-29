@@ -20,9 +20,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 )
 
 func mockContractRequesterWithError(t *testing.T) *testutils.ContractRequesterMock {
@@ -47,4 +49,18 @@ func mockCertificate(t *testing.T, rootDomainRef *core.RecordRef) *testutils.Cer
 		return rootDomainRef
 	}
 	return certificateMock
+}
+
+func TestNew(t *testing.T) {
+	contractRequester := mockContractRequester(t, nil)
+	certificate := mockCertificate(t, nil)
+
+	result, err := New()
+
+	cm := &component.Manager{}
+	cm.Inject(contractRequester, certificate, result)
+
+	require.NoError(t, err)
+	require.Equal(t, result.Certificate, certificate)
+	require.Equal(t, result.ContractRequester, contractRequester)
 }
