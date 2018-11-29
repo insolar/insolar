@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"context"
 	"encoding/gob"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -93,7 +94,14 @@ func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 }
 
 func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
-	// TODO: implement check ID, ShortID collision (maybe some other checks)
+	n := bc.keeper.GetActiveNode(node.ID())
+	if n != nil {
+		return errors.New(fmt.Sprintf("Node ID collision: %s", n.ID()))
+	}
+	n = bc.keeper.GetActiveNodeByShortID(node.ShortID())
+	if n != nil {
+		return errors.New(fmt.Sprintf("Short ID collision: %d", n.ShortID()))
+	}
 	return nil
 }
 
