@@ -17,14 +17,17 @@
 package bootstrap
 
 import (
+	"crypto/rand"
+	"fmt"
 	"sort"
-	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
+
+const nonceSize int = 128
 
 // checkShortIDCollision returns true if NodeKeeper already contains node with such ShortID
 func checkShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
@@ -110,6 +113,13 @@ func Xor(first, second []byte) []byte {
 }
 
 func GenerateNonce() (Nonce, error) {
-	// TODO: generate nonce based on entropy
-	return time.Now().MarshalBinary()
+	buffer := [nonceSize]byte{}
+	l, err := rand.Read(buffer[:])
+	if err != nil {
+		return nil, errors.Wrapf(err, "error generating nonce")
+	}
+	if l != nonceSize {
+		return nil, errors.New(fmt.Sprintf("GenerateNonce: generated size %d does equal to required size %d", l, nonceSize))
+	}
+	return buffer[:], nil
 }
