@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -83,7 +84,7 @@ func TestTransportConsensus_SendRequest(t *testing.T) {
 	request := cn1.NewRequestBuilder().Type(types.Phase1).Data(packet).Build()
 	err = cn1.SendRequest(request, cn2.GetNodeID())
 	require.NoError(t, err)
-	success := network.WaitTimeout(&wg, time.Second)
+	success := utils.WaitTimeout(&wg, time.Second)
 	require.True(t, success)
 }
 
