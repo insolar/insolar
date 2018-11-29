@@ -96,19 +96,14 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	gls.Set("callCtx", args.Context)
 	defer gls.Cleanup()
 
-	inslogger.FromContext(ctx).Debugf("123")
 	p, err := t.GI.Plugin(ctx, args.Code)
-	inslogger.FromContext(ctx).Debugf("456")
 	if err != nil {
-		log.Debugf("Couldn't get plugin by code reference %s", args.Code.String())
 		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
 	}
 
 	if args.Context.Caller.IsEmpty() {
 		attr, err := p.Lookup("INSATTR_" + args.Method + "_API")
 		if err != nil {
-			log.Debugf("Calling non INSATTRAPI method %s (code ref: %s)",
-				args.Method, args.Code.String())
 			return errors.Wrapf(
 				err, "Calling non INSATTRAPI method %s (code ref: %s)",
 				args.Method, args.Code.String(),
@@ -116,19 +111,15 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		}
 		api, ok := attr.(*bool)
 		if !ok {
-			log.Debugf("INSATTRAPI attribute for method %s is not boolean", args.Method)
 			return errors.Errorf("INSATTRAPI attribute for method %s is not boolean", args.Method)
 		}
 		if !*api {
-			log.Debugf("Calling non INSATTRAPI method ")
 			return errors.Errorf("Calling non INSATTRAPI method ")
 		}
 	}
 
 	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
 	if err != nil {
-		log.Debugf("Can't find wrapper for %s (code ref: %s)",
-			args.Method, args.Code.String())
 		return errors.Wrapf(
 			err, "Can't find wrapper for %s (code ref: %s)",
 			args.Method, args.Code.String(),
@@ -137,14 +128,12 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 
 	wrapper, ok := symbol.(func(object []byte, data []byte) ([]byte, []byte, error))
 	if !ok {
-		log.Debugf("Wrapper with wrong signature")
 		return errors.New("Wrapper with wrong signature")
 	}
 
 	state, result, err := wrapper(args.Data, args.Arguments) // may be entire args???
 
 	if err != nil {
-		log.Debugf("Method call returned error")
 		return errors.Wrapf(err, "Method call returned error")
 	}
 	reply.Data = state
@@ -211,7 +200,6 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 	path := filepath.Join(gi.dir, ref.String())
 	_, err := os.Stat(path)
 
-	inslogger.FromContext(ctx).Debugf("oc 1")
 	inslogger.FromContext(ctx).Debugf(err.Error())
 	if err == nil {
 		return path, nil
@@ -219,14 +207,11 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 		return "", errors.Wrap(err, "file !notexists()")
 	}
 
-	inslogger.FromContext(ctx).Debugf("oc 2")
 	client, err := gi.Upstream()
 	if err != nil {
 		return "", err
 	}
 
-	inslogger.FromContext(ctx).Debugf("oc 3")
-	inslogger.FromContext(ctx).Debugf("obtaining code %q", ref)
 	req := rpctypes.UpGetCodeReq{
 		UpBaseReq: MakeUpBaseReq(),
 		Code:      ref,
@@ -241,14 +226,10 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 		return "", errors.Wrap(err, "on calling main API")
 	}
 
-	inslogger.FromContext(ctx).Debugf("oc 4")
-
 	err = ioutil.WriteFile(path, res.Code, 0666)
 	if err != nil {
 		return "", errors.Wrap(err, "on writing file down")
 	}
-
-	inslogger.FromContext(ctx).Debugf("oc 5")
 
 	return path, nil
 }
