@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/host"
@@ -35,6 +36,10 @@ type NetworkBootstrapper struct {
 }
 
 func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
+	if len(nb.certificate.GetBootstrapNodes()) == 0 {
+		log.Info("Zero bootstrap")
+		return nil
+	}
 	if OriginIsDiscovery(nb.certificate) {
 		return nb.bootstrapDiscovery(ctx)
 	}

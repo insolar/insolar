@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/controller/pinger"
@@ -81,6 +82,7 @@ func init() {
 
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
+	log.Info("Bootstrapping to discovery node")
 	ch := bc.getBootstrapHostsChannel(ctx, 1)
 	host := bc.waitResultFromChannel(ctx, ch)
 	if host == nil {
@@ -96,6 +98,7 @@ func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
 }
 
 func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
+	log.Info("Network bootstrap between discovery nodes")
 	discoveryNodes := bc.cert.GetBootstrapNodes()
 	var err error
 	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.cert.GetNodeRef())
