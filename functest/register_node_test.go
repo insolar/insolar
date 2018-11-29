@@ -63,3 +63,10 @@ func TestRegisterNodeNotExistRole(t *testing.T) {
 	require.Contains(t, err.Error(),
 		"[ registerNodeCall ] Problems with RegisterNode: [ RegisterNode ] Can't save as child: on calling main API: couldn't save new object as child: executer error: problem with API call: Can't call constructor NewNodeRecord: Role is not supported: some_not_fancy_role")
 }
+
+func TestRegisterNodeByNoRoot(t *testing.T) {
+	member := createMember(t, "Member1")
+	const testRole = "virtual"
+	_, err := signedRequest(member, "RegisterNode", TESTPUBLICKEY, testRole)
+	require.Contains(t, err.Error(), "[ RegisterNode ] Only Root member can register node")
+}
