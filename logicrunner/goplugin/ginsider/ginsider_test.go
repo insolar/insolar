@@ -6,6 +6,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -28,10 +29,12 @@ func TestHealthCheck(t *testing.T) {
 	currentPath, err := os.Getwd()
 	require.NoError(t, err)
 
-	insgoccPath := currentPath + "/../../../bin/insgocc"
-	contractPath := currentPath + "/healthcheck/healthcheck.go"
+	insgoccPath := "../../../bin/insgocc"
+	contractPath := "./healthcheck/healthcheck.go"
 
-	execResult, err := exec.Command(insgoccPath, "compile", "-o", tmpDir, contractPath).CombinedOutput()
+	pathToTmp, err := filepath.Rel(currentPath, tmpDir)
+
+	execResult, err := exec.Command(insgoccPath, "compile", "-o", pathToTmp, contractPath).CombinedOutput()
 	log.Warnf("%s", execResult)
 	require.NoError(t, err, "failed to compile contract")
 
@@ -45,7 +48,7 @@ func TestHealthCheck(t *testing.T) {
 
 	startGoInsider(t, gi, protocol, socket)
 
-	cmd := exec.Command(currentPath+"/../../../bin/healthcheck",
+	cmd := exec.Command("../../../bin/healthcheck",
 		"-a", socket,
 		"-p", protocol,
 		"-r", refString)
