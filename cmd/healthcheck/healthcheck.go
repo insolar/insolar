@@ -21,13 +21,12 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/insolar/insolar/testutils"
+	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/spf13/pflag"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/testutils"
 )
 
 func main() {
