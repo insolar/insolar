@@ -63,24 +63,29 @@ type AuthorizationCertificate struct {
 }
 
 // GetRole returns role from node certificate
-func (nodeCert *AuthorizationCertificate) GetRole() core.StaticRole {
-	return core.GetStaticRoleFromString(nodeCert.Role)
+func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
+	return core.GetStaticRoleFromString(authCert.Role)
 }
 
 // GetNodeSign returns bootstrap nodes array
-func (nodeCert *AuthorizationCertificate) GetNodeSign(publicKey crypto.PublicKey) []byte {
-	return []byte{}
+func (authCert *AuthorizationCertificate) GetNodeSign(publicKey crypto.PublicKey) ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
 }
 
 // GetNodeRef returns reference from node certificate
-func (nodeCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
-	ref := core.NewRefFromBase58(nodeCert.Reference)
+func (authCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
+	ref := core.NewRefFromBase58(authCert.Reference)
 	return &ref
 }
 
 // GetPublicKey returns public key reference from node certificate
-func (nodeCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
-	return nodeCert.nodePublicKey
+func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
+	return authCert.nodePublicKey
+}
+
+// Serialize returns decoded info from AuthorizationCertificate
+func (authCert *AuthorizationCertificate) Serialize() ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
 }
 
 // BootstrapNode holds info about bootstrap nodes
@@ -273,6 +278,11 @@ func (cert *Certificate) Dump() (string, error) {
 }
 
 // GetNodeSign return sign from bootstrap node with provided public key
-func (cert *Certificate) GetNodeSign(publicKey crypto.PublicKey) []byte {
-	return []byte{}
+func (cert *Certificate) GetNodeSign(publicKey crypto.PublicKey) ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
+}
+
+// Serialize returns decoded info from AuthorizationCertificate
+func (cert *Certificate) Serialize() ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
 }
