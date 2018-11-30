@@ -66,7 +66,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't extract response")
 	}
 
-	cert, err := nc.Certificate.NewCertForHost(pKey, core.StaticRole(role).String(), nodeRef.String())
+	cert, err := nc.Certificate.NewCertForHost(pKey, role, nodeRef.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
 	}

@@ -18,15 +18,24 @@ package extractor
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
 // NodeInfoResponse extracts response of GetNodeInfo
-func NodeInfoResponse(data []byte) (string, uint64, error) {
-	z, err := core.UnMarshalResponse(data, []interface{}{nil})
+func NodeInfoResponse(data []byte) (string, string, error) {
+	res := struct {
+		PublicKey string
+		Role      core.StaticRole
+	}{}
+	var contractErr *foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{&res, &contractErr})
 	if err != nil {
-		return "", 0, errors.Wrap(err, "[ NodeInfoResponse ] Couldn't unmarshall response")
+		return "", "", errors.Wrap(err, "[ NodeInfoResponse ] Couldn't unmarshall response")
 	}
-	answer := z[0].(map[interface{}]interface{})
-	return answer["PublicKey"].(string), answer["Role"].(uint64), nil
+	if contractErr != nil {
+		return "", "", errors.Wrap(contractErr, "[ NodeInfoResponse ] Has error in response")
+	}
+
+	return res.PublicKey, res.Role.String(), nil
 }
