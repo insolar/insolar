@@ -123,7 +123,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
-		n.cfg.Host.ConsensusTransport.Address,
+		n.cfg.Host.Transport.Address,
 		n.cfg.Node.Node.ID,
 		n.NodeNetwork.GetOrigin().ShortID(),
 		n.routingTable,
