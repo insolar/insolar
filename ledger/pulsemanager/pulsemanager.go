@@ -88,11 +88,11 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 }
 
 // Current returns current pulse structure.
-func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
+func (m *PulseManager) Current() *core.Pulse {
 	m.setLock.RLock()
 	defer m.setLock.RUnlock()
 
-	return &m.currentPulse, nil
+	return &m.currentPulse
 }
 
 func (m *PulseManager) processDrop(ctx context.Context, latestPulseNumber core.PulseNumber) error {
@@ -234,6 +234,15 @@ func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) 
 	inslog := inslogger.FromContext(ctx)
 	var retrydelay time.Duration
 	attempt := 0
+	// shift synced pulse
+	finishpulse := func() {
+		pulses = pulses[1:]
+		// reset retry variables
+		// TODO: use jitter value for zero 'retrydelay'
+		retrydelay = 0
+		attempt = 0
+	}
+
 	for {
 		select {
 		case <-time.After(retrydelay):
@@ -267,6 +276,10 @@ func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) 
 		}
 
 		tosyncPN := pulses[0]
+		if m.pulseIsOutdated(tosyncPN) {
+			finishpulse()
+			continue
+		}
 		inslog.Infof("start syncronization to heavy for pulse %v", tosyncPN)
 
 		sholdretry := false
@@ -295,11 +308,11 @@ func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) 
 			panic(err)
 		}
 
-		// shift synced pulse
-		pulses = pulses[1:]
-		// reset retry variables
-		// TODO: use jitter value for zero 'retrydelay'
-		retrydelay = 0
-		attempt = 0
+		finishpulse()
 	}
+}
+
+func (m *PulseManager) pulseIsOutdated(pn core.PulseNumber) bool {
+	currentnum := m.Current().PulseNumber
+	return currentnum-pn > m.options.pulsesDeltaLimit
 }
