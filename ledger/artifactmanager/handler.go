@@ -77,6 +77,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
 	h.Bus.MustRegister(core.TypeGetObjectIndex, h.handleGetObjectIndex)
+	h.Bus.MustRegister(core.TypeValidationCheck, h.handleValidationCheck)
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
 	h.jetDropHandlers[core.TypeGetObject] = h.handleGetObject
@@ -662,6 +663,24 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 	}
 
 	return &reply.ObjectIndex{Index: buf}, nil
+}
+
+func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.ValidationCheck)
+
+	rec, err := h.db.GetRecord(ctx, &msg.ValidatedState)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch state record")
+	}
+	state, ok := rec.(record.ObjectState)
+	if !ok {
+		return nil, errors.New("failed to fetch state record")
+	}
+	if msg.LatestStateApproved != state.PrevStateID() {
+		return &reply.NotOK{}, nil
+	}
+
+	return &reply.OK{}, nil
 }
 
 func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Message) error {
