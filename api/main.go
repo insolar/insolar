@@ -89,7 +89,7 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 
 	err = rpcServer.RegisterService(NewStatusService(ar), "status")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: info")
+		return errors.New("[ registerServices ] Can't RegisterService: status")
 	}
 
 	return nil
