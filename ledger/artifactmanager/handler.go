@@ -641,7 +641,9 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 	if !ok {
 		return nil, errors.New("failed to fetch state record")
 	}
-	if msg.LatestStateApproved != state.PrevStateID() {
+	approved := msg.LatestStateApproved
+	validated := state.PrevStateID()
+	if !approved.Equal(validated) && approved != nil && validated != nil {
 		return &reply.NotOK{}, nil
 	}
 
