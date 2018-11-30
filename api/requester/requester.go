@@ -169,7 +169,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	return response, nil
 }
 
-func getDefaultRpcParams(method string) PostParams {
+func getDefaultRPCParams(method string) PostParams {
 	return PostParams{
 		"jsonrpc": "2.0",
 		"id":      "",
@@ -179,7 +179,7 @@ func getDefaultRpcParams(method string) PostParams {
 
 // Info makes rpc request to info.Get method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	params := getDefaultRpcParams("info.Get")
+	params := getDefaultRPCParams("info.Get")
 
 	body, err := GetResponseBody(url+"/rpc", params)
 	if err != nil {
