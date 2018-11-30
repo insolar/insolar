@@ -120,7 +120,6 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	origin := nodenetwork.NewNode(testutils.RandomRef(),
 		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
 		nil,
-		0,
 		address,
 		"",
 	)

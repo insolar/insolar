@@ -93,11 +93,6 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 	return TypeNodeJoinClaim
 }
 
-func (njc *NodeJoinClaim) Node() core.Node {
-	// TODO: convert claim to node
-	return nil
-}
-
 // NodeJoinClaim is a type 5, len == 272.
 type NodeAnnounceClaim struct {
 	NodeJoinClaim
