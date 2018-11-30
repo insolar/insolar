@@ -278,7 +278,6 @@ func (cert *Certificate) Dump() (string, error) {
 	return string(result), nil
 }
 
-<<<<<<< HEAD
 func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (core.Certificate, error) {
 	newCert := Certificate{
 		MajorityRule:        cert.MajorityRule,
@@ -296,7 +295,8 @@ func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (c
 		newCert.BootstrapNodes[i].NetworkSign = node.NetworkSign
 	}
 	return &newCert, nil
-=======
+}
+
 // GetNodeSign return sign from bootstrap node with provided ref
 func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
@@ -305,5 +305,4 @@ func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
 // Serialize returns decoded info from AuthorizationCertificate
 func (cert *Certificate) Serialize() ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
->>>>>>> 71118efec1e35b8ef447b1098b4127da1d9b04ad
 }
