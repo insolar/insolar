@@ -53,7 +53,7 @@ func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
 }
 
 // GetCert method returns node certificate
-func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.AuthorizationCertificate, error) {
+func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
 	return nc.getCoordinator().GetCert(ctx, nodeRef)
 }
 
