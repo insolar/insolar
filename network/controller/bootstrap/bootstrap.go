@@ -51,7 +51,7 @@ type NodeBootstrapResponse struct {
 }
 
 type GenesisRequest struct {
-	Certificate core.Certificate
+	Certificate core.AuthorizationCertificate
 }
 
 type GenesisResponse struct {
@@ -241,7 +241,7 @@ func (bc *Bootstrapper) processBootstrap(request network.Request) (network.Respo
 	return bc.transport.BuildResponse(request, &NodeBootstrapResponse{Code: Accepted}), nil
 }
 
-func (bc *Bootstrapper) checkGenesisCert(cert core.Certificate) error {
+func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) error {
 	// TODO: check certificate
 	return nil
 }

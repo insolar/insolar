@@ -52,6 +52,42 @@ type Certificate struct {
 	nodePublicKey   crypto.PublicKey
 }
 
+// AuthorizationCertificate holds info about node from it certificate
+type AuthorizationCertificate struct {
+	PublicKey      string          `json:"public_key"`
+	Reference      string          `json:"reference"`
+	Role           string          `json:"role"`
+	BootstrapNodes []BootstrapNode `json:"bootstrap_nodes"`
+
+	nodePublicKey crypto.PublicKey
+}
+
+// GetRole returns role from node certificate
+func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
+	return core.GetStaticRoleFromString(authCert.Role)
+}
+
+// GetNodeSign returns bootstrap nodes array
+func (authCert *AuthorizationCertificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
+}
+
+// GetNodeRef returns reference from node certificate
+func (authCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
+	ref := core.NewRefFromBase58(authCert.Reference)
+	return &ref
+}
+
+// GetPublicKey returns public key reference from node certificate
+func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
+	return authCert.nodePublicKey
+}
+
+// Serialize returns decoded info from AuthorizationCertificate
+func (authCert *AuthorizationCertificate) Serialize() ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
+}
+
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
 	PublicKey   string `json:"public_key"`
@@ -240,4 +276,14 @@ func (cert *Certificate) Dump() (string, error) {
 	}
 
 	return string(result), nil
+}
+
+// GetNodeSign return sign from bootstrap node with provided ref
+func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
+}
+
+// Serialize returns decoded info from AuthorizationCertificate
+func (cert *Certificate) Serialize() ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
 }

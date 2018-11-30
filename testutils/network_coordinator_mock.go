@@ -30,7 +30,7 @@ type NetworkCoordinatorMock struct {
 	SetPulsePreCounter uint64
 	SetPulseMock       mNetworkCoordinatorMockSetPulse
 
-	ValidateCertFunc       func(p context.Context, p1 core.Certificate) (r bool, r1 error)
+	ValidateCertFunc       func(p context.Context, p1 core.AuthorizationCertificate) (r bool, r1 error)
 	ValidateCertCounter    uint64
 	ValidateCertPreCounter uint64
 	ValidateCertMock       mNetworkCoordinatorMockValidateCert
@@ -199,32 +199,32 @@ type mNetworkCoordinatorMockValidateCert struct {
 //NetworkCoordinatorMockValidateCertParams represents input parameters of the NetworkCoordinator.ValidateCert
 type NetworkCoordinatorMockValidateCertParams struct {
 	p  context.Context
-	p1 core.Certificate
+	p1 core.AuthorizationCertificate
 }
 
 //Expect sets up expected params for the NetworkCoordinator.ValidateCert
-func (m *mNetworkCoordinatorMockValidateCert) Expect(p context.Context, p1 core.Certificate) *mNetworkCoordinatorMockValidateCert {
+func (m *mNetworkCoordinatorMockValidateCert) Expect(p context.Context, p1 core.AuthorizationCertificate) *mNetworkCoordinatorMockValidateCert {
 	m.mockExpectations = &NetworkCoordinatorMockValidateCertParams{p, p1}
 	return m
 }
 
 //Return sets up a mock for NetworkCoordinator.ValidateCert to return Return's arguments
 func (m *mNetworkCoordinatorMockValidateCert) Return(r bool, r1 error) *NetworkCoordinatorMock {
-	m.mock.ValidateCertFunc = func(p context.Context, p1 core.Certificate) (bool, error) {
+	m.mock.ValidateCertFunc = func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of NetworkCoordinator.ValidateCert method
-func (m *mNetworkCoordinatorMockValidateCert) Set(f func(p context.Context, p1 core.Certificate) (r bool, r1 error)) *NetworkCoordinatorMock {
+func (m *mNetworkCoordinatorMockValidateCert) Set(f func(p context.Context, p1 core.AuthorizationCertificate) (r bool, r1 error)) *NetworkCoordinatorMock {
 	m.mock.ValidateCertFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //ValidateCert implements github.com/insolar/insolar/core.NetworkCoordinator interface
-func (m *NetworkCoordinatorMock) ValidateCert(p context.Context, p1 core.Certificate) (r bool, r1 error) {
+func (m *NetworkCoordinatorMock) ValidateCert(p context.Context, p1 core.AuthorizationCertificate) (r bool, r1 error) {
 	atomic.AddUint64(&m.ValidateCertPreCounter, 1)
 	defer atomic.AddUint64(&m.ValidateCertCounter, 1)
 

@@ -34,7 +34,7 @@ func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef core.Rec
 	return nil, errors.New("not implemented")
 }
 
-func (znc *zeroNetworkCoordinator) ValidateCert(ctx context.Context, certificate core.Certificate) (bool, error) {
+func (znc *zeroNetworkCoordinator) ValidateCert(ctx context.Context, certificate core.AuthorizationCertificate) (bool, error) {
 	return false, errors.New("not implemented")
 }
 
