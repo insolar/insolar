@@ -24,7 +24,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps pre-build build functest test test_with_coverage regen-proxies generate ensure
+.PHONY: all lint ci-lint metalint clean install-deps pre-build build functest test test_with_coverage regen-proxies generate ensure test_git_no_changes
 
 all: clean install-deps pre-build build test
 
@@ -51,6 +51,9 @@ pre-build: ensure generate
 
 generate:
 	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
+
+test_git_no_changes:
+	git diff --exit-code
 
 ensure:
 	dep ensure
