@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/heavy"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/record"
@@ -92,7 +94,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
-				return nil, fmt.Errorf("BusMock one send should be failed (test retry)")
+				return heavy.ErrSyncInProgress,
+					errors.New("BusMock one send should be failed (test retry)")
 			}
 
 			syncsended++

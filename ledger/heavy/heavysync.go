@@ -24,15 +24,15 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-var (
-	// processable errors by client (i.e. it could retry)
-
-	// ErrSyncInProgress indicates that sync for provided jet is in sync
-	ErrSyncInProgress = errors.New("Heavy node already syncing")
-)
+// ErrSyncInProgress indicates that sync for provided jet is in sync
+var ErrSyncInProgress = &reply.HeavyError{
+	Message: "Heavy node sync in progress",
+	SubType: reply.ErrHeavySyncInProgress,
+}
 
 // in testnet we start with only one jet
 type syncstate struct {
@@ -79,7 +79,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, pn core.PulseNumber) error 
 	}
 
 	if pn <= s.lastok {
-		return fmt.Errorf("Pulse %v is greater or equal last synced pulse %v", pn, s.lastok)
+		return fmt.Errorf("Pulse %v is not greater than last synced pulse %v", pn, s.lastok)
 	}
 
 	pulse, err := s.db.GetPulse(ctx, checkpoint)

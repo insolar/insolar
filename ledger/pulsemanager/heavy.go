@@ -23,9 +23,30 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 )
+
+// HeavyErr holds core.Reply and implements core.Retryable and error interfaces.
+type HeavyErr struct {
+	reply core.Reply
+	err   error
+}
+
+// Error implements error interface.
+func (he HeavyErr) Error() string {
+	return he.err.Error()
+}
+
+// IsRetryable checks retryability of message.
+func (he HeavyErr) IsRetryable() bool {
+	herr, ok := he.reply.(*reply.HeavyError)
+	if ok {
+		ok = herr.ConcreteType() == reply.ErrHeavySyncInProgress
+	}
+	return ok
+}
 
 // HeavySync syncs records from light to heavy node, returns last synced pulse and error.
 //
@@ -36,20 +57,24 @@ func (m *PulseManager) HeavySync(
 	retry bool,
 ) error {
 	inslog := inslogger.FromContext(ctx)
+	var (
+		busreply core.Reply
+		buserr   error
+	)
 
 	if retry {
 		inslog.Infof("send reset message for pulse %v (retry sync)", pn)
 		resetMsg := &message.HeavyReset{PulseNum: pn}
-		if _, reseterr := m.Bus.Send(ctx, resetMsg, nil); reseterr != nil {
-			return reseterr
+		if busreply, buserr := m.Bus.Send(ctx, resetMsg, nil); buserr != nil {
+			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg := &message.HeavyStartStop{PulseNum: pn}
-	_, starterr := m.Bus.Send(ctx, signalMsg, nil)
+	busreply, buserr = m.Bus.Send(ctx, signalMsg, nil)
 	// TODO: check if locked
-	if starterr != nil {
-		return starterr
+	if buserr != nil {
+		return HeavyErr{reply: busreply, err: buserr}
 	}
 	inslog.Infof("synchronize, sucessfully send start message for pulse %v", pn)
 
@@ -64,16 +89,16 @@ func (m *PulseManager) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{Records: recs}
-		_, senderr := m.Bus.Send(ctx, msg, nil)
-		if senderr != nil {
-			return senderr
+		busreply, buserr = m.Bus.Send(ctx, msg, nil)
+		if buserr != nil {
+			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg.Finished = true
-	_, stoperr := m.Bus.Send(ctx, signalMsg, nil)
-	if stoperr != nil {
-		return stoperr
+	busreply, buserr = m.Bus.Send(ctx, signalMsg, nil)
+	if buserr != nil {
+		return HeavyErr{reply: busreply, err: buserr}
 	}
 	inslog.Infof("synchronize, sucessfully send finish message for pulse %v", pn)
 

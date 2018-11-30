@@ -252,19 +252,28 @@ func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) 
 		tosyncPN := pulses[0]
 		inslog.Infof("start syncronization to heavy for pulse %v", tosyncPN)
 
+		sholdretry := false
 		syncerr := m.HeavySync(ctx, tosyncPN, attempt > 0)
 		if syncerr != nil {
+
+			if heavyerr, ok := syncerr.(HeavyErr); ok {
+				sholdretry = heavyerr.IsRetryable()
+			}
+
 			syncerr = errors.Wrap(syncerr, "HeavySync failed")
-			inslog.Errorf("%v (on attempt=%v)", syncerr.Error(), attempt)
-			retrydelay = m.syncbackoff.ForAttempt(attempt)
-			attempt++
-			continue
+			inslog.Errorf("%v (on attempt=%v, sholdretry=%v)", syncerr.Error(), attempt, sholdretry)
+
+			if sholdretry {
+				retrydelay = m.syncbackoff.ForAttempt(attempt)
+				attempt++
+				continue
+			}
+			// TODO: write some info in dust?
 		}
 
 		err = m.db.SetReplicatedPulse(ctx, tosyncPN)
 		if err != nil {
-			err = errors.Wrap(err,
-				"SetReplicatedPulse failed after success HeavySync in Pulsemanager")
+			err = errors.Wrap(err, "SetReplicatedPulse failed")
 			inslog.Error(err)
 			panic(err)
 		}

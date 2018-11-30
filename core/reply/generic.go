@@ -27,7 +27,7 @@ func (e *OK) Type() core.ReplyType {
 	return TypeOK
 }
 
-// Error is common reaction for methods returning id to lifeline states.
+// Error is common error reaction.
 type Error struct {
 	ErrType ErrType
 }

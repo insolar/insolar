@@ -37,7 +37,7 @@ func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core
 	msg := genericMsg.Message().(*message.HeavyPayload)
 	inslog.Debugf("Heavy sync: get start payload message with %v records", len(msg.Records))
 	if err := h.HeavySync.Store(ctx, msg.PulseNum, msg.Records); err != nil {
-		return nil, err
+		return heavyerrreply(err), err
 	}
 	return &reply.OK{}, nil
 }
@@ -60,7 +60,7 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 	// start
 	inslog.Debugf("Heavy sync: get start message for pulse %v", msg.PulseNum)
 	if err := h.HeavySync.Start(ctx, msg.PulseNum); err != nil {
-		return nil, err
+		return heavyerrreply(err), err
 	}
 	return &reply.OK{}, nil
 }
@@ -74,7 +74,14 @@ func (h *MessageHandler) handleHeavyReset(ctx context.Context, genericMsg core.P
 	msg := genericMsg.Message().(*message.HeavyReset)
 	inslog.Debugf("Heavy sync: get reset message for pulse %v", msg.PulseNum)
 	if err := h.HeavySync.Reset(ctx, msg.PulseNum); err != nil {
-		return nil, err
+		return heavyerrreply(err), err
 	}
 	return &reply.OK{}, nil
+}
+
+func heavyerrreply(err error) core.Reply {
+	if herr, ok := err.(*reply.HeavyError); ok {
+		return herr
+	}
+	return nil
 }
