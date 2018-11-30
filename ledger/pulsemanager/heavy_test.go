@@ -81,6 +81,11 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// always return true
 	jcMock.IsAuthorizedMock.Return(true, nil)
 
+	// Mock N6: GIL mock
+	gilMock := testutils.NewGlobalInsolarLockMock(t)
+	gilMock.AcquireFunc = func(context.Context) {}
+	gilMock.ReleaseFunc = func(context.Context) {}
+
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var synckeys []key
 	var syncsended int
@@ -135,6 +140,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.NodeNet = nodenetMock
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
+	pm.GIL = gilMock
 
 	// Actial test logic
 	// start PulseManager
@@ -195,7 +201,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {
 	// fmt.Printf("CALL setpulse %v\n", pulsenum)
-	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)})
+	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)}, false)
 }
 
 func addRecords(

@@ -34,16 +34,17 @@ import (
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	// components
-	LR             core.LogicRunner    `inject:""`
-	Bus            core.MessageBus     `inject:""`
-	NodeNet        core.NodeNetwork    `inject:""`
-	JetCoordinator core.JetCoordinator `inject:""`
+	LR             core.LogicRunner       `inject:""`
+	Bus            core.MessageBus        `inject:""`
+	NodeNet        core.NodeNetwork       `inject:""`
+	JetCoordinator core.JetCoordinator    `inject:""`
+	GIL            core.GlobalInsolarLock `inject:""`
+	currentPulse   core.Pulse
 
 	// internal stuff
 	db *storage.DB
 	// setLock locks Set method call.
-	setLock sync.Mutex
+	setLock sync.RWMutex
 	stopped bool
 	stop    chan struct{}
 	// gotpulse signals if there is something to sync to Heavy
@@ -73,8 +74,9 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseManager {
 	pm := &PulseManager{
-		db:       db,
-		gotpulse: make(chan struct{}, 1),
+		db:           db,
+		gotpulse:     make(chan struct{}, 1),
+		currentPulse: *core.GenesisPulse,
 	}
 	pm.options.enablesync = conf.HeavySyncEnabled
 	pm.options.syncmessagelimit = conf.HeavySyncMessageLimit
@@ -84,22 +86,13 @@ func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseMana
 
 // Current returns current pulse structure.
 func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
-	latestPulse, err := m.db.GetLatestPulseNumber(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pulse, err := m.db.GetPulse(ctx, latestPulse)
-	if err != nil {
-		return nil, err
-	}
-	return &pulse.Pulse, nil
+	m.setLock.RLock()
+	defer m.setLock.RUnlock()
+
+	return &m.currentPulse, nil
 }
 
-func (m *PulseManager) processDrop(ctx context.Context) error {
-	latestPulseNumber, err := m.db.GetLatestPulseNumber(ctx)
-	if err != nil {
-		return err
-	}
+func (m *PulseManager) processDrop(ctx context.Context, latestPulseNumber core.PulseNumber) error {
 	latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
 	if err != nil {
 		return err
@@ -135,7 +128,7 @@ func (m *PulseManager) processDrop(ctx context.Context) error {
 }
 
 // Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
+func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) error {
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -143,27 +136,45 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
-	// Run only on material executor.
+	var latestPulseNumber core.PulseNumber
 	var err error
-	// execute only on material executor
-	isLight := m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial
-	if isLight {
-		if err = m.processDrop(ctx); err != nil {
-			return errors.Wrap(err, "processDrop failed")
+	m.GIL.Acquire(ctx)
+
+	// swap pulse
+	m.currentPulse = pulse
+
+	// TODO: swap active nodes and set prev pulse state to network
+
+	if !dry {
+		latestPulseNumber, err = m.db.GetLatestPulseNumber(ctx)
+		if err != nil {
+			return errors.Wrap(err, "call of GetLatestPulseNumber failed")
+		}
+
+		if err := m.db.AddPulse(ctx, pulse); err != nil {
+			return errors.Wrap(err, "call of AddPulse failed")
+		}
+		err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
+		if err != nil {
+			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
 
-	if err = m.db.AddPulse(ctx, pulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
+	m.GIL.Release(ctx)
+
+	if dry {
+		return nil
 	}
 
-	if isLight && m.options.enablesync {
-		m.SyncToHeavy(pulse.PulseNumber)
-	}
+	// Run only on material executor.
+	// execute only on material executor
+	// TODO: do as much as possible async.
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+		if err = m.processDrop(ctx, latestPulseNumber); err != nil {
+			return errors.Wrap(err, "processDrop failed")
+		}
 
-	err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
-	if err != nil {
-		return errors.Wrap(err, "call of SetActiveNodes failed")
+		m.SyncToHeavy()
 	}
 
 	return m.LR.OnPulse(ctx, pulse)
@@ -172,7 +183,10 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse) error {
 // SyncToHeavy signals to sync loop there is something to sync.
 //
 // Should never be called after Stop.
-func (m *PulseManager) SyncToHeavy(pn core.PulseNumber) {
+func (m *PulseManager) SyncToHeavy() {
+	if !m.options.enablesync {
+		return
+	}
 	// TODO: save current pulse as
 	if len(m.gotpulse) == 0 {
 		m.gotpulse <- struct{}{}
