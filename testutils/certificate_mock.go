@@ -50,6 +50,11 @@ type CertificateMock struct {
 	GetRootDomainReferencePreCounter uint64
 	GetRootDomainReferenceMock       mCertificateMockGetRootDomainReference
 
+	NewCertForHostFunc       func(p string, p1 string, p2 string) (r core.Certificate, r1 error)
+	NewCertForHostCounter    uint64
+	NewCertForHostPreCounter uint64
+	NewCertForHostMock       mCertificateMockNewCertForHost
+
 	SerializeFunc       func() (r []byte, r1 error)
 	SerializeCounter    uint64
 	SerializePreCounter uint64
@@ -75,6 +80,7 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	m.GetPublicKeyMock = mCertificateMockGetPublicKey{mock: m}
 	m.GetRoleMock = mCertificateMockGetRole{mock: m}
 	m.GetRootDomainReferenceMock = mCertificateMockGetRootDomainReference{mock: m}
+	m.NewCertForHostMock = mCertificateMockNewCertForHost{mock: m}
 	m.SerializeMock = mCertificateMockSerialize{mock: m}
 	m.SetRootDomainReferenceMock = mCertificateMockSetRootDomainReference{mock: m}
 
@@ -357,6 +363,74 @@ func (m *CertificateMock) GetRootDomainReferenceMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetRootDomainReferencePreCounter)
 }
 
+type mCertificateMockNewCertForHost struct {
+	mock             *CertificateMock
+	mockExpectations *CertificateMockNewCertForHostParams
+}
+
+//CertificateMockNewCertForHostParams represents input parameters of the Certificate.NewCertForHost
+type CertificateMockNewCertForHostParams struct {
+	p  string
+	p1 string
+	p2 string
+}
+
+//Expect sets up expected params for the Certificate.NewCertForHost
+func (m *mCertificateMockNewCertForHost) Expect(p string, p1 string, p2 string) *mCertificateMockNewCertForHost {
+	m.mockExpectations = &CertificateMockNewCertForHostParams{p, p1, p2}
+	return m
+}
+
+//Return sets up a mock for Certificate.NewCertForHost to return Return's arguments
+func (m *mCertificateMockNewCertForHost) Return(r core.Certificate, r1 error) *CertificateMock {
+	m.mock.NewCertForHostFunc = func(p string, p1 string, p2 string) (core.Certificate, error) {
+		return r, r1
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of Certificate.NewCertForHost method
+func (m *mCertificateMockNewCertForHost) Set(f func(p string, p1 string, p2 string) (r core.Certificate, r1 error)) *CertificateMock {
+	m.mock.NewCertForHostFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//NewCertForHost implements github.com/insolar/insolar/core.Certificate interface
+func (m *CertificateMock) NewCertForHost(p string, p1 string, p2 string) (r core.Certificate, r1 error) {
+	atomic.AddUint64(&m.NewCertForHostPreCounter, 1)
+	defer atomic.AddUint64(&m.NewCertForHostCounter, 1)
+
+	if m.NewCertForHostMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.NewCertForHostMock.mockExpectations, CertificateMockNewCertForHostParams{p, p1, p2},
+			"Certificate.NewCertForHost got unexpected parameters")
+
+		if m.NewCertForHostFunc == nil {
+
+			m.t.Fatal("No results are set for the CertificateMock.NewCertForHost")
+
+			return
+		}
+	}
+
+	if m.NewCertForHostFunc == nil {
+		m.t.Fatal("Unexpected call to CertificateMock.NewCertForHost")
+		return
+	}
+
+	return m.NewCertForHostFunc(p, p1, p2)
+}
+
+//NewCertForHostMinimockCounter returns a count of CertificateMock.NewCertForHostFunc invocations
+func (m *CertificateMock) NewCertForHostMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.NewCertForHostCounter)
+}
+
+//NewCertForHostMinimockPreCounter returns the value of CertificateMock.NewCertForHost invocations
+func (m *CertificateMock) NewCertForHostMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.NewCertForHostPreCounter)
+}
+
 type mCertificateMockSerialize struct {
 	mock *CertificateMock
 }
@@ -493,6 +567,10 @@ func (m *CertificateMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CertificateMock.GetRootDomainReference")
 	}
 
+	if m.NewCertForHostFunc != nil && atomic.LoadUint64(&m.NewCertForHostCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.NewCertForHost")
+	}
+
 	if m.SerializeFunc != nil && atomic.LoadUint64(&m.SerializeCounter) == 0 {
 		m.t.Fatal("Expected call to CertificateMock.Serialize")
 	}
@@ -542,6 +620,10 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.GetRootDomainReference")
 	}
 
+	if m.NewCertForHostFunc != nil && atomic.LoadUint64(&m.NewCertForHostCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.NewCertForHost")
+	}
+
 	if m.SerializeFunc != nil && atomic.LoadUint64(&m.SerializeCounter) == 0 {
 		m.t.Fatal("Expected call to CertificateMock.Serialize")
 	}
@@ -570,6 +652,7 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 		ok = ok && (m.GetPublicKeyFunc == nil || atomic.LoadUint64(&m.GetPublicKeyCounter) > 0)
 		ok = ok && (m.GetRoleFunc == nil || atomic.LoadUint64(&m.GetRoleCounter) > 0)
 		ok = ok && (m.GetRootDomainReferenceFunc == nil || atomic.LoadUint64(&m.GetRootDomainReferenceCounter) > 0)
+		ok = ok && (m.NewCertForHostFunc == nil || atomic.LoadUint64(&m.NewCertForHostCounter) > 0)
 		ok = ok && (m.SerializeFunc == nil || atomic.LoadUint64(&m.SerializeCounter) > 0)
 		ok = ok && (m.SetRootDomainReferenceFunc == nil || atomic.LoadUint64(&m.SetRootDomainReferenceCounter) > 0)
 
@@ -602,6 +685,10 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 
 			if m.GetRootDomainReferenceFunc != nil && atomic.LoadUint64(&m.GetRootDomainReferenceCounter) == 0 {
 				m.t.Error("Expected call to CertificateMock.GetRootDomainReference")
+			}
+
+			if m.NewCertForHostFunc != nil && atomic.LoadUint64(&m.NewCertForHostCounter) == 0 {
+				m.t.Error("Expected call to CertificateMock.NewCertForHost")
 			}
 
 			if m.SerializeFunc != nil && atomic.LoadUint64(&m.SerializeCounter) == 0 {
@@ -645,6 +732,10 @@ func (m *CertificateMock) AllMocksCalled() bool {
 	}
 
 	if m.GetRootDomainReferenceFunc != nil && atomic.LoadUint64(&m.GetRootDomainReferenceCounter) == 0 {
+		return false
+	}
+
+	if m.NewCertForHostFunc != nil && atomic.LoadUint64(&m.NewCertForHostCounter) == 0 {
 		return false
 	}
 

@@ -118,6 +118,11 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 		return nil, errors.Wrap(err, "[ NewAPIRunner ] Can't register services:")
 	}
 
+	err = rpcServer.RegisterService(NewNodeCertService(&ar), "cert")
+	if err != nil {
+		return nil, err
+	}
+
 	return &ar, nil
 }
 
