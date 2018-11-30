@@ -21,6 +21,9 @@ import (
 
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
@@ -33,6 +36,7 @@ func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
 
 type unsyncList struct {
 	activeNodes map[core.RecordRef]core.Node
+	addressMap  map[core.RecordRef]string
 	claims      map[core.RecordRef][]consensus.ReferendumClaim
 	refToIndex  map[core.RecordRef]int
 	indexToRef  map[int]core.RecordRef
@@ -58,7 +62,8 @@ func (ul *unsyncList) RemoveClaims(from core.RecordRef) {
 	ul.cache = nil
 }
 
-func (ul *unsyncList) AddClaims(from core.RecordRef, claims []consensus.ReferendumClaim) {
+func (ul *unsyncList) AddClaims(from core.RecordRef, claims []consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
+	ul.addressMap = addressMap
 	ul.claims[from] = claims
 	ul.cache = nil
 }
@@ -68,7 +73,7 @@ func (ul *unsyncList) CalculateHash() ([]byte, error) {
 		return ul.cache, nil
 	}
 	m := copyMap(ul.activeNodes)
-	merge(m, ul.claims)
+	ul.merge(m, ul.claims)
 	sorted := sortedNodeList(m)
 	var err error
 	ul.cache, err = CalculateHash(nil, sorted)
@@ -78,30 +83,38 @@ func (ul *unsyncList) CalculateHash() ([]byte, error) {
 type adder func(core.Node)
 type deleter func(core.RecordRef)
 
-func merge(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]consensus.ReferendumClaim) {
+func (ul *unsyncList) merge(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]consensus.ReferendumClaim) {
 	addNode := func(node core.Node) {
 		nodes[node.ID()] = node
 	}
 	delNode := func(ref core.RecordRef) {
 		delete(nodes, ref)
 	}
-	mergeWith(claims, addNode, delNode)
+	ul.mergeWith(claims, addNode, delNode)
 }
 
-func mergeWith(claims map[core.RecordRef][]consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
+func (ul *unsyncList) mergeWith(claims map[core.RecordRef][]consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
 	for _, claimList := range claims {
 		for _, claim := range claimList {
-			mergeClaim(claim, addFunc, delFunc)
+			ul.mergeClaim(claim, addFunc, delFunc)
 		}
 	}
 }
 
-func mergeClaim(claim consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
+func (ul *unsyncList) mergeClaim(claim consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
 	switch t := claim.(type) {
 	case *consensus.NodeAnnounceClaim:
-		addFunc(t.Node())
+		node, err := claimToNode(ul.addressMap[t.NodeRef], "", t)
+		if err != nil {
+			log.Error("[ mergeClaim ] failed to get a Node")
+		}
+		addFunc(node)
 	case *consensus.NodeJoinClaim:
-		addFunc(t.Node())
+		node, err := claimToNode(ul.addressMap[t.NodeRef], "", t)
+		if err != nil {
+			log.Error("[ mergeClaim ] failed to get a Node")
+		}
+		addFunc(node)
 	case *consensus.NodeLeaveClaim:
 		// TODO: add node ID to node leave claim (only to struct, not packet)
 		// delFunc()
