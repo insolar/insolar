@@ -140,6 +140,7 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 	case *GetObjectIndex:
 		return &t.Object, core.DynamicRoleLightExecutor
 	case *HotIndexes:
+		// TODO: 30.11.2018 It's not clear, what should be here. We need to solve in the nearest future. @egorikas
 		return nil, 0
 	case *Parcel:
 		return ExtractAllowedSenderObjectAndRole(t.Msg)
