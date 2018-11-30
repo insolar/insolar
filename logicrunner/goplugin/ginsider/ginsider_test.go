@@ -76,9 +76,8 @@ func init() {
 
 	binaryPath, ok = os.LookupEnv("BIN_DIR")
 	if !ok {
-		var err error
-
-		binaryPath, err = os.Getwd()
+		wd, err := os.Getwd()
+		binaryPath = filepath.Join(wd, "..", "..", "..", "bin")
 
 		if err != nil {
 			panic(err.Error())
