@@ -21,33 +21,35 @@ import (
 	"net/http"
 
 	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-type RegisterNodeArgs struct {
+type NodeCertArgs struct {
 	Ref string
 }
 
-type RegisterNodeReply struct {
+type NodeCertReply struct {
 	Cert *certificate.Certificate `json:"cert"`
 }
 
-type RegisterNodeService struct {
+type NodeCertService struct {
 	runner *Runner
 }
 
-func NewRegisterNodeService(runner *Runner) *RegisterNodeService {
-	return &RegisterNodeService{runner: runner}
+func NewNodeCertService(runner *Runner) *NodeCertService {
+	return &NodeCertService{runner: runner}
 }
 
-func (s *RegisterNodeService) GetNodeInfo(r *http.Request, args *RegisterNodeArgs, reply *RegisterNodeReply) error {
+func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCertReply) error {
 	ctx, _ := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
-	cert, err := s.runner.NetworkCoordinator.CreateNodeCert(ctx, args.Ref)
+	cert, err := s.runner.NetworkCoordinator.GetCert(ctx, core.NewRefFromBase58(args.Ref))
 	if err != nil {
 		return err
 	}
+
 	reply.Cert = cert.(*certificate.Certificate)
 	return nil
 }

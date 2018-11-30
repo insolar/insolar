@@ -45,7 +45,3 @@ func (znc *zeroNetworkCoordinator) WriteActiveNodes(ctx context.Context, number 
 func (znc *zeroNetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return errors.New("not implemented")
 }
-
-func (znc *zeroNetworkCoordinator) CreateNodeCert(ctx context.Context, ref string) (core.Certificate, error) {
-	return nil, errors.New("not implemented")
-}

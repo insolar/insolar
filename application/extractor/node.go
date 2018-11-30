@@ -14,16 +14,19 @@
  *    limitations under the License.
  */
 
-package common
+package extractor
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
-type BootstrapController interface {
-	Start()
-	Bootstrap(ctx context.Context) error
-	GetBootstrapHosts() []*host.Host
+// NodeInfoResponse extracts response of GetNodeInfo
+func NodeInfoResponse(data []byte) (string, uint64, error) {
+	z, err := core.UnMarshalResponse(data, []interface{}{nil})
+	if err != nil {
+		return "", 0, errors.Wrap(err, "[ NodeInfoResponse ] Couldn't unmarshall response")
+	}
+	answer := z[0].(map[interface{}]interface{})
+	return answer["PublicKey"].(string), answer["Role"].(uint64), nil
 }

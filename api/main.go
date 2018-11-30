@@ -95,7 +95,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 		return nil, err
 	}
 
-	err = rpcServer.RegisterService(NewRegisterNodeService(&ar), "register_node")
+	err = rpcServer.RegisterService(NewNodeCertService(&ar), "node_cert")
 	if err != nil {
 		return nil, err
 	}

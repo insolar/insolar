@@ -45,7 +45,3 @@ func (rnc *realNetworkCoordinator) WriteActiveNodes(ctx context.Context, number 
 func (rnc *realNetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return errors.New("not implemented")
 }
-
-func (rnc *realNetworkCoordinator) CreateNodeCert(ctx context.Context, ref string) (core.Certificate, error) {
-	return nil, errors.New("not implemented")
-}

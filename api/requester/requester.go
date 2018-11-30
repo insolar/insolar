@@ -26,13 +26,14 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
 // verbose switches on verbose mode
 var verbose = false
+var scheme = platformpolicy.NewPlatformCryptographyScheme()
 
 func verboseInfo(ctx context.Context, msg string) {
 	if verbose {
@@ -143,7 +144,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 
 	verboseInfo(ctx, "Signing request ...")
-	cs := cryptography.NewKeyBoundCryptographyService(userCfg.privateKeyObject)
+	cs := scheme.Signer(userCfg.privateKeyObject)
 	signature, err := cs.Sign(serRequest)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")

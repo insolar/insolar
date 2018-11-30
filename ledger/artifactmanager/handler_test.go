@@ -59,7 +59,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	t.Run("fetches index from heavy when no index", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Head, 0,
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Head, 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -67,7 +67,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 			Msg: &msg,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirectReply)
+		redirect, ok := rep.(*reply.GetObjectRedirect)
 		require.True(t, ok)
 		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirect)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
@@ -87,7 +87,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleLightExecutor, &msg.Head, 0,
+			ctx, core.DynamicRoleLightExecutor, &msg.Head, 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -95,7 +95,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 			Msg: &msg,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirectReply)
+		redirect, ok := rep.(*reply.GetObjectRedirect)
 		require.True(t, ok)
 		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirect)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
@@ -112,7 +112,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Head, 5,
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Head, 5,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -120,7 +120,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 			Msg: &msg,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirectReply)
+		redirect, ok := rep.(*reply.GetObjectRedirect)
 		require.True(t, ok)
 		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirect)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
@@ -168,7 +168,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Parent, 0,
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, 0,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -194,7 +194,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleLightExecutor, &msg.Parent, 0,
+			ctx, core.DynamicRoleLightExecutor, &msg.Parent, 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -216,7 +216,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.RoleHeavyExecutor, &msg.Parent, 5,
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, 5,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -269,7 +269,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	h.Bus = mb
 	heavyRef := genRandomRef(0)
 	jc.QueryRoleMock.Expect(
-		ctx, core.RoleHeavyExecutor, &msg.Head, 0,
+		ctx, core.DynamicRoleHeavyExecutor, &msg.Head, 0,
 	).Return(
 		[]core.RecordRef{*heavyRef}, nil,
 	)
@@ -329,7 +329,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	h.Bus = mb
 	heavyRef := genRandomRef(0)
 	jc.QueryRoleMock.Expect(
-		ctx, core.RoleHeavyExecutor, &msg.Object, 0,
+		ctx, core.DynamicRoleHeavyExecutor, &msg.Object, 0,
 	).Return(
 		[]core.RecordRef{*heavyRef}, nil,
 	)
@@ -374,4 +374,127 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	decodedIndex, err := index.DecodeObjectLifeline(indexRep.Index)
 	require.NoError(t, err)
 	assert.Equal(t, objectIndex, *decodedIndex)
+}
+
+func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	tf := testutils.NewDelegationTokenFactoryMock(mc)
+	jc := testutils.NewJetCoordinatorMock(mc)
+	mb := testutils.NewMessageBusMock(mc)
+
+	msg := message.GetCode{
+		Code: *genRandomRef(0),
+	}
+
+	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirect{Signature: []byte{1, 2, 3}}, nil)
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+		LightChainLimit: 3,
+	})
+
+	h.JetCoordinator = jc
+	h.DelegationTokenFactory = tf
+	h.Bus = mb
+
+	t.Run("redirects to light when created after limit", func(t *testing.T) {
+		lightRef := genRandomRef(0)
+		jc.QueryRoleMock.Expect(
+			ctx, core.DynamicRoleLightExecutor, &msg.Code, 0,
+		).Return(
+			[]core.RecordRef{*lightRef}, nil,
+		)
+		rep, err := h.handleGetCode(ctx, 0, &message.Parcel{
+			Msg: &msg,
+		})
+		require.NoError(t, err)
+		redirect, ok := rep.(*reply.GetCodeRedirect)
+		require.True(t, ok)
+		token, ok := redirect.Token.(*delegationtoken.GetCodeRedirect)
+		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+		assert.Equal(t, lightRef, redirect.GetReceiver())
+	})
+
+	t.Run("redirects to heavy when created before limit", func(t *testing.T) {
+		heavyRef := genRandomRef(0)
+		jc.QueryRoleMock.Expect(
+			ctx, core.DynamicRoleHeavyExecutor, &msg.Code, 5,
+		).Return(
+			[]core.RecordRef{*heavyRef}, nil,
+		)
+		rep, err := h.handleGetCode(ctx, 5, &message.Parcel{
+			Msg: &msg,
+		})
+		require.NoError(t, err)
+		redirect, ok := rep.(*reply.GetCodeRedirect)
+		require.True(t, ok)
+		token, ok := redirect.Token.(*delegationtoken.GetCodeRedirect)
+		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+		assert.Equal(t, heavyRef, redirect.GetReceiver())
+	})
+}
+
+func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	mb := testutils.NewMessageBusMock(mc)
+	jc := testutils.NewJetCoordinatorMock(mc)
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+		LightChainLimit: 3,
+	})
+
+	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
+	childRecord := record.ChildRecord{
+		Ref:       *genRandomRef(0),
+		PrevChild: nil,
+	}
+	amendHash := db.PlatformCryptographyScheme.ReferenceHasher()
+	_, err := childRecord.WriteHashData(amendHash)
+	require.NoError(t, err)
+	childID := core.NewRecordID(0, amendHash.Sum(nil))
+
+	msg := message.RegisterChild{
+		Record: record.SerializeRecord(&childRecord),
+		Parent: *genRandomRef(0),
+	}
+
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		if m, ok := gm.(*message.GetObjectIndex); ok {
+			assert.Equal(t, msg.Parent, m.Object)
+			buf, err := index.EncodeObjectLifeline(&objIndex)
+			require.NoError(t, err)
+			return &reply.ObjectIndex{Index: buf}, nil
+		}
+
+		panic("unexpected call")
+	}
+
+	h.JetCoordinator = jc
+	h.Bus = mb
+	heavyRef := genRandomRef(0)
+	jc.QueryRoleMock.Expect(
+		ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, 0,
+	).Return(
+		[]core.RecordRef{*heavyRef}, nil,
+	)
+	rep, err := h.handleRegisterChild(ctx, 0, &message.Parcel{
+		Msg: &msg,
+	})
+	require.NoError(t, err)
+	objRep, ok := rep.(*reply.ID)
+	require.True(t, ok)
+	assert.Equal(t, *childID, objRep.ID)
+
+	idx, err := db.GetObjectIndex(ctx, msg.Parent.Record(), false)
+	require.NoError(t, err)
+	assert.Equal(t, childID, idx.ChildPointer)
 }

@@ -17,6 +17,11 @@ func ( e *ExtendableError ) Error() string{
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
     ph := proxyctx.Current
     self := new({{ $.ContractType }})
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{ S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
+	}
+
     err := ph.Deserialize(object, self)
 	if err != nil {
 		e := &ExtendableError{ S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
@@ -38,6 +43,11 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
     ph := proxyctx.Current
     self := new({{ $.ContractType }})
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{ S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
+	}
+
     err := ph.Deserialize(object, self)
 	if err != nil {
 		e := &ExtendableError{ S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
@@ -61,6 +71,10 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
     ph := proxyctx.Current
 
     self := new({{ $.ContractType }})
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
 
     err := ph.Deserialize(object, self)
     if err != nil {

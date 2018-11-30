@@ -71,3 +71,18 @@ func (t *GetChildrenRedirect) Type() core.DelegationTokenType {
 func (t *GetChildrenRedirect) Verify(parcel core.Parcel) (bool, error) {
 	panic("")
 }
+
+// GetCodeRedirect is a redirect token for the GetObject method
+type GetCodeRedirect struct {
+	Signature []byte
+}
+
+// Type implementation of Token interface.
+func (t *GetCodeRedirect) Type() core.DelegationTokenType {
+	return core.DTTypeGetCodeRedirect
+}
+
+// Verify implementation of Token interface.
+func (t *GetCodeRedirect) Verify(parcel core.Parcel) (bool, error) {
+	panic("")
+}

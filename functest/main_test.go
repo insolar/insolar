@@ -360,11 +360,21 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't start insolard: ")
 	}
 	fmt.Println("[ setup ] insolard was successfully started")
-	time.Sleep(60 * time.Second)
-	err = setInfo()
+
+	numAttempts := 60
+	for i := 0; i < numAttempts; i++ {
+		err = setInfo()
+		if err != nil {
+			fmt.Printf("[ setup ] Couldn't setInfo. Attempt %d/%d. Err: %s", i, numAttempts, err)
+		} else {
+			break
+		}
+		time.Sleep(time.Second)
+	}
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't receive root reference ")
 	}
+
 	fmt.Println("[ setup ] root reference successfully received")
 	root.ref = info.RootMember
 

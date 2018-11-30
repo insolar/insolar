@@ -46,7 +46,7 @@ type NodeKeeperMock struct {
 	GetActiveNodesPreCounter uint64
 	GetActiveNodesMock       mNodeKeeperMockGetActiveNodes
 
-	GetActiveNodesByRoleFunc       func(p core.JetRole) (r []core.RecordRef)
+	GetActiveNodesByRoleFunc       func(p core.DynamicRole) (r []core.RecordRef)
 	GetActiveNodesByRoleCounter    uint64
 	GetActiveNodesByRolePreCounter uint64
 	GetActiveNodesByRoleMock       mNodeKeeperMockGetActiveNodesByRole
@@ -461,32 +461,32 @@ type mNodeKeeperMockGetActiveNodesByRole struct {
 
 //NodeKeeperMockGetActiveNodesByRoleParams represents input parameters of the NodeKeeper.GetActiveNodesByRole
 type NodeKeeperMockGetActiveNodesByRoleParams struct {
-	p core.JetRole
+	p core.DynamicRole
 }
 
 //Expect sets up expected params for the NodeKeeper.GetActiveNodesByRole
-func (m *mNodeKeeperMockGetActiveNodesByRole) Expect(p core.JetRole) *mNodeKeeperMockGetActiveNodesByRole {
+func (m *mNodeKeeperMockGetActiveNodesByRole) Expect(p core.DynamicRole) *mNodeKeeperMockGetActiveNodesByRole {
 	m.mockExpectations = &NodeKeeperMockGetActiveNodesByRoleParams{p}
 	return m
 }
 
 //Return sets up a mock for NodeKeeper.GetActiveNodesByRole to return Return's arguments
 func (m *mNodeKeeperMockGetActiveNodesByRole) Return(r []core.RecordRef) *NodeKeeperMock {
-	m.mock.GetActiveNodesByRoleFunc = func(p core.JetRole) []core.RecordRef {
+	m.mock.GetActiveNodesByRoleFunc = func(p core.DynamicRole) []core.RecordRef {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of NodeKeeper.GetActiveNodesByRole method
-func (m *mNodeKeeperMockGetActiveNodesByRole) Set(f func(p core.JetRole) (r []core.RecordRef)) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetActiveNodesByRole) Set(f func(p core.DynamicRole) (r []core.RecordRef)) *NodeKeeperMock {
 	m.mock.GetActiveNodesByRoleFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetActiveNodesByRole implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetActiveNodesByRole(p core.JetRole) (r []core.RecordRef) {
+func (m *NodeKeeperMock) GetActiveNodesByRole(p core.DynamicRole) (r []core.RecordRef) {
 	atomic.AddUint64(&m.GetActiveNodesByRolePreCounter, 1)
 	defer atomic.AddUint64(&m.GetActiveNodesByRoleCounter, 1)
 

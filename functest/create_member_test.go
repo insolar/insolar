@@ -34,12 +34,12 @@ func TestCreateMember(t *testing.T) {
 
 func TestCreateMemberWrongNameType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", 111, "000")
-	require.EqualError(t, err, "[ createMemberCall ]: [ Deserialize ]: unexpected EOF")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: unexpected EOF")
 }
 
 func TestCreateMemberWrongKeyType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", "Member", 111)
-	require.EqualError(t, err, "[ createMemberCall ]: [ Deserialize ]: EOF")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
 // no error
@@ -50,7 +50,7 @@ func _TestCreateMemberOneParameter(t *testing.T) {
 
 func TestCreateMemberOneParameterOtherType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", 111)
-	require.EqualError(t, err, "[ createMemberCall ]: [ Deserialize ]: EOF")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
 func TestCreateMembersWithSameName(t *testing.T) {
@@ -65,5 +65,5 @@ func TestCreateMembersWithSameName(t *testing.T) {
 func TestCreateMemberByNoRoot(t *testing.T) {
 	member := createMember(t, "Member1")
 	_, err := signedRequest(member, "CreateMember", "Member2", "000")
-	require.EqualError(t, err, "[ CreateMember ] Only Root member can create members")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ CreateMember ] Only Root member can create members")
 }
