@@ -136,7 +136,7 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 
 	pulseManagerMock := testutils.NewPulseManagerMock(t)
 	netCoordinator := testutils.NewNetworkCoordinatorMock(t)
-	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.Certificate) (bool, error) {
+	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
 		return true, nil
 	})
 
