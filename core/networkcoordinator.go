@@ -24,10 +24,10 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/core.NetworkCoordinator -o ../testutils -s _mock.go
 type NetworkCoordinator interface {
 	// GetCert returns certificate object by node reference, using discovery nodes for signing
-	GetCert(context.Context, RecordRef) (Certificate, error)
+	GetCert(context.Context, RecordRef) (NodeCertificate, error)
 
 	// ValidateCert checks certificate signature
-	ValidateCert(context.Context, Certificate) (bool, error)
+	ValidateCert(context.Context, NodeCertificate) (bool, error)
 
 	// TODO: Remove this method, use SetPulse instead
 	WriteActiveNodes(ctx context.Context, number PulseNumber, activeNodes []Node) error
