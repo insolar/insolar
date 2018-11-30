@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
@@ -33,7 +34,11 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o . -s _mock.go
 type Communicator interface {
 	// ExchangePhase1 used in first consensus step to exchange data between participants
-	ExchangePhase1(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error)
+	ExchangePhase1(
+		ctx context.Context,
+		participants []core.Node,
+		packet packets.Phase1Packet,
+	) (map[core.RecordRef]*packets.Phase1Packet, map[core.RecordRef]string, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
 	ExchangePhase2(ctx context.Context, participants []core.Node, packet packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
@@ -41,8 +46,9 @@ type Communicator interface {
 }
 
 type phase1Result struct {
-	id     core.RecordRef
-	packet *packets.Phase1Packet
+	id      core.RecordRef
+	address *host.Address
+	packet  *packets.Phase1Packet
 }
 
 type phase2Result struct {
@@ -107,8 +113,13 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, reques
 }
 
 // ExchangePhase1 used in first consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []core.Node, packet packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
+func (nc *NaiveCommunicator) ExchangePhase1(
+	ctx context.Context,
+	participants []core.Node,
+	packet packets.Phase1Packet,
+) (map[core.RecordRef]*packets.Phase1Packet, map[core.RecordRef]string, error) {
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
+	addresses := make(map[core.RecordRef]string, len(participants))
 
 	result[nc.ConsensusNetwork.GetNodeID()] = &packet
 
@@ -116,7 +127,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []
 
 	packetBuffer, err := packet.Serialize()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ExchangePhase1] Failed to serialize Phase1Packet.")
+		return nil, nil, errors.Wrap(err, "[ExchangePhase1] Failed to serialize Phase1Packet.")
 	}
 
 	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
@@ -140,16 +151,17 @@ func (nc *NaiveCommunicator) ExchangePhase1(ctx context.Context, participants []
 				}
 			}
 			result[res.id] = res.packet
+			addresses[res.id] = res.address.String()
 
 			if len(result) == len(participants) {
-				return result, nil
+				return result, addresses, nil
 			}
 		case <-ctx.Done():
-			return result, nil
+			return result, addresses, nil
 		}
 	}
 
-	return result, nil
+	return result, addresses, nil
 }
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants
@@ -259,7 +271,7 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 		go nc.PulseHandler.HandlePulse(context.Background(), newPulse)
 	}
 
-	nc.phase1result <- phase1Result{request.GetSender(), p}
+	nc.phase1result <- phase1Result{request.GetSender(), request.GetSenderHost().Address, p}
 }
 
 func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
