@@ -143,11 +143,12 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 
 	cert, cryptographyService := initCrypto(t)
 	cert.BootstrapNodes = s.getBootstrapNodes()
+	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
 	cm := &component.Manager{}
 	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock)
 	cm.Register(cert, cryptographyService)
-	cm.Inject(serviceNetwork)
+	cm.Inject(serviceNetwork, netSwitcher)
 
 	serviceNetwork.NodeKeeper = keeper
 
