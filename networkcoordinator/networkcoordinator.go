@@ -53,12 +53,12 @@ func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
 }
 
 // GetCert method returns node certificate
-func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
+func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.NodeCertificate, error) {
 	return nc.getCoordinator().GetCert(ctx, nodeRef)
 }
 
 // ValidateCert validates node certificate
-func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.Certificate) (bool, error) {
+func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.NodeCertificate) (bool, error) {
 	return nc.getCoordinator().ValidateCert(ctx, certificate)
 }
 
