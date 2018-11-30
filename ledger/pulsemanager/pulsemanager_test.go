@@ -42,5 +42,5 @@ func TestPulseManager_Current(t *testing.T) {
 
 	pulse, err := pm.Current(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, core.Pulse{PulseNumber: core.FirstPulseNumber}, *pulse)
+	assert.Equal(t, core.GenesisPulse.PulseNumber, pulse.PulseNumber)
 }
