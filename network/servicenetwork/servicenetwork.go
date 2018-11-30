@@ -18,7 +18,9 @@ package servicenetwork
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -99,6 +101,23 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 	n.controller.RemoteProcedureRegister(name, method)
 }
 
+// incrementPort increments port number if it not equals 0
+func incrementPort(address string) (string, error) {
+	parts := strings.Split(address, ":")
+	if len(parts) != 2 {
+		return address, errors.New("failed to get port from address")
+	}
+	port, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return address, err
+	}
+
+	if port != 0 {
+		port++
+	}
+	return fmt.Sprintf("%s:%d", parts[0], port), nil
+}
+
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 
@@ -122,8 +141,14 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create internal transport")
 	}
 
+	// workaround for Consensus transport, port+=1 of default transport
+	n.cfg.Host.Transport.Address, err = incrementPort(n.cfg.Host.Transport.Address)
+	if err != nil {
+		return errors.Wrap(err, "failed to increment port.")
+	}
+
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
-		n.cfg.Host.ConsensusTransport.Address,
+		n.cfg.Host.Transport.Address,
 		n.cfg.Node.Node.ID,
 		n.NodeNetwork.GetOrigin().ShortID(),
 		n.routingTable,
