@@ -563,40 +563,44 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 		} else if err != nil {
 			return err
 		}
+		h.recent.AddObject(*msg.Object.Record())
 
-		// Rewinding to validated record.
-		currentID := idx.LatestState
-		for currentID != nil {
-			// We have passed an approved record.
-			if currentID.Equal(idx.LatestStateApproved) {
-				return errors.New("changing approved records is not allowed")
-			}
+		// Find node that has this state.
+		var nodes []core.RecordRef
+		if pulseNumber-msg.State.Pulse() < h.conf.LightChainLimit {
+			// Find light executor that saved the state.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.DynamicRoleLightExecutor, &msg.Object, msg.State.Pulse(),
+			)
+		} else {
+			// Find heavy that has this object.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.DynamicRoleHeavyExecutor, &msg.Object, pulseNumber,
+			)
+		}
 
-			// Fetching actual record.
-			rec, err := tx.GetRecord(ctx, currentID)
-			if err != nil {
-				return nil
+		// Send checking message.
+		genericReply, err := h.Bus.Send(ctx, &message.ValidationCheck{
+			Object:              msg.Object,
+			ValidatedState:      msg.State,
+			LatestStateApproved: idx.LatestStateApproved,
+		}, &core.MessageSendOptions{
+			Receiver: &nodes[0],
+		})
+		if err != nil {
+			return err
+		}
+		switch genericReply.(type) {
+		case *reply.OK:
+			if msg.IsValid {
+				idx.LatestStateApproved = &msg.State
+			} else {
+				idx.LatestState = idx.LatestStateApproved
 			}
-			currentState, ok := rec.(record.ObjectState)
-			if !ok {
-				return errors.New("invalid object record")
-			}
-
-			// Validated record found.
-			if currentID.Equal(&msg.State) {
-				if msg.IsValid {
-					idx.LatestStateApproved = currentID
-				} else {
-					idx.LatestState = currentState.PrevStateID()
-				}
-				err := tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
-				if err != nil {
-					return err
-				}
-				break
-			}
-
-			currentID = currentState.PrevStateID()
+		case *reply.NotOK:
+			return errors.New("validation sequence integrity failure")
+		default:
+			return errors.New("unexpected reply")
 		}
 
 		return nil
@@ -605,7 +609,6 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	if err != nil {
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Object.Record())
 
 	return &reply.OK{}, nil
 }
