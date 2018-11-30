@@ -76,6 +76,15 @@ type rpcInfoResponse struct {
 	Result infoResponse `json:"result"`
 }
 
+type statusResponse struct {
+	NetworkState string `json:"NetworkState"`
+}
+
+type rpcStatusResponse struct {
+	RPCResponse
+	Result statusResponse `json:"result"`
+}
+
 func createMember(t *testing.T, name string) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
@@ -137,6 +146,18 @@ func getInfo(t *testing.T) infoResponse {
 	unmarshalRPCResponse(t, body, rpcInfoResponse)
 	require.NotNil(t, rpcInfoResponse.Result)
 	return rpcInfoResponse.Result
+}
+
+func getStatus(t *testing.T) statusResponse {
+	body := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "status.Get",
+		"id":      "",
+	})
+	rpcStatusResponse := &rpcStatusResponse{}
+	unmarshalRPCResponse(t, body, rpcStatusResponse)
+	require.NotNil(t, rpcStatusResponse.Result)
+	return rpcStatusResponse.Result
 }
 
 func unmarshalRPCResponse(t *testing.T, body []byte, response RPCResponseInterface) {

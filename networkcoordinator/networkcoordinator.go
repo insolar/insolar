@@ -19,7 +19,10 @@ package networkcoordinator
 import (
 	"context"
 
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
+	"github.com/pkg/errors"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
@@ -54,11 +57,24 @@ func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
 
 // GetCert method returns node certificate
 func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
-	return nc.getCoordinator().GetCert(ctx, nodeRef)
+	res, err := nc.ContractRequester.SendRequest(ctx, &nodeRef, "GetNodeInfo", []interface{}{})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
+	}
+	pKey, role, err := extractor.NodeInfoResponse(res.(*reply.CallMethod).Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetCert ] Couldn't extract response")
+	}
+
+	cert, err := nc.Certificate.NewCertForHost(pKey, role, nodeRef.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
+	}
+	return cert, nil
 }
 
 // ValidateCert validates node certificate
-func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.Certificate) (bool, error) {
+func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.AuthorizationCertificate) (bool, error) {
 	return nc.getCoordinator().ValidateCert(ctx, certificate)
 }
 
