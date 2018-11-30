@@ -57,7 +57,6 @@ func createOrigin(configuration configuration.HostNetwork, certificate core.Cert
 		*certificate.GetNodeRef(),
 		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
 		certificate.GetPublicKey(),
-		0,
 		publicAddress,
 		version.Version,
 	), nil

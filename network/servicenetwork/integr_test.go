@@ -84,7 +84,7 @@ func createNetworkNode(t *testing.T) networkNode {
 	address := "127.0.0.1:0"
 	consensusAddr := "127.0.0.1:0"
 
-	origin := nodenetwork.NewNode(testutils.RandomRef(), nil, nil, 0, address, "")
+	origin := nodenetwork.NewNode(testutils.RandomRef(), nil, nil, address, "")
 	keeper := nodenetwork.NewNodeKeeper(origin)
 
 	cfg := configuration.NewConfiguration()
