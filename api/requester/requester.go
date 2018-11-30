@@ -204,7 +204,7 @@ func Info(url string) (*InfoResponse, error) {
 }
 
 func Status(url string) (*StatusResponse, error) {
-	params := getDefaultRpcParams("status.Get")
+	params := getDefaultRPCParams("status.Get")
 
 	body, err := GetResponseBody(url+"/rpc", params)
 	if err != nil {
