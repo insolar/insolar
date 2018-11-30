@@ -59,8 +59,9 @@ type pmOptions struct {
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseManager {
 	pm := &PulseManager{
-		db:       db,
-		gotpulse: make(chan struct{}, 1),
+		db:           db,
+		gotpulse:     make(chan struct{}, 1),
+		currentPulse: *core.GenesisPulse,
 	}
 	pm.options.enablesync = conf.HeavySyncEnabled
 	pm.options.syncmessagelimit = conf.HeavySyncMessageLimit
