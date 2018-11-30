@@ -26,22 +26,27 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+// NodeCertArgs is arguments that NodeCert service accepts.
 type NodeCertArgs struct {
 	Ref string
 }
 
+// NodeCertReply is reply for NodeCert service requests.
 type NodeCertReply struct {
 	Cert *certificate.Certificate `json:"cert"`
 }
 
+// NodeCertService is a service that provides cert for node.
 type NodeCertService struct {
 	runner *Runner
 }
 
+// NewNodeCertService creates new NodeCert service instance.
 func NewNodeCertService(runner *Runner) *NodeCertService {
 	return &NodeCertService{runner: runner}
 }
 
+// Get returns certificate for node with given reference.
 func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCertReply) error {
 	ctx, _ := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
