@@ -217,6 +217,7 @@ func (cert *Certificate) SetRootDomainReference(ref *core.RecordRef) {
 }
 
 // NewCertificatesWithKeys generate certificate from given keys
+// DEPRECATED, this method generates invalid certificate
 func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*Certificate, error) {
 	cert := Certificate{}
 
