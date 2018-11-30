@@ -278,6 +278,7 @@ func (cert *Certificate) Dump() (string, error) {
 	return string(result), nil
 }
 
+// NewCertForHost returns new certificate
 func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (core.Certificate, error) {
 	newCert := Certificate{
 		MajorityRule:        cert.MajorityRule,
