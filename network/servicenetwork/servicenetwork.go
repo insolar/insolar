@@ -101,6 +101,7 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 	n.controller.RemoteProcedureRegister(name, method)
 }
 
+// incrementPort increments port number if it not equals 0
 func incrementPort(address string) (string, error) {
 	parts := strings.Split(address, ":")
 	if len(parts) != 2 {
@@ -111,7 +112,10 @@ func incrementPort(address string) (string, error) {
 		return address, err
 	}
 
-	return fmt.Sprintf("%s:%d", parts[0], port+1), nil
+	if port != 0 {
+		port++
+	}
+	return fmt.Sprintf("%s:%d", parts[0], port), nil
 }
 
 // Start implements component.Initer
