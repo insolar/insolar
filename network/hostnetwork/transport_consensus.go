@@ -94,6 +94,7 @@ func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 	}
 	origin.ShortID = shortID
 	result := &transportConsensus{handlers: make(map[types.PacketType]network.ConsensusRequestHandler)}
+
 	result.transport = tp
 	result.resolver = resolver
 	result.origin = origin

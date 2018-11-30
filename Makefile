@@ -24,7 +24,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps pre-build build functest test test_with_coverage regen-proxies
+.PHONY: all lint ci-lint metalint clean install-deps pre-build build functest test test_with_coverage regen-proxies generate ensure test_git_no_changes
 
 all: clean install-deps pre-build build test
 
@@ -47,12 +47,18 @@ install-deps:
 	go get -u golang.org/x/tools/cmd/stringer
 	go get -u github.com/gojuno/minimock/cmd/minimock
 
-pre-build:
-	dep ensure
-	# workaround for minimock
+pre-build: ensure generate
+
+generate:
 	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
 
-build: 
+test_git_no_changes:
+	git diff --exit-code
+
+ensure:
+	dep ensure
+
+build:
 	mkdir -p $(BIN_DIR)
 	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK)
 
@@ -83,8 +89,9 @@ $(EXPORTER):
 $(HEALTHCHECK):
 	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
 
+
 functest:
-	CGO_ENABLED=1 go test -tags functest -v ./functest
+	CGO_ENABLED=1 go test -tags functest ./functest
 
 test:
 	go test -v $(ALL_PACKAGES)
