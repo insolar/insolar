@@ -279,7 +279,7 @@ func (cert *Certificate) Dump() (string, error) {
 }
 
 // GetNodeSign return sign from bootstrap node with provided ref
-func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
+func (cert *Certificate) GetNodeSign(nodeRef string) ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
 }
 
