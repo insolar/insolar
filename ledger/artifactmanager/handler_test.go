@@ -561,9 +561,8 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {
 				Index: firstIndex,
-				Meta: &message.RecentObjectsIndexMeta{
-					TTL: 321,
-				}},
+				TTL:   321,
+			},
 		},
 		PendingRequests: map[core.RecordID][]byte{
 			*secondId: record.SerializeRecord(&record.CodeRecord{}),
@@ -574,9 +573,9 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	recentMock.AddPendingRequestFunc = func(p core.RecordID) {
 		require.Equal(t, p, *secondId)
 	}
-	recentMock.AddObjectWithMetaFunc = func(p core.RecordID, p1 *message.RecentObjectsIndexMeta) {
+	recentMock.AddObjectWithTTLFunc = func(p core.RecordID, ttl int) {
 		require.Equal(t, p, *firstID)
-		require.Equal(t, 320, p1.TTL)
+		require.Equal(t, 320, ttl)
 	}
 
 	h := NewMessageHandler(db, &configuration.ArtifactManager{})

@@ -810,8 +810,8 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 			inslog.Error(err)
 			continue
 		}
-		meta.Meta.TTL--
-		h.Recent.AddObjectWithMeta(id, meta.Meta)
+		meta.TTL--
+		h.Recent.AddObjectWithTTL(id, meta.TTL)
 	}
 
 	return &reply.OK{}, nil

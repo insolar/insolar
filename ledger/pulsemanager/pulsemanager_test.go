@@ -82,8 +82,8 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.ClearZeroTTLObjectsMock.Return()
 	recentMock.ClearObjectsMock.Return()
-	recentMock.GetObjectsMock.Return(map[core.RecordID]*message.RecentObjectsIndexMeta{
-		*firstID: {TTL: 1},
+	recentMock.GetObjectsMock.Return(map[core.RecordID]int{
+		*firstID: 1,
 	})
 	recentMock.GetRequestsMock.Return([]core.RecordID{*secondID})
 
@@ -102,7 +102,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		decodedIndex, err := index.DecodeObjectLifeline(val.RecentObjects[*firstID].Index)
 		require.NoError(t, err)
 		require.Equal(t, firstIndex, *decodedIndex)
-		require.Equal(t, 1, val.RecentObjects[*firstID].Meta.TTL)
+		require.Equal(t, 1, val.RecentObjects[*firstID].TTL)
 
 		return nil, nil
 	}

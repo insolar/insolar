@@ -67,7 +67,7 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 
 	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.ClearZeroTTLObjectsMock.Return()
-	recentMock.GetObjectsMock.Return(map[core.RecordID]*message.RecentObjectsIndexMeta{})
+	recentMock.GetObjectsMock.Return(map[core.RecordID]int{})
 	recentMock.GetRequestsMock.Return([]core.RecordID{})
 	recentMock.ClearObjectsMock.Return()
 

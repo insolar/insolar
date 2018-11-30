@@ -135,7 +135,7 @@ func (m *PulseManager) processRecentObjects(
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID][]byte{}
 
-	for id, meta := range recentObjectsIds {
+	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
@@ -147,7 +147,7 @@ func (m *PulseManager) processRecentObjects(
 			continue
 		}
 		recentObjects[id] = &message.HotIndex{
-			Meta:  meta,
+			TTL:   ttl,
 			Index: encoded,
 		}
 	}
