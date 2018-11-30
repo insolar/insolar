@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network"
+	packets "github.com/insolar/insolar/consensus/packets"
+	core "github.com/insolar/insolar/core"
+	network "github.com/insolar/insolar/network"
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
