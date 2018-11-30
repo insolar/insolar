@@ -30,7 +30,7 @@ type CertificateMock struct {
 	GetNodeRefPreCounter uint64
 	GetNodeRefMock       mCertificateMockGetNodeRef
 
-	GetNodeSignFunc       func(p string) (r []byte, r1 error)
+	GetNodeSignFunc       func(p *core.RecordRef) (r []byte, r1 error)
 	GetNodeSignCounter    uint64
 	GetNodeSignPreCounter uint64
 	GetNodeSignMock       mCertificateMockGetNodeSign
@@ -172,32 +172,32 @@ type mCertificateMockGetNodeSign struct {
 
 //CertificateMockGetNodeSignParams represents input parameters of the Certificate.GetNodeSign
 type CertificateMockGetNodeSignParams struct {
-	p string
+	p *core.RecordRef
 }
 
 //Expect sets up expected params for the Certificate.GetNodeSign
-func (m *mCertificateMockGetNodeSign) Expect(p string) *mCertificateMockGetNodeSign {
+func (m *mCertificateMockGetNodeSign) Expect(p *core.RecordRef) *mCertificateMockGetNodeSign {
 	m.mockExpectations = &CertificateMockGetNodeSignParams{p}
 	return m
 }
 
 //Return sets up a mock for Certificate.GetNodeSign to return Return's arguments
 func (m *mCertificateMockGetNodeSign) Return(r []byte, r1 error) *CertificateMock {
-	m.mock.GetNodeSignFunc = func(p string) ([]byte, error) {
+	m.mock.GetNodeSignFunc = func(p *core.RecordRef) ([]byte, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Certificate.GetNodeSign method
-func (m *mCertificateMockGetNodeSign) Set(f func(p string) (r []byte, r1 error)) *CertificateMock {
+func (m *mCertificateMockGetNodeSign) Set(f func(p *core.RecordRef) (r []byte, r1 error)) *CertificateMock {
 	m.mock.GetNodeSignFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetNodeSign implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) GetNodeSign(p string) (r []byte, r1 error) {
+func (m *CertificateMock) GetNodeSign(p *core.RecordRef) (r []byte, r1 error) {
 	atomic.AddUint64(&m.GetNodeSignPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeSignCounter, 1)
 
