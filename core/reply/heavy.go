@@ -14,16 +14,34 @@
  *    limitations under the License.
  */
 
-package common
+package reply
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/core"
 )
 
-type BootstrapController interface {
-	Start()
-	Bootstrap(ctx context.Context) error
-	GetBootstrapHosts() []*host.Host
+// ErrHeavySyncInProgress returned when heavy sync in progress.
+const (
+	ErrHeavySyncInProgress ErrType = iota + 1
+)
+
+// HeavyError carries heavy record information
+type HeavyError struct {
+	Message string
+	SubType ErrType
+}
+
+// Type implementation of Reply interface.
+func (e *HeavyError) Type() core.ReplyType {
+	return TypeHeavyError
+}
+
+// ConcreteType returns concrete error type.
+func (e *HeavyError) ConcreteType() ErrType {
+	return e.SubType
+}
+
+// Error returns error message for stored type.
+func (e *HeavyError) Error() string {
+	return e.Message
 }

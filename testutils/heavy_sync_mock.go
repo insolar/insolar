@@ -19,6 +19,11 @@ import (
 type HeavySyncMock struct {
 	t minimock.Tester
 
+	ResetFunc       func(p context.Context, p1 core.PulseNumber) (r error)
+	ResetCounter    uint64
+	ResetPreCounter uint64
+	ResetMock       mHeavySyncMockReset
+
 	StartFunc       func(p context.Context, p1 core.PulseNumber) (r error)
 	StartCounter    uint64
 	StartPreCounter uint64
@@ -43,11 +48,79 @@ func NewHeavySyncMock(t minimock.Tester) *HeavySyncMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.ResetMock = mHeavySyncMockReset{mock: m}
 	m.StartMock = mHeavySyncMockStart{mock: m}
 	m.StopMock = mHeavySyncMockStop{mock: m}
 	m.StoreMock = mHeavySyncMockStore{mock: m}
 
 	return m
+}
+
+type mHeavySyncMockReset struct {
+	mock             *HeavySyncMock
+	mockExpectations *HeavySyncMockResetParams
+}
+
+//HeavySyncMockResetParams represents input parameters of the HeavySync.Reset
+type HeavySyncMockResetParams struct {
+	p  context.Context
+	p1 core.PulseNumber
+}
+
+//Expect sets up expected params for the HeavySync.Reset
+func (m *mHeavySyncMockReset) Expect(p context.Context, p1 core.PulseNumber) *mHeavySyncMockReset {
+	m.mockExpectations = &HeavySyncMockResetParams{p, p1}
+	return m
+}
+
+//Return sets up a mock for HeavySync.Reset to return Return's arguments
+func (m *mHeavySyncMockReset) Return(r error) *HeavySyncMock {
+	m.mock.ResetFunc = func(p context.Context, p1 core.PulseNumber) error {
+		return r
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of HeavySync.Reset method
+func (m *mHeavySyncMockReset) Set(f func(p context.Context, p1 core.PulseNumber) (r error)) *HeavySyncMock {
+	m.mock.ResetFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//Reset implements github.com/insolar/insolar/core.HeavySync interface
+func (m *HeavySyncMock) Reset(p context.Context, p1 core.PulseNumber) (r error) {
+	atomic.AddUint64(&m.ResetPreCounter, 1)
+	defer atomic.AddUint64(&m.ResetCounter, 1)
+
+	if m.ResetMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.ResetMock.mockExpectations, HeavySyncMockResetParams{p, p1},
+			"HeavySync.Reset got unexpected parameters")
+
+		if m.ResetFunc == nil {
+
+			m.t.Fatal("No results are set for the HeavySyncMock.Reset")
+
+			return
+		}
+	}
+
+	if m.ResetFunc == nil {
+		m.t.Fatal("Unexpected call to HeavySyncMock.Reset")
+		return
+	}
+
+	return m.ResetFunc(p, p1)
+}
+
+//ResetMinimockCounter returns a count of HeavySyncMock.ResetFunc invocations
+func (m *HeavySyncMock) ResetMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ResetCounter)
+}
+
+//ResetMinimockPreCounter returns the value of HeavySyncMock.Reset invocations
+func (m *HeavySyncMock) ResetMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ResetPreCounter)
 }
 
 type mHeavySyncMockStart struct {
@@ -256,6 +329,10 @@ func (m *HeavySyncMock) StoreMinimockPreCounter() uint64 {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *HeavySyncMock) ValidateCallCounters() {
 
+	if m.ResetFunc != nil && atomic.LoadUint64(&m.ResetCounter) == 0 {
+		m.t.Fatal("Expected call to HeavySyncMock.Reset")
+	}
+
 	if m.StartFunc != nil && atomic.LoadUint64(&m.StartCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Start")
 	}
@@ -285,6 +362,10 @@ func (m *HeavySyncMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *HeavySyncMock) MinimockFinish() {
 
+	if m.ResetFunc != nil && atomic.LoadUint64(&m.ResetCounter) == 0 {
+		m.t.Fatal("Expected call to HeavySyncMock.Reset")
+	}
+
 	if m.StartFunc != nil && atomic.LoadUint64(&m.StartCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Start")
 	}
@@ -311,6 +392,7 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && (m.ResetFunc == nil || atomic.LoadUint64(&m.ResetCounter) > 0)
 		ok = ok && (m.StartFunc == nil || atomic.LoadUint64(&m.StartCounter) > 0)
 		ok = ok && (m.StopFunc == nil || atomic.LoadUint64(&m.StopCounter) > 0)
 		ok = ok && (m.StoreFunc == nil || atomic.LoadUint64(&m.StoreCounter) > 0)
@@ -321,6 +403,10 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if m.ResetFunc != nil && atomic.LoadUint64(&m.ResetCounter) == 0 {
+				m.t.Error("Expected call to HeavySyncMock.Reset")
+			}
 
 			if m.StartFunc != nil && atomic.LoadUint64(&m.StartCounter) == 0 {
 				m.t.Error("Expected call to HeavySyncMock.Start")
@@ -345,6 +431,10 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *HeavySyncMock) AllMocksCalled() bool {
+
+	if m.ResetFunc != nil && atomic.LoadUint64(&m.ResetCounter) == 0 {
+		return false
+	}
 
 	if m.StartFunc != nil && atomic.LoadUint64(&m.StartCounter) == 0 {
 		return false

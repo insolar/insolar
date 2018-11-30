@@ -63,7 +63,7 @@ type Transport interface {
 func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
 	conn, publicAddress, err := NewConnection(cfg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create connection.")
 	}
 
 	switch cfg.Protocol {

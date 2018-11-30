@@ -72,16 +72,6 @@ func (t *Table) AddToKnownHosts(h *host.Host) {
 	t.addRemoteHost(h)
 }
 
-// GetLocalNodes get all nodes from the local globe.
-func (t *Table) GetLocalNodes() []core.RecordRef {
-	nodes := t.NodeKeeper.GetActiveNodes()
-	result := make([]core.RecordRef, len(nodes))
-	for i, node := range nodes {
-		result[i] = node.ID()
-	}
-	return result
-}
-
 // GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
 func (t *Table) GetRandomNodes(count int) []host.Host {
 	// not so random for now

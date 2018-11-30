@@ -24,7 +24,7 @@ type PulseManagerMock struct {
 	CurrentPreCounter uint64
 	CurrentMock       mPulseManagerMockCurrent
 
-	SetFunc       func(p context.Context, p1 core.Pulse) (r error)
+	SetFunc       func(p context.Context, p1 core.Pulse, p2 bool) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mPulseManagerMockSet
@@ -119,36 +119,37 @@ type mPulseManagerMockSet struct {
 type PulseManagerMockSetParams struct {
 	p  context.Context
 	p1 core.Pulse
+	p2 bool
 }
 
 //Expect sets up expected params for the PulseManager.Set
-func (m *mPulseManagerMockSet) Expect(p context.Context, p1 core.Pulse) *mPulseManagerMockSet {
-	m.mockExpectations = &PulseManagerMockSetParams{p, p1}
+func (m *mPulseManagerMockSet) Expect(p context.Context, p1 core.Pulse, p2 bool) *mPulseManagerMockSet {
+	m.mockExpectations = &PulseManagerMockSetParams{p, p1, p2}
 	return m
 }
 
 //Return sets up a mock for PulseManager.Set to return Return's arguments
 func (m *mPulseManagerMockSet) Return(r error) *PulseManagerMock {
-	m.mock.SetFunc = func(p context.Context, p1 core.Pulse) error {
+	m.mock.SetFunc = func(p context.Context, p1 core.Pulse, p2 bool) error {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of PulseManager.Set method
-func (m *mPulseManagerMockSet) Set(f func(p context.Context, p1 core.Pulse) (r error)) *PulseManagerMock {
+func (m *mPulseManagerMockSet) Set(f func(p context.Context, p1 core.Pulse, p2 bool) (r error)) *PulseManagerMock {
 	m.mock.SetFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //Set implements github.com/insolar/insolar/core.PulseManager interface
-func (m *PulseManagerMock) Set(p context.Context, p1 core.Pulse) (r error) {
+func (m *PulseManagerMock) Set(p context.Context, p1 core.Pulse, p2 bool) (r error) {
 	atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 
 	if m.SetMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SetMock.mockExpectations, PulseManagerMockSetParams{p, p1},
+		testify_assert.Equal(m.t, *m.SetMock.mockExpectations, PulseManagerMockSetParams{p, p1, p2},
 			"PulseManager.Set got unexpected parameters")
 
 		if m.SetFunc == nil {
@@ -164,7 +165,7 @@ func (m *PulseManagerMock) Set(p context.Context, p1 core.Pulse) (r error) {
 		return
 	}
 
-	return m.SetFunc(p, p1)
+	return m.SetFunc(p, p1, p2)
 }
 
 //SetMinimockCounter returns a count of PulseManagerMock.SetFunc invocations

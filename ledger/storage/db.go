@@ -44,11 +44,10 @@ const (
 	scopeIDBlob     byte = 7
 	scopeIDLocal    byte = 8
 
-	sysGenesis                  byte = 1
-	sysLatestPulse              byte = 2
-	sysReplicatedPulse          byte = 3
-	sysLastPulseAsLightMaterial byte = 4
-	sysLastSyncedPulseOnHeavy   byte = 5
+	sysGenesis                byte = 1
+	sysLatestPulse            byte = 2
+	sysReplicatedPulse        byte = 3
+	sysLastSyncedPulseOnHeavy byte = 4
 )
 
 // DB represents BadgerDB storage implementation.

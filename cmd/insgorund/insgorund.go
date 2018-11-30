@@ -21,12 +21,14 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strings"
+
+	"github.com/insolar/insolar/core"
 
 	"github.com/insolar/insolar/log"
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 func main() {
@@ -35,6 +37,8 @@ func main() {
 	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
 	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
 	rpcProtocol := pflag.String("rpc-proto", "tcp", "protocol of RPC API")
+	code := pflag.String("code", "", "add pre-compiled code to cache (<ref>:</path/to/plugin.so>)")
+
 	pflag.Parse()
 
 	err := log.SetLevel("Debug")
@@ -50,10 +54,26 @@ func main() {
 		}
 		defer os.RemoveAll(tmpDir)
 		*path = tmpDir
+		log.Debug("ginsider cache dir is " + tmpDir)
 	}
 
 	insider := ginsider.NewGoInsider(*path, *rpcProtocol, *rpcAddress)
-	proxyctx.Current = insider
+
+	if *code != "" {
+		codeSlice := strings.Split(*code, ":")
+		if len(codeSlice) != 2 {
+			log.Fatal("code param format is <ref>:</path/to/plugin.so>")
+			os.Exit(1)
+		}
+		ref := core.NewRefFromBase58(codeSlice[0])
+		pluginPath := codeSlice[1]
+
+		err := insider.AddPlugin(ref, pluginPath)
+		if err != nil {
+			log.Fatalf("Couldn't add plugin by ref %s with .so from %s, err: %s ", ref, pluginPath, err.Error())
+			os.Exit(1)
+		}
+	}
 
 	err = rpc.Register(&ginsider.RPC{GI: insider})
 	if err != nil {
