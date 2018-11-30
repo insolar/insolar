@@ -160,8 +160,6 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 			return result, addresses, nil
 		}
 	}
-
-	return result, addresses, nil
 }
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants

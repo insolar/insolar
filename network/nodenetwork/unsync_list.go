@@ -192,7 +192,7 @@ func claimToNode(address, version string, claim consensus.ReferendumClaim) (core
 	return node, nil
 }
 
-func nodeToClaim(node core.Node) (consensus.ReferendumClaim, error) {
-	// TODO: do this if u know how
-	return nil, nil
-}
+// func nodeToClaim(node core.Node) (consensus.ReferendumClaim, error) {
+// TODO: do this if u know how and why
+// return nil, nil
+// }
