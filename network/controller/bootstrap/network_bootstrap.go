@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
@@ -76,13 +75,17 @@ func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Error authorizing on discovery node")
 	}
-	data, err := nb.challengeController.Execute(ctx, discoveryNode, sessionID)
-	if err != nil {
-		return errors.Wrap(err, "Error executing double challenge response")
-	}
-	origin := nb.nodeKeeper.GetOrigin()
-	mutableOrigin := origin.(nodenetwork.MutableNode)
-	mutableOrigin.SetShortID(data.AssignShortID)
+
+	// TODO: fix workaround challenge request disable
+	/*
+		data, err := nb.challengeController.Execute(ctx, discoveryNode, sessionID)
+		if err != nil {
+			return errors.Wrap(err, "Error executing double challenge response")
+		}
+		origin := nb.nodeKeeper.GetOrigin()
+		mutableOrigin := origin.(nodenetwork.MutableNode)
+		mutableOrigin.SetShortID(data.AssignShortID)
+	*/
 	return nb.authController.Register(ctx, discoveryNode, sessionID)
 }
 
