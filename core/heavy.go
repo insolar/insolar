@@ -24,4 +24,5 @@ type HeavySync interface {
 	Start(ctx context.Context, pn PulseNumber) error
 	Store(ctx context.Context, pn PulseNumber, kvs []KV) error
 	Stop(ctx context.Context, pn PulseNumber) error
+	Reset(ctx context.Context, pn PulseNumber) error
 }
