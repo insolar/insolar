@@ -29,8 +29,10 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/controller/pinger"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -51,11 +53,11 @@ type NodeBootstrapResponse struct {
 }
 
 type GenesisRequest struct {
-	Certificate core.AuthorizationCertificate
+	// Certificate core.AuthorizationCertificate
 }
 
 type GenesisResponse struct {
-	Discovery core.Node
+	Discovery *NodeStruct
 	Error     string
 }
 
@@ -63,6 +65,43 @@ type StartSessionRequest struct{}
 
 type StartSessionResponse struct {
 	SessionID SessionID
+}
+
+type NodeStruct struct {
+	ID      core.RecordRef
+	SID     core.ShortNodeID
+	Roles   []core.StaticRole
+	PK      []byte
+	Address string
+	Version string
+}
+
+func newNode(n *NodeStruct) (core.Node, error) {
+	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKey(n.PK)
+	if err != nil {
+		return nil, errors.Wrap(err, "error deserializing node public key")
+	}
+
+	result := nodenetwork.NewNode(n.ID, n.Roles, pk, 0, n.Address, n.Version)
+	mNode := result.(nodenetwork.MutableNode)
+	mNode.SetShortID(n.SID)
+	return mNode, nil
+}
+
+func newNodeStruct(node core.Node) (*NodeStruct, error) {
+	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKey(node.PublicKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "error serializing node public key")
+	}
+
+	return &NodeStruct{
+		ID:      node.ID(),
+		SID:     node.ShortID(),
+		Roles:   node.Roles(),
+		PK:      pk,
+		Address: node.PhysicalAddress(),
+		Version: node.Version(),
+	}, nil
 }
 
 type Code uint8
@@ -85,7 +124,7 @@ func init() {
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
-	ch := bc.getBootstrapHostsChannel(ctx, 1)
+	ch := bc.getBootstrapHostsChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
 	host := bc.waitResultFromChannel(ctx, ch)
 	if host == nil {
 		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
@@ -121,7 +160,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 
 	var hosts []*host.Host
 	for {
-		ch := bc.getBootstrapHostsChannel(ctx, discoveryCount)
+		ch := bc.getBootstrapHostsChannel(ctx, discoveryNodes, discoveryCount)
 		hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 		if len(hosts) == discoveryCount {
 			// we connected to all discovery nodes
@@ -135,12 +174,14 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrapf(err, "Discovery bootstrap to host %s failed", h)
 		}
-		err = bc.checkActiveNode(activeNode)
-		if err != nil {
-			return errors.Wrapf(err, "Discovery check of host %s failed", h)
-		}
 		activeNodes = append(activeNodes, activeNode)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
+	}
+	for _, activeNode := range activeNodes {
+		err = bc.checkActiveNode(activeNode)
+		if err != nil {
+			return errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
+		}
 	}
 	bc.keeper.AddActiveNodes(activeNodes)
 	inslogger.FromContext(ctx).Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
@@ -149,7 +190,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (core.Node, error) {
 	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
-		Certificate: bc.cert,
+		// Certificate: bc.cert,
 	}).Build()
 	future, err := bc.transport.SendRequestPacket(request, h)
 	if err != nil {
@@ -163,13 +204,17 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (c
 	if data.Discovery == nil {
 		return nil, errors.New("Error genesis response from discovery node: " + data.Error)
 	}
-	return data.Discovery, nil
+	discovery, err := newNode(data.Discovery)
+	if err != nil {
+		return nil, errors.New("Error deserializing node from discovery node: " + data.Error)
+	}
+	return discovery, nil
 }
 
-func (bc *Bootstrapper) getBootstrapHostsChannel(ctx context.Context, capacity int) <-chan *host.Host {
+func (bc *Bootstrapper) getBootstrapHostsChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
 	// we need only one host to bootstrap
-	bootstrapHosts := make(chan *host.Host, capacity)
-	for _, bootstrapNode := range bc.cert.GetDiscoveryNodes() {
+	bootstrapHosts := make(chan *host.Host, needResponses)
+	for _, discoveryNode := range discoveryNodes {
 		go func(ctx context.Context, address string, ch chan<- *host.Host) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
 			bootstrapHost, err := bc.bootstrap(address)
@@ -178,7 +223,7 @@ func (bc *Bootstrapper) getBootstrapHostsChannel(ctx context.Context, capacity i
 				return
 			}
 			bootstrapHosts <- bootstrapHost
-		}(ctx, bootstrapNode.GetHost(), bootstrapHosts)
+		}(ctx, discoveryNode.GetHost(), bootstrapHosts)
 	}
 	return bootstrapHosts
 }
@@ -247,12 +292,16 @@ func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) err
 }
 
 func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
-	data := request.GetData().(*GenesisRequest)
+	/*data := request.GetData().(*GenesisRequest)
 	err := bc.checkGenesisCert(data.Certificate)
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
+	}*/
+	discovery, err := newNodeStruct(bc.keeper.GetOrigin())
+	if err != nil {
+		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
 	}
-	return bc.transport.BuildResponse(request, &GenesisResponse{Discovery: bc.keeper.GetOrigin()}), nil
+	return bc.transport.BuildResponse(request, &GenesisResponse{Discovery: discovery}), nil
 }
 
 func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
