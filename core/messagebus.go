@@ -109,6 +109,7 @@ type MessageBus interface {
 	WriteTape(ctx context.Context, writer io.Writer) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/core.GlobalInsolarLock -o ../testutils -s _mock.go
 type GlobalInsolarLock interface {
 	Acquire(context.Context)
 	Release(context.Context)
