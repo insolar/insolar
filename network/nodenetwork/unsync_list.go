@@ -104,12 +104,14 @@ func (ul *unsyncList) mergeWith(claims map[core.RecordRef][]consensus.Referendum
 func (ul *unsyncList) mergeClaim(claim consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
 	switch t := claim.(type) {
 	case *consensus.NodeAnnounceClaim:
+		// TODO: fix version
 		node, err := claimToNode(ul.addressMap[t.NodeRef], "", t)
 		if err != nil {
 			log.Error("[ mergeClaim ] failed to get a Node")
 		}
 		addFunc(node)
 	case *consensus.NodeJoinClaim:
+		// TODO: fix version
 		node, err := claimToNode(ul.addressMap[t.NodeRef], "", t)
 		if err != nil {
 			log.Error("[ mergeClaim ] failed to get a Node")
@@ -191,5 +193,6 @@ func claimToNode(address, version string, claim consensus.ReferendumClaim) (core
 }
 
 func nodeToClaim(node core.Node) (consensus.ReferendumClaim, error) {
+	// TODO: do this if u know how
 	return nil, nil
 }
