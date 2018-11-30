@@ -52,6 +52,35 @@ type Certificate struct {
 	nodePublicKey   crypto.PublicKey
 }
 
+// NodeCertificate holds info about node from it certificate
+type NodeCertificate struct {
+	PublicKey      string          `json:"public_key"`
+	Reference      string          `json:"reference"`
+	Role           string          `json:"role"`
+	BootstrapNodes []BootstrapNode `json:"bootstrap_nodes"`
+
+	nodePublicKey crypto.PublicKey
+}
+
+// GetRole returns role from node certificate
+func (nodeCert *NodeCertificate) GetRole() core.StaticRole {
+	return core.GetStaticRoleFromString(nodeCert.Role)
+}
+
+// GetNodeSign return bootstrap nodes array
+func (nodeCert *NodeCertificate) GetNodeSign(publicKey crypto.PublicKey) []byte {
+	return []byte{}
+}
+
+func (nodeCert *NodeCertificate) GetNodeRef() *core.RecordRef {
+	ref := core.NewRefFromBase58(nodeCert.Reference)
+	return &ref
+}
+
+func (nodeCert *NodeCertificate) GetPublicKey() crypto.PublicKey {
+	return nodeCert.nodePublicKey
+}
+
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
 	PublicKey   string `json:"public_key"`
@@ -239,4 +268,9 @@ func (cert *Certificate) Dump() (string, error) {
 	}
 
 	return string(result), nil
+}
+
+// GetNodeSign return sign from bootstrap node with provided public key
+func (cert *Certificate) GetNodeSign(publicKey crypto.PublicKey) []byte {
+	return []byte{}
 }
