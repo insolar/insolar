@@ -2090,3 +2090,61 @@ package main
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{uint64(100), nil}, r)
 }
+
+func TestEmptyParamsMethodCall(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+
+	var contractCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	
+)
+type One struct {
+   foundation.BaseContract
+}
+
+func New() (*One, error){
+   return nil, nil
+}
+
+func (rd *One) TestCall(name string, key string) (string, error) {
+	return "TEST", nil
+}
+
+`
+	ctx := inslogger.ContextWithTrace(context.Background(), utils.RandTraceID())
+	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{
+		"one": contractCode,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	protoRef := core.NewRefFromBase58("one")
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: protoRef}},
+	)
+	assert.NoError(t, err)
+	contract := getRefFromID(contractID)
+	_, err = am.ActivateObject(
+		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+
+	res, err := executeMethod(ctx, lr, pm, *contract, 0, "TestCall")
+	assert.NoError(t, err)
+
+	// call method without params
+	resParsed := goplugintestutils.CBORUnMarshalToSlice(t, res.(*reply.CallMethod).Result)
+	// in current realization all good, but this method expects 2 params and it must return error
+	assert.Equal(t, "TEST", resParsed[0])
+
+}
