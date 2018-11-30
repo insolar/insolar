@@ -30,11 +30,11 @@ func newZeroNetworkCoordinator() *zeroNetworkCoordinator {
 	return &zeroNetworkCoordinator{}
 }
 
-func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.NodeCertificate, error) {
+func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.AuthorizationCertificate, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (znc *zeroNetworkCoordinator) ValidateCert(ctx context.Context, certificate core.NodeCertificate) (bool, error) {
+func (znc *zeroNetworkCoordinator) ValidateCert(ctx context.Context, certificate core.AuthorizationCertificate) (bool, error) {
 	return false, errors.New("not implemented")
 }
 

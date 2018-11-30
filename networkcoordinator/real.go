@@ -30,11 +30,11 @@ func newRealNetworkCoordinator() *realNetworkCoordinator {
 	return &realNetworkCoordinator{}
 }
 
-func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.NodeCertificate, error) {
+func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.AuthorizationCertificate, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (rnc *realNetworkCoordinator) ValidateCert(ctx context.Context, certificate core.NodeCertificate) (bool, error) {
+func (rnc *realNetworkCoordinator) ValidateCert(ctx context.Context, certificate core.AuthorizationCertificate) (bool, error) {
 	return false, errors.New("not implemented")
 }
 

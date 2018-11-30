@@ -52,8 +52,8 @@ type Certificate struct {
 	nodePublicKey   crypto.PublicKey
 }
 
-// NodeCertificate holds info about node from it certificate
-type NodeCertificate struct {
+// AuthorizationCertificate holds info about node from it certificate
+type AuthorizationCertificate struct {
 	PublicKey      string          `json:"public_key"`
 	Reference      string          `json:"reference"`
 	Role           string          `json:"role"`
@@ -63,23 +63,23 @@ type NodeCertificate struct {
 }
 
 // GetRole returns role from node certificate
-func (nodeCert *NodeCertificate) GetRole() core.StaticRole {
+func (nodeCert *AuthorizationCertificate) GetRole() core.StaticRole {
 	return core.GetStaticRoleFromString(nodeCert.Role)
 }
 
 // GetNodeSign returns bootstrap nodes array
-func (nodeCert *NodeCertificate) GetNodeSign(publicKey crypto.PublicKey) []byte {
+func (nodeCert *AuthorizationCertificate) GetNodeSign(publicKey crypto.PublicKey) []byte {
 	return []byte{}
 }
 
 // GetNodeRef returns reference from node certificate
-func (nodeCert *NodeCertificate) GetNodeRef() *core.RecordRef {
+func (nodeCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
 	ref := core.NewRefFromBase58(nodeCert.Reference)
 	return &ref
 }
 
 // GetPublicKey returns public key reference from node certificate
-func (nodeCert *NodeCertificate) GetPublicKey() crypto.PublicKey {
+func (nodeCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
 	return nodeCert.nodePublicKey
 }
 
