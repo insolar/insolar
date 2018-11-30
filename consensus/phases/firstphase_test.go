@@ -46,7 +46,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	}
 
 	nodeKeeperMock.GetActiveNodesMock.Set(func() (r []core.Node) {
-		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", "")}
+		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, nil, nil, "", "")}
 	})
 
 	cm := component.Manager{}
