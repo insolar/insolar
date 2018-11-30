@@ -157,3 +157,26 @@ func newSparseUnsyncList(capacity int) *sparseUnsyncList {
 func (ul *sparseUnsyncList) Length() int {
 	return ul.capacity
 }
+
+func claimToNode(address, version string, claim consensus.ReferendumClaim) (core.Node, error) {
+	njc, ok := claim.(*consensus.NodeJoinClaim)
+	if !ok {
+		return nil, errors.New("[ ClaimToNode ] failed to convert a claim to node koin claim")
+	}
+	keyProc := platformpolicy.NewKeyProcessor()
+	key, err := keyProc.ImportPublicKey(njc.NodePK[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Node ] failed to import a public key")
+	}
+	node := NewNode(
+		njc.NodeRef,
+		[]core.StaticRole{core.StaticRole(int(njc.NodeRoleRecID))},
+		key,
+		address,
+		version)
+	return node, nil
+}
+
+func nodeToClaim(node core.Node) (consensus.ReferendumClaim, error) {
+	return nil, nil
+}
