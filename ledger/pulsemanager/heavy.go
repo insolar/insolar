@@ -135,7 +135,7 @@ func (m *PulseManager) NextSyncPulses(ctx context.Context) ([]core.PulseNumber, 
 func (m *PulseManager) findallcompleted(ctx context.Context, from core.PulseNumber) ([]core.PulseNumber, error) {
 	wasalight, err := m.JetCoordinator.IsAuthorized(
 		ctx,
-		core.RoleLightExecutor,
+		core.DynamicRoleLightExecutor,
 		// TODO: pass JetID RecordRef here, when it would be ready
 		nil,
 		from,
