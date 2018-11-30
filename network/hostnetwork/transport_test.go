@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -65,7 +66,6 @@ func (m *MockResolver) ResolveS(id core.ShortNodeID) (*host.Host, error) {
 func (m *MockResolver) Inject(nodeKeeper network.NodeKeeper) {}
 func (m *MockResolver) AddToKnownHosts(h *host.Host)         {}
 func (m *MockResolver) Rebalance(network.PartitionPolicy)    {}
-func (m *MockResolver) GetLocalNodes() []core.RecordRef      { return nil }
 func (m *MockResolver) GetRandomNodes(int) []host.Host       { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
@@ -185,7 +185,7 @@ func TestNewHostTransport(t *testing.T) {
 		_, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
 		require.NoError(t, err)
 	}
-	success := network.WaitTimeout(&wg, time.Second)
+	success := utils.WaitTimeout(&wg, time.Second)
 	require.True(t, success)
 }
 
@@ -248,7 +248,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
 	require.NoError(t, err)
-	success := network.WaitTimeout(&wg, time.Second)
+	success := utils.WaitTimeout(&wg, time.Second)
 	require.True(t, success)
 }
 
@@ -359,7 +359,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
-	result := network.WaitTimeout(&wg, time.Millisecond*10)
+	result := utils.WaitTimeout(&wg, time.Millisecond*10)
 	require.False(t, result)
 }
 
