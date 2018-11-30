@@ -77,7 +77,7 @@ func getTestData(t *testing.T) (
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
 		recent: storage.NewRecentStorage(1),
-		conf:   &configuration.ArtifactManager{LightChainLimit: 3},
+		conf:   &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -594,7 +594,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
 		recent: storage.NewRecentStorage(1),
-		conf:   &configuration.ArtifactManager{LightChainLimit: 3},
+		conf:   &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
