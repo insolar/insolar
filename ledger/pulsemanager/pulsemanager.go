@@ -187,7 +187,7 @@ func (m *PulseManager) SyncToHeavy() {
 	if !m.options.enablesync {
 		return
 	}
-	// TODO: save current pulse as
+	// TODO: save current pulse as last should be processed
 	if len(m.gotpulse) == 0 {
 		m.gotpulse <- struct{}{}
 		return

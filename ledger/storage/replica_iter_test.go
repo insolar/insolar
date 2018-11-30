@@ -147,8 +147,6 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	require.Nil(t, recsBefore)
 	require.Nil(t, idxBefore)
 
-	// TODO: remove assertpulse struct
-	// tt represents test case PulseNumber -> expected record keys
 	ttPerPulse := make(map[int][]key)
 	ttRange := make(map[int][]key)
 
