@@ -44,6 +44,7 @@ type Runner struct {
 	ContractRequester   core.ContractRequester   `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
+	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
