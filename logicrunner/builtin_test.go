@@ -80,7 +80,7 @@ func TestBareHelloworld(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseNumber = 0
 
-	l.GetPulseManager().Set(
+	_ = l.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: mb.PulseNumber, Entropy: core.Entropy{}},
 	)

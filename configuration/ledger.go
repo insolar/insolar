@@ -49,6 +49,12 @@ type PulseManager struct {
 	HeavySyncMessageLimit int
 }
 
+// RecentStorage holds configuration for RecentStorage
+type RecentStorage struct {
+	// Default TTL is a value of default ttl for redirects
+	DefaultTTL int
+}
+
 // Ledger holds configuration for ledger.
 type Ledger struct {
 	// Storage defines storage configuration.
@@ -59,6 +65,8 @@ type Ledger struct {
 	ArtifactManager ArtifactManager
 	// PulseManager holds configuration for PulseManager.
 	PulseManager PulseManager
+	// RecentStorage holds configuration for RecentStorage
+	RecentStorage RecentStorage
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -86,6 +94,10 @@ func NewLedger() Ledger {
 		PulseManager: PulseManager{
 			HeavySyncEnabled:      true,
 			HeavySyncMessageLimit: 1 << 20, // 1Mb
+		},
+
+		RecentStorage: RecentStorage{
+			DefaultTTL: 50,
 		},
 	}
 }

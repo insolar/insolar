@@ -786,8 +786,8 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		len(msg.PendingRequests),
 	)
 
-	for id, meta := range msg.PendingRequests {
-		newID, err := h.db.SetRecord(ctx, id.Pulse(), record.DeserializeRecord(meta))
+	for id, request := range msg.PendingRequests {
+		newID, err := h.db.SetRecord(ctx, id.Pulse(), record.DeserializeRecord(request))
 		if err != nil {
 			inslog.Error(err)
 			continue
