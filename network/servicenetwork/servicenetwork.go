@@ -104,7 +104,7 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 func incrementPort(address string) (string, error) {
 	parts := strings.Split(address, ":")
 	if len(parts) != 2 {
-		return address, errors.New("failed to get port from address.")
+		return address, errors.New("failed to get port from address")
 	}
 	port, err := strconv.Atoi(parts[1])
 	if err != nil {

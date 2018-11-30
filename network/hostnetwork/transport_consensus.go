@@ -18,8 +18,6 @@ package hostnetwork
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
