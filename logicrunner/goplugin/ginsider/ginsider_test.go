@@ -29,7 +29,14 @@ func TestHealthCheck(t *testing.T) {
 	currentPath, err := os.Getwd()
 	require.NoError(t, err)
 
-	insgoccPath := currentPath + "/../../../bin/insgocc"
+	var insgoccPath string
+	binPath, ok := os.LookupEnv("BIN_DIR")
+	if !ok {
+		insgoccPath = currentPath + "../../../bin/insgocc"
+	} else {
+		insgoccPath = binPath + "/insgocc"
+	}
+
 	contractPath := currentPath + "/healthcheck/healthcheck.go"
 
 	pathToTmp, err := filepath.Rel(currentPath, tmpDir)
