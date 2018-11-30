@@ -14,30 +14,4 @@
  *    limitations under the License.
  */
 
-package api
-
-import (
-	"net/http"
-)
-
-// StatusReply is reply for Status service requests.
-type StatusReply struct {
-	NetworkState string
-}
-
-// StatusService is a service that provides API for getting status of node.
-type StatusService struct {
-	runner *Runner
-}
-
-// NewStatusService creates new StatusService instance.
-func NewStatusService(runner *Runner) *StatusService {
-	return &StatusService{runner: runner}
-}
-
-// Get returns status info
-func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusReply) error {
-	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
-
-	return nil
-}
+package functest

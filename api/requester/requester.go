@@ -203,6 +203,7 @@ func Info(url string) (*InfoResponse, error) {
 	return res, nil
 }
 
+// Status makes rpc request to info.Status method and extracts it
 func Status(url string) (*StatusResponse, error) {
 	params := getDefaultRPCParams("status.Get")
 
