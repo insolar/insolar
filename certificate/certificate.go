@@ -68,7 +68,7 @@ func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
 }
 
 // GetNodeSign returns bootstrap nodes array
-func (authCert *AuthorizationCertificate) GetNodeSign(publicKey crypto.PublicKey) ([]byte, error) {
+func (authCert *AuthorizationCertificate) GetNodeSign(nodeRef string) ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
 }
 
@@ -278,8 +278,8 @@ func (cert *Certificate) Dump() (string, error) {
 	return string(result), nil
 }
 
-// GetNodeSign return sign from bootstrap node with provided public key
-func (cert *Certificate) GetNodeSign(publicKey crypto.PublicKey) ([]byte, error) {
+// GetNodeSign return sign from bootstrap node with provided ref
+func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
 }
 
