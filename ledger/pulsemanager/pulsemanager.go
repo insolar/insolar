@@ -58,9 +58,9 @@ type PulseManager struct {
 }
 
 type pmOptions struct {
-	enablesync       bool
-	syncmessagelimit int
-	notolderlimit    core.PulseNumber
+	enableSync       bool
+	syncMessageLimit int
+	pulsesDeltaLimit core.PulseNumber
 }
 
 func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
@@ -80,9 +80,9 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 		currentPulse: *core.GenesisPulse,
 	}
 	pmconf := conf.PulseManager
-	pm.options.enablesync = pmconf.HeavySyncEnabled
-	pm.options.syncmessagelimit = pmconf.HeavySyncMessageLimit
-	pm.options.notolderlimit = conf.LightChainLimit
+	pm.options.enableSync = pmconf.HeavySyncEnabled
+	pm.options.syncMessageLimit = pmconf.HeavySyncMessageLimit
+	pm.options.pulsesDeltaLimit = conf.LightChainLimit
 	pm.syncbackoff = backoffFromConfig(pmconf.HeavyBackoff)
 	return pm
 }
@@ -187,7 +187,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 //
 // Should never be called after Stop.
 func (m *PulseManager) SyncToHeavy() {
-	if !m.options.enablesync {
+	if !m.options.enableSync {
 		return
 	}
 	// TODO: save current pulse as last should be processed
@@ -201,7 +201,7 @@ func (m *PulseManager) SyncToHeavy() {
 func (m *PulseManager) Start(ctx context.Context) error {
 	m.syncdone = make(chan struct{})
 	m.stop = make(chan struct{})
-	if m.options.enablesync {
+	if m.options.enableSync {
 		synclist, err := m.NextSyncPulses(ctx)
 		if err != nil {
 			return err
@@ -219,7 +219,7 @@ func (m *PulseManager) Stop(ctx context.Context) error {
 	m.setLock.Unlock()
 	close(m.stop)
 
-	if m.options.enablesync {
+	if m.options.enableSync {
 		close(m.gotpulse)
 		inslogger.FromContext(ctx).Info("waiting finish of replication to heavy node...")
 		<-m.syncdone

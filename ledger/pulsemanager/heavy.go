@@ -79,7 +79,7 @@ func (m *PulseManager) HeavySync(
 	inslog.Infof("synchronize, sucessfully send start message for pulse %v", pn)
 
 	replicator := storage.NewReplicaIter(
-		ctx, m.db, pn, pn+1, m.options.syncmessagelimit)
+		ctx, m.db, pn, pn+1, m.options.syncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
@@ -120,7 +120,7 @@ func (m *PulseManager) NextSyncPulses(ctx context.Context) ([]core.PulseNumber, 
 	}
 
 	if replicated == 0 {
-		return m.findallcompleted(ctx, core.FirstPulseNumber)
+		return m.findAllCompleted(ctx, core.FirstPulseNumber)
 	}
 	next, nexterr := m.findnext(ctx, replicated)
 	if nexterr != nil {
@@ -129,10 +129,10 @@ func (m *PulseManager) NextSyncPulses(ctx context.Context) ([]core.PulseNumber, 
 	if next == nil {
 		return nil, nil
 	}
-	return m.findallcompleted(ctx, *next)
+	return m.findAllCompleted(ctx, *next)
 }
 
-func (m *PulseManager) findallcompleted(ctx context.Context, from core.PulseNumber) ([]core.PulseNumber, error) {
+func (m *PulseManager) findAllCompleted(ctx context.Context, from core.PulseNumber) ([]core.PulseNumber, error) {
 	wasalight, err := m.JetCoordinator.IsAuthorized(
 		ctx,
 		core.DynamicRoleLightExecutor,
@@ -158,7 +158,7 @@ func (m *PulseManager) findallcompleted(ctx context.Context, from core.PulseNumb
 	if wasalight {
 		found = append(found, from)
 	}
-	extra, err := m.findallcompleted(ctx, *next)
+	extra, err := m.findAllCompleted(ctx, *next)
 	if err != nil {
 		return nil, err
 	}
