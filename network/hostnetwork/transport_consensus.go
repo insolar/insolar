@@ -75,19 +75,6 @@ func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	handler((*packetWrapper)(msg))
 }
 
-func incrementPort(address string) (string, error) {
-	parts := strings.Split(address, ":")
-	if len(parts) != 2 {
-		return address, errors.New("failed to get port from address.")
-	}
-	port, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return address, err
-	}
-
-	return fmt.Sprintf("%s:%d", parts[0], port+1), nil
-}
-
 func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 	resolver network.RoutingTable) (network.ConsensusNetwork, error) {
 
@@ -95,13 +82,6 @@ func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 	conf.Address = address
 	conf.Protocol = "PURE_UDP"
 	conf.BehindNAT = false
-
-	// workaround for Consensus transport, port+=1 of default transport
-	var err error
-	conf.Address, err = incrementPort(conf.Address)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to increment port.")
-	}
 
 	tp, err := transport.NewTransport(conf, relay.NewProxy())
 	if err != nil {
