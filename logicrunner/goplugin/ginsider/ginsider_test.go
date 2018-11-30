@@ -29,8 +29,8 @@ func TestHealthCheck(t *testing.T) {
 	currentPath, err := os.Getwd()
 	require.NoError(t, err)
 
-	insgoccPath := "../../../bin/insgocc"
-	contractPath := "./healthcheck/healthcheck.go"
+	insgoccPath := currentPath + "/../../../bin/insgocc"
+	contractPath := currentPath + "/healthcheck/healthcheck.go"
 
 	pathToTmp, err := filepath.Rel(currentPath, tmpDir)
 
@@ -48,7 +48,7 @@ func TestHealthCheck(t *testing.T) {
 
 	startGoInsider(t, gi, protocol, socket)
 
-	cmd := exec.Command("../../../bin/healthcheck",
+	cmd := exec.Command(currentPath+"/../../../bin/healthcheck",
 		"-a", socket,
 		"-p", protocol,
 		"-r", refString)
