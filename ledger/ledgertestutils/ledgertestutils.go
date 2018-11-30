@@ -17,6 +17,7 @@
 package ledgertestutils
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -32,6 +33,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
@@ -55,7 +57,8 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	am.PlatformCryptographyScheme = pcs
 	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	jc.PlatformCryptographyScheme = pcs
-	pm := pulsemanager.NewPulseManager(db, conf.PulseManager)
+	conf.PulseManager.HeavySyncEnabled = false
+	pm := pulsemanager.NewPulseManager(db, conf)
 	ls := localstorage.NewLocalStorage(db)
 
 	// Init components.
@@ -66,10 +69,15 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, "", ""))
 	}
 
+	gilMock := testutils.NewGlobalInsolarLockMock(t)
+	gilMock.AcquireFunc = func(context.Context) {}
+	gilMock.ReleaseFunc = func(context.Context) {}
+
 	handler.Bus = c.MessageBus
 	am.DefaultBus = c.MessageBus
 	jc.NodeNet = c.NodeNetwork
 	pm.NodeNet = c.NodeNetwork
+	pm.GIL = gilMock
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 

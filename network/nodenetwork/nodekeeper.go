@@ -105,12 +105,27 @@ type nodekeeper struct {
 
 	sync     network.UnsyncList
 	syncLock sync.Mutex
+
+	isBootstrap     bool
+	isBootstrapLock sync.RWMutex
 }
 
 // TODO: remove this method when bootstrap mechanism completed
 // IsBootstrapped method returns true when bootstrapNodes are connected to each other
 func (nk *nodekeeper) IsBootstrapped() bool {
-	return false
+	nk.isBootstrapLock.RLock()
+	defer nk.isBootstrapLock.RUnlock()
+
+	return nk.isBootstrap
+}
+
+// TODO: remove this method when bootstrap mechanism completed
+// SetIsBootstrapped method set is bootstrap completed
+func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
+	nk.isBootstrapLock.Lock()
+	defer nk.isBootstrapLock.Unlock()
+
+	nk.isBootstrap = isBootstrap
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {

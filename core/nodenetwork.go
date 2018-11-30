@@ -62,4 +62,6 @@ type NodeNetwork interface {
 type SwitcherWorkAround interface {
 	// IsBootstrapped method shows that all DiscoveryNodes finds each other
 	IsBootstrapped() bool
+	// SetIsBootstrapped method set is bootstrap completed
+	SetIsBootstrapped(isBootstrap bool)
 }

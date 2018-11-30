@@ -137,6 +137,10 @@ const (
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
 type NodeKeeper interface {
 	core.NodeNetwork
+
+	// TODO: remove this interface when bootstrap mechanism completed
+	core.SwitcherWorkAround
+
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
 	// AddActiveNodes add active nodes.

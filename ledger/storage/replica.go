@@ -41,25 +41,6 @@ func (db *DB) GetReplicatedPulse(ctx context.Context) (core.PulseNumber, error) 
 	return core.NewPulseNumber(buf), nil
 }
 
-// SetLastPulseAsLightMaterial saves last pulse then node had a 'light material' role.
-func (db *DB) SetLastPulseAsLightMaterial(ctx context.Context, pulsenum core.PulseNumber) error {
-	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysLastPulseAsLightMaterial}), pulsenum.Bytes())
-	})
-}
-
-// GetLastPulseAsLightMaterial returns last pulse then node had a 'light material' role.
-func (db *DB) GetLastPulseAsLightMaterial(ctx context.Context) (core.PulseNumber, error) {
-	buf, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysLastPulseAsLightMaterial}))
-	if err != nil {
-		if err == ErrNotFound {
-			err = nil
-		}
-		return 0, err
-	}
-	return core.NewPulseNumber(buf), nil
-}
-
 // SetHeavySyncedPulse saves last successfuly synced pulse number on heavy node.
 func (db *DB) SetHeavySyncedPulse(ctx context.Context, pulsenum core.PulseNumber) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {

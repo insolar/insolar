@@ -39,6 +39,7 @@ const TESTSEED = "VGVzdA=="
 
 var testSeedResponse = seedResponse{Seed: []byte("Test"), TraceID: "testTraceID"}
 var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
+var testStatusResponse = StatusResponse{NetworkState: "OK"}
 
 type rpcRequest struct {
 	RPCVersion string `json:"jsonrpc"`
@@ -91,6 +92,8 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	}
 
 	switch rpcReq.Method {
+	case "status.Get":
+		answer["result"] = testStatusResponse
 	case "info.Get":
 		answer["result"] = testInfoResponse
 	case "seed.Get":
@@ -256,4 +259,10 @@ func TestInfo(t *testing.T) {
 	resp, err := Info(URL)
 	require.NoError(t, err)
 	require.Equal(t, resp, &testInfoResponse)
+}
+
+func TestStatus(t *testing.T) {
+	resp, err := Status(URL)
+	require.NoError(t, err)
+	require.Equal(t, resp, &testStatusResponse)
 }

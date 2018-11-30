@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *
@@ -14,15 +16,16 @@
  *    limitations under the License.
  */
 
-package core
+package functest
 
-import "context"
+import (
+	"testing"
 
-// HeavySync provides methods for sync on heavy node.
-//go:generate minimock -i github.com/insolar/insolar/core.HeavySync -o ../testutils -s _mock.go
-type HeavySync interface {
-	Start(ctx context.Context, pn PulseNumber) error
-	Store(ctx context.Context, pn PulseNumber, kvs []KV) error
-	Stop(ctx context.Context, pn PulseNumber) error
-	Reset(ctx context.Context, pn PulseNumber) error
+	"github.com/stretchr/testify/require"
+)
+
+func TestGetStatus(t *testing.T) {
+	status := getStatus(t)
+	require.NotNil(t, status)
+	require.Equal(t, "NoNetworkState", status.NetworkState)
 }

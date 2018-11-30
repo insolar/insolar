@@ -14,15 +14,30 @@
  *    limitations under the License.
  */
 
-package core
+package api
 
-import "context"
+import (
+	"net/http"
+)
 
-// HeavySync provides methods for sync on heavy node.
-//go:generate minimock -i github.com/insolar/insolar/core.HeavySync -o ../testutils -s _mock.go
-type HeavySync interface {
-	Start(ctx context.Context, pn PulseNumber) error
-	Store(ctx context.Context, pn PulseNumber, kvs []KV) error
-	Stop(ctx context.Context, pn PulseNumber) error
-	Reset(ctx context.Context, pn PulseNumber) error
+// StatusReply is reply for Status service requests.
+type StatusReply struct {
+	NetworkState string
+}
+
+// StatusService is a service that provides API for getting status of node.
+type StatusService struct {
+	runner *Runner
+}
+
+// NewStatusService creates new StatusService instance.
+func NewStatusService(runner *Runner) *StatusService {
+	return &StatusService{runner: runner}
+}
+
+// Get returns status info
+func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusReply) error {
+	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
+
+	return nil
 }
