@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 

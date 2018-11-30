@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/pkg/errors"
 

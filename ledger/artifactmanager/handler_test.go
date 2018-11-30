@@ -578,7 +578,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		require.Equal(t, 320, ttl)
 	}
 
-	h := NewMessageHandler(db, &configuration.ArtifactManager{})
+	h := NewMessageHandler(db, &configuration.Ledger{})
 	h.Recent = recentMock
 
 	res, err := h.handleHotRecords(ctx, &message.Parcel{Msg: hotIndexes})

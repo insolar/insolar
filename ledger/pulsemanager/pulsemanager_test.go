@@ -79,6 +79,9 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		codeRecord,
 	)
 
+	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
+	require.NoError(t, err)
+
 	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.ClearZeroTTLObjectsMock.Return()
 	recentMock.ClearObjectsMock.Return()
@@ -114,15 +117,22 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
-	pm := pulsemanager.NewPulseManager(db, configuration.PulseManager{})
+	pm := pulsemanager.NewPulseManager(db, configuration.Ledger{})
+
+	gil := testutils.NewGlobalInsolarLockMock(t)
+	gil.AcquireMock.Return()
+	gil.ReleaseMock.Return()
+
 	pm.LR = lr
 	pm.Recent = recentMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
+	pm.GIL = gil
 
 	// Act
-	pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
+	err = pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2}, false)
 
 	// Assert
+	require.NoError(t, err)
 	recentMock.MinimockFinish()
 }

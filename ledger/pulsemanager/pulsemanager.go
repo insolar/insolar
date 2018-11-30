@@ -256,10 +256,6 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 			return errors.Wrap(err, "processDrop failed")
 		}
 
-		// if err = m.db.SetLastPulseAsLightMaterial(ctx, *latestPulse.Prev); err != nil {
-		// 	return errors.Wrap(err, "call of SetLastPulseAsLightMaterial failed")
-		// }
-
 		m.SyncToHeavy()
 	}
 
