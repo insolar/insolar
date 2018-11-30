@@ -60,6 +60,7 @@ type PulseManager struct {
 type pmOptions struct {
 	enablesync       bool
 	syncmessagelimit int
+	notolderlimit    core.PulseNumber
 }
 
 func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
@@ -72,15 +73,17 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB, conf configuration.PulseManager) *PulseManager {
+func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 	pm := &PulseManager{
 		db:           db,
 		gotpulse:     make(chan struct{}, 1),
 		currentPulse: *core.GenesisPulse,
 	}
-	pm.options.enablesync = conf.HeavySyncEnabled
-	pm.options.syncmessagelimit = conf.HeavySyncMessageLimit
-	pm.syncbackoff = backoffFromConfig(conf.HeavyBackoff)
+	pmconf := conf.PulseManager
+	pm.options.enablesync = pmconf.HeavySyncEnabled
+	pm.options.syncmessagelimit = pmconf.HeavySyncMessageLimit
+	pm.options.notolderlimit = conf.LightChainLimit
+	pm.syncbackoff = backoffFromConfig(pmconf.HeavyBackoff)
 	return pm
 }
 

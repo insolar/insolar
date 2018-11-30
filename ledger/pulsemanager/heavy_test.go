@@ -123,17 +123,21 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// build PulseManager
 	minretry := 20 * time.Millisecond
 	kb := 1 << 10
+	pmconf := configuration.PulseManager{
+		HeavySyncEnabled:      true,
+		HeavySyncMessageLimit: 2 * kb,
+		HeavyBackoff: configuration.Backoff{
+			Jitter: true,
+			Min:    minretry,
+			Max:    minretry * 2,
+			Factor: 2,
+		},
+	}
 	pm := pulsemanager.NewPulseManager(
 		db,
-		configuration.PulseManager{
-			HeavySyncEnabled:      true,
-			HeavySyncMessageLimit: 2 * kb,
-			HeavyBackoff: configuration.Backoff{
-				Jitter: true,
-				Min:    minretry,
-				Max:    minretry * 2,
-				Factor: 2,
-			},
+		configuration.Ledger{
+			PulseManager:    pmconf,
+			LightChainLimit: 10,
 		},
 	)
 	pm.LR = lrMock

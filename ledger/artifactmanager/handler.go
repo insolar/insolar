@@ -39,7 +39,7 @@ type MessageHandler struct {
 	db                         *storage.DB
 	jetDropHandlers            map[core.MessageType]internalHandler
 	recent                     *storage.RecentStorage
-	conf                       *configuration.ArtifactManager
+	conf                       *configuration.Ledger
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
@@ -50,7 +50,7 @@ type MessageHandler struct {
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	db *storage.DB, recentObjects *storage.RecentStorage, conf *configuration.ArtifactManager,
+	db *storage.DB, recentObjects *storage.RecentStorage, conf *configuration.Ledger,
 ) *MessageHandler {
 	return &MessageHandler{
 		db:              db,
