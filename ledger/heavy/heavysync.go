@@ -24,13 +24,15 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// processable errors by client (i.e. it could retry)
-var (
-	ErrSyncInProgress = errors.New("Heavy node already syncing")
-)
+// ErrSyncInProgress indicates that sync for provided jet is in sync
+var ErrSyncInProgress = &reply.HeavyError{
+	Message: "Heavy node sync in progress",
+	SubType: reply.ErrHeavySyncInProgress,
+}
 
 // in testnet we start with only one jet
 type syncstate struct {
@@ -67,15 +69,17 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, pn core.PulseNumber) error 
 			return errors.Wrap(err, "GetHeavySyncedPulse failed")
 		}
 	}
+
+	// TODO: not sure how to handle this case properly
 	if checkpoint == 0 {
 		if pn != core.FirstPulseNumber {
-			return errors.New("Range should start with first pulse if sync checkpoint on heavy not found")
+			return errors.New("Pulse should be equal first pulse number if sync checkpoint on heavy not found")
 		}
 		return nil
 	}
 
 	if pn <= s.lastok {
-		return errors.New("Pulse has been already synced")
+		return fmt.Errorf("Pulse %v is not greater than last synced pulse %v", pn, s.lastok)
 	}
 
 	pulse, err := s.db.GetPulse(ctx, checkpoint)
@@ -120,7 +124,7 @@ func (s *Sync) Store(ctx context.Context, pn core.PulseNumber, kvs []core.KV) er
 			return errors.New("Jet not in sync mode")
 		}
 		if *s.syncpulse != pn {
-			return errors.New("Passed range doesn't match range in sync")
+			return fmt.Errorf("Passed pulse %v doesn't math in-sync pulse %v", pn, *s.syncpulse)
 		}
 		s.insync = true
 		return nil
@@ -134,10 +138,12 @@ func (s *Sync) Store(ctx context.Context, pn core.PulseNumber, kvs []core.KV) er
 		s.insync = false
 		s.Unlock()
 	}()
+	// could be retryable error only on low level storage issues
+	// TODO: check error value and wrap to repeatable if it is not integrity errors
 	return s.db.StoreKeyValues(ctx, kvs)
 }
 
-// Stop stops replication with specified pulses range.
+// Stop successfully stops replication for specified pulse.
 //
 // TODO: call Stop if range sync too long
 func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
@@ -147,10 +153,10 @@ func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
 		return errors.New("Jet not in sync mode")
 	}
 	if *s.syncpulse != pn {
-		return errors.New("Passed range doesn't match range in sync")
+		return fmt.Errorf("Passed pulse %v doesn't match pulse %v current in sync", pn, *s.syncpulse)
 	}
 	if s.insync {
-		return errors.New("Can't stop heavy repliction that still in store mode")
+		return ErrSyncInProgress
 	}
 	s.syncpulse = nil
 
@@ -159,5 +165,18 @@ func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
 		return err
 	}
 	s.lastok = pn
+	return nil
+}
+
+// Reset resets sync for provided pulse.
+func (s *Sync) Reset(ctx context.Context, pn core.PulseNumber) error {
+	s.Lock()
+	defer s.Unlock()
+
+	if s.insync {
+		return ErrSyncInProgress
+	}
+
+	s.syncpulse = nil
 	return nil
 }

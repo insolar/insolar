@@ -93,7 +93,48 @@ func Test_StoreKeyValues(t *testing.T) {
 	require.Equal(t, expectedidxs, gotidxs, "indexes are the same after restore")
 }
 
-func Test_ReplicaIter(t *testing.T) {
+func Test_ReplicaIter_FirstPulse(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	addRecords(ctx, t, db, core.FirstPulseNumber)
+
+	replicator := storage.NewReplicaIter(ctx, db, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
+	var got []key
+	for i := 0; ; i++ {
+		if i > 50 {
+			t.Fatal("too many loops")
+		}
+
+		recs, err := replicator.NextRecords()
+		if err == storage.ErrReplicatorDone {
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
+
+		for _, rec := range recs {
+			got = append(got, rec.K)
+		}
+	}
+
+	got = sortkeys(got)
+	all, idxs := getallkeys(db.GetBadgerDB())
+	all = append(all, idxs...)
+	all = sortkeys(all)
+
+	// fmt.Println("All:")
+	// printkeys(all, "  ")
+	// fmt.Println("Got:")
+	// printkeys(got, "  ")
+
+	require.Equal(t, all, got, "get expected records for first pulse")
+}
+
+func Test_ReplicaIter_Base(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
@@ -106,8 +147,6 @@ func Test_ReplicaIter(t *testing.T) {
 	require.Nil(t, recsBefore)
 	require.Nil(t, idxBefore)
 
-	// TODO: remove assertpulse struct
-	// tt represents test case PulseNumber -> expected record keys
 	ttPerPulse := make(map[int][]key)
 	ttRange := make(map[int][]key)
 
@@ -287,6 +326,10 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		k := item.KeyCopy(nil)
+		if key(k).pulse() == 0 {
+			continue
+		}
+
 		switch k[0] {
 		case scopeIDRecord:
 			records = append(records, k)

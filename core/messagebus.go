@@ -185,6 +185,8 @@ const (
 	TypeHeavyStartStop
 	// TypeHeavyPayload carries Key/Value records for replication to Heavy Material node.
 	TypeHeavyPayload
+	// TypeHeavyReset resets current sync (on errors)
+	TypeHeavyReset
 
 	// Bootstrap
 

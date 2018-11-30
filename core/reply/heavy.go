@@ -16,34 +16,32 @@
 
 package reply
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+)
 
-// OK is a generic reply for success calls without returned value.
-type OK struct {
+// ErrHeavySyncInProgress returned when heavy sync in progress.
+const (
+	ErrHeavySyncInProgress ErrType = iota + 1
+)
+
+// HeavyError carries heavy record information
+type HeavyError struct {
+	Message string
+	SubType ErrType
 }
 
 // Type implementation of Reply interface.
-func (e *OK) Type() core.ReplyType {
-	return TypeOK
+func (e *HeavyError) Type() core.ReplyType {
+	return TypeHeavyError
 }
 
-// Error is common error reaction.
-type Error struct {
-	ErrType ErrType
+// ConcreteType returns concrete error type.
+func (e *HeavyError) ConcreteType() ErrType {
+	return e.SubType
 }
 
-// Type implementation of Reply interface.
-func (e *Error) Type() core.ReplyType {
-	return TypeError
-}
-
-// Error returns concrete error for stored type.
-func (e *Error) Error() error {
-	switch e.ErrType {
-	case ErrDeactivated:
-		return core.ErrDeactivated
-	case ErrStateNotAvailable:
-		return core.ErrStateNotAvailable
-	}
-	return core.ErrUnknown
+// Error returns error message for stored type.
+func (e *HeavyError) Error() string {
+	return e.Message
 }
