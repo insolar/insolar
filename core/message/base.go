@@ -66,6 +66,14 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	case core.TypeValidationCheck:
 		return &ValidationCheck{}, nil
 
+	// heavy sync
+	case core.TypeHeavyStartStop:
+		return &HeavyStartStop{}, nil
+	case core.TypeHeavyPayload:
+		return &HeavyPayload{}, nil
+	case core.TypeHeavyReset:
+		return &HeavyReset{}, nil
+
 	// Bootstrap
 	case core.TypeBootstrapRequest:
 		return &GenesisRequest{}, nil

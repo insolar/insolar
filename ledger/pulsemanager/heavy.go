@@ -19,11 +19,34 @@ package pulsemanager
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 )
+
+// HeavyErr holds core.Reply and implements core.Retryable and error interfaces.
+type HeavyErr struct {
+	reply core.Reply
+	err   error
+}
+
+// Error implements error interface.
+func (he HeavyErr) Error() string {
+	return he.err.Error()
+}
+
+// IsRetryable checks retryability of message.
+func (he HeavyErr) IsRetryable() bool {
+	herr, ok := he.reply.(*reply.HeavyError)
+	if !ok {
+		return false
+	}
+	return herr.ConcreteType() == reply.ErrHeavySyncInProgress
+}
 
 // HeavySync syncs records from light to heavy node, returns last synced pulse and error.
 //
@@ -31,19 +54,32 @@ import (
 func (m *PulseManager) HeavySync(
 	ctx context.Context,
 	pn core.PulseNumber,
-) (core.PulseNumber, error) {
+	retry bool,
+) error {
 	inslog := inslogger.FromContext(ctx)
+	var (
+		busreply core.Reply
+		buserr   error
+	)
+
+	if retry {
+		inslog.Infof("send reset message for pulse %v (retry sync)", pn)
+		resetMsg := &message.HeavyReset{PulseNum: pn}
+		if busreply, buserr := m.Bus.Send(ctx, resetMsg, nil); buserr != nil {
+			return HeavyErr{reply: busreply, err: buserr}
+		}
+	}
 
 	signalMsg := &message.HeavyStartStop{PulseNum: pn}
-	_, starterr := m.Bus.Send(ctx, signalMsg, nil)
+	busreply, buserr = m.Bus.Send(ctx, signalMsg, nil)
 	// TODO: check if locked
-	if starterr != nil {
-		return 0, starterr
+	if buserr != nil {
+		return HeavyErr{reply: busreply, err: buserr}
 	}
-	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", pn, pn+1)
+	inslog.Infof("synchronize, sucessfully send start message for pulse %v", pn)
 
 	replicator := storage.NewReplicaIter(
-		ctx, m.db, pn, pn+1, m.options.syncmessagelimit)
+		ctx, m.db, pn, pn+1, m.options.syncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
@@ -53,52 +89,86 @@ func (m *PulseManager) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{Records: recs}
-		_, senderr := m.Bus.Send(ctx, msg, nil)
-		if senderr != nil {
-			return 0, senderr
+		busreply, buserr = m.Bus.Send(ctx, msg, nil)
+		if buserr != nil {
+			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg.Finished = true
-	_, stoperr := m.Bus.Send(ctx, signalMsg, nil)
-	if stoperr != nil {
-		return 0, stoperr
+	busreply, buserr = m.Bus.Send(ctx, signalMsg, nil)
+	if buserr != nil {
+		return HeavyErr{reply: busreply, err: buserr}
 	}
-	inslog.Debugf("synchronize, sucessfully send start message for range [%v:%v]", pn, pn+1)
+	inslog.Infof("synchronize, sucessfully send finish message for pulse %v", pn)
 
 	lastmeetpulse := replicator.LastPulse()
-	inslog.Debugf("synchronize on [%v:%v] finised (maximum record pulse is %v)",
-		pn, pn+1, lastmeetpulse)
-	return lastmeetpulse, nil
+	inslog.Infof("synchronize on %v finised (maximum record pulse is %v)",
+		pn, lastmeetpulse)
+	return nil
 }
 
-// NextSyncPulses returns pulse numbers range for syncing to heavy node.
-// If nothing to sync it returns 0, 0, nil.
-func (m *PulseManager) NextSyncPulses(ctx context.Context) (start, end core.PulseNumber, err error) {
+// NextSyncPulses returns next pulse numbers for syncing to heavy node.
+// If nothing to sync it returns nil, nil.
+func (m *PulseManager) NextSyncPulses(ctx context.Context) ([]core.PulseNumber, error) {
 	var (
 		replicated core.PulseNumber
-		last       core.PulseNumber
+		err        error
 	)
 	if replicated, err = m.db.GetReplicatedPulse(ctx); err != nil {
-		return
-	}
-	if last, err = m.db.GetLastPulseAsLightMaterial(ctx); err != nil {
-		return
-	}
-	// if replicated pulse is not less than "last light material pulse", nothing to sync
-	if replicated >= last {
-		return
+		return nil, err
 	}
 
-	// start should be after replicated pulse or at least from FirstPulseNumber (for zero case)
-	start = replicated + 1
 	if replicated == 0 {
-		start = core.FirstPulseNumber
+		return m.findAllCompleted(ctx, core.FirstPulseNumber)
 	}
-	// end should be after "last light material pulse" + 1 or at least next pulse after start
-	end = last + 1
-	if last == 0 {
-		end = start + 1
+	next, nexterr := m.findnext(ctx, replicated)
+	if nexterr != nil {
+		return nil, nexterr
 	}
-	return
+	if next == nil {
+		return nil, nil
+	}
+	return m.findAllCompleted(ctx, *next)
+}
+
+func (m *PulseManager) findAllCompleted(ctx context.Context, from core.PulseNumber) ([]core.PulseNumber, error) {
+	wasalight, err := m.JetCoordinator.IsAuthorized(
+		ctx,
+		core.DynamicRoleLightExecutor,
+		// TODO: pass JetID RecordRef here, when it would be ready
+		nil,
+		from,
+		m.NodeNet.GetOrigin().ID(),
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Light checking failed")
+	}
+	next, err := m.findnext(ctx, from)
+	if err != nil {
+		return nil, err
+	}
+	if next == nil {
+		// if next is not found, we haven't got next pulse
+		// in such case we don't want to replicate unfinished pulse
+		return nil, nil
+	}
+
+	var found []core.PulseNumber
+	if wasalight {
+		found = append(found, from)
+	}
+	extra, err := m.findAllCompleted(ctx, *next)
+	if err != nil {
+		return nil, err
+	}
+	return append(found, extra...), nil
+}
+
+func (m *PulseManager) findnext(ctx context.Context, from core.PulseNumber) (*core.PulseNumber, error) {
+	pulse, err := m.db.GetPulse(ctx, from)
+	if err != nil {
+		return nil, errors.Wrapf(err, "GetPulse with pulse num %v failed", from)
+	}
+	return pulse.Next, nil
 }

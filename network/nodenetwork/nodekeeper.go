@@ -27,48 +27,44 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/utils"
 
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )
 
 // NewNodeNetwork create active node component
-func NewNodeNetwork(configuration configuration.Configuration) (core.NodeNetwork, error) {
-	origin, err := createOrigin(configuration)
+func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Certificate) (core.NodeNetwork, error) {
+	origin, err := createOrigin(configuration, certificate)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
-
-	if len(configuration.Host.BootstrapHosts) == 0 {
-		log.Info("Bootstrap nodes are not set. Init zeronet.")
+	if len(certificate.GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certificate) {
 		nodeKeeper.AddActiveNodes([]core.Node{origin})
 	}
-
 	return nodeKeeper, nil
 }
 
-func createOrigin(configuration configuration.Configuration) (MutableNode, error) {
-	nodeID := core.NewRefFromBase58(configuration.Node.Node.ID)
+func createOrigin(configuration configuration.HostNetwork, certificate core.Certificate) (MutableNode, error) {
 	publicAddress, err := resolveAddress(configuration)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to resolve public address")
 	}
 
 	// TODO: get roles from certificate
-	// TODO: pass public key
 	return newMutableNode(
-		nodeID,
+		*certificate.GetNodeRef(),
 		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
-		nil,
+		certificate.GetPublicKey(),
 		0,
 		publicAddress,
 		version.Version,
 	), nil
 }
 
-func resolveAddress(configuration configuration.Configuration) (string, error) {
-	conn, address, err := transport.NewConnection(configuration.Host.Transport)
+func resolveAddress(configuration configuration.HostNetwork) (string, error) {
+	conn, address, err := transport.NewConnection(configuration.Transport)
 	if err != nil {
 		return "", err
 	}
@@ -110,12 +106,27 @@ type nodekeeper struct {
 
 	sync     network.UnsyncList
 	syncLock sync.Mutex
+
+	isBootstrap     bool
+	isBootstrapLock sync.RWMutex
 }
 
 // TODO: remove this method when bootstrap mechanism completed
 // IsBootstrapped method returns true when bootstrapNodes are connected to each other
 func (nk *nodekeeper) IsBootstrapped() bool {
-	return false
+	nk.isBootstrapLock.RLock()
+	defer nk.isBootstrapLock.RUnlock()
+
+	return nk.isBootstrap
+}
+
+// TODO: remove this method when bootstrap mechanism completed
+// SetIsBootstrapped method set is bootstrap completed
+func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
+	nk.isBootstrapLock.Lock()
+	defer nk.isBootstrapLock.Unlock()
+
+	nk.isBootstrap = isBootstrap
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {

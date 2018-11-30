@@ -18,6 +18,7 @@ package certificate
 
 import (
 	"crypto"
+	"encoding/gob"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
@@ -39,13 +40,94 @@ type Certificate struct {
 		HeavyMaterial uint `json:"heavy_material"`
 		LightMaterial uint `json:"light_material"`
 	} `json:"min_roles"`
-	PublicKey           string               `json:"public_key"`
-	Reference           string               `json:"reference"`
-	PulsarPublicKeys    []string             `json:"pulsar_public_keys"`
-	Role                string               `json:"role"`
-	BootstrapNodes      []core.BootstrapNode `json:"bootstrap_nodes"`
-	RootDomainReference string               `json:"root_domain_ref"`
+	PublicKey           string          `json:"public_key"`
+	Reference           string          `json:"reference"`
+	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
+	Role                string          `json:"role"`
+	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
+	RootDomainReference string          `json:"root_domain_ref"`
+
+	// preprocessed fields
+	pulsarPublicKey []crypto.PublicKey
+	nodePublicKey   crypto.PublicKey
 }
+
+// AuthorizationCertificate holds info about node from it certificate
+type AuthorizationCertificate struct {
+	PublicKey      string          `json:"public_key"`
+	Reference      string          `json:"reference"`
+	Role           string          `json:"role"`
+	BootstrapNodes []BootstrapNode `json:"bootstrap_nodes"`
+
+	nodePublicKey crypto.PublicKey
+}
+
+// GetRole returns role from node certificate
+func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
+	return core.GetStaticRoleFromString(authCert.Role)
+}
+
+// GetNodeSign returns bootstrap nodes array
+func (authCert *AuthorizationCertificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
+}
+
+// GetNodeRef returns reference from node certificate
+func (authCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
+	ref := core.NewRefFromBase58(authCert.Reference)
+	return &ref
+}
+
+// GetPublicKey returns public key reference from node certificate
+func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
+	return authCert.nodePublicKey
+}
+
+// Serialize returns decoded info from AuthorizationCertificate
+func (authCert *AuthorizationCertificate) Serialize() ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
+}
+
+// BootstrapNode holds info about bootstrap nodes
+type BootstrapNode struct {
+	PublicKey   string `json:"public_key"`
+	Host        string `json:"host"`
+	NetworkSign []byte `json:"network_sign"`
+	NodeSign    []byte `json:"node_sign"`
+	NodeRef     string `json:"node_ref"`
+
+	// preprocessed fields
+	nodePublicKey crypto.PublicKey
+}
+
+func (bn *BootstrapNode) GetNodeRef() *core.RecordRef {
+	ref := core.NewRefFromBase58(bn.NodeRef)
+	return &ref
+}
+
+func (bn *BootstrapNode) GetPublicKey() crypto.PublicKey {
+	return bn.nodePublicKey
+}
+
+func (bn *BootstrapNode) GetHost() string {
+	return bn.Host
+}
+
+func init() {
+	// TODO: add Serialize & Deserialize instead of this
+	gob.Register(&Certificate{})
+}
+
+func (cert *Certificate) GetNodeRef() *core.RecordRef {
+	ref := core.NewRefFromBase58(cert.Reference)
+	return &ref
+}
+
+func (cert *Certificate) GetPublicKey() crypto.PublicKey {
+	return cert.nodePublicKey
+}
+
+var scheme = platformpolicy.NewPlatformCryptographyScheme()
 
 func (cert *Certificate) serializeNetworkPart() []byte {
 	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
@@ -67,10 +149,10 @@ func (cert *Certificate) serializeNetworkPart() []byte {
 
 // SignNetworkPart signs network part in certificate
 func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) {
-	signer := platformpolicy.NewPlatformCryptographyScheme().Signer(key)
+	signer := scheme.Signer(key)
 	sign, err := signer.Sign(cert.serializeNetworkPart())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "[ SignNetworkPart ] Can't Sign")
 	}
 	return sign.Bytes(), nil
 }
@@ -81,24 +163,56 @@ func (cert *Certificate) serializeNodePart() []byte {
 
 // SignNodePart signs node part in certificate
 func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
-	signer := platformpolicy.NewPlatformCryptographyScheme().Signer(key)
+	signer := scheme.Signer(key)
 	sign, err := signer.Sign(cert.serializeNodePart())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "[ SignNodePart ] Can't Sign")
 	}
 	return sign.Bytes(), nil
 }
 
-// GetBootstrapNodes return bootstrap nodes array
-func (cert *Certificate) GetBootstrapNodes() []core.BootstrapNode {
-	return cert.BootstrapNodes
+// GetDiscoveryNodes return bootstrap nodes array
+func (cert *Certificate) GetDiscoveryNodes() []core.DiscoveryNode {
+	result := make([]core.DiscoveryNode, 0)
+	for i := 0; i < len(cert.BootstrapNodes); i++ {
+		// we get node by pointer, so ranged for loop does not suite
+		result = append(result, &cert.BootstrapNodes[i])
+	}
+	return result
+}
+
+func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
+	importedNodePubKey, err := keyProcessor.ImportPublicKey([]byte(cert.PublicKey))
+	if err != nil {
+		return errors.Wrapf(err, "[ fillExtraFields ] Bad PublicKey: %s", cert.PublicKey)
+	}
+	cert.nodePublicKey = importedNodePubKey
+
+	for _, pulsarKey := range cert.PulsarPublicKeys {
+		importedPulsarPubKey, err := keyProcessor.ImportPublicKey([]byte(pulsarKey))
+		if err != nil {
+			return errors.Wrapf(err, "[ fillExtraFields ] Bad pulsarKey: %s", pulsarKey)
+		}
+		cert.pulsarPublicKey = append(cert.pulsarPublicKey, importedPulsarPubKey)
+	}
+
+	for i := 0; i < len(cert.BootstrapNodes); i++ {
+		currentNode := &cert.BootstrapNodes[i]
+		importedBNodePubKey, err := keyProcessor.ImportPublicKey([]byte(currentNode.PublicKey))
+		if err != nil {
+			return errors.Wrapf(err, "[ fillExtraFields ] Bad Bootstrap PublicKey: %s", currentNode.PublicKey)
+		}
+		currentNode.nodePublicKey = importedBNodePubKey
+	}
+
+	return nil
 }
 
 // ReadCertificate constructor creates new Certificate component
 func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, certPath string) (*Certificate, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(certPath))
 	if err != nil {
-		return nil, errors.New("[ ReadCertificate ] failed to read certificate from: " + certPath)
+		return nil, errors.Wrapf(err, "[ ReadCertificate ] failed to read certificate from: %s", certPath)
 	}
 	cert := Certificate{}
 	err = json.Unmarshal(data, &cert)
@@ -115,14 +229,12 @@ func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor,
 		return nil, errors.New("[ ReadCertificate ] Different public keys. Cert path: " + certPath + ".")
 	}
 
-	return &cert, nil
-}
+	err = cert.fillExtraFields(keyProcessor)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ReadCertificate ] Incorrect fields")
+	}
 
-func (cert *Certificate) reset() {
-	cert.PublicKey = ""
-	cert.BootstrapNodes = []core.BootstrapNode{}
-	cert.Reference = ""
-	cert.MajorityRule = 0
+	return &cert, nil
 }
 
 func (cert *Certificate) GetRole() core.StaticRole {
@@ -141,9 +253,9 @@ func (cert *Certificate) SetRootDomainReference(ref *core.RecordRef) {
 }
 
 // NewCertificatesWithKeys generate certificate from given keys
+// DEPRECATED, this method generates invalid certificate
 func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*Certificate, error) {
 	cert := Certificate{}
-	cert.reset()
 
 	cert.Reference = testutils.RandomRef().String()
 
@@ -153,6 +265,7 @@ func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyPr
 	}
 
 	cert.PublicKey = string(keyBytes)
+	cert.nodePublicKey = publicKey
 	return &cert, nil
 }
 
@@ -163,4 +276,14 @@ func (cert *Certificate) Dump() (string, error) {
 	}
 
 	return string(result), nil
+}
+
+// GetNodeSign return sign from bootstrap node with provided ref
+func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
+}
+
+// Serialize returns decoded info from AuthorizationCertificate
+func (cert *Certificate) Serialize() ([]byte, error) {
+	return []byte{}, errors.New("not implemented")
 }

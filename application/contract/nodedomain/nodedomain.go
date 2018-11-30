@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/noderecord"
+	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -38,10 +39,16 @@ func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
-var INSATTR_RegisterNode_API = true
-
 // RegisterNode registers node in system
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
+
+	root, err := rootdomain.GetObject(*nd.GetContext().Parent).GetRootMemberRef()
+	if err != nil {
+		return "", fmt.Errorf("[ RegisterNode ] Couldn't get root member reference: %s", err.Error())
+	}
+	if *nd.GetContext().Caller != *root {
+		return "", fmt.Errorf("[ RegisterNode ] Only Root member can register node")
+	}
 
 	newNode := noderecord.NewNodeRecord(publicKey, role)
 	node, err := newNode.AsChild(nd.GetReference())

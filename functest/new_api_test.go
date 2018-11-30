@@ -55,7 +55,7 @@ func TestBadSeed(t *testing.T) {
 		Params: nil,
 	}, []byte("111"))
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ CallHandler ] Bad seed param")
+	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
 
 func TestIncorrectSeed(t *testing.T) {
@@ -67,7 +67,7 @@ func TestIncorrectSeed(t *testing.T) {
 		Params: nil,
 	}, []byte("12345678901234567890123456789012"))
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ CallHandler ] Incorrect seed")
+	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
 }
 
 func customSend(data string) (map[string]interface{}, error) {

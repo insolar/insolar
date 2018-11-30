@@ -112,7 +112,7 @@ func initComponents(
 	genesisKeyOut string,
 
 ) (*component.Manager, error) {
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, cert)
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)

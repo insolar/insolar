@@ -18,7 +18,9 @@ package servicenetwork
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -52,6 +54,7 @@ type ServiceNetwork struct {
 	ArtifactManager     core.ArtifactManager            `inject:""`
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
 	NodeKeeper          network.NodeKeeper              `inject:""`
+	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
 
 	// subcomponents
 	PhaseManager     phases.PhaseManager      // `inject:""`
@@ -99,6 +102,23 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 	n.controller.RemoteProcedureRegister(name, method)
 }
 
+// incrementPort increments port number if it not equals 0
+func incrementPort(address string) (string, error) {
+	parts := strings.Split(address, ":")
+	if len(parts) != 2 {
+		return address, errors.New("failed to get port from address")
+	}
+	port, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return address, err
+	}
+
+	if port != 0 {
+		port++
+	}
+	return fmt.Sprintf("%s:%d", parts[0], port), nil
+}
+
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 
@@ -116,16 +136,23 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.PhaseManager.(*phases.Phases).SecondPhase = secondPhase
 	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
 
-	routingTable, hostNetwork, networkController, err := newNetworkComponents(n.cfg, n, n.CryptographyScheme)
+	n.routingTable = &routing.Table{}
+	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg)
 	if err != nil {
-		return errors.Wrap(err, "Failed to create network components.")
+		return errors.Wrap(err, "Failed to create internal transport")
+	}
+
+	// workaround for Consensus transport, port+=1 of default transport
+	n.cfg.Host.Transport.Address, err = incrementPort(n.cfg.Host.Transport.Address)
+	if err != nil {
+		return errors.Wrap(err, "failed to increment port.")
 	}
 
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
-		n.cfg.Host.ConsensusTransport.Address,
+		n.cfg.Host.Transport.Address,
 		n.cfg.Node.Node.ID,
 		n.NodeNetwork.GetOrigin().ShortID(),
-		routingTable,
+		n.routingTable,
 	)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create consensus network.")
@@ -145,10 +172,10 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		thirdPhase,
 	)
 
+	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
+	options := controller.ConfigureOptions(n.cfg.Host)
+	n.controller = controller.NewNetworkController(n, options, n.Certificate, internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
-	n.routingTable = routingTable
-	n.hostNetwork = hostNetwork
-	n.controller = networkController
 	return nil
 }
 
@@ -164,12 +191,6 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	err := n.controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
-	}
-
-	log.Infoln("Authorizing network...")
-	err = n.controller.Authorize(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Failed to authorize network")
 	}
 
 	n.fakePulsar.Start(ctx)
@@ -201,15 +222,21 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = n.PulseManager.Set(ctx, pulse)
+		err = n.PulseManager.Set(ctx, pulse, false)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to set pulse"))
 			return
 		}
+
+		// TODO: I don't know why I put it here. If you know better place for that, move it there please
+		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
+			return
+		}
+
 		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
 		go func(logger core.Logger, network *ServiceNetwork) {
-			// FIXME: we need to resend pulse only to nodes outside the globe, we send pulse to nodes inside the globe on phase1 of the consensus
-			// network.controller.ResendPulseToKnownHosts(pulse)
 			if network.NetworkCoordinator == nil {
 				return
 			}
@@ -223,8 +250,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			// 	logger.Warn("phase manager fail: " + err.Error())
 			// }
 		}(logger, n)
-
-		// TODO: PLACE NEW CONSENSUS HERE
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
 	}
@@ -232,18 +257,4 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 
 func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
 	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
-}
-
-// newNetworkComponents create network.HostNetwork and network.Controller for new network
-func newNetworkComponents(conf configuration.Configuration,
-	pulseHandler network.PulseHandler, scheme core.PlatformCryptographyScheme) (network.RoutingTable, network.HostNetwork, network.Controller, error) {
-	routingTable := &routing.Table{}
-	internalTransport, err := hostnetwork.NewInternalTransport(conf)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "error creating internal transport")
-	}
-	hostNetwork := hostnetwork.NewHostTransport(internalTransport, routingTable)
-	options := controller.ConfigureOptions(conf.Host)
-	networkController := controller.NewNetworkController(pulseHandler, options, internalTransport, routingTable, hostNetwork, scheme)
-	return routingTable, hostNetwork, networkController, nil
 }

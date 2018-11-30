@@ -19,8 +19,6 @@ package controller
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -30,20 +28,6 @@ type PulseController struct {
 	pulseHandler network.PulseHandler
 	hostNetwork  network.HostNetwork
 	routingTable network.RoutingTable
-}
-
-func (pc *PulseController) ResendPulse(pulse core.Pulse) {
-	// TODO: resend pulse to other globes if needed
-	nodes := pc.routingTable.GetLocalNodes()
-	request := pc.hostNetwork.NewRequestBuilder().Type(types.Pulse).Data(&packet.RequestPulse{
-		Pulse: pulse,
-	}).Build()
-	for _, node := range nodes {
-		_, err := pc.hostNetwork.SendRequest(request, node)
-		if err != nil {
-			log.Warn("Error resending pulse to host %s: %s", node.String(), err.Error())
-		}
-	}
 }
 
 func (pc *PulseController) Start() {
