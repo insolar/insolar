@@ -20,7 +20,7 @@ import (
 type NetworkCoordinatorMock struct {
 	t minimock.Tester
 
-	GetCertFunc       func(p context.Context, p1 core.RecordRef) (r core.AuthorizationCertificate, r1 error)
+	GetCertFunc       func(p context.Context, p1 core.RecordRef) (r core.Certificate, r1 error)
 	GetCertCounter    uint64
 	GetCertPreCounter uint64
 	GetCertMock       mNetworkCoordinatorMockGetCert
@@ -75,22 +75,22 @@ func (m *mNetworkCoordinatorMockGetCert) Expect(p context.Context, p1 core.Recor
 }
 
 //Return sets up a mock for NetworkCoordinator.GetCert to return Return's arguments
-func (m *mNetworkCoordinatorMockGetCert) Return(r core.AuthorizationCertificate, r1 error) *NetworkCoordinatorMock {
-	m.mock.GetCertFunc = func(p context.Context, p1 core.RecordRef) (core.AuthorizationCertificate, error) {
+func (m *mNetworkCoordinatorMockGetCert) Return(r core.Certificate, r1 error) *NetworkCoordinatorMock {
+	m.mock.GetCertFunc = func(p context.Context, p1 core.RecordRef) (core.Certificate, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of NetworkCoordinator.GetCert method
-func (m *mNetworkCoordinatorMockGetCert) Set(f func(p context.Context, p1 core.RecordRef) (r core.AuthorizationCertificate, r1 error)) *NetworkCoordinatorMock {
+func (m *mNetworkCoordinatorMockGetCert) Set(f func(p context.Context, p1 core.RecordRef) (r core.Certificate, r1 error)) *NetworkCoordinatorMock {
 	m.mock.GetCertFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetCert implements github.com/insolar/insolar/core.NetworkCoordinator interface
-func (m *NetworkCoordinatorMock) GetCert(p context.Context, p1 core.RecordRef) (r core.AuthorizationCertificate, r1 error) {
+func (m *NetworkCoordinatorMock) GetCert(p context.Context, p1 core.RecordRef) (r core.Certificate, r1 error) {
 	atomic.AddUint64(&m.GetCertPreCounter, 1)
 	defer atomic.AddUint64(&m.GetCertCounter, 1)
 
