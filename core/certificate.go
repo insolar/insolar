@@ -47,6 +47,6 @@ type AuthorizationCertificate interface {
 	NodeMeta
 
 	GetRole() StaticRole
-	GetNodeSign(publicKey crypto.PublicKey) ([]byte, error)
+	GetNodeSign(nodeRef string) ([]byte, error)
 	Serialize() ([]byte, error)
 }
