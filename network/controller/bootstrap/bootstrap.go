@@ -174,12 +174,14 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrapf(err, "Discovery bootstrap to host %s failed", h)
 		}
-		err = bc.checkActiveNode(activeNode)
-		if err != nil {
-			return errors.Wrapf(err, "Discovery check of host %s failed", h)
-		}
 		activeNodes = append(activeNodes, activeNode)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
+	}
+	for _, activeNode := range activeNodes {
+		err = bc.checkActiveNode(activeNode)
+		if err != nil {
+			return errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
+		}
 	}
 	bc.keeper.AddActiveNodes(activeNodes)
 	inslogger.FromContext(ctx).Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
