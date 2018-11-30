@@ -38,7 +38,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 
 	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}}, nil)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
@@ -141,7 +141,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}}, nil)
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 
@@ -242,7 +242,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 
@@ -296,7 +296,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 
@@ -354,7 +354,7 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 
@@ -393,7 +393,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	}
 
 	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirect{Signature: []byte{1, 2, 3}}, nil)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 
@@ -448,7 +448,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.ArtifactManager{
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 
