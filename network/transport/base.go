@@ -21,13 +21,13 @@ import (
 	"net"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -128,7 +128,7 @@ func (t *baseTransport) prepareDisconnect() {
 }
 
 func (t *baseTransport) generateID() packet.RequestID {
-	id := AtomicLoadAndIncrementUint64(t.sequence)
+	id := utils.AtomicLoadAndIncrementUint64(t.sequence)
 	return packet.RequestID(id)
 }
 
@@ -212,14 +212,4 @@ func shouldProcessPacket(future Future, msg *packet.Packet) bool {
 	responseIsForRightSender := future.Actor().Equal(*msg.Sender)
 
 	return typesShouldBeEqual && (responseIsForRightSender || msg.Type == types.Ping)
-}
-
-// AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
-	}
 }

@@ -74,7 +74,7 @@ func (mh *merkleHelper) bucketEntryHash(entryIndex uint32, nodeHash []byte) []by
 	return mh.doubleSliceHash(entryIndexHash, nodeHash)
 }
 
-func (mh *merkleHelper) bucketInfoHash(role core.NodeRole, nodeCount uint32) []byte {
+func (mh *merkleHelper) bucketInfoHash(role core.StaticRole, nodeCount uint32) []byte {
 	roleHash := mh.leafHasher.Hash(utils.UInt32ToBytes(uint32(role)))
 	nodeCountHash := mh.leafHasher.Hash(utils.UInt32ToBytes(nodeCount))
 	return mh.doubleSliceHash(roleHash, nodeCountHash)

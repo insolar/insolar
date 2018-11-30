@@ -153,7 +153,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// Run only on material executor.
 	// execute only on material executor
 	// TODO: do as much as possible async.
-	if m.NodeNet.GetOrigin().Role() == core.RoleLightMaterial {
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		if err = m.processDrop(ctx, latestPulseNumber); err != nil {
 			return errors.Wrap(err, "processDrop failed")
 		}

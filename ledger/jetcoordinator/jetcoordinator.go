@@ -29,7 +29,7 @@ import (
 type JetCoordinator struct {
 	db                         *storage.DB
 	rootJetNode                *JetNode
-	roleCounts                 map[core.JetRole]int
+	roleCounts                 map[core.DynamicRole]int
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 }
@@ -56,10 +56,10 @@ func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) *JetCo
 }
 
 func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
-	jc.roleCounts = map[core.JetRole]int{}
+	jc.roleCounts = map[core.DynamicRole]int{}
 
 	for intRole, count := range conf.RoleCounts {
-		role := core.JetRole(intRole)
+		role := core.DynamicRole(intRole)
 		jc.roleCounts[role] = count
 	}
 }
@@ -67,7 +67,7 @@ func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
 // IsAuthorized checks for role on concrete pulse for the address.
 func (jc *JetCoordinator) IsAuthorized(
 	ctx context.Context,
-	role core.JetRole,
+	role core.DynamicRole,
 	obj *core.RecordRef,
 	pulse core.PulseNumber,
 	node core.RecordRef,
@@ -87,7 +87,7 @@ func (jc *JetCoordinator) IsAuthorized(
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
 func (jc *JetCoordinator) QueryRole(
 	ctx context.Context,
-	role core.JetRole,
+	role core.DynamicRole,
 	obj *core.RecordRef,
 	pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {

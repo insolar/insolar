@@ -1739,6 +1739,7 @@ package main
 }
 
 func TestReleaseRequestsAfterPulse(t *testing.T) {
+	t.Skip("Test for old architecture. Unskip when new queue mechanism will release.")
 	if parallel {
 		t.Parallel()
 	}

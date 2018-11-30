@@ -38,12 +38,12 @@ type NodeMock struct {
 	PulsePreCounter uint64
 	PulseMock       mNodeMockPulse
 
-	RoleFunc       func() (r core.NodeRole)
+	RoleFunc       func() (r core.StaticRole)
 	RoleCounter    uint64
 	RolePreCounter uint64
 	RoleMock       mNodeMockRole
 
-	RolesFunc       func() (r []core.NodeRole)
+	RolesFunc       func() (r []core.StaticRole)
 	RolesCounter    uint64
 	RolesPreCounter uint64
 	RolesMock       mNodeMockRoles
@@ -252,22 +252,22 @@ type mNodeMockRole struct {
 }
 
 //Return sets up a mock for Node.Role to return Return's arguments
-func (m *mNodeMockRole) Return(r core.NodeRole) *NodeMock {
-	m.mock.RoleFunc = func() core.NodeRole {
+func (m *mNodeMockRole) Return(r core.StaticRole) *NodeMock {
+	m.mock.RoleFunc = func() core.StaticRole {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Node.Role method
-func (m *mNodeMockRole) Set(f func() (r core.NodeRole)) *NodeMock {
+func (m *mNodeMockRole) Set(f func() (r core.StaticRole)) *NodeMock {
 	m.mock.RoleFunc = f
 
 	return m.mock
 }
 
 //Role implements github.com/insolar/insolar/core.Node interface
-func (m *NodeMock) Role() (r core.NodeRole) {
+func (m *NodeMock) Role() (r core.StaticRole) {
 	atomic.AddUint64(&m.RolePreCounter, 1)
 	defer atomic.AddUint64(&m.RoleCounter, 1)
 
@@ -294,22 +294,22 @@ type mNodeMockRoles struct {
 }
 
 //Return sets up a mock for Node.Roles to return Return's arguments
-func (m *mNodeMockRoles) Return(r []core.NodeRole) *NodeMock {
-	m.mock.RolesFunc = func() []core.NodeRole {
+func (m *mNodeMockRoles) Return(r []core.StaticRole) *NodeMock {
+	m.mock.RolesFunc = func() []core.StaticRole {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Node.Roles method
-func (m *mNodeMockRoles) Set(f func() (r []core.NodeRole)) *NodeMock {
+func (m *mNodeMockRoles) Set(f func() (r []core.StaticRole)) *NodeMock {
 	m.mock.RolesFunc = f
 
 	return m.mock
 }
 
 //Roles implements github.com/insolar/insolar/core.Node interface
-func (m *NodeMock) Roles() (r []core.NodeRole) {
+func (m *NodeMock) Roles() (r []core.StaticRole) {
 	atomic.AddUint64(&m.RolesPreCounter, 1)
 	defer atomic.AddUint64(&m.RolesCounter, 1)
 

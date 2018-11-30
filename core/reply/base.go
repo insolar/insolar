@@ -35,6 +35,7 @@ const (
 	// TypeOK is a generic reply for success calls without returned value.
 	TypeOK
 
+	TypeGetCodeRedirect
 	TypeGetObjectRedirect
 	TypeGetChildrenRedirect
 
@@ -92,6 +93,12 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &OK{}, nil
 	case TypeObjectIndex:
 		return &ObjectIndex{}, nil
+	case TypeGetCodeRedirect:
+		return &GetCodeRedirect{}, nil
+	case TypeGetObjectRedirect:
+		return &GetObjectRedirect{}, nil
+	case TypeGetChildrenRedirect:
+		return &GetChildrenRedirect{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -151,4 +158,7 @@ func init() {
 	gob.Register(&Error{})
 	gob.Register(&OK{})
 	gob.Register(&ObjectIndex{})
+	gob.Register(&GetCodeRedirect{})
+	gob.Register(&GetObjectRedirect{})
+	gob.Register(&GetChildrenRedirect{})
 }

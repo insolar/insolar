@@ -201,4 +201,5 @@ const (
 	DTTypePendingExecution DelegationTokenType = iota + 1
 	DTTypeGetObjectRedirect
 	DTTypeGetChildrenRedirect
+	DTTypeGetCodeRedirect
 )
