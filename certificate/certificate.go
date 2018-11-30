@@ -252,10 +252,10 @@ func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (c
 		BootstrapNodes:      make([]BootstrapNode, len(cert.BootstrapNodes)),
 		RootDomainReference: cert.RootDomainReference,
 	}
-	for i := range cert.BootstrapNodes {
-		newCert.BootstrapNodes[i].Host = cert.BootstrapNodes[i].Host
-		newCert.BootstrapNodes[i].PublicKey = cert.BootstrapNodes[i].PublicKey
-		newCert.BootstrapNodes[i].NetworkSign = cert.BootstrapNodes[i].NetworkSign
+	for i, node := range cert.BootstrapNodes {
+		newCert.BootstrapNodes[i].Host = node.Host
+		newCert.BootstrapNodes[i].PublicKey = node.PublicKey
+		newCert.BootstrapNodes[i].NetworkSign = node.NetworkSign
 	}
 	return &newCert, nil
 }

@@ -33,7 +33,7 @@ type Certificate interface {
 	GetRole() StaticRole
 	GetRootDomainReference() *RecordRef
 	SetRootDomainReference(ref *RecordRef)
-	NewCertForHost(string, string, string) (Certificate, error)
+	NewCertForHost(pKey string, role string, nodeRef string) (Certificate, error)
 	GetDiscoveryNodes() []DiscoveryNode
 }
 
