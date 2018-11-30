@@ -204,7 +204,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		}
 
 		// TODO: I don't know why I put it here. If you know better place for that, move it there please
-		n.NetworkSwitcher.OnPulse(ctx, pulse)
+		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
+			return
+		}
 
 		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
 		go func(logger core.Logger, network *ServiceNetwork) {
