@@ -84,21 +84,21 @@ func TestSerialization(t *testing.T) {
 
 func TestNewApiRunnerNilConfig(t *testing.T) {
 	_, err := NewRunner(nil)
-	require.EqualError(t, err, "[ NewAPIRunner ] config is nil")
+	require.Contains(t, err.Error(), "config is nil")
 }
 
 func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 	cfg := configuration.APIRunner{}
 	_, err := NewRunner(&cfg)
-	require.EqualError(t, err, "[ NewAPIRunner ] Address must not be empty")
+	require.Contains(t, err.Error(), "Address must not be empty")
 
 	cfg.Address = "address:100"
 	_, err = NewRunner(&cfg)
-	require.EqualError(t, err, "[ NewAPIRunner ] Call must exist")
+	require.Contains(t, err.Error(), "Call must exist")
 
 	cfg.Call = "test"
 	_, err = NewRunner(&cfg)
-	require.EqualError(t, err, "[ NewAPIRunner ] RPC must exist")
+	require.Contains(t, err.Error(), "RPC must exist")
 
 	cfg.RPC = "test"
 	_, err = NewRunner(&cfg)
