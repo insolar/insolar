@@ -279,7 +279,7 @@ func (nk *nodekeeper) MoveSyncToActive() {
 	}()
 
 	sync := nk.sync.(*unsyncList)
-	mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
+	sync.mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
 }
 
 func jetRoleToNodeRole(role core.DynamicRole) core.StaticRole {
