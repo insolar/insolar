@@ -24,7 +24,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps pre-build build functest test test_with_coverage regen-proxies
+.PHONY: all lint ci-lint metalint clean install-deps pre-build build functest test test_with_coverage regen-proxies generate ensure
 
 all: clean install-deps pre-build build test
 
@@ -47,12 +47,15 @@ install-deps:
 	go get -u golang.org/x/tools/cmd/stringer
 	go get -u github.com/gojuno/minimock/cmd/minimock
 
-pre-build:
-	dep ensure
-	# workaround for minimock
+pre-build: ensure generate
+
+generate:
 	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
 
-build: 
+ensure:
+	dep ensure
+
+build:
 	mkdir -p $(BIN_DIR)
 	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK)
 
