@@ -44,7 +44,11 @@ func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 	if utils.OriginIsDiscovery(nb.certificate) {
-		return nb.bootstrapDiscovery(ctx)
+		if err := nb.bootstrapDiscovery(ctx); err != nil {
+			return errors.Wrap(err, "[ Bootstrap ] Couldn't OriginIsDiscovery")
+		}
+		nb.nodeKeeper.SetIsBootstrapped(true)
+		return nil
 	}
 	return nb.bootstrapJoiner(ctx)
 }

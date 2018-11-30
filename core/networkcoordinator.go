@@ -27,7 +27,7 @@ type NetworkCoordinator interface {
 	GetCert(context.Context, RecordRef) (Certificate, error)
 
 	// ValidateCert checks certificate signature
-	ValidateCert(context.Context, Certificate) (bool, error)
+	ValidateCert(context.Context, AuthorizationCertificate) (bool, error)
 
 	// TODO: Remove this method, use SetPulse instead
 	WriteActiveNodes(ctx context.Context, number PulseNumber, activeNodes []Node) error
