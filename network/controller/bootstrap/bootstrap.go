@@ -51,7 +51,7 @@ type NodeBootstrapResponse struct {
 }
 
 type GenesisRequest struct {
-	Certificate core.Certificate
+	// Certificate core.Certificate
 }
 
 type GenesisResponse struct {
@@ -149,7 +149,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (core.Node, error) {
 	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
-		Certificate: bc.cert,
+		// Certificate: bc.cert,
 	}).Build()
 	future, err := bc.transport.SendRequestPacket(request, h)
 	if err != nil {
@@ -247,11 +247,11 @@ func (bc *Bootstrapper) checkGenesisCert(cert core.Certificate) error {
 }
 
 func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
-	data := request.GetData().(*GenesisRequest)
+	/*data := request.GetData().(*GenesisRequest)
 	err := bc.checkGenesisCert(data.Certificate)
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
-	}
+	}*/
 	return bc.transport.BuildResponse(request, &GenesisResponse{Discovery: bc.keeper.GetOrigin()}), nil
 }
 
