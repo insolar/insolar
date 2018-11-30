@@ -53,19 +53,52 @@ type Runner struct {
 	SeedGenerator       seedmanager.SeedGenerator
 }
 
-// NewRunner is C-tor for API Runner
-func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
+func checkConfig(cfg *configuration.APIRunner) error {
 	if cfg == nil {
-		return nil, errors.New("[ NewAPIRunner ] config is nil")
+		return errors.New("[ checkConfig ] config is nil")
 	}
 	if cfg.Address == "" {
-		return nil, errors.New("[ NewAPIRunner ] Address must not be empty")
+		return errors.New("[ checkConfig ] Address must not be empty")
 	}
 	if len(cfg.Call) == 0 {
-		return nil, errors.New("[ NewAPIRunner ] Call must exist")
+		return errors.New("[ checkConfig ] Call must exist")
 	}
 	if len(cfg.RPC) == 0 {
-		return nil, errors.New("[ NewAPIRunner ] RPC must exist")
+		return errors.New("[ checkConfig ] RPC must exist")
+	}
+
+	return nil
+}
+
+func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
+	err := rpcServer.RegisterService(NewStorageExporterService(ar), "exporter")
+	if err != nil {
+		return errors.New("[ registerServices ] Can't RegisterService: exporter")
+	}
+
+	err = rpcServer.RegisterService(NewSeedService(ar), "seed")
+	if err != nil {
+		return errors.New("[ registerServices ] Can't RegisterService: seed")
+	}
+
+	err = rpcServer.RegisterService(NewInfoService(ar), "info")
+	if err != nil {
+		return errors.New("[ registerServices ] Can't RegisterService: info")
+	}
+
+	err = rpcServer.RegisterService(NewStatusService(ar), "status")
+	if err != nil {
+		return errors.New("[ registerServices ] Can't RegisterService: info")
+	}
+
+	return nil
+}
+
+// NewRunner is C-tor for API Runner
+func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
+
+	if err := checkConfig(cfg); err != nil {
+		return nil, errors.Wrap(err, "[ NewAPIRunner ] Bad config")
 	}
 
 	addrStr := fmt.Sprint(cfg.Address)
@@ -80,19 +113,8 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 
 	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")
 
-	err := rpcServer.RegisterService(NewStorageExporterService(&ar), "exporter")
-	if err != nil {
-		return nil, err
-	}
-
-	err = rpcServer.RegisterService(NewSeedService(&ar), "seed")
-	if err != nil {
-		return nil, err
-	}
-
-	err = rpcServer.RegisterService(NewInfoService(&ar), "info")
-	if err != nil {
-		return nil, err
+	if err := ar.registerServices(rpcServer); err != nil {
+		return nil, errors.Wrap(err, "[ NewAPIRunner ] Can't register services:")
 	}
 
 	return &ar, nil
