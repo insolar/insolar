@@ -63,6 +63,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &SetRecord{}, nil
 	case core.TypeGetObjectIndex:
 		return &GetObjectIndex{}, nil
+	case core.TypeValidationCheck:
+		return &ValidationCheck{}, nil
 
 	// Bootstrap
 	case core.TypeBootstrapRequest:
@@ -181,6 +183,7 @@ func init() {
 	gob.Register(&GetObjectIndex{})
 	gob.Register(&SetBlob{})
 	gob.Register(&ValidateRecord{})
+	gob.Register(&ValidationCheck{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
