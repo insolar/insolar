@@ -25,7 +25,7 @@ import (
 
 // RecentStorage is a base structure
 type RecentStorage struct {
-	recentObjects   map[core.RecordID]*message.RecentObjectsIndexMeta
+	recentObjects   map[core.RecordID]int
 	objectLock      sync.Mutex
 	pendingRequests map[core.RecordID]struct{}
 	requestLock     sync.Mutex
@@ -35,7 +35,7 @@ type RecentStorage struct {
 // NewRecentStorage creates default RecentStorage object
 func NewRecentStorage(defaultTTL int) *RecentStorage {
 	return &RecentStorage{
-		recentObjects:   map[core.RecordID]*message.RecentObjectsIndexMeta{},
+		recentObjects:   map[core.RecordID]int{},
 		pendingRequests: map[core.RecordID]struct{}{},
 		DefaultTTL:      defaultTTL,
 		objectLock:      sync.Mutex{},
@@ -47,16 +47,7 @@ func (r *RecentStorage) AddObject(id core.RecordID) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	value, ok := r.recentObjects[id]
-
-	if !ok {
-		r.recentObjects[id] = &message.RecentObjectsIndexMeta{
-			TTL: r.DefaultTTL,
-		}
-		return
-	}
-
-	value.TTL = r.DefaultTTL
+	r.recentObjects[id] = r.DefaultTTL
 }
 
 // AddObjectWithMeta adds object with meta to cache

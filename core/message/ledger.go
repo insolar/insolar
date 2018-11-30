@@ -184,7 +184,7 @@ type HotIndexes struct {
 
 // HotIndex contains meat about hot-data
 type HotIndex struct {
-	Meta  *RecentObjectsIndexMeta
+	TTL  int
 	Index []byte
 }
 
@@ -193,7 +193,7 @@ func (*HotIndexes) Type() core.MessageType {
 	return core.TypeHotRecords
 }
 
-// RecentObjectsIndexMeta contains meta about indexes
-type RecentObjectsIndexMeta struct {
-	TTL int
-}
+// // RecentObjectsIndexMeta contains meta about indexes
+// type RecentObjectsIndexMeta struct {
+// 	TTL int
+// }
