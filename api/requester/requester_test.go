@@ -39,7 +39,7 @@ const TESTSEED = "VGVzdA=="
 
 var testSeedResponse = seedResponse{Seed: []byte("Test"), TraceID: "testTraceID"}
 var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
-var testStatusResponse = StatusResponse{NetworkState: "horosho"}
+var testStatusResponse = StatusResponse{NetworkState: "OK"}
 
 type rpcRequest struct {
 	RPCVersion string `json:"jsonrpc"`
