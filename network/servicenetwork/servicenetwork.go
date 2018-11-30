@@ -54,6 +54,7 @@ type ServiceNetwork struct {
 	ArtifactManager     core.ArtifactManager            `inject:""`
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
 	NodeKeeper          network.NodeKeeper              `inject:""`
+	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
 
 	// subcomponents
 	PhaseManager     phases.PhaseManager      // `inject:""`
@@ -226,6 +227,14 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			logger.Error(errors.Wrap(err, "Failed to set pulse"))
 			return
 		}
+
+		// TODO: I don't know why I put it here. If you know better place for that, move it there please
+		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
+			return
+		}
+
 		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
 		go func(logger core.Logger, network *ServiceNetwork) {
 			if network.NetworkCoordinator == nil {
