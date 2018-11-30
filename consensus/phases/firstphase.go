@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const ConsensusAtPercents = 0.66
+const ConsensusAtPercents = 2.0 / 3.0
 
 func consensusReached(resultLen, participanstLen int) bool {
 	minParticipants := int(math.Floor(ConsensusAtPercents*float64(participanstLen))) + 1
