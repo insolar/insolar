@@ -86,8 +86,9 @@ $(EXPORTER):
 $(HEALTHCHECK):
 	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
 
+
 functest:
-	CGO_ENABLED=1 go test -tags functest -v ./functest
+	CGO_ENABLED=1 go test -tags functest ./functest
 
 test:
 	go test -v $(ALL_PACKAGES)
