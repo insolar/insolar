@@ -60,6 +60,9 @@ const (
 	TypeChildren
 	// TypeObjectIndex contains serialized object index. It can be stored in DB without processing.
 	TypeObjectIndex
+
+	// TypeHeavyError carries heavy record sync
+	TypeHeavyError
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -89,6 +92,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &Children{}, nil
 	case TypeError:
 		return &Error{}, nil
+	case TypeHeavyError:
+		return &HeavyError{}, nil
 	case TypeOK:
 		return &OK{}, nil
 	case TypeObjectIndex:
@@ -161,4 +166,5 @@ func init() {
 	gob.Register(&GetCodeRedirect{})
 	gob.Register(&GetObjectRedirect{})
 	gob.Register(&GetChildrenRedirect{})
+	gob.Register(&HeavyError{})
 }
