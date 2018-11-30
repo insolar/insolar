@@ -127,7 +127,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// swap pulse
 	m.currentPulse = pulse
 
-	// []swap active nodes and set prev pulse state to network
+	// TODO: swap active nodes and set prev pulse state to network
 
 	if !dry {
 		latestPulseNumber, err = m.db.GetLatestPulseNumber(ctx)
