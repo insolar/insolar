@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/pkg/errors"
 
@@ -35,10 +36,10 @@ import (
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
 	db      *storage.DB
-	Recent  core.RecentStorage `inject:""`
-	LR      core.LogicRunner   `inject:""`
-	Bus     core.MessageBus    `inject:""`
-	NodeNet core.NodeNetwork   `inject:""`
+	Recent  recentstorage.RecentStorage `inject:""`
+	LR      core.LogicRunner            `inject:""`
+	Bus     core.MessageBus             `inject:""`
+	NodeNet core.NodeNetwork            `inject:""`
 	// setLock locks Set method call.
 	setLock  sync.Mutex
 	stopLock sync.RWMutex

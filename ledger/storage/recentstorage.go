@@ -20,11 +20,12 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 )
 
 // RecentStorage is a base structure
 type RecentStorage struct {
-	recentObjects   map[core.RecordID]*core.RecentObjectsIndexMeta
+	recentObjects   map[core.RecordID]*message.RecentObjectsIndexMeta
 	objectLock      sync.Mutex
 	pendingRequests map[core.RecordID]struct{}
 	requestLock     sync.Mutex
@@ -34,7 +35,7 @@ type RecentStorage struct {
 // NewRecentStorage creates default RecentStorage object
 func NewRecentStorage(defaultTTL int) *RecentStorage {
 	return &RecentStorage{
-		recentObjects:   map[core.RecordID]*core.RecentObjectsIndexMeta{},
+		recentObjects:   map[core.RecordID]*message.RecentObjectsIndexMeta{},
 		pendingRequests: map[core.RecordID]struct{}{},
 		DefaultTTL:      defaultTTL,
 		objectLock:      sync.Mutex{},
@@ -49,7 +50,7 @@ func (r *RecentStorage) AddObject(id core.RecordID) {
 	value, ok := r.recentObjects[id]
 
 	if !ok {
-		r.recentObjects[id] = &core.RecentObjectsIndexMeta{
+		r.recentObjects[id] = &message.RecentObjectsIndexMeta{
 			TTL: r.DefaultTTL,
 		}
 		return
@@ -59,11 +60,11 @@ func (r *RecentStorage) AddObject(id core.RecordID) {
 }
 
 // AddObjectWithMeta adds object with meta to cache
-func (r *RecentStorage) AddObjectWithMeta(id core.RecordID, meta *core.RecentObjectsIndexMeta) {
+func (r *RecentStorage) AddObjectWithMeta(id core.RecordID, meta *message.RecentObjectsIndexMeta) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 	if meta == nil {
-		meta = &core.RecentObjectsIndexMeta{
+		meta = &message.RecentObjectsIndexMeta{
 			TTL: r.DefaultTTL,
 		}
 	}
@@ -91,11 +92,11 @@ func (r *RecentStorage) RemovePendingRequest(id core.RecordID) {
 }
 
 // GetObjects returns object hot-indexes.
-func (r *RecentStorage) GetObjects() map[core.RecordID]*core.RecentObjectsIndexMeta {
+func (r *RecentStorage) GetObjects() map[core.RecordID]*message.RecentObjectsIndexMeta {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	targetMap := make(map[core.RecordID]*core.RecentObjectsIndexMeta, len(r.recentObjects))
+	targetMap := make(map[core.RecordID]*message.RecentObjectsIndexMeta, len(r.recentObjects))
 	for key, value := range r.recentObjects {
 		targetMap[key] = value
 	}
@@ -133,6 +134,6 @@ func (r *RecentStorage) ClearObjects() {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	r.recentObjects = map[core.RecordID]*core.RecentObjectsIndexMeta{}
+	r.recentObjects = map[core.RecordID]*message.RecentObjectsIndexMeta{}
 	r.pendingRequests = map[core.RecordID]struct{}{}
 }

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/testutils"
 
 	"github.com/insolar/insolar/core"
@@ -42,7 +43,7 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	})
 	heavysync.StopMock.Return(nil)
 
-	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()

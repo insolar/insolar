@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/logicrunner"
@@ -78,10 +79,10 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		codeRecord,
 	)
 
-	recentMock := testutils.NewRecentStorageMock(t)
+	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.ClearZeroTTLObjectsMock.Return()
 	recentMock.ClearObjectsMock.Return()
-	recentMock.GetObjectsMock.Return(map[core.RecordID]*core.RecentObjectsIndexMeta{
+	recentMock.GetObjectsMock.Return(map[core.RecordID]*message.RecentObjectsIndexMeta{
 		*firstID: {TTL: 1},
 	})
 	recentMock.GetRequestsMock.Return([]core.RecordID{*secondID})

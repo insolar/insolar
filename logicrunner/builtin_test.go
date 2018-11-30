@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/network"
@@ -74,7 +75,7 @@ func TestBareHelloworld(t *testing.T) {
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 
-	recent := testutils.NewRecentStorageMock(t)
+	recent := recentstorage.NewRecentStorageMock(t)
 
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseNumber = 0

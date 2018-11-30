@@ -262,23 +262,3 @@ type StorageExporter interface {
 	// Export returns data view from storage.
 	Export(ctx context.Context, fromPulse PulseNumber, size int) (*StorageExportResult, error)
 }
-
-// RecentObjectsIndexMeta contains meta about indexes
-type RecentObjectsIndexMeta struct {
-	TTL int
-}
-
-// RecentStorage is a base interface for the storage of recent objects and indexes
-//go:generate minimock -i github.com/insolar/insolar/core.RecentStorage -o ../testutils -s _mock.go
-type RecentStorage interface {
-	AddObject(id RecordID)
-	AddObjectWithMeta(id RecordID, meta *RecentObjectsIndexMeta)
-
-	AddPendingRequest(id RecordID)
-
-	RemovePendingRequest(id RecordID)
-	GetObjects() map[RecordID]*RecentObjectsIndexMeta
-	GetRequests() []RecordID
-	ClearZeroTTLObjects()
-	ClearObjects()
-}

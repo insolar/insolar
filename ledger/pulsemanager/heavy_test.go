@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -64,9 +65,9 @@ func TestPulseManager_SendToHeavy(t *testing.T) {
 	// Mock N4: message bus for Send method
 	busMock := testutils.NewMessageBusMock(t)
 
-	recentMock := testutils.NewRecentStorageMock(t)
+	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.ClearZeroTTLObjectsMock.Return()
-	recentMock.GetObjectsMock.Return(map[core.RecordID]*core.RecentObjectsIndexMeta{})
+	recentMock.GetObjectsMock.Return(map[core.RecordID]*message.RecentObjectsIndexMeta{})
 	recentMock.GetRequestsMock.Return([]core.RecordID{})
 	recentMock.ClearObjectsMock.Return()
 

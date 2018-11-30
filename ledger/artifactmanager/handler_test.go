@@ -12,6 +12,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
@@ -39,7 +40,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	h := NewMessageHandler(db, &configuration.ArtifactManager{
 		LightChainLimit: 3,
 	})
-	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
@@ -147,7 +148,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
 
-	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
@@ -252,7 +253,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
-	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
@@ -311,7 +312,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
-	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
@@ -377,7 +378,7 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
-	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
@@ -420,7 +421,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	msg := message.GetCode{
 		Code: *genRandomRef(0),
 	}
-	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
@@ -480,7 +481,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	defer cleaner()
 	defer mc.Finish()
 
-	recentStorageMock := testutils.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
@@ -560,7 +561,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {
 				Index: firstIndex,
-				Meta: &core.RecentObjectsIndexMeta{
+				Meta: &message.RecentObjectsIndexMeta{
 					TTL: 321,
 				}},
 		},
@@ -569,11 +570,11 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		},
 	}
 
-	recentMock := testutils.NewRecentStorageMock(t)
+	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.AddPendingRequestFunc = func(p core.RecordID) {
 		require.Equal(t, p, *secondId)
 	}
-	recentMock.AddObjectWithMetaFunc = func(p core.RecordID, p1 *core.RecentObjectsIndexMeta) {
+	recentMock.AddObjectWithMetaFunc = func(p core.RecordID, p1 *message.RecentObjectsIndexMeta) {
 		require.Equal(t, p, *firstID)
 		require.Equal(t, 320, p1.TTL)
 	}

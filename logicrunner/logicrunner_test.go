@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
@@ -133,7 +134,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		},
 	)
 
-	recentMock := testutils.NewRecentStorageMock(t)
+	recentMock := recentstorage.NewRecentStorageMock(t)
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}

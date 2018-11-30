@@ -1,4 +1,4 @@
-package ledger
+package recentstorage
 
 import (
 	"github.com/insolar/insolar/core"
@@ -6,7 +6,7 @@ import (
 )
 
 // RecentStorage is a base interface for the storage of recent objects and indexes
-//go:generate minimock -i github.com/insolar/insolar/core.RecentStorage -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentStorage -o ./ -s _mock.go
 type RecentStorage interface {
 	AddObject(id core.RecordID)
 	AddObjectWithMeta(id core.RecordID, meta *message.RecentObjectsIndexMeta)
@@ -19,4 +19,3 @@ type RecentStorage interface {
 	ClearZeroTTLObjects()
 	ClearObjects()
 }
-

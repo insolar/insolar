@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -40,7 +41,7 @@ type MessageHandler struct {
 	db                         *storage.DB
 	jetDropHandlers            map[core.MessageType]internalHandler
 	conf                       *configuration.ArtifactManager
-	Recent                     core.RecentStorage              `inject:""`
+	Recent                     recentstorage.RecentStorage     `inject:""`
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
