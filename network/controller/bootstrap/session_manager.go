@@ -38,7 +38,7 @@ const (
 
 type Session struct {
 	NodeID core.RecordRef
-	Cert   core.Certificate
+	Cert   core.NodeCertificate
 	State  SessionState
 
 	DiscoveryNonce Nonce
@@ -56,7 +56,7 @@ func NewSessionManager() *SessionManager {
 	return &SessionManager{sessions: make(map[SessionID]*Session)}
 }
 
-func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.Certificate) SessionID {
+func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.NodeCertificate) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
 	result := &Session{NodeID: ref, State: Authorized, Cert: cert}
 	sessionID := SessionID(id)
@@ -98,7 +98,7 @@ func (sm *SessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) 
 	return nil
 }
 
-func (sm *SessionManager) GetChallengeData(id SessionID) (core.Certificate, Nonce, error) {
+func (sm *SessionManager) GetChallengeData(id SessionID) (core.NodeCertificate, Nonce, error) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
