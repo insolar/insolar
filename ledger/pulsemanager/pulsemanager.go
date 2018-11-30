@@ -88,11 +88,11 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 }
 
 // Current returns current pulse structure.
-func (m *PulseManager) Current() *core.Pulse {
+func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	m.setLock.RLock()
 	defer m.setLock.RUnlock()
 
-	return &m.currentPulse
+	return &m.currentPulse, nil
 }
 
 func (m *PulseManager) processDrop(ctx context.Context, latestPulseNumber core.PulseNumber) error {
@@ -276,7 +276,7 @@ func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) 
 		}
 
 		tosyncPN := pulses[0]
-		if m.pulseIsOutdated(tosyncPN) {
+		if m.pulseIsOutdated(ctx, tosyncPN) {
 			finishpulse()
 			continue
 		}
@@ -312,7 +312,10 @@ func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) 
 	}
 }
 
-func (m *PulseManager) pulseIsOutdated(pn core.PulseNumber) bool {
-	currentnum := m.Current().PulseNumber
-	return currentnum-pn > m.options.pulsesDeltaLimit
+func (m *PulseManager) pulseIsOutdated(ctx context.Context, pn core.PulseNumber) bool {
+	current, err := m.Current(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return current.PulseNumber-pn > m.options.pulsesDeltaLimit
 }

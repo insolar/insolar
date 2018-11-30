@@ -42,10 +42,10 @@ func (he HeavyErr) Error() string {
 // IsRetryable checks retryability of message.
 func (he HeavyErr) IsRetryable() bool {
 	herr, ok := he.reply.(*reply.HeavyError)
-	if ok {
-		ok = herr.ConcreteType() == reply.ErrHeavySyncInProgress
+	if !ok {
+		return false
 	}
-	return ok
+	return herr.ConcreteType() == reply.ErrHeavySyncInProgress
 }
 
 // HeavySync syncs records from light to heavy node, returns last synced pulse and error.
