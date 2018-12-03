@@ -178,6 +178,8 @@ const (
 	TypeSetBlob
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
+	// TypeHotRecords saves hot-records in storage.
+	TypeHotRecords
 
 	// TypeValidationCheck checks if validation of a particular record can be performed.
 	TypeValidationCheck

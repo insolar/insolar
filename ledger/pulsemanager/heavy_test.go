@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,12 +77,19 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// Mock N4: message bus for Send method
 	busMock := testutils.NewMessageBusMock(t)
 
-	// Mock5: JetCoordinatorMock
+	// Mock5: RecentStorageMock
+	recentMock := recentstorage.NewRecentStorageMock(t)
+	recentMock.ClearZeroTTLObjectsMock.Return()
+	recentMock.GetObjectsMock.Return(map[core.RecordID]int{})
+	recentMock.GetRequestsMock.Return([]core.RecordID{})
+	recentMock.ClearObjectsMock.Return()
+
+	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(t)
 	// always return true
 	jcMock.IsAuthorizedMock.Return(true, nil)
 
-	// Mock N6: GIL mock
+	// Mock N7: GIL mock
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
 	gilMock.AcquireFunc = func(context.Context) {}
 	gilMock.ReleaseFunc = func(context.Context) {}
@@ -145,6 +153,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
+	pm.Recent = recentMock
 
 	// Actial test logic
 	// start PulseManager

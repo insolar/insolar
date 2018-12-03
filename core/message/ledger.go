@@ -185,3 +185,24 @@ type ValidationCheck struct {
 func (*ValidationCheck) Type() core.MessageType {
 	return core.TypeValidationCheck
 }
+
+// HotIndexes contains hot-data
+type HotIndexes struct {
+	ledgerMessage
+	Jet             core.RecordRef
+	Drop            []byte
+	RecentObjects   map[core.RecordID]*HotIndex
+	PendingRequests map[core.RecordID][]byte
+	PulseNumber     core.PulseNumber
+}
+
+// HotIndex contains meat about hot-data
+type HotIndex struct {
+	TTL   int
+	Index []byte
+}
+
+// Type implementation of Message interface.
+func (*HotIndexes) Type() core.MessageType {
+	return core.TypeHotRecords
+}
