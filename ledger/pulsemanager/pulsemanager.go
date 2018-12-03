@@ -37,14 +37,14 @@ import (
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR             core.LogicRunner       `inject:""`
-	Bus            core.MessageBus        `inject:""`
-	NodeNet        core.NodeNetwork       `inject:""`
-	JetCoordinator core.JetCoordinator    `inject:""`
-	GIL            core.GlobalInsolarLock `inject:""`
-	Recent  recentstorage.RecentStorage `inject:""`
+	LR             core.LogicRunner            `inject:""`
+	Bus            core.MessageBus             `inject:""`
+	NodeNet        core.NodeNetwork            `inject:""`
+	JetCoordinator core.JetCoordinator         `inject:""`
+	GIL            core.GlobalInsolarLock      `inject:""`
+	Recent         recentstorage.RecentStorage `inject:""`
 
-	currentPulse   core.Pulse
+	currentPulse core.Pulse
 
 	// internal stuff
 	db *storage.DB
@@ -139,8 +139,6 @@ func (m *PulseManager) processDrop(ctx context.Context, latestPulse *storage.Pul
 	}
 	return nil
 }
-
-
 
 func (m *PulseManager) processRecentObjects(
 	ctx context.Context,
