@@ -143,7 +143,14 @@ func signData(service core.CryptographyService, data interface{}) ([]byte, error
 	return signature.Bytes(), nil
 }
 
-func selectByEntropy(scheme core.PlatformCryptographyScheme, entropy core.Entropy, values []string, count int) ([]string, error) { // nolint: megacheck
+// copied from jetcoordinator
+// (the only difference is type of input/output arrays)
+func selectByEntropy(
+	scheme core.PlatformCryptographyScheme,
+	entropy core.Entropy,
+	values []string,
+	count int,
+) ([]string, error) { // nolint: megacheck
 	type idxHash struct {
 		idx  int
 		hash []byte
@@ -170,7 +177,9 @@ func selectByEntropy(scheme core.PlatformCryptographyScheme, entropy core.Entrop
 		})
 	}
 
-	sort.SliceStable(hashes, func(i, j int) bool { return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0 })
+	sort.SliceStable(hashes, func(i, j int) bool {
+		return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0
+	})
 
 	selected := make([]string, 0, count)
 	for i := 0; i < count; i++ {

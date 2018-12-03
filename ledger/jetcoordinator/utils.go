@@ -24,7 +24,12 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-func selectByEntropy(scheme core.PlatformCryptographyScheme, entropy core.Entropy, values []core.RecordRef, count int) ([]core.RecordRef, error) { // nolint: megacheck
+func selectByEntropy(
+	scheme core.PlatformCryptographyScheme,
+	entropy core.Entropy,
+	values []core.RecordRef,
+	count int,
+) ([]core.RecordRef, error) { // nolint: megacheck
 	type idxHash struct {
 		idx  int
 		hash []byte
@@ -51,7 +56,9 @@ func selectByEntropy(scheme core.PlatformCryptographyScheme, entropy core.Entrop
 		})
 	}
 
-	sort.SliceStable(hashes, func(i, j int) bool { return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0 })
+	sort.SliceStable(hashes, func(i, j int) bool {
+		return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0
+	})
 
 	selected := make([]core.RecordRef, 0, count)
 	for i := 0; i < count; i++ {
