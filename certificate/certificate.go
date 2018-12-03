@@ -209,25 +209,25 @@ func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 	return nil
 }
 
-func certificateConstructor(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, data []byte) (*Certificate, error) {
+func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, data []byte) (*Certificate, error) {
 	cert := Certificate{}
 	err := json.Unmarshal(data, &cert)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ certificateConstructor ] failed to parse certificate json")
+		return nil, errors.Wrap(err, "[ newCertificate ] failed to parse certificate json")
 	}
 
 	pub, err := keyProcessor.ExportPublicKey(publicKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ certificateConstructor ] failed to retrieve public key from node private key")
+		return nil, errors.Wrap(err, "[ newCertificate ] failed to retrieve public key from node private key")
 	}
 
 	if cert.PublicKey != string(pub) {
-		return nil, errors.New("[ certificateConstructor ] Different public keys")
+		return nil, errors.New("[ newCertificate ] Different public keys")
 	}
 
 	err = cert.fillExtraFields(keyProcessor)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ certificateConstructor ] Incorrect fields")
+		return nil, errors.Wrap(err, "[ newCertificate ] Incorrect fields")
 	}
 
 	return &cert, nil
@@ -239,7 +239,7 @@ func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor,
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ ReadCertificate ] failed to read certificate from: %s", certPath)
 	}
-	cert, err := certificateConstructor(publicKey, keyProcessor, data)
+	cert, err := newCertificate(publicKey, keyProcessor, data)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ReadCertificate ]")
 	}
@@ -252,7 +252,7 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.Key
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ ReadCertificateFromReader ] failed to read certificate data")
 	}
-	cert, err := certificateConstructor(publicKey, keyProcessor, data)
+	cert, err := newCertificate(publicKey, keyProcessor, data)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ReadCertificateFromReader ]")
 	}
