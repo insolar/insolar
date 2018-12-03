@@ -299,11 +299,17 @@ func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) err
 }
 
 func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
-	/*data := request.GetData().(*GenesisRequest)
-	err := bc.checkGenesisCert(data.Certificate)
+	fmt.Println("processGenesis, safe and sound")
+	data := request.GetData().(*GenesisRequest)
+	genesisCert, err := certificate.Deserialize(data.Certificate)
+	fmt.Println("genesisCert Deserializeresult:", genesisCert)
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
-	}*/
+	}
+	err = bc.checkGenesisCert(genesisCert)
+	if err != nil {
+		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
+	}
 	discovery, err := newNodeStruct(bc.keeper.GetOrigin())
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
