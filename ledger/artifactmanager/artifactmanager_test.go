@@ -651,7 +651,8 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, *stateID3, *desc.StateID())
 	desc, err = am.GetObject(ctx, *objRef, nil, true)
-	assert.Equal(t, core.ErrStateNotAvailable, err)
+	assert.NoError(t, err)
+	assert.Equal(t, *stateID1, *desc.StateID())
 }
 
 func TestLedgerArtifactManager_RegisterResult(t *testing.T) {
