@@ -20,7 +20,7 @@ import (
 type CommunicatorMock struct {
 	t minimock.Tester
 
-	ExchangePhase1Func       func(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (r map[core.RecordRef]*packets.Phase1Packet, r1 error)
+	ExchangePhase1Func       func(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (r map[core.RecordRef]*packets.Phase1Packet, r1 map[core.RecordRef]string, r2 error)
 	ExchangePhase1Counter    uint64
 	ExchangePhase1PreCounter uint64
 	ExchangePhase1Mock       mCommunicatorMockExchangePhase1
@@ -70,22 +70,22 @@ func (m *mCommunicatorMockExchangePhase1) Expect(p context.Context, p1 []core.No
 }
 
 //Return sets up a mock for Communicator.ExchangePhase1 to return Return's arguments
-func (m *mCommunicatorMockExchangePhase1) Return(r map[core.RecordRef]*packets.Phase1Packet, r1 error) *CommunicatorMock {
-	m.mock.ExchangePhase1Func = func(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, error) {
-		return r, r1
+func (m *mCommunicatorMockExchangePhase1) Return(r map[core.RecordRef]*packets.Phase1Packet, r1 map[core.RecordRef]string, r2 error) *CommunicatorMock {
+	m.mock.ExchangePhase1Func = func(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (map[core.RecordRef]*packets.Phase1Packet, map[core.RecordRef]string, error) {
+		return r, r1, r2
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of Communicator.ExchangePhase1 method
-func (m *mCommunicatorMockExchangePhase1) Set(f func(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (r map[core.RecordRef]*packets.Phase1Packet, r1 error)) *CommunicatorMock {
+func (m *mCommunicatorMockExchangePhase1) Set(f func(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (r map[core.RecordRef]*packets.Phase1Packet, r1 map[core.RecordRef]string, r2 error)) *CommunicatorMock {
 	m.mock.ExchangePhase1Func = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //ExchangePhase1 implements github.com/insolar/insolar/consensus/phases.Communicator interface
-func (m *CommunicatorMock) ExchangePhase1(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (r map[core.RecordRef]*packets.Phase1Packet, r1 error) {
+func (m *CommunicatorMock) ExchangePhase1(p context.Context, p1 []core.Node, p2 packets.Phase1Packet) (r map[core.RecordRef]*packets.Phase1Packet, r1 map[core.RecordRef]string, r2 error) {
 	atomic.AddUint64(&m.ExchangePhase1PreCounter, 1)
 	defer atomic.AddUint64(&m.ExchangePhase1Counter, 1)
 

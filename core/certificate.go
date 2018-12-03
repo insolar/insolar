@@ -28,11 +28,11 @@ type NodeMeta interface {
 // Certificate interface provides methods to manage keys
 //go:generate minimock -i github.com/insolar/insolar/core.Certificate -o ../testutils -s _mock.go
 type Certificate interface {
-	NodeMeta
+	AuthorizationCertificate
 
-	GetRole() StaticRole
 	GetRootDomainReference() *RecordRef
 	SetRootDomainReference(ref *RecordRef)
+	NewCertForHost(pKey string, role string, nodeRef string) (Certificate, error)
 	GetDiscoveryNodes() []DiscoveryNode
 }
 
@@ -41,4 +41,13 @@ type DiscoveryNode interface {
 	NodeMeta
 
 	GetHost() string
+}
+
+// AuthorizationCertificate interface provides methods to manage info about node from it certificate
+type AuthorizationCertificate interface {
+	NodeMeta
+
+	GetRole() StaticRole
+	GetNodeSign(nodeRef *RecordRef) ([]byte, error)
+	Serialize() ([]byte, error)
 }

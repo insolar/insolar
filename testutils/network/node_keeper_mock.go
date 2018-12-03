@@ -85,6 +85,11 @@ type NodeKeeperMock struct {
 	GetUnsyncListPreCounter uint64
 	GetUnsyncListMock       mNodeKeeperMockGetUnsyncList
 
+	IsBootstrappedFunc       func() (r bool)
+	IsBootstrappedCounter    uint64
+	IsBootstrappedPreCounter uint64
+	IsBootstrappedMock       mNodeKeeperMockIsBootstrapped
+
 	MoveSyncToActiveFunc       func()
 	MoveSyncToActiveCounter    uint64
 	MoveSyncToActivePreCounter uint64
@@ -99,6 +104,11 @@ type NodeKeeperMock struct {
 	SetCloudHashCounter    uint64
 	SetCloudHashPreCounter uint64
 	SetCloudHashMock       mNodeKeeperMockSetCloudHash
+
+	SetIsBootstrappedFunc       func(p bool)
+	SetIsBootstrappedCounter    uint64
+	SetIsBootstrappedPreCounter uint64
+	SetIsBootstrappedMock       mNodeKeeperMockSetIsBootstrapped
 
 	SetOriginClaimFunc       func(p *packets.NodeJoinClaim)
 	SetOriginClaimCounter    uint64
@@ -137,9 +147,11 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetSparseUnsyncListMock = mNodeKeeperMockGetSparseUnsyncList{mock: m}
 	m.GetStateMock = mNodeKeeperMockGetState{mock: m}
 	m.GetUnsyncListMock = mNodeKeeperMockGetUnsyncList{mock: m}
+	m.IsBootstrappedMock = mNodeKeeperMockIsBootstrapped{mock: m}
 	m.MoveSyncToActiveMock = mNodeKeeperMockMoveSyncToActive{mock: m}
 	m.NodesJoinedDuringPreviousPulseMock = mNodeKeeperMockNodesJoinedDuringPreviousPulse{mock: m}
 	m.SetCloudHashMock = mNodeKeeperMockSetCloudHash{mock: m}
+	m.SetIsBootstrappedMock = mNodeKeeperMockSetIsBootstrapped{mock: m}
 	m.SetOriginClaimMock = mNodeKeeperMockSetOriginClaim{mock: m}
 	m.SetStateMock = mNodeKeeperMockSetState{mock: m}
 	m.SyncMock = mNodeKeeperMockSync{mock: m}
@@ -837,6 +849,48 @@ func (m *NodeKeeperMock) GetUnsyncListMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetUnsyncListPreCounter)
 }
 
+type mNodeKeeperMockIsBootstrapped struct {
+	mock *NodeKeeperMock
+}
+
+//Return sets up a mock for NodeKeeper.IsBootstrapped to return Return's arguments
+func (m *mNodeKeeperMockIsBootstrapped) Return(r bool) *NodeKeeperMock {
+	m.mock.IsBootstrappedFunc = func() bool {
+		return r
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of NodeKeeper.IsBootstrapped method
+func (m *mNodeKeeperMockIsBootstrapped) Set(f func() (r bool)) *NodeKeeperMock {
+	m.mock.IsBootstrappedFunc = f
+
+	return m.mock
+}
+
+//IsBootstrapped implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) IsBootstrapped() (r bool) {
+	atomic.AddUint64(&m.IsBootstrappedPreCounter, 1)
+	defer atomic.AddUint64(&m.IsBootstrappedCounter, 1)
+
+	if m.IsBootstrappedFunc == nil {
+		m.t.Fatal("Unexpected call to NodeKeeperMock.IsBootstrapped")
+		return
+	}
+
+	return m.IsBootstrappedFunc()
+}
+
+//IsBootstrappedMinimockCounter returns a count of NodeKeeperMock.IsBootstrappedFunc invocations
+func (m *NodeKeeperMock) IsBootstrappedMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsBootstrappedCounter)
+}
+
+//IsBootstrappedMinimockPreCounter returns the value of NodeKeeperMock.IsBootstrapped invocations
+func (m *NodeKeeperMock) IsBootstrappedMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsBootstrappedPreCounter)
+}
+
 type mNodeKeeperMockMoveSyncToActive struct {
 	mock *NodeKeeperMock
 }
@@ -985,6 +1039,72 @@ func (m *NodeKeeperMock) SetCloudHashMinimockCounter() uint64 {
 //SetCloudHashMinimockPreCounter returns the value of NodeKeeperMock.SetCloudHash invocations
 func (m *NodeKeeperMock) SetCloudHashMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetCloudHashPreCounter)
+}
+
+type mNodeKeeperMockSetIsBootstrapped struct {
+	mock             *NodeKeeperMock
+	mockExpectations *NodeKeeperMockSetIsBootstrappedParams
+}
+
+//NodeKeeperMockSetIsBootstrappedParams represents input parameters of the NodeKeeper.SetIsBootstrapped
+type NodeKeeperMockSetIsBootstrappedParams struct {
+	p bool
+}
+
+//Expect sets up expected params for the NodeKeeper.SetIsBootstrapped
+func (m *mNodeKeeperMockSetIsBootstrapped) Expect(p bool) *mNodeKeeperMockSetIsBootstrapped {
+	m.mockExpectations = &NodeKeeperMockSetIsBootstrappedParams{p}
+	return m
+}
+
+//Return sets up a mock for NodeKeeper.SetIsBootstrapped to return Return's arguments
+func (m *mNodeKeeperMockSetIsBootstrapped) Return() *NodeKeeperMock {
+	m.mock.SetIsBootstrappedFunc = func(p bool) {
+		return
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of NodeKeeper.SetIsBootstrapped method
+func (m *mNodeKeeperMockSetIsBootstrapped) Set(f func(p bool)) *NodeKeeperMock {
+	m.mock.SetIsBootstrappedFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//SetIsBootstrapped implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) SetIsBootstrapped(p bool) {
+	atomic.AddUint64(&m.SetIsBootstrappedPreCounter, 1)
+	defer atomic.AddUint64(&m.SetIsBootstrappedCounter, 1)
+
+	if m.SetIsBootstrappedMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.SetIsBootstrappedMock.mockExpectations, NodeKeeperMockSetIsBootstrappedParams{p},
+			"NodeKeeper.SetIsBootstrapped got unexpected parameters")
+
+		if m.SetIsBootstrappedFunc == nil {
+
+			m.t.Fatal("No results are set for the NodeKeeperMock.SetIsBootstrapped")
+
+			return
+		}
+	}
+
+	if m.SetIsBootstrappedFunc == nil {
+		m.t.Fatal("Unexpected call to NodeKeeperMock.SetIsBootstrapped")
+		return
+	}
+
+	m.SetIsBootstrappedFunc(p)
+}
+
+//SetIsBootstrappedMinimockCounter returns a count of NodeKeeperMock.SetIsBootstrappedFunc invocations
+func (m *NodeKeeperMock) SetIsBootstrappedMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SetIsBootstrappedCounter)
+}
+
+//SetIsBootstrappedMinimockPreCounter returns the value of NodeKeeperMock.SetIsBootstrapped invocations
+func (m *NodeKeeperMock) SetIsBootstrappedMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SetIsBootstrappedPreCounter)
 }
 
 type mNodeKeeperMockSetOriginClaim struct {
@@ -1241,6 +1361,10 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
 	}
 
+	if m.IsBootstrappedFunc != nil && atomic.LoadUint64(&m.IsBootstrappedCounter) == 0 {
+		m.t.Fatal("Expected call to NodeKeeperMock.IsBootstrapped")
+	}
+
 	if m.MoveSyncToActiveFunc != nil && atomic.LoadUint64(&m.MoveSyncToActiveCounter) == 0 {
 		m.t.Fatal("Expected call to NodeKeeperMock.MoveSyncToActive")
 	}
@@ -1251,6 +1375,10 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 
 	if m.SetCloudHashFunc != nil && atomic.LoadUint64(&m.SetCloudHashCounter) == 0 {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetCloudHash")
+	}
+
+	if m.SetIsBootstrappedFunc != nil && atomic.LoadUint64(&m.SetIsBootstrappedCounter) == 0 {
+		m.t.Fatal("Expected call to NodeKeeperMock.SetIsBootstrapped")
 	}
 
 	if m.SetOriginClaimFunc != nil && atomic.LoadUint64(&m.SetOriginClaimCounter) == 0 {
@@ -1334,6 +1462,10 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
 	}
 
+	if m.IsBootstrappedFunc != nil && atomic.LoadUint64(&m.IsBootstrappedCounter) == 0 {
+		m.t.Fatal("Expected call to NodeKeeperMock.IsBootstrapped")
+	}
+
 	if m.MoveSyncToActiveFunc != nil && atomic.LoadUint64(&m.MoveSyncToActiveCounter) == 0 {
 		m.t.Fatal("Expected call to NodeKeeperMock.MoveSyncToActive")
 	}
@@ -1344,6 +1476,10 @@ func (m *NodeKeeperMock) MinimockFinish() {
 
 	if m.SetCloudHashFunc != nil && atomic.LoadUint64(&m.SetCloudHashCounter) == 0 {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetCloudHash")
+	}
+
+	if m.SetIsBootstrappedFunc != nil && atomic.LoadUint64(&m.SetIsBootstrappedCounter) == 0 {
+		m.t.Fatal("Expected call to NodeKeeperMock.SetIsBootstrapped")
 	}
 
 	if m.SetOriginClaimFunc != nil && atomic.LoadUint64(&m.SetOriginClaimCounter) == 0 {
@@ -1385,9 +1521,11 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && (m.GetSparseUnsyncListFunc == nil || atomic.LoadUint64(&m.GetSparseUnsyncListCounter) > 0)
 		ok = ok && (m.GetStateFunc == nil || atomic.LoadUint64(&m.GetStateCounter) > 0)
 		ok = ok && (m.GetUnsyncListFunc == nil || atomic.LoadUint64(&m.GetUnsyncListCounter) > 0)
+		ok = ok && (m.IsBootstrappedFunc == nil || atomic.LoadUint64(&m.IsBootstrappedCounter) > 0)
 		ok = ok && (m.MoveSyncToActiveFunc == nil || atomic.LoadUint64(&m.MoveSyncToActiveCounter) > 0)
 		ok = ok && (m.NodesJoinedDuringPreviousPulseFunc == nil || atomic.LoadUint64(&m.NodesJoinedDuringPreviousPulseCounter) > 0)
 		ok = ok && (m.SetCloudHashFunc == nil || atomic.LoadUint64(&m.SetCloudHashCounter) > 0)
+		ok = ok && (m.SetIsBootstrappedFunc == nil || atomic.LoadUint64(&m.SetIsBootstrappedCounter) > 0)
 		ok = ok && (m.SetOriginClaimFunc == nil || atomic.LoadUint64(&m.SetOriginClaimCounter) > 0)
 		ok = ok && (m.SetStateFunc == nil || atomic.LoadUint64(&m.SetStateCounter) > 0)
 		ok = ok && (m.SyncFunc == nil || atomic.LoadUint64(&m.SyncCounter) > 0)
@@ -1451,6 +1589,10 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NodeKeeperMock.GetUnsyncList")
 			}
 
+			if m.IsBootstrappedFunc != nil && atomic.LoadUint64(&m.IsBootstrappedCounter) == 0 {
+				m.t.Error("Expected call to NodeKeeperMock.IsBootstrapped")
+			}
+
 			if m.MoveSyncToActiveFunc != nil && atomic.LoadUint64(&m.MoveSyncToActiveCounter) == 0 {
 				m.t.Error("Expected call to NodeKeeperMock.MoveSyncToActive")
 			}
@@ -1461,6 +1603,10 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if m.SetCloudHashFunc != nil && atomic.LoadUint64(&m.SetCloudHashCounter) == 0 {
 				m.t.Error("Expected call to NodeKeeperMock.SetCloudHash")
+			}
+
+			if m.SetIsBootstrappedFunc != nil && atomic.LoadUint64(&m.SetIsBootstrappedCounter) == 0 {
+				m.t.Error("Expected call to NodeKeeperMock.SetIsBootstrapped")
 			}
 
 			if m.SetOriginClaimFunc != nil && atomic.LoadUint64(&m.SetOriginClaimCounter) == 0 {
@@ -1539,6 +1685,10 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if m.IsBootstrappedFunc != nil && atomic.LoadUint64(&m.IsBootstrappedCounter) == 0 {
+		return false
+	}
+
 	if m.MoveSyncToActiveFunc != nil && atomic.LoadUint64(&m.MoveSyncToActiveCounter) == 0 {
 		return false
 	}
@@ -1548,6 +1698,10 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 	}
 
 	if m.SetCloudHashFunc != nil && atomic.LoadUint64(&m.SetCloudHashCounter) == 0 {
+		return false
+	}
+
+	if m.SetIsBootstrappedFunc != nil && atomic.LoadUint64(&m.SetIsBootstrappedCounter) == 0 {
 		return false
 	}
 

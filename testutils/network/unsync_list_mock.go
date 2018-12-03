@@ -19,7 +19,7 @@ import (
 type UnsyncListMock struct {
 	t minimock.Tester
 
-	AddClaimsFunc       func(p core.RecordRef, p1 []packets.ReferendumClaim)
+	AddClaimsFunc       func(p core.RecordRef, p1 []packets.ReferendumClaim, p2 map[core.RecordRef]string)
 	AddClaimsCounter    uint64
 	AddClaimsPreCounter uint64
 	AddClaimsMock       mUnsyncListMockAddClaims
@@ -77,36 +77,37 @@ type mUnsyncListMockAddClaims struct {
 type UnsyncListMockAddClaimsParams struct {
 	p  core.RecordRef
 	p1 []packets.ReferendumClaim
+	p2 map[core.RecordRef]string
 }
 
 //Expect sets up expected params for the UnsyncList.AddClaims
-func (m *mUnsyncListMockAddClaims) Expect(p core.RecordRef, p1 []packets.ReferendumClaim) *mUnsyncListMockAddClaims {
-	m.mockExpectations = &UnsyncListMockAddClaimsParams{p, p1}
+func (m *mUnsyncListMockAddClaims) Expect(p core.RecordRef, p1 []packets.ReferendumClaim, p2 map[core.RecordRef]string) *mUnsyncListMockAddClaims {
+	m.mockExpectations = &UnsyncListMockAddClaimsParams{p, p1, p2}
 	return m
 }
 
 //Return sets up a mock for UnsyncList.AddClaims to return Return's arguments
 func (m *mUnsyncListMockAddClaims) Return() *UnsyncListMock {
-	m.mock.AddClaimsFunc = func(p core.RecordRef, p1 []packets.ReferendumClaim) {
+	m.mock.AddClaimsFunc = func(p core.RecordRef, p1 []packets.ReferendumClaim, p2 map[core.RecordRef]string) {
 		return
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of UnsyncList.AddClaims method
-func (m *mUnsyncListMockAddClaims) Set(f func(p core.RecordRef, p1 []packets.ReferendumClaim)) *UnsyncListMock {
+func (m *mUnsyncListMockAddClaims) Set(f func(p core.RecordRef, p1 []packets.ReferendumClaim, p2 map[core.RecordRef]string)) *UnsyncListMock {
 	m.mock.AddClaimsFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //AddClaims implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) AddClaims(p core.RecordRef, p1 []packets.ReferendumClaim) {
+func (m *UnsyncListMock) AddClaims(p core.RecordRef, p1 []packets.ReferendumClaim, p2 map[core.RecordRef]string) {
 	atomic.AddUint64(&m.AddClaimsPreCounter, 1)
 	defer atomic.AddUint64(&m.AddClaimsCounter, 1)
 
 	if m.AddClaimsMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.AddClaimsMock.mockExpectations, UnsyncListMockAddClaimsParams{p, p1},
+		testify_assert.Equal(m.t, *m.AddClaimsMock.mockExpectations, UnsyncListMockAddClaimsParams{p, p1, p2},
 			"UnsyncList.AddClaims got unexpected parameters")
 
 		if m.AddClaimsFunc == nil {
@@ -122,7 +123,7 @@ func (m *UnsyncListMock) AddClaims(p core.RecordRef, p1 []packets.ReferendumClai
 		return
 	}
 
-	m.AddClaimsFunc(p, p1)
+	m.AddClaimsFunc(p, p1, p2)
 }
 
 //AddClaimsMinimockCounter returns a count of UnsyncListMock.AddClaimsFunc invocations
