@@ -53,7 +53,7 @@ type NodeBootstrapResponse struct {
 }
 
 type GenesisRequest struct {
-	// Certificate core.AuthorizationCertificate
+	Certificate []byte
 }
 
 type GenesisResponse struct {
