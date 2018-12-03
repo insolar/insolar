@@ -314,7 +314,7 @@ func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
 }
 
-// Deserialize returns decoded info from AuthorizationCertificate
+// Deserialize deserializes data to AuthorizationCertificate interface
 func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
 	cert := AuthorizationCertificate{}
 	err := core.Deserialize(data, &cert)
@@ -324,7 +324,7 @@ func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
 	return &cert, nil
 }
 
-// Serialize returns decoded info from AuthorizationCertificate
+// Serialize serializes AuthorizationCertificate interface
 func Serialize(authCert core.AuthorizationCertificate) ([]byte, error) {
 	data, err := core.Serialize(authCert)
 	if err != nil {
