@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -189,8 +190,14 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (core.Node, error) {
+	fmt.Println("sendGenesisRequest, safe and sound")
+	serializedCert, err := certificate.Serialize(bc.cert)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to serialize certificate")
+	}
+	fmt.Println("Serialize cert just fine")
 	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
-		// Certificate: bc.cert,
+		Certificate: serializedCert,
 	}).Build()
 	future, err := bc.transport.SendRequestPacket(request, h)
 	if err != nil {
