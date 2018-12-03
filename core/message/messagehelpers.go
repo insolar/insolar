@@ -58,13 +58,15 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 
 func ExtractRole(msg core.Message) core.DynamicRole {
 	switch t := msg.(type) {
-	case *ExecutorResults,
+	case
+		*ExecutorResults,
 		*CallMethod,
 		*CallConstructor,
 		*GenesisRequest,
 		*ValidationResults:
 		return core.DynamicRoleVirtualExecutor
-	case *GetChildren,
+	case
+		*GetChildren,
 		*GetCode,
 		*GetDelegate,
 		*GetObject,
