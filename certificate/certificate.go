@@ -264,11 +264,6 @@ func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
 	return &ref
 }
 
-// SetRootDomainReference sets RootDomain reference for certificate
-func (cert *Certificate) SetRootDomainReference(ref *core.RecordRef) {
-	cert.RootDomainReference = ref.String()
-}
-
 // NewCertificatesWithKeys generate certificate from given keys
 // DEPRECATED, this method generates invalid certificate
 func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*Certificate, error) {
