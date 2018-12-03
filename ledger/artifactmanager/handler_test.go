@@ -587,3 +587,61 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.NoError(t, err)
 	recentMock.MinimockFinish()
 }
+
+func TestMessageHandler_HandleValidationCheck(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
+	h := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 3,
+	})
+	h.Recent = recentStorageMock
+
+	t.Run("returns not ok when not valid", func(t *testing.T) {
+		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{})
+		require.NoError(t, err)
+
+		msg := message.ValidationCheck{
+			Object:              *genRandomRef(0),
+			ValidatedState:      *validatedStateID,
+			LatestStateApproved: genRandomID(0),
+		}
+
+		rep, err := h.handleValidationCheck(ctx, &message.Parcel{
+			Msg: &msg,
+		})
+		require.NoError(t, err)
+		_, ok := rep.(*reply.NotOK)
+		assert.True(t, ok)
+	})
+
+	t.Run("returns ok when valid", func(t *testing.T) {
+		approvedStateID := *genRandomID(0)
+		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{
+			PrevState: approvedStateID,
+		})
+		require.NoError(t, err)
+
+		msg := message.ValidationCheck{
+			Object:              *genRandomRef(0),
+			ValidatedState:      *validatedStateID,
+			LatestStateApproved: &approvedStateID,
+		}
+
+		rep, err := h.handleValidationCheck(ctx, &message.Parcel{
+			Msg: &msg,
+		})
+		require.NoError(t, err)
+		_, ok := rep.(*reply.OK)
+		assert.True(t, ok)
+	})
+}

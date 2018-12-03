@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
@@ -76,6 +77,7 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
+		conf:   &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -584,8 +586,35 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 
 func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	t.Parallel()
-	ctx, _, am, cleaner := getTestData(t)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	defer mc.Finish()
+
+	mb := testmessagebus.NewTestMessageBus(t)
+	jc := testutils.NewJetCoordinatorMock(mc)
+	handler := MessageHandler{
+		db:                         db,
+		jetDropHandlers:            map[core.MessageType]internalHandler{},
+		PlatformCryptographyScheme: scheme,
+		recent: storage.NewRecentStorage(1),
+		conf:   &configuration.Ledger{LightChainLimit: 3},
+	}
+
+	handler.Bus = mb
+	handler.JetCoordinator = jc
+	err := handler.Init(ctx)
+	require.NoError(t, err)
+	am := LedgerArtifactManager{
+		db:                         db,
+		DefaultBus:                 mb,
+		getChildrenChunkSize:       100,
+		PlatformCryptographyScheme: scheme,
+	}
+
+	jc.QueryRoleMock.Return([]core.RecordRef{*genRandomRef(0)}, nil)
 
 	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "object"}})
 	objRef := genRefWithID(objID)
@@ -610,16 +639,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	_, err = am.GetObject(ctx, *objRef, nil, true)
 	assert.Equal(t, err, core.ErrStateNotAvailable)
 
-	desc, err = am.UpdateObject(
-		ctx,
-		domainRef,
-		*genRandomRef(0),
-		desc,
-		[]byte{2},
-	)
-	assert.NoError(t, err)
-	stateID2 := desc.StateID()
-
 	desc, err = am.GetObject(ctx, *objRef, nil, false)
 	assert.NoError(t, err)
 	desc, err = am.UpdateObject(
@@ -631,7 +650,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	stateID3 := desc.StateID()
-	err = am.RegisterValidation(ctx, *objRef, *stateID2, true, nil)
+	err = am.RegisterValidation(ctx, *objRef, *stateID1, true, nil)
 	assert.NoError(t, err)
 
 	desc, err = am.GetObject(ctx, *objRef, nil, false)
@@ -639,7 +658,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	assert.Equal(t, *stateID3, *desc.StateID())
 	desc, err = am.GetObject(ctx, *objRef, nil, true)
 	assert.NoError(t, err)
-	assert.Equal(t, *stateID2, *desc.StateID())
+	assert.Equal(t, *stateID1, *desc.StateID())
 }
 
 func TestLedgerArtifactManager_RegisterResult(t *testing.T) {

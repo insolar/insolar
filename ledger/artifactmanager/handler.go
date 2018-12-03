@@ -82,6 +82,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeHeavyReset, h.handleHeavyReset)
 
 	h.Bus.MustRegister(core.TypeGetObjectIndex, h.handleGetObjectIndex)
+	h.Bus.MustRegister(core.TypeValidationCheck, h.handleValidationCheck)
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
 	h.jetDropHandlers[core.TypeGetObject] = h.handleGetObject
@@ -550,48 +551,68 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.ValidateRecord)
+func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.ValidateRecord)
 
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(ctx, msg.Object.Record(), true)
+		if err == storage.ErrNotFound {
+			heavy, err := h.findHeavy(ctx, msg.Object, pulseNumber)
+			if err != nil {
+				return err
+			}
+			idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Object, heavy)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+		h.recent.AddObject(*msg.Object.Record())
+
+		// Find node that has this state.
+		var nodes []core.RecordRef
+		if pulseNumber-msg.State.Pulse() < h.conf.LightChainLimit {
+			// Find light executor that saved the state.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.DynamicRoleLightExecutor, &msg.Object, msg.State.Pulse(),
+			)
+		} else {
+			// Find heavy that has this object.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.DynamicRoleHeavyExecutor, &msg.Object, pulseNumber,
+			)
+		}
 		if err != nil {
-			return errors.Wrap(err, "failed to fetch object index")
+			return err
 		}
 
-		// Rewinding to validated record.
-		currentID := idx.LatestState
-		for currentID != nil {
-			// We have passed an approved record.
-			if currentID.Equal(idx.LatestStateApproved) {
-				return errors.New("changing approved records is not allowed")
+		// Send checking message.
+		genericReply, err := h.Bus.Send(ctx, &message.ValidationCheck{
+			Object:              msg.Object,
+			ValidatedState:      msg.State,
+			LatestStateApproved: idx.LatestStateApproved,
+		}, &core.MessageSendOptions{
+			Receiver: &nodes[0],
+		})
+		if err != nil {
+			return err
+		}
+		switch genericReply.(type) {
+		case *reply.OK:
+			if msg.IsValid {
+				idx.LatestStateApproved = &msg.State
+			} else {
+				idx.LatestState = idx.LatestStateApproved
 			}
-
-			// Fetching actual record.
-			rec, err := tx.GetRecord(ctx, currentID)
+			err = tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
 			if err != nil {
-				return nil
+				return errors.Wrap(err, "failed to save object index")
 			}
-			currentState, ok := rec.(record.ObjectState)
-			if !ok {
-				return errors.New("invalid object record")
-			}
-
-			// Validated record found.
-			if currentID.Equal(&msg.State) {
-				if msg.IsValid {
-					idx.LatestStateApproved = currentID
-				} else {
-					idx.LatestState = currentState.PrevStateID()
-				}
-				err := tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
-				if err != nil {
-					return err
-				}
-				break
-			}
-
-			currentID = currentState.PrevStateID()
+		case *reply.NotOK:
+			return errors.New("validation sequence integrity failure")
+		default:
+			return errors.New("unexpected reply")
 		}
 
 		return nil
@@ -600,7 +621,6 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	if err != nil {
 		return nil, err
 	}
-	h.Recent.AddObject(*msg.Object.Record())
 
 	return &reply.OK{}, nil
 }
@@ -619,6 +639,26 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 	}
 
 	return &reply.ObjectIndex{Index: buf}, nil
+}
+
+func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.ValidationCheck)
+
+	rec, err := h.db.GetRecord(ctx, &msg.ValidatedState)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch state record")
+	}
+	state, ok := rec.(record.ObjectState)
+	if !ok {
+		return nil, errors.New("failed to fetch state record")
+	}
+	approved := msg.LatestStateApproved
+	validated := state.PrevStateID()
+	if !approved.Equal(validated) && approved != nil && validated != nil {
+		return &reply.NotOK{}, nil
+	}
+
+	return &reply.OK{}, nil
 }
 
 func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Message) error {

@@ -181,6 +181,9 @@ const (
 	// TypeHotRecords saves hot-records in storage.
 	TypeHotRecords
 
+	// TypeValidationCheck checks if validation of a particular record can be performed.
+	TypeValidationCheck
+
 	// Heavy replication
 
 	// TypeHeavyStartStop carries start/stop signal for heavy replication.

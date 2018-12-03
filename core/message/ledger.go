@@ -172,6 +172,20 @@ func (*GetObjectIndex) Type() core.MessageType {
 	return core.TypeGetObjectIndex
 }
 
+// ValidationCheck checks if validation of a particular record can be performed.
+type ValidationCheck struct {
+	ledgerMessage
+
+	Object              core.RecordRef
+	ValidatedState      core.RecordID
+	LatestStateApproved *core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*ValidationCheck) Type() core.MessageType {
+	return core.TypeValidationCheck
+}
+
 // HotIndexes contains hot-data
 type HotIndexes struct {
 	ledgerMessage
