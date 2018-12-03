@@ -222,7 +222,7 @@ func certificateConstructor(publicKey crypto.PublicKey, keyProcessor core.KeyPro
 	}
 
 	if cert.PublicKey != string(pub) {
-		return nil, errors.New("[ certificateConstructor ] Different public keys.")
+		return nil, errors.New("[ certificateConstructor ] Different public keys")
 	}
 
 	err = cert.fillExtraFields(keyProcessor)
