@@ -84,11 +84,6 @@ func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
 	return authCert.nodePublicKey
 }
 
-// Serialize returns decoded info from AuthorizationCertificate
-func (authCert *AuthorizationCertificate) Serialize() ([]byte, error) {
-	return []byte{}, errors.New("not implemented")
-}
-
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
 	PublicKey   string `json:"public_key"`
