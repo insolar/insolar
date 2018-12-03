@@ -190,12 +190,10 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (core.Node, error) {
-	fmt.Println("sendGenesisRequest, safe and sound")
 	serializedCert, err := certificate.Serialize(bc.cert)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize certificate")
 	}
-	fmt.Println("Serialize cert just fine")
 	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
 		Certificate: serializedCert,
 	}).Build()
@@ -299,10 +297,8 @@ func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) err
 }
 
 func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
-	fmt.Println("processGenesis, safe and sound")
 	data := request.GetData().(*GenesisRequest)
 	genesisCert, err := certificate.Deserialize(data.Certificate)
-	fmt.Println("genesisCert Deserializeresult:", genesisCert)
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
 	}
