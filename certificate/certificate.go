@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"encoding/gob"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
@@ -208,33 +209,54 @@ func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 	return nil
 }
 
+func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, data []byte) (*Certificate, error) {
+	cert := Certificate{}
+	err := json.Unmarshal(data, &cert)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ newCertificate ] failed to parse certificate json")
+	}
+
+	pub, err := keyProcessor.ExportPublicKey(publicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ newCertificate ] failed to retrieve public key from node private key")
+	}
+
+	if cert.PublicKey != string(pub) {
+		return nil, errors.New("[ newCertificate ] Different public keys")
+	}
+
+	err = cert.fillExtraFields(keyProcessor)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ newCertificate ] Incorrect fields")
+	}
+
+	return &cert, nil
+}
+
 // ReadCertificate constructor creates new Certificate component
 func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, certPath string) (*Certificate, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(certPath))
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ ReadCertificate ] failed to read certificate from: %s", certPath)
 	}
-	cert := Certificate{}
-	err = json.Unmarshal(data, &cert)
+	cert, err := newCertificate(publicKey, keyProcessor, data)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ReadCertificate ] failed to parse certificate json")
+		return nil, errors.Wrap(err, "[ ReadCertificate ]")
 	}
+	return cert, nil
+}
 
-	pub, err := keyProcessor.ExportPublicKey(publicKey)
+// ReadCertificateFromReader constructor creates new Certificate component
+func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, reader io.Reader) (*Certificate, error) {
+	data, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ReadCertificate ] failed to retrieve public key from node private key")
+		return nil, errors.Wrapf(err, "[ ReadCertificateFromReader ] failed to read certificate data")
 	}
-
-	if cert.PublicKey != string(pub) {
-		return nil, errors.New("[ ReadCertificate ] Different public keys. Cert path: " + certPath + ".")
-	}
-
-	err = cert.fillExtraFields(keyProcessor)
+	cert, err := newCertificate(publicKey, keyProcessor, data)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ReadCertificate ] Incorrect fields")
+		return nil, errors.Wrap(err, "[ ReadCertificateFromReader ]")
 	}
-
-	return &cert, nil
+	return cert, nil
 }
 
 func (cert *Certificate) GetRole() core.StaticRole {
