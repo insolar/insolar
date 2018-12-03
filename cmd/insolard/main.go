@@ -117,6 +117,7 @@ func main() {
 
 	if params.isGenesis {
 		removeLedgerDataDir(ctx, cfg)
+		cfg.Ledger.PulseManager.HeavySyncEnabled = false
 	}
 
 	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
