@@ -63,6 +63,8 @@ const (
 
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
+
+	TypeNodeSign
 )
 
 // ErrType is used to determine and compare reply errors.
