@@ -48,7 +48,6 @@ type MessageHandler struct {
 
 	db              *storage.DB
 	jetDropHandlers map[core.MessageType]internalHandler
-	recent          *storage.RecentStorage
 	conf            *configuration.Ledger
 }
 
