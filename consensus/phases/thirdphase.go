@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
@@ -32,8 +33,12 @@ type ThirdPhase struct {
 	NodeKeeper   network.NodeKeeper       `inject:""`
 
 	newActiveNodeList []core.Node
-	// TODO: insert it from somewhere
-	mapper packets.BitSetMapper
+	notLegitNodes     map[core.RecordRef]bool
+	mapper            packets.BitSetMapper
+}
+
+func NewThirdPhase() *ThirdPhase {
+	return &ThirdPhase{notLegitNodes: make(map[core.RecordRef]bool)}
 }
 
 func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
@@ -64,27 +69,26 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) erro
 		if err != nil {
 			return errors.Wrap(err, "[ Execute ] failed to get a cells")
 		}
-		for _, cell := range cells {
-			if cell.State == packets.Legit {
-				node, err := getNode(cell.NodeID, nodes)
-				if err != nil {
-					return errors.Wrap(err, "[ Execute ] failed to find a node on phase 3")
-				}
-				tp.newActiveNodeList = append(tp.newActiveNodeList, node)
-			}
-		}
+		tp.addCellsToActiveList(cells)
 	}
 
 	return nil
 }
 
-func getNode(ref core.RecordRef, nodes []core.Node) (core.Node, error) {
-	for _, node := range nodes {
-		if ref == node.ID() {
-			return node, nil
+func (tp *ThirdPhase) addCellsToActiveList(cells []packets.BitSetCell) {
+	nodes := tp.NodeKeeper.GetActiveNodes()
+	for _, cell := range cells {
+		node, err := getNode(cell.NodeID, nodes)
+		if err != nil {
+			log.Error("[ Execute ] failed to find a node on phase 3")
+		}
+		if (cell.State == packets.Legit) && !tp.notLegitNodes[node.ID()] {
+			tp.newActiveNodeList = append(tp.newActiveNodeList, node)
+		} else {
+			tp.notLegitNodes[node.ID()] = true
+			tp.removeFromNewActiveList(node)
 		}
 	}
-	return nil, errors.New("[ getNode] failed to find a node on phase 3")
 }
 
 func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
@@ -111,4 +115,22 @@ func (tp *ThirdPhase) isSignPhase3PacketRight(packet *packets.Phase3Packet, reco
 	}
 
 	return tp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+}
+
+func (tp *ThirdPhase) removeFromNewActiveList(node core.Node) {
+	for i, n := range tp.newActiveNodeList {
+		if n.ID() == node.ID() {
+			tp.newActiveNodeList = append(tp.newActiveNodeList[:i], tp.newActiveNodeList[i+1:]...)
+			return
+		}
+	}
+}
+
+func getNode(ref core.RecordRef, nodes []core.Node) (core.Node, error) {
+	for _, node := range nodes {
+		if ref == node.ID() {
+			return node, nil
+		}
+	}
+	return nil, errors.New("[ getNode] failed to find a node on phase 3")
 }
