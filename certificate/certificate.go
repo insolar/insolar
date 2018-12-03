@@ -334,3 +334,12 @@ func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
 	}
 	return &cert, nil
 }
+
+// Serialize returns decoded info from AuthorizationCertificate
+func Serialize(authCert core.AuthorizationCertificate) ([]byte, error) {
+	data, err := core.Serialize(authCert)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Serialize ]")
+	}
+	return data, nil
+}
