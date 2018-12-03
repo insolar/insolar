@@ -17,6 +17,7 @@
 package entropy
 
 import (
+	"crypto/rand"
 	"fmt"
 	"testing"
 
@@ -42,4 +43,47 @@ func TestSelectByEntropy(t *testing.T) {
 
 	result2, err := SelectByEntropy(scheme, entropy[:], values, count)
 	assert.Equal(t, result1, result2)
+}
+
+// go test -v ./utils/entropy/ -bench=. -cpu=1 -benchmem > ./utils/entropy/prevbench.txt
+func BenchmarkSelectByEntropy(b *testing.B) {
+	benches := []struct {
+		values int
+		count  int
+	}{
+		{10, 1},
+		{10, 5},
+		{10, 10},
+		{100, 1},
+		{100, 50},
+		{100, 100},
+		{1000, 1},
+		{1000, 500},
+		{1000, 1000},
+	}
+	for _, bench := range benches {
+		b.Run(
+			fmt.Sprintf("%v_from_%v", bench.count, bench.values),
+			func(b *testing.B) {
+				benchSelectByEntropy(b, bench.values, bench.count)
+			})
+	}
+}
+
+func benchSelectByEntropy(b *testing.B, valuescount int, count int) {
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	entropy := make([]byte, 64)
+	rand.Read(entropy)
+
+	values := make([][]byte, 0, valuescount)
+	for i := 0; i < valuescount; i++ {
+		value := make([]byte, 64)
+		rand.Read(value)
+		values = append(values, value)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = SelectByEntropy(scheme, entropy, values, count)
+	}
 }
