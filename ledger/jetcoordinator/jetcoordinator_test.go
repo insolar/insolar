@@ -35,7 +35,6 @@ func newActiveNode(ref core.RecordRef, role core.StaticRole) core.Node {
 		ref,
 		role,
 		nil, // TODO publicKey
-		core.PulseNumber(0),
 		"",
 		"",
 	)
@@ -47,7 +46,8 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, 0, "", ""))
+
+	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", ""))
 	c := core.Components{LogicRunner: lr, NodeNetwork: keeper}
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)

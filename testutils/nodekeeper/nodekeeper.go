@@ -19,7 +19,6 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 			nw.GetNodeID(),
 			core.StaticRoleVirtual,
 			pk,
-			core.PulseNumber(0),
 			// TODO implement later
 			"",
 			"",
@@ -31,7 +30,6 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 			nw.GetNodeID(),
 			core.StaticRoleVirtual,
 			pk,
-			core.PulseNumber(0),
 			// TODO implement later
 			"",
 			"",

@@ -47,7 +47,6 @@ func newMutableNode(
 	id core.RecordRef,
 	role core.StaticRole,
 	publicKey crypto.PublicKey,
-	pulseNum core.PulseNumber,
 	physicalAddress,
 	version string) MutableNode {
 	return &node{
@@ -55,7 +54,6 @@ func newMutableNode(
 		NodeShortID:         utils.GenerateShortID(id),
 		NodeRole:            role,
 		NodePublicKey:       publicKey,
-		NodePulseNum:        pulseNum,
 		NodePhysicalAddress: physicalAddress,
 		NodeVersion:         version,
 	}
@@ -65,11 +63,9 @@ func NewNode(
 	id core.RecordRef,
 	role core.StaticRole,
 	publicKey crypto.PublicKey,
-
-	pulseNum core.PulseNumber,
 	physicalAddress,
 	version string) core.Node {
-	return newMutableNode(id, role, publicKey, pulseNum, physicalAddress, version)
+	return newMutableNode(id, role, publicKey, physicalAddress, version)
 }
 
 func (n *node) ID() core.RecordRef {

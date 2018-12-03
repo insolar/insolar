@@ -137,6 +137,10 @@ const (
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
 type NodeKeeper interface {
 	core.NodeNetwork
+
+	// TODO: remove this interface when bootstrap mechanism completed
+	core.SwitcherWorkAround
+
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
 	// AddActiveNodes add active nodes.
@@ -175,9 +179,9 @@ type NodeKeeper interface {
 type UnsyncList interface {
 	consensus.BitSetMapper
 	// RemoveClaims
-	RemoveClaims(from core.RecordRef)
+	RemoveClaims(core.RecordRef)
 	// AddClaims
-	AddClaims(from core.RecordRef, claims []consensus.ReferendumClaim)
+	AddClaims(core.RecordRef, []consensus.ReferendumClaim, map[core.RecordRef]string)
 	// CalculateHash calculate node list hash based on active node list and claims
 	CalculateHash() ([]byte, error)
 }

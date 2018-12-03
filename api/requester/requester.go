@@ -49,20 +49,6 @@ func SetVerbose(verb bool) {
 // PostParams represents params struct
 type PostParams = map[string]interface{}
 
-type rpcResponse struct {
-	RPCVersion string                 `json:"jsonrpc"`
-	Error      map[string]interface{} `json:"error"`
-}
-
-type seedResponse struct {
-	Seed    []byte `json:"Seed"`
-	TraceID string `json:"TraceID"`
-}
-type rpcSeedResponse struct {
-	rpcResponse
-	Result seedResponse `json:"result"`
-}
-
 // GetResponseBody makes request and extracts body
 func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
@@ -183,26 +169,19 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	return response, nil
 }
 
-// InfoResponse represents response from rpc on info.Get method
-type InfoResponse struct {
-	RootDomain string `json:"RootDomain"`
-	RootMember string `json:"RootMember"`
-	NodeDomain string `json:"NodeDomain"`
-	TraceID    string `json:"TraceID"`
-}
-
-type rpcInfoResponse struct {
-	rpcResponse
-	Result InfoResponse `json:"result"`
+func getDefaultRPCParams(method string) PostParams {
+	return PostParams{
+		"jsonrpc": "2.0",
+		"id":      "",
+		"method":  method,
+	}
 }
 
 // Info makes rpc request to info.Get method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	body, err := GetResponseBody(url+"/rpc", PostParams{
-		"jsonrpc": "2.0",
-		"method":  "info.Get",
-		"id":      "",
-	})
+	params := getDefaultRPCParams("info.Get")
+
+	body, err := GetResponseBody(url+"/rpc", params)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Info ]")
 	}
@@ -219,6 +198,32 @@ func Info(url string) (*InfoResponse, error) {
 	res := &infoResp.Result
 	if res == nil {
 		return nil, errors.New("[ Info ] Field 'result' is nil")
+	}
+
+	return res, nil
+}
+
+// Status makes rpc request to info.Status method and extracts it
+func Status(url string) (*StatusResponse, error) {
+	params := getDefaultRPCParams("status.Get")
+
+	body, err := GetResponseBody(url+"/rpc", params)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Status ]")
+	}
+
+	statusResp := rpcStatusResponse{}
+
+	err = json.Unmarshal(body, &statusResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Status ] Can't unmarshal")
+	}
+	if statusResp.Error != nil {
+		return nil, errors.New("[ Status ] Field 'error' is not nil: " + fmt.Sprint(statusResp.Error))
+	}
+	res := &statusResp.Result
+	if res == nil {
+		return nil, errors.New("[ Status ] Field 'result' is nil")
 	}
 
 	return res, nil

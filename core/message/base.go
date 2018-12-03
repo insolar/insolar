@@ -63,6 +63,13 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &SetRecord{}, nil
 	case core.TypeGetObjectIndex:
 		return &GetObjectIndex{}, nil
+	// heavy sync
+	case core.TypeHeavyStartStop:
+		return &HeavyStartStop{}, nil
+	case core.TypeHeavyPayload:
+		return &HeavyPayload{}, nil
+	case core.TypeHeavyReset:
+		return &HeavyReset{}, nil
 
 	// Bootstrap
 	case core.TypeBootstrapRequest:

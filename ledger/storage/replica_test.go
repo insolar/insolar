@@ -47,19 +47,6 @@ func Test_ReplicatedPulse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, expect, got)
 
-	// test {Set/Get}LastPulseAsLightMaterial methods pair
-	lightGot0, err := db.GetLastPulseAsLightMaterial(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, core.PulseNumber(0), lightGot0)
-
-	expectLight := core.PulseNumber(100500)
-	err = db.SetLastPulseAsLightMaterial(ctx, expectLight)
-	require.NoError(t, err)
-
-	gotLight, err := db.GetLastPulseAsLightMaterial(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, expectLight, gotLight)
-
 	// test {Set/Get}HeavySyncedPulse methods pair
 	heavyGot0, err := db.GetHeavySyncedPulse(ctx)
 	require.NoError(t, err)

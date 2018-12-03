@@ -28,8 +28,7 @@ import (
 )
 
 func newTestNode() core.Node {
-	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil,
-		core.PulseNumber(0), "", "")
+	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "", "")
 }
 
 func newTestNodeWithShortID(id core.ShortNodeID) core.Node {

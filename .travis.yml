@@ -21,6 +21,8 @@ before_install:
 install:
   - make pre-build
 script:
+# check if git repo unchanged in CI before build stage (try to catch forgotten generated files)
+  - make test_git_no_changes
   - make build
   - make functest
   - make test_with_coverage
