@@ -240,12 +240,12 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "get pulse %v failed", latestPulseNumber)
 		}
 
 		drop, dropSerialized, messages, err := m.createDrop(ctx, latestPulse)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "create drop on pulse %v failed", latestPulseNumber)
 		}
 
 		if hotRecordsError := m.processRecentObjects(ctx, latestPulse, drop, dropSerialized); hotRecordsError != nil {
