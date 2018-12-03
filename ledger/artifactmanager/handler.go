@@ -598,6 +598,10 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 			} else {
 				idx.LatestState = idx.LatestStateApproved
 			}
+			err = tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
+			if err != nil {
+				return errors.Wrap(err, "failed to save object index")
+			}
 		case *reply.NotOK:
 			return errors.New("validation sequence integrity failure")
 		default:
