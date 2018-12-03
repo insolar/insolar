@@ -54,11 +54,6 @@ type CertificateMock struct {
 	NewCertForHostCounter    uint64
 	NewCertForHostPreCounter uint64
 	NewCertForHostMock       mCertificateMockNewCertForHost
-
-	SetRootDomainReferenceFunc       func(p *core.RecordRef)
-	SetRootDomainReferenceCounter    uint64
-	SetRootDomainReferencePreCounter uint64
-	SetRootDomainReferenceMock       mCertificateMockSetRootDomainReference
 }
 
 //NewCertificateMock returns a mock for github.com/insolar/insolar/core.Certificate
@@ -76,7 +71,6 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	m.GetRoleMock = mCertificateMockGetRole{mock: m}
 	m.GetRootDomainReferenceMock = mCertificateMockGetRootDomainReference{mock: m}
 	m.NewCertForHostMock = mCertificateMockNewCertForHost{mock: m}
-	m.SetRootDomainReferenceMock = mCertificateMockSetRootDomainReference{mock: m}
 
 	return m
 }
@@ -425,72 +419,6 @@ func (m *CertificateMock) NewCertForHostMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.NewCertForHostPreCounter)
 }
 
-type mCertificateMockSetRootDomainReference struct {
-	mock             *CertificateMock
-	mockExpectations *CertificateMockSetRootDomainReferenceParams
-}
-
-//CertificateMockSetRootDomainReferenceParams represents input parameters of the Certificate.SetRootDomainReference
-type CertificateMockSetRootDomainReferenceParams struct {
-	p *core.RecordRef
-}
-
-//Expect sets up expected params for the Certificate.SetRootDomainReference
-func (m *mCertificateMockSetRootDomainReference) Expect(p *core.RecordRef) *mCertificateMockSetRootDomainReference {
-	m.mockExpectations = &CertificateMockSetRootDomainReferenceParams{p}
-	return m
-}
-
-//Return sets up a mock for Certificate.SetRootDomainReference to return Return's arguments
-func (m *mCertificateMockSetRootDomainReference) Return() *CertificateMock {
-	m.mock.SetRootDomainReferenceFunc = func(p *core.RecordRef) {
-		return
-	}
-	return m.mock
-}
-
-//Set uses given function f as a mock of Certificate.SetRootDomainReference method
-func (m *mCertificateMockSetRootDomainReference) Set(f func(p *core.RecordRef)) *CertificateMock {
-	m.mock.SetRootDomainReferenceFunc = f
-	m.mockExpectations = nil
-	return m.mock
-}
-
-//SetRootDomainReference implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) SetRootDomainReference(p *core.RecordRef) {
-	atomic.AddUint64(&m.SetRootDomainReferencePreCounter, 1)
-	defer atomic.AddUint64(&m.SetRootDomainReferenceCounter, 1)
-
-	if m.SetRootDomainReferenceMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SetRootDomainReferenceMock.mockExpectations, CertificateMockSetRootDomainReferenceParams{p},
-			"Certificate.SetRootDomainReference got unexpected parameters")
-
-		if m.SetRootDomainReferenceFunc == nil {
-
-			m.t.Fatal("No results are set for the CertificateMock.SetRootDomainReference")
-
-			return
-		}
-	}
-
-	if m.SetRootDomainReferenceFunc == nil {
-		m.t.Fatal("Unexpected call to CertificateMock.SetRootDomainReference")
-		return
-	}
-
-	m.SetRootDomainReferenceFunc(p)
-}
-
-//SetRootDomainReferenceMinimockCounter returns a count of CertificateMock.SetRootDomainReferenceFunc invocations
-func (m *CertificateMock) SetRootDomainReferenceMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetRootDomainReferenceCounter)
-}
-
-//SetRootDomainReferenceMinimockPreCounter returns the value of CertificateMock.SetRootDomainReference invocations
-func (m *CertificateMock) SetRootDomainReferenceMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetRootDomainReferencePreCounter)
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CertificateMock) ValidateCallCounters() {
@@ -521,10 +449,6 @@ func (m *CertificateMock) ValidateCallCounters() {
 
 	if m.NewCertForHostFunc != nil && atomic.LoadUint64(&m.NewCertForHostCounter) == 0 {
 		m.t.Fatal("Expected call to CertificateMock.NewCertForHost")
-	}
-
-	if m.SetRootDomainReferenceFunc != nil && atomic.LoadUint64(&m.SetRootDomainReferenceCounter) == 0 {
-		m.t.Fatal("Expected call to CertificateMock.SetRootDomainReference")
 	}
 
 }
@@ -572,10 +496,6 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.NewCertForHost")
 	}
 
-	if m.SetRootDomainReferenceFunc != nil && atomic.LoadUint64(&m.SetRootDomainReferenceCounter) == 0 {
-		m.t.Fatal("Expected call to CertificateMock.SetRootDomainReference")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -597,7 +517,6 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 		ok = ok && (m.GetRoleFunc == nil || atomic.LoadUint64(&m.GetRoleCounter) > 0)
 		ok = ok && (m.GetRootDomainReferenceFunc == nil || atomic.LoadUint64(&m.GetRootDomainReferenceCounter) > 0)
 		ok = ok && (m.NewCertForHostFunc == nil || atomic.LoadUint64(&m.NewCertForHostCounter) > 0)
-		ok = ok && (m.SetRootDomainReferenceFunc == nil || atomic.LoadUint64(&m.SetRootDomainReferenceCounter) > 0)
 
 		if ok {
 			return
@@ -632,10 +551,6 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 
 			if m.NewCertForHostFunc != nil && atomic.LoadUint64(&m.NewCertForHostCounter) == 0 {
 				m.t.Error("Expected call to CertificateMock.NewCertForHost")
-			}
-
-			if m.SetRootDomainReferenceFunc != nil && atomic.LoadUint64(&m.SetRootDomainReferenceCounter) == 0 {
-				m.t.Error("Expected call to CertificateMock.SetRootDomainReference")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -675,10 +590,6 @@ func (m *CertificateMock) AllMocksCalled() bool {
 	}
 
 	if m.NewCertForHostFunc != nil && atomic.LoadUint64(&m.NewCertForHostCounter) == 0 {
-		return false
-	}
-
-	if m.SetRootDomainReferenceFunc != nil && atomic.LoadUint64(&m.SetRootDomainReferenceCounter) == 0 {
 		return false
 	}
 
