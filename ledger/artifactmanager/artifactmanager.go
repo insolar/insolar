@@ -75,7 +75,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		},
 		message.ExtractTarget(parcel.Message()),
 	)
-	return id, err
+	return id, errors.Wrap(err, "[ RegisterRequest ] ")
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
