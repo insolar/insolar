@@ -166,13 +166,13 @@ func initComponents(
 		keyProcessor,
 		cert,
 		nodeNetwork,
+		nw,
 	)
 
 	components := ledger.GetLedgerComponents(cfg.Ledger)
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
 
 	components = append(components, []interface{}{
-		nw,
 		messageBus,
 		contractRequester,
 		&ld,
