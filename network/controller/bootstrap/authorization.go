@@ -19,7 +19,6 @@ package bootstrap
 import (
 	"context"
 	"encoding/gob"
-	"fmt"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/consensus/packets"
@@ -102,7 +101,6 @@ func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode 
 	if data.Code == OpRejected {
 		return 0, errors.New("Authorize rejected: " + data.Error)
 	}
-	fmt.Println("Authorize was well")
 	return data.SessionID, nil
 }
 
