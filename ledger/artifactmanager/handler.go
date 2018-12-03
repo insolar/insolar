@@ -579,6 +579,9 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 				ctx, core.DynamicRoleHeavyExecutor, &msg.Object, pulseNumber,
 			)
 		}
+		if err != nil {
+			return err
+		}
 
 		// Send checking message.
 		genericReply, err := h.Bus.Send(ctx, &message.ValidationCheck{
