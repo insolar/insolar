@@ -225,6 +225,45 @@ func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
+// Serialize implements interface method
+func (nac *NodeAnnounceClaim) Serialize() ([]byte, error) {
+	nodeJoinPart, err := nac.NodeJoinClaim.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	result := allocateBuffer(1024)
+	err = binary.Write(result, defaultByteOrder, nodeJoinPart)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeJoinClaim part")
+	}
+	err = binary.Write(result, defaultByteOrder, nac.NodeIndex)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeIndex")
+	}
+	err = binary.Write(result, defaultByteOrder, nac.NodeCount)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeCount")
+	}
+	return result.Bytes(), nil
+}
+
+// Deserialize implements interface method
+func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
+	err := nac.NodeJoinClaim.Deserialize(data)
+	if err != nil {
+		return err
+	}
+	err = binary.Read(data, defaultByteOrder, &nac.NodeIndex)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeIndex")
+	}
+	err = binary.Read(data, defaultByteOrder, &nac.NodeCount)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeCount")
+	}
+	return nil
+}
+
 // Deserialize implements interface method
 func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
 	return nil
