@@ -17,17 +17,20 @@
 package main
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 	"net/rpc"
 	"os"
 	"strings"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/metrics"
 
-	"github.com/insolar/insolar/log"
 	"github.com/spf13/pflag"
 
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
 )
 
@@ -87,7 +90,35 @@ func main() {
 		os.Exit(1)
 	}
 
+	runMetrics()
+
 	log.Debug("ginsider launched, listens " + *listen)
 	rpc.Accept(listener)
 	log.Debug("bye\n")
+}
+
+func runMetrics() {
+	log.Debug("ginsider start metrics")
+
+	// TODO copy-pasted from configuration/metrics.NewMetrics()
+	metricsConfiguration := configuration.Metrics{
+		ListenAddress: "0.0.0.0:9090",
+		Namespace:     "insolar",
+		ZpagesEnabled: true,
+	}
+	ctx := context.TODO()
+
+	// TODO make it right
+	m, err := metrics.NewMetrics(ctx, metricsConfiguration)
+	if err != nil {
+		log.Fatal("couldn't setup metrics ", err)
+		os.Exit(1)
+	}
+	err = m.Start(ctx)
+	if err != nil {
+		log.Fatal("couldn't setup metrics ", err)
+		os.Exit(1)
+	}
+
+	log.Debug("ginsider metrics start successfully")
 }
