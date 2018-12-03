@@ -82,7 +82,7 @@ func newNode(n *NodeStruct) (core.Node, error) {
 		return nil, errors.Wrap(err, "error deserializing node public key")
 	}
 
-	result := nodenetwork.NewNode(n.ID, n.Roles, pk, 0, n.Address, n.Version)
+	result := nodenetwork.NewNode(n.ID, n.Roles, pk, n.Address, n.Version)
 	mNode := result.(nodenetwork.MutableNode)
 	mNode.SetShortID(n.SID)
 	return mNode, nil
