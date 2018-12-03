@@ -95,24 +95,29 @@ type BootstrapNode struct {
 	nodePublicKey crypto.PublicKey
 }
 
+// GetNodeRef returns reference of bootstrap node
 func (bn *BootstrapNode) GetNodeRef() *core.RecordRef {
 	ref := core.NewRefFromBase58(bn.NodeRef)
 	return &ref
 }
 
+// GetPublicKey returns public key reference of bootstrap node
 func (bn *BootstrapNode) GetPublicKey() crypto.PublicKey {
 	return bn.nodePublicKey
 }
 
+// GetHost returns host of bootstrap node
 func (bn *BootstrapNode) GetHost() string {
 	return bn.Host
 }
 
+// GetNodeRef returns reference from certificate
 func (cert *Certificate) GetNodeRef() *core.RecordRef {
 	ref := core.NewRefFromBase58(cert.Reference)
 	return &ref
 }
 
+// GetPublicKey returns public key reference from certificate
 func (cert *Certificate) GetPublicKey() crypto.PublicKey {
 	return cert.nodePublicKey
 }
@@ -248,6 +253,7 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.Key
 	return cert, nil
 }
 
+// GetRole returns role from certificate
 func (cert *Certificate) GetRole() core.StaticRole {
 	return core.GetStaticRoleFromString(cert.Role)
 }
@@ -280,6 +286,7 @@ func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyPr
 	return &cert, nil
 }
 
+// Dump returns all info about certificate in json format
 func (cert *Certificate) Dump() (string, error) {
 	result, err := json.MarshalIndent(cert, "", "    ")
 	if err != nil {
