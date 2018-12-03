@@ -179,6 +179,9 @@ const (
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
 
+	// TypeValidationCheck checks if validation of a particular record can be performed.
+	TypeValidationCheck
+
 	// Heavy replication
 
 	// TypeHeavyStartStop carries start/stop signal for heavy replication.

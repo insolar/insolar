@@ -498,3 +498,55 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	require.NoError(t, err)
 	assert.Equal(t, childID, idx.ChildPointer)
 }
+
+func TestMessageHandler_HandleValidationCheck(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
+		LightChainLimit: 3,
+	})
+
+	t.Run("returns not ok when not valid", func(t *testing.T) {
+		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{})
+		require.NoError(t, err)
+
+		msg := message.ValidationCheck{
+			Object:              *genRandomRef(0),
+			ValidatedState:      *validatedStateID,
+			LatestStateApproved: genRandomID(0),
+		}
+
+		rep, err := h.handleValidationCheck(ctx, &message.Parcel{
+			Msg: &msg,
+		})
+		require.NoError(t, err)
+		_, ok := rep.(*reply.NotOK)
+		assert.True(t, ok)
+	})
+
+	t.Run("returns ok when valid", func(t *testing.T) {
+		approvedStateID := *genRandomID(0)
+		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{
+			PrevState: approvedStateID,
+		})
+		require.NoError(t, err)
+
+		msg := message.ValidationCheck{
+			Object:              *genRandomRef(0),
+			ValidatedState:      *validatedStateID,
+			LatestStateApproved: &approvedStateID,
+		}
+
+		rep, err := h.handleValidationCheck(ctx, &message.Parcel{
+			Msg: &msg,
+		})
+		require.NoError(t, err)
+		_, ok := rep.(*reply.OK)
+		assert.True(t, ok)
+	})
+}
