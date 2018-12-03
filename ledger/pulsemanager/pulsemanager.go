@@ -87,12 +87,13 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 	return pm
 }
 
-// Current returns current pulse structure.
+// Current returns copy (for concurrency safety) of current pulse structure.
 func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	m.setLock.RLock()
 	defer m.setLock.RUnlock()
 
-	return &m.currentPulse, nil
+	p := m.currentPulse
+	return &p, nil
 }
 
 func (m *PulseManager) processDrop(ctx context.Context, latestPulseNumber core.PulseNumber) error {
