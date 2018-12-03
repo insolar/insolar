@@ -599,7 +599,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
-		recent: storage.NewRecentStorage(1),
 		conf:   &configuration.Ledger{LightChainLimit: 3},
 	}
 

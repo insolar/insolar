@@ -568,7 +568,6 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 		} else if err != nil {
 			return err
 		}
-		h.recent.AddObject(*msg.Object.Record())
 
 		// Find node that has this state.
 		var nodes []core.RecordRef
