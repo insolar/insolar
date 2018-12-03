@@ -31,7 +31,6 @@ type Certificate interface {
 	AuthorizationCertificate
 
 	GetRootDomainReference() *RecordRef
-	SetRootDomainReference(ref *RecordRef)
 	NewCertForHost(pKey string, role string, nodeRef string) (Certificate, error)
 	GetDiscoveryNodes() []DiscoveryNode
 }
