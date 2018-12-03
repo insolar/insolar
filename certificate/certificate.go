@@ -325,7 +325,12 @@ func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
 }
 
-// Serialize returns decoded info from AuthorizationCertificate
-func (cert *Certificate) Serialize() ([]byte, error) {
-	return []byte{}, errors.New("not implemented")
+// Deserialize returns decoded info from AuthorizationCertificate
+func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
+	cert := AuthorizationCertificate{}
+	err := core.Deserialize(data, &cert)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ]")
+	}
+	return &cert, nil
 }
