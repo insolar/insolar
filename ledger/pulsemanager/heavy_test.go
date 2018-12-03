@@ -55,7 +55,6 @@ func TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
 }
 
 func sendToHeavy(t *testing.T, withretry bool) {
-	t.Skip("@nordicdyno is rewriting it")
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
