@@ -140,7 +140,8 @@ func (db *DB) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		err = db.SetDrop(ctx, &jetdrop.JetDrop{Pulse: core.FirstPulseNumber})
+		// It should be 0. Becase pulse after 65537 will try to use a hash of drop between 0 - 65537
+		err = db.SetDrop(ctx, &jetdrop.JetDrop{})
 		if err != nil {
 			return nil, err
 		}

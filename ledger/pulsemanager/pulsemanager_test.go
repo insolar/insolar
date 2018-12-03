@@ -79,9 +79,6 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		codeRecord,
 	)
 
-	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
-	require.NoError(t, err)
-
 	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.ClearZeroTTLObjectsMock.Return()
 	recentMock.ClearObjectsMock.Return()
@@ -130,7 +127,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pm.GIL = gil
 
 	// Act
-	err = pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2}, false)
+	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
 
 	// Assert
 	require.NoError(t, err)

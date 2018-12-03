@@ -104,11 +104,6 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	syncmessagesPerMessage := map[int]*messageStat{}
 	var bussendfailed int32
 	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
-		_, ok := msg.(*message.HotIndexes)
-		if ok {
-			return nil, nil
-		}
-
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
