@@ -18,7 +18,6 @@ package certificate
 
 import (
 	"crypto"
-	"encoding/gob"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -107,11 +106,6 @@ func (bn *BootstrapNode) GetPublicKey() crypto.PublicKey {
 
 func (bn *BootstrapNode) GetHost() string {
 	return bn.Host
-}
-
-func init() {
-	// TODO: add Serialize & Deserialize instead of this
-	gob.Register(&Certificate{})
 }
 
 func (cert *Certificate) GetNodeRef() *core.RecordRef {
