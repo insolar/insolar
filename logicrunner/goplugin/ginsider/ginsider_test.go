@@ -18,6 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var binaryPath string
+
 func TestHealthCheck(t *testing.T) {
 	protocol := "unix"
 	socket := os.TempDir() + "/" + testutils.RandomString() + ".sock"
@@ -29,8 +31,9 @@ func TestHealthCheck(t *testing.T) {
 	currentPath, err := os.Getwd()
 	require.NoError(t, err)
 
-	insgoccPath := "../../../bin/insgocc"
-	contractPath := "./healthcheck/healthcheck.go"
+	insgoccPath := binaryPath + "/insgocc"
+	healthcheckPath := binaryPath + "/healthcheck"
+	contractPath := currentPath + "/healthcheck/healthcheck.go"
 
 	pathToTmp, err := filepath.Rel(currentPath, tmpDir)
 
@@ -38,7 +41,7 @@ func TestHealthCheck(t *testing.T) {
 	log.Warnf("%s", execResult)
 	require.NoError(t, err, "failed to compile contract")
 
-	//start GoInsider
+	// start GoInsider
 	gi := NewGoInsider(tmpDir, protocol, socket)
 
 	refString := "1111111111111111111111111111111111111111111111111111111111111112"
@@ -48,7 +51,7 @@ func TestHealthCheck(t *testing.T) {
 
 	startGoInsider(t, gi, protocol, socket)
 
-	cmd := exec.Command("../../../bin/healthcheck",
+	cmd := exec.Command(healthcheckPath,
 		"-a", socket,
 		"-p", protocol,
 		"-r", refString)
@@ -66,4 +69,18 @@ func startGoInsider(t *testing.T, gi *GoInsider, protocol string, socket string)
 	listener, err := net.Listen(protocol, socket)
 	require.NoError(t, err, "can't start listener")
 	go rpc.Accept(listener)
+}
+
+func init() {
+	var ok bool
+
+	binaryPath, ok = os.LookupEnv("BIN_DIR")
+	if !ok {
+		wd, err := os.Getwd()
+		binaryPath = filepath.Join(wd, "..", "..", "..", "bin")
+
+		if err != nil {
+			panic(err.Error())
+		}
+	}
 }

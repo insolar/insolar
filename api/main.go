@@ -92,6 +92,11 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 		return errors.New("[ registerServices ] Can't RegisterService: status")
 	}
 
+	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
+	if err != nil {
+		return errors.New("[ registerServices ] Can't RegisterService: cert")
+	}
+
 	return nil
 }
 

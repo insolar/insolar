@@ -46,3 +46,16 @@ func GetStaticRoleFromString(role string) StaticRole {
 
 	return StaticRoleUnknown
 }
+
+func (nr StaticRole) String() string {
+	switch nr {
+	case StaticRoleVirtual:
+		return "virtual"
+	case StaticRoleHeavyMaterial:
+		return "heavy_material"
+	case StaticRoleLightMaterial:
+		return "light_material"
+	}
+
+	return "unknown"
+}

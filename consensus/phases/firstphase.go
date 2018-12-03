@@ -78,7 +78,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a packet")
 	}
-	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
+	resultPackets, addressMap, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
@@ -110,7 +110,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		fp.UnsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
-	fp.processClaims(ctx, claimMap)
+	fp.processClaims(ctx, claimMap, addressMap)
 
 	// Get active nodes again for case when current node just joined to network and don't have full active list
 	activeNodes = fp.NodeKeeper.GetActiveNodes()
@@ -169,8 +169,8 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 	return 0, errors.New("not implemented")
 }
 
-func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim) {
+func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim, addressMap map[core.RecordRef]string) {
 	for ref, claimList := range claims {
-		fp.UnsyncList.AddClaims(ref, claimList)
+		fp.UnsyncList.AddClaims(ref, claimList, addressMap)
 	}
 }

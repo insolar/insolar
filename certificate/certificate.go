@@ -278,6 +278,26 @@ func (cert *Certificate) Dump() (string, error) {
 	return string(result), nil
 }
 
+// NewCertForHost returns new certificate
+func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (core.Certificate, error) {
+	newCert := Certificate{
+		MajorityRule:        cert.MajorityRule,
+		MinRoles:            cert.MinRoles,
+		PublicKey:           pKey,
+		Reference:           ref,
+		PulsarPublicKeys:    cert.PulsarPublicKeys,
+		Role:                role,
+		BootstrapNodes:      make([]BootstrapNode, len(cert.BootstrapNodes)),
+		RootDomainReference: cert.RootDomainReference,
+	}
+	for i, node := range cert.BootstrapNodes {
+		newCert.BootstrapNodes[i].Host = node.Host
+		newCert.BootstrapNodes[i].PublicKey = node.PublicKey
+		newCert.BootstrapNodes[i].NetworkSign = node.NetworkSign
+	}
+	return &newCert, nil
+}
+
 // GetNodeSign return sign from bootstrap node with provided ref
 func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
 	return []byte{}, errors.New("not implemented")

@@ -38,6 +38,7 @@ const (
 )
 
 // NetworkSwitcher is a network FSM using for bootstrapping
+//go:generate minimock -i github.com/insolar/insolar/core.NetworkSwitcher -o ../testutils -s _mock.go
 type NetworkSwitcher interface {
 	// GetState method returns current network state
 	GetState() NetworkState

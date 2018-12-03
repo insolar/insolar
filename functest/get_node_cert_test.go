@@ -24,8 +24,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetStatus(t *testing.T) {
-	status := getStatus(t)
-	require.NotNil(t, status)
-	require.Equal(t, "NoNetworkState", status.NetworkState)
+func TestNodeCert(t *testing.T) {
+	const TESTPUBLICKEY = "some_fancy_public_key"
+	const testRole = "virtual"
+	res, err := signedRequest(&root, "RegisterNode", TESTPUBLICKEY, testRole)
+	require.NoError(t, err)
+
+	body := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "cert.Get",
+		"id":      "",
+		"params":  map[string]string{"ref": res.(string)},
+	})
+
+	require.NotEqual(t, "", string(body))
 }
