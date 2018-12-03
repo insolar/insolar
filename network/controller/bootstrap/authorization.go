@@ -154,14 +154,18 @@ func (ac *AuthorizationController) processRegisterRequest(request network.Reques
 
 func (ac *AuthorizationController) processAuthorizeRequest(request network.Request) (network.Response, error) {
 	data := request.GetData().(*AuthorizationRequest)
-	valid, err := ac.coordinator.ValidateCert(context.Background(), data.Certificate)
+	cert, err := certificate.Deserialize(data.Certificate)
+	if err != nil {
+		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+	}
+	valid, err := ac.coordinator.ValidateCert(context.Background(), cert)
 	if !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
 		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
-	session := ac.sessionManager.NewSession(request.GetSender(), data.Certificate)
+	session := ac.sessionManager.NewSession(request.GetSender(), cert)
 	return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
