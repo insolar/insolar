@@ -47,7 +47,7 @@ const (
 
 // AuthorizationRequest
 type AuthorizationRequest struct {
-	Certificate core.AuthorizationCertificate
+	Certificate []byte
 }
 
 // AuthorizationResponse
