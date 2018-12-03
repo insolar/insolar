@@ -166,7 +166,18 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 }
 
 func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
-	return 0, errors.New("not implemented")
+	for _, claimList := range claims {
+		for _, claim := range claimList {
+			if claim.Type() == packets.TypeNodeAnnounceClaim {
+				announceClaim, ok := claim.(*packets.NodeAnnounceClaim)
+				if !ok {
+					continue
+				}
+				return int(announceClaim.NodeCount), nil
+			}
+		}
+	}
+	return 0, errors.New("no announce claims were received")
 }
 
 func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim, addressMap map[core.RecordRef]string) {
