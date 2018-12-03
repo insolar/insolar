@@ -52,10 +52,16 @@ func createOrigin(configuration configuration.HostNetwork, certificate core.Cert
 		return nil, errors.Wrap(err, "Failed to resolve public address")
 	}
 
+	role := certificate.GetRole()
+	if role == core.StaticRoleUnknown {
+		log.Info("[ createOrigin ] Use core.StaticRoleLightMaterial, since no role in certificate")
+		role = core.StaticRoleLightMaterial
+	}
+
 	// TODO: get roles from certificate
 	return newMutableNode(
 		*certificate.GetNodeRef(),
-		core.StaticRoleVirtual,
+		role,
 		certificate.GetPublicKey(),
 		publicAddress,
 		version.Version,
