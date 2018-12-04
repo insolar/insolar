@@ -517,7 +517,7 @@ func (cb *ContractsBuilder) proxy(name string) error {
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ proxy ]")
 	}
 
 	contractPath := filepath.Join(cb.root, "src/contract", name, "main.go")
@@ -551,7 +551,7 @@ func (cb *ContractsBuilder) plugin(name string) error {
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ plugin ]")
 	}
 
 	cmd := exec.Command(
