@@ -34,7 +34,8 @@ import (
 
 // Certificate holds info about certificate
 type Certificate struct {
-	MajorityRule int `json:"majority_rule"`
+	CS           core.CryptographyService `inject:"" json:"-"`
+	MajorityRule int                      `json:"majority_rule"`
 	MinRoles     struct {
 		Virtual       uint `json:"virtual"`
 		HeavyMaterial uint `json:"heavy_material"`
@@ -306,4 +307,24 @@ func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
 // Serialize returns decoded info from AuthorizationCertificate
 func (cert *Certificate) Serialize() ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
+}
+
+func (cert *Certificate) VerifyAuthorizationCertificate(authCert *AuthorizationCertificate) (bool, error) {
+	if len(cert.BootstrapNodes) != len(authCert.BootstrapNodes) {
+		return false, nil
+	}
+	data := []byte(authCert.PublicKey + authCert.Reference + authCert.Role)
+	for _, node := range cert.BootstrapNodes {
+		ok := false
+		for _, sig := range authCert.BootstrapNodes {
+			ok = cert.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sig.NodeSign), data)
+			if ok {
+				continue
+			}
+		}
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
 }
