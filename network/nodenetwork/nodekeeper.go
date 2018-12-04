@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
@@ -108,6 +109,8 @@ type nodekeeper struct {
 
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
+
+	Cryptography core.CryptographyService `inject:""`
 }
 
 // TODO: remove this method when bootstrap mechanism completed
