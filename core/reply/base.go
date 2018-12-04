@@ -32,8 +32,10 @@ const (
 
 	// TypeError is reply with error.
 	TypeError = core.ReplyType(iota + 1)
-	// TypeOK is a generic reply for success calls without returned value.
+	// TypeOK is a generic reply for signaling a positive result.
 	TypeOK
+	// TypeNotOK is a generic reply for signaling a negative result.
+	TypeNotOK
 
 	TypeGetCodeRedirect
 	TypeGetObjectRedirect
