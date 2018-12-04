@@ -18,7 +18,6 @@ package networkcoordinator
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/certificate"
@@ -66,7 +65,6 @@ func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
 
 // GetCert method returns node certificate
 func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
-	fmt.Println("GET CERT")
 	res, err := nc.ContractRequester.SendRequest(ctx, &nodeRef, "GetNodeInfo", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
