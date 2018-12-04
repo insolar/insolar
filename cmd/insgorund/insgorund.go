@@ -40,6 +40,7 @@ func main() {
 	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
 	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
 	rpcProtocol := pflag.String("rpc-proto", "tcp", "protocol of RPC API")
+	metricsAddres := pflag.String("metrics", "localhost:9091", "address and port of prometheus metrics")
 	code := pflag.String("code", "", "add pre-compiled code to cache (<ref>:</path/to/plugin.so>)")
 
 	pflag.Parse()
@@ -90,26 +91,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	runMetrics()
-
-	log.Debug("ginsider launched, listens " + *listen)
-	rpc.Accept(listener)
-	log.Debug("bye\n")
-}
-
-func runMetrics() {
-	log.Debug("ginsider start metrics")
-
-	// TODO copy-pasted from configuration/metrics.NewMetrics()
-	metricsConfiguration := configuration.Metrics{
-		ListenAddress: "0.0.0.0:9090",
-		Namespace:     "insolar",
-		ZpagesEnabled: true,
-	}
 	ctx := context.TODO()
 
-	// TODO make it right
-	m, err := metrics.NewMetrics(ctx, metricsConfiguration)
+	metricsConfiguration := configuration.Metrics{
+		ListenAddress: *metricsAddres,
+		Namespace:     "insgorund",
+		ZpagesEnabled: true,
+	}
+
+	m, err := metrics.NewMetrics(ctx, metricsConfiguration, metrics.GetInsgorundRegistry())
 	if err != nil {
 		log.Fatal("couldn't setup metrics ", err)
 		os.Exit(1)
@@ -120,5 +110,9 @@ func runMetrics() {
 		os.Exit(1)
 	}
 
-	log.Debug("ginsider metrics start successfully")
+	defer m.Stop(ctx)
+
+	log.Debug("ginsider launched, listens " + *listen)
+	rpc.Accept(listener)
+	log.Debug("bye\n")
 }
