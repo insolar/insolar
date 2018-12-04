@@ -18,6 +18,7 @@ package entropy
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"sort"
 
@@ -32,39 +33,48 @@ func SelectByEntropy(
 	values [][]byte,
 	count int,
 ) ([][]byte, error) {
-	type idxHash struct {
-		idx  int
-		hash []byte
-	}
-
-	if len(values) < count {
+	if count > len(values) {
 		return nil, errors.New("count value should be less than values size")
 	}
 
-	hashes := make([]*idxHash, 0, len(values))
-	for i, value := range values {
-		h := scheme.ReferenceHasher()
-		_, err := h.Write(entropy)
-		if err != nil {
-			return nil, err
-		}
-		_, err = h.Write(value)
-		if err != nil {
-			return nil, err
-		}
-		hashes = append(hashes, &idxHash{
-			idx:  i,
-			hash: h.Sum(nil),
-		})
+	if count == 1 && count == len(values) {
+		return values, nil
 	}
 
-	sort.SliceStable(hashes, func(i, j int) bool {
-		return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0
+	sort.SliceStable(values, func(i, j int) bool {
+		return bytes.Compare(values[i], values[j]) < 0
 	})
 
-	selected := make([][]byte, 0, count)
-	for i := 0; i < count; i++ {
-		selected = append(selected, values[hashes[i].idx])
+	h := scheme.ReferenceHasher()
+	if _, err := h.Write(entropy); err != nil {
+		panic(err)
+	}
+
+	countUintBuf := make([]byte, binary.MaxVarintLen64)
+	hashUintBuf := make([]byte, binary.MaxVarintLen64)
+
+	selected := make([][]byte, count)
+	indexes := make([]int, len(values))
+	for i := 0; i < len(values); i++ {
+		indexes[i] = i
+	}
+	ucount := uint64(count)
+	for i := uint64(0); i < ucount; i++ {
+		// put i-step as hash input (convert to variadic uint)
+		binary.PutUvarint(countUintBuf, i)
+		hsum := h.Sum(countUintBuf)
+
+		// convert first hash bytes to uint64
+		copy(hashUintBuf, hsum)
+		n := binary.LittleEndian.Uint64(hashUintBuf)
+
+		// calc and get index from list of indexes and remove it
+		idx2idx := n % uint64(len(indexes))
+		idx := indexes[idx2idx]
+		indexes[idx2idx] = indexes[len(indexes)-1]
+		indexes = indexes[:len(indexes)-1]
+
+		selected[i] = values[idx]
 	}
 	return selected, nil
 }
