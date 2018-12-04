@@ -32,7 +32,12 @@ stop_listening()
     for port in $ports
     do
         echo "port: $port"
-        lsof -i :$port | grep LISTEN | awk '{print $2}' | xargs kill
+        pids=$(lsof -i :$port | grep LISTEN | awk '{print $2}')
+        for pid in $pids
+        do
+            echo "killing pid $pid"
+            kill $pid
+        done
     done
 }
 
