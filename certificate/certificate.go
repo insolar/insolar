@@ -42,6 +42,11 @@ type BaseCertificate struct {
 	nodePublicKey crypto.PublicKey
 }
 
+// GetRole returns role from node certificate
+func (baseCert *BaseCertificate) GetRole() core.StaticRole {
+	return core.GetStaticRoleFromString(baseCert.Role)
+}
+
 // Certificate holds info about certificate
 type Certificate struct {
 	BaseCertificate
@@ -61,11 +66,6 @@ type Certificate struct {
 // AuthorizationCertificate holds info about node from it certificate
 type AuthorizationCertificate struct {
 	BaseCertificate
-}
-
-// GetRole returns role from node certificate
-func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
-	return core.GetStaticRoleFromString(authCert.Role)
 }
 
 // GetNodeSign returns bootstrap nodes array
@@ -252,11 +252,6 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.Key
 		return nil, errors.Wrap(err, "[ ReadCertificateFromReader ]")
 	}
 	return cert, nil
-}
-
-// GetRole returns role from certificate
-func (cert *Certificate) GetRole() core.StaticRole {
-	return core.GetStaticRoleFromString(cert.Role)
 }
 
 // GetRootDomainReference returns RootDomain reference
