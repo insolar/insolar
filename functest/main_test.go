@@ -327,47 +327,22 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolar was successfully builded")
 
-	err = generateRootMemberKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate root member keys: ")
-	}
-	fmt.Println("[ setup ] root member keys successfully generated")
-
-	err = loadRootKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't load root keys: ")
-	}
-	fmt.Println("[ setup ] root keys successfully loaded")
-
-	err = generateDiscoveryNodesKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate discovery node keys: ")
-	}
-	fmt.Println("[ setup ] discovery nodes keys successfully generated")
-
-	err = buildInsolard()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't build insolard: ")
-	}
-	fmt.Println("[ setup ] insolard was successfully builded")
-
-	err = startGenesis()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start genesis: ")
-	}
-	fmt.Println("[ setup ] genesis was successfully started")
-
 	err = startInsgorund()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
 	}
 	fmt.Println("[ setup ] insgorund was successfully started")
 
-	err = startInsolard()
+	err = startNet()
 	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start insolard: ")
+		return errors.Wrap(err, "[ setup ] could't startNet")
 	}
-	fmt.Println("[ setup ] insolard was successfully started")
+
+	err = loadRootKeys()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't load root keys: ")
+	}
+	fmt.Println("[ setup ] root keys successfully loaded")
 
 	numAttempts := 60
 	for i := 0; i < numAttempts; i++ {
