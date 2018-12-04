@@ -815,13 +815,26 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 			inslog.Error(err)
 			continue
 		}
+
+		savedIndex, err := h.db.GetObjectIndex(ctx, &id, false)
+		if err != nil {
+			return nil, err
+		}
+
 		err = h.db.SetObjectIndex(ctx, &id, decodedIndex)
 		if err != nil {
 			inslog.Error(err)
 			continue
 		}
+
 		meta.TTL--
-		h.Recent.AddObjectWithTTL(id, meta.TTL)
+		h.Recent.AddObjectWithTll(id, meta.TTL)
+		if savedIndex != nil {
+			err = h.Recent.MaskAsMine(id)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return &reply.OK{}, nil

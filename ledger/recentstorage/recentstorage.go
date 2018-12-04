@@ -8,10 +8,13 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentStorage -o ./ -s _mock.go
 type RecentStorage interface {
 	AddObject(id core.RecordID)
-	AddObjectWithTTL(id core.RecordID, ttl int)
+	AddObjectWithTll(id core.RecordID, ttl int)
 
 	AddPendingRequest(id core.RecordID)
 	RemovePendingRequest(id core.RecordID)
+
+	IsMine(id core.RecordID) bool
+	MaskAsMine(id core.RecordID) error
 
 	GetObjects() map[core.RecordID]int
 	GetRequests() []core.RecordID

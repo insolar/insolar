@@ -150,7 +150,7 @@ func (m *PulseManager) processRecentObjects(
 	m.Recent.ClearZeroTTLObjects()
 	recentObjectsIds := m.Recent.GetObjects()
 	pendingRequestsIds := m.Recent.GetRequests()
-	m.Recent.ClearObjects()
+	defer m.Recent.ClearObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID][]byte{}
