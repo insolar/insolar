@@ -37,7 +37,7 @@ type Communicator interface {
 	ExchangePhase1(
 		ctx context.Context,
 		participants []core.Node,
-		packet packets.Phase1Packet,
+		packet *packets.Phase1Packet,
 	) (map[core.RecordRef]*packets.Phase1Packet, map[core.RecordRef]string, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
 	ExchangePhase2(ctx context.Context, participants []core.Node, packet packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
@@ -116,12 +116,12 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, reques
 func (nc *NaiveCommunicator) ExchangePhase1(
 	ctx context.Context,
 	participants []core.Node,
-	packet packets.Phase1Packet,
+	packet *packets.Phase1Packet,
 ) (map[core.RecordRef]*packets.Phase1Packet, map[core.RecordRef]string, error) {
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
 	addresses := make(map[core.RecordRef]string, len(participants))
 
-	result[nc.ConsensusNetwork.GetNodeID()] = &packet
+	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 

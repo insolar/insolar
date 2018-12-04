@@ -78,7 +78,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a packet")
 	}
-	resultPackets, addressMap, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
+	resultPackets, addressMap, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
@@ -166,6 +166,7 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 }
 
 func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
+	// TODO: NETD18-47
 	for _, claimList := range claims {
 		for _, claim := range claimList {
 			if claim.Type() == packets.TypeNodeAnnounceClaim {
