@@ -15,3 +15,23 @@
  */
 
 package extractor
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/core"
+	"github.com/stretchr/testify/require"
+)
+
+// base.go
+func TestStringResponse(t *testing.T) {
+	testValue := "test_string"
+
+	data, err := core.Serialize([]interface{}{testValue, nil})
+	require.NoError(t, err)
+
+	result, err := stringResponse(data)
+
+	require.NoError(t, err)
+	require.Equal(t, testValue, result)
+}
