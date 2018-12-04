@@ -314,15 +314,14 @@ func Serialize(authCert core.AuthorizationCertificate) ([]byte, error) {
 }
 
 func (cert *Certificate) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
-	crt := authCert.(*AuthorizationCertificate)
-	if len(cert.BootstrapNodes) != len(crt.BootstrapNodes) {
+	if len(cert.GetDiscoveryNodes()) != len(authCert.GetDiscoveryNodes()) {
 		return false, nil
 	}
-	data := []byte(crt.PublicKey + crt.Reference + crt.Role)
+	data := authCert.SerializeNodePart()
 	for _, node := range cert.BootstrapNodes {
 		ok := false
-		for _, sig := range crt.BootstrapNodes {
-			ok = cert.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sig.NodeSign), data)
+		for _, sig := range authCert.GetDiscoveryNodes() {
+			ok = cert.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sig.GetNodeSign()), data)
 			if ok {
 				continue
 			}
