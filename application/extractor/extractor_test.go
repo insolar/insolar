@@ -62,3 +62,16 @@ func TestStringResponse_UnmarshalError(t *testing.T) {
 	require.Contains(t, err.Error(), "Can't unmarshal")
 	require.Equal(t, "", result)
 }
+
+// member.go
+func TestPublicKeyResponse(t *testing.T) {
+	testValue := "test_public_key"
+
+	data, err := core.Serialize([]interface{}{testValue, nil})
+	require.NoError(t, err)
+
+	result, err := PublicKeyResponse(data)
+
+	require.NoError(t, err)
+	require.Equal(t, testValue, result)
+}
