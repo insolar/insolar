@@ -32,34 +32,35 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Certificate holds info about certificate
-type Certificate struct {
-	MajorityRule int `json:"majority_rule"`
-	MinRoles     struct {
-		Virtual       uint `json:"virtual"`
-		HeavyMaterial uint `json:"heavy_material"`
-		LightMaterial uint `json:"light_material"`
-	} `json:"min_roles"`
-	PublicKey           string          `json:"public_key"`
-	Reference           string          `json:"reference"`
-	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
-	Role                string          `json:"role"`
-	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
-	RootDomainReference string          `json:"root_domain_ref"`
-
-	// preprocessed fields
-	pulsarPublicKey []crypto.PublicKey
-	nodePublicKey   crypto.PublicKey
-}
-
-// AuthorizationCertificate holds info about node from it certificate
-type AuthorizationCertificate struct {
+// BaseCertificate holds base info about node from it certificate
+type BaseCertificate struct {
 	PublicKey      string          `json:"public_key"`
 	Reference      string          `json:"reference"`
 	Role           string          `json:"role"`
 	BootstrapNodes []BootstrapNode `json:"bootstrap_nodes"`
 
 	nodePublicKey crypto.PublicKey
+}
+
+// Certificate holds info about certificate
+type Certificate struct {
+	BaseCertificate
+	MajorityRule int `json:"majority_rule"`
+	MinRoles     struct {
+		Virtual       uint `json:"virtual"`
+		HeavyMaterial uint `json:"heavy_material"`
+		LightMaterial uint `json:"light_material"`
+	} `json:"min_roles"`
+	PulsarPublicKeys    []string `json:"pulsar_public_keys"`
+	RootDomainReference string   `json:"root_domain_ref"`
+
+	// preprocessed fields
+	pulsarPublicKey []crypto.PublicKey
+}
+
+// AuthorizationCertificate holds info about node from it certificate
+type AuthorizationCertificate struct {
+	BaseCertificate
 }
 
 // GetRole returns role from node certificate
@@ -294,13 +295,15 @@ func (cert *Certificate) Dump() (string, error) {
 // NewCertForHost returns new certificate
 func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (core.Certificate, error) {
 	newCert := Certificate{
-		MajorityRule:        cert.MajorityRule,
-		MinRoles:            cert.MinRoles,
-		PublicKey:           pKey,
-		Reference:           ref,
+		MajorityRule: cert.MajorityRule,
+		MinRoles:     cert.MinRoles,
+		BaseCertificate: BaseCertificate{
+			PublicKey:      pKey,
+			Reference:      ref,
+			Role:           role,
+			BootstrapNodes: make([]BootstrapNode, len(cert.BootstrapNodes)),
+		},
 		PulsarPublicKeys:    cert.PulsarPublicKeys,
-		Role:                role,
-		BootstrapNodes:      make([]BootstrapNode, len(cert.BootstrapNodes)),
 		RootDomainReference: cert.RootDomainReference,
 	}
 	for i, node := range cert.BootstrapNodes {
