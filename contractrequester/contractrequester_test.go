@@ -18,6 +18,7 @@ package contractrequester
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -28,6 +29,14 @@ func mockMessageBus(t *testing.T, result core.Reply) *testutils.MessageBusMock {
 	mbMock := testutils.NewMessageBusMock(t)
 	mbMock.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		return result, nil
+	}
+	return mbMock
+}
+
+func mockMessageBusError(t *testing.T) *testutils.MessageBusMock {
+	mbMock := testutils.NewMessageBusMock(t)
+	mbMock.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		return nil, errors.New("test error message")
 	}
 	return mbMock
 }
