@@ -58,55 +58,122 @@ func NewCalculatorMock(t minimock.Tester) *CalculatorMock {
 }
 
 type mCalculatorMockGetCloudProof struct {
-	mock             *CalculatorMock
-	mockExpectations *CalculatorMockGetCloudProofParams
+	mock              *CalculatorMock
+	mainExpectation   *CalculatorMockGetCloudProofExpectation
+	expectationSeries []*CalculatorMockGetCloudProofExpectation
 }
 
-//CalculatorMockGetCloudProofParams represents input parameters of the Calculator.GetCloudProof
-type CalculatorMockGetCloudProofParams struct {
+type CalculatorMockGetCloudProofExpectation struct {
+	input  *CalculatorMockGetCloudProofInput
+	result *CalculatorMockGetCloudProofResult
+}
+
+type CalculatorMockGetCloudProofInput struct {
 	p *merkle.CloudEntry
 }
 
-//Expect sets up expected params for the Calculator.GetCloudProof
+type CalculatorMockGetCloudProofResult struct {
+	r  merkle.OriginHash
+	r1 *merkle.CloudProof
+	r2 error
+}
+
+//Expect specifies that invocation of Calculator.GetCloudProof is expected from 1 to Infinity times
 func (m *mCalculatorMockGetCloudProof) Expect(p *merkle.CloudEntry) *mCalculatorMockGetCloudProof {
-	m.mockExpectations = &CalculatorMockGetCloudProofParams{p}
+	m.mock.GetCloudProofFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CalculatorMockGetCloudProofExpectation{}
+	}
+	m.mainExpectation.input = &CalculatorMockGetCloudProofInput{p}
 	return m
 }
 
-//Return sets up a mock for Calculator.GetCloudProof to return Return's arguments
+//Return specifies results of invocation of Calculator.GetCloudProof
 func (m *mCalculatorMockGetCloudProof) Return(r merkle.OriginHash, r1 *merkle.CloudProof, r2 error) *CalculatorMock {
-	m.mock.GetCloudProofFunc = func(p *merkle.CloudEntry) (merkle.OriginHash, *merkle.CloudProof, error) {
-		return r, r1, r2
+	m.mock.GetCloudProofFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CalculatorMockGetCloudProofExpectation{}
 	}
+	m.mainExpectation.result = &CalculatorMockGetCloudProofResult{r, r1, r2}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Calculator.GetCloudProof is expected once
+func (m *mCalculatorMockGetCloudProof) ExpectOnce(p *merkle.CloudEntry) *CalculatorMockGetCloudProofExpectation {
+	m.mock.GetCloudProofFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CalculatorMockGetCloudProofExpectation{}
+	expectation.input = &CalculatorMockGetCloudProofInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CalculatorMockGetCloudProofExpectation) Return(r merkle.OriginHash, r1 *merkle.CloudProof, r2 error) {
+	e.result = &CalculatorMockGetCloudProofResult{r, r1, r2}
 }
 
 //Set uses given function f as a mock of Calculator.GetCloudProof method
 func (m *mCalculatorMockGetCloudProof) Set(f func(p *merkle.CloudEntry) (r merkle.OriginHash, r1 *merkle.CloudProof, r2 error)) *CalculatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.GetCloudProofFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetCloudProof implements github.com/insolar/insolar/network/merkle.Calculator interface
 func (m *CalculatorMock) GetCloudProof(p *merkle.CloudEntry) (r merkle.OriginHash, r1 *merkle.CloudProof, r2 error) {
-	atomic.AddUint64(&m.GetCloudProofPreCounter, 1)
+	counter := atomic.AddUint64(&m.GetCloudProofPreCounter, 1)
 	defer atomic.AddUint64(&m.GetCloudProofCounter, 1)
 
-	if m.GetCloudProofMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.GetCloudProofMock.mockExpectations, CalculatorMockGetCloudProofParams{p},
-			"Calculator.GetCloudProof got unexpected parameters")
-
-		if m.GetCloudProofFunc == nil {
-
-			m.t.Fatal("No results are set for the CalculatorMock.GetCloudProof")
-
+	if len(m.GetCloudProofMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetCloudProofMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CalculatorMock.GetCloudProof. %v", p)
 			return
 		}
+
+		input := m.GetCloudProofMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CalculatorMockGetCloudProofInput{p}, "Calculator.GetCloudProof got unexpected parameters")
+
+		result := m.GetCloudProofMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CalculatorMock.GetCloudProof")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
+	}
+
+	if m.GetCloudProofMock.mainExpectation != nil {
+
+		input := m.GetCloudProofMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CalculatorMockGetCloudProofInput{p}, "Calculator.GetCloudProof got unexpected parameters")
+		}
+
+		result := m.GetCloudProofMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CalculatorMock.GetCloudProof")
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
 	}
 
 	if m.GetCloudProofFunc == nil {
-		m.t.Fatal("Unexpected call to CalculatorMock.GetCloudProof")
+		m.t.Fatalf("Unexpected call to CalculatorMock.GetCloudProof. %v", p)
 		return
 	}
 
@@ -123,56 +190,143 @@ func (m *CalculatorMock) GetCloudProofMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetCloudProofPreCounter)
 }
 
-type mCalculatorMockGetGlobuleProof struct {
-	mock             *CalculatorMock
-	mockExpectations *CalculatorMockGetGlobuleProofParams
+//GetCloudProofFinished returns true if mock invocations count is ok
+func (m *CalculatorMock) GetCloudProofFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetCloudProofMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetCloudProofCounter) == uint64(len(m.GetCloudProofMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetCloudProofMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetCloudProofCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetCloudProofFunc != nil {
+		return atomic.LoadUint64(&m.GetCloudProofCounter) > 0
+	}
+
+	return true
 }
 
-//CalculatorMockGetGlobuleProofParams represents input parameters of the Calculator.GetGlobuleProof
-type CalculatorMockGetGlobuleProofParams struct {
+type mCalculatorMockGetGlobuleProof struct {
+	mock              *CalculatorMock
+	mainExpectation   *CalculatorMockGetGlobuleProofExpectation
+	expectationSeries []*CalculatorMockGetGlobuleProofExpectation
+}
+
+type CalculatorMockGetGlobuleProofExpectation struct {
+	input  *CalculatorMockGetGlobuleProofInput
+	result *CalculatorMockGetGlobuleProofResult
+}
+
+type CalculatorMockGetGlobuleProofInput struct {
 	p *merkle.GlobuleEntry
 }
 
-//Expect sets up expected params for the Calculator.GetGlobuleProof
+type CalculatorMockGetGlobuleProofResult struct {
+	r  merkle.OriginHash
+	r1 *merkle.GlobuleProof
+	r2 error
+}
+
+//Expect specifies that invocation of Calculator.GetGlobuleProof is expected from 1 to Infinity times
 func (m *mCalculatorMockGetGlobuleProof) Expect(p *merkle.GlobuleEntry) *mCalculatorMockGetGlobuleProof {
-	m.mockExpectations = &CalculatorMockGetGlobuleProofParams{p}
+	m.mock.GetGlobuleProofFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CalculatorMockGetGlobuleProofExpectation{}
+	}
+	m.mainExpectation.input = &CalculatorMockGetGlobuleProofInput{p}
 	return m
 }
 
-//Return sets up a mock for Calculator.GetGlobuleProof to return Return's arguments
+//Return specifies results of invocation of Calculator.GetGlobuleProof
 func (m *mCalculatorMockGetGlobuleProof) Return(r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error) *CalculatorMock {
-	m.mock.GetGlobuleProofFunc = func(p *merkle.GlobuleEntry) (merkle.OriginHash, *merkle.GlobuleProof, error) {
-		return r, r1, r2
+	m.mock.GetGlobuleProofFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CalculatorMockGetGlobuleProofExpectation{}
 	}
+	m.mainExpectation.result = &CalculatorMockGetGlobuleProofResult{r, r1, r2}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Calculator.GetGlobuleProof is expected once
+func (m *mCalculatorMockGetGlobuleProof) ExpectOnce(p *merkle.GlobuleEntry) *CalculatorMockGetGlobuleProofExpectation {
+	m.mock.GetGlobuleProofFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CalculatorMockGetGlobuleProofExpectation{}
+	expectation.input = &CalculatorMockGetGlobuleProofInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CalculatorMockGetGlobuleProofExpectation) Return(r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error) {
+	e.result = &CalculatorMockGetGlobuleProofResult{r, r1, r2}
 }
 
 //Set uses given function f as a mock of Calculator.GetGlobuleProof method
 func (m *mCalculatorMockGetGlobuleProof) Set(f func(p *merkle.GlobuleEntry) (r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error)) *CalculatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.GetGlobuleProofFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetGlobuleProof implements github.com/insolar/insolar/network/merkle.Calculator interface
 func (m *CalculatorMock) GetGlobuleProof(p *merkle.GlobuleEntry) (r merkle.OriginHash, r1 *merkle.GlobuleProof, r2 error) {
-	atomic.AddUint64(&m.GetGlobuleProofPreCounter, 1)
+	counter := atomic.AddUint64(&m.GetGlobuleProofPreCounter, 1)
 	defer atomic.AddUint64(&m.GetGlobuleProofCounter, 1)
 
-	if m.GetGlobuleProofMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.GetGlobuleProofMock.mockExpectations, CalculatorMockGetGlobuleProofParams{p},
-			"Calculator.GetGlobuleProof got unexpected parameters")
-
-		if m.GetGlobuleProofFunc == nil {
-
-			m.t.Fatal("No results are set for the CalculatorMock.GetGlobuleProof")
-
+	if len(m.GetGlobuleProofMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetGlobuleProofMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CalculatorMock.GetGlobuleProof. %v", p)
 			return
 		}
+
+		input := m.GetGlobuleProofMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CalculatorMockGetGlobuleProofInput{p}, "Calculator.GetGlobuleProof got unexpected parameters")
+
+		result := m.GetGlobuleProofMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CalculatorMock.GetGlobuleProof")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
+	}
+
+	if m.GetGlobuleProofMock.mainExpectation != nil {
+
+		input := m.GetGlobuleProofMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CalculatorMockGetGlobuleProofInput{p}, "Calculator.GetGlobuleProof got unexpected parameters")
+		}
+
+		result := m.GetGlobuleProofMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CalculatorMock.GetGlobuleProof")
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
 	}
 
 	if m.GetGlobuleProofFunc == nil {
-		m.t.Fatal("Unexpected call to CalculatorMock.GetGlobuleProof")
+		m.t.Fatalf("Unexpected call to CalculatorMock.GetGlobuleProof. %v", p)
 		return
 	}
 
@@ -189,56 +343,143 @@ func (m *CalculatorMock) GetGlobuleProofMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetGlobuleProofPreCounter)
 }
 
-type mCalculatorMockGetPulseProof struct {
-	mock             *CalculatorMock
-	mockExpectations *CalculatorMockGetPulseProofParams
+//GetGlobuleProofFinished returns true if mock invocations count is ok
+func (m *CalculatorMock) GetGlobuleProofFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetGlobuleProofMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetGlobuleProofCounter) == uint64(len(m.GetGlobuleProofMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetGlobuleProofMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetGlobuleProofCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetGlobuleProofFunc != nil {
+		return atomic.LoadUint64(&m.GetGlobuleProofCounter) > 0
+	}
+
+	return true
 }
 
-//CalculatorMockGetPulseProofParams represents input parameters of the Calculator.GetPulseProof
-type CalculatorMockGetPulseProofParams struct {
+type mCalculatorMockGetPulseProof struct {
+	mock              *CalculatorMock
+	mainExpectation   *CalculatorMockGetPulseProofExpectation
+	expectationSeries []*CalculatorMockGetPulseProofExpectation
+}
+
+type CalculatorMockGetPulseProofExpectation struct {
+	input  *CalculatorMockGetPulseProofInput
+	result *CalculatorMockGetPulseProofResult
+}
+
+type CalculatorMockGetPulseProofInput struct {
 	p *merkle.PulseEntry
 }
 
-//Expect sets up expected params for the Calculator.GetPulseProof
+type CalculatorMockGetPulseProofResult struct {
+	r  merkle.OriginHash
+	r1 *merkle.PulseProof
+	r2 error
+}
+
+//Expect specifies that invocation of Calculator.GetPulseProof is expected from 1 to Infinity times
 func (m *mCalculatorMockGetPulseProof) Expect(p *merkle.PulseEntry) *mCalculatorMockGetPulseProof {
-	m.mockExpectations = &CalculatorMockGetPulseProofParams{p}
+	m.mock.GetPulseProofFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CalculatorMockGetPulseProofExpectation{}
+	}
+	m.mainExpectation.input = &CalculatorMockGetPulseProofInput{p}
 	return m
 }
 
-//Return sets up a mock for Calculator.GetPulseProof to return Return's arguments
+//Return specifies results of invocation of Calculator.GetPulseProof
 func (m *mCalculatorMockGetPulseProof) Return(r merkle.OriginHash, r1 *merkle.PulseProof, r2 error) *CalculatorMock {
-	m.mock.GetPulseProofFunc = func(p *merkle.PulseEntry) (merkle.OriginHash, *merkle.PulseProof, error) {
-		return r, r1, r2
+	m.mock.GetPulseProofFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CalculatorMockGetPulseProofExpectation{}
 	}
+	m.mainExpectation.result = &CalculatorMockGetPulseProofResult{r, r1, r2}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Calculator.GetPulseProof is expected once
+func (m *mCalculatorMockGetPulseProof) ExpectOnce(p *merkle.PulseEntry) *CalculatorMockGetPulseProofExpectation {
+	m.mock.GetPulseProofFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CalculatorMockGetPulseProofExpectation{}
+	expectation.input = &CalculatorMockGetPulseProofInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CalculatorMockGetPulseProofExpectation) Return(r merkle.OriginHash, r1 *merkle.PulseProof, r2 error) {
+	e.result = &CalculatorMockGetPulseProofResult{r, r1, r2}
 }
 
 //Set uses given function f as a mock of Calculator.GetPulseProof method
 func (m *mCalculatorMockGetPulseProof) Set(f func(p *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error)) *CalculatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.GetPulseProofFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetPulseProof implements github.com/insolar/insolar/network/merkle.Calculator interface
 func (m *CalculatorMock) GetPulseProof(p *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error) {
-	atomic.AddUint64(&m.GetPulseProofPreCounter, 1)
+	counter := atomic.AddUint64(&m.GetPulseProofPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulseProofCounter, 1)
 
-	if m.GetPulseProofMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.GetPulseProofMock.mockExpectations, CalculatorMockGetPulseProofParams{p},
-			"Calculator.GetPulseProof got unexpected parameters")
-
-		if m.GetPulseProofFunc == nil {
-
-			m.t.Fatal("No results are set for the CalculatorMock.GetPulseProof")
-
+	if len(m.GetPulseProofMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetPulseProofMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CalculatorMock.GetPulseProof. %v", p)
 			return
 		}
+
+		input := m.GetPulseProofMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CalculatorMockGetPulseProofInput{p}, "Calculator.GetPulseProof got unexpected parameters")
+
+		result := m.GetPulseProofMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CalculatorMock.GetPulseProof")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
+	}
+
+	if m.GetPulseProofMock.mainExpectation != nil {
+
+		input := m.GetPulseProofMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CalculatorMockGetPulseProofInput{p}, "Calculator.GetPulseProof got unexpected parameters")
+		}
+
+		result := m.GetPulseProofMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CalculatorMock.GetPulseProof")
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
 	}
 
 	if m.GetPulseProofFunc == nil {
-		m.t.Fatal("Unexpected call to CalculatorMock.GetPulseProof")
+		m.t.Fatalf("Unexpected call to CalculatorMock.GetPulseProof. %v", p)
 		return
 	}
 
@@ -255,58 +496,139 @@ func (m *CalculatorMock) GetPulseProofMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPulseProofPreCounter)
 }
 
-type mCalculatorMockIsValid struct {
-	mock             *CalculatorMock
-	mockExpectations *CalculatorMockIsValidParams
+//GetPulseProofFinished returns true if mock invocations count is ok
+func (m *CalculatorMock) GetPulseProofFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetPulseProofMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetPulseProofCounter) == uint64(len(m.GetPulseProofMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetPulseProofMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetPulseProofCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetPulseProofFunc != nil {
+		return atomic.LoadUint64(&m.GetPulseProofCounter) > 0
+	}
+
+	return true
 }
 
-//CalculatorMockIsValidParams represents input parameters of the Calculator.IsValid
-type CalculatorMockIsValidParams struct {
+type mCalculatorMockIsValid struct {
+	mock              *CalculatorMock
+	mainExpectation   *CalculatorMockIsValidExpectation
+	expectationSeries []*CalculatorMockIsValidExpectation
+}
+
+type CalculatorMockIsValidExpectation struct {
+	input  *CalculatorMockIsValidInput
+	result *CalculatorMockIsValidResult
+}
+
+type CalculatorMockIsValidInput struct {
 	p  merkle.Proof
 	p1 merkle.OriginHash
 	p2 crypto.PublicKey
 }
 
-//Expect sets up expected params for the Calculator.IsValid
+type CalculatorMockIsValidResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Calculator.IsValid is expected from 1 to Infinity times
 func (m *mCalculatorMockIsValid) Expect(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) *mCalculatorMockIsValid {
-	m.mockExpectations = &CalculatorMockIsValidParams{p, p1, p2}
+	m.mock.IsValidFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CalculatorMockIsValidExpectation{}
+	}
+	m.mainExpectation.input = &CalculatorMockIsValidInput{p, p1, p2}
 	return m
 }
 
-//Return sets up a mock for Calculator.IsValid to return Return's arguments
+//Return specifies results of invocation of Calculator.IsValid
 func (m *mCalculatorMockIsValid) Return(r bool) *CalculatorMock {
-	m.mock.IsValidFunc = func(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) bool {
-		return r
+	m.mock.IsValidFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CalculatorMockIsValidExpectation{}
 	}
+	m.mainExpectation.result = &CalculatorMockIsValidResult{r}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Calculator.IsValid is expected once
+func (m *mCalculatorMockIsValid) ExpectOnce(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) *CalculatorMockIsValidExpectation {
+	m.mock.IsValidFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CalculatorMockIsValidExpectation{}
+	expectation.input = &CalculatorMockIsValidInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CalculatorMockIsValidExpectation) Return(r bool) {
+	e.result = &CalculatorMockIsValidResult{r}
 }
 
 //Set uses given function f as a mock of Calculator.IsValid method
 func (m *mCalculatorMockIsValid) Set(f func(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) (r bool)) *CalculatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.IsValidFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //IsValid implements github.com/insolar/insolar/network/merkle.Calculator interface
 func (m *CalculatorMock) IsValid(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) (r bool) {
-	atomic.AddUint64(&m.IsValidPreCounter, 1)
+	counter := atomic.AddUint64(&m.IsValidPreCounter, 1)
 	defer atomic.AddUint64(&m.IsValidCounter, 1)
 
-	if m.IsValidMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.IsValidMock.mockExpectations, CalculatorMockIsValidParams{p, p1, p2},
-			"Calculator.IsValid got unexpected parameters")
-
-		if m.IsValidFunc == nil {
-
-			m.t.Fatal("No results are set for the CalculatorMock.IsValid")
-
+	if len(m.IsValidMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsValidMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CalculatorMock.IsValid. %v %v %v", p, p1, p2)
 			return
 		}
+
+		input := m.IsValidMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CalculatorMockIsValidInput{p, p1, p2}, "Calculator.IsValid got unexpected parameters")
+
+		result := m.IsValidMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CalculatorMock.IsValid")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsValidMock.mainExpectation != nil {
+
+		input := m.IsValidMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CalculatorMockIsValidInput{p, p1, p2}, "Calculator.IsValid got unexpected parameters")
+		}
+
+		result := m.IsValidMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CalculatorMock.IsValid")
+		}
+
+		r = result.r
+
+		return
 	}
 
 	if m.IsValidFunc == nil {
-		m.t.Fatal("Unexpected call to CalculatorMock.IsValid")
+		m.t.Fatalf("Unexpected call to CalculatorMock.IsValid. %v %v %v", p, p1, p2)
 		return
 	}
 
@@ -323,23 +645,43 @@ func (m *CalculatorMock) IsValidMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IsValidPreCounter)
 }
 
+//IsValidFinished returns true if mock invocations count is ok
+func (m *CalculatorMock) IsValidFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsValidMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsValidCounter) == uint64(len(m.IsValidMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsValidMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsValidCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsValidFunc != nil {
+		return atomic.LoadUint64(&m.IsValidCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CalculatorMock) ValidateCallCounters() {
 
-	if m.GetCloudProofFunc != nil && atomic.LoadUint64(&m.GetCloudProofCounter) == 0 {
+	if !m.GetCloudProofFinished() {
 		m.t.Fatal("Expected call to CalculatorMock.GetCloudProof")
 	}
 
-	if m.GetGlobuleProofFunc != nil && atomic.LoadUint64(&m.GetGlobuleProofCounter) == 0 {
+	if !m.GetGlobuleProofFinished() {
 		m.t.Fatal("Expected call to CalculatorMock.GetGlobuleProof")
 	}
 
-	if m.GetPulseProofFunc != nil && atomic.LoadUint64(&m.GetPulseProofCounter) == 0 {
+	if !m.GetPulseProofFinished() {
 		m.t.Fatal("Expected call to CalculatorMock.GetPulseProof")
 	}
 
-	if m.IsValidFunc != nil && atomic.LoadUint64(&m.IsValidCounter) == 0 {
+	if !m.IsValidFinished() {
 		m.t.Fatal("Expected call to CalculatorMock.IsValid")
 	}
 
@@ -360,19 +702,19 @@ func (m *CalculatorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CalculatorMock) MinimockFinish() {
 
-	if m.GetCloudProofFunc != nil && atomic.LoadUint64(&m.GetCloudProofCounter) == 0 {
+	if !m.GetCloudProofFinished() {
 		m.t.Fatal("Expected call to CalculatorMock.GetCloudProof")
 	}
 
-	if m.GetGlobuleProofFunc != nil && atomic.LoadUint64(&m.GetGlobuleProofCounter) == 0 {
+	if !m.GetGlobuleProofFinished() {
 		m.t.Fatal("Expected call to CalculatorMock.GetGlobuleProof")
 	}
 
-	if m.GetPulseProofFunc != nil && atomic.LoadUint64(&m.GetPulseProofCounter) == 0 {
+	if !m.GetPulseProofFinished() {
 		m.t.Fatal("Expected call to CalculatorMock.GetPulseProof")
 	}
 
-	if m.IsValidFunc != nil && atomic.LoadUint64(&m.IsValidCounter) == 0 {
+	if !m.IsValidFinished() {
 		m.t.Fatal("Expected call to CalculatorMock.IsValid")
 	}
 
@@ -390,10 +732,10 @@ func (m *CalculatorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.GetCloudProofFunc == nil || atomic.LoadUint64(&m.GetCloudProofCounter) > 0)
-		ok = ok && (m.GetGlobuleProofFunc == nil || atomic.LoadUint64(&m.GetGlobuleProofCounter) > 0)
-		ok = ok && (m.GetPulseProofFunc == nil || atomic.LoadUint64(&m.GetPulseProofCounter) > 0)
-		ok = ok && (m.IsValidFunc == nil || atomic.LoadUint64(&m.IsValidCounter) > 0)
+		ok = ok && m.GetCloudProofFinished()
+		ok = ok && m.GetGlobuleProofFinished()
+		ok = ok && m.GetPulseProofFinished()
+		ok = ok && m.IsValidFinished()
 
 		if ok {
 			return
@@ -402,19 +744,19 @@ func (m *CalculatorMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.GetCloudProofFunc != nil && atomic.LoadUint64(&m.GetCloudProofCounter) == 0 {
+			if !m.GetCloudProofFinished() {
 				m.t.Error("Expected call to CalculatorMock.GetCloudProof")
 			}
 
-			if m.GetGlobuleProofFunc != nil && atomic.LoadUint64(&m.GetGlobuleProofCounter) == 0 {
+			if !m.GetGlobuleProofFinished() {
 				m.t.Error("Expected call to CalculatorMock.GetGlobuleProof")
 			}
 
-			if m.GetPulseProofFunc != nil && atomic.LoadUint64(&m.GetPulseProofCounter) == 0 {
+			if !m.GetPulseProofFinished() {
 				m.t.Error("Expected call to CalculatorMock.GetPulseProof")
 			}
 
-			if m.IsValidFunc != nil && atomic.LoadUint64(&m.IsValidCounter) == 0 {
+			if !m.IsValidFinished() {
 				m.t.Error("Expected call to CalculatorMock.IsValid")
 			}
 
@@ -430,19 +772,19 @@ func (m *CalculatorMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CalculatorMock) AllMocksCalled() bool {
 
-	if m.GetCloudProofFunc != nil && atomic.LoadUint64(&m.GetCloudProofCounter) == 0 {
+	if !m.GetCloudProofFinished() {
 		return false
 	}
 
-	if m.GetGlobuleProofFunc != nil && atomic.LoadUint64(&m.GetGlobuleProofCounter) == 0 {
+	if !m.GetGlobuleProofFinished() {
 		return false
 	}
 
-	if m.GetPulseProofFunc != nil && atomic.LoadUint64(&m.GetPulseProofCounter) == 0 {
+	if !m.GetPulseProofFinished() {
 		return false
 	}
 
-	if m.IsValidFunc != nil && atomic.LoadUint64(&m.IsValidCounter) == 0 {
+	if !m.IsValidFinished() {
 		return false
 	}
 

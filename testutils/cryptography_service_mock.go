@@ -52,31 +52,106 @@ func NewCryptographyServiceMock(t minimock.Tester) *CryptographyServiceMock {
 }
 
 type mCryptographyServiceMockGetPublicKey struct {
-	mock *CryptographyServiceMock
+	mock              *CryptographyServiceMock
+	mainExpectation   *CryptographyServiceMockGetPublicKeyExpectation
+	expectationSeries []*CryptographyServiceMockGetPublicKeyExpectation
 }
 
-//Return sets up a mock for CryptographyService.GetPublicKey to return Return's arguments
-func (m *mCryptographyServiceMockGetPublicKey) Return(r crypto.PublicKey, r1 error) *CryptographyServiceMock {
-	m.mock.GetPublicKeyFunc = func() (crypto.PublicKey, error) {
-		return r, r1
+type CryptographyServiceMockGetPublicKeyExpectation struct {
+	result *CryptographyServiceMockGetPublicKeyResult
+}
+
+type CryptographyServiceMockGetPublicKeyResult struct {
+	r  crypto.PublicKey
+	r1 error
+}
+
+//Expect specifies that invocation of CryptographyService.GetPublicKey is expected from 1 to Infinity times
+func (m *mCryptographyServiceMockGetPublicKey) Expect() *mCryptographyServiceMockGetPublicKey {
+	m.mock.GetPublicKeyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CryptographyServiceMockGetPublicKeyExpectation{}
 	}
+
+	return m
+}
+
+//Return specifies results of invocation of CryptographyService.GetPublicKey
+func (m *mCryptographyServiceMockGetPublicKey) Return(r crypto.PublicKey, r1 error) *CryptographyServiceMock {
+	m.mock.GetPublicKeyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CryptographyServiceMockGetPublicKeyExpectation{}
+	}
+	m.mainExpectation.result = &CryptographyServiceMockGetPublicKeyResult{r, r1}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CryptographyService.GetPublicKey is expected once
+func (m *mCryptographyServiceMockGetPublicKey) ExpectOnce() *CryptographyServiceMockGetPublicKeyExpectation {
+	m.mock.GetPublicKeyFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CryptographyServiceMockGetPublicKeyExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CryptographyServiceMockGetPublicKeyExpectation) Return(r crypto.PublicKey, r1 error) {
+	e.result = &CryptographyServiceMockGetPublicKeyResult{r, r1}
 }
 
 //Set uses given function f as a mock of CryptographyService.GetPublicKey method
 func (m *mCryptographyServiceMockGetPublicKey) Set(f func() (r crypto.PublicKey, r1 error)) *CryptographyServiceMock {
-	m.mock.GetPublicKeyFunc = f
+	m.mainExpectation = nil
+	m.expectationSeries = nil
 
+	m.mock.GetPublicKeyFunc = f
 	return m.mock
 }
 
 //GetPublicKey implements github.com/insolar/insolar/core.CryptographyService interface
 func (m *CryptographyServiceMock) GetPublicKey() (r crypto.PublicKey, r1 error) {
-	atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
+	counter := atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyCounter, 1)
 
+	if len(m.GetPublicKeyMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetPublicKeyMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CryptographyServiceMock.GetPublicKey.")
+			return
+		}
+
+		result := m.GetPublicKeyMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CryptographyServiceMock.GetPublicKey")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetPublicKeyMock.mainExpectation != nil {
+
+		result := m.GetPublicKeyMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CryptographyServiceMock.GetPublicKey")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
 	if m.GetPublicKeyFunc == nil {
-		m.t.Fatal("Unexpected call to CryptographyServiceMock.GetPublicKey")
+		m.t.Fatalf("Unexpected call to CryptographyServiceMock.GetPublicKey.")
 		return
 	}
 
@@ -93,56 +168,140 @@ func (m *CryptographyServiceMock) GetPublicKeyMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyPreCounter)
 }
 
-type mCryptographyServiceMockSign struct {
-	mock             *CryptographyServiceMock
-	mockExpectations *CryptographyServiceMockSignParams
+//GetPublicKeyFinished returns true if mock invocations count is ok
+func (m *CryptographyServiceMock) GetPublicKeyFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetPublicKeyMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetPublicKeyCounter) == uint64(len(m.GetPublicKeyMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetPublicKeyMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetPublicKeyFunc != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyCounter) > 0
+	}
+
+	return true
 }
 
-//CryptographyServiceMockSignParams represents input parameters of the CryptographyService.Sign
-type CryptographyServiceMockSignParams struct {
+type mCryptographyServiceMockSign struct {
+	mock              *CryptographyServiceMock
+	mainExpectation   *CryptographyServiceMockSignExpectation
+	expectationSeries []*CryptographyServiceMockSignExpectation
+}
+
+type CryptographyServiceMockSignExpectation struct {
+	input  *CryptographyServiceMockSignInput
+	result *CryptographyServiceMockSignResult
+}
+
+type CryptographyServiceMockSignInput struct {
 	p []byte
 }
 
-//Expect sets up expected params for the CryptographyService.Sign
+type CryptographyServiceMockSignResult struct {
+	r  *core.Signature
+	r1 error
+}
+
+//Expect specifies that invocation of CryptographyService.Sign is expected from 1 to Infinity times
 func (m *mCryptographyServiceMockSign) Expect(p []byte) *mCryptographyServiceMockSign {
-	m.mockExpectations = &CryptographyServiceMockSignParams{p}
+	m.mock.SignFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CryptographyServiceMockSignExpectation{}
+	}
+	m.mainExpectation.input = &CryptographyServiceMockSignInput{p}
 	return m
 }
 
-//Return sets up a mock for CryptographyService.Sign to return Return's arguments
+//Return specifies results of invocation of CryptographyService.Sign
 func (m *mCryptographyServiceMockSign) Return(r *core.Signature, r1 error) *CryptographyServiceMock {
-	m.mock.SignFunc = func(p []byte) (*core.Signature, error) {
-		return r, r1
+	m.mock.SignFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CryptographyServiceMockSignExpectation{}
 	}
+	m.mainExpectation.result = &CryptographyServiceMockSignResult{r, r1}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CryptographyService.Sign is expected once
+func (m *mCryptographyServiceMockSign) ExpectOnce(p []byte) *CryptographyServiceMockSignExpectation {
+	m.mock.SignFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CryptographyServiceMockSignExpectation{}
+	expectation.input = &CryptographyServiceMockSignInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CryptographyServiceMockSignExpectation) Return(r *core.Signature, r1 error) {
+	e.result = &CryptographyServiceMockSignResult{r, r1}
 }
 
 //Set uses given function f as a mock of CryptographyService.Sign method
 func (m *mCryptographyServiceMockSign) Set(f func(p []byte) (r *core.Signature, r1 error)) *CryptographyServiceMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.SignFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //Sign implements github.com/insolar/insolar/core.CryptographyService interface
 func (m *CryptographyServiceMock) Sign(p []byte) (r *core.Signature, r1 error) {
-	atomic.AddUint64(&m.SignPreCounter, 1)
+	counter := atomic.AddUint64(&m.SignPreCounter, 1)
 	defer atomic.AddUint64(&m.SignCounter, 1)
 
-	if m.SignMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SignMock.mockExpectations, CryptographyServiceMockSignParams{p},
-			"CryptographyService.Sign got unexpected parameters")
-
-		if m.SignFunc == nil {
-
-			m.t.Fatal("No results are set for the CryptographyServiceMock.Sign")
-
+	if len(m.SignMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SignMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CryptographyServiceMock.Sign. %v", p)
 			return
 		}
+
+		input := m.SignMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CryptographyServiceMockSignInput{p}, "CryptographyService.Sign got unexpected parameters")
+
+		result := m.SignMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CryptographyServiceMock.Sign")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.SignMock.mainExpectation != nil {
+
+		input := m.SignMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CryptographyServiceMockSignInput{p}, "CryptographyService.Sign got unexpected parameters")
+		}
+
+		result := m.SignMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CryptographyServiceMock.Sign")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
 	}
 
 	if m.SignFunc == nil {
-		m.t.Fatal("Unexpected call to CryptographyServiceMock.Sign")
+		m.t.Fatalf("Unexpected call to CryptographyServiceMock.Sign. %v", p)
 		return
 	}
 
@@ -159,58 +318,139 @@ func (m *CryptographyServiceMock) SignMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SignPreCounter)
 }
 
-type mCryptographyServiceMockVerify struct {
-	mock             *CryptographyServiceMock
-	mockExpectations *CryptographyServiceMockVerifyParams
+//SignFinished returns true if mock invocations count is ok
+func (m *CryptographyServiceMock) SignFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SignMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SignCounter) == uint64(len(m.SignMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SignMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SignCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SignFunc != nil {
+		return atomic.LoadUint64(&m.SignCounter) > 0
+	}
+
+	return true
 }
 
-//CryptographyServiceMockVerifyParams represents input parameters of the CryptographyService.Verify
-type CryptographyServiceMockVerifyParams struct {
+type mCryptographyServiceMockVerify struct {
+	mock              *CryptographyServiceMock
+	mainExpectation   *CryptographyServiceMockVerifyExpectation
+	expectationSeries []*CryptographyServiceMockVerifyExpectation
+}
+
+type CryptographyServiceMockVerifyExpectation struct {
+	input  *CryptographyServiceMockVerifyInput
+	result *CryptographyServiceMockVerifyResult
+}
+
+type CryptographyServiceMockVerifyInput struct {
 	p  crypto.PublicKey
 	p1 core.Signature
 	p2 []byte
 }
 
-//Expect sets up expected params for the CryptographyService.Verify
+type CryptographyServiceMockVerifyResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of CryptographyService.Verify is expected from 1 to Infinity times
 func (m *mCryptographyServiceMockVerify) Expect(p crypto.PublicKey, p1 core.Signature, p2 []byte) *mCryptographyServiceMockVerify {
-	m.mockExpectations = &CryptographyServiceMockVerifyParams{p, p1, p2}
+	m.mock.VerifyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CryptographyServiceMockVerifyExpectation{}
+	}
+	m.mainExpectation.input = &CryptographyServiceMockVerifyInput{p, p1, p2}
 	return m
 }
 
-//Return sets up a mock for CryptographyService.Verify to return Return's arguments
+//Return specifies results of invocation of CryptographyService.Verify
 func (m *mCryptographyServiceMockVerify) Return(r bool) *CryptographyServiceMock {
-	m.mock.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) bool {
-		return r
+	m.mock.VerifyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CryptographyServiceMockVerifyExpectation{}
 	}
+	m.mainExpectation.result = &CryptographyServiceMockVerifyResult{r}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CryptographyService.Verify is expected once
+func (m *mCryptographyServiceMockVerify) ExpectOnce(p crypto.PublicKey, p1 core.Signature, p2 []byte) *CryptographyServiceMockVerifyExpectation {
+	m.mock.VerifyFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CryptographyServiceMockVerifyExpectation{}
+	expectation.input = &CryptographyServiceMockVerifyInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CryptographyServiceMockVerifyExpectation) Return(r bool) {
+	e.result = &CryptographyServiceMockVerifyResult{r}
 }
 
 //Set uses given function f as a mock of CryptographyService.Verify method
 func (m *mCryptographyServiceMockVerify) Set(f func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool)) *CryptographyServiceMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.VerifyFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //Verify implements github.com/insolar/insolar/core.CryptographyService interface
 func (m *CryptographyServiceMock) Verify(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
-	atomic.AddUint64(&m.VerifyPreCounter, 1)
+	counter := atomic.AddUint64(&m.VerifyPreCounter, 1)
 	defer atomic.AddUint64(&m.VerifyCounter, 1)
 
-	if m.VerifyMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.VerifyMock.mockExpectations, CryptographyServiceMockVerifyParams{p, p1, p2},
-			"CryptographyService.Verify got unexpected parameters")
-
-		if m.VerifyFunc == nil {
-
-			m.t.Fatal("No results are set for the CryptographyServiceMock.Verify")
-
+	if len(m.VerifyMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.VerifyMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CryptographyServiceMock.Verify. %v %v %v", p, p1, p2)
 			return
 		}
+
+		input := m.VerifyMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CryptographyServiceMockVerifyInput{p, p1, p2}, "CryptographyService.Verify got unexpected parameters")
+
+		result := m.VerifyMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CryptographyServiceMock.Verify")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.VerifyMock.mainExpectation != nil {
+
+		input := m.VerifyMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CryptographyServiceMockVerifyInput{p, p1, p2}, "CryptographyService.Verify got unexpected parameters")
+		}
+
+		result := m.VerifyMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CryptographyServiceMock.Verify")
+		}
+
+		r = result.r
+
+		return
 	}
 
 	if m.VerifyFunc == nil {
-		m.t.Fatal("Unexpected call to CryptographyServiceMock.Verify")
+		m.t.Fatalf("Unexpected call to CryptographyServiceMock.Verify. %v %v %v", p, p1, p2)
 		return
 	}
 
@@ -227,19 +467,39 @@ func (m *CryptographyServiceMock) VerifyMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.VerifyPreCounter)
 }
 
+//VerifyFinished returns true if mock invocations count is ok
+func (m *CryptographyServiceMock) VerifyFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.VerifyMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.VerifyCounter) == uint64(len(m.VerifyMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.VerifyMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.VerifyCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.VerifyFunc != nil {
+		return atomic.LoadUint64(&m.VerifyCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CryptographyServiceMock) ValidateCallCounters() {
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+	if !m.GetPublicKeyFinished() {
 		m.t.Fatal("Expected call to CryptographyServiceMock.GetPublicKey")
 	}
 
-	if m.SignFunc != nil && atomic.LoadUint64(&m.SignCounter) == 0 {
+	if !m.SignFinished() {
 		m.t.Fatal("Expected call to CryptographyServiceMock.Sign")
 	}
 
-	if m.VerifyFunc != nil && atomic.LoadUint64(&m.VerifyCounter) == 0 {
+	if !m.VerifyFinished() {
 		m.t.Fatal("Expected call to CryptographyServiceMock.Verify")
 	}
 
@@ -260,15 +520,15 @@ func (m *CryptographyServiceMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CryptographyServiceMock) MinimockFinish() {
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+	if !m.GetPublicKeyFinished() {
 		m.t.Fatal("Expected call to CryptographyServiceMock.GetPublicKey")
 	}
 
-	if m.SignFunc != nil && atomic.LoadUint64(&m.SignCounter) == 0 {
+	if !m.SignFinished() {
 		m.t.Fatal("Expected call to CryptographyServiceMock.Sign")
 	}
 
-	if m.VerifyFunc != nil && atomic.LoadUint64(&m.VerifyCounter) == 0 {
+	if !m.VerifyFinished() {
 		m.t.Fatal("Expected call to CryptographyServiceMock.Verify")
 	}
 
@@ -286,9 +546,9 @@ func (m *CryptographyServiceMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.GetPublicKeyFunc == nil || atomic.LoadUint64(&m.GetPublicKeyCounter) > 0)
-		ok = ok && (m.SignFunc == nil || atomic.LoadUint64(&m.SignCounter) > 0)
-		ok = ok && (m.VerifyFunc == nil || atomic.LoadUint64(&m.VerifyCounter) > 0)
+		ok = ok && m.GetPublicKeyFinished()
+		ok = ok && m.SignFinished()
+		ok = ok && m.VerifyFinished()
 
 		if ok {
 			return
@@ -297,15 +557,15 @@ func (m *CryptographyServiceMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+			if !m.GetPublicKeyFinished() {
 				m.t.Error("Expected call to CryptographyServiceMock.GetPublicKey")
 			}
 
-			if m.SignFunc != nil && atomic.LoadUint64(&m.SignCounter) == 0 {
+			if !m.SignFinished() {
 				m.t.Error("Expected call to CryptographyServiceMock.Sign")
 			}
 
-			if m.VerifyFunc != nil && atomic.LoadUint64(&m.VerifyCounter) == 0 {
+			if !m.VerifyFinished() {
 				m.t.Error("Expected call to CryptographyServiceMock.Verify")
 			}
 
@@ -321,15 +581,15 @@ func (m *CryptographyServiceMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CryptographyServiceMock) AllMocksCalled() bool {
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+	if !m.GetPublicKeyFinished() {
 		return false
 	}
 
-	if m.SignFunc != nil && atomic.LoadUint64(&m.SignCounter) == 0 {
+	if !m.SignFinished() {
 		return false
 	}
 
-	if m.VerifyFunc != nil && atomic.LoadUint64(&m.VerifyCounter) == 0 {
+	if !m.VerifyFinished() {
 		return false
 	}
 
