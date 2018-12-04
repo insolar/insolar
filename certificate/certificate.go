@@ -309,14 +309,15 @@ func (cert *Certificate) Serialize() ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
 }
 
-func (cert *Certificate) VerifyAuthorizationCertificate(authCert *AuthorizationCertificate) (bool, error) {
-	if len(cert.BootstrapNodes) != len(authCert.BootstrapNodes) {
+func (cert *Certificate) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
+	crt := authCert.(*AuthorizationCertificate)
+	if len(cert.BootstrapNodes) != len(crt.BootstrapNodes) {
 		return false, nil
 	}
-	data := []byte(authCert.PublicKey + authCert.Reference + authCert.Role)
+	data := []byte(crt.PublicKey + crt.Reference + crt.Role)
 	for _, node := range cert.BootstrapNodes {
 		ok := false
-		for _, sig := range authCert.BootstrapNodes {
+		for _, sig := range crt.BootstrapNodes {
 			ok = cert.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sig.NodeSign), data)
 			if ok {
 				continue

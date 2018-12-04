@@ -64,6 +64,11 @@ type CertificateMock struct {
 	SetRootDomainReferenceCounter    uint64
 	SetRootDomainReferencePreCounter uint64
 	SetRootDomainReferenceMock       mCertificateMockSetRootDomainReference
+
+	VerifyAuthorizationCertificateFunc       func(p core.AuthorizationCertificate) (r bool, r1 error)
+	VerifyAuthorizationCertificateCounter    uint64
+	VerifyAuthorizationCertificatePreCounter uint64
+	VerifyAuthorizationCertificateMock       mCertificateMockVerifyAuthorizationCertificate
 }
 
 //NewCertificateMock returns a mock for github.com/insolar/insolar/core.Certificate
@@ -83,6 +88,7 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	m.NewCertForHostMock = mCertificateMockNewCertForHost{mock: m}
 	m.SerializeMock = mCertificateMockSerialize{mock: m}
 	m.SetRootDomainReferenceMock = mCertificateMockSetRootDomainReference{mock: m}
+	m.VerifyAuthorizationCertificateMock = mCertificateMockVerifyAuthorizationCertificate{mock: m}
 
 	return m
 }
@@ -539,6 +545,72 @@ func (m *CertificateMock) SetRootDomainReferenceMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetRootDomainReferencePreCounter)
 }
 
+type mCertificateMockVerifyAuthorizationCertificate struct {
+	mock             *CertificateMock
+	mockExpectations *CertificateMockVerifyAuthorizationCertificateParams
+}
+
+//CertificateMockVerifyAuthorizationCertificateParams represents input parameters of the Certificate.VerifyAuthorizationCertificate
+type CertificateMockVerifyAuthorizationCertificateParams struct {
+	p core.AuthorizationCertificate
+}
+
+//Expect sets up expected params for the Certificate.VerifyAuthorizationCertificate
+func (m *mCertificateMockVerifyAuthorizationCertificate) Expect(p core.AuthorizationCertificate) *mCertificateMockVerifyAuthorizationCertificate {
+	m.mockExpectations = &CertificateMockVerifyAuthorizationCertificateParams{p}
+	return m
+}
+
+//Return sets up a mock for Certificate.VerifyAuthorizationCertificate to return Return's arguments
+func (m *mCertificateMockVerifyAuthorizationCertificate) Return(r bool, r1 error) *CertificateMock {
+	m.mock.VerifyAuthorizationCertificateFunc = func(p core.AuthorizationCertificate) (bool, error) {
+		return r, r1
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of Certificate.VerifyAuthorizationCertificate method
+func (m *mCertificateMockVerifyAuthorizationCertificate) Set(f func(p core.AuthorizationCertificate) (r bool, r1 error)) *CertificateMock {
+	m.mock.VerifyAuthorizationCertificateFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//VerifyAuthorizationCertificate implements github.com/insolar/insolar/core.Certificate interface
+func (m *CertificateMock) VerifyAuthorizationCertificate(p core.AuthorizationCertificate) (r bool, r1 error) {
+	atomic.AddUint64(&m.VerifyAuthorizationCertificatePreCounter, 1)
+	defer atomic.AddUint64(&m.VerifyAuthorizationCertificateCounter, 1)
+
+	if m.VerifyAuthorizationCertificateMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.VerifyAuthorizationCertificateMock.mockExpectations, CertificateMockVerifyAuthorizationCertificateParams{p},
+			"Certificate.VerifyAuthorizationCertificate got unexpected parameters")
+
+		if m.VerifyAuthorizationCertificateFunc == nil {
+
+			m.t.Fatal("No results are set for the CertificateMock.VerifyAuthorizationCertificate")
+
+			return
+		}
+	}
+
+	if m.VerifyAuthorizationCertificateFunc == nil {
+		m.t.Fatal("Unexpected call to CertificateMock.VerifyAuthorizationCertificate")
+		return
+	}
+
+	return m.VerifyAuthorizationCertificateFunc(p)
+}
+
+//VerifyAuthorizationCertificateMinimockCounter returns a count of CertificateMock.VerifyAuthorizationCertificateFunc invocations
+func (m *CertificateMock) VerifyAuthorizationCertificateMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter)
+}
+
+//VerifyAuthorizationCertificateMinimockPreCounter returns the value of CertificateMock.VerifyAuthorizationCertificate invocations
+func (m *CertificateMock) VerifyAuthorizationCertificateMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.VerifyAuthorizationCertificatePreCounter)
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CertificateMock) ValidateCallCounters() {
@@ -577,6 +649,10 @@ func (m *CertificateMock) ValidateCallCounters() {
 
 	if m.SetRootDomainReferenceFunc != nil && atomic.LoadUint64(&m.SetRootDomainReferenceCounter) == 0 {
 		m.t.Fatal("Expected call to CertificateMock.SetRootDomainReference")
+	}
+
+	if m.VerifyAuthorizationCertificateFunc != nil && atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.VerifyAuthorizationCertificate")
 	}
 
 }
@@ -632,6 +708,10 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.SetRootDomainReference")
 	}
 
+	if m.VerifyAuthorizationCertificateFunc != nil && atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) == 0 {
+		m.t.Fatal("Expected call to CertificateMock.VerifyAuthorizationCertificate")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -655,6 +735,7 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 		ok = ok && (m.NewCertForHostFunc == nil || atomic.LoadUint64(&m.NewCertForHostCounter) > 0)
 		ok = ok && (m.SerializeFunc == nil || atomic.LoadUint64(&m.SerializeCounter) > 0)
 		ok = ok && (m.SetRootDomainReferenceFunc == nil || atomic.LoadUint64(&m.SetRootDomainReferenceCounter) > 0)
+		ok = ok && (m.VerifyAuthorizationCertificateFunc == nil || atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) > 0)
 
 		if ok {
 			return
@@ -697,6 +778,10 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 
 			if m.SetRootDomainReferenceFunc != nil && atomic.LoadUint64(&m.SetRootDomainReferenceCounter) == 0 {
 				m.t.Error("Expected call to CertificateMock.SetRootDomainReference")
+			}
+
+			if m.VerifyAuthorizationCertificateFunc != nil && atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) == 0 {
+				m.t.Error("Expected call to CertificateMock.VerifyAuthorizationCertificate")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -744,6 +829,10 @@ func (m *CertificateMock) AllMocksCalled() bool {
 	}
 
 	if m.SetRootDomainReferenceFunc != nil && atomic.LoadUint64(&m.SetRootDomainReferenceCounter) == 0 {
+		return false
+	}
+
+	if m.VerifyAuthorizationCertificateFunc != nil && atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) == 0 {
 		return false
 	}
 

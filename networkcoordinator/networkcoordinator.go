@@ -75,7 +75,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 
 // ValidateCert validates node certificate
 func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.AuthorizationCertificate) (bool, error) {
-	return nc.Certificate.VerifyAuthorizationCertificate(&certificate)
+	return nc.Certificate.VerifyAuthorizationCertificate(certificate)
 }
 
 // WriteActiveNodes writes active nodes to ledger
