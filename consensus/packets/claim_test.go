@@ -61,7 +61,7 @@ func TestNodeViolationBlame(t *testing.T) {
 func makeNodeJoinClaim() *NodeJoinClaim {
 	nodeJoinClaim := &NodeJoinClaim{}
 	nodeJoinClaim.ShortNodeID = core.ShortNodeID(77)
-	nodeJoinClaim.RelayNodeID = uint32(26)
+	nodeJoinClaim.RelayNodeID = core.ShortNodeID(26)
 	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
 	nodeJoinClaim.JoinsAfter = uint32(67)
 	nodeJoinClaim.NodeRoleRecID = 32

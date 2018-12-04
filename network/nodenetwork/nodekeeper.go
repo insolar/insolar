@@ -316,7 +316,7 @@ func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
 	var s [consensus.SignatureLength]byte
 	claim := consensus.NodeJoinClaim{
 		ShortNodeID:             nk.origin.ShortID(),
-		RelayNodeID:             0,
+		RelayNodeID:             nk.origin.ShortID(),
 		ProtocolVersionAndFlags: 0,
 		JoinsAfter:              0,
 		NodeRoleRecID:           0, // TODO: how to get a role as int?
