@@ -65,13 +65,20 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase1Packet.")
 	}
 
+	var success bool
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
-		err = packet.AddClaim(fp.NodeKeeper.GetOriginClaim())
-		if err != nil {
+		success = packet.AddClaim(fp.NodeKeeper.GetOriginClaim())
+		if !success {
 			return nil, errors.Wrap(err, "[ Execute ] Failed to add origin claim in Phase1Packet.")
 		}
 	}
-	// TODO: add other claims
+	for {
+		success = packet.AddClaim(fp.NodeKeeper.GetClaimQueue().Front())
+		if !success {
+			break
+		}
+		_ = fp.NodeKeeper.GetClaimQueue().Pop()
+	}
 
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
 	err = fp.signPhase1Packet(&packet)
