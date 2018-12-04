@@ -101,11 +101,7 @@ type networkNode struct {
 }
 
 func initCertificate() *certificate.Certificate {
-	result := &certificate.Certificate{
-		MajorityRule: 0,
-		//MinRoles: struct{ Virtual:1, HeavyMaterial: 1, LightMaterial:1},
-
-	}
+	result := &certificate.AuthorizationCertificate{}
 	return result
 }
 
@@ -176,7 +172,7 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	s.T().Skip("fix nodes auth, generate valid certs!")
+	// s.T().Skip("fix nodes auth, generate valid certs!")
 
 	phasesResult := make(chan error)
 	s.InitNodes()
