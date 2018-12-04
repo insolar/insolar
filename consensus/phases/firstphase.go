@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -188,6 +189,20 @@ func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packet
 	}
 	return result
 }
+
+func (fp *FirstPhase) claimSignIsOk(claim *packets.NodeJoinClaim) (bool, error) {
+	keyProc := platformpolicy.NewKeyProcessor()
+	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
+	if err != nil {
+		return false, errors.Wrap(err, "[ claimSignIsOk ] failed to import a key")
+	}
+	rawClaim, err := claim.SerializeWithoutSign()
+	if err != nil {
+		return false, errors.Wrap(err, "[ claimSignIsOk ] failed to serialize a claim")
+	}
+	return fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.Signature[:]), rawClaim), nil
+}
+
 func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim, addressMap map[core.RecordRef]string) {
 	for ref, claimList := range claims {
 		fp.UnsyncList.AddClaims(ref, claimList, addressMap)
