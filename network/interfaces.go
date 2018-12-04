@@ -185,6 +185,8 @@ type UnsyncList interface {
 	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim, map[core.RecordRef]string)
 	// CalculateHash calculate node list hash based on active node list and claims
 	CalculateHash() ([]byte, error)
+	// GetActiveNode
+	GetActiveNode(ref core.RecordRef) core.Node
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.

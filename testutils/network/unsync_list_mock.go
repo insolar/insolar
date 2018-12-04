@@ -30,6 +30,11 @@ type UnsyncListMock struct {
 	CalculateHashPreCounter uint64
 	CalculateHashMock       mUnsyncListMockCalculateHash
 
+	GetActiveNodeFunc       func(p core.RecordRef) (r core.Node)
+	GetActiveNodeCounter    uint64
+	GetActiveNodePreCounter uint64
+	GetActiveNodeMock       mUnsyncListMockGetActiveNode
+
 	IndexToRefFunc       func(p int) (r core.RecordRef, r1 error)
 	IndexToRefCounter    uint64
 	IndexToRefPreCounter uint64
@@ -61,6 +66,7 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 
 	m.AddClaimsMock = mUnsyncListMockAddClaims{mock: m}
 	m.CalculateHashMock = mUnsyncListMockCalculateHash{mock: m}
+	m.GetActiveNodeMock = mUnsyncListMockGetActiveNode{mock: m}
 	m.IndexToRefMock = mUnsyncListMockIndexToRef{mock: m}
 	m.LengthMock = mUnsyncListMockLength{mock: m}
 	m.RefToIndexMock = mUnsyncListMockRefToIndex{mock: m}
@@ -176,6 +182,72 @@ func (m *UnsyncListMock) CalculateHashMinimockCounter() uint64 {
 //CalculateHashMinimockPreCounter returns the value of UnsyncListMock.CalculateHash invocations
 func (m *UnsyncListMock) CalculateHashMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.CalculateHashPreCounter)
+}
+
+type mUnsyncListMockGetActiveNode struct {
+	mock             *UnsyncListMock
+	mockExpectations *UnsyncListMockGetActiveNodeParams
+}
+
+//UnsyncListMockGetActiveNodeParams represents input parameters of the UnsyncList.GetActiveNode
+type UnsyncListMockGetActiveNodeParams struct {
+	p core.RecordRef
+}
+
+//Expect sets up expected params for the UnsyncList.GetActiveNode
+func (m *mUnsyncListMockGetActiveNode) Expect(p core.RecordRef) *mUnsyncListMockGetActiveNode {
+	m.mockExpectations = &UnsyncListMockGetActiveNodeParams{p}
+	return m
+}
+
+//Return sets up a mock for UnsyncList.GetActiveNode to return Return's arguments
+func (m *mUnsyncListMockGetActiveNode) Return(r core.Node) *UnsyncListMock {
+	m.mock.GetActiveNodeFunc = func(p core.RecordRef) core.Node {
+		return r
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of UnsyncList.GetActiveNode method
+func (m *mUnsyncListMockGetActiveNode) Set(f func(p core.RecordRef) (r core.Node)) *UnsyncListMock {
+	m.mock.GetActiveNodeFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//GetActiveNode implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) GetActiveNode(p core.RecordRef) (r core.Node) {
+	atomic.AddUint64(&m.GetActiveNodePreCounter, 1)
+	defer atomic.AddUint64(&m.GetActiveNodeCounter, 1)
+
+	if m.GetActiveNodeMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.GetActiveNodeMock.mockExpectations, UnsyncListMockGetActiveNodeParams{p},
+			"UnsyncList.GetActiveNode got unexpected parameters")
+
+		if m.GetActiveNodeFunc == nil {
+
+			m.t.Fatal("No results are set for the UnsyncListMock.GetActiveNode")
+
+			return
+		}
+	}
+
+	if m.GetActiveNodeFunc == nil {
+		m.t.Fatal("Unexpected call to UnsyncListMock.GetActiveNode")
+		return
+	}
+
+	return m.GetActiveNodeFunc(p)
+}
+
+//GetActiveNodeMinimockCounter returns a count of UnsyncListMock.GetActiveNodeFunc invocations
+func (m *UnsyncListMock) GetActiveNodeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetActiveNodeCounter)
+}
+
+//GetActiveNodeMinimockPreCounter returns the value of UnsyncListMock.GetActiveNode invocations
+func (m *UnsyncListMock) GetActiveNodeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetActiveNodePreCounter)
 }
 
 type mUnsyncListMockIndexToRef struct {
@@ -430,6 +502,10 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to UnsyncListMock.CalculateHash")
 	}
 
+	if m.GetActiveNodeFunc != nil && atomic.LoadUint64(&m.GetActiveNodeCounter) == 0 {
+		m.t.Fatal("Expected call to UnsyncListMock.GetActiveNode")
+	}
+
 	if m.IndexToRefFunc != nil && atomic.LoadUint64(&m.IndexToRefCounter) == 0 {
 		m.t.Fatal("Expected call to UnsyncListMock.IndexToRef")
 	}
@@ -471,6 +547,10 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.CalculateHash")
 	}
 
+	if m.GetActiveNodeFunc != nil && atomic.LoadUint64(&m.GetActiveNodeCounter) == 0 {
+		m.t.Fatal("Expected call to UnsyncListMock.GetActiveNode")
+	}
+
 	if m.IndexToRefFunc != nil && atomic.LoadUint64(&m.IndexToRefCounter) == 0 {
 		m.t.Fatal("Expected call to UnsyncListMock.IndexToRef")
 	}
@@ -503,6 +583,7 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && (m.AddClaimsFunc == nil || atomic.LoadUint64(&m.AddClaimsCounter) > 0)
 		ok = ok && (m.CalculateHashFunc == nil || atomic.LoadUint64(&m.CalculateHashCounter) > 0)
+		ok = ok && (m.GetActiveNodeFunc == nil || atomic.LoadUint64(&m.GetActiveNodeCounter) > 0)
 		ok = ok && (m.IndexToRefFunc == nil || atomic.LoadUint64(&m.IndexToRefCounter) > 0)
 		ok = ok && (m.LengthFunc == nil || atomic.LoadUint64(&m.LengthCounter) > 0)
 		ok = ok && (m.RefToIndexFunc == nil || atomic.LoadUint64(&m.RefToIndexCounter) > 0)
@@ -521,6 +602,10 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 
 			if m.CalculateHashFunc != nil && atomic.LoadUint64(&m.CalculateHashCounter) == 0 {
 				m.t.Error("Expected call to UnsyncListMock.CalculateHash")
+			}
+
+			if m.GetActiveNodeFunc != nil && atomic.LoadUint64(&m.GetActiveNodeCounter) == 0 {
+				m.t.Error("Expected call to UnsyncListMock.GetActiveNode")
 			}
 
 			if m.IndexToRefFunc != nil && atomic.LoadUint64(&m.IndexToRefCounter) == 0 {
@@ -556,6 +641,10 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 	}
 
 	if m.CalculateHashFunc != nil && atomic.LoadUint64(&m.CalculateHashCounter) == 0 {
+		return false
+	}
+
+	if m.GetActiveNodeFunc != nil && atomic.LoadUint64(&m.GetActiveNodeCounter) == 0 {
 		return false
 	}
 

@@ -117,35 +117,17 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		fp.UnsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
-	fp.processClaims(ctx, claimMap, addressMap)
+	fp.UnsyncList.AddClaims(claimMap, addressMap)
 
-	// Get active nodes again for case when current node just joined to network and don't have full active list
-	activeNodes = fp.NodeKeeper.GetActiveNodes()
-	deviantsNodes := make([]core.Node, 0)
-	timedOutNodes := make([]core.Node, 0)
-	validProofs := make(map[core.Node]*merkle.PulseProof)
-
-	for _, node := range activeNodes {
-		proof, ok := proofSet[node.ID()]
-		if !ok {
-			timedOutNodes = append(timedOutNodes, node)
-		}
-
-		if !fp.Calculator.IsValid(proof, pulseHash, node.PublicKey()) {
-			validProofs[node] = proof
-		} else {
-			deviantsNodes = append(deviantsNodes, node)
-		}
-	}
+	valid, fault := fp.validateProofs(pulseHash, proofSet)
 
 	return &FirstPhaseState{
-		PulseEntry:    entry,
-		PulseHash:     pulseHash,
-		PulseProof:    pulseProof,
-		PulseProofSet: validProofs,
-		TimedOutNodes: timedOutNodes,
-		DeviantNodes:  deviantsNodes,
-		UnsyncList:    fp.UnsyncList,
+		PulseEntry:  entry,
+		PulseHash:   pulseHash,
+		PulseProof:  pulseProof,
+		ValidProofs: valid,
+		FaultProofs: fault,
+		UnsyncList:  fp.UnsyncList,
 	}, nil
 }
 
@@ -172,6 +154,32 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }
 
+func (fp *FirstPhase) validateProofs(
+	pulseHash merkle.OriginHash,
+	proofs map[core.RecordRef]*merkle.PulseProof,
+) (valid map[core.Node]*merkle.PulseProof, fault map[core.RecordRef]*merkle.PulseProof) {
+
+	validProofs := make(map[core.Node]*merkle.PulseProof)
+	faultProofs := make(map[core.RecordRef]*merkle.PulseProof)
+	for nodeID, proof := range proofs {
+		valid := fp.validateProof(pulseHash, nodeID, proof)
+		if valid {
+			validProofs[fp.UnsyncList.GetActiveNode(nodeID)] = proof
+		} else {
+			faultProofs[nodeID] = proof
+		}
+	}
+	return validProofs, faultProofs
+}
+
+func (fp *FirstPhase) validateProof(pulseHash merkle.OriginHash, nodeID core.RecordRef, proof *merkle.PulseProof) bool {
+	node := fp.UnsyncList.GetActiveNode(nodeID)
+	if node == nil {
+		return false
+	}
+	return fp.Calculator.IsValid(proof, pulseHash, node.PublicKey())
+}
+
 func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
 	// TODO: NETD18-47
 	for _, claimList := range claims {
@@ -186,8 +194,4 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 		}
 	}
 	return 0, errors.New("no announce claims were received")
-}
-
-func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim, addressMap map[core.RecordRef]string) {
-	fp.UnsyncList.AddClaims(claims, addressMap)
 }

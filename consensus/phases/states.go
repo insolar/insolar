@@ -29,10 +29,8 @@ type FirstPhaseState struct {
 	PulseHash  merkle.OriginHash
 	PulseProof *merkle.PulseProof
 
-	PulseProofSet map[core.Node]*merkle.PulseProof
-
-	TimedOutNodes []core.Node
-	DeviantNodes  []core.Node
+	ValidProofs map[core.Node]*merkle.PulseProof
+	FaultProofs map[core.RecordRef]*merkle.PulseProof
 
 	UnsyncList network.UnsyncList
 }

@@ -43,7 +43,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	entry := &merkle.GlobuleEntry{
 		PulseEntry:    state.PulseEntry,
-		ProofSet:      state.PulseProofSet,
+		ProofSet:      state.ValidProofs,
 		PulseHash:     state.PulseHash,
 		PrevCloudHash: prevCloudHash,
 		GlobuleID:     globuleID,
