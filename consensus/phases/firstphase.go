@@ -182,7 +182,5 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 }
 
 func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim, addressMap map[core.RecordRef]string) {
-	for ref, claimList := range claims {
-		fp.UnsyncList.AddClaims(ref, claimList, addressMap)
-	}
+	fp.UnsyncList.AddClaims(claims, addressMap)
 }

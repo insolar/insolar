@@ -182,7 +182,7 @@ type UnsyncList interface {
 	// RemoveClaims
 	RemoveClaims(core.RecordRef)
 	// AddClaims
-	AddClaims(core.RecordRef, []consensus.ReferendumClaim, map[core.RecordRef]string)
+	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim, map[core.RecordRef]string)
 	// CalculateHash calculate node list hash based on active node list and claims
 	CalculateHash() ([]byte, error)
 }

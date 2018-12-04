@@ -62,9 +62,9 @@ func (ul *unsyncList) RemoveClaims(from core.RecordRef) {
 	ul.cache = nil
 }
 
-func (ul *unsyncList) AddClaims(from core.RecordRef, claims []consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
+func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
 	ul.addressMap = addressMap
-	ul.claims[from] = claims
+	ul.claims = claims
 	ul.cache = nil
 }
 
