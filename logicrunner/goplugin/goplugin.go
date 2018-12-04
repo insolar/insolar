@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/metrics"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -165,6 +167,8 @@ func (gp *GoPlugin) CallMethod(
 
 	select {
 	case callResult := <-resultChan:
+		callTime := time.Since(start)
+		metrics.InsgorundContractExecutionTime.Observe(callTime.Seconds())
 		inslogger.FromContext(ctx).Debugf("CallMethod done work, time spend in here - %s", time.Since(start))
 		if callResult.Error != nil {
 			return nil, nil, errors.Wrap(callResult.Error, "problem with API call")
