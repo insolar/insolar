@@ -336,14 +336,8 @@ func (cert *Certificate) VerifyAuthorizationCertificate(authCert core.Authorizat
 	}
 	data := authCert.SerializeNodePart()
 	for _, node := range discoveryNodes {
-		var ok bool
-
-		for _, sig := range authCert.GetDiscoveryNodes() {
-			ok = cert.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sig.GetNodeSign()), data)
-			if ok {
-				continue
-			}
-		}
+		sign := authCert.GetDiscoverySign(node.GetNodeRef())
+		ok := cert.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sign), data)
 		if !ok {
 			return false, nil
 		}
