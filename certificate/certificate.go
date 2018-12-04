@@ -68,6 +68,20 @@ func (authCert *AuthorizationCertificate) GetDiscoveryNodes() []core.DiscoveryNo
 	return result
 }
 
+func (authCert *AuthorizationCertificate) SerializeNodePart() []byte {
+	return []byte(authCert.PublicKey + authCert.Reference + authCert.Role)
+}
+
+// SignNodePart signs node part in certificate
+func (authCert *AuthorizationCertificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
+	signer := scheme.Signer(key)
+	sign, err := signer.Sign(authCert.SerializeNodePart())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignNodePart ] Can't Sign")
+	}
+	return sign.Bytes(), nil
+}
+
 // Certificate holds info about certificate
 type Certificate struct {
 	AuthorizationCertificate
@@ -139,20 +153,6 @@ func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) 
 	sign, err := signer.Sign(cert.serializeNetworkPart())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignNetworkPart ] Can't Sign")
-	}
-	return sign.Bytes(), nil
-}
-
-func (cert *Certificate) serializeNodePart() []byte {
-	return []byte(cert.PublicKey + cert.Reference + cert.Role)
-}
-
-// SignNodePart signs node part in certificate
-func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
-	signer := scheme.Signer(key)
-	sign, err := signer.Sign(cert.serializeNodePart())
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignNodePart ] Can't Sign")
 	}
 	return sign.Bytes(), nil
 }
