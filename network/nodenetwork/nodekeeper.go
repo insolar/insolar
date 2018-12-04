@@ -313,16 +313,16 @@ func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
 	var keyData [consensus.PublicKeyLength]byte
 	copy(keyData[:], exportedKey[:consensus.PublicKeyLength])
 
-	var s [71]byte
+	var s [consensus.SignatureLength]byte
 	claim := consensus.NodeJoinClaim{
-		nk.origin.ShortID(),
-		0,
-		0,
-		0,
-		0, // TODO: how to get a role as int?
-		nk.origin.ID(),
-		keyData,
-		s,
+		ShortNodeID:             nk.origin.ShortID(),
+		RelayNodeID:             0,
+		ProtocolVersionAndFlags: 0,
+		JoinsAfter:              0,
+		NodeRoleRecID:           0, // TODO: how to get a role as int?
+		NodeRef:                 nk.origin.ID(),
+		NodePK:                  keyData,
+		Signature:               s,
 	}
 
 	dataToSign, err := claim.SerializeWithoutSign()
