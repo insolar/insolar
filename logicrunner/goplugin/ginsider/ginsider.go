@@ -221,6 +221,7 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 	err = client.Call("RPC.GetCode", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
 		return "", errors.Wrap(err, "on calling main API")
@@ -306,6 +307,7 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, arg
 	err = client.Call("RPC.RouteCall", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
 		return nil, errors.Wrap(err, "on calling main API")
@@ -333,6 +335,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
@@ -357,6 +360,7 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([
 	err = client.Call("RPC.GetObjChildren", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
 		return nil, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
@@ -384,6 +388,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 	err = client.Call("RPC.SaveAsDelegate", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
@@ -409,6 +414,7 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 	err = client.Call("RPC.GetDelegate", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
@@ -432,6 +438,7 @@ func (gi *GoInsider) DeactivateObject(object core.RecordRef) error {
 	err = client.Call("RPC.DeactivateObject", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
 		return errors.Wrap(err, "on calling main API")
