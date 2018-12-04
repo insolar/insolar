@@ -300,6 +300,43 @@ func (nk *nodekeeper) MoveSyncToActive() {
 	sync.mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
 }
 
+func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
+	key, err := nk.Cryptography.GetPublicKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to get a public key")
+	}
+	keyProc := platformpolicy.NewKeyProcessor()
+	exportedKey, err := keyProc.ExportPublicKey(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to export a public key")
+	}
+	var keyData [consensus.PublicKeyLength]byte
+	copy(keyData[:], exportedKey[:consensus.PublicKeyLength])
+
+	var s [71]byte
+	claim := consensus.NodeJoinClaim{
+		nk.origin.ShortID(),
+		0,
+		0,
+		0,
+		0, // TODO: how to get a role as int?
+		nk.origin.ID(),
+		keyData,
+		s,
+	}
+
+	dataToSign, err := claim.SerializeWithoutSign()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to serialize a claim")
+	}
+	sign, err := nk.sign(dataToSign)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to sign a claim")
+	}
+
+	copy(claim.Signature[:], sign[:consensus.SignatureLength])
+	return &claim, nil
+}
 func jetRoleToNodeRole(role core.DynamicRole) core.StaticRole {
 	switch role {
 	case core.DynamicRoleVirtualExecutor:
