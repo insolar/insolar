@@ -17,6 +17,7 @@
 package extractor
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -189,4 +190,22 @@ func TestNodeInfoResponse_UnmarshalError(t *testing.T) {
 	require.Contains(t, err.Error(), "Can't unmarshal response")
 	require.Equal(t, "", pk)
 	require.Equal(t, "", role)
+}
+
+// rootdomain.go
+func TestInfoResponse(t *testing.T) {
+	testValue, _ := json.Marshal(map[string]interface{}{
+		"root_member": "test_root_member",
+		"node_domain": "test_node_domain",
+	})
+	expectedValue := Info{}
+	_ = json.Unmarshal(testValue, &expectedValue)
+
+	data, err := core.Serialize([]interface{}{testValue, nil})
+	require.NoError(t, err)
+
+	info, err := InfoResponse(data)
+
+	require.NoError(t, err)
+	require.Equal(t, &expectedValue, info)
 }
