@@ -149,7 +149,6 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	c.Ledger = tempLedger
 
 	nodeConfig := configuration.NewConfiguration()
-	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig, scheme)
 	require.NotNil(t, serviceNetwork)
 
