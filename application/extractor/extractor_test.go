@@ -101,3 +101,19 @@ func TestPublicKeyResponse_UnmarshalError(t *testing.T) {
 	require.Contains(t, err.Error(), "Can't unmarshal")
 	require.Equal(t, "", result)
 }
+
+func TestCallResponse(t *testing.T) {
+	testValue := map[interface{}]interface{}{
+		"string_value": "test_string",
+		"int_value":    uint64(1),
+	}
+
+	data, err := core.Serialize([]interface{}{testValue, nil})
+	require.NoError(t, err)
+
+	result, contractErr, err := CallResponse(data)
+
+	require.NoError(t, err)
+	require.Nil(t, contractErr)
+	require.Equal(t, testValue, result)
+}
