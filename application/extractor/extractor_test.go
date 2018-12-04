@@ -75,3 +75,17 @@ func TestPublicKeyResponse(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, testValue, result)
 }
+
+func TestPublicKeyResponse_ErrorResponse(t *testing.T) {
+	testValue := "test_public_key"
+	contractErr := &foundation.Error{S: "Custom test error"}
+
+	data, err := core.Serialize([]interface{}{testValue, contractErr})
+	require.NoError(t, err)
+
+	result, err := PublicKeyResponse(data)
+
+	require.Contains(t, err.Error(), "Has error in response")
+	require.Contains(t, err.Error(), "Custom test error")
+	require.Equal(t, "", result)
+}
