@@ -226,3 +226,15 @@ func TestInfoResponse_ErrorResponse(t *testing.T) {
 	require.Contains(t, err.Error(), "Custom test error")
 	require.Nil(t, info)
 }
+
+func TestInfoResponse_UnmarshalError(t *testing.T) {
+	testValue := "some_no_valid_data"
+
+	data, err := core.Serialize(testValue)
+	require.NoError(t, err)
+
+	info, err := InfoResponse(data)
+
+	require.Contains(t, err.Error(), "Can't unmarshal")
+	require.Nil(t, info)
+}
