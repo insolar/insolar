@@ -50,31 +50,103 @@ func NewDiscoveryNodeMock(t minimock.Tester) *DiscoveryNodeMock {
 }
 
 type mDiscoveryNodeMockGetHost struct {
-	mock *DiscoveryNodeMock
+	mock              *DiscoveryNodeMock
+	mainExpectation   *DiscoveryNodeMockGetHostExpectation
+	expectationSeries []*DiscoveryNodeMockGetHostExpectation
 }
 
-//Return sets up a mock for DiscoveryNode.GetHost to return Return's arguments
-func (m *mDiscoveryNodeMockGetHost) Return(r string) *DiscoveryNodeMock {
-	m.mock.GetHostFunc = func() string {
-		return r
+type DiscoveryNodeMockGetHostExpectation struct {
+	result *DiscoveryNodeMockGetHostResult
+}
+
+type DiscoveryNodeMockGetHostResult struct {
+	r string
+}
+
+//Expect specifies that invocation of DiscoveryNode.GetHost is expected from 1 to Infinity times
+func (m *mDiscoveryNodeMockGetHost) Expect() *mDiscoveryNodeMockGetHost {
+	m.mock.GetHostFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DiscoveryNodeMockGetHostExpectation{}
 	}
+
+	return m
+}
+
+//Return specifies results of invocation of DiscoveryNode.GetHost
+func (m *mDiscoveryNodeMockGetHost) Return(r string) *DiscoveryNodeMock {
+	m.mock.GetHostFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DiscoveryNodeMockGetHostExpectation{}
+	}
+	m.mainExpectation.result = &DiscoveryNodeMockGetHostResult{r}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DiscoveryNode.GetHost is expected once
+func (m *mDiscoveryNodeMockGetHost) ExpectOnce() *DiscoveryNodeMockGetHostExpectation {
+	m.mock.GetHostFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DiscoveryNodeMockGetHostExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DiscoveryNodeMockGetHostExpectation) Return(r string) {
+	e.result = &DiscoveryNodeMockGetHostResult{r}
 }
 
 //Set uses given function f as a mock of DiscoveryNode.GetHost method
 func (m *mDiscoveryNodeMockGetHost) Set(f func() (r string)) *DiscoveryNodeMock {
-	m.mock.GetHostFunc = f
+	m.mainExpectation = nil
+	m.expectationSeries = nil
 
+	m.mock.GetHostFunc = f
 	return m.mock
 }
 
 //GetHost implements github.com/insolar/insolar/core.DiscoveryNode interface
 func (m *DiscoveryNodeMock) GetHost() (r string) {
-	atomic.AddUint64(&m.GetHostPreCounter, 1)
+	counter := atomic.AddUint64(&m.GetHostPreCounter, 1)
 	defer atomic.AddUint64(&m.GetHostCounter, 1)
 
+	if len(m.GetHostMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetHostMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetHost.")
+			return
+		}
+
+		result := m.GetHostMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetHost")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetHostMock.mainExpectation != nil {
+
+		result := m.GetHostMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetHost")
+		}
+
+		r = result.r
+
+		return
+	}
+
 	if m.GetHostFunc == nil {
-		m.t.Fatal("Unexpected call to DiscoveryNodeMock.GetHost")
+		m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetHost.")
 		return
 	}
 
@@ -91,32 +163,124 @@ func (m *DiscoveryNodeMock) GetHostMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetHostPreCounter)
 }
 
-type mDiscoveryNodeMockGetNodeRef struct {
-	mock *DiscoveryNodeMock
+//GetHostFinished returns true if mock invocations count is ok
+func (m *DiscoveryNodeMock) GetHostFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetHostMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetHostCounter) == uint64(len(m.GetHostMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetHostMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetHostCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetHostFunc != nil {
+		return atomic.LoadUint64(&m.GetHostCounter) > 0
+	}
+
+	return true
 }
 
-//Return sets up a mock for DiscoveryNode.GetNodeRef to return Return's arguments
-func (m *mDiscoveryNodeMockGetNodeRef) Return(r *core.RecordRef) *DiscoveryNodeMock {
-	m.mock.GetNodeRefFunc = func() *core.RecordRef {
-		return r
+type mDiscoveryNodeMockGetNodeRef struct {
+	mock              *DiscoveryNodeMock
+	mainExpectation   *DiscoveryNodeMockGetNodeRefExpectation
+	expectationSeries []*DiscoveryNodeMockGetNodeRefExpectation
+}
+
+type DiscoveryNodeMockGetNodeRefExpectation struct {
+	result *DiscoveryNodeMockGetNodeRefResult
+}
+
+type DiscoveryNodeMockGetNodeRefResult struct {
+	r *core.RecordRef
+}
+
+//Expect specifies that invocation of DiscoveryNode.GetNodeRef is expected from 1 to Infinity times
+func (m *mDiscoveryNodeMockGetNodeRef) Expect() *mDiscoveryNodeMockGetNodeRef {
+	m.mock.GetNodeRefFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DiscoveryNodeMockGetNodeRefExpectation{}
 	}
+
+	return m
+}
+
+//Return specifies results of invocation of DiscoveryNode.GetNodeRef
+func (m *mDiscoveryNodeMockGetNodeRef) Return(r *core.RecordRef) *DiscoveryNodeMock {
+	m.mock.GetNodeRefFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DiscoveryNodeMockGetNodeRefExpectation{}
+	}
+	m.mainExpectation.result = &DiscoveryNodeMockGetNodeRefResult{r}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DiscoveryNode.GetNodeRef is expected once
+func (m *mDiscoveryNodeMockGetNodeRef) ExpectOnce() *DiscoveryNodeMockGetNodeRefExpectation {
+	m.mock.GetNodeRefFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DiscoveryNodeMockGetNodeRefExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DiscoveryNodeMockGetNodeRefExpectation) Return(r *core.RecordRef) {
+	e.result = &DiscoveryNodeMockGetNodeRefResult{r}
 }
 
 //Set uses given function f as a mock of DiscoveryNode.GetNodeRef method
 func (m *mDiscoveryNodeMockGetNodeRef) Set(f func() (r *core.RecordRef)) *DiscoveryNodeMock {
-	m.mock.GetNodeRefFunc = f
+	m.mainExpectation = nil
+	m.expectationSeries = nil
 
+	m.mock.GetNodeRefFunc = f
 	return m.mock
 }
 
 //GetNodeRef implements github.com/insolar/insolar/core.DiscoveryNode interface
 func (m *DiscoveryNodeMock) GetNodeRef() (r *core.RecordRef) {
-	atomic.AddUint64(&m.GetNodeRefPreCounter, 1)
+	counter := atomic.AddUint64(&m.GetNodeRefPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeRefCounter, 1)
 
+	if len(m.GetNodeRefMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetNodeRefMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetNodeRef.")
+			return
+		}
+
+		result := m.GetNodeRefMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetNodeRef")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetNodeRefMock.mainExpectation != nil {
+
+		result := m.GetNodeRefMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetNodeRef")
+		}
+
+		r = result.r
+
+		return
+	}
+
 	if m.GetNodeRefFunc == nil {
-		m.t.Fatal("Unexpected call to DiscoveryNodeMock.GetNodeRef")
+		m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetNodeRef.")
 		return
 	}
 
@@ -133,32 +297,124 @@ func (m *DiscoveryNodeMock) GetNodeRefMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetNodeRefPreCounter)
 }
 
-type mDiscoveryNodeMockGetPublicKey struct {
-	mock *DiscoveryNodeMock
+//GetNodeRefFinished returns true if mock invocations count is ok
+func (m *DiscoveryNodeMock) GetNodeRefFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetNodeRefMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetNodeRefCounter) == uint64(len(m.GetNodeRefMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetNodeRefMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetNodeRefCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetNodeRefFunc != nil {
+		return atomic.LoadUint64(&m.GetNodeRefCounter) > 0
+	}
+
+	return true
 }
 
-//Return sets up a mock for DiscoveryNode.GetPublicKey to return Return's arguments
-func (m *mDiscoveryNodeMockGetPublicKey) Return(r crypto.PublicKey) *DiscoveryNodeMock {
-	m.mock.GetPublicKeyFunc = func() crypto.PublicKey {
-		return r
+type mDiscoveryNodeMockGetPublicKey struct {
+	mock              *DiscoveryNodeMock
+	mainExpectation   *DiscoveryNodeMockGetPublicKeyExpectation
+	expectationSeries []*DiscoveryNodeMockGetPublicKeyExpectation
+}
+
+type DiscoveryNodeMockGetPublicKeyExpectation struct {
+	result *DiscoveryNodeMockGetPublicKeyResult
+}
+
+type DiscoveryNodeMockGetPublicKeyResult struct {
+	r crypto.PublicKey
+}
+
+//Expect specifies that invocation of DiscoveryNode.GetPublicKey is expected from 1 to Infinity times
+func (m *mDiscoveryNodeMockGetPublicKey) Expect() *mDiscoveryNodeMockGetPublicKey {
+	m.mock.GetPublicKeyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DiscoveryNodeMockGetPublicKeyExpectation{}
 	}
+
+	return m
+}
+
+//Return specifies results of invocation of DiscoveryNode.GetPublicKey
+func (m *mDiscoveryNodeMockGetPublicKey) Return(r crypto.PublicKey) *DiscoveryNodeMock {
+	m.mock.GetPublicKeyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DiscoveryNodeMockGetPublicKeyExpectation{}
+	}
+	m.mainExpectation.result = &DiscoveryNodeMockGetPublicKeyResult{r}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DiscoveryNode.GetPublicKey is expected once
+func (m *mDiscoveryNodeMockGetPublicKey) ExpectOnce() *DiscoveryNodeMockGetPublicKeyExpectation {
+	m.mock.GetPublicKeyFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DiscoveryNodeMockGetPublicKeyExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DiscoveryNodeMockGetPublicKeyExpectation) Return(r crypto.PublicKey) {
+	e.result = &DiscoveryNodeMockGetPublicKeyResult{r}
 }
 
 //Set uses given function f as a mock of DiscoveryNode.GetPublicKey method
 func (m *mDiscoveryNodeMockGetPublicKey) Set(f func() (r crypto.PublicKey)) *DiscoveryNodeMock {
-	m.mock.GetPublicKeyFunc = f
+	m.mainExpectation = nil
+	m.expectationSeries = nil
 
+	m.mock.GetPublicKeyFunc = f
 	return m.mock
 }
 
 //GetPublicKey implements github.com/insolar/insolar/core.DiscoveryNode interface
 func (m *DiscoveryNodeMock) GetPublicKey() (r crypto.PublicKey) {
-	atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
+	counter := atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyCounter, 1)
 
+	if len(m.GetPublicKeyMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetPublicKeyMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetPublicKey.")
+			return
+		}
+
+		result := m.GetPublicKeyMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetPublicKey")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetPublicKeyMock.mainExpectation != nil {
+
+		result := m.GetPublicKeyMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetPublicKey")
+		}
+
+		r = result.r
+
+		return
+	}
+
 	if m.GetPublicKeyFunc == nil {
-		m.t.Fatal("Unexpected call to DiscoveryNodeMock.GetPublicKey")
+		m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetPublicKey.")
 		return
 	}
 
@@ -175,19 +431,39 @@ func (m *DiscoveryNodeMock) GetPublicKeyMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyPreCounter)
 }
 
+//GetPublicKeyFinished returns true if mock invocations count is ok
+func (m *DiscoveryNodeMock) GetPublicKeyFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetPublicKeyMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetPublicKeyCounter) == uint64(len(m.GetPublicKeyMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetPublicKeyMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetPublicKeyFunc != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DiscoveryNodeMock) ValidateCallCounters() {
 
-	if m.GetHostFunc != nil && atomic.LoadUint64(&m.GetHostCounter) == 0 {
+	if !m.GetHostFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetHost")
 	}
 
-	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+	if !m.GetNodeRefFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetNodeRef")
 	}
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+	if !m.GetPublicKeyFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetPublicKey")
 	}
 
@@ -208,15 +484,15 @@ func (m *DiscoveryNodeMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *DiscoveryNodeMock) MinimockFinish() {
 
-	if m.GetHostFunc != nil && atomic.LoadUint64(&m.GetHostCounter) == 0 {
+	if !m.GetHostFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetHost")
 	}
 
-	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+	if !m.GetNodeRefFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetNodeRef")
 	}
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+	if !m.GetPublicKeyFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetPublicKey")
 	}
 
@@ -234,9 +510,9 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.GetHostFunc == nil || atomic.LoadUint64(&m.GetHostCounter) > 0)
-		ok = ok && (m.GetNodeRefFunc == nil || atomic.LoadUint64(&m.GetNodeRefCounter) > 0)
-		ok = ok && (m.GetPublicKeyFunc == nil || atomic.LoadUint64(&m.GetPublicKeyCounter) > 0)
+		ok = ok && m.GetHostFinished()
+		ok = ok && m.GetNodeRefFinished()
+		ok = ok && m.GetPublicKeyFinished()
 
 		if ok {
 			return
@@ -245,15 +521,15 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.GetHostFunc != nil && atomic.LoadUint64(&m.GetHostCounter) == 0 {
+			if !m.GetHostFinished() {
 				m.t.Error("Expected call to DiscoveryNodeMock.GetHost")
 			}
 
-			if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+			if !m.GetNodeRefFinished() {
 				m.t.Error("Expected call to DiscoveryNodeMock.GetNodeRef")
 			}
 
-			if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+			if !m.GetPublicKeyFinished() {
 				m.t.Error("Expected call to DiscoveryNodeMock.GetPublicKey")
 			}
 
@@ -269,15 +545,15 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *DiscoveryNodeMock) AllMocksCalled() bool {
 
-	if m.GetHostFunc != nil && atomic.LoadUint64(&m.GetHostCounter) == 0 {
+	if !m.GetHostFinished() {
 		return false
 	}
 
-	if m.GetNodeRefFunc != nil && atomic.LoadUint64(&m.GetNodeRefCounter) == 0 {
+	if !m.GetNodeRefFinished() {
 		return false
 	}
 
-	if m.GetPublicKeyFunc != nil && atomic.LoadUint64(&m.GetPublicKeyCounter) == 0 {
+	if !m.GetPublicKeyFinished() {
 		return false
 	}
 
