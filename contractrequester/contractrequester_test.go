@@ -21,8 +21,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func mockMessageBus(t *testing.T, result core.Reply) *testutils.MessageBusMock {
@@ -39,4 +41,16 @@ func mockMessageBusError(t *testing.T) *testutils.MessageBusMock {
 		return nil, errors.New("test error message")
 	}
 	return mbMock
+}
+
+func TestNew(t *testing.T) {
+	messageBus := mockMessageBus(t, nil)
+
+	contractRequester, err := New()
+
+	cm := &component.Manager{}
+	cm.Inject(messageBus, contractRequester)
+
+	require.NoError(t, err)
+	require.Equal(t, messageBus, contractRequester.MessageBus)
 }
