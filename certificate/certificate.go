@@ -34,10 +34,11 @@ import (
 
 // AuthorizationCertificate holds info about node from it certificate
 type AuthorizationCertificate struct {
-	PublicKey      string          `json:"public_key"`
-	Reference      string          `json:"reference"`
-	Role           string          `json:"role"`
-	BootstrapNodes []BootstrapNode `json:"bootstrap_nodes"`
+	PublicKey         string          `json:"public_key"`
+	Reference         string          `json:"reference"`
+	Role              string          `json:"role"`
+	BootstrapNodes    []BootstrapNode `json:"bootstrap_nodes"`
+	bootstrapNodesMap map[*core.RecordRef][]byte
 
 	nodePublicKey crypto.PublicKey
 }
@@ -66,6 +67,21 @@ func (authCert *AuthorizationCertificate) GetDiscoveryNodes() []core.DiscoveryNo
 		result = append(result, &authCert.BootstrapNodes[i])
 	}
 	return result
+}
+
+// GetPublicKey returns public key reference from node certificate
+func (authCert *AuthorizationCertificate) initBootstrapNodesMap() {
+	if authCert.bootstrapNodesMap == nil {
+		for _, bNode := range authCert.BootstrapNodes {
+			authCert.bootstrapNodesMap[bNode.GetNodeRef()] = bNode.NodeSign
+		}
+	}
+}
+
+// GetNodeSign return sign from bootstrap node with provided ref
+func (authCert *AuthorizationCertificate) GetDiscoverySign(discoveryRef *core.RecordRef) []byte {
+	authCert.initBootstrapNodesMap()
+	return authCert.bootstrapNodesMap[discoveryRef]
 }
 
 func (authCert *AuthorizationCertificate) SerializeNodePart() []byte {
@@ -314,12 +330,14 @@ func Serialize(authCert core.AuthorizationCertificate) ([]byte, error) {
 }
 
 func (cert *Certificate) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
-	if len(cert.GetDiscoveryNodes()) != len(authCert.GetDiscoveryNodes()) {
+	discoveryNodes := cert.GetDiscoveryNodes()
+	if len(discoveryNodes) != len(authCert.GetDiscoveryNodes()) {
 		return false, nil
 	}
 	data := authCert.SerializeNodePart()
-	for _, node := range cert.BootstrapNodes {
-		ok := false
+	for _, node := range discoveryNodes {
+		var ok bool
+
 		for _, sig := range authCert.GetDiscoveryNodes() {
 			ok = cert.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sig.GetNodeSign()), data)
 			if ok {
