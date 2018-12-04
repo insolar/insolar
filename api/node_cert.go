@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 )
 
 // NodeCertArgs is arguments that NodeCert service accepts.
@@ -52,7 +53,7 @@ func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCe
 
 	cert, err := s.runner.NetworkCoordinator.GetCert(ctx, core.NewRefFromBase58(args.Ref))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ NodeCertService.Get] ")
 	}
 
 	reply.Cert = cert.(*certificate.Certificate)
