@@ -337,6 +337,15 @@ func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
 	copy(claim.Signature[:], sign[:consensus.SignatureLength])
 	return &claim, nil
 }
+
+func (nk *nodekeeper) sign(data []byte) ([]byte, error) {
+	sign, err := nk.Cryptography.Sign(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ sign ] failed to sign a claim")
+	}
+	return sign.Bytes(), nil
+}
+
 func jetRoleToNodeRole(role core.DynamicRole) core.StaticRole {
 	switch role {
 	case core.DynamicRoleVirtualExecutor:
