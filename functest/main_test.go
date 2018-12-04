@@ -149,13 +149,6 @@ func setInfo() error {
 	return nil
 }
 
-var insgorundPath string
-
-func buildGinsiderCLI() (err error) {
-	insgorundPath, _, err = goplugintestutils.Build()
-	return errors.Wrap(err, "[ buildGinsiderCLI ] could't build ginsider CLI: ")
-}
-
 func stopInsolard() error {
 	if stdin != nil {
 		defer stdin.Close()
@@ -169,24 +162,6 @@ func stopInsolard() error {
 	err := cmd.Process.Kill()
 	if err != nil {
 		return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
-	}
-	return nil
-}
-
-var insgorundCleaner func()
-
-func startInsgorund() (err error) {
-	// It starts on ports of "virtual" node
-	insgorundCleaner, err = goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:38181", "tcp", "127.0.0.1:38182")
-	if err != nil {
-		return errors.Wrap(err, "[ startInsgorund ] could't wait for insolard to start completely: ")
-	}
-	return nil
-}
-
-func stopInsgorund() error {
-	if insgorundCleaner != nil {
-		insgorundCleaner()
 	}
 	return nil
 }
@@ -301,6 +276,13 @@ func waitForLaunch() error {
 	}
 }
 
+var insgorundPath string
+
+func buildGinsiderCLI() (err error) {
+	insgorundPath, _, err = goplugintestutils.Build()
+	return errors.Wrap(err, "[ buildGinsiderCLI ] could't build ginsider CLI: ")
+}
+
 func setup() error {
 
 	err := deleteDirForData()
@@ -325,12 +307,6 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't build insolar: ")
 	}
 	fmt.Println("[ setup ] insolar was successfully builded")
-
-	err = startInsgorund()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
-	}
-	fmt.Println("[ setup ] insgorund was successfully started")
 
 	err = startNet()
 	if err != nil {
@@ -369,12 +345,6 @@ func teardown() {
 		fmt.Println("[ teardown ] failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
-
-	err = stopInsgorund()
-	if err != nil {
-		fmt.Println("[ teardown ] failed to stop insgorund: ", err)
-	}
-	fmt.Println("[ teardown ] insgorund was successfully stoped")
 
 	err = deleteDirForData()
 	if err != nil {
