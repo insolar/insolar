@@ -181,8 +181,8 @@ func (m *PulseManager) processRecentObjects(
 		pendingRequests[id] = record.SerializeRecord(pendingRecord)
 	}
 
-	msg := &message.HotIndexes{
-		Drop:            dropSerialized,
+	msg := &message.HotData{
+		Drop:            *drop,
 		PulseNumber:     *latestPulse.Prev,
 		RecentObjects:   recentObjects,
 		PendingRequests: pendingRequests,

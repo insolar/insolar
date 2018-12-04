@@ -556,7 +556,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
 		LatestState: firstID,
 	})
-	hotIndexes := &message.HotIndexes{
+	hotIndexes := &message.HotData{
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {
