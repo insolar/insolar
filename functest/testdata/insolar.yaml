@@ -1,7 +1,7 @@
 host:
   transport:
     protocol: TCP
-    address: 127.0.0.1:0
+    address: 127.0.0.1:53831
     behindnat: false
   bootstraphosts: []
   isrelay: false
@@ -28,7 +28,7 @@ log:
   level: Debug
   adapter: logrus
 stats:
-  listenaddress: 0.0.0.0:8080
+  listenaddress: 0.0.0.0:8081
 logicrunner:
   rpclisten: 127.0.0.1:18182
   builtin: {}
