@@ -24,22 +24,17 @@ import (
 
 // RecentStorage is a base structure
 type RecentStorage struct {
-	recentObjects   map[core.RecordID]*RecentObjectsIndexMeta
+	recentObjects   map[core.RecordID]int
 	objectLock      sync.Mutex
 	pendingRequests map[core.RecordID]struct{}
 	requestLock     sync.Mutex
 	DefaultTTL      int
 }
 
-// RecentObjectsIndexMeta contains meta about indexes
-type RecentObjectsIndexMeta struct {
-	TTL int
-}
-
 // NewRecentStorage creates default RecentStorage object
 func NewRecentStorage(defaultTTL int) *RecentStorage {
 	return &RecentStorage{
-		recentObjects:   map[core.RecordID]*RecentObjectsIndexMeta{},
+		recentObjects:   map[core.RecordID]int{},
 		pendingRequests: map[core.RecordID]struct{}{},
 		DefaultTTL:      defaultTTL,
 		objectLock:      sync.Mutex{},
@@ -51,16 +46,14 @@ func (r *RecentStorage) AddObject(id core.RecordID) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	value, ok := r.recentObjects[id]
+	r.recentObjects[id] = r.DefaultTTL
+}
 
-	if !ok {
-		r.recentObjects[id] = &RecentObjectsIndexMeta{
-			TTL: r.DefaultTTL,
-		}
-		return
-	}
-
-	value.TTL = r.DefaultTTL
+// AddObjectWithTTL adds object with specified TTL to the cache
+func (r *RecentStorage) AddObjectWithTTL(id core.RecordID, ttl int) {
+	r.objectLock.Lock()
+	defer r.objectLock.Unlock()
+	r.recentObjects[id] = ttl
 }
 
 // AddPendingRequest adds request to cache.
@@ -83,11 +76,11 @@ func (r *RecentStorage) RemovePendingRequest(id core.RecordID) {
 }
 
 // GetObjects returns object hot-indexes.
-func (r *RecentStorage) GetObjects() map[core.RecordID]*RecentObjectsIndexMeta {
+func (r *RecentStorage) GetObjects() map[core.RecordID]int {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	targetMap := make(map[core.RecordID]*RecentObjectsIndexMeta, len(r.recentObjects))
+	targetMap := make(map[core.RecordID]int, len(r.recentObjects))
 	for key, value := range r.recentObjects {
 		targetMap[key] = value
 	}
@@ -114,7 +107,7 @@ func (r *RecentStorage) ClearZeroTTLObjects() {
 	defer r.objectLock.Unlock()
 
 	for key, value := range r.recentObjects {
-		if value.TTL == 0 {
+		if value == 0 {
 			delete(r.recentObjects, key)
 		}
 	}
@@ -125,5 +118,6 @@ func (r *RecentStorage) ClearObjects() {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	r.recentObjects = map[core.RecordID]*RecentObjectsIndexMeta{}
+	r.recentObjects = map[core.RecordID]int{}
+	r.pendingRequests = map[core.RecordID]struct{}{}
 }

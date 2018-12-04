@@ -2,7 +2,7 @@ versionmanager:
   minalowedversion: v0.3.0
 host:
   transport:
-    protocol: UTP
+    protocol: TCP
     address: 127.0.0.1:53835
     behindnat: false
   bootstraphosts: []

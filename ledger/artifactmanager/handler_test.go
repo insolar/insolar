@@ -12,8 +12,9 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/jetdrop"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +31,6 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	mb := testutils.NewMessageBusMock(mc)
 
 	msg := message.GetObject{
 		Head: *genRandomRef(0),
@@ -38,9 +38,15 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 
 	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}}, nil)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
+	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
+	mb := testutils.NewMessageBusMock(mc)
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Head, m.Object)
@@ -52,6 +58,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		panic("unexpected call")
 	}
 
+	h.Recent = recentStorageMock
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
@@ -141,9 +148,11 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}}, nil)
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
-		LightChainLimit: 3,
-	})
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
 
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
@@ -161,9 +170,14 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		panic("unexpected call")
 	}
 
+	h := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 3,
+	})
+
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	h.Recent = recentStorageMock
 
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
@@ -240,12 +254,17 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
+	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
-
+	h.Recent = recentStorageMock
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
 	objIndex := index.ObjectLifeline{Delegates: map[core.RecordRef]core.RecordRef{delegateType: delegate}}
@@ -294,11 +313,17 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
+	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
+	h.Recent = recentStorageMock
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
 	amendRecord := record.ObjectAmendRecord{
@@ -354,9 +379,15 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
+	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
+	h.Recent = recentStorageMock
 
 	msg := message.GetObjectIndex{
 		Object: *genRandomRef(0),
@@ -391,15 +422,20 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	msg := message.GetCode{
 		Code: *genRandomRef(0),
 	}
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
 
 	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirect{Signature: []byte{1, 2, 3}}, nil)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
+	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	h.Recent = recentStorageMock
 
 	t.Run("redirects to light when created after limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
@@ -446,11 +482,17 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	defer cleaner()
 	defer mc.Finish()
 
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, storage.NewRecentStorage(0), &configuration.Ledger{
+	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
+	h.Recent = recentStorageMock
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
 	childRecord := record.ChildRecord{
@@ -497,4 +539,116 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	idx, err := db.GetObjectIndex(ctx, msg.Parent.Record(), false)
 	require.NoError(t, err)
 	assert.Equal(t, childID, idx.ChildPointer)
+}
+
+func TestMessageHandler_HandleHotRecords(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	idCreator, idCreatorCleaner := storagetest.TmpDB(ctx, t)
+	defer idCreatorCleaner()
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
+	require.NoError(t, err)
+
+	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
+	secondId, _ := idCreator.SetRecord(ctx, core.FirstPulseNumber, &record.CodeRecord{})
+
+	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
+		LatestState: firstID,
+	})
+	hotIndexes := &message.HotData{
+		PulseNumber: core.FirstPulseNumber,
+		RecentObjects: map[core.RecordID]*message.HotIndex{
+			*firstID: {
+				Index: firstIndex,
+				TTL:   321,
+			},
+		},
+		PendingRequests: map[core.RecordID][]byte{
+			*secondId: record.SerializeRecord(&record.CodeRecord{}),
+		},
+		Drop: jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+	}
+
+	recentMock := recentstorage.NewRecentStorageMock(t)
+	recentMock.AddPendingRequestFunc = func(p core.RecordID) {
+		require.Equal(t, p, *secondId)
+	}
+	recentMock.AddObjectWithTTLFunc = func(p core.RecordID, ttl int) {
+		require.Equal(t, p, *firstID)
+		require.Equal(t, 320, ttl)
+	}
+
+	h := NewMessageHandler(db, &configuration.Ledger{})
+	h.Recent = recentMock
+
+	res, err := h.handleHotRecords(ctx, &message.Parcel{Msg: hotIndexes})
+
+	require.NoError(t, err)
+	require.Equal(t, res, &reply.OK{})
+
+	savedDrop, err := h.db.GetDrop(ctx, core.FirstPulseNumber)
+	require.NoError(t, err)
+	require.Equal(t, &jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+
+	recentMock.MinimockFinish()
+}
+
+func TestMessageHandler_HandleValidationCheck(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
+	h := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 3,
+	})
+	h.Recent = recentStorageMock
+
+	t.Run("returns not ok when not valid", func(t *testing.T) {
+		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{})
+		require.NoError(t, err)
+
+		msg := message.ValidationCheck{
+			Object:              *genRandomRef(0),
+			ValidatedState:      *validatedStateID,
+			LatestStateApproved: genRandomID(0),
+		}
+
+		rep, err := h.handleValidationCheck(ctx, &message.Parcel{
+			Msg: &msg,
+		})
+		require.NoError(t, err)
+		_, ok := rep.(*reply.NotOK)
+		assert.True(t, ok)
+	})
+
+	t.Run("returns ok when valid", func(t *testing.T) {
+		approvedStateID := *genRandomID(0)
+		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{
+			PrevState: approvedStateID,
+		})
+		require.NoError(t, err)
+
+		msg := message.ValidationCheck{
+			Object:              *genRandomRef(0),
+			ValidatedState:      *validatedStateID,
+			LatestStateApproved: &approvedStateID,
+		}
+
+		rep, err := h.handleValidationCheck(ctx, &message.Parcel{
+			Msg: &msg,
+		})
+		require.NoError(t, err)
+		_, ok := rep.(*reply.OK)
+		assert.True(t, ok)
+	})
 }
