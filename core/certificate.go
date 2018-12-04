@@ -32,7 +32,6 @@ type Certificate interface {
 
 	GetRootDomainReference() *RecordRef
 	NewCertForHost(pKey string, role string, nodeRef string) (Certificate, error)
-	GetDiscoveryNodes() []DiscoveryNode
 	VerifyAuthorizationCertificate(AuthorizationCertificate) (bool, error)
 }
 
@@ -47,5 +46,6 @@ type DiscoveryNode interface {
 type AuthorizationCertificate interface {
 	NodeMeta
 
+	GetDiscoveryNodes() []DiscoveryNode
 	GetRole() StaticRole
 }
