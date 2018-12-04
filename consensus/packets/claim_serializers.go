@@ -146,7 +146,7 @@ func (nvb *NodeViolationBlame) Serialize() ([]byte, error) {
 
 // Deserialize implements interface method
 func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &njc.NodeID)
+	err := binary.Read(data, defaultByteOrder, &njc.ShortNodeID)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeID")
 	}
@@ -187,39 +187,61 @@ func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
 // Serialize implements interface method
 func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
 	result := allocateBuffer(1024)
-	err := binary.Write(result, defaultByteOrder, njc.NodeID)
+
+	rawData, err := njc.SerializeWithoutSign()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodeID")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Failed to serialize a claim without header")
+	}
+
+	err = binary.Write(result, defaultByteOrder, rawData)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Failed to write a data without header")
+	}
+
+	err = binary.Write(result, defaultByteOrder, njc.Signature[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write Signature")
+	}
+
+	return result.Bytes(), nil
+}
+
+func (njc *NodeJoinClaim) SerializeWithoutSign() ([]byte, error) {
+	result := allocateBuffer(1024)
+
+	err := binary.Write(result, defaultByteOrder, njc.ShortNodeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write NodeID")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.RelayNodeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write RelayNodeID")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write RelayNodeID")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.ProtocolVersionAndFlags)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write ProtocolVersionAndFlags")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write ProtocolVersionAndFlags")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.JoinsAfter)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write JoinsAfter")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write JoinsAfter")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.NodeRoleRecID)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodeRoleRecID")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write NodeRoleRecID")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.NodeRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodeRef")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write NodeRef")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.NodePK)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Can't write NodePK")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write NodePK")
 	}
 
 	return result.Bytes(), nil
