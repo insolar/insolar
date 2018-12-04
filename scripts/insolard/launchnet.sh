@@ -163,7 +163,7 @@ copy_serts()
     cp $NODES_DATA/certs/discovery_cert_3.json $THIRD_NODE/cert.json
 }
 
-trap stop_listening EXIT
+trap 'stop_listening true' EXIT
 
 run_insgorund=true
 param=$1
