@@ -130,3 +130,26 @@ func TestCallResponse_UnmarshalError(t *testing.T) {
 	require.Nil(t, contractErr)
 	require.Nil(t, result)
 }
+
+// node.go
+func TestNodeInfoResponse(t *testing.T) {
+	testPK := "test_public_key"
+	testRole := core.StaticRoleVirtual
+
+	testValue := struct {
+		PublicKey string
+		Role      core.StaticRole
+	}{
+		PublicKey: testPK,
+		Role:      testRole,
+	}
+
+	data, err := core.Serialize([]interface{}{testValue, nil})
+	require.NoError(t, err)
+
+	pk, role, err := NodeInfoResponse(data)
+
+	require.NoError(t, err)
+	require.Equal(t, testPK, pk)
+	require.Equal(t, testRole.String(), role)
+}
