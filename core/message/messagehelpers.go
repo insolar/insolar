@@ -45,6 +45,8 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.RecordRef
 	case *HeavyPayload:
 		return core.RecordRef{}
+	case *HotData:
+		return t.Jet
 	case *GetObjectIndex:
 		return t.Object
 	case *Parcel:
@@ -56,38 +58,28 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 
 func ExtractRole(msg core.Message) core.DynamicRole {
 	switch t := msg.(type) {
-	case *GenesisRequest:
-		return core.DynamicRoleLightExecutor
-	case *CallConstructor:
+	case
+		*ExecutorResults,
+		*CallMethod,
+		*CallConstructor,
+		*GenesisRequest,
+		*ValidationResults:
 		return core.DynamicRoleVirtualExecutor
-	case *CallMethod:
-		return core.DynamicRoleVirtualExecutor
-	case *ExecutorResults:
-		return core.DynamicRoleVirtualExecutor
-	case *GetChildren:
-		return core.DynamicRoleLightExecutor
-	case *GetCode:
-		return core.DynamicRoleLightExecutor
-	case *GetDelegate:
-		return core.DynamicRoleLightExecutor
-	case *GetObject:
-		return core.DynamicRoleLightExecutor
-	case *JetDrop:
-		return core.DynamicRoleLightExecutor
-	case *RegisterChild:
-		return core.DynamicRoleLightExecutor
-	case *SetBlob:
-		return core.DynamicRoleLightExecutor
-	case *SetRecord:
-		return core.DynamicRoleLightExecutor
-	case *UpdateObject:
+	case
+		*GetChildren,
+		*GetCode,
+		*GetDelegate,
+		*GetObject,
+		*JetDrop,
+		*RegisterChild,
+		*SetBlob,
+		*SetRecord,
+		*UpdateObject,
+		*ValidateRecord,
+		*HotData:
 		return core.DynamicRoleLightExecutor
 	case *ValidateCaseBind:
 		return core.DynamicRoleVirtualValidator
-	case *ValidateRecord:
-		return core.DynamicRoleLightExecutor
-	case *ValidationResults:
-		return core.DynamicRoleVirtualExecutor
 	case
 		*HeavyStartStop,
 		*HeavyPayload,
@@ -149,6 +141,9 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		return &t.RecordRef, core.DynamicRoleVirtualValidator
 	case *GetObjectIndex:
 		return &t.Object, core.DynamicRoleLightExecutor
+	case *HotData:
+		// TODO: 30.11.2018 It's not clear, what should be here. We need to solve in the nearest future. @egorikas
+		return nil, 0
 	case *Parcel:
 		return ExtractAllowedSenderObjectAndRole(t.Msg)
 	default:

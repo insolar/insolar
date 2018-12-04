@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -36,26 +38,26 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	db                         *storage.DB
-	jetDropHandlers            map[core.MessageType]internalHandler
-	recent                     *storage.RecentStorage
-	conf                       *configuration.Ledger
+	Recent                     recentstorage.RecentStorage     `inject:""`
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
+
+	db              *storage.DB
+	jetDropHandlers map[core.MessageType]internalHandler
+	conf            *configuration.Ledger
 }
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	db *storage.DB, recentObjects *storage.RecentStorage, conf *configuration.Ledger,
+	db *storage.DB, conf *configuration.Ledger,
 ) *MessageHandler {
 	return &MessageHandler{
 		db:              db,
 		jetDropHandlers: map[core.MessageType]internalHandler{},
-		recent:          recentObjects,
 		conf:            conf,
 	}
 }
@@ -72,6 +74,8 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeSetRecord, h.messagePersistingWrapper(h.handleSetRecord))
 	h.Bus.MustRegister(core.TypeSetBlob, h.messagePersistingWrapper(h.handleSetBlob))
 	h.Bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
+
+	h.Bus.MustRegister(core.TypeHotRecords, h.handleHotRecords)
 
 	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
@@ -119,10 +123,10 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 	}
 
 	if _, ok := rec.(record.Request); ok {
-		h.recent.AddPendingRequest(*id)
+		h.Recent.AddPendingRequest(*id)
 	}
 	if result, ok := rec.(*record.ResultRecord); ok {
-		h.recent.RemovePendingRequest(*result.Request.Record())
+		h.Recent.RemovePendingRequest(*result.Request.Record())
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -219,7 +223,7 @@ func (h *MessageHandler) handleGetObject(
 		}
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record())
 
 	state, err := getObjectStateRecord(ctx, h.db, stateID)
 	if err != nil {
@@ -293,7 +297,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	h.recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -327,7 +331,7 @@ func (h *MessageHandler) handleGetChildren(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.recent.AddObject(*msg.Parent.Record())
+	h.Recent.AddObject(*msg.Parent.Record())
 
 	var (
 		refs         []core.RecordRef
@@ -434,7 +438,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
-		h.recent.AddObject(*msg.Object.Record())
+		h.Recent.AddObject(*msg.Object.Record())
 
 		id, err := tx.SetRecord(ctx, pulseNumber, rec)
 		if err != nil {
@@ -453,7 +457,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Object.Record())
+	h.Recent.AddObject(*msg.Object.Record())
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -490,7 +494,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		} else if err != nil {
 			return err
 		}
-		h.recent.AddObject(*msg.Parent.Record())
+		h.Recent.AddObject(*msg.Parent.Record())
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -516,7 +520,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	if err != nil {
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Parent.Record())
+	h.Recent.AddObject(*msg.Parent.Record())
 
 	return &reply.ID{ID: *child}, nil
 }
@@ -564,7 +568,6 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 		} else if err != nil {
 			return err
 		}
-		h.recent.AddObject(*msg.Object.Record())
 
 		// Find node that has this state.
 		var nodes []core.RecordRef
@@ -773,4 +776,53 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	return idx, nil
+}
+
+func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
+
+	msg := genericMsg.Message().(*message.HotData)
+	inslog.Debugf(
+		"HotData sync: get start payload message with %v - lifelines and %v - pending requests",
+		len(msg.RecentObjects),
+		len(msg.PendingRequests),
+	)
+
+	err := h.db.SetDrop(ctx, &msg.Drop)
+	if err != nil {
+		return nil, err
+	}
+
+	for id, request := range msg.PendingRequests {
+		newID, err := h.db.SetRecord(ctx, id.Pulse(), record.DeserializeRecord(request))
+		if err != nil {
+			inslog.Error(err)
+			continue
+		}
+		if !bytes.Equal(id.Bytes(), newID.Bytes()) {
+			inslog.Errorf("Problems with saving the pending request, ids don't match - %v  %v", id.Bytes(), newID.Bytes())
+			continue
+		}
+		h.Recent.AddPendingRequest(id)
+	}
+
+	for id, meta := range msg.RecentObjects {
+		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
+		if err != nil {
+			inslog.Error(err)
+			continue
+		}
+		err = h.db.SetObjectIndex(ctx, &id, decodedIndex)
+		if err != nil {
+			inslog.Error(err)
+			continue
+		}
+		meta.TTL--
+		h.Recent.AddObjectWithTTL(id, meta.TTL)
+	}
+
+	return &reply.OK{}, nil
 }

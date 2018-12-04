@@ -140,6 +140,7 @@ func (db *DB) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
+		// It should be 0. Becase pulse after 65537 will try to use a hash of drop between 0 - 65537
 		err = db.SetDrop(ctx, &jetdrop.JetDrop{})
 		if err != nil {
 			return nil, err
@@ -328,26 +329,65 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 		return nil, nil, err
 	}
 
-	prefix := make([]byte, core.PulseNumberSize+1)
-	prefix[0] = scopeIDMessage
-	copy(prefix[1:], pulse.Bytes())
+	wg := sync.WaitGroup{}
+	wg.Add(2)
 
 	var messages [][]byte
-	err = db.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
+	var messagesError error
 
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			val, err := it.Item().ValueCopy(nil)
-			if err != nil {
-				return err
+	go func() {
+		messagesPrefix := make([]byte, core.PulseNumberSize+1)
+		messagesPrefix[0] = scopeIDMessage
+		copy(messagesPrefix[1:], pulse.Bytes())
+
+		messagesError = db.db.View(func(txn *badger.Txn) error {
+			it := txn.NewIterator(badger.DefaultIteratorOptions)
+			defer it.Close()
+
+			for it.Seek(messagesPrefix); it.ValidForPrefix(messagesPrefix); it.Next() {
+				val, err := it.Item().ValueCopy(nil)
+				if err != nil {
+					return err
+				}
+				messages = append(messages, val)
 			}
-			messages = append(messages, val)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, nil, err
+			return nil
+		})
+
+		wg.Done()
+	}()
+
+	var jetDropHashError error
+
+	go func() {
+		recordPrefix := make([]byte, core.PulseNumberSize+1)
+		recordPrefix[0] = scopeIDRecord
+		copy(recordPrefix[1:], pulse.Bytes())
+
+		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
+			it := txn.NewIterator(badger.DefaultIteratorOptions)
+			defer it.Close()
+
+			for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
+				val, err := it.Item().ValueCopy(nil)
+				if err != nil {
+					return err
+				}
+				hw.Sum(val)
+			}
+			return nil
+		})
+
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	if messagesError != nil {
+		return nil, nil, messagesError
+	}
+	if jetDropHashError != nil {
+		return nil, nil, jetDropHashError
 	}
 
 	drop := jetdrop.JetDrop{

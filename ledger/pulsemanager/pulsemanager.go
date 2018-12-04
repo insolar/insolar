@@ -21,6 +21,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -34,12 +37,14 @@ import (
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR             core.LogicRunner       `inject:""`
-	Bus            core.MessageBus        `inject:""`
-	NodeNet        core.NodeNetwork       `inject:""`
-	JetCoordinator core.JetCoordinator    `inject:""`
-	GIL            core.GlobalInsolarLock `inject:""`
-	currentPulse   core.Pulse
+	LR             core.LogicRunner            `inject:""`
+	Bus            core.MessageBus             `inject:""`
+	NodeNet        core.NodeNetwork            `inject:""`
+	JetCoordinator core.JetCoordinator         `inject:""`
+	GIL            core.GlobalInsolarLock      `inject:""`
+	Recent         recentstorage.RecentStorage `inject:""`
+
+	currentPulse core.Pulse
 
 	// internal stuff
 	db *storage.DB
@@ -96,35 +101,93 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	return &p, nil
 }
 
-func (m *PulseManager) processDrop(ctx context.Context, latestPulseNumber core.PulseNumber) error {
-	latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
-	if err != nil {
-		return err
-	}
+func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Pulse) (
+	drop *jetdrop.JetDrop,
+	dropSerialized []byte,
+	messages [][]byte,
+	err error,
+) {
 	prevDrop, err := m.db.GetDrop(ctx, *latestPulse.Prev)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
-	drop, messages, err := m.db.CreateDrop(ctx, latestPulseNumber, prevDrop.Hash)
+	drop, messages, err = m.db.CreateDrop(ctx, latestPulse.Pulse.PulseNumber, prevDrop.Hash)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 	err = m.db.SetDrop(ctx, drop)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
-	dropSerialized, err := jetdrop.Encode(drop)
+	dropSerialized, err = jetdrop.Encode(drop)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
+	return
+}
+
+func (m *PulseManager) processDrop(ctx context.Context, latestPulse *storage.Pulse, dropSerialized []byte, messages [][]byte) error {
 	msg := &message.JetDrop{
 		Drop:        dropSerialized,
 		Messages:    messages,
-		PulseNumber: latestPulseNumber,
+		PulseNumber: *latestPulse.Prev,
 	}
-	_, err = m.Bus.Send(ctx, msg, nil)
+	_, err := m.Bus.Send(ctx, msg, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *PulseManager) processRecentObjects(
+	ctx context.Context,
+	latestPulse *storage.Pulse,
+	drop *jetdrop.JetDrop,
+	dropSerialized []byte,
+) error {
+	m.Recent.ClearZeroTTLObjects()
+	recentObjectsIds := m.Recent.GetObjects()
+	pendingRequestsIds := m.Recent.GetRequests()
+	m.Recent.ClearObjects()
+
+	recentObjects := map[core.RecordID]*message.HotIndex{}
+	pendingRequests := map[core.RecordID][]byte{}
+
+	for id, ttl := range recentObjectsIds {
+		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
+		encoded, err := index.EncodeObjectLifeline(lifeline)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
+		recentObjects[id] = &message.HotIndex{
+			TTL:   ttl,
+			Index: encoded,
+		}
+	}
+
+	for _, id := range pendingRequestsIds {
+		pendingRecord, err := m.db.GetRecord(ctx, &id)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
+		pendingRequests[id] = record.SerializeRecord(pendingRecord)
+	}
+
+	msg := &message.HotData{
+		Drop:            *drop,
+		PulseNumber:     *latestPulse.Prev,
+		RecentObjects:   recentObjects,
+		PendingRequests: pendingRequests,
+	}
+	_, err := m.Bus.Send(ctx, msg, nil)
 	if err != nil {
 		return err
 	}
@@ -174,7 +237,21 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		if err = m.processDrop(ctx, latestPulseNumber); err != nil {
+		latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
+		if err != nil {
+			return errors.Wrapf(err, "get pulse %v failed", latestPulseNumber)
+		}
+
+		drop, dropSerialized, messages, err := m.createDrop(ctx, latestPulse)
+		if err != nil {
+			return errors.Wrapf(err, "create drop on pulse %v failed", latestPulseNumber)
+		}
+
+		if hotRecordsError := m.processRecentObjects(ctx, latestPulse, drop, dropSerialized); hotRecordsError != nil {
+			return errors.Wrap(err, "processRecentObjects failed")
+		}
+
+		if err = m.processDrop(ctx, latestPulse, dropSerialized, messages); err != nil {
 			return errors.Wrap(err, "processDrop failed")
 		}
 
