@@ -70,8 +70,6 @@ func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configura
 		inslog.Info("No certificate path - No merge")
 		return
 	}
-
-	cfg.Node.Node.ID = cert.Reference
 }
 
 func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) {
