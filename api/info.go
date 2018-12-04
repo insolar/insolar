@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -70,6 +71,8 @@ func NewInfoService(runner *Runner) *InfoService {
 //
 func (s *InfoService) Get(r *http.Request, args *InfoArgs, reply *InfoReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+
+	log.Infof("[ INFO ] Incoming request: %s", r.RequestURI)
 
 	rootDomain := s.runner.GenesisDataProvider.GetRootDomain(ctx)
 	if rootDomain == nil {

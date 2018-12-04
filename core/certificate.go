@@ -31,7 +31,6 @@ type Certificate interface {
 	AuthorizationCertificate
 
 	GetRootDomainReference() *RecordRef
-	SetRootDomainReference(ref *RecordRef)
 	NewCertForHost(pKey string, role string, nodeRef string) (Certificate, error)
 	GetDiscoveryNodes() []DiscoveryNode
 }
@@ -49,5 +48,4 @@ type AuthorizationCertificate interface {
 
 	GetRole() StaticRole
 	GetNodeSign(nodeRef *RecordRef) ([]byte, error)
-	Serialize() ([]byte, error)
 }

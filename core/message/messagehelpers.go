@@ -45,7 +45,7 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.RecordRef
 	case *HeavyPayload:
 		return core.RecordRef{}
-	case *HotIndexes:
+	case *HotData:
 		return t.Jet
 	case *GetObjectIndex:
 		return t.Object
@@ -76,7 +76,7 @@ func ExtractRole(msg core.Message) core.DynamicRole {
 		*SetRecord,
 		*UpdateObject,
 		*ValidateRecord,
-		*HotIndexes:
+		*HotData:
 		return core.DynamicRoleLightExecutor
 	case *ValidateCaseBind:
 		return core.DynamicRoleVirtualValidator
@@ -141,7 +141,7 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		return &t.RecordRef, core.DynamicRoleVirtualValidator
 	case *GetObjectIndex:
 		return &t.Object, core.DynamicRoleLightExecutor
-	case *HotIndexes:
+	case *HotData:
 		// TODO: 30.11.2018 It's not clear, what should be here. We need to solve in the nearest future. @egorikas
 		return nil, 0
 	case *Parcel:

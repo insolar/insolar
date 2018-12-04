@@ -784,12 +784,17 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		return &reply.OK{}, nil
 	}
 
-	msg := genericMsg.Message().(*message.HotIndexes)
+	msg := genericMsg.Message().(*message.HotData)
 	inslog.Debugf(
-		"HotIndexes sync: get start payload message with %v - lifelines and %v - pending requests",
+		"HotData sync: get start payload message with %v - lifelines and %v - pending requests",
 		len(msg.RecentObjects),
 		len(msg.PendingRequests),
 	)
+
+	err := h.db.SetDrop(ctx, &msg.Drop)
+	if err != nil {
+		return nil, err
+	}
 
 	for id, request := range msg.PendingRequests {
 		newID, err := h.db.SetRecord(ctx, id.Pulse(), record.DeserializeRecord(request))
