@@ -15,3 +15,58 @@
  */
 
 package extractor
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/stretchr/testify/require"
+)
+
+func TestInfoResponse(t *testing.T) {
+	testValue, _ := json.Marshal(map[string]interface{}{
+		"root_member": "test_root_member",
+		"node_domain": "test_node_domain",
+	})
+	expectedValue := Info{}
+	_ = json.Unmarshal(testValue, &expectedValue)
+
+	data, err := core.Serialize([]interface{}{testValue, nil})
+	require.NoError(t, err)
+
+	info, err := InfoResponse(data)
+
+	require.NoError(t, err)
+	require.Equal(t, &expectedValue, info)
+}
+
+func TestInfoResponse_ErrorResponse(t *testing.T) {
+	testValue, _ := json.Marshal(map[string]interface{}{
+		"root_member": "test_root_member",
+		"node_domain": "test_node_domain",
+	})
+	contractErr := &foundation.Error{S: "Custom test error"}
+
+	data, err := core.Serialize([]interface{}{testValue, contractErr})
+	require.NoError(t, err)
+
+	info, err := InfoResponse(data)
+
+	require.Contains(t, err.Error(), "Has error in response")
+	require.Contains(t, err.Error(), "Custom test error")
+	require.Nil(t, info)
+}
+
+func TestInfoResponse_UnmarshalError(t *testing.T) {
+	testValue := "some_no_valid_data"
+
+	data, err := core.Serialize(testValue)
+	require.NoError(t, err)
+
+	info, err := InfoResponse(data)
+
+	require.Contains(t, err.Error(), "Can't unmarshal")
+	require.Nil(t, info)
+}
