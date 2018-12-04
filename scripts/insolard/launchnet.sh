@@ -23,11 +23,13 @@ DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
 stop_listening()
 {
-    ports="$INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 53835 53837 53839 38181"
-    if [ "$1" != "" ]
+    stop_insgorund=$1
+    ports="53835 53837 53839 38181"
+    if [ "$stop_insgorund" == "true" ]
     then
-        ports=$@
+        ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
     fi
+    
     echo "Stop listening..."
     for port in $ports
     do
@@ -66,7 +68,7 @@ create_required_dirs()
 
 prepare()
 {
-    stop_listening
+    stop_listening $run_insgorund
     clear_dirs
     create_required_dirs
 }
@@ -123,8 +125,14 @@ process_input_params()
     param=$1
     if [  "$param" == "clear" ]
     then
-        prepare
+        prepare true
         exit 0
+    fi
+
+    if [  "$param" == "no_insgorund" ]
+    then
+        run_insgorund=false
+        return
     fi
 
     if [ "$param" == "help" ] || [ "$param" == "-h" ] || [ "$param" == "--help" ]
@@ -136,8 +144,9 @@ process_input_params()
 
 run_insgorund()
 {
-    host=127.0.0.1
-    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT
+    /Users/ivansibitov/go/src/github.com/insolar/insolar/testdata/logicrunner/insgorund -l 127.0.0.1:18181 --proto tcp --rpc 127.0.0.1:18182 --rpc-proto tcp
+    #host=127.0.0.1
+    #$INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT
 }
 
 copy_data()
@@ -156,11 +165,12 @@ copy_serts()
 
 trap stop_listening EXIT
 
+run_insgorund=true
 param=$1
 check_working_dir
 process_input_params $param
 
-prepare
+prepare 
 build_binaries
 generate_bootstrap_keys
 generate_root_member_keys
@@ -170,8 +180,13 @@ generate_discovery_nodes_keys
 printf "start pulsar ... \n"
 $PULSARD -c scripts/insolard/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
 
-printf "start insgorund ... \n"
-run_insgorund &
+if [ "$run_insgorund" == "true" ]
+then
+    printf "start insgorund ... \n"
+    run_insgorund &
+else
+    echo "INSGORUND IS NOT LAUNCHED"
+fi
 
 printf "start genesis ... \n"
 $INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
