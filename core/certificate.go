@@ -40,6 +40,7 @@ type DiscoveryNode interface {
 	NodeMeta
 
 	GetHost() string
+	GetNodeSign() []byte
 }
 
 // AuthorizationCertificate interface provides methods to manage info about node from it certificate
