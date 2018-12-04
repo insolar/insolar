@@ -17,6 +17,8 @@
 package certificate
 
 import (
+	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -119,4 +121,95 @@ func TestReadPrivateKey_BadKeyPair(t *testing.T) {
 
 	_, err := ReadCertificate(pk, kp, TestCert)
 	require.Contains(t, err.Error(), "Different public keys")
+}
+
+func TestReadCertificateFromReader(t *testing.T) {
+	kp := platformpolicy.NewKeyProcessor()
+	privateKey, _ := kp.GeneratePrivateKey()
+	nodePublicKey := kp.ExtractPublicKey(privateKey)
+	publicKey, _ := kp.ExportPublicKey(nodePublicKey)
+
+	type сertInfo map[string]interface{}
+	info := сertInfo{
+		"majority_rule": 7,
+		"min_roles": map[string]interface{}{
+			"virtual":        1,
+			"heavy_material": 2,
+			"light_material": 3,
+		},
+		"public_key":      string(publicKey[:]),
+		"reference":       "2prKtCG51YhseciDY5EnnHapPskNHvrvhSc3HrCvYLKKxXn4K3kFQtiz3QLVD1acpQmaDBHUG2Q988xjSFhswJLs",
+		"role":            "virtual",
+		"root_domain_ref": "0987654321",
+		"bootstrap_nodes": []map[string]interface{}{
+			{
+				"public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n",
+				"host":       "localhost:22001",
+			},
+			{
+				"public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n",
+				"host":       "localhost:22002",
+			},
+			{
+				"public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n",
+				"host":       "localhost:22003",
+			},
+		},
+	}
+	certJson, err := json.Marshal(info)
+	require.NoError(t, err)
+
+	r := bytes.NewReader(certJson)
+	cert, err := ReadCertificateFromReader(nodePublicKey, kp, r)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, cert.PublicKey)
+	require.Equal(t, "virtual", cert.Role)
+	require.Equal(t, "2prKtCG51YhseciDY5EnnHapPskNHvrvhSc3HrCvYLKKxXn4K3kFQtiz3QLVD1acpQmaDBHUG2Q988xjSFhswJLs",
+		cert.Reference)
+	require.Equal(t, 7, cert.MajorityRule)
+	require.Equal(t, uint(1), cert.MinRoles.Virtual)
+	require.Equal(t, uint(2), cert.MinRoles.HeavyMaterial)
+	require.Equal(t, uint(3), cert.MinRoles.LightMaterial)
+	require.Equal(t, "0987654321", cert.RootDomainReference)
+	require.Equal(t, nodePublicKey, cert.nodePublicKey)
+
+	testPubKey := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n"
+	key, err := kp.ImportPublicKey([]byte(testPubKey))
+	require.NoError(t, err)
+
+	bootstrapNodes := []BootstrapNode{
+		BootstrapNode{
+			PublicKey:     testPubKey,
+			Host:          "localhost:22001",
+			nodePublicKey: key,
+		},
+		BootstrapNode{
+			PublicKey:     testPubKey,
+			Host:          "localhost:22002",
+			nodePublicKey: key,
+		},
+		BootstrapNode{
+			PublicKey:     testPubKey,
+			Host:          "localhost:22003",
+			nodePublicKey: key,
+		},
+	}
+
+	require.Equal(t, bootstrapNodes, cert.BootstrapNodes)
+}
+
+func TestSerializeDeserialize(t *testing.T) {
+	cert := &AuthorizationCertificate{
+		PublicKey:      "test_public_key",
+		Reference:      "test_reference",
+		Role:           "test_role",
+		BootstrapNodes: []BootstrapNode{},
+	}
+	result, err := Serialize(cert)
+	require.NoError(t, err)
+
+	deserializedCert, err := Deserialize(result)
+	require.NoError(t, err)
+	require.Equal(t, cert, deserializedCert)
 }

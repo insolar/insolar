@@ -129,7 +129,6 @@ func (g *Genesis) activateRootDomain(
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	g.rootDomainRef = contract
-	g.Certificate.SetRootDomainReference(contract)
 
 	return contractID, desc, nil
 }

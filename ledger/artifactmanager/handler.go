@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -36,26 +38,26 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	db                         *storage.DB
-	jetDropHandlers            map[core.MessageType]internalHandler
-	recent                     *storage.RecentStorage
-	conf                       *configuration.Ledger
+	Recent                     recentstorage.RecentStorage     `inject:""`
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
+
+	db              *storage.DB
+	jetDropHandlers map[core.MessageType]internalHandler
+	conf            *configuration.Ledger
 }
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	db *storage.DB, recentObjects *storage.RecentStorage, conf *configuration.Ledger,
+	db *storage.DB, conf *configuration.Ledger,
 ) *MessageHandler {
 	return &MessageHandler{
 		db:              db,
 		jetDropHandlers: map[core.MessageType]internalHandler{},
-		recent:          recentObjects,
 		conf:            conf,
 	}
 }
@@ -73,11 +75,14 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeSetBlob, h.messagePersistingWrapper(h.handleSetBlob))
 	h.Bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
 
+	h.Bus.MustRegister(core.TypeHotRecords, h.handleHotRecords)
+
 	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
 	h.Bus.MustRegister(core.TypeHeavyReset, h.handleHeavyReset)
 
 	h.Bus.MustRegister(core.TypeGetObjectIndex, h.handleGetObjectIndex)
+	h.Bus.MustRegister(core.TypeValidationCheck, h.handleValidationCheck)
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
 	h.jetDropHandlers[core.TypeGetObject] = h.handleGetObject
@@ -118,10 +123,10 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 	}
 
 	if _, ok := rec.(record.Request); ok {
-		h.recent.AddPendingRequest(*id)
+		h.Recent.AddPendingRequest(*id)
 	}
 	if result, ok := rec.(*record.ResultRecord); ok {
-		h.recent.RemovePendingRequest(*result.Request.Record())
+		h.Recent.RemovePendingRequest(*result.Request.Record())
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -218,7 +223,7 @@ func (h *MessageHandler) handleGetObject(
 		}
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record())
 
 	state, err := getObjectStateRecord(ctx, h.db, stateID)
 	if err != nil {
@@ -292,7 +297,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	h.recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -326,7 +331,7 @@ func (h *MessageHandler) handleGetChildren(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.recent.AddObject(*msg.Parent.Record())
+	h.Recent.AddObject(*msg.Parent.Record())
 
 	var (
 		refs         []core.RecordRef
@@ -433,7 +438,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
-		h.recent.AddObject(*msg.Object.Record())
+		h.Recent.AddObject(*msg.Object.Record())
 
 		id, err := tx.SetRecord(ctx, pulseNumber, rec)
 		if err != nil {
@@ -452,7 +457,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Object.Record())
+	h.Recent.AddObject(*msg.Object.Record())
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -489,7 +494,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		} else if err != nil {
 			return err
 		}
-		h.recent.AddObject(*msg.Parent.Record())
+		h.Recent.AddObject(*msg.Parent.Record())
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -515,7 +520,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	if err != nil {
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Parent.Record())
+	h.Recent.AddObject(*msg.Parent.Record())
 
 	return &reply.ID{ID: *child}, nil
 }
@@ -546,48 +551,67 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.ValidateRecord)
+func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.ValidateRecord)
 
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(ctx, msg.Object.Record(), true)
-		if err != nil {
-			return errors.Wrap(err, "failed to fetch object index")
+		if err == storage.ErrNotFound {
+			heavy, err := h.findHeavy(ctx, msg.Object, pulseNumber)
+			if err != nil {
+				return err
+			}
+			idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Object, heavy)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
 		}
 
-		// Rewinding to validated record.
-		currentID := idx.LatestState
-		for currentID != nil {
-			// We have passed an approved record.
-			if currentID.Equal(idx.LatestStateApproved) {
-				return errors.New("changing approved records is not allowed")
-			}
+		// Find node that has this state.
+		var nodes []core.RecordRef
+		if pulseNumber-msg.State.Pulse() < h.conf.LightChainLimit {
+			// Find light executor that saved the state.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.DynamicRoleLightExecutor, &msg.Object, msg.State.Pulse(),
+			)
+		} else {
+			// Find heavy that has this object.
+			nodes, err = h.JetCoordinator.QueryRole(
+				ctx, core.DynamicRoleHeavyExecutor, &msg.Object, pulseNumber,
+			)
+		}
+		if err != nil {
+			return err
+		}
 
-			// Fetching actual record.
-			rec, err := tx.GetRecord(ctx, currentID)
+		// Send checking message.
+		genericReply, err := h.Bus.Send(ctx, &message.ValidationCheck{
+			Object:              msg.Object,
+			ValidatedState:      msg.State,
+			LatestStateApproved: idx.LatestStateApproved,
+		}, &core.MessageSendOptions{
+			Receiver: &nodes[0],
+		})
+		if err != nil {
+			return err
+		}
+		switch genericReply.(type) {
+		case *reply.OK:
+			if msg.IsValid {
+				idx.LatestStateApproved = &msg.State
+			} else {
+				idx.LatestState = idx.LatestStateApproved
+			}
+			err = tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
 			if err != nil {
-				return nil
+				return errors.Wrap(err, "failed to save object index")
 			}
-			currentState, ok := rec.(record.ObjectState)
-			if !ok {
-				return errors.New("invalid object record")
-			}
-
-			// Validated record found.
-			if currentID.Equal(&msg.State) {
-				if msg.IsValid {
-					idx.LatestStateApproved = currentID
-				} else {
-					idx.LatestState = currentState.PrevStateID()
-				}
-				err := tx.SetObjectIndex(ctx, msg.Object.Record(), idx)
-				if err != nil {
-					return err
-				}
-				break
-			}
-
-			currentID = currentState.PrevStateID()
+		case *reply.NotOK:
+			return errors.New("validation sequence integrity failure")
+		default:
+			return errors.New("unexpected reply")
 		}
 
 		return nil
@@ -596,7 +620,6 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 	if err != nil {
 		return nil, err
 	}
-	h.recent.AddObject(*msg.Object.Record())
 
 	return &reply.OK{}, nil
 }
@@ -615,6 +638,26 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 	}
 
 	return &reply.ObjectIndex{Index: buf}, nil
+}
+
+func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.ValidationCheck)
+
+	rec, err := h.db.GetRecord(ctx, &msg.ValidatedState)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch state record")
+	}
+	state, ok := rec.(record.ObjectState)
+	if !ok {
+		return nil, errors.New("failed to fetch state record")
+	}
+	approved := msg.LatestStateApproved
+	validated := state.PrevStateID()
+	if !approved.Equal(validated) && approved != nil && validated != nil {
+		return &reply.NotOK{}, nil
+	}
+
+	return &reply.OK{}, nil
 }
 
 func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Message) error {
@@ -733,4 +776,53 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	return idx, nil
+}
+
+func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
+	if hack.SkipValidation(ctx) {
+		return &reply.OK{}, nil
+	}
+
+	msg := genericMsg.Message().(*message.HotData)
+	inslog.Debugf(
+		"HotData sync: get start payload message with %v - lifelines and %v - pending requests",
+		len(msg.RecentObjects),
+		len(msg.PendingRequests),
+	)
+
+	err := h.db.SetDrop(ctx, &msg.Drop)
+	if err != nil {
+		return nil, err
+	}
+
+	for id, request := range msg.PendingRequests {
+		newID, err := h.db.SetRecord(ctx, id.Pulse(), record.DeserializeRecord(request))
+		if err != nil {
+			inslog.Error(err)
+			continue
+		}
+		if !bytes.Equal(id.Bytes(), newID.Bytes()) {
+			inslog.Errorf("Problems with saving the pending request, ids don't match - %v  %v", id.Bytes(), newID.Bytes())
+			continue
+		}
+		h.Recent.AddPendingRequest(id)
+	}
+
+	for id, meta := range msg.RecentObjects {
+		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
+		if err != nil {
+			inslog.Error(err)
+			continue
+		}
+		err = h.db.SetObjectIndex(ctx, &id, decodedIndex)
+		if err != nil {
+			inslog.Error(err)
+			continue
+		}
+		meta.TTL--
+		h.Recent.AddObjectWithTTL(id, meta.TTL)
+	}
+
+	return &reply.OK{}, nil
 }
