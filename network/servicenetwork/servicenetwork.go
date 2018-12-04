@@ -163,7 +163,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
 
 	cm.Inject(n.NodeKeeper,
-		n.PhaseManager,
+		//n.PhaseManager,
 		n.MerkleCalculator,
 		n.ConsensusNetwork,
 		n.Communicator,
@@ -245,10 +245,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
 			// TODO: make PhaseManager works and uncomment this
-			// err = n.PhaseManager.OnPulse(ctx, &pulse)
-			// if err != nil {
-			// 	logger.Warn("phase manager fail: " + err.Error())
-			// }
+			err = n.PhaseManager.OnPulse(ctx, &pulse)
+			if err != nil {
+				logger.Warn("phase manager fail: " + err.Error())
+			}
 		}(logger, n)
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
