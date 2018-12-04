@@ -79,11 +79,6 @@ type AuthorizationCertificate struct {
 	BaseCertificate
 }
 
-// GetNodeSign returns bootstrap nodes array
-func (authCert *AuthorizationCertificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
-	return []byte{}, errors.New("not implemented")
-}
-
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
 	PublicKey   string `json:"public_key"`
@@ -296,11 +291,6 @@ func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (c
 		newCert.BootstrapNodes[i].NetworkSign = node.NetworkSign
 	}
 	return &newCert, nil
-}
-
-// GetNodeSign return sign from bootstrap node with provided ref
-func (cert *Certificate) GetNodeSign(nodeRef *core.RecordRef) ([]byte, error) {
-	return []byte{}, errors.New("not implemented")
 }
 
 // Deserialize deserializes data to AuthorizationCertificate interface
