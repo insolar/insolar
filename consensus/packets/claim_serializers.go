@@ -181,6 +181,11 @@ func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodePK")
 	}
 
+	err = binary.Read(data, defaultByteOrder, &njc.Signature)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read Signature")
+	}
+
 	return nil
 }
 
