@@ -6,7 +6,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// NetworkMessageSentTotal is total number of sent messages metric
 var InsgorundCallsTotal = prometheus.NewCounter(prometheus.CounterOpts{
 	Name:      "call_contract_method_total",
 	Help:      "Total number of calls contracts methods",
