@@ -23,7 +23,7 @@ DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
 stop_listening()
 {
-    ports="$INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
+    ports="$INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 53835 53837 53839"
     if [ "$1" != "" ]
     then
         ports=$@
@@ -31,6 +31,7 @@ stop_listening()
     echo "Stop listening..."
     for port in $ports
     do
+        echo "port: $port"
         lsof -i :$port | grep LISTEN | awk '{print $2}' | xargs kill
     done
 }
@@ -60,6 +61,7 @@ create_required_dirs()
 
 prepare()
 {
+    stop_listening
     clear_dirs
     create_required_dirs
 }
@@ -176,5 +178,8 @@ copy_serts
 printf "start nodes ... \n"
 
 $INSOLARD --config scripts/insolard/first_insolar.yaml &> $FIRST_NODE/output.txt &
+echo "FIRST STARTED"
 $INSOLARD --config scripts/insolard/second_insolar.yaml &> $SECOND_NODE/output.txt &
+echo "SECOND STARTED"
 $INSOLARD --config scripts/insolard/third_insolar.yaml &> $THIRD_NODE/output.txt
+echo "FINISHING ..."
