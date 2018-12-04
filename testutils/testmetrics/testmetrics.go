@@ -56,7 +56,7 @@ func Start(ctx context.Context) TestMetrics {
 	// don't wait too long in tests
 	cfg.ReportingPeriod = time.Millisecond
 
-	m, err := metrics.NewMetrics(ctx, cfg)
+	m, err := metrics.NewMetrics(ctx, cfg, metrics.GetInsolarRegistry())
 	if err != nil {
 		panic(err)
 	}
