@@ -58,6 +58,16 @@ func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
 	return core.GetStaticRoleFromString(authCert.Role)
 }
 
+// GetDiscoveryNodes return bootstrap nodes array
+func (authCert *AuthorizationCertificate) GetDiscoveryNodes() []core.DiscoveryNode {
+	result := make([]core.DiscoveryNode, 0)
+	for i := 0; i < len(authCert.BootstrapNodes); i++ {
+		// we get node by pointer, so ranged for loop does not suite
+		result = append(result, &authCert.BootstrapNodes[i])
+	}
+	return result
+}
+
 // Certificate holds info about certificate
 type Certificate struct {
 	AuthorizationCertificate
@@ -145,16 +155,6 @@ func (cert *Certificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ SignNodePart ] Can't Sign")
 	}
 	return sign.Bytes(), nil
-}
-
-// GetDiscoveryNodes return bootstrap nodes array
-func (cert *Certificate) GetDiscoveryNodes() []core.DiscoveryNode {
-	result := make([]core.DiscoveryNode, 0)
-	for i := 0; i < len(cert.BootstrapNodes); i++ {
-		// we get node by pointer, so ranged for loop does not suite
-		result = append(result, &cert.BootstrapNodes[i])
-	}
-	return result
 }
 
 func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
