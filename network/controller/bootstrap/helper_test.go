@@ -78,6 +78,10 @@ func (t *testNode) GetHost() string {
 	return ""
 }
 
+func (t *testNode) GetNodeSign() []byte {
+	return []byte{}
+}
+
 func TestRemoveOrigin(t *testing.T) {
 	origin := testutils.RandomRef()
 	originNode := &testNode{origin}
