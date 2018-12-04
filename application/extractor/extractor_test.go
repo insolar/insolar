@@ -209,3 +209,20 @@ func TestInfoResponse(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, &expectedValue, info)
 }
+
+func TestInfoResponse_ErrorResponse(t *testing.T) {
+	testValue, _ := json.Marshal(map[string]interface{}{
+		"root_member": "test_root_member",
+		"node_domain": "test_node_domain",
+	})
+	contractErr := &foundation.Error{S: "Custom test error"}
+
+	data, err := core.Serialize([]interface{}{testValue, contractErr})
+	require.NoError(t, err)
+
+	info, err := InfoResponse(data)
+
+	require.Contains(t, err.Error(), "Has error in response")
+	require.Contains(t, err.Error(), "Custom test error")
+	require.Nil(t, info)
+}
