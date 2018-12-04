@@ -89,3 +89,15 @@ func TestPublicKeyResponse_ErrorResponse(t *testing.T) {
 	require.Contains(t, err.Error(), "Custom test error")
 	require.Equal(t, "", result)
 }
+
+func TestPublicKeyResponse_UnmarshalError(t *testing.T) {
+	testValue := "some_no_valid_data"
+
+	data, err := core.Serialize(testValue)
+	require.NoError(t, err)
+
+	result, err := PublicKeyResponse(data)
+
+	require.Contains(t, err.Error(), "Can't unmarshal")
+	require.Equal(t, "", result)
+}
