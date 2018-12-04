@@ -53,21 +53,31 @@ func NewTestSuite() *testSuite {
 		networkPort:  10001,
 	}
 }
-
-func (s *testSuite) StartNodes() {
+func (s *testSuite) InitNodes() {
 	for _, n := range s.bootstrapNodes {
 		err := n.componentManager.Init(s.ctx)
 		s.NoError(err)
-		err = n.componentManager.Start(s.ctx)
+	}
+	log.Info("========== Bootstrap nodes inited")
+	<-time.After(time.Second * 1)
+
+	if s.testNode.componentManager != nil {
+		err := s.testNode.componentManager.Init(s.ctx)
+		s.NoError(err)
+	}
+
+}
+
+func (s *testSuite) StartNodes() {
+	for _, n := range s.bootstrapNodes {
+		err := n.componentManager.Start(s.ctx)
 		s.NoError(err)
 	}
 	log.Info("========== Bootstrap nodes started")
 	<-time.After(time.Second * 1)
 
 	if s.testNode.componentManager != nil {
-		err := s.testNode.componentManager.Init(s.ctx)
-		s.NoError(err)
-		err = s.testNode.componentManager.Start(s.ctx)
+		err := s.testNode.componentManager.Start(s.ctx)
 		s.NoError(err)
 	}
 
@@ -90,6 +100,15 @@ type networkNode struct {
 	serviceNetwork   *ServiceNetwork
 }
 
+func initCertificate() *certificate.Certificate {
+	result := &certificate.Certificate{
+		MajorityRule: 0,
+		//MinRoles: struct{ Virtual:1, HeavyMaterial: 1, LightMaterial:1},
+
+	}
+	return result
+}
+
 func initCrypto(t *testing.T) (*certificate.Certificate, core.CryptographyService) {
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
@@ -103,11 +122,12 @@ func initCrypto(t *testing.T) (*certificate.Certificate, core.CryptographyServic
 }
 
 func (s *testSuite) getBootstrapNodes() []certificate.BootstrapNode {
-	result := make([]certificate.BootstrapNode, len(s.bootstrapNodes))
+	result := make([]certificate.BootstrapNode, 0)
 	for _, b := range s.bootstrapNodes {
 		result = append(result, certificate.BootstrapNode{
 			Host:      b.serviceNetwork.cfg.Host.Transport.Address,
 			PublicKey: b.serviceNetwork.Certificate.(*certificate.Certificate).PublicKey,
+			NodeRef:   b.serviceNetwork.NodeNetwork.GetOrigin().ID().String(),
 		})
 	}
 	return result
@@ -123,7 +143,7 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 		address,
 		"",
 	)
-	keeper := nodenetwork.NewNodeKeeper(origin)
+	keeper := &nodeKeeperWrapper{nodenetwork.NewNodeKeeper(origin)}
 
 	cfg := configuration.NewConfiguration()
 	cfg.Node.Node.ID = origin.ID().String()
@@ -156,9 +176,23 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	s.T().Skip("fix me")
+	//s.T().Skip("fixme")
+
+	phasesResult := make(chan error)
+	s.InitNodes()
+	s.testNode.serviceNetwork.PhaseManager = &phaseManagerWrapper{s.testNode.serviceNetwork.PhaseManager, phasesResult}
+
 	s.StartNodes()
 
+	// after init before start
+
+	// s.testNode check join claim
+	// wait for cosensus done
+	// s.testNode check active lists
+
+	s.testNode.serviceNetwork.NodeKeeper.GetOriginClaim()
+
+	// teardown
 	<-time.After(time.Second * 5)
 	s.StopNodes()
 
