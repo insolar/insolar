@@ -28,7 +28,7 @@ type Phase2Packet struct {
 
 	// -------------------- Section 1
 	globuleHashSignature    [HashLength]byte
-	deviantBitSet           BitSet
+	bitSet                  BitSet
 	SignatureHeaderSection1 [SignatureLength]byte
 
 	// -------------------- Section 2 (optional)
@@ -86,5 +86,5 @@ func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) er
 }
 
 func (p2p *Phase2Packet) GetBitSet() BitSet {
-	return p2p.deviantBitSet
+	return p2p.bitSet
 }
