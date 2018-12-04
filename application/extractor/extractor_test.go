@@ -153,3 +153,27 @@ func TestNodeInfoResponse(t *testing.T) {
 	require.Equal(t, testPK, pk)
 	require.Equal(t, testRole.String(), role)
 }
+
+func TestNodeInfoResponse_ErrorResponse(t *testing.T) {
+	testPK := "test_public_key"
+	testRole := core.StaticRoleVirtual
+
+	testValue := struct {
+		PublicKey string
+		Role      core.StaticRole
+	}{
+		PublicKey: testPK,
+		Role:      testRole,
+	}
+	contractErr := &foundation.Error{S: "Custom test error"}
+
+	data, err := core.Serialize([]interface{}{testValue, contractErr})
+	require.NoError(t, err)
+
+	pk, role, err := NodeInfoResponse(data)
+
+	require.Contains(t, err.Error(), "Has error in response")
+	require.Contains(t, err.Error(), "Custom test error")
+	require.Equal(t, "", pk)
+	require.Equal(t, "", role)
+}
