@@ -89,9 +89,9 @@ func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core
 			if ok {
 				continue
 			}
-			if !ok {
-				return false, nil
-			}
+		}
+		if !ok {
+			return false, nil
 		}
 	}
 	return true, nil
