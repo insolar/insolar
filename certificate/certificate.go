@@ -32,8 +32,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// BaseCertificate holds base info about node from it certificate
-type BaseCertificate struct {
+// AuthorizationCertificate holds base info about node from it certificate
+type AuthorizationCertificate struct {
 	PublicKey      string          `json:"public_key"`
 	Reference      string          `json:"reference"`
 	Role           string          `json:"role"`
@@ -43,24 +43,24 @@ type BaseCertificate struct {
 }
 
 // GetPublicKey returns public key reference from node certificate
-func (baseCert *BaseCertificate) GetPublicKey() crypto.PublicKey {
-	return baseCert.nodePublicKey
+func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
+	return authCert.nodePublicKey
 }
 
 // GetNodeRef returns reference from node certificate
-func (baseCert *BaseCertificate) GetNodeRef() *core.RecordRef {
-	ref := core.NewRefFromBase58(baseCert.Reference)
+func (authCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
+	ref := core.NewRefFromBase58(authCert.Reference)
 	return &ref
 }
 
 // GetRole returns role from node certificate
-func (baseCert *BaseCertificate) GetRole() core.StaticRole {
-	return core.GetStaticRoleFromString(baseCert.Role)
+func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
+	return core.GetStaticRoleFromString(authCert.Role)
 }
 
 // Certificate holds info about certificate
 type Certificate struct {
-	BaseCertificate
+	AuthorizationCertificate
 	MajorityRule int `json:"majority_rule"`
 	MinRoles     struct {
 		Virtual       uint `json:"virtual"`
@@ -72,11 +72,6 @@ type Certificate struct {
 
 	// preprocessed fields
 	pulsarPublicKey []crypto.PublicKey
-}
-
-// AuthorizationCertificate holds info about node from it certificate
-type AuthorizationCertificate struct {
-	BaseCertificate
 }
 
 // BootstrapNode holds info about bootstrap nodes
@@ -276,7 +271,7 @@ func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (c
 	newCert := Certificate{
 		MajorityRule: cert.MajorityRule,
 		MinRoles:     cert.MinRoles,
-		BaseCertificate: BaseCertificate{
+		AuthorizationCertificate: AuthorizationCertificate{
 			PublicKey:      pKey,
 			Reference:      ref,
 			Role:           role,
