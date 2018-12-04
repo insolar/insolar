@@ -177,3 +177,16 @@ func TestNodeInfoResponse_ErrorResponse(t *testing.T) {
 	require.Equal(t, "", pk)
 	require.Equal(t, "", role)
 }
+
+func TestNodeInfoResponse_UnmarshalError(t *testing.T) {
+	testValue := "some_no_valid_data"
+
+	data, err := core.Serialize(testValue)
+	require.NoError(t, err)
+
+	pk, role, err := NodeInfoResponse(data)
+
+	require.Contains(t, err.Error(), "Can't unmarshal response")
+	require.Equal(t, "", pk)
+	require.Equal(t, "", role)
+}
