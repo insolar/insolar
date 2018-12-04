@@ -438,7 +438,12 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
+
 		h.Recent.AddObject(*msg.Object.Record())
+		err = h.Recent.MaskAsMine(*msg.Object.Record())
+		if err != nil {
+			return err
+		}
 
 		id, err := tx.SetRecord(ctx, pulseNumber, rec)
 		if err != nil {
@@ -457,7 +462,12 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		return nil, err
 	}
+
 	h.Recent.AddObject(*msg.Object.Record())
+	err = h.Recent.MaskAsMine(*msg.Object.Record())
+	if err != nil {
+		return nil, err
+	}
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -495,6 +505,10 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 			return err
 		}
 		h.Recent.AddObject(*msg.Parent.Record())
+		err = h.Recent.MaskAsMine(*msg.Parent.Record())
+		if err != nil {
+			return err
+		}
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -520,7 +534,12 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	if err != nil {
 		return nil, err
 	}
+
 	h.Recent.AddObject(*msg.Parent.Record())
+	err = h.Recent.MaskAsMine(*msg.Parent.Record())
+	if err != nil {
+		return nil, err
+	}
 
 	return &reply.ID{ID: *child}, nil
 }
