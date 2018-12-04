@@ -32,7 +32,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// AuthorizationCertificate holds base info about node from it certificate
+// AuthorizationCertificate holds info about node from it certificate
 type AuthorizationCertificate struct {
 	PublicKey      string          `json:"public_key"`
 	Reference      string          `json:"reference"`
@@ -61,7 +61,8 @@ func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
 // Certificate holds info about certificate
 type Certificate struct {
 	AuthorizationCertificate
-	MajorityRule int `json:"majority_rule"`
+	CS           core.CryptographyService `inject:"" json:"-"`
+	MajorityRule int                      `json:"majority_rule"`
 	MinRoles     struct {
 		Virtual       uint `json:"virtual"`
 		HeavyMaterial uint `json:"heavy_material"`
@@ -305,4 +306,25 @@ func Serialize(authCert core.AuthorizationCertificate) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Serialize ]")
 	}
 	return data, nil
+}
+
+func (cert *Certificate) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
+	crt := authCert.(*AuthorizationCertificate)
+	if len(cert.BootstrapNodes) != len(crt.BootstrapNodes) {
+		return false, nil
+	}
+	data := []byte(crt.PublicKey + crt.Reference + crt.Role)
+	for _, node := range cert.BootstrapNodes {
+		ok := false
+		for _, sig := range crt.BootstrapNodes {
+			ok = cert.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sig.NodeSign), data)
+			if ok {
+				continue
+			}
+		}
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
 }
