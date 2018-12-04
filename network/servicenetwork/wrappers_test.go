@@ -33,12 +33,14 @@ type nodeKeeperWrapper struct {
 
 type phaseManagerWrapper struct {
 	original phases.PhaseManager
-	result   <-chan error
+	result   chan error
 }
 
 func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
-	return p.original.OnPulse(ctx, pulse)
+	res := p.original.OnPulse(ctx, pulse)
+	p.result <- res
+	return res
 }
 
 func (n *nodeKeeperWrapper) GetOrigin() core.Node {
