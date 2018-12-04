@@ -33,7 +33,6 @@ type HostNetwork struct {
 	IsRelay           bool // set if node must be relay explicit
 	InfinityBootstrap bool // set true for infinity tries to bootstrap
 	Timeout           int  // bootstrap reconnect timeout
-	MajorityRule      int  // MajorityRule number
 	SignMessages      bool // signing a messages if true
 }
 
@@ -49,7 +48,6 @@ func NewHostNetwork() HostNetwork {
 		BootstrapHosts:    bootstrapHosts,
 		Timeout:           4,
 		InfinityBootstrap: false,
-		MajorityRule:      0,
 		SignMessages:      false,
 	}
 }

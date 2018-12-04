@@ -76,10 +76,8 @@ func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configura
 		cfg.Host.BootstrapHosts = append(cfg.Host.BootstrapHosts, bn.Host)
 	}
 	cfg.Node.Node.ID = cert.Reference
-	cfg.Host.MajorityRule = cert.MajorityRule
-
-	inslog.Infof("Add %d bootstrap nodes. Set node id to %s. Set majority rule to %d",
-		len(cfg.Host.BootstrapHosts), cfg.Node.Node.ID, cfg.Host.MajorityRule)
+	inslog.Infof("Add %d bootstrap nodes. Set node id to %s.",
+		len(cfg.Host.BootstrapHosts), cfg.Node.Node.ID)
 }
 
 func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) {
