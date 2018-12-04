@@ -23,6 +23,8 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -53,4 +55,18 @@ func TestNew(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
+}
+
+func TestContractRequester_routeCall(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	testResult := &reply.CallMethod{}
+
+	cReq := &ContractRequester{
+		MessageBus: mockMessageBus(t, testResult),
+	}
+
+	routResult, err := cReq.routeCall(ctx, testutils.RandomRef(), "TestMethod", core.Arguments{})
+
+	require.NoError(t, err)
+	require.Equal(t, testResult, routResult)
 }
