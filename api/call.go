@@ -70,7 +70,7 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 func (ar *Runner) verifySignature(ctx context.Context, params Request) error {
 	key, err := ar.getMemberPubKey(ctx, params.Reference)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ VerifySignature ] Can't getMemberPubKey")
 	}
 	if key == "" {
 		return errors.New("[ VerifySignature ] Not found public key for this member")
