@@ -84,3 +84,14 @@ func TestContractRequester_routeCall_SendError(t *testing.T) {
 	require.Contains(t, err.Error(), "test error message")
 	require.Nil(t, routResult)
 }
+
+func TestContractRequester_routeCall_MessageBusNil(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	cReq := &ContractRequester{}
+
+	routResult, err := cReq.routeCall(ctx, testutils.RandomRef(), "TestMethod", core.Arguments{})
+
+	require.Contains(t, err.Error(), "message bus was not set during initialization")
+	require.Nil(t, routResult)
+}
