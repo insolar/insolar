@@ -30,11 +30,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 )
@@ -55,7 +55,7 @@ var stderr io.ReadCloser
 var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
 
-var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
+var insolarRootMemberKeysPath = filepath.Join("../scripts/insolard/configs", insolarRootMemberKeys)
 var insolarNodesKeysPath = filepath.Join(testdataPath(), "discovery_node_")
 
 var info infoResponse
@@ -92,15 +92,6 @@ func buildInsolar() error {
 	return errors.Wrapf(err, "[ buildInsolar ] could't build insolar: %s", out)
 }
 
-func buildInsolard() error {
-	out, err := exec.Command(
-		"go", "build",
-		"-o", insolardPath,
-		insolarImportPath+"/cmd/insolard/",
-	).CombinedOutput()
-	return errors.Wrapf(err, "[ buildInsolard ] could't build insolard: %s", out)
-}
-
 func createDirForContracts() error {
 	return os.MkdirAll(filepath.Join(functestPath(), "contractstorage"), 0777)
 }
@@ -111,25 +102,6 @@ func deleteDirForContracts() error {
 
 func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
-}
-
-func generateRootMemberKeys() error {
-	out, err := exec.Command(
-		insolarPath, "-c", "gen_keys",
-		"-o", insolarRootMemberKeysPath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateRootMemberKeys ] could't generate root member keys: %s", out)
-}
-
-func generateDiscoveryNodesKeys() error {
-	for i := 0; i < 5; i++ {
-		out, err := exec.Command(
-			insolarPath, "-c", "gen_keys",
-			"-o", insolarNodesKeysPath+strconv.Itoa(i+1)+".json").CombinedOutput()
-		if err != nil {
-			return errors.Wrapf(err, "[ generateDiscoveryNodesKeys ] could't generate discovery node keys: %s", out)
-		}
-	}
-	return nil
 }
 
 func loadRootKeys() error {
