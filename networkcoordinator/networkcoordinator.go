@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/application/extractor"
+	certificate2 "github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
@@ -27,6 +28,7 @@ import (
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
+	CS                  core.CryptographyService `inject:""`
 	Certificate         core.Certificate         `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
 	ContractRequester   core.ContractRequester   `inject:""`
@@ -75,7 +77,24 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 
 // ValidateCert validates node certificate
 func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.AuthorizationCertificate) (bool, error) {
-	return nc.getCoordinator().ValidateCert(ctx, certificate)
+	cert := certificate.(*certificate2.AuthorizationCertificate)
+	data := []byte(cert.PublicKey + cert.Reference + cert.Role)
+	if len(cert.BootstrapNodes) != len(nc.Certificate.GetDiscoveryNodes()) {
+		return false, nil
+	}
+	for _, node := range nc.Certificate.GetDiscoveryNodes() {
+		ok := false
+		for _, sig := range cert.BootstrapNodes {
+			ok = nc.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sig.NodeSign), data)
+			if ok {
+				continue
+			}
+			if !ok {
+				return false, nil
+			}
+		}
+	}
+	return true, nil
 }
 
 // WriteActiveNodes writes active nodes to ledger
