@@ -90,7 +90,7 @@ func TestSelectByEntropy(t *testing.T) {
 }
 
 // go test -v ./utils/entropy/ -bench=. -cpu=1 -benchmem -run=NONE > ./utils/entropy/benchresults/$(git rev-parse --short HEAD).txt
-// benchcmp ./utils/entropy/benchresults/{d06b172a,cd73cf1e}.txt
+// benchcmp ./utils/entropy/benchresults/{c1448af3,b3072c30.txt}.txt
 func BenchmarkSelectByEntropy(b *testing.B) {
 	benches := []struct {
 		values int
