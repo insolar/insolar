@@ -117,3 +117,16 @@ func TestCallResponse(t *testing.T) {
 	require.Nil(t, contractErr)
 	require.Equal(t, testValue, result)
 }
+
+func TestCallResponse_UnmarshalError(t *testing.T) {
+	testValue := "some_no_valid_data"
+
+	data, err := core.Serialize(testValue)
+	require.NoError(t, err)
+
+	result, contractErr, err := CallResponse(data)
+
+	require.Contains(t, err.Error(), "Can't unmarshal response")
+	require.Nil(t, contractErr)
+	require.Nil(t, result)
+}
