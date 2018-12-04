@@ -127,6 +127,11 @@ func (bn *BootstrapNode) GetHost() string {
 	return bn.Host
 }
 
+// NodeSign returns signed information about some node
+func (bn *BootstrapNode) GetNodeSign() []byte {
+	return bn.NodeSign
+}
+
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
 
 func (cert *Certificate) serializeNetworkPart() []byte {
