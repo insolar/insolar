@@ -202,7 +202,6 @@ func waitForNet() error {
 			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s/api", port))
 			if err != nil {
 				fmt.Println("[ startNet ] Problem with port " + port + ". Err: " + err.Error())
-				currentOk--
 				break
 			} else {
 				fmt.Println("[ startNet ] Good response from port " + port + ". Response: " + resp.NetworkState)
