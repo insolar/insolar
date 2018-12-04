@@ -50,4 +50,5 @@ type AuthorizationCertificate interface {
 	GetDiscoveryNodes() []DiscoveryNode
 	GetRole() StaticRole
 	SerializeNodePart() []byte
+	GetDiscoverySign(discoveryRef *RecordRef) []byte
 }
