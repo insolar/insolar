@@ -21,7 +21,9 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/insolar/insolar/core"
 
@@ -87,7 +89,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	var gracefulStop = make(chan os.Signal, 1)
+	signal.Notify(gracefulStop, syscall.SIGTERM)
+	signal.Notify(gracefulStop, syscall.SIGINT)
+
+	go func() {
+		sig := <-gracefulStop
+
+		log.Info("ginsider get signal: ", sig.String())
+		os.Exit(1)
+	}()
+
 	log.Debug("ginsider launched, listens " + *listen)
 	rpc.Accept(listener)
+
 	log.Debug("bye\n")
 }
