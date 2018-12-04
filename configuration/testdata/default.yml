@@ -7,7 +7,6 @@ host:
   isrelay: false
   infinitybootstrap: false
   timeout: 4
-  majoritirule: 5
   signmessages: false
 service:
   service: {}

@@ -9,7 +9,7 @@ host:
   isrelay: false
   infinitybootstrap: false
   timeout: 4
-ervice:
+service:
   service: {}
 ledger:
   storage:

@@ -28,7 +28,6 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -64,14 +63,6 @@ func parseInputParams() inputParams {
 	return result
 }
 
-func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration, cert *certificate.Certificate) {
-	inslog := inslogger.FromContext(ctx)
-	if len(cfg.CertificatePath) == 0 {
-		inslog.Info("No certificate path - No merge")
-		return
-	}
-}
-
 func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) {
 	_, err := exec.Command(
 		"rm", "-rfv",
@@ -101,6 +92,7 @@ func main() {
 	}
 
 	cfg := &cfgHolder.Configuration
+	cfg.Metrics.Namespace = "insolard"
 
 	traceid := utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
@@ -117,11 +109,6 @@ func main() {
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
-
-	if !params.isGenesis {
-		mergeConfigAndCertificate(ctx, cfg, cert)
-	}
-	cfg.Metrics.Namespace = "insolard"
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
