@@ -110,3 +110,18 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, testResult, result)
 }
+
+func TestContractRequester_SendRequest_RouteError(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	ref := testutils.RandomRef()
+
+	cReq := &ContractRequester{
+		MessageBus: mockMessageBusError(t),
+	}
+
+	result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
+
+	require.Contains(t, err.Error(), "Can't route call")
+	require.Contains(t, err.Error(), "test error message")
+	require.Nil(t, result)
+}
