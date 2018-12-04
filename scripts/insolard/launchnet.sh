@@ -23,7 +23,7 @@ DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
 stop_listening()
 {
-    ports="$INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 53835 53837 53839"
+    ports="$INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 53835 53837 53839 38181"
     if [ "$1" != "" ]
     then
         ports=$@
