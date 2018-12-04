@@ -99,7 +99,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 			},
 			StateHash: rawProof.StateHash(),
 		}
-		claimMap[ref] = packet.GetClaims()
+		claimMap[ref] = fp.getSignedClaims(packet.GetClaims())
 	}
 
 	if fp.NodeKeeper.GetState() == network.Waiting {
@@ -169,6 +169,25 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 	return 0, errors.New("not implemented")
 }
 
+func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+	result := make([]packets.ReferendumClaim, 0)
+	for _, claim := range claims {
+		joinClaim, ok := claim.(*packets.NodeJoinClaim)
+		if ok {
+			signConfirmed, err := fp.claimSignIsOk(joinClaim)
+			if err != nil {
+				log.Error("[ getSignedClaims ] failed to check a claim sign")
+				continue
+			}
+			if !signConfirmed {
+				log.Error("[ getSginedClaims ] sign is unconfirmed")
+				continue
+			}
+		}
+		result = append(result, claim)
+	}
+	return result
+}
 func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim, addressMap map[core.RecordRef]string) {
 	for ref, claimList := range claims {
 		fp.UnsyncList.AddClaims(ref, claimList, addressMap)
