@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -53,7 +54,7 @@ type NodeBootstrapResponse struct {
 }
 
 type GenesisRequest struct {
-	// Certificate core.AuthorizationCertificate
+	Certificate []byte
 }
 
 type GenesisResponse struct {
@@ -189,8 +190,12 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (core.Node, error) {
+	serializedCert, err := certificate.Serialize(bc.cert)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to serialize certificate")
+	}
 	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
-		// Certificate: bc.cert,
+		Certificate: serializedCert,
 	}).Build()
 	future, err := bc.transport.SendRequestPacket(request, h)
 	if err != nil {
@@ -292,11 +297,15 @@ func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) err
 }
 
 func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
-	/*data := request.GetData().(*GenesisRequest)
-	err := bc.checkGenesisCert(data.Certificate)
+	data := request.GetData().(*GenesisRequest)
+	genesisCert, err := certificate.Deserialize(data.Certificate)
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
-	}*/
+	}
+	err = bc.checkGenesisCert(genesisCert)
+	if err != nil {
+		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
+	}
 	discovery, err := newNodeStruct(bc.keeper.GetOrigin())
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil

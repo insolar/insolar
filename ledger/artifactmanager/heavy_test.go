@@ -21,10 +21,11 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/testutils"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,8 +43,14 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	})
 	heavysync.StopMock.Return(nil)
 
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
 	// message hanler with mok
-	mh := NewMessageHandler(db, storage.NewRecentStorage(0), nil)
+	mh := NewMessageHandler(db, nil)
+	mh.Recent = recentStorageMock
 	mh.HeavySync = heavysync
 
 	payload := []core.KV{

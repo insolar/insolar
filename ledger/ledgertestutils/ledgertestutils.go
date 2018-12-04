@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -50,7 +50,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
-	handler := artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(0), nil)
+	handler := artifactmanager.NewMessageHandler(db, nil)
 	handler.PlatformCryptographyScheme = pcs
 
 	am := artifactmanager.NewArtifactManger(db)
@@ -80,6 +80,12 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm.GIL = gilMock
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+	handler.Recent = recentStorageMock
 
 	err := handler.Init(ctx)
 	if err != nil {

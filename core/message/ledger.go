@@ -171,3 +171,38 @@ type GetObjectIndex struct {
 func (*GetObjectIndex) Type() core.MessageType {
 	return core.TypeGetObjectIndex
 }
+
+// ValidationCheck checks if validation of a particular record can be performed.
+type ValidationCheck struct {
+	ledgerMessage
+
+	Object              core.RecordRef
+	ValidatedState      core.RecordID
+	LatestStateApproved *core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*ValidationCheck) Type() core.MessageType {
+	return core.TypeValidationCheck
+}
+
+// HotIndexes contains hot-data
+type HotIndexes struct {
+	ledgerMessage
+	Jet             core.RecordRef
+	Drop            []byte
+	RecentObjects   map[core.RecordID]*HotIndex
+	PendingRequests map[core.RecordID][]byte
+	PulseNumber     core.PulseNumber
+}
+
+// HotIndex contains meat about hot-data
+type HotIndex struct {
+	TTL   int
+	Index []byte
+}
+
+// Type implementation of Message interface.
+func (*HotIndexes) Type() core.MessageType {
+	return core.TypeHotRecords
+}

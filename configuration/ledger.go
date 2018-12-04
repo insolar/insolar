@@ -55,6 +55,12 @@ type Backoff struct {
 	Min, Max time.Duration
 }
 
+// RecentStorage holds configuration for RecentStorage
+type RecentStorage struct {
+	// Default TTL is a value of default ttl for redirects
+	DefaultTTL int
+}
+
 // Ledger holds configuration for ledger.
 type Ledger struct {
 	// Storage defines storage configuration.
@@ -63,6 +69,8 @@ type Ledger struct {
 	JetCoordinator JetCoordinator
 	// PulseManager holds configuration for PulseManager.
 	PulseManager PulseManager
+	// RecentStorage holds configuration for RecentStorage
+	RecentStorage RecentStorage
 
 	// common/sharable values:
 
@@ -100,6 +108,10 @@ func NewLedger() Ledger {
 				Max:    2 * time.Second,
 				Factor: 2,
 			},
+		},
+
+		RecentStorage: RecentStorage{
+			DefaultTTL: 50,
 		},
 
 		LightChainLimit: 10 * 30, // 30 pulses
