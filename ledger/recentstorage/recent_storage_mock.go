@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
+	core "github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -163,19 +163,19 @@ type mRecentStorageMockAddObjectWithTll struct {
 	mockExpectations *RecentStorageMockAddObjectWithTllParams
 }
 
-// RecentStorageMockAddObjectWithTllParams represents input parameters of the RecentStorage.AddObjectWithTll
+//RecentStorageMockAddObjectWithTllParams represents input parameters of the RecentStorage.AddObjectWithTll
 type RecentStorageMockAddObjectWithTllParams struct {
 	p  core.RecordID
 	p1 int
 }
 
-// Expect sets up expected params for the RecentStorage.AddObjectWithTll
+//Expect sets up expected params for the RecentStorage.AddObjectWithTll
 func (m *mRecentStorageMockAddObjectWithTll) Expect(p core.RecordID, p1 int) *mRecentStorageMockAddObjectWithTll {
 	m.mockExpectations = &RecentStorageMockAddObjectWithTllParams{p, p1}
 	return m
 }
 
-// Return sets up a mock for RecentStorage.AddObjectWithTll to return Return's arguments
+//Return sets up a mock for RecentStorage.AddObjectWithTll to return Return's arguments
 func (m *mRecentStorageMockAddObjectWithTll) Return() *RecentStorageMock {
 	m.mock.AddObjectWithTllFunc = func(p core.RecordID, p1 int) {
 		return
@@ -183,14 +183,14 @@ func (m *mRecentStorageMockAddObjectWithTll) Return() *RecentStorageMock {
 	return m.mock
 }
 
-// Set uses given function f as a mock of RecentStorage.AddObjectWithTll method
+//Set uses given function f as a mock of RecentStorage.AddObjectWithTll method
 func (m *mRecentStorageMockAddObjectWithTll) Set(f func(p core.RecordID, p1 int)) *RecentStorageMock {
 	m.mock.AddObjectWithTllFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
-// AddObjectWithTll implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
+//AddObjectWithTll implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
 func (m *RecentStorageMock) AddObjectWithTll(p core.RecordID, p1 int) {
 	atomic.AddUint64(&m.AddObjectWithTllPreCounter, 1)
 	defer atomic.AddUint64(&m.AddObjectWithTllCounter, 1)
@@ -215,12 +215,12 @@ func (m *RecentStorageMock) AddObjectWithTll(p core.RecordID, p1 int) {
 	m.AddObjectWithTllFunc(p, p1)
 }
 
-// AddObjectWithTllMinimockCounter returns a count of RecentStorageMock.AddObjectWithTllFunc invocations
+//AddObjectWithTllMinimockCounter returns a count of RecentStorageMock.AddObjectWithTllFunc invocations
 func (m *RecentStorageMock) AddObjectWithTllMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.AddObjectWithTllCounter)
 }
 
-// AddObjectWithTllMinimockPreCounter returns the value of RecentStorageMock.AddObjectWithTll invocations
+//AddObjectWithTllMinimockPreCounter returns the value of RecentStorageMock.AddObjectWithTll invocations
 func (m *RecentStorageMock) AddObjectWithTllMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.AddObjectWithTllPreCounter)
 }
@@ -464,18 +464,18 @@ type mRecentStorageMockIsMine struct {
 	mockExpectations *RecentStorageMockIsMineParams
 }
 
-// RecentStorageMockIsMineParams represents input parameters of the RecentStorage.IsMine
+//RecentStorageMockIsMineParams represents input parameters of the RecentStorage.IsMine
 type RecentStorageMockIsMineParams struct {
 	p core.RecordID
 }
 
-// Expect sets up expected params for the RecentStorage.IsMine
+//Expect sets up expected params for the RecentStorage.IsMine
 func (m *mRecentStorageMockIsMine) Expect(p core.RecordID) *mRecentStorageMockIsMine {
 	m.mockExpectations = &RecentStorageMockIsMineParams{p}
 	return m
 }
 
-// Return sets up a mock for RecentStorage.IsMine to return Return's arguments
+//Return sets up a mock for RecentStorage.IsMine to return Return's arguments
 func (m *mRecentStorageMockIsMine) Return(r bool) *RecentStorageMock {
 	m.mock.IsMineFunc = func(p core.RecordID) bool {
 		return r
@@ -483,14 +483,14 @@ func (m *mRecentStorageMockIsMine) Return(r bool) *RecentStorageMock {
 	return m.mock
 }
 
-// Set uses given function f as a mock of RecentStorage.IsMine method
+//Set uses given function f as a mock of RecentStorage.IsMine method
 func (m *mRecentStorageMockIsMine) Set(f func(p core.RecordID) (r bool)) *RecentStorageMock {
 	m.mock.IsMineFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
-// IsMine implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
+//IsMine implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
 func (m *RecentStorageMock) IsMine(p core.RecordID) (r bool) {
 	atomic.AddUint64(&m.IsMinePreCounter, 1)
 	defer atomic.AddUint64(&m.IsMineCounter, 1)
@@ -515,12 +515,12 @@ func (m *RecentStorageMock) IsMine(p core.RecordID) (r bool) {
 	return m.IsMineFunc(p)
 }
 
-// IsMineMinimockCounter returns a count of RecentStorageMock.IsMineFunc invocations
+//IsMineMinimockCounter returns a count of RecentStorageMock.IsMineFunc invocations
 func (m *RecentStorageMock) IsMineMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.IsMineCounter)
 }
 
-// IsMineMinimockPreCounter returns the value of RecentStorageMock.IsMine invocations
+//IsMineMinimockPreCounter returns the value of RecentStorageMock.IsMine invocations
 func (m *RecentStorageMock) IsMineMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IsMinePreCounter)
 }
@@ -530,18 +530,18 @@ type mRecentStorageMockMaskAsMine struct {
 	mockExpectations *RecentStorageMockMaskAsMineParams
 }
 
-// RecentStorageMockMaskAsMineParams represents input parameters of the RecentStorage.MaskAsMine
+//RecentStorageMockMaskAsMineParams represents input parameters of the RecentStorage.MaskAsMine
 type RecentStorageMockMaskAsMineParams struct {
 	p core.RecordID
 }
 
-// Expect sets up expected params for the RecentStorage.MaskAsMine
+//Expect sets up expected params for the RecentStorage.MaskAsMine
 func (m *mRecentStorageMockMaskAsMine) Expect(p core.RecordID) *mRecentStorageMockMaskAsMine {
 	m.mockExpectations = &RecentStorageMockMaskAsMineParams{p}
 	return m
 }
 
-// Return sets up a mock for RecentStorage.MaskAsMine to return Return's arguments
+//Return sets up a mock for RecentStorage.MaskAsMine to return Return's arguments
 func (m *mRecentStorageMockMaskAsMine) Return(r error) *RecentStorageMock {
 	m.mock.MaskAsMineFunc = func(p core.RecordID) error {
 		return r
@@ -549,14 +549,14 @@ func (m *mRecentStorageMockMaskAsMine) Return(r error) *RecentStorageMock {
 	return m.mock
 }
 
-// Set uses given function f as a mock of RecentStorage.MaskAsMine method
+//Set uses given function f as a mock of RecentStorage.MaskAsMine method
 func (m *mRecentStorageMockMaskAsMine) Set(f func(p core.RecordID) (r error)) *RecentStorageMock {
 	m.mock.MaskAsMineFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
-// MaskAsMine implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
+//MaskAsMine implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
 func (m *RecentStorageMock) MaskAsMine(p core.RecordID) (r error) {
 	atomic.AddUint64(&m.MaskAsMinePreCounter, 1)
 	defer atomic.AddUint64(&m.MaskAsMineCounter, 1)
@@ -581,12 +581,12 @@ func (m *RecentStorageMock) MaskAsMine(p core.RecordID) (r error) {
 	return m.MaskAsMineFunc(p)
 }
 
-// MaskAsMineMinimockCounter returns a count of RecentStorageMock.MaskAsMineFunc invocations
+//MaskAsMineMinimockCounter returns a count of RecentStorageMock.MaskAsMineFunc invocations
 func (m *RecentStorageMock) MaskAsMineMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.MaskAsMineCounter)
 }
 
-// MaskAsMineMinimockPreCounter returns the value of RecentStorageMock.MaskAsMine invocations
+//MaskAsMineMinimockPreCounter returns the value of RecentStorageMock.MaskAsMine invocations
 func (m *RecentStorageMock) MaskAsMineMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.MaskAsMinePreCounter)
 }
