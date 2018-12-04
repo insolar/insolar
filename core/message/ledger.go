@@ -18,6 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/jetdrop"
 )
 
 type ledgerMessage struct {
@@ -186,11 +187,11 @@ func (*ValidationCheck) Type() core.MessageType {
 	return core.TypeValidationCheck
 }
 
-// HotIndexes contains hot-data
-type HotIndexes struct {
+// HotData contains hot-data
+type HotData struct {
 	ledgerMessage
 	Jet             core.RecordRef
-	Drop            []byte
+	Drop            jetdrop.JetDrop
 	RecentObjects   map[core.RecordID]*HotIndex
 	PendingRequests map[core.RecordID][]byte
 	PulseNumber     core.PulseNumber
@@ -203,6 +204,6 @@ type HotIndex struct {
 }
 
 // Type implementation of Message interface.
-func (*HotIndexes) Type() core.MessageType {
+func (*HotData) Type() core.MessageType {
 	return core.TypeHotRecords
 }
