@@ -47,6 +47,12 @@ func (baseCert *BaseCertificate) GetPublicKey() crypto.PublicKey {
 	return baseCert.nodePublicKey
 }
 
+// GetNodeRef returns reference from node certificate
+func (baseCert *BaseCertificate) GetNodeRef() *core.RecordRef {
+	ref := core.NewRefFromBase58(baseCert.Reference)
+	return &ref
+}
+
 // GetRole returns role from node certificate
 func (baseCert *BaseCertificate) GetRole() core.StaticRole {
 	return core.GetStaticRoleFromString(baseCert.Role)
@@ -78,12 +84,6 @@ func (authCert *AuthorizationCertificate) GetNodeSign(nodeRef *core.RecordRef) (
 	return []byte{}, errors.New("not implemented")
 }
 
-// GetNodeRef returns reference from node certificate
-func (authCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
-	ref := core.NewRefFromBase58(authCert.Reference)
-	return &ref
-}
-
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
 	PublicKey   string `json:"public_key"`
@@ -110,12 +110,6 @@ func (bn *BootstrapNode) GetPublicKey() crypto.PublicKey {
 // GetHost returns host of bootstrap node
 func (bn *BootstrapNode) GetHost() string {
 	return bn.Host
-}
-
-// GetNodeRef returns reference from certificate
-func (cert *Certificate) GetNodeRef() *core.RecordRef {
-	ref := core.NewRefFromBase58(cert.Reference)
-	return &ref
 }
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
