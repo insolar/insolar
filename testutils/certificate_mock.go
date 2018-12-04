@@ -25,6 +25,11 @@ type CertificateMock struct {
 	GetDiscoveryNodesPreCounter uint64
 	GetDiscoveryNodesMock       mCertificateMockGetDiscoveryNodes
 
+	GetDiscoverySignFunc       func(p *core.RecordRef) (r []byte)
+	GetDiscoverySignCounter    uint64
+	GetDiscoverySignPreCounter uint64
+	GetDiscoverySignMock       mCertificateMockGetDiscoverySign
+
 	GetNodeRefFunc       func() (r *core.RecordRef)
 	GetNodeRefCounter    uint64
 	GetNodeRefPreCounter uint64
@@ -70,6 +75,7 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	}
 
 	m.GetDiscoveryNodesMock = mCertificateMockGetDiscoveryNodes{mock: m}
+	m.GetDiscoverySignMock = mCertificateMockGetDiscoverySign{mock: m}
 	m.GetNodeRefMock = mCertificateMockGetNodeRef{mock: m}
 	m.GetPublicKeyMock = mCertificateMockGetPublicKey{mock: m}
 	m.GetRoleMock = mCertificateMockGetRole{mock: m}
@@ -210,6 +216,153 @@ func (m *CertificateMock) GetDiscoveryNodesFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetDiscoveryNodesFunc != nil {
 		return atomic.LoadUint64(&m.GetDiscoveryNodesCounter) > 0
+	}
+
+	return true
+}
+
+type mCertificateMockGetDiscoverySign struct {
+	mock              *CertificateMock
+	mainExpectation   *CertificateMockGetDiscoverySignExpectation
+	expectationSeries []*CertificateMockGetDiscoverySignExpectation
+}
+
+type CertificateMockGetDiscoverySignExpectation struct {
+	input  *CertificateMockGetDiscoverySignInput
+	result *CertificateMockGetDiscoverySignResult
+}
+
+type CertificateMockGetDiscoverySignInput struct {
+	p *core.RecordRef
+}
+
+type CertificateMockGetDiscoverySignResult struct {
+	r []byte
+}
+
+//Expect specifies that invocation of Certificate.GetDiscoverySign is expected from 1 to Infinity times
+func (m *mCertificateMockGetDiscoverySign) Expect(p *core.RecordRef) *mCertificateMockGetDiscoverySign {
+	m.mock.GetDiscoverySignFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateMockGetDiscoverySignExpectation{}
+	}
+	m.mainExpectation.input = &CertificateMockGetDiscoverySignInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Certificate.GetDiscoverySign
+func (m *mCertificateMockGetDiscoverySign) Return(r []byte) *CertificateMock {
+	m.mock.GetDiscoverySignFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateMockGetDiscoverySignExpectation{}
+	}
+	m.mainExpectation.result = &CertificateMockGetDiscoverySignResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Certificate.GetDiscoverySign is expected once
+func (m *mCertificateMockGetDiscoverySign) ExpectOnce(p *core.RecordRef) *CertificateMockGetDiscoverySignExpectation {
+	m.mock.GetDiscoverySignFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CertificateMockGetDiscoverySignExpectation{}
+	expectation.input = &CertificateMockGetDiscoverySignInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CertificateMockGetDiscoverySignExpectation) Return(r []byte) {
+	e.result = &CertificateMockGetDiscoverySignResult{r}
+}
+
+//Set uses given function f as a mock of Certificate.GetDiscoverySign method
+func (m *mCertificateMockGetDiscoverySign) Set(f func(p *core.RecordRef) (r []byte)) *CertificateMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetDiscoverySignFunc = f
+	return m.mock
+}
+
+//GetDiscoverySign implements github.com/insolar/insolar/core.Certificate interface
+func (m *CertificateMock) GetDiscoverySign(p *core.RecordRef) (r []byte) {
+	counter := atomic.AddUint64(&m.GetDiscoverySignPreCounter, 1)
+	defer atomic.AddUint64(&m.GetDiscoverySignCounter, 1)
+
+	if len(m.GetDiscoverySignMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetDiscoverySignMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CertificateMock.GetDiscoverySign. %v", p)
+			return
+		}
+
+		input := m.GetDiscoverySignMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CertificateMockGetDiscoverySignInput{p}, "Certificate.GetDiscoverySign got unexpected parameters")
+
+		result := m.GetDiscoverySignMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateMock.GetDiscoverySign")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetDiscoverySignMock.mainExpectation != nil {
+
+		input := m.GetDiscoverySignMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CertificateMockGetDiscoverySignInput{p}, "Certificate.GetDiscoverySign got unexpected parameters")
+		}
+
+		result := m.GetDiscoverySignMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateMock.GetDiscoverySign")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetDiscoverySignFunc == nil {
+		m.t.Fatalf("Unexpected call to CertificateMock.GetDiscoverySign. %v", p)
+		return
+	}
+
+	return m.GetDiscoverySignFunc(p)
+}
+
+//GetDiscoverySignMinimockCounter returns a count of CertificateMock.GetDiscoverySignFunc invocations
+func (m *CertificateMock) GetDiscoverySignMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDiscoverySignCounter)
+}
+
+//GetDiscoverySignMinimockPreCounter returns the value of CertificateMock.GetDiscoverySign invocations
+func (m *CertificateMock) GetDiscoverySignMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDiscoverySignPreCounter)
+}
+
+//GetDiscoverySignFinished returns true if mock invocations count is ok
+func (m *CertificateMock) GetDiscoverySignFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetDiscoverySignMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetDiscoverySignCounter) == uint64(len(m.GetDiscoverySignMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetDiscoverySignMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetDiscoverySignCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetDiscoverySignFunc != nil {
+		return atomic.LoadUint64(&m.GetDiscoverySignCounter) > 0
 	}
 
 	return true
@@ -1195,6 +1348,10 @@ func (m *CertificateMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CertificateMock.GetDiscoveryNodes")
 	}
 
+	if !m.GetDiscoverySignFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetDiscoverySign")
+	}
+
 	if !m.GetNodeRefFinished() {
 		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
@@ -1244,6 +1401,10 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.GetDiscoveryNodes")
 	}
 
+	if !m.GetDiscoverySignFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetDiscoverySign")
+	}
+
 	if !m.GetNodeRefFinished() {
 		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
@@ -1287,6 +1448,7 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetDiscoveryNodesFinished()
+		ok = ok && m.GetDiscoverySignFinished()
 		ok = ok && m.GetNodeRefFinished()
 		ok = ok && m.GetPublicKeyFinished()
 		ok = ok && m.GetRoleFinished()
@@ -1304,6 +1466,10 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetDiscoveryNodesFinished() {
 				m.t.Error("Expected call to CertificateMock.GetDiscoveryNodes")
+			}
+
+			if !m.GetDiscoverySignFinished() {
+				m.t.Error("Expected call to CertificateMock.GetDiscoverySign")
 			}
 
 			if !m.GetNodeRefFinished() {
@@ -1347,6 +1513,10 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 func (m *CertificateMock) AllMocksCalled() bool {
 
 	if !m.GetDiscoveryNodesFinished() {
+		return false
+	}
+
+	if !m.GetDiscoverySignFinished() {
 		return false
 	}
 
