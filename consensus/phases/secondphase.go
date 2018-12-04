@@ -65,7 +65,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a packet")
 	}
-	proofSet, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, packet)
+	proofSet, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
