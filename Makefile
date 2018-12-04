@@ -40,7 +40,7 @@ clean:
 	go clean $(ALL_PACKAGES)
 	rm -f $(COVERPROFILE)
 	rm -rf $(BIN_DIR)
-	./scripts/insolard/launch.sh clear
+	./scripts/insolard/launchnet.sh clear
 
 install-deps:
 	go get -u github.com/golang/dep/cmd/dep
