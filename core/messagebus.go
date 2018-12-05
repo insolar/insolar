@@ -200,8 +200,8 @@ const (
 
 	// NetworkCoordinator
 
-	// NetworkCoordinatorNodeSignRequest used to request signature for new node
-	NetworkCoordinatorNodeSignRequest
+	// TypeNodeSignRequest used to request sign for new node
+	TypeNodeSignRequest
 )
 
 // DelegationTokenType is an enum type of delegation token

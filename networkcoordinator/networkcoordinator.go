@@ -49,11 +49,7 @@ func New() (*NetworkCoordinator, error) {
 func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 	nc.zeroCoordinator = newZeroNetworkCoordinator()
 	nc.realCoordinator = newRealNetworkCoordinator()
-	return nil
-}
-
-func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	return nc.Bus.Register(core.NetworkCoordinatorNodeSignRequest, nc.SignNode)
+	return nc.Bus.Register(core.TypeNodeSignRequest, nc.SignNode)
 }
 
 func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
@@ -85,7 +81,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 			if err != nil {
 				return nil, err
 			}
-			nc.Certificate.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
+			cert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
 		} else {
 			msg := message.NodeSignPayload{
 				NodeRef: &nodeRef,
@@ -98,7 +94,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 				return nil, err
 			}
 			sign := r.(reply.NodeSignInt).GetSign()
-			nc.Certificate.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
+			cert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
 		}
 	}
 	return cert, nil
