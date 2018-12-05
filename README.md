@@ -72,7 +72,7 @@ Generate default configuration file
 Example
 ------------
     # Start net of nodes
-    ./scripts/insolard/launchnet.sh
+    ./scripts/insolard/launchnet.sh -g
 
 
     # In other terminal:

@@ -9,7 +9,7 @@ Usage
    
 #### Start insolard
 
-    ./scripts/insolard/launchnet.sh
+    ./scripts/insolard/launchnet.sh -g
    
 #### Start benchmark
 
