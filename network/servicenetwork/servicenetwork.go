@@ -137,7 +137,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
 
 	n.routingTable = &routing.Table{}
-	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.Certificate.GetNodeRef().String())
+	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
 		return errors.Wrap(err, "Failed to create internal transport")
 	}
@@ -150,7 +150,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
 		n.cfg.Host.Transport.Address,
-		n.Certificate.GetNodeRef().String(),
+		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeNetwork.GetOrigin().ShortID(),
 		n.routingTable,
 	)

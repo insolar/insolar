@@ -76,7 +76,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 	}
 
 	currentNodeCert := nc.CertificateManager.GetCertificate()
-	cert, err := nc.CertificateManager.NewCertForHost(pKey, role, nodeRef.String())
+	cert, err := nc.CertificateManager.NewUnsignedCertificate(pKey, role, nodeRef.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
 	}

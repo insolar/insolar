@@ -55,5 +55,5 @@ type AuthorizationCertificate interface {
 type CertificateManager interface {
 	GetCertificate() Certificate
 	VerifyAuthorizationCertificate(authCert AuthorizationCertificate) (bool, error)
-	NewCertForHost(pKey string, role string, nodeRef string) (Certificate, error)
+	NewUnsignedCertificate(pKey string, role string, nodeRef string) (Certificate, error)
 }

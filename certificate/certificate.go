@@ -65,8 +65,8 @@ func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.Author
 	return true, nil
 }
 
-// NewCertForHost returns new certificate
-func (m *CertificateManager) NewCertForHost(pKey string, ref string, role string) (core.Certificate, error) {
+// NewUnsignedCertificate returns new certificate
+func (m *CertificateManager) NewUnsignedCertificate(pKey string, ref string, role string) (core.Certificate, error) {
 	cert := m.certificate.(*Certificate)
 	newCert := Certificate{
 		MajorityRule: cert.MajorityRule,

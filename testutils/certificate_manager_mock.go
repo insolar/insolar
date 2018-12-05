@@ -24,10 +24,10 @@ type CertificateManagerMock struct {
 	GetCertificatePreCounter uint64
 	GetCertificateMock       mCertificateManagerMockGetCertificate
 
-	NewCertForHostFunc       func(p string, p1 string, p2 string) (r core.Certificate, r1 error)
-	NewCertForHostCounter    uint64
-	NewCertForHostPreCounter uint64
-	NewCertForHostMock       mCertificateManagerMockNewCertForHost
+	NewUnsignedCertificateFunc       func(p string, p1 string, p2 string) (r core.Certificate, r1 error)
+	NewUnsignedCertificateCounter    uint64
+	NewUnsignedCertificatePreCounter uint64
+	NewUnsignedCertificateMock       mCertificateManagerMockNewUnsignedCertificate
 
 	VerifyAuthorizationCertificateFunc       func(p core.AuthorizationCertificate) (r bool, r1 error)
 	VerifyAuthorizationCertificateCounter    uint64
@@ -44,7 +44,7 @@ func NewCertificateManagerMock(t minimock.Tester) *CertificateManagerMock {
 	}
 
 	m.GetCertificateMock = mCertificateManagerMockGetCertificate{mock: m}
-	m.NewCertForHostMock = mCertificateManagerMockNewCertForHost{mock: m}
+	m.NewUnsignedCertificateMock = mCertificateManagerMockNewUnsignedCertificate{mock: m}
 	m.VerifyAuthorizationCertificateMock = mCertificateManagerMockVerifyAuthorizationCertificate{mock: m}
 
 	return m
@@ -184,93 +184,93 @@ func (m *CertificateManagerMock) GetCertificateFinished() bool {
 	return true
 }
 
-type mCertificateManagerMockNewCertForHost struct {
+type mCertificateManagerMockNewUnsignedCertificate struct {
 	mock              *CertificateManagerMock
-	mainExpectation   *CertificateManagerMockNewCertForHostExpectation
-	expectationSeries []*CertificateManagerMockNewCertForHostExpectation
+	mainExpectation   *CertificateManagerMockNewUnsignedCertificateExpectation
+	expectationSeries []*CertificateManagerMockNewUnsignedCertificateExpectation
 }
 
-type CertificateManagerMockNewCertForHostExpectation struct {
-	input  *CertificateManagerMockNewCertForHostInput
-	result *CertificateManagerMockNewCertForHostResult
+type CertificateManagerMockNewUnsignedCertificateExpectation struct {
+	input  *CertificateManagerMockNewUnsignedCertificateInput
+	result *CertificateManagerMockNewUnsignedCertificateResult
 }
 
-type CertificateManagerMockNewCertForHostInput struct {
+type CertificateManagerMockNewUnsignedCertificateInput struct {
 	p  string
 	p1 string
 	p2 string
 }
 
-type CertificateManagerMockNewCertForHostResult struct {
+type CertificateManagerMockNewUnsignedCertificateResult struct {
 	r  core.Certificate
 	r1 error
 }
 
-//Expect specifies that invocation of CertificateManager.NewCertForHost is expected from 1 to Infinity times
-func (m *mCertificateManagerMockNewCertForHost) Expect(p string, p1 string, p2 string) *mCertificateManagerMockNewCertForHost {
-	m.mock.NewCertForHostFunc = nil
+//Expect specifies that invocation of CertificateManager.NewUnsignedCertificate is expected from 1 to Infinity times
+func (m *mCertificateManagerMockNewUnsignedCertificate) Expect(p string, p1 string, p2 string) *mCertificateManagerMockNewUnsignedCertificate {
+	m.mock.NewUnsignedCertificateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateManagerMockNewCertForHostExpectation{}
+		m.mainExpectation = &CertificateManagerMockNewUnsignedCertificateExpectation{}
 	}
-	m.mainExpectation.input = &CertificateManagerMockNewCertForHostInput{p, p1, p2}
+	m.mainExpectation.input = &CertificateManagerMockNewUnsignedCertificateInput{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of CertificateManager.NewCertForHost
-func (m *mCertificateManagerMockNewCertForHost) Return(r core.Certificate, r1 error) *CertificateManagerMock {
-	m.mock.NewCertForHostFunc = nil
+//Return specifies results of invocation of CertificateManager.NewUnsignedCertificate
+func (m *mCertificateManagerMockNewUnsignedCertificate) Return(r core.Certificate, r1 error) *CertificateManagerMock {
+	m.mock.NewUnsignedCertificateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateManagerMockNewCertForHostExpectation{}
+		m.mainExpectation = &CertificateManagerMockNewUnsignedCertificateExpectation{}
 	}
-	m.mainExpectation.result = &CertificateManagerMockNewCertForHostResult{r, r1}
+	m.mainExpectation.result = &CertificateManagerMockNewUnsignedCertificateResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of CertificateManager.NewCertForHost is expected once
-func (m *mCertificateManagerMockNewCertForHost) ExpectOnce(p string, p1 string, p2 string) *CertificateManagerMockNewCertForHostExpectation {
-	m.mock.NewCertForHostFunc = nil
+//ExpectOnce specifies that invocation of CertificateManager.NewUnsignedCertificate is expected once
+func (m *mCertificateManagerMockNewUnsignedCertificate) ExpectOnce(p string, p1 string, p2 string) *CertificateManagerMockNewUnsignedCertificateExpectation {
+	m.mock.NewUnsignedCertificateFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &CertificateManagerMockNewCertForHostExpectation{}
-	expectation.input = &CertificateManagerMockNewCertForHostInput{p, p1, p2}
+	expectation := &CertificateManagerMockNewUnsignedCertificateExpectation{}
+	expectation.input = &CertificateManagerMockNewUnsignedCertificateInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *CertificateManagerMockNewCertForHostExpectation) Return(r core.Certificate, r1 error) {
-	e.result = &CertificateManagerMockNewCertForHostResult{r, r1}
+func (e *CertificateManagerMockNewUnsignedCertificateExpectation) Return(r core.Certificate, r1 error) {
+	e.result = &CertificateManagerMockNewUnsignedCertificateResult{r, r1}
 }
 
-//Set uses given function f as a mock of CertificateManager.NewCertForHost method
-func (m *mCertificateManagerMockNewCertForHost) Set(f func(p string, p1 string, p2 string) (r core.Certificate, r1 error)) *CertificateManagerMock {
+//Set uses given function f as a mock of CertificateManager.NewUnsignedCertificate method
+func (m *mCertificateManagerMockNewUnsignedCertificate) Set(f func(p string, p1 string, p2 string) (r core.Certificate, r1 error)) *CertificateManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.NewCertForHostFunc = f
+	m.mock.NewUnsignedCertificateFunc = f
 	return m.mock
 }
 
-//NewCertForHost implements github.com/insolar/insolar/core.CertificateManager interface
-func (m *CertificateManagerMock) NewCertForHost(p string, p1 string, p2 string) (r core.Certificate, r1 error) {
-	counter := atomic.AddUint64(&m.NewCertForHostPreCounter, 1)
-	defer atomic.AddUint64(&m.NewCertForHostCounter, 1)
+//NewUnsignedCertificate implements github.com/insolar/insolar/core.CertificateManager interface
+func (m *CertificateManagerMock) NewUnsignedCertificate(p string, p1 string, p2 string) (r core.Certificate, r1 error) {
+	counter := atomic.AddUint64(&m.NewUnsignedCertificatePreCounter, 1)
+	defer atomic.AddUint64(&m.NewUnsignedCertificateCounter, 1)
 
-	if len(m.NewCertForHostMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.NewCertForHostMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CertificateManagerMock.NewCertForHost. %v %v %v", p, p1, p2)
+	if len(m.NewUnsignedCertificateMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.NewUnsignedCertificateMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CertificateManagerMock.NewUnsignedCertificate. %v %v %v", p, p1, p2)
 			return
 		}
 
-		input := m.NewCertForHostMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CertificateManagerMockNewCertForHostInput{p, p1, p2}, "CertificateManager.NewCertForHost got unexpected parameters")
+		input := m.NewUnsignedCertificateMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CertificateManagerMockNewUnsignedCertificateInput{p, p1, p2}, "CertificateManager.NewUnsignedCertificate got unexpected parameters")
 
-		result := m.NewCertForHostMock.expectationSeries[counter-1].result
+		result := m.NewUnsignedCertificateMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the CertificateManagerMock.NewCertForHost")
+			m.t.Fatal("No results are set for the CertificateManagerMock.NewUnsignedCertificate")
 			return
 		}
 
@@ -280,16 +280,16 @@ func (m *CertificateManagerMock) NewCertForHost(p string, p1 string, p2 string) 
 		return
 	}
 
-	if m.NewCertForHostMock.mainExpectation != nil {
+	if m.NewUnsignedCertificateMock.mainExpectation != nil {
 
-		input := m.NewCertForHostMock.mainExpectation.input
+		input := m.NewUnsignedCertificateMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, CertificateManagerMockNewCertForHostInput{p, p1, p2}, "CertificateManager.NewCertForHost got unexpected parameters")
+			testify_assert.Equal(m.t, *input, CertificateManagerMockNewUnsignedCertificateInput{p, p1, p2}, "CertificateManager.NewUnsignedCertificate got unexpected parameters")
 		}
 
-		result := m.NewCertForHostMock.mainExpectation.result
+		result := m.NewUnsignedCertificateMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the CertificateManagerMock.NewCertForHost")
+			m.t.Fatal("No results are set for the CertificateManagerMock.NewUnsignedCertificate")
 		}
 
 		r = result.r
@@ -298,39 +298,39 @@ func (m *CertificateManagerMock) NewCertForHost(p string, p1 string, p2 string) 
 		return
 	}
 
-	if m.NewCertForHostFunc == nil {
-		m.t.Fatalf("Unexpected call to CertificateManagerMock.NewCertForHost. %v %v %v", p, p1, p2)
+	if m.NewUnsignedCertificateFunc == nil {
+		m.t.Fatalf("Unexpected call to CertificateManagerMock.NewUnsignedCertificate. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.NewCertForHostFunc(p, p1, p2)
+	return m.NewUnsignedCertificateFunc(p, p1, p2)
 }
 
-//NewCertForHostMinimockCounter returns a count of CertificateManagerMock.NewCertForHostFunc invocations
-func (m *CertificateManagerMock) NewCertForHostMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.NewCertForHostCounter)
+//NewUnsignedCertificateMinimockCounter returns a count of CertificateManagerMock.NewUnsignedCertificateFunc invocations
+func (m *CertificateManagerMock) NewUnsignedCertificateMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.NewUnsignedCertificateCounter)
 }
 
-//NewCertForHostMinimockPreCounter returns the value of CertificateManagerMock.NewCertForHost invocations
-func (m *CertificateManagerMock) NewCertForHostMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.NewCertForHostPreCounter)
+//NewUnsignedCertificateMinimockPreCounter returns the value of CertificateManagerMock.NewUnsignedCertificate invocations
+func (m *CertificateManagerMock) NewUnsignedCertificateMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.NewUnsignedCertificatePreCounter)
 }
 
-//NewCertForHostFinished returns true if mock invocations count is ok
-func (m *CertificateManagerMock) NewCertForHostFinished() bool {
+//NewUnsignedCertificateFinished returns true if mock invocations count is ok
+func (m *CertificateManagerMock) NewUnsignedCertificateFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.NewCertForHostMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.NewCertForHostCounter) == uint64(len(m.NewCertForHostMock.expectationSeries))
+	if len(m.NewUnsignedCertificateMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.NewUnsignedCertificateCounter) == uint64(len(m.NewUnsignedCertificateMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.NewCertForHostMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.NewCertForHostCounter) > 0
+	if m.NewUnsignedCertificateMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.NewUnsignedCertificateCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.NewCertForHostFunc != nil {
-		return atomic.LoadUint64(&m.NewCertForHostCounter) > 0
+	if m.NewUnsignedCertificateFunc != nil {
+		return atomic.LoadUint64(&m.NewUnsignedCertificateCounter) > 0
 	}
 
 	return true
@@ -494,8 +494,8 @@ func (m *CertificateManagerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CertificateManagerMock.GetCertificate")
 	}
 
-	if !m.NewCertForHostFinished() {
-		m.t.Fatal("Expected call to CertificateManagerMock.NewCertForHost")
+	if !m.NewUnsignedCertificateFinished() {
+		m.t.Fatal("Expected call to CertificateManagerMock.NewUnsignedCertificate")
 	}
 
 	if !m.VerifyAuthorizationCertificateFinished() {
@@ -523,8 +523,8 @@ func (m *CertificateManagerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateManagerMock.GetCertificate")
 	}
 
-	if !m.NewCertForHostFinished() {
-		m.t.Fatal("Expected call to CertificateManagerMock.NewCertForHost")
+	if !m.NewUnsignedCertificateFinished() {
+		m.t.Fatal("Expected call to CertificateManagerMock.NewUnsignedCertificate")
 	}
 
 	if !m.VerifyAuthorizationCertificateFinished() {
@@ -546,7 +546,7 @@ func (m *CertificateManagerMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetCertificateFinished()
-		ok = ok && m.NewCertForHostFinished()
+		ok = ok && m.NewUnsignedCertificateFinished()
 		ok = ok && m.VerifyAuthorizationCertificateFinished()
 
 		if ok {
@@ -560,8 +560,8 @@ func (m *CertificateManagerMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to CertificateManagerMock.GetCertificate")
 			}
 
-			if !m.NewCertForHostFinished() {
-				m.t.Error("Expected call to CertificateManagerMock.NewCertForHost")
+			if !m.NewUnsignedCertificateFinished() {
+				m.t.Error("Expected call to CertificateManagerMock.NewUnsignedCertificate")
 			}
 
 			if !m.VerifyAuthorizationCertificateFinished() {
@@ -584,7 +584,7 @@ func (m *CertificateManagerMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.NewCertForHostFinished() {
+	if !m.NewUnsignedCertificateFinished() {
 		return false
 	}
 
