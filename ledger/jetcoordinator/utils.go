@@ -17,6 +17,9 @@
 package jetcoordinator
 
 import (
+	"bytes"
+	"sort"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/utils/entropy"
 )
@@ -27,19 +30,22 @@ func selectByEntropy(
 	values []core.RecordRef,
 	count int,
 ) ([]core.RecordRef, error) { // nolint: megacheck
-	in := make([][]byte, 0, len(values))
+	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
+	sort.SliceStable(values, func(i, j int) bool {
+		return bytes.Compare(values[i][:], values[j][:]) < 0
+	})
+	in := make([]interface{}, 0, len(values))
 	for _, value := range values {
-		in = append(in, value[:])
+		in = append(in, interface{}(value))
 	}
+
 	res, err := entropy.SelectByEntropy(scheme, e[:], in, count)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]core.RecordRef, 0, len(res))
 	for _, value := range res {
-		var coreref core.RecordRef
-		copy(coreref[:], value)
-		out = append(out, coreref)
+		out = append(out, value.(core.RecordRef))
 	}
 	return out, nil
 }
