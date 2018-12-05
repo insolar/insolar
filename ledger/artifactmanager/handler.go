@@ -440,9 +440,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 
 		h.Recent.AddObject(*msg.Object.Record(), true)
-		if err != nil {
-			return err
-		}
 
 		id, err := tx.SetRecord(ctx, pulseNumber, rec)
 		if err != nil {
@@ -463,9 +460,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	}
 
 	h.Recent.AddObject(*msg.Object.Record(), true)
-	if err != nil {
-		return nil, err
-	}
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -530,9 +524,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	}
 
 	h.Recent.AddObject(*msg.Parent.Record(), true)
-	if err != nil {
-		return nil, err
-	}
 
 	return &reply.ID{ID: *child}, nil
 }
