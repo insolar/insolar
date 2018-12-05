@@ -84,6 +84,9 @@ func getTestData(t *testing.T) (
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
+	recentStorageMock.MaskAsMineFunc = func(p core.RecordID) (r error) {
+		return nil
+	}
 	handler.Recent = recentStorageMock
 
 	handler.Bus = mb
@@ -172,9 +175,10 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 			},
 		},
 	)
-	db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
+	require.NoError(t, err)
 
 	objRef := *genRandomRef(0)
 	objDesc, err := am.ActivateObject(
@@ -229,10 +233,11 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 			},
 		},
 	)
-	db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
+	require.NoError(t, err)
 	deactivateID, err := am.DeactivateObject(
 		ctx,
 		domainRef,
@@ -269,10 +274,11 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 			},
 		},
 	)
-	db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
+	require.NoError(t, err)
 	memory := []byte{1, 2, 3}
 	prototype := genRandomRef(0)
 	obj, err := am.UpdateObject(
@@ -312,7 +318,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
 	objRef := genRandomRef(0)
-	db.SetRecord(
+	_, err := db.SetRecord(
 		ctx,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{
@@ -325,7 +331,9 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 			Parent: *parentRef,
 		},
 	)
-	db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{3})
+	require.NoError(t, err)
+	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{3})
+	require.NoError(t, err)
 	objectAmendID, _ := db.SetRecord(ctx, core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
@@ -335,7 +343,9 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 			Image:  *prototypeRef,
 		},
 	})
-	db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{4})
+	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{4})
+	require.NoError(t, err)
+
 	objectIndex := index.ObjectLifeline{
 		LatestState:  objectAmendID,
 		ChildPointer: genRandomID(0),
@@ -600,6 +610,9 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.MaskAsMineFunc = func(p core.RecordID) (r error) {
+		return nil
+	}
 
 	handler := MessageHandler{
 		db:                         db,
