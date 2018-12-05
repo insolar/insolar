@@ -133,10 +133,11 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	// Act
 	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
 	require.NoError(t, err)
-	index, err := db.GetObjectIndex(ctx, firstID, false)
-	require.Error(t, err)
+	savedIndex, err := db.GetObjectIndex(ctx, firstID, false)
+	require.NoError(t, err)
 
 	// Assert
-	require.Nil(t, index)
+	require.NotNil(t, savedIndex)
+	require.NotNil(t, firstIndex, savedIndex)
 	recentMock.MinimockFinish()
 }

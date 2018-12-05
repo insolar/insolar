@@ -172,7 +172,7 @@ func (m *PulseManager) processRecentObjects(
 			Index: encoded,
 		}
 
-		if m.Recent.IsMine(id) {
+		if !m.Recent.IsMine(id) {
 			err := m.db.RemoveObjectIndex(ctx, &id)
 			if err != nil {
 				logger.Error(err)
