@@ -19,6 +19,7 @@ package packets
 import (
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -59,13 +60,14 @@ func TestNodeViolationBlame(t *testing.T) {
 
 func makeNodeJoinClaim() *NodeJoinClaim {
 	nodeJoinClaim := &NodeJoinClaim{}
-	nodeJoinClaim.NodeID = uint32(77)
-	nodeJoinClaim.RelayNodeID = uint32(26)
+	nodeJoinClaim.ShortNodeID = core.ShortNodeID(77)
+	nodeJoinClaim.RelayNodeID = core.ShortNodeID(26)
 	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
 	nodeJoinClaim.JoinsAfter = uint32(67)
-	nodeJoinClaim.NodeRoleRecID = uint32(32)
+	nodeJoinClaim.NodeRoleRecID = 32
 	nodeJoinClaim.NodeRef = testutils.RandomRef()
 	nodeJoinClaim.NodePK = randomArray64()
+	nodeJoinClaim.Signature = randomArray71()
 
 	return nodeJoinClaim
 }
@@ -76,7 +78,7 @@ func TestNodeJoinClaim(t *testing.T) {
 
 func TestNodeJoinClaim_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makeNodeJoinClaim(),
-		"[ NodeJoinClaim.Deserialize ] Can't read NodePK: unexpected EOF")
+		"[ NodeJoinClaim.Deserialize ] Can't read Signature: unexpected EOF")
 }
 
 func TestNodeLeaveClaim(t *testing.T) {
@@ -86,4 +88,16 @@ func TestNodeLeaveClaim(t *testing.T) {
 
 func TestMakeClaimHeader(t *testing.T) {
 
+}
+
+func makeNodeAnnounceClaim() *NodeAnnounceClaim {
+	nodeAnnounceClaim := &NodeAnnounceClaim{}
+	nodeAnnounceClaim.NodeJoinClaim = *makeNodeJoinClaim()
+	nodeAnnounceClaim.NodeCount = 266
+	nodeAnnounceClaim.NodeIndex = 37
+	return nodeAnnounceClaim
+}
+
+func TestNodeAnnounceClaim(t *testing.T) {
+	checkSerializationDeserialization(t, makeNodeAnnounceClaim())
 }

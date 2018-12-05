@@ -80,13 +80,14 @@ func (nvb *NodeViolationBlame) Type() ClaimType {
 
 // NodeJoinClaim is a type 1, len == 272.
 type NodeJoinClaim struct {
-	NodeID                  uint32
-	RelayNodeID             uint32
+	ShortNodeID             core.ShortNodeID
+	RelayNodeID             core.ShortNodeID
 	ProtocolVersionAndFlags uint32
 	JoinsAfter              uint32
 	NodeRoleRecID           uint32
 	NodeRef                 core.RecordRef
-	NodePK                  [64]byte
+	NodePK                  [PublicKeyLength]byte
+	Signature               [SignatureLength]byte
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
@@ -96,6 +97,9 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 // NodeJoinClaim is a type 5, len == 272.
 type NodeAnnounceClaim struct {
 	NodeJoinClaim
+
+	NodeIndex uint16
+	NodeCount uint16
 }
 
 func (nac *NodeAnnounceClaim) Type() ClaimType {

@@ -208,7 +208,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 
 	err = m.addMapping(ID2, "abirvalg")
 	require.Error(t, err)
-	err = m.addMapping(ID3, "127.0.0.1:9090")
+	err = m.addMapping(ID3, "127.0.0.1:7654")
 	require.NoError(t, err)
 
 	// should return error because resolved address is invalid
