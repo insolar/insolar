@@ -84,6 +84,10 @@ func (ul *unsyncList) GetActiveNode(ref core.RecordRef) core.Node {
 	return ul.activeNodes[ref]
 }
 
+func (ul *unsyncList) GetActiveNodes() []core.Node {
+	return sortedNodeList(ul.activeNodes)
+}
+
 type adder func(core.Node)
 type deleter func(core.RecordRef)
 
