@@ -58,7 +58,7 @@ create_required_dirs()
     mkdir -p scripts/insolard/$CONFIGS_DIR
 }
 
-prepare()
+prepare_dirs()
 {
     clear_dirs
     create_required_dirs
@@ -116,7 +116,7 @@ process_input_params()
     param=$1
     if [  "$param" == "clear" ]
     then
-        prepare
+        prepare_dirs
         exit 0
     fi
 
@@ -124,6 +124,11 @@ process_input_params()
     then
         usage
         exit 0
+    fi
+
+    if [ "$param" == "genesis" ] || [ "$param" == "-g" ] || [ "$param" == "--genesis" ]
+    then
+        prepare
     fi
 }
 
@@ -140,11 +145,28 @@ copy_data()
     cp $LEDGER_DIR/* $THIRD_NODE/data
 }
 
-copy_serts()
+copy_certs()
 {
     cp $NODES_DATA/certs/discovery_cert_1.json $FIRST_NODE/cert.json
     cp $NODES_DATA/certs/discovery_cert_2.json $SECOND_NODE/cert.json
     cp $NODES_DATA/certs/discovery_cert_3.json $THIRD_NODE/cert.json
+}
+
+prepare()
+{
+    prepare_dirs
+    build_binaries
+    generate_bootstrap_keys
+    generate_root_member_keys
+    generate_certificate
+    generate_discovery_nodes_keys
+
+    printf "start genesis ... \n"
+    $INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
+    printf "genesis is done\n"
+
+    copy_data
+    copy_certs
 }
 
 trap stop_listening EXIT
@@ -153,25 +175,11 @@ param=$1
 check_working_dir
 process_input_params $param
 
-prepare
-build_binaries
-generate_bootstrap_keys
-generate_root_member_keys
-generate_certificate
-generate_discovery_nodes_keys
-
 printf "start pulsar ... \n"
 $PULSARD -c scripts/insolard/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
 
 printf "start insgorund ... \n"
 run_insgorund &
-
-printf "start genesis ... \n"
-$INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
-printf "genesis is done\n"
-
-copy_data
-copy_serts
 
 printf "start nodes ... \n"
 
