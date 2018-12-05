@@ -44,8 +44,8 @@ func SelectByEntropy(
 		panic(err)
 	}
 
-	countUintBuf := make([]byte, binary.MaxVarintLen64)
-	hashUintBuf := make([]byte, binary.MaxVarintLen64)
+	countVarintBuf := make([]byte, binary.MaxVarintLen64)
+	hashUint64Buf := make([]byte, 8)
 
 	selected := make([]interface{}, count)
 	indexes := make([]int, len(values))
@@ -55,12 +55,12 @@ func SelectByEntropy(
 	ucount := uint64(count)
 	for i := uint64(0); i < ucount; i++ {
 		// put i-step as hash input (convert to variadic uint)
-		binary.PutUvarint(countUintBuf, i)
-		hsum := h.Sum(countUintBuf)
+		binary.PutUvarint(countVarintBuf, i)
+		hsum := h.Sum(countVarintBuf)
 
 		// convert first hash bytes to uint64
-		copy(hashUintBuf, hsum)
-		n := binary.LittleEndian.Uint64(hashUintBuf)
+		copy(hashUint64Buf, hsum)
+		n := binary.LittleEndian.Uint64(hashUint64Buf)
 
 		// calc and get index from list of indexes and remove it
 		idx2idx := n % uint64(len(indexes))
