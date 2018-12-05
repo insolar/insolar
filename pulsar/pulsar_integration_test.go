@@ -42,16 +42,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func initCrypto(t *testing.T) (*certificate.Certificate, core.CryptographyService) {
+func initCrypto(t *testing.T) (*certificate.CertificateManager, core.CryptographyService) {
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 	cs := cryptography.NewKeyBoundCryptographyService(key)
 	kp := platformpolicy.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
-	cert, err := certificate.NewCertificatesWithKeys(pk, kp)
+	certManager, err := certificate.NewManagerCertificateWithKeys(pk, kp)
 	require.NoError(t, err)
 
-	return cert, cs
+	return certManager, cs
 }
 
 func TestTwoPulsars_Handshake(t *testing.T) {

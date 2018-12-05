@@ -90,16 +90,16 @@ type networkNode struct {
 	serviceNetwork   *ServiceNetwork
 }
 
-func initCrypto(t *testing.T) (*certificate.Certificate, core.CryptographyService) {
+func initCrypto(t *testing.T) (*certificate.CertificateManager, core.CryptographyService) {
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 	cs := cryptography.NewKeyBoundCryptographyService(key)
 	kp := platformpolicy.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
-	cert, err := certificate.NewCertificatesWithKeys(pk, kp)
+	certManager, err := certificate.NewManagerCertificateWithKeys(pk, kp)
 	require.NoError(t, err)
 
-	return cert, cs
+	return certManager, cs
 }
 
 func (s *testSuite) getBootstrapNodes() []certificate.BootstrapNode {
@@ -107,7 +107,7 @@ func (s *testSuite) getBootstrapNodes() []certificate.BootstrapNode {
 	for _, b := range s.bootstrapNodes {
 		result = append(result, certificate.BootstrapNode{
 			Host:      b.serviceNetwork.cfg.Host.Transport.Address,
-			PublicKey: b.serviceNetwork.Certificate.(*certificate.Certificate).PublicKey,
+			PublicKey: b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey,
 		})
 	}
 	return result
@@ -141,13 +141,13 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 
 	amMock := testutils.NewArtifactManagerMock(t)
 
-	cert, cryptographyService := initCrypto(t)
-	cert.BootstrapNodes = s.getBootstrapNodes()
+	certManager, cryptographyService := initCrypto(t)
+	certManager.GetCertificate().(*certificate.Certificate).BootstrapNodes = s.getBootstrapNodes()
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
 	cm := &component.Manager{}
 	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock)
-	cm.Register(cert, cryptographyService)
+	cm.Register(certManager, cryptographyService)
 	cm.Inject(serviceNetwork, netSwitcher)
 
 	serviceNetwork.NodeKeeper = keeper

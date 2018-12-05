@@ -46,7 +46,7 @@ type ServiceNetwork struct {
 	routingTable network.RoutingTable // TODO: should be injected
 
 	// dependencies
-	Certificate         core.Certificate                `inject:""`
+	CertificateManager  core.CertificateManager         `inject:""`
 	NodeNetwork         core.NodeNetwork                `inject:""`
 	PulseManager        core.PulseManager               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
@@ -159,7 +159,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	cm := component.Manager{}
-	cm.Register(n.Certificate, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
+	cm.Register(n.CertificateManager, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
 		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
 
 	cm.Inject(n.NodeKeeper,
@@ -174,7 +174,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
-	n.controller = controller.NewNetworkController(n, options, n.Certificate, internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
+	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
