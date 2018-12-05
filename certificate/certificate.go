@@ -46,12 +46,12 @@ func (m *CertificateManager) GetCertificate() core.Certificate {
 // VerifyAuthorizationCertificate verifies certificate from some node
 func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
 	discoveryNodes := m.certificate.GetDiscoveryNodes()
-	if len(discoveryNodes) != len(authCert.GetDiscoveryNodes()) {
+	if len(discoveryNodes) != len(authCert.GetDiscoverySigns()) {
 		return false, nil
 	}
 	data := authCert.SerializeNodePart()
 	for _, node := range discoveryNodes {
-		sign := authCert.GetDiscoverySign(node.GetNodeRef())
+		sign := authCert.GetDiscoverySigns()[node.GetNodeRef()]
 		ok := m.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sign), data)
 		if !ok {
 			return false, nil
@@ -67,10 +67,9 @@ func (m *CertificateManager) NewCertForHost(pKey string, ref string, role string
 		MajorityRule: cert.MajorityRule,
 		MinRoles:     cert.MinRoles,
 		AuthorizationCertificate: AuthorizationCertificate{
-			PublicKey:      pKey,
-			Reference:      ref,
-			Role:           role,
-			BootstrapNodes: make([]BootstrapNode, len(cert.BootstrapNodes)),
+			PublicKey: pKey,
+			Reference: ref,
+			Role:      role,
 		},
 		PulsarPublicKeys:    cert.PulsarPublicKeys,
 		RootDomainReference: cert.RootDomainReference,
@@ -90,11 +89,10 @@ func (m *CertificateManager) GetRootDomainReference() *core.RecordRef {
 
 // AuthorizationCertificate holds info about node from it certificate
 type AuthorizationCertificate struct {
-	PublicKey         string          `json:"public_key"`
-	Reference         string          `json:"reference"`
-	Role              string          `json:"role"`
-	BootstrapNodes    []BootstrapNode `json:"bootstrap_nodes"`
-	bootstrapNodesMap map[*core.RecordRef][]byte
+	PublicKey      string `json:"public_key"`
+	Reference      string `json:"reference"`
+	Role           string `json:"role"`
+	DiscoverySigns map[*core.RecordRef][]byte
 
 	nodePublicKey crypto.PublicKey
 }
@@ -115,29 +113,9 @@ func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
 	return core.GetStaticRoleFromString(authCert.Role)
 }
 
-// GetDiscoveryNodes return bootstrap nodes array
-func (authCert *AuthorizationCertificate) GetDiscoveryNodes() []core.DiscoveryNode {
-	result := make([]core.DiscoveryNode, 0)
-	for i := 0; i < len(authCert.BootstrapNodes); i++ {
-		// we get node by pointer, so ranged for loop does not suite
-		result = append(result, &authCert.BootstrapNodes[i])
-	}
-	return result
-}
-
-// GetPublicKey returns public key reference from node certificate
-func (authCert *AuthorizationCertificate) initBootstrapNodesMap() {
-	if authCert.bootstrapNodesMap == nil {
-		for _, bNode := range authCert.BootstrapNodes {
-			authCert.bootstrapNodesMap[bNode.GetNodeRef()] = bNode.NodeSign
-		}
-	}
-}
-
 // GetNodeSign return sign from bootstrap node with provided ref
-func (authCert *AuthorizationCertificate) GetDiscoverySign(discoveryRef *core.RecordRef) []byte {
-	authCert.initBootstrapNodesMap()
-	return authCert.bootstrapNodesMap[discoveryRef]
+func (authCert *AuthorizationCertificate) GetDiscoverySigns() map[*core.RecordRef][]byte {
+	return authCert.DiscoverySigns
 }
 
 // SerializeNodePart returns some node info decoded in bytes
@@ -164,8 +142,9 @@ type Certificate struct {
 		HeavyMaterial uint `json:"heavy_material"`
 		LightMaterial uint `json:"light_material"`
 	} `json:"min_roles"`
-	PulsarPublicKeys    []string `json:"pulsar_public_keys"`
-	RootDomainReference string   `json:"root_domain_ref"`
+	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
+	RootDomainReference string          `json:"root_domain_ref"`
+	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
 
 	// preprocessed fields
 	pulsarPublicKey []crypto.PublicKey
@@ -330,6 +309,16 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.Key
 func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
 	ref := core.NewRefFromBase58(cert.RootDomainReference)
 	return &ref
+}
+
+// GetDiscoveryNodes return bootstrap nodes array
+func (cert *Certificate) GetDiscoveryNodes() []core.DiscoveryNode {
+	result := make([]core.DiscoveryNode, 0)
+	for i := 0; i < len(cert.BootstrapNodes); i++ {
+		// we get node by pointer, so ranged for loop does not suite
+		result = append(result, &cert.BootstrapNodes[i])
+	}
+	return result
 }
 
 // NewCertificatesWithKeys generate certificate from given keys

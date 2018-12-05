@@ -31,6 +31,7 @@ type Certificate interface {
 	AuthorizationCertificate
 
 	GetRootDomainReference() *RecordRef
+	GetDiscoveryNodes() []DiscoveryNode
 }
 
 //go:generate minimock -i github.com/insolar/insolar/core.DiscoveryNode -o ../testutils -s _mock.go
@@ -45,10 +46,9 @@ type DiscoveryNode interface {
 type AuthorizationCertificate interface {
 	NodeMeta
 
-	GetDiscoveryNodes() []DiscoveryNode
 	GetRole() StaticRole
 	SerializeNodePart() []byte
-	GetDiscoverySign(discoveryRef *RecordRef) []byte
+	GetDiscoverySigns() map[*RecordRef][]byte
 }
 
 // CertificateManager interface provides methods to manage nodes certificate

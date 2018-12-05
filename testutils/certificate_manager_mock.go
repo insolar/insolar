@@ -24,6 +24,16 @@ type CertificateManagerMock struct {
 	GetCertificatePreCounter uint64
 	GetCertificateMock       mCertificateManagerMockGetCertificate
 
+	GetRootDomainReferenceFunc       func() (r *core.RecordRef)
+	GetRootDomainReferenceCounter    uint64
+	GetRootDomainReferencePreCounter uint64
+	GetRootDomainReferenceMock       mCertificateManagerMockGetRootDomainReference
+
+	NewCertForHostFunc       func(p string, p1 string, p2 string) (r core.Certificate, r1 error)
+	NewCertForHostCounter    uint64
+	NewCertForHostPreCounter uint64
+	NewCertForHostMock       mCertificateManagerMockNewCertForHost
+
 	VerifyAuthorizationCertificateFunc       func(p core.AuthorizationCertificate) (r bool, r1 error)
 	VerifyAuthorizationCertificateCounter    uint64
 	VerifyAuthorizationCertificatePreCounter uint64
@@ -39,6 +49,8 @@ func NewCertificateManagerMock(t minimock.Tester) *CertificateManagerMock {
 	}
 
 	m.GetCertificateMock = mCertificateManagerMockGetCertificate{mock: m}
+	m.GetRootDomainReferenceMock = mCertificateManagerMockGetRootDomainReference{mock: m}
+	m.NewCertForHostMock = mCertificateManagerMockNewCertForHost{mock: m}
 	m.VerifyAuthorizationCertificateMock = mCertificateManagerMockVerifyAuthorizationCertificate{mock: m}
 
 	return m
@@ -173,6 +185,292 @@ func (m *CertificateManagerMock) GetCertificateFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetCertificateFunc != nil {
 		return atomic.LoadUint64(&m.GetCertificateCounter) > 0
+	}
+
+	return true
+}
+
+type mCertificateManagerMockGetRootDomainReference struct {
+	mock              *CertificateManagerMock
+	mainExpectation   *CertificateManagerMockGetRootDomainReferenceExpectation
+	expectationSeries []*CertificateManagerMockGetRootDomainReferenceExpectation
+}
+
+type CertificateManagerMockGetRootDomainReferenceExpectation struct {
+	result *CertificateManagerMockGetRootDomainReferenceResult
+}
+
+type CertificateManagerMockGetRootDomainReferenceResult struct {
+	r *core.RecordRef
+}
+
+//Expect specifies that invocation of CertificateManager.GetRootDomainReference is expected from 1 to Infinity times
+func (m *mCertificateManagerMockGetRootDomainReference) Expect() *mCertificateManagerMockGetRootDomainReference {
+	m.mock.GetRootDomainReferenceFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateManagerMockGetRootDomainReferenceExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of CertificateManager.GetRootDomainReference
+func (m *mCertificateManagerMockGetRootDomainReference) Return(r *core.RecordRef) *CertificateManagerMock {
+	m.mock.GetRootDomainReferenceFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateManagerMockGetRootDomainReferenceExpectation{}
+	}
+	m.mainExpectation.result = &CertificateManagerMockGetRootDomainReferenceResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CertificateManager.GetRootDomainReference is expected once
+func (m *mCertificateManagerMockGetRootDomainReference) ExpectOnce() *CertificateManagerMockGetRootDomainReferenceExpectation {
+	m.mock.GetRootDomainReferenceFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CertificateManagerMockGetRootDomainReferenceExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CertificateManagerMockGetRootDomainReferenceExpectation) Return(r *core.RecordRef) {
+	e.result = &CertificateManagerMockGetRootDomainReferenceResult{r}
+}
+
+//Set uses given function f as a mock of CertificateManager.GetRootDomainReference method
+func (m *mCertificateManagerMockGetRootDomainReference) Set(f func() (r *core.RecordRef)) *CertificateManagerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetRootDomainReferenceFunc = f
+	return m.mock
+}
+
+//GetRootDomainReference implements github.com/insolar/insolar/core.CertificateManager interface
+func (m *CertificateManagerMock) GetRootDomainReference() (r *core.RecordRef) {
+	counter := atomic.AddUint64(&m.GetRootDomainReferencePreCounter, 1)
+	defer atomic.AddUint64(&m.GetRootDomainReferenceCounter, 1)
+
+	if len(m.GetRootDomainReferenceMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetRootDomainReferenceMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CertificateManagerMock.GetRootDomainReference.")
+			return
+		}
+
+		result := m.GetRootDomainReferenceMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateManagerMock.GetRootDomainReference")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRootDomainReferenceMock.mainExpectation != nil {
+
+		result := m.GetRootDomainReferenceMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateManagerMock.GetRootDomainReference")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRootDomainReferenceFunc == nil {
+		m.t.Fatalf("Unexpected call to CertificateManagerMock.GetRootDomainReference.")
+		return
+	}
+
+	return m.GetRootDomainReferenceFunc()
+}
+
+//GetRootDomainReferenceMinimockCounter returns a count of CertificateManagerMock.GetRootDomainReferenceFunc invocations
+func (m *CertificateManagerMock) GetRootDomainReferenceMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRootDomainReferenceCounter)
+}
+
+//GetRootDomainReferenceMinimockPreCounter returns the value of CertificateManagerMock.GetRootDomainReference invocations
+func (m *CertificateManagerMock) GetRootDomainReferenceMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRootDomainReferencePreCounter)
+}
+
+//GetRootDomainReferenceFinished returns true if mock invocations count is ok
+func (m *CertificateManagerMock) GetRootDomainReferenceFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetRootDomainReferenceMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetRootDomainReferenceCounter) == uint64(len(m.GetRootDomainReferenceMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetRootDomainReferenceMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetRootDomainReferenceCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetRootDomainReferenceFunc != nil {
+		return atomic.LoadUint64(&m.GetRootDomainReferenceCounter) > 0
+	}
+
+	return true
+}
+
+type mCertificateManagerMockNewCertForHost struct {
+	mock              *CertificateManagerMock
+	mainExpectation   *CertificateManagerMockNewCertForHostExpectation
+	expectationSeries []*CertificateManagerMockNewCertForHostExpectation
+}
+
+type CertificateManagerMockNewCertForHostExpectation struct {
+	input  *CertificateManagerMockNewCertForHostInput
+	result *CertificateManagerMockNewCertForHostResult
+}
+
+type CertificateManagerMockNewCertForHostInput struct {
+	p  string
+	p1 string
+	p2 string
+}
+
+type CertificateManagerMockNewCertForHostResult struct {
+	r  core.Certificate
+	r1 error
+}
+
+//Expect specifies that invocation of CertificateManager.NewCertForHost is expected from 1 to Infinity times
+func (m *mCertificateManagerMockNewCertForHost) Expect(p string, p1 string, p2 string) *mCertificateManagerMockNewCertForHost {
+	m.mock.NewCertForHostFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateManagerMockNewCertForHostExpectation{}
+	}
+	m.mainExpectation.input = &CertificateManagerMockNewCertForHostInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of CertificateManager.NewCertForHost
+func (m *mCertificateManagerMockNewCertForHost) Return(r core.Certificate, r1 error) *CertificateManagerMock {
+	m.mock.NewCertForHostFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateManagerMockNewCertForHostExpectation{}
+	}
+	m.mainExpectation.result = &CertificateManagerMockNewCertForHostResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CertificateManager.NewCertForHost is expected once
+func (m *mCertificateManagerMockNewCertForHost) ExpectOnce(p string, p1 string, p2 string) *CertificateManagerMockNewCertForHostExpectation {
+	m.mock.NewCertForHostFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CertificateManagerMockNewCertForHostExpectation{}
+	expectation.input = &CertificateManagerMockNewCertForHostInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CertificateManagerMockNewCertForHostExpectation) Return(r core.Certificate, r1 error) {
+	e.result = &CertificateManagerMockNewCertForHostResult{r, r1}
+}
+
+//Set uses given function f as a mock of CertificateManager.NewCertForHost method
+func (m *mCertificateManagerMockNewCertForHost) Set(f func(p string, p1 string, p2 string) (r core.Certificate, r1 error)) *CertificateManagerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.NewCertForHostFunc = f
+	return m.mock
+}
+
+//NewCertForHost implements github.com/insolar/insolar/core.CertificateManager interface
+func (m *CertificateManagerMock) NewCertForHost(p string, p1 string, p2 string) (r core.Certificate, r1 error) {
+	counter := atomic.AddUint64(&m.NewCertForHostPreCounter, 1)
+	defer atomic.AddUint64(&m.NewCertForHostCounter, 1)
+
+	if len(m.NewCertForHostMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.NewCertForHostMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CertificateManagerMock.NewCertForHost. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.NewCertForHostMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CertificateManagerMockNewCertForHostInput{p, p1, p2}, "CertificateManager.NewCertForHost got unexpected parameters")
+
+		result := m.NewCertForHostMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateManagerMock.NewCertForHost")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.NewCertForHostMock.mainExpectation != nil {
+
+		input := m.NewCertForHostMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CertificateManagerMockNewCertForHostInput{p, p1, p2}, "CertificateManager.NewCertForHost got unexpected parameters")
+		}
+
+		result := m.NewCertForHostMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateManagerMock.NewCertForHost")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.NewCertForHostFunc == nil {
+		m.t.Fatalf("Unexpected call to CertificateManagerMock.NewCertForHost. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.NewCertForHostFunc(p, p1, p2)
+}
+
+//NewCertForHostMinimockCounter returns a count of CertificateManagerMock.NewCertForHostFunc invocations
+func (m *CertificateManagerMock) NewCertForHostMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.NewCertForHostCounter)
+}
+
+//NewCertForHostMinimockPreCounter returns the value of CertificateManagerMock.NewCertForHost invocations
+func (m *CertificateManagerMock) NewCertForHostMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.NewCertForHostPreCounter)
+}
+
+//NewCertForHostFinished returns true if mock invocations count is ok
+func (m *CertificateManagerMock) NewCertForHostFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.NewCertForHostMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.NewCertForHostCounter) == uint64(len(m.NewCertForHostMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.NewCertForHostMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.NewCertForHostCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.NewCertForHostFunc != nil {
+		return atomic.LoadUint64(&m.NewCertForHostCounter) > 0
 	}
 
 	return true
@@ -336,6 +634,14 @@ func (m *CertificateManagerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CertificateManagerMock.GetCertificate")
 	}
 
+	if !m.GetRootDomainReferenceFinished() {
+		m.t.Fatal("Expected call to CertificateManagerMock.GetRootDomainReference")
+	}
+
+	if !m.NewCertForHostFinished() {
+		m.t.Fatal("Expected call to CertificateManagerMock.NewCertForHost")
+	}
+
 	if !m.VerifyAuthorizationCertificateFinished() {
 		m.t.Fatal("Expected call to CertificateManagerMock.VerifyAuthorizationCertificate")
 	}
@@ -361,6 +667,14 @@ func (m *CertificateManagerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateManagerMock.GetCertificate")
 	}
 
+	if !m.GetRootDomainReferenceFinished() {
+		m.t.Fatal("Expected call to CertificateManagerMock.GetRootDomainReference")
+	}
+
+	if !m.NewCertForHostFinished() {
+		m.t.Fatal("Expected call to CertificateManagerMock.NewCertForHost")
+	}
+
 	if !m.VerifyAuthorizationCertificateFinished() {
 		m.t.Fatal("Expected call to CertificateManagerMock.VerifyAuthorizationCertificate")
 	}
@@ -380,6 +694,8 @@ func (m *CertificateManagerMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetCertificateFinished()
+		ok = ok && m.GetRootDomainReferenceFinished()
+		ok = ok && m.NewCertForHostFinished()
 		ok = ok && m.VerifyAuthorizationCertificateFinished()
 
 		if ok {
@@ -391,6 +707,14 @@ func (m *CertificateManagerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetCertificateFinished() {
 				m.t.Error("Expected call to CertificateManagerMock.GetCertificate")
+			}
+
+			if !m.GetRootDomainReferenceFinished() {
+				m.t.Error("Expected call to CertificateManagerMock.GetRootDomainReference")
+			}
+
+			if !m.NewCertForHostFinished() {
+				m.t.Error("Expected call to CertificateManagerMock.NewCertForHost")
 			}
 
 			if !m.VerifyAuthorizationCertificateFinished() {
@@ -410,6 +734,14 @@ func (m *CertificateManagerMock) MinimockWait(timeout time.Duration) {
 func (m *CertificateManagerMock) AllMocksCalled() bool {
 
 	if !m.GetCertificateFinished() {
+		return false
+	}
+
+	if !m.GetRootDomainReferenceFinished() {
+		return false
+	}
+
+	if !m.NewCertForHostFinished() {
 		return false
 	}
 
