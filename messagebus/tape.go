@@ -157,12 +157,12 @@ func (t *storageTape) setReplyBinary(ctx context.Context, msgHash []byte, rep []
 // It uses <storageTape id> + <message hash> for Value keys.
 type memoryTape struct {
 	pulse   core.PulseNumber
-	storage []message
+	storage []memoryTapeMessage
 }
 
-type message struct {
-	mesasgeSig []byte
-	reply      interface{}
+type memoryTapeMessage struct {
+	msgHash []byte
+	reply   interface{}
 }
 
 func NewMemorytape(pulse core.PulseNumber) memoryTape {
@@ -186,12 +186,22 @@ func NewMemoryTapeFromReader(ctx context.Context, r io.Reader) (*memoryTape, err
 	return &t, nil
 }
 
-func (t *memoryTape) Write(ctx context.Context, writer io.Writer) error {
-	panic("implement me")
+func (t *memoryTape) Write(ctx context.Context, w io.Writer) error {
+	encoder := codec.NewEncoder(w, new(codec.CborHandle))
+
+	err := encoder.Encode(t.pulse)
+	if err != nil {
+		return errors.Wrap(err, "[ MemoryTape ] can't write pulse")
+	}
+
+	err = encoder.Encode(t.storage)
+	if err != nil {
+		return errors.Wrap(err, "[ MemoryTape ] can't write storage")
+	}
+	return nil
 }
 
 func (t *memoryTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
-	panic("implement me")
 }
 
 func (t *memoryTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
