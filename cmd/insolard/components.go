@@ -74,28 +74,28 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	}
 }
 
-func initCertificate(
+func initCertificateManager(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	isBootstrap bool,
 	cryptographyService core.CryptographyService,
 	keyProcessor core.KeyProcessor,
-) *certificate.Certificate {
-	var cert *certificate.Certificate
+) *certificate.CertificateManager {
+	var certManager *certificate.CertificateManager
 	var err error
 
 	publicKey, err := cryptographyService.GetPublicKey()
 	checkError(ctx, err, "failed to retrieve node public key")
 
 	if isBootstrap {
-		cert, err = certificate.NewCertificatesWithKeys(publicKey, keyProcessor)
+		certManager, err = certificate.NewManagerCertificateWithKeys(publicKey, keyProcessor)
 		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
 	} else {
-		cert, err = certificate.ReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+		certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
 		checkError(ctx, err, "failed to start Certificate")
 	}
 
-	return cert
+	return certManager
 }
 
 // initComponents creates and links all insolard components
