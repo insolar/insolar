@@ -50,7 +50,6 @@ type bootstrapComponents struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme
 	KeyStore                   core.KeyStore
 	KeyProcessor               core.KeyProcessor
-	Certificate                core.Certificate
 }
 
 func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
