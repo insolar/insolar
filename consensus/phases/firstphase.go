@@ -67,7 +67,11 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
-		err = packet.AddClaim(fp.NodeKeeper.GetOriginClaim())
+		originClaim, err := fp.NodeKeeper.GetOriginClaim()
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Execute ] Failed to get origin claim")
+		}
+		err = packet.AddClaim(originClaim)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Execute ] Failed to add origin claim in Phase1Packet.")
 		}

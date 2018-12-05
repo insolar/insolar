@@ -88,11 +88,10 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 }
 
 type nodekeeper struct {
-	origin      core.Node
-	originClaim *consensus.NodeJoinClaim
-	originLock  sync.RWMutex
-	state       network.NodeKeeperState
-	claimQueue  *claimQueue
+	origin     core.Node
+	originLock sync.RWMutex
+	state      network.NodeKeeperState
+	claimQueue *claimQueue
 
 	nodesJoinedDuringPrevPulse bool
 
@@ -246,18 +245,11 @@ func (nk *nodekeeper) GetState() network.NodeKeeperState {
 	return nk.state
 }
 
-func (nk *nodekeeper) SetOriginClaim(claim *consensus.NodeJoinClaim) {
-	nk.originLock.Lock()
-	defer nk.originLock.Unlock()
-
-	nk.originClaim = claim
-}
-
-func (nk *nodekeeper) GetOriginClaim() *consensus.NodeJoinClaim {
+func (nk *nodekeeper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
 	nk.originLock.RLock()
 	defer nk.originLock.RUnlock()
 
-	return nk.originClaim
+	return nk.nodeToClaim()
 }
 
 func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
