@@ -59,11 +59,6 @@ type CertificateMock struct {
 	SerializeNodePartCounter    uint64
 	SerializeNodePartPreCounter uint64
 	SerializeNodePartMock       mCertificateMockSerializeNodePart
-
-	VerifyAuthorizationCertificateFunc       func(p core.AuthorizationCertificate) (r bool, r1 error)
-	VerifyAuthorizationCertificateCounter    uint64
-	VerifyAuthorizationCertificatePreCounter uint64
-	VerifyAuthorizationCertificateMock       mCertificateMockVerifyAuthorizationCertificate
 }
 
 //NewCertificateMock returns a mock for github.com/insolar/insolar/core.Certificate
@@ -82,7 +77,6 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	m.GetRootDomainReferenceMock = mCertificateMockGetRootDomainReference{mock: m}
 	m.NewCertForHostMock = mCertificateMockNewCertForHost{mock: m}
 	m.SerializeNodePartMock = mCertificateMockSerializeNodePart{mock: m}
-	m.VerifyAuthorizationCertificateMock = mCertificateMockVerifyAuthorizationCertificate{mock: m}
 
 	return m
 }
@@ -1190,156 +1184,6 @@ func (m *CertificateMock) SerializeNodePartFinished() bool {
 	return true
 }
 
-type mCertificateMockVerifyAuthorizationCertificate struct {
-	mock              *CertificateMock
-	mainExpectation   *CertificateMockVerifyAuthorizationCertificateExpectation
-	expectationSeries []*CertificateMockVerifyAuthorizationCertificateExpectation
-}
-
-type CertificateMockVerifyAuthorizationCertificateExpectation struct {
-	input  *CertificateMockVerifyAuthorizationCertificateInput
-	result *CertificateMockVerifyAuthorizationCertificateResult
-}
-
-type CertificateMockVerifyAuthorizationCertificateInput struct {
-	p core.AuthorizationCertificate
-}
-
-type CertificateMockVerifyAuthorizationCertificateResult struct {
-	r  bool
-	r1 error
-}
-
-//Expect specifies that invocation of Certificate.VerifyAuthorizationCertificate is expected from 1 to Infinity times
-func (m *mCertificateMockVerifyAuthorizationCertificate) Expect(p core.AuthorizationCertificate) *mCertificateMockVerifyAuthorizationCertificate {
-	m.mock.VerifyAuthorizationCertificateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateMockVerifyAuthorizationCertificateExpectation{}
-	}
-	m.mainExpectation.input = &CertificateMockVerifyAuthorizationCertificateInput{p}
-	return m
-}
-
-//Return specifies results of invocation of Certificate.VerifyAuthorizationCertificate
-func (m *mCertificateMockVerifyAuthorizationCertificate) Return(r bool, r1 error) *CertificateMock {
-	m.mock.VerifyAuthorizationCertificateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateMockVerifyAuthorizationCertificateExpectation{}
-	}
-	m.mainExpectation.result = &CertificateMockVerifyAuthorizationCertificateResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Certificate.VerifyAuthorizationCertificate is expected once
-func (m *mCertificateMockVerifyAuthorizationCertificate) ExpectOnce(p core.AuthorizationCertificate) *CertificateMockVerifyAuthorizationCertificateExpectation {
-	m.mock.VerifyAuthorizationCertificateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &CertificateMockVerifyAuthorizationCertificateExpectation{}
-	expectation.input = &CertificateMockVerifyAuthorizationCertificateInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *CertificateMockVerifyAuthorizationCertificateExpectation) Return(r bool, r1 error) {
-	e.result = &CertificateMockVerifyAuthorizationCertificateResult{r, r1}
-}
-
-//Set uses given function f as a mock of Certificate.VerifyAuthorizationCertificate method
-func (m *mCertificateMockVerifyAuthorizationCertificate) Set(f func(p core.AuthorizationCertificate) (r bool, r1 error)) *CertificateMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.VerifyAuthorizationCertificateFunc = f
-	return m.mock
-}
-
-//VerifyAuthorizationCertificate implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) VerifyAuthorizationCertificate(p core.AuthorizationCertificate) (r bool, r1 error) {
-	counter := atomic.AddUint64(&m.VerifyAuthorizationCertificatePreCounter, 1)
-	defer atomic.AddUint64(&m.VerifyAuthorizationCertificateCounter, 1)
-
-	if len(m.VerifyAuthorizationCertificateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.VerifyAuthorizationCertificateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CertificateMock.VerifyAuthorizationCertificate. %v", p)
-			return
-		}
-
-		input := m.VerifyAuthorizationCertificateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CertificateMockVerifyAuthorizationCertificateInput{p}, "Certificate.VerifyAuthorizationCertificate got unexpected parameters")
-
-		result := m.VerifyAuthorizationCertificateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the CertificateMock.VerifyAuthorizationCertificate")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.VerifyAuthorizationCertificateMock.mainExpectation != nil {
-
-		input := m.VerifyAuthorizationCertificateMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, CertificateMockVerifyAuthorizationCertificateInput{p}, "Certificate.VerifyAuthorizationCertificate got unexpected parameters")
-		}
-
-		result := m.VerifyAuthorizationCertificateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the CertificateMock.VerifyAuthorizationCertificate")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.VerifyAuthorizationCertificateFunc == nil {
-		m.t.Fatalf("Unexpected call to CertificateMock.VerifyAuthorizationCertificate. %v", p)
-		return
-	}
-
-	return m.VerifyAuthorizationCertificateFunc(p)
-}
-
-//VerifyAuthorizationCertificateMinimockCounter returns a count of CertificateMock.VerifyAuthorizationCertificateFunc invocations
-func (m *CertificateMock) VerifyAuthorizationCertificateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter)
-}
-
-//VerifyAuthorizationCertificateMinimockPreCounter returns the value of CertificateMock.VerifyAuthorizationCertificate invocations
-func (m *CertificateMock) VerifyAuthorizationCertificateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.VerifyAuthorizationCertificatePreCounter)
-}
-
-//VerifyAuthorizationCertificateFinished returns true if mock invocations count is ok
-func (m *CertificateMock) VerifyAuthorizationCertificateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.VerifyAuthorizationCertificateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) == uint64(len(m.VerifyAuthorizationCertificateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.VerifyAuthorizationCertificateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.VerifyAuthorizationCertificateFunc != nil {
-		return atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CertificateMock) ValidateCallCounters() {
@@ -1374,10 +1218,6 @@ func (m *CertificateMock) ValidateCallCounters() {
 
 	if !m.SerializeNodePartFinished() {
 		m.t.Fatal("Expected call to CertificateMock.SerializeNodePart")
-	}
-
-	if !m.VerifyAuthorizationCertificateFinished() {
-		m.t.Fatal("Expected call to CertificateMock.VerifyAuthorizationCertificate")
 	}
 
 }
@@ -1429,10 +1269,6 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.SerializeNodePart")
 	}
 
-	if !m.VerifyAuthorizationCertificateFinished() {
-		m.t.Fatal("Expected call to CertificateMock.VerifyAuthorizationCertificate")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -1455,7 +1291,6 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetRootDomainReferenceFinished()
 		ok = ok && m.NewCertForHostFinished()
 		ok = ok && m.SerializeNodePartFinished()
-		ok = ok && m.VerifyAuthorizationCertificateFinished()
 
 		if ok {
 			return
@@ -1494,10 +1329,6 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SerializeNodePartFinished() {
 				m.t.Error("Expected call to CertificateMock.SerializeNodePart")
-			}
-
-			if !m.VerifyAuthorizationCertificateFinished() {
-				m.t.Error("Expected call to CertificateMock.VerifyAuthorizationCertificate")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1541,10 +1372,6 @@ func (m *CertificateMock) AllMocksCalled() bool {
 	}
 
 	if !m.SerializeNodePartFinished() {
-		return false
-	}
-
-	if !m.VerifyAuthorizationCertificateFinished() {
 		return false
 	}
 
