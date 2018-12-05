@@ -41,8 +41,8 @@ func NewStatusService(runner *Runner) *StatusService {
 
 // Get returns status info
 func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusReply) error {
-	traceId := utils.RandTraceID()
-	_, inslog := inslogger.WithTraceField(context.Background(), traceId)
+	traceID := utils.RandTraceID()
+	_, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
 	inslog.Infof("[ StatusService.Get ] Incoming request: %s", r.RequestURI)
 

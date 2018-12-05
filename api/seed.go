@@ -64,8 +64,8 @@ func NewSeedService(runner *Runner) *SeedService {
 // 	}
 //
 func (s *SeedService) Get(r *http.Request, args *SeedArgs, reply *SeedReply) error {
-	traceId := utils.RandTraceID()
-	_, inslog := inslogger.WithTraceField(context.Background(), traceId)
+	traceID := utils.RandTraceID()
+	_, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
 	inslog.Infof("[ SeedService.Get ] Incoming request: %s", r.RequestURI)
 

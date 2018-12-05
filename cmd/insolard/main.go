@@ -112,8 +112,8 @@ func main() {
 
 	cfg := &cfgHolder.Configuration
 
-	traceid := utils.RandTraceID()
-	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
+	traceID := utils.RandTraceID()
+	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
 
 	if params.isGenesis {
 		removeLedgerDataDir(ctx, cfg)
