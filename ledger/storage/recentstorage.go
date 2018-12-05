@@ -20,7 +20,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 // RecentStorage is a base structure
@@ -48,15 +47,15 @@ func NewRecentStorage(defaultTTL int) *RecentStorage {
 }
 
 // AddObject adds object to cache
-func (r *RecentStorage) AddObject(id core.RecordID) {
+func (r *RecentStorage) AddObject(id core.RecordID, isMine bool) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	r.recentObjects[id] = &recentObjectMeta{ttl: r.DefaultTTL}
+	r.recentObjects[id] = &recentObjectMeta{ttl: r.DefaultTTL, isMine: isMine}
 }
 
-// AddObjectWithMeta adds object with specified TTL to the cache
-func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int) {
+// AddObjectWithTLL adds object with specified TTL to the cache
+func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int, isMine bool) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 	r.recentObjects[id] = &recentObjectMeta{ttl: r.DefaultTTL}
@@ -79,20 +78,6 @@ func (r *RecentStorage) RemovePendingRequest(id core.RecordID) {
 	defer r.requestLock.Unlock()
 
 	delete(r.pendingRequests, id)
-}
-
-// MarkAsMine marks object as created on the current ME
-func (r *RecentStorage) MarkAsMine(id core.RecordID) error {
-	r.objectLock.Lock()
-	defer r.objectLock.Unlock()
-
-	val, ok := r.recentObjects[id]
-	if !ok {
-		return errors.New("object doesn't exist")
-	}
-	val.isMine = true
-
-	return nil
 }
 
 // IsMine checks mine-status of an object

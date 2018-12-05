@@ -85,7 +85,6 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
-	recentStorageMock.MarkAsMineMock.Return(nil)
 	handler.Recent = recentStorageMock
 
 	err := handler.Init(ctx)

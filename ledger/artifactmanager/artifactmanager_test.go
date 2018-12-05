@@ -77,16 +77,13 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:   &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
-	recentStorageMock.MarkAsMineFunc = func(p core.RecordID) (r error) {
-		return nil
-	}
 	handler.Recent = recentStorageMock
 
 	handler.Bus = mb
@@ -610,15 +607,12 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.MarkAsMineFunc = func(p core.RecordID) (r error) {
-		return nil
-	}
 
 	handler := MessageHandler{
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:   &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -639,7 +633,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "object"}})
 	require.NoError(t, err)
 	objRef := genRefWithID(objID)
-
 
 	desc, err := am.ActivateObject(
 		ctx,

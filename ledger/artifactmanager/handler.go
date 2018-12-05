@@ -223,7 +223,7 @@ func (h *MessageHandler) handleGetObject(
 		}
 		return nil, err
 	}
-	h.Recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record(), false)
 
 	state, err := getObjectStateRecord(ctx, h.db, stateID)
 	if err != nil {
@@ -297,7 +297,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	h.Recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record(), false)
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -331,7 +331,7 @@ func (h *MessageHandler) handleGetChildren(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.Recent.AddObject(*msg.Parent.Record())
+	h.Recent.AddObject(*msg.Parent.Record(), false)
 
 	var (
 		refs         []core.RecordRef
@@ -439,8 +439,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 			return errors.New("invalid state record")
 		}
 
-		h.Recent.AddObject(*msg.Object.Record())
-		err = h.Recent.MarkAsMine(*msg.Object.Record())
+		h.Recent.AddObject(*msg.Object.Record(), true)
 		if err != nil {
 			return err
 		}
@@ -463,8 +462,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		return nil, err
 	}
 
-	h.Recent.AddObject(*msg.Object.Record())
-	err = h.Recent.MarkAsMine(*msg.Object.Record())
+	h.Recent.AddObject(*msg.Object.Record(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -504,11 +502,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		} else if err != nil {
 			return err
 		}
-		h.Recent.AddObject(*msg.Parent.Record())
-		err = h.Recent.MarkAsMine(*msg.Parent.Record())
-		if err != nil {
-			return err
-		}
+		h.Recent.AddObject(*msg.Parent.Record(), true)
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -535,8 +529,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		return nil, err
 	}
 
-	h.Recent.AddObject(*msg.Parent.Record())
-	err = h.Recent.MarkAsMine(*msg.Parent.Record())
+	h.Recent.AddObject(*msg.Parent.Record(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -839,6 +832,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		if err != nil {
 			return nil, err
 		}
+		isMine := savedIndex != nil
 
 		err = h.db.SetObjectIndex(ctx, &id, decodedIndex)
 		if err != nil {
@@ -847,13 +841,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		}
 
 		meta.TTL--
-		h.Recent.AddObjectWithTLL(id, meta.TTL)
-		if savedIndex != nil {
-			err = h.Recent.MarkAsMine(id)
-			if err != nil {
-				return nil, err
-			}
-		}
+		h.Recent.AddObjectWithTLL(id, meta.TTL, isMine)
 	}
 
 	return &reply.OK{}, nil
