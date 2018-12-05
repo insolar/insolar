@@ -38,6 +38,11 @@ type CertificateManager struct {
 	certificate core.Certificate
 }
 
+// NewCertificateManager returns new CertificateManager instance
+func NewCertificateManager(cert core.Certificate) *CertificateManager {
+	return &CertificateManager{certificate: cert}
+}
+
 // GetCertificate returns current node certificate
 func (m *CertificateManager) GetCertificate() core.Certificate {
 	return m.certificate
@@ -128,23 +133,6 @@ func (authCert *AuthorizationCertificate) SignNodePart(key crypto.PrivateKey) ([
 	return sign.Bytes(), nil
 }
 
-// Certificate holds info about certificate
-type Certificate struct {
-	AuthorizationCertificate
-	MajorityRule int `json:"majority_rule"`
-	MinRoles     struct {
-		Virtual       uint `json:"virtual"`
-		HeavyMaterial uint `json:"heavy_material"`
-		LightMaterial uint `json:"light_material"`
-	} `json:"min_roles"`
-	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
-	RootDomainReference string          `json:"root_domain_ref"`
-	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
-
-	// preprocessed fields
-	pulsarPublicKey []crypto.PublicKey
-}
-
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
 	PublicKey   string `json:"public_key"`
@@ -179,6 +167,47 @@ func (bn *BootstrapNode) GetNodeSign() []byte {
 }
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
+
+// Certificate holds info about certificate
+type Certificate struct {
+	AuthorizationCertificate
+	MajorityRule int `json:"majority_rule"`
+	MinRoles     struct {
+		Virtual       uint `json:"virtual"`
+		HeavyMaterial uint `json:"heavy_material"`
+		LightMaterial uint `json:"light_material"`
+	} `json:"min_roles"`
+	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
+	RootDomainReference string          `json:"root_domain_ref"`
+	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
+
+	// preprocessed fields
+	pulsarPublicKey []crypto.PublicKey
+}
+
+func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, data []byte) (*Certificate, error) {
+	cert := Certificate{}
+	err := json.Unmarshal(data, &cert)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ newCertificate ] failed to parse certificate json")
+	}
+
+	pub, err := keyProcessor.ExportPublicKey(publicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ newCertificate ] failed to retrieve public key from node private key")
+	}
+
+	if cert.PublicKey != string(pub) {
+		return nil, errors.New("[ newCertificate ] Different public keys")
+	}
+
+	err = cert.fillExtraFields(keyProcessor)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ newCertificate ] Incorrect fields")
+	}
+
+	return &cert, nil
+}
 
 func (cert *Certificate) serializeNetworkPart() []byte {
 	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
@@ -235,33 +264,30 @@ func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 	return nil
 }
 
-func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, data []byte) (*Certificate, error) {
-	cert := Certificate{}
-	err := json.Unmarshal(data, &cert)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ newCertificate ] failed to parse certificate json")
-	}
-
-	pub, err := keyProcessor.ExportPublicKey(publicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ newCertificate ] failed to retrieve public key from node private key")
-	}
-
-	if cert.PublicKey != string(pub) {
-		return nil, errors.New("[ newCertificate ] Different public keys")
-	}
-
-	err = cert.fillExtraFields(keyProcessor)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ newCertificate ] Incorrect fields")
-	}
-
-	return &cert, nil
+// GetRootDomainReference returns RootDomain reference
+func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
+	ref := core.NewRefFromBase58(cert.RootDomainReference)
+	return &ref
 }
 
-// NewCertificateManager returns new CertificateManager instance
-func NewCertificateManager(cert core.Certificate) *CertificateManager {
-	return &CertificateManager{certificate: cert}
+// GetDiscoveryNodes return bootstrap nodes array
+func (cert *Certificate) GetDiscoveryNodes() []core.DiscoveryNode {
+	result := make([]core.DiscoveryNode, 0)
+	for i := 0; i < len(cert.BootstrapNodes); i++ {
+		// we get node by pointer, so ranged for loop does not suite
+		result = append(result, &cert.BootstrapNodes[i])
+	}
+	return result
+}
+
+// Dump returns all info about certificate in json format
+func (cert *Certificate) Dump() (string, error) {
+	result, err := json.MarshalIndent(cert, "", "    ")
+	if err != nil {
+		return "", errors.Wrap(err, "[ Certificate::Dump ]")
+	}
+
+	return string(result), nil
 }
 
 // ReadCertificate constructor creates new Certificate component
@@ -300,22 +326,6 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.Key
 	return cert, nil
 }
 
-// GetRootDomainReference returns RootDomain reference
-func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
-	ref := core.NewRefFromBase58(cert.RootDomainReference)
-	return &ref
-}
-
-// GetDiscoveryNodes return bootstrap nodes array
-func (cert *Certificate) GetDiscoveryNodes() []core.DiscoveryNode {
-	result := make([]core.DiscoveryNode, 0)
-	for i := 0; i < len(cert.BootstrapNodes); i++ {
-		// we get node by pointer, so ranged for loop does not suite
-		result = append(result, &cert.BootstrapNodes[i])
-	}
-	return result
-}
-
 // NewCertificatesWithKeys generate certificate from given keys
 // DEPRECATED, this method generates invalid certificate
 func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*Certificate, error) {
@@ -342,16 +352,6 @@ func NewManagerCertificateWithKeys(publicKey crypto.PublicKey, keyProcessor core
 	}
 	certManager := NewCertificateManager(cert)
 	return certManager, nil
-}
-
-// Dump returns all info about certificate in json format
-func (cert *Certificate) Dump() (string, error) {
-	result, err := json.MarshalIndent(cert, "", "    ")
-	if err != nil {
-		return "", errors.Wrap(err, "[ Certificate::Dump ]")
-	}
-
-	return string(result), nil
 }
 
 // Deserialize deserializes data to AuthorizationCertificate interface
