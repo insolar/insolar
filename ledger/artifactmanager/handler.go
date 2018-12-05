@@ -668,7 +668,7 @@ func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Mes
 	if err != nil {
 		return err
 	}
-	err = db.SetMessage(ctx, lastPulse.Pulse.PulseNumber, genericMsg)
+	err = db.SetMessage(ctx, core.TODOJetID, lastPulse.Pulse.PulseNumber, genericMsg)
 	if err != nil {
 		return err
 	}

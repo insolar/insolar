@@ -117,7 +117,7 @@ func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Puls
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	drop, messages, err = m.db.CreateDrop(ctx, latestPulse.Pulse.PulseNumber, prevDrop.Hash)
+	drop, messages, err = m.db.CreateDrop(ctx, core.TODOJetID, latestPulse.Pulse.PulseNumber, prevDrop.Hash)
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -322,7 +322,7 @@ func (db *DB) waitinflight() {
 // CreateDrop creates and stores jet drop for given pulse number.
 //
 // Previous JetDrop hash should be provided. On success returns saved drop and slot records.
-func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash []byte) (
+func (db *DB) CreateDrop(ctx context.Context, jet core.RecordID, pulse core.PulseNumber, prevHash []byte) (
 	*jetdrop.JetDrop,
 	[][]byte,
 	error,
@@ -343,9 +343,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 	var messagesError error
 
 	go func() {
-		messagesPrefix := make([]byte, core.PulseNumberSize+1)
-		messagesPrefix[0] = scopeIDMessage
-		copy(messagesPrefix[1:], pulse.Bytes())
+		messagesPrefix := prefixkeyany(scopeIDMessage, jet[:], pulse.Bytes())
 
 		messagesError = db.db.View(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -485,7 +483,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 }
 
 // SetMessage persists message to the database
-func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, genericMessage core.Message) error {
+func (db *DB) SetMessage(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
 	messageBytes := message.ToBytes(genericMessage)
 	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
@@ -496,7 +494,7 @@ func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, gene
 
 	return db.set(
 		ctx,
-		prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
+		prefixkeyany(scopeIDMessage, jet[:], pulseNumber.Bytes(), hw.Sum(nil)),
 		messageBytes,
 	)
 }

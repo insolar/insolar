@@ -17,6 +17,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 
@@ -50,6 +51,14 @@ func prefixkey(prefix byte, key []byte) []byte {
 	k := make([]byte, core.RecordIDSize+1)
 	k[0] = prefix
 	_ = copy(k[1:], key)
+	return k
+}
+
+func prefixkeyany(prefix byte, parts ...[]byte) []byte {
+	tail := bytes.Join(parts, nil)
+	k := make([]byte, len(tail)+1)
+	k[0] = prefix
+	_ = copy(k[1:], tail)
 	return k
 }
 
