@@ -67,13 +67,15 @@ func ExtractPacket(reader io.Reader) (ConsensusPacket, error) {
 		packet = &Phase1Packet{}
 	case Phase2:
 		packet = &Phase2Packet{}
+	case Phase3:
+		packet = &Phase3Packet{}
 	default:
 		return nil, errors.New("[ ExtractPacket ] Unknown extract packet type. " + strconv.Itoa(int(header.PacketT)))
 	}
 
 	err = packet.DeserializeWithoutHeader(reader, &header)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ExtractPacket ] Can't DeserializeWithoutHeader packet2")
+		return nil, errors.Wrap(err, "[ ExtractPacket ] Can't DeserializeWithoutHeader packet")
 	}
 
 	return packet, nil
