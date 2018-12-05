@@ -326,6 +326,16 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.Key
 	return cert, nil
 }
 
+// NewManagerReadCertificate constructor creates new CertificateManager component
+func NewManagerReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, reader io.Reader) (*CertificateManager, error) {
+	cert, err := ReadCertificateFromReader(publicKey, keyProcessor, reader)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NewManagerReadCertificateFromReader ] failed to read certificate data:")
+	}
+	certManager := NewCertificateManager(cert)
+	return certManager, nil
+}
+
 // NewCertificatesWithKeys generate certificate from given keys
 // DEPRECATED, this method generates invalid certificate
 func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*Certificate, error) {
