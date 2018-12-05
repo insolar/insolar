@@ -249,8 +249,13 @@ func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error
 func (m *TransactionManager) remove(ctx context.Context, key []byte) error {
 	debugf(ctx, "get key %v", bytes2hex(key))
 
-	txn := m.db.db.NewTransaction(false)
+	txn := m.db.db.NewTransaction(true)
 	defer txn.Discard()
 
-	return txn.Delete(key)
+	err := txn.Delete(key)
+	if err != nil{
+		return err
+	}
+
+	return txn.Commit(nil)
 }
