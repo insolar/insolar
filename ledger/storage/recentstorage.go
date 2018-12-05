@@ -56,7 +56,7 @@ func (r *RecentStorage) AddObject(id core.RecordID) {
 }
 
 // AddObjectWithMeta adds object with specified TTL to the cache
-func (r *RecentStorage) AddObjectWithTll(id core.RecordID, ttl int) {
+func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 	r.recentObjects[id] = &recentObjectMeta{ttl: r.DefaultTTL}
@@ -82,7 +82,7 @@ func (r *RecentStorage) RemovePendingRequest(id core.RecordID) {
 }
 
 // MarkAsMine marks object as created on the current ME
-func (r *RecentStorage) MaskAsMine(id core.RecordID) error {
+func (r *RecentStorage) MarkAsMine(id core.RecordID) error {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
