@@ -62,9 +62,9 @@ func (ul *unsyncList) RemoveClaims(from core.RecordRef) {
 	ul.cache = nil
 }
 
-func (ul *unsyncList) AddClaims(from core.RecordRef, claims []consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
+func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
 	ul.addressMap = addressMap
-	ul.claims[from] = claims
+	ul.claims = claims
 	ul.cache = nil
 }
 
@@ -78,6 +78,14 @@ func (ul *unsyncList) CalculateHash() ([]byte, error) {
 	var err error
 	ul.cache, err = CalculateHash(nil, sorted)
 	return ul.cache, err
+}
+
+func (ul *unsyncList) GetActiveNode(ref core.RecordRef) core.Node {
+	return ul.activeNodes[ref]
+}
+
+func (ul *unsyncList) GetActiveNodes() []core.Node {
+	return sortedNodeList(ul.activeNodes)
 }
 
 type adder func(core.Node)
@@ -103,18 +111,11 @@ func (ul *unsyncList) mergeWith(claims map[core.RecordRef][]consensus.Referendum
 
 func (ul *unsyncList) mergeClaim(claim consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
 	switch t := claim.(type) {
-	case *consensus.NodeAnnounceClaim:
-		// TODO: fix version
-		node, err := claimToNode(ul.addressMap[t.NodeRef], "", t)
-		if err != nil {
-			log.Error("[ mergeClaim ] failed to get a Node")
-		}
-		addFunc(node)
 	case *consensus.NodeJoinClaim:
 		// TODO: fix version
 		node, err := claimToNode(ul.addressMap[t.NodeRef], "", t)
 		if err != nil {
-			log.Error("[ mergeClaim ] failed to get a Node")
+			log.Error("[ mergeClaim ] failed to convert Claim -> Node")
 		}
 		addFunc(node)
 	case *consensus.NodeLeaveClaim:
@@ -173,19 +174,39 @@ func (ul *sparseUnsyncList) Length() int {
 	return ul.capacity
 }
 
-func claimToNode(address, version string, claim consensus.ReferendumClaim) (core.Node, error) {
-	njc, ok := claim.(*consensus.NodeJoinClaim)
-	if !ok {
-		return nil, errors.New("[ ClaimToNode ] failed to convert a claim to node koin claim")
+func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
+	ul.unsyncList.AddClaims(claims, addressMap)
+
+	for _, claimList := range claims {
+		for _, claim := range claimList {
+			t := claim.Type()
+			if t != consensus.TypeNodeAnnounceClaim {
+				continue
+			}
+			c, ok := claim.(*consensus.NodeAnnounceClaim)
+			if !ok {
+				log.Error("[ AddClaims ] Could not convert claim with type TypeNodeAnnounceClaim to NodeAnnounceClaim")
+			}
+
+			// TODO: fix version
+			node, err := claimToNode(ul.addressMap[c.NodeRef], "", &c.NodeJoinClaim)
+			if err != nil {
+				log.Error("[ AddClaims ] failed to convert Claim -> Node")
+			}
+			ul.activeNodes[node.ID()] = node
+		}
 	}
+}
+
+func claimToNode(address, version string, claim *consensus.NodeJoinClaim) (core.Node, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKey(njc.NodePK[:])
+	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Node ] failed to import a public key")
+		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
 	}
 	node := NewNode(
-		njc.NodeRef,
-		[]core.StaticRole{core.StaticRole(int(njc.NodeRoleRecID))},
+		claim.NodeRef,
+		[]core.StaticRole{core.StaticRole(int(claim.NodeRoleRecID))},
 		key,
 		address,
 		version)
