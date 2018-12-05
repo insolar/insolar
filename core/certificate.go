@@ -56,6 +56,5 @@ type AuthorizationCertificate interface {
 type CertificateManager interface {
 	GetCertificate() Certificate
 	VerifyAuthorizationCertificate(authCert AuthorizationCertificate) (bool, error)
-	GetRootDomainReference() *RecordRef
 	NewCertForHost(pKey string, role string, nodeRef string) (Certificate, error)
 }

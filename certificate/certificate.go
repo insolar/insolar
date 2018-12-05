@@ -82,11 +82,6 @@ func (m *CertificateManager) NewCertForHost(pKey string, ref string, role string
 	return &newCert, nil
 }
 
-// GetRootDomainReference returns RootDomain reference
-func (m *CertificateManager) GetRootDomainReference() *core.RecordRef {
-	return m.certificate.GetRootDomainReference()
-}
-
 // AuthorizationCertificate holds info about node from it certificate
 type AuthorizationCertificate struct {
 	PublicKey      string `json:"public_key"`
@@ -113,7 +108,7 @@ func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
 	return core.GetStaticRoleFromString(authCert.Role)
 }
 
-// GetNodeSign return sign from bootstrap node with provided ref
+// GetDiscoverySigns return map of discovery nodes signs
 func (authCert *AuthorizationCertificate) GetDiscoverySigns() map[*core.RecordRef][]byte {
 	return authCert.DiscoverySigns
 }
