@@ -125,7 +125,7 @@ func init() {
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
-	ch := bc.getBootstrapHostsChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
+	ch := bc.getDiscoveryNodesChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
 	host := bc.waitResultFromChannel(ctx, ch)
 	if host == nil {
 		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
@@ -161,7 +161,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 
 	var hosts []*host.Host
 	for {
-		ch := bc.getBootstrapHostsChannel(ctx, discoveryNodes, discoveryCount)
+		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 		hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 		if len(hosts) == discoveryCount {
 			// we connected to all discovery nodes
@@ -216,7 +216,7 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (c
 	return discovery, nil
 }
 
-func (bc *Bootstrapper) getBootstrapHostsChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
+func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
 	// we need only one host to bootstrap
 	bootstrapHosts := make(chan *host.Host, needResponses)
 	for _, discoveryNode := range discoveryNodes {
