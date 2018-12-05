@@ -301,6 +301,17 @@ func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyPr
 	return &cert, nil
 }
 
+// NewManagerCertificateWithKeys generate manager with certificate from given keys
+// DEPRECATED, this method generates invalid certificate
+func NewManagerCertificateWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*CertificateManager, error) {
+	cert, err := NewCertificatesWithKeys(publicKey, keyProcessor)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NewManagerCertificateWithKeys ] failed to create certificate:")
+	}
+	certManager := newCertificateManager(cert)
+	return certManager, nil
+}
+
 // Dump returns all info about certificate in json format
 func (cert *Certificate) Dump() (string, error) {
 	result, err := json.MarshalIndent(cert, "", "    ")
