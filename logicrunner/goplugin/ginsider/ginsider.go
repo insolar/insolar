@@ -224,12 +224,12 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return "", errors.Wrap(err, "on calling main API")
+		return "", errors.Wrap(err, "[ ObtainCode ] on calling main API")
 	}
 
 	err = ioutil.WriteFile(path, res.Code, 0666)
 	if err != nil {
-		return "", errors.Wrap(err, "on writing file down")
+		return "", errors.Wrap(err, "[ ObtainCode ] on writing file down")
 	}
 
 	return path, nil
@@ -310,7 +310,7 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, arg
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return nil, errors.Wrap(err, "on calling main API")
+		return nil, errors.Wrap(err, "[ RouteCall ] on calling main API")
 	}
 
 	return []byte(res.Result), nil
@@ -338,7 +338,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -391,7 +391,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -417,7 +417,7 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "[ GetDelegate ] on calling main API")
 	}
 
 	return res.Object, nil
@@ -441,7 +441,7 @@ func (gi *GoInsider) DeactivateObject(object core.RecordRef) error {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return errors.Wrap(err, "on calling main API")
+		return errors.Wrap(err, "[ DeactivateObject ] on calling main API")
 	}
 
 	return nil
@@ -482,7 +482,7 @@ func (gi *GoInsider) AddPlugin(ref core.RecordRef, path string) error {
 
 	p, err := plugin.Open(path)
 	if err != nil {
-		return errors.Wrap(err, "couldn't open plugin")
+		return errors.Wrap(err, "[ AddPlugin ] couldn't open plugin")
 	}
 
 	inslogger.FromContext(context.TODO()).Debugf("AddPlugin plugins %+v", gi.plugins)
