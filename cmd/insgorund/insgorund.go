@@ -111,7 +111,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		defer m.Stop(ctx)
+		defer m.Stop(ctx) // nolint: errcheck
 	}
 
 	log.Debug("ginsider launched, listens " + *listen)
