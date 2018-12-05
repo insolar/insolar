@@ -17,7 +17,10 @@
 package servicenetwork
 
 import (
+	"bytes"
 	"context"
+	"crypto"
+	"encoding/json"
 	"strconv"
 	"testing"
 	"time"
@@ -119,26 +122,25 @@ func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto
 	return result
 }
 
-func initCrypto(t *testing.T) (*certificate.Certificate, core.CryptographyService) {
+func initCrypto(t *testing.T, nodes []certificate.BootstrapNode) (core.Certificate, core.CryptographyService) {
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 	cs := cryptography.NewKeyBoundCryptographyService(key)
-	kp := platformpolicy.NewKeyProcessor()
-	pk, _ := cs.GetPublicKey()
-	cert, err := certificate.NewCertificatesWithKeys(pk, kp)
-	require.NoError(t, err)
+	pubKey, err := cs.GetPublicKey()
+	assert.NoError(t, err)
+	cert := initCertificate(t, nodes, pubKey)
 
 	return cert, cs
 }
 
-func (s *testSuite) getBootstrapNodes() []certificate.BootstrapNode {
+func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode {
 	result := make([]certificate.BootstrapNode, 0)
 	for _, b := range s.bootstrapNodes {
-		result = append(result, certificate.BootstrapNode{
-			Host:      b.serviceNetwork.cfg.Host.Transport.Address,
-			PublicKey: b.serviceNetwork.Certificate.(*certificate.Certificate).PublicKey,
-			NodeRef:   b.serviceNetwork.NodeNetwork.GetOrigin().ID().String(),
-		})
+		node := certificate.NewBootstrapNode(b.serviceNetwork.Certificate.GetPublicKey())
+		node.Host = b.serviceNetwork.cfg.Host.Transport.Address
+		node.PublicKey = b.serviceNetwork.Certificate.(*certificate.Certificate).PublicKey
+		node.NodeRef = b.serviceNetwork.NodeNetwork.GetOrigin().ID().String()
+		result = append(result, node)
 	}
 	return result
 }
@@ -171,8 +173,7 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 
 	amMock := testutils.NewArtifactManagerMock(t)
 
-	cert, cryptographyService := initCrypto(t)
-	cert.BootstrapNodes = s.getBootstrapNodes()
+	cert, cryptographyService := initCrypto(t, s.getBootstrapNodes(t))
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
 	cm := &component.Manager{}
