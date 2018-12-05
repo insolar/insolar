@@ -33,7 +33,7 @@ func newActiveNode(ref core.RecordRef, role core.StaticRole) core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
 	return nodenetwork.NewNode(
 		ref,
-		[]core.StaticRole{role},
+		role,
 		nil, // TODO publicKey
 		"",
 		"",
@@ -46,7 +46,8 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, "", ""))
+
+	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", ""))
 	c := core.Components{LogicRunner: lr, NodeNetwork: keeper}
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)

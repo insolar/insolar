@@ -8,8 +8,8 @@ INSGORUND=$BIN_DIR/insgorund
 PULSARD=$BIN_DIR/pulsard
 CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
-INSGORUND_LISTEN_PORT=38181
-INSGORUND_RPS_PORT=38182
+INSGORUND_LISTEN_PORT=18181
+INSGORUND_RPS_PORT=18182
 CONFIGS_DIR=configs
 KEYS_FILE=scripts/insolard/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=scripts/insolard/$CONFIGS_DIR/root_member_keys.json
@@ -23,15 +23,23 @@ DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
 stop_listening()
 {
-    ports="$INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
-    if [ "$1" != "" ]
+    stop_insgorund=$1
+    ports="53835 53837 53839"
+    if [ "$stop_insgorund" == "true" ]
     then
-        ports=$@
+        ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
     fi
+    
     echo "Stop listening..."
     for port in $ports
     do
-        lsof -i :$port | grep LISTEN | awk '{print $2}' | xargs kill
+        echo "port: $port"
+        pids=$(lsof -i :$port | grep LISTEN | awk '{print $2}')
+        for pid in $pids
+        do
+            echo "killing pid $pid"
+            kill $pid
+        done
     done
 }
 
@@ -58,8 +66,9 @@ create_required_dirs()
     mkdir -p scripts/insolard/$CONFIGS_DIR
 }
 
-prepare_dirs()
+prepare()
 {
+    stop_listening $run_insgorund
     clear_dirs
     create_required_dirs
 }
@@ -108,31 +117,39 @@ check_working_dir()
 
 usage()
 {
-    echo "usage: $0 <clear>"
+    echo "usage: $0 [options]"
+    echo "possible options: "
+    echo -e "\t-h - show help"
+    echo -e "\t-n - don't run insgorund"
+    echo -e "\t-g - preventively generate initial ledger"
+    echo -e "\t-l - clear all and exit"
 }
 
 process_input_params()
 {
-    param=$1
-    if [  "$param" == "clear" ]
-    then
-        prepare_dirs
-        exit 0
-    fi
-
-    if [ "$param" == "help" ] || [ "$param" == "-h" ] || [ "$param" == "--help" ]
-    then
-        usage
-        exit 0
-    fi
-
-    if [ "$param" == "genesis" ] || [ "$param" == "-g" ] || [ "$param" == "--genesis" ]
-    then
-        prepare
-    fi
+    OPTIND=1
+    while getopts "h?ngl" opt; do
+        case "$opt" in
+        h|\?)
+            usage
+            exit 0
+            ;;
+        n)
+            run_insgorund=false
+            ;;
+        g)
+            genesis
+            return
+            ;;
+        l)
+            prepare
+            exit 0
+            ;;
+        esac
+    done
 }
 
-run_insgorund()
+launch_insgorund()
 {
     host=127.0.0.1
     $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT
@@ -152,9 +169,9 @@ copy_certs()
     cp $NODES_DATA/certs/discovery_cert_3.json $THIRD_NODE/cert.json
 }
 
-prepare()
+genesis()
 {
-    prepare_dirs
+    prepare
     build_binaries
     generate_bootstrap_keys
     generate_root_member_keys
@@ -169,20 +186,28 @@ prepare()
     copy_certs
 }
 
-trap stop_listening EXIT
+trap 'stop_listening true' EXIT
 
-param=$1
+run_insgorund=true
 check_working_dir
-process_input_params $param
+process_input_params $@
 
 printf "start pulsar ... \n"
 $PULSARD -c scripts/insolard/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
 
-printf "start insgorund ... \n"
-run_insgorund &
+if [ "$run_insgorund" == "true" ]
+then
+    printf "start insgorund ... \n"
+    launch_insgorund &
+else
+    echo "INSGORUND IS NOT LAUNCHED"
+fi
 
 printf "start nodes ... \n"
 
 $INSOLARD --config scripts/insolard/first_insolar.yaml &> $FIRST_NODE/output.txt &
+echo "FIRST STARTED"
 $INSOLARD --config scripts/insolard/second_insolar.yaml &> $SECOND_NODE/output.txt &
+echo "SECOND STARTED"
 $INSOLARD --config scripts/insolard/third_insolar.yaml &> $THIRD_NODE/output.txt
+echo "FINISHING ..."

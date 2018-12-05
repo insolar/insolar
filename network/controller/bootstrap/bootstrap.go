@@ -71,7 +71,7 @@ type StartSessionResponse struct {
 type NodeStruct struct {
 	ID      core.RecordRef
 	SID     core.ShortNodeID
-	Roles   []core.StaticRole
+	Role    core.StaticRole
 	PK      []byte
 	Address string
 	Version string
@@ -83,7 +83,7 @@ func newNode(n *NodeStruct) (core.Node, error) {
 		return nil, errors.Wrap(err, "error deserializing node public key")
 	}
 
-	result := nodenetwork.NewNode(n.ID, n.Roles, pk, n.Address, n.Version)
+	result := nodenetwork.NewNode(n.ID, n.Role, pk, n.Address, n.Version)
 	mNode := result.(nodenetwork.MutableNode)
 	mNode.SetShortID(n.SID)
 	return mNode, nil
@@ -98,7 +98,7 @@ func newNodeStruct(node core.Node) (*NodeStruct, error) {
 	return &NodeStruct{
 		ID:      node.ID(),
 		SID:     node.ShortID(),
-		Roles:   node.Roles(),
+		Role:    node.Role(),
 		PK:      pk,
 		Address: node.PhysicalAddress(),
 		Version: node.Version(),

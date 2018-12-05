@@ -147,7 +147,6 @@ type NodeKeeper interface {
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
-
 	// SetState set state of the NodeKeeper
 	SetState(NodeKeeperState)
 	// GetState get state of the NodeKeeper

@@ -53,10 +53,16 @@ func createOrigin(configuration configuration.HostNetwork, certificate core.Cert
 		return nil, errors.Wrap(err, "Failed to resolve public address")
 	}
 
+	role := certificate.GetRole()
+	if role == core.StaticRoleUnknown {
+		log.Info("[ createOrigin ] Use core.StaticRoleLightMaterial, since no role in certificate")
+		role = core.StaticRoleLightMaterial
+	}
+
 	// TODO: get roles from certificate
 	return newMutableNode(
 		*certificate.GetNodeRef(),
-		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
+		role,
 		certificate.GetPublicKey(),
 		publicAddress,
 		version.Version,
@@ -211,14 +217,14 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 		log.Infof("Added origin node %s to active list", nk.origin.ID())
 	}
 	nk.active[node.ID()] = node
-	for _, role := range node.Roles() {
-		list, ok := nk.indexNode[role]
-		if !ok {
-			list = newRecordRefSet()
-		}
-		list.Add(node.ID())
-		nk.indexNode[role] = list
+
+	list, ok := nk.indexNode[node.Role()]
+	if !ok {
+		list = newRecordRefSet()
 	}
+	list.Add(node.ID())
+	nk.indexNode[node.Role()] = list
+
 	nk.indexShortID[node.ShortID()] = node
 }
 

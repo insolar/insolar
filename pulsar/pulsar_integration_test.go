@@ -117,7 +117,9 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 }
 
 func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
-	origin := nodenetwork.NewNode(nodeID, nil, nil, address, "")
+
+	origin := nodenetwork.NewNode(nodeID, core.StaticRoleUnknown, nil, address, "")
+
 	keeper := nodenetwork.NewNodeKeeper(origin)
 	if isBootstrap {
 		keeper.AddActiveNodes([]core.Node{origin})
@@ -139,8 +141,10 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	require.NoError(t, err)
 
 	c := core.Components{LogicRunner: lr}
+
 	c.MessageBus = testmessagebus.NewTestMessageBus(t)
-	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, []core.StaticRole{core.StaticRoleVirtual}, nil, "", ""))
+
+	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleVirtual, nil, "", ""))
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 

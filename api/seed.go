@@ -17,9 +17,11 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
@@ -62,6 +64,11 @@ func NewSeedService(runner *Runner) *SeedService {
 // 	}
 //
 func (s *SeedService) Get(r *http.Request, args *SeedArgs, reply *SeedReply) error {
+	traceID := utils.RandTraceID()
+	_, inslog := inslogger.WithTraceField(context.Background(), traceID)
+
+	inslog.Infof("[ SeedService.Get ] Incoming request: %s", r.RequestURI)
+
 	seed, err := s.runner.SeedGenerator.Next()
 	if err != nil {
 		return errors.Wrap(err, "[ GetSeed ]")
@@ -69,7 +76,7 @@ func (s *SeedService) Get(r *http.Request, args *SeedArgs, reply *SeedReply) err
 	s.runner.SeedManager.Add(*seed)
 
 	reply.Seed = seed[:]
-	reply.TraceID = utils.RandTraceID()
+	reply.TraceID = traceID
 
 	return nil
 }

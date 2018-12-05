@@ -94,11 +94,12 @@ func main() {
 	cfg := &cfgHolder.Configuration
 	cfg.Metrics.Namespace = "insolard"
 
-	traceid := utils.RandTraceID()
-	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
+	traceID := utils.RandTraceID()
+	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
 
 	if params.isGenesis {
 		removeLedgerDataDir(ctx, cfg)
+		cfg.Ledger.PulseManager.HeavySyncEnabled = false
 	}
 
 	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
@@ -116,7 +117,7 @@ func main() {
 	if params.traceEnabled {
 		jconf := cfg.Tracer.Jaeger
 		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint)
-		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceid})
+		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
 	}
 	defer jaegerflush()
 

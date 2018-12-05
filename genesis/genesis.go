@@ -418,22 +418,22 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 		for j, node := range nodes {
 			certs[i].BootstrapNodes[j].NetworkSign, err = certs[i].SignNetworkPart(node.privKey)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "[ makeCertificates ]")
 			}
 			certs[i].BootstrapNodes[j].NodeSign, err = certs[i].SignNodePart(node.privKey)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "[ makeCertificates ]")
 			}
 		}
 
 		// save cert to disk
 		cert, err := json.MarshalIndent(certs[i], "", "  ")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ makeCertificates ]")
 		}
 		err = ioutil.WriteFile(path.Join(g.keyOut, "discovery_cert_"+strconv.Itoa(i+1)+".json"), cert, 0644)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ makeCertificates ]")
 		}
 	}
 	return nil

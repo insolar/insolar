@@ -118,7 +118,7 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	s.networkPort += 2 // coz consensus transport port+=1
 
 	origin := nodenetwork.NewNode(testutils.RandomRef(),
-		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
+		core.StaticRoleVirtual,
 		nil,
 		address,
 		"",
