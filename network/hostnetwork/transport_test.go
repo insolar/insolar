@@ -98,10 +98,10 @@ func mockConfiguration(address string) configuration.Configuration {
 
 func TestNewInternalTransport(t *testing.T) {
 	// broken address
-	_, err := NewInternalTransport(mockConfiguration("abirvalg"), "123")
+	_, err := NewInternalTransport(mockConfiguration("abirvalg"), ID1)
 	require.Error(t, err)
 	address := "127.0.0.1:0"
-	tp, err := NewInternalTransport(mockConfiguration(address), "123")
+	tp, err := NewInternalTransport(mockConfiguration(address), ID1)
 	require.NoError(t, err)
 	defer tp.Stop()
 	// require that new address with correct port has been assigned
@@ -111,7 +111,7 @@ func TestNewInternalTransport(t *testing.T) {
 
 func TestNewInternalTransport2(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "123")
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	go tp.Start(ctx)
 	// no assertion, check that Stop does not block
@@ -124,12 +124,12 @@ func TestNewInternalTransport2(t *testing.T) {
 func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err error) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "123")
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	if err != nil {
 		return nil, nil, err
 	}
 	tr1 := NewHostTransport(i1, m)
-	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "234")
+	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -192,7 +192,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	m := newMockResolver()
 	ctx := context.Background()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "123")
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	t1 := NewHostTransport(i1, m)
 	t1.Start(ctx)
@@ -364,7 +364,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 
 func TestDoubleStart(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "123")
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -382,7 +382,7 @@ func TestDoubleStart(t *testing.T) {
 func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "123")
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	tr1 := NewHostTransport(i1, m)
 	defer tr1.Stop()
