@@ -17,17 +17,17 @@
 package entropy
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	mrand "math/rand"
+	"sort"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 func randslice(size int) []byte {
@@ -43,14 +43,14 @@ func TestSelectByEntropy(t *testing.T) {
 	entropy := randslice(64)
 
 	valuescount := 10
-	values := make([][]byte, 0, valuescount)
+	values := make([]interface{}, 0, valuescount)
 	seen := map[string]bool{}
 	for i := 0; i < valuescount; {
 		value := randslice(64)
 		if seen[string(value)] {
 			continue
 		}
-		values = append(values, value)
+		values = append(values, interface{}(value))
 		seen[string(value)] = true
 		i++
 		// fmt.Printf(">> gen value: %b\n", value)
@@ -75,9 +75,10 @@ func TestSelectByEntropy(t *testing.T) {
 
 	seencount := map[string]int{}
 	for _, val := range result2 {
-		n, _ := seencount[string(val)]
+		v := val.([]byte)
+		n, _ := seencount[string(v)]
 		n++
-		seencount[string(val)] = n
+		seencount[string(v)] = n
 	}
 	for k, v := range seencount {
 		if v < 2 {
@@ -110,32 +111,39 @@ func BenchmarkSelectByEntropy(b *testing.B) {
 		b.Run(
 			fmt.Sprintf("%v_from_%v", bench.count, bench.values),
 			func(b *testing.B) {
-				benchSelectByEntropy(b, bench.values, bench.count, SelectByEntropy)
+				benchSelectByEntropy(b, bench.values, bench.count)
 			})
 	}
 }
 
-type entropyfunc func(
-	scheme core.PlatformCryptographyScheme,
-	entropy []byte,
-	values [][]byte,
-	count int,
-) ([][]byte, error)
-
 // compiler should avoid to optimize call of benched function
-var results [][]byte
+var resultsI []interface{}
+var resultsB [][]byte
 
-func benchSelectByEntropy(b *testing.B, valuescount int, count int, fn entropyfunc) {
+func benchSelectByEntropy(b *testing.B, valuescount int, count int) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	entropy := randslice(64)
 
-	values := make([][]byte, 0, valuescount)
+	valuesB := make([][]byte, 0, valuescount)
 	for i := 0; i < valuescount; i++ {
-		values = append(values, randslice(64))
+		valuesB = append(valuesB, randslice(64))
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		results, _ = fn(scheme, entropy, values, count)
+		sort.SliceStable(valuesB, func(i, j int) bool {
+			return bytes.Compare(valuesB[i], valuesB[j]) < 0
+		})
+
+		values := make([]interface{}, 0, valuescount)
+		for _, v := range valuesB {
+			values = append(values, interface{}(v))
+		}
+
+		resultsI, _ = SelectByEntropy(scheme, entropy, values, count)
+		resultsB := make([][]byte, len(resultsI))
+		for _, v := range resultsI {
+			resultsB = append(resultsB, v.([]byte))
+		}
 	}
 }

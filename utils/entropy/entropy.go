@@ -17,22 +17,20 @@
 package entropy
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
-	"sort"
 
 	"github.com/insolar/insolar/core"
 )
 
-// SelectByEntropy deterministicaly selects value from values list by
-// provided crypto scheme and entropy data.
+// SelectByEntropy selects value from list based on provided crypto scheme and entropy data.
+// Beware: requres sorted values for deterministicaly selection!
 func SelectByEntropy(
 	scheme core.PlatformCryptographyScheme,
 	entropy []byte,
-	values [][]byte,
+	values []interface{},
 	count int,
-) ([][]byte, error) {
+) ([]interface{}, error) {
 	if count > len(values) {
 		return nil, errors.New("count value should be less than values size")
 	}
@@ -40,10 +38,6 @@ func SelectByEntropy(
 	if count == 1 && count == len(values) {
 		return values, nil
 	}
-
-	sort.SliceStable(values, func(i, j int) bool {
-		return bytes.Compare(values[i], values[j]) < 0
-	})
 
 	h := scheme.ReferenceHasher()
 	if _, err := h.Write(entropy); err != nil {
@@ -53,7 +47,7 @@ func SelectByEntropy(
 	countUintBuf := make([]byte, binary.MaxVarintLen64)
 	hashUintBuf := make([]byte, binary.MaxVarintLen64)
 
-	selected := make([][]byte, count)
+	selected := make([]interface{}, count)
 	indexes := make([]int, len(values))
 	for i := 0; i < len(values); i++ {
 		indexes[i] = i
