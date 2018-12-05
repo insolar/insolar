@@ -88,3 +88,7 @@ func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) er
 func (p2p *Phase2Packet) GetBitSet() BitSet {
 	return p2p.bitSet
 }
+
+func (p2p *Phase2Packet) SetBitSet(bitset BitSet) {
+	p2p.bitSet = bitset
+}

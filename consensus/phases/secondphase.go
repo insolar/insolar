@@ -58,19 +58,24 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase2Packet.")
 	}
+	bitset, err := generatePhase2Bitset(state.UnsyncList, state.ValidProofs)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Execute ] Failed to generate bitset for Phase2Packet")
+	}
+	packet.SetBitSet(bitset)
 	err = sp.signPhase2Packet(&packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a packet")
 	}
 	activeNodes := state.UnsyncList.GetActiveNodes()
-	proofSet, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, &packet)
+	packets, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
 
-	for ref, packet := range proofSet {
+	for ref, packet := range packets {
 		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
 		if err != nil {
 			log.Warn("failed to check a sign: ", err.Error())
@@ -108,6 +113,22 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		GlobuleProof:    globuleProof,
 		GlobuleProofSet: nodeProofs,
 	}, nil
+}
+
+func generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
+	bitset, err := packets.NewBitSet(list.Length())
+	if err != nil {
+		return nil, err
+	}
+	cells := make([]packets.BitSetCell, 0)
+	for node, _ := range proofs {
+		cells = append(cells, packets.BitSetCell{NodeID: node.ID(), State: packets.Legit})
+	}
+	err = bitset.ApplyChanges(cells, list)
+	if err != nil {
+		return nil, err
+	}
+	return bitset, nil
 }
 
 func (sp *SecondPhase) signPhase2Packet(p *packets.Phase2Packet) error {

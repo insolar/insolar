@@ -73,7 +73,7 @@ func (arr *bitArray) serialize(compressed bool) ([]byte, error) {
 	for _, b := range arr.array {
 		err := binary.Write(&result, defaultByteOrder, b)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ serialize] failed to serialize a bitarray")
+			return nil, errors.Wrap(err, "[ serialize ] failed to serialize a bitarray")
 		}
 	}
 
