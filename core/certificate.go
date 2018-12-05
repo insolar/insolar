@@ -52,7 +52,7 @@ type AuthorizationCertificate interface {
 	GetDiscoverySign(discoveryRef *RecordRef) []byte
 }
 
-// CertificateManager interface provides methods to manage info about node from it certificate
+// CertificateManager interface provides methods to manage nodes certificate
 //go:generate minimock -i github.com/insolar/insolar/core.CertificateManager -o ../testutils -s _mock.go
 type CertificateManager interface {
 	GetCertificate() Certificate
