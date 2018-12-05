@@ -131,7 +131,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 
 func processError(err error, extraMsg string, resp *answer, insLog core.Logger) {
 	resp.Error = err.Error()
-	insLog.Error(errors.Wrapf(err, "[ CallHandler ] ", extraMsg))
+	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {

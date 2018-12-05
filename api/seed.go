@@ -76,7 +76,7 @@ func (s *SeedService) Get(r *http.Request, args *SeedArgs, reply *SeedReply) err
 	s.runner.SeedManager.Add(*seed)
 
 	reply.Seed = seed[:]
-	reply.TraceID = traceId
+	reply.TraceID = traceID
 
 	return nil
 }
