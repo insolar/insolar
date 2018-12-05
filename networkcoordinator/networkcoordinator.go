@@ -52,6 +52,7 @@ func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 	return nil
 }
 
+// Start implements interface of Component
 func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 	return nc.Bus.Register(core.NetworkCoordinatorNodeSignRequest, nc.SignNode)
 }
@@ -120,6 +121,7 @@ func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) er
 	return nc.getCoordinator().SetPulse(ctx, pulse)
 }
 
+// SignNode signs info about some node
 func (nc *NetworkCoordinator) SignNode(ctx context.Context, p core.Parcel) (core.Reply, error) {
 	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
 	sign, err := nc.signNode(ctx, nodeRef)
