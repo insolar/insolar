@@ -117,36 +117,42 @@ check_working_dir()
 
 usage()
 {
-    echo "usage: $0 <clear>"
+    echo "usage: $0 [options]"
+    echo "possible options: "
+    echo -e "\t-h - show help"
+    echo -e "\t-n - don't run insgorund"
+    echo -e "\t-g - generate initial ledger"
+    echo -e "\t-l - clear all and exit"
 }
 
 process_input_params()
 {
-    param=$1
-    if [  "$param" == "clear" ]
-    then
-        prepare true
-        exit 0
-    fi
-
-    if [  "$param" == "no_insgorund" ]
-    then
-        run_insgorund=false
-        return
-    fi
-
-    if [ "$param" == "help" ] || [ "$param" == "-h" ] || [ "$param" == "--help" ]
-    then
-        usage
-        exit 0
-    fi
+    OPTIND=1
+    while getopts "h?ngl" opt; do
+        case "$opt" in
+        h|\?)
+            usage
+            exit 0
+            ;;
+        n)
+            run_insgorund=false
+            ;;
+        g)
+            genesis
+            return
+            ;;
+        l)
+            prepare
+            exit 0
+            ;;
+        esac
+    done
 }
 
-run_insgorund()
+launch_insgorund()
 {
-    /Users/ivansibitov/go/src/github.com/insolar/insolar/testdata/logicrunner/insgorund -l 127.0.0.1:18181 --proto tcp --rpc 127.0.0.1:18182 --rpc-proto tcp
-    #host=127.0.0.1
-    #$INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT
+    host=127.0.0.1
+    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT
 }
 
 copy_data()
@@ -156,26 +162,35 @@ copy_data()
     cp $LEDGER_DIR/* $THIRD_NODE/data
 }
 
-copy_serts()
+copy_certs()
 {
     cp $NODES_DATA/certs/discovery_cert_1.json $FIRST_NODE/cert.json
     cp $NODES_DATA/certs/discovery_cert_2.json $SECOND_NODE/cert.json
     cp $NODES_DATA/certs/discovery_cert_3.json $THIRD_NODE/cert.json
 }
 
+genesis()
+{
+    prepare
+    build_binaries
+    generate_bootstrap_keys
+    generate_root_member_keys
+    generate_certificate
+    generate_discovery_nodes_keys
+
+    printf "start genesis ... \n"
+    $INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
+    printf "genesis is done\n"
+
+    copy_data
+    copy_certs
+}
+
 trap 'stop_listening true' EXIT
 
 run_insgorund=true
-param=$1
 check_working_dir
-process_input_params $param
-
-prepare 
-build_binaries
-generate_bootstrap_keys
-generate_root_member_keys
-generate_certificate
-generate_discovery_nodes_keys
+process_input_params $@
 
 printf "start pulsar ... \n"
 $PULSARD -c scripts/insolard/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
@@ -183,17 +198,10 @@ $PULSARD -c scripts/insolard/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
 if [ "$run_insgorund" == "true" ]
 then
     printf "start insgorund ... \n"
-    run_insgorund &
+    launch_insgorund &
 else
     echo "INSGORUND IS NOT LAUNCHED"
 fi
-
-printf "start genesis ... \n"
-$INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
-printf "genesis is done\n"
-
-copy_data
-copy_serts
 
 printf "start nodes ... \n"
 
