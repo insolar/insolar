@@ -451,6 +451,7 @@ func (gi *GoInsider) DeactivateObject(object core.RecordRef) error {
 func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)
 	log.Debugf("serializing %+v", what)
+	log.Debugf("GoInsider.serializing Stack: ", string(debug.Stack()))
 	return codec.NewEncoderBytes(to, ch).Encode(what)
 }
 
