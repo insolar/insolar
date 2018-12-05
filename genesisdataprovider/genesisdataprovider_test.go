@@ -46,12 +46,17 @@ func mockContractRequester(t *testing.T, res core.Reply) *testutils.ContractRequ
 	return contractRequesterMock
 }
 
-func mockCertificate(t *testing.T, rootDomainRef *core.RecordRef) *testutils.CertificateMock {
+func mockCertificateManager(t *testing.T, rootDomainRef *core.RecordRef) *testutils.CertificateManagerMock {
 	certificateMock := testutils.NewCertificateMock(t)
 	certificateMock.GetRootDomainReferenceFunc = func() (r *core.RecordRef) {
 		return rootDomainRef
 	}
-	return certificateMock
+
+	certificateManagerMock := testutils.NewCertificateManagerMock(t)
+	certificateManagerMock.GetCertificateFunc = func() (r core.Certificate) {
+		return certificateMock
+	}
+	return certificateManagerMock
 }
 
 func mockInfoResult(rootMemberRef core.RecordRef, nodeDomainRef core.RecordRef) core.Reply {
@@ -66,15 +71,15 @@ func mockInfoResult(rootMemberRef core.RecordRef, nodeDomainRef core.RecordRef) 
 
 func TestNew(t *testing.T) {
 	contractRequester := mockContractRequester(t, nil)
-	certificate := mockCertificate(t, nil)
+	certificateManager := mockCertificateManager(t, nil)
 
 	result, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(contractRequester, certificate, result)
+	cm.Inject(contractRequester, certificateManager, result)
 
 	require.NoError(t, err)
-	require.Equal(t, result.Certificate, certificate)
+	require.Equal(t, result.CertificateManager, certificateManager)
 	require.Equal(t, result.ContractRequester, contractRequester)
 }
 
@@ -86,8 +91,8 @@ func TestGenesisDataProvider_setInfo(t *testing.T) {
 	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, nil),
-		ContractRequester: mockContractRequester(t, infoRes),
+		CertificateManager: mockCertificateManager(t, nil),
+		ContractRequester:  mockContractRequester(t, infoRes),
 	}
 
 	err := gdp.setInfo(ctx)
@@ -101,8 +106,8 @@ func TestGenesisDataProvider_setInfo_ErrorSendRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, nil),
-		ContractRequester: mockContractRequesterWithError(t),
+		CertificateManager: mockCertificateManager(t, nil),
+		ContractRequester:  mockContractRequesterWithError(t),
 	}
 
 	err := gdp.setInfo(ctx)
@@ -115,7 +120,7 @@ func TestGenesisDataProvider_GetRootDomain(t *testing.T) {
 	rootDomainRef := testutils.RandomRef()
 
 	gdp := &GenesisDataProvider{
-		Certificate: mockCertificate(t, &rootDomainRef),
+		CertificateManager: mockCertificateManager(t, &rootDomainRef),
 	}
 
 	res := gdp.GetRootDomain(ctx)
@@ -131,8 +136,8 @@ func TestGenesisDataProvider_GetRootMember(t *testing.T) {
 	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, nil),
-		ContractRequester: mockContractRequester(t, infoRes),
+		CertificateManager: mockCertificateManager(t, nil),
+		ContractRequester:  mockContractRequester(t, infoRes),
 	}
 
 	res, err := gdp.GetRootMember(ctx)
@@ -150,8 +155,8 @@ func TestGenesisDataProvider_GetRootMember_AlreadySet(t *testing.T) {
 	infoRes := mockInfoResult(newRootMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, nil),
-		ContractRequester: mockContractRequester(t, infoRes),
+		CertificateManager: mockCertificateManager(t, nil),
+		ContractRequester:  mockContractRequester(t, infoRes),
 	}
 	gdp.rootMemberRef = &rootMemberRef
 
@@ -166,8 +171,8 @@ func TestGenesisDataProvider_GetRootMember_Error(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, nil),
-		ContractRequester: mockContractRequesterWithError(t),
+		CertificateManager: mockCertificateManager(t, nil),
+		ContractRequester:  mockContractRequesterWithError(t),
 	}
 
 	res, err := gdp.GetRootMember(ctx)
@@ -184,8 +189,8 @@ func TestGenesisDataProvider_GetNodeDomain(t *testing.T) {
 	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, nil),
-		ContractRequester: mockContractRequester(t, infoRes),
+		CertificateManager: mockCertificateManager(t, nil),
+		ContractRequester:  mockContractRequester(t, infoRes),
 	}
 
 	res, err := gdp.GetNodeDomain(ctx)
@@ -203,8 +208,8 @@ func TestGenesisDataProvider_GetNodeDomain_AlreadySet(t *testing.T) {
 	infoRes := mockInfoResult(rootMemberRef, newNodeDomainRef)
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, nil),
-		ContractRequester: mockContractRequester(t, infoRes),
+		CertificateManager: mockCertificateManager(t, nil),
+		ContractRequester:  mockContractRequester(t, infoRes),
 	}
 	gdp.nodeDomainRef = &nodeDomainRef
 
@@ -219,8 +224,8 @@ func TestGenesisDataProvider_GetNodeDomain_Error(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	gdp := &GenesisDataProvider{
-		Certificate:       mockCertificate(t, nil),
-		ContractRequester: mockContractRequesterWithError(t),
+		CertificateManager: mockCertificateManager(t, nil),
+		ContractRequester:  mockContractRequesterWithError(t),
 	}
 
 	res, err := gdp.GetNodeDomain(ctx)

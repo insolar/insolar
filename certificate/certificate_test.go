@@ -201,10 +201,9 @@ func TestReadCertificateFromReader(t *testing.T) {
 
 func TestSerializeDeserialize(t *testing.T) {
 	cert := &AuthorizationCertificate{
-		PublicKey:      "test_public_key",
-		Reference:      "test_reference",
-		Role:           "test_role",
-		BootstrapNodes: []BootstrapNode{},
+		PublicKey: "test_public_key",
+		Reference: "test_reference",
+		Role:      "test_role",
 	}
 	result, err := Serialize(cert)
 	require.NoError(t, err)

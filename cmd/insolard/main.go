@@ -102,7 +102,7 @@ func main() {
 	}
 
 	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
-	cert := initCertificate(
+	certManager := initCertificateManager(
 		ctx,
 		*cfg,
 		params.isGenesis,
@@ -127,7 +127,7 @@ func main() {
 		bootstrapComponents.PlatformCryptographyScheme,
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
-		cert,
+		certManager,
 		params.isGenesis,
 		params.genesisConfigPath,
 		params.genesisKeyOut,

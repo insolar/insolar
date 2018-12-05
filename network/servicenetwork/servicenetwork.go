@@ -46,7 +46,7 @@ type ServiceNetwork struct {
 	routingTable network.RoutingTable // TODO: should be injected
 
 	// dependencies
-	Certificate         core.Certificate                `inject:""`
+	CertificateManager  core.CertificateManager         `inject:""`
 	NodeNetwork         core.NodeNetwork                `inject:""`
 	PulseManager        core.PulseManager               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
@@ -137,7 +137,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
 
 	n.routingTable = &routing.Table{}
-	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.Certificate.GetNodeRef().String())
+	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
 		return errors.Wrap(err, "Failed to create internal transport")
 	}
@@ -150,7 +150,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
 		n.cfg.Host.Transport.Address,
-		n.Certificate.GetNodeRef().String(),
+		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeNetwork.GetOrigin().ShortID(),
 		n.routingTable,
 	)
@@ -159,7 +159,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	cm := component.Manager{}
-	cm.Register(n.Certificate, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
+	cm.Register(n.CertificateManager, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
 		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
 
 	cm.Inject(n.NodeKeeper,
@@ -174,7 +174,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
-	n.controller = controller.NewNetworkController(n, options, n.Certificate, internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
+	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
