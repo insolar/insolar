@@ -84,10 +84,10 @@ func (m *CertificateManager) NewCertForHost(pKey string, ref string, role string
 
 // AuthorizationCertificate holds info about node from it certificate
 type AuthorizationCertificate struct {
-	PublicKey      string `json:"public_key"`
-	Reference      string `json:"reference"`
-	Role           string `json:"role"`
-	DiscoverySigns map[*core.RecordRef][]byte
+	PublicKey      string                     `json:"public_key"`
+	Reference      string                     `json:"reference"`
+	Role           string                     `json:"role"`
+	DiscoverySigns map[*core.RecordRef][]byte `json:"-"`
 
 	nodePublicKey crypto.PublicKey
 }
