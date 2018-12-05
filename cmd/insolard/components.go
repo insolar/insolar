@@ -106,13 +106,13 @@ func initComponents(
 	platformCryptographyScheme core.PlatformCryptographyScheme,
 	keyStore core.KeyStore,
 	keyProcessor core.KeyProcessor,
-	cert core.Certificate,
+	certManager core.CertificateManager,
 	isGenesis bool,
 	genesisConfigPath string,
 	genesisKeyOut string,
 
 ) (*component.Manager, error) {
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, cert)
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
@@ -164,7 +164,7 @@ func initComponents(
 		keyStore,
 		cryptographyService,
 		keyProcessor,
-		cert,
+		certManager,
 		nodeNetwork,
 	)
 
