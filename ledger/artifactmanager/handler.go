@@ -847,7 +847,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		}
 
 		meta.TTL--
-		h.Recent.AddObjectWithTll(id, meta.TTL)
+		h.Recent.AddObjectWithTLL(id, meta.TTL)
 		if savedIndex != nil {
 			err = h.Recent.MaskAsMine(id)
 			if err != nil {

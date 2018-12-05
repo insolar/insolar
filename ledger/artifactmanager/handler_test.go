@@ -317,6 +317,9 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
+	recentStorageMock.MaskAsMineFunc = func(p core.RecordID) (r error) {
+		return nil
+	}
 
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -486,6 +489,10 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
+	recentStorageMock.MaskAsMineFunc = func(p core.RecordID) (r error) {
+		return nil
+	}
+
 
 	mb := testutils.NewMessageBusMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -557,6 +564,10 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
 		LatestState: firstID,
 	})
+	err = db.SetObjectIndex(ctx, firstID, &index.ObjectLifeline{
+		LatestState: firstID,
+	})
+	require.NoError(t, err)
 	hotIndexes := &message.HotData{
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
@@ -575,10 +586,11 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	recentMock.AddPendingRequestFunc = func(p core.RecordID) {
 		require.Equal(t, p, *secondId)
 	}
-	recentMock.AddObjectWithTTLFunc = func(p core.RecordID, ttl int) {
+	recentMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int) {
 		require.Equal(t, p, *firstID)
 		require.Equal(t, 320, ttl)
 	}
+	recentMock.MaskAsMineMock.Expect(*firstID).Return(nil)
 
 	h := NewMessageHandler(db, &configuration.Ledger{})
 	h.Recent = recentMock
