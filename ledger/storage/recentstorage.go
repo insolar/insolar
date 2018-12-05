@@ -48,10 +48,7 @@ func NewRecentStorage(defaultTTL int) *RecentStorage {
 
 // AddObject adds object to cache
 func (r *RecentStorage) AddObject(id core.RecordID, isMine bool) {
-	r.objectLock.Lock()
-	defer r.objectLock.Unlock()
-
-	r.recentObjects[id] = &recentObjectMeta{ttl: r.DefaultTTL, isMine: isMine}
+	r.AddObjectWithTLL(id, r.DefaultTTL, isMine)
 }
 
 // AddObjectWithTLL adds object with specified TTL to the cache
