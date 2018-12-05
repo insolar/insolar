@@ -211,5 +211,9 @@ func (t *memoryTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, 
 }
 
 func (t *memoryTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
-	panic("implement me")
+	t.storage = append(t.storage, memoryTapeMessage{
+		msgHash: msgHash,
+		reply:   rep,
+	})
+	return nil
 }
