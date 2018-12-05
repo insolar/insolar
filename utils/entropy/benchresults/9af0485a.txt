@@ -1,0 +1,15 @@
+# 2nd optimization (empty interfaces)
+goos: darwin
+goarch: amd64
+pkg: github.com/insolar/insolar/utils/entropy
+BenchmarkSelectByEntropy/1_from_10         	 1000000	      2020 ns/op	    1792 B/op	      24 allocs/op
+BenchmarkSelectByEntropy/5_from_10         	  300000	      5290 ns/op	    4256 B/op	      36 allocs/op
+BenchmarkSelectByEntropy/10_from_10        	  200000	      9258 ns/op	    7328 B/op	      51 allocs/op
+BenchmarkSelectByEntropy/1_from_100        	  200000	      7489 ns/op	    7120 B/op	     114 allocs/op
+BenchmarkSelectByEntropy/50_from_100       	   30000	     47204 ns/op	   37760 B/op	     261 allocs/op
+BenchmarkSelectByEntropy/100_from_100      	   20000	     87141 ns/op	   68640 B/op	     411 allocs/op
+BenchmarkSelectByEntropy/1_from_1000       	   20000	     62266 ns/op	   57808 B/op	    1014 allocs/op
+BenchmarkSelectByEntropy/500_from_1000     	    3000	    471350 ns/op	  366240 B/op	    2511 allocs/op
+BenchmarkSelectByEntropy/1000_from_1000    	    2000	    897510 ns/op	  675296 B/op	    4011 allocs/op
+PASS
+ok  	github.com/insolar/insolar/utils/entropy	17.044s
