@@ -32,6 +32,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// CertificateManager is a component for working with current node certificate
 type CertificateManager struct {
 	CS          core.CryptographyService `inject:""`
 	certificate core.Certificate
@@ -94,6 +95,7 @@ func (authCert *AuthorizationCertificate) GetDiscoverySign(discoveryRef *core.Re
 	return authCert.bootstrapNodesMap[discoveryRef]
 }
 
+// SerializeNodePart returns some node info decoded in bytes
 func (authCert *AuthorizationCertificate) SerializeNodePart() []byte {
 	return []byte(authCert.PublicKey + authCert.Reference + authCert.Role)
 }
@@ -238,6 +240,7 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 	return &cert, nil
 }
 
+// NewCertificateManager returns new CertificateManager instance
 func NewCertificateManager(cert core.Certificate) *CertificateManager {
 	return &CertificateManager{certificate: cert}
 }
@@ -363,6 +366,7 @@ func Serialize(authCert core.AuthorizationCertificate) ([]byte, error) {
 	return data, nil
 }
 
+// VerifyAuthorizationCertificate verifies certificate from some node
 func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
 	cert := m.GetCertificate()
 	discoveryNodes := cert.GetDiscoveryNodes()
