@@ -111,7 +111,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 		ctx,
 		&reference,
 		"Call",
-		[]interface{}{*ar.Certificate.GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
+		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")

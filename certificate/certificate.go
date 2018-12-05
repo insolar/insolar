@@ -238,7 +238,7 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 	return &cert, nil
 }
 
-func newCertificateManager(cert core.Certificate) *CertificateManager {
+func NewCertificateManager(cert core.Certificate) *CertificateManager {
 	return &CertificateManager{certificate: cert}
 }
 
@@ -261,7 +261,7 @@ func NewManagerReadCertificate(publicKey crypto.PublicKey, keyProcessor core.Key
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewManagerReadCertificate ] failed to read certificate:")
 	}
-	certManager := newCertificateManager(cert)
+	certManager := NewCertificateManager(cert)
 	return certManager, nil
 }
 
@@ -308,7 +308,7 @@ func NewManagerCertificateWithKeys(publicKey crypto.PublicKey, keyProcessor core
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewManagerCertificateWithKeys ] failed to create certificate:")
 	}
-	certManager := newCertificateManager(cert)
+	certManager := NewCertificateManager(cert)
 	return certManager, nil
 }
 
