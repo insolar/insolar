@@ -84,7 +84,7 @@ func getTestData(t *testing.T) (
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
-	recentStorageMock.MaskAsMineFunc = func(p core.RecordID) (r error) {
+	recentStorageMock.MarkAsMineFunc = func(p core.RecordID) (r error) {
 		return nil
 	}
 	handler.Recent = recentStorageMock
@@ -610,7 +610,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.MaskAsMineFunc = func(p core.RecordID) (r error) {
+	recentStorageMock.MarkAsMineFunc = func(p core.RecordID) (r error) {
 		return nil
 	}
 

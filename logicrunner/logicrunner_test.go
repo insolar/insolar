@@ -135,6 +135,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	)
 
 	recentMock := recentstorage.NewRecentStorageMock(t)
+	recentMock.MarkAsMineMock.Return(nil)
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
