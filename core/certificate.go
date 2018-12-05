@@ -56,4 +56,5 @@ type AuthorizationCertificate interface {
 //go:generate minimock -i github.com/insolar/insolar/core.CertificateManager -o ../testutils -s _mock.go
 type CertificateManager interface {
 	GetCertificate() Certificate
+	VerifyAuthorizationCertificate(authCert AuthorizationCertificate) (bool, error)
 }
