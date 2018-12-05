@@ -121,6 +121,7 @@ func incrementPort(address string) (string, error) {
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
+	var err error
 
 	n.PhaseManager = phases.NewPhaseManager()
 	n.MerkleCalculator = merkle.NewCalculator()
@@ -137,15 +138,23 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
 
 	n.routingTable = &routing.Table{}
-	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.Certificate.GetNodeRef().String())
-	if err != nil {
-		return errors.Wrap(err, "Failed to create internal transport")
-	}
 
 	// workaround for Consensus transport, port+=1 of default transport
 	n.cfg.Host.Transport.Address, err = incrementPort(n.cfg.Host.Transport.Address)
 	if err != nil {
 		return errors.Wrap(err, "failed to increment port.")
+	}
+
+	return nil
+}
+
+// Start implements component.Starter
+func (n *ServiceNetwork) Start(ctx context.Context) error {
+	// Inject workaround
+	// The code below could not be a part of Init because it uses Certificate component
+	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.Certificate.GetNodeRef().String())
+	if err != nil {
+		return errors.Wrap(err, "Failed to create internal transport")
 	}
 
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
@@ -167,20 +176,17 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.MerkleCalculator,
 		n.ConsensusNetwork,
 		n.Communicator,
-		firstPhase,
-		secondPhase,
-		thirdPhase,
+		n.PhaseManager.(*phases.Phases).FirstPhase,
+		n.PhaseManager.(*phases.Phases).SecondPhase,
+		n.PhaseManager.(*phases.Phases).ThirdPhase,
 	)
 
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.controller = controller.NewNetworkController(n, options, n.Certificate, internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
-	return nil
-}
+	// End of components initialization
 
-// Start implements component.Starter
-func (n *ServiceNetwork) Start(ctx context.Context) error {
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
 
