@@ -63,7 +63,6 @@ type Genesis struct {
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
 	Network         core.Network         `inject:""`
-	Certificate     core.Certificate     `inject:""`
 }
 
 // NewGenesis creates new Genesis
