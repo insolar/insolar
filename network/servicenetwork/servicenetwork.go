@@ -179,11 +179,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
-	// Inject workaround
-	// The code below could not be a part of Init because it uses Certificate component
-
-	// End of components initialization
-
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
 
