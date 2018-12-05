@@ -48,7 +48,7 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) erro
 	}
 
 	nodes := tp.NodeKeeper.GetActiveNodes()
-	answers, err := tp.Communicator.ExchangePhase3(ctx, nodes, packet)
+	answers, err := tp.Communicator.ExchangePhase3(ctx, nodes, &packet)
 	if err != nil {
 		return errors.Wrap(err, "[ Execute ] failed to get answers on phase 3")
 	}

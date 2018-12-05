@@ -58,3 +58,11 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	activeNodes := firstPhase.NodeKeeper.GetActiveNodes()
 	assert.Equal(t, 1, len(activeNodes))
 }
+
+func Test_consensusReached(t *testing.T) {
+	assert.True(t, consensusReached(5, 6))
+	assert.False(t, consensusReached(4, 6))
+
+	assert.True(t, consensusReached(201, 300))
+	assert.False(t, consensusReached(200, 300))
+}

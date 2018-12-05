@@ -89,3 +89,15 @@ func TestNodeLeaveClaim(t *testing.T) {
 func TestMakeClaimHeader(t *testing.T) {
 
 }
+
+func makeNodeAnnounceClaim() *NodeAnnounceClaim {
+	nodeAnnounceClaim := &NodeAnnounceClaim{}
+	nodeAnnounceClaim.NodeJoinClaim = *makeNodeJoinClaim()
+	nodeAnnounceClaim.NodeCount = 266
+	nodeAnnounceClaim.NodeIndex = 37
+	return nodeAnnounceClaim
+}
+
+func TestNodeAnnounceClaim(t *testing.T) {
+	checkSerializationDeserialization(t, makeNodeAnnounceClaim())
+}
