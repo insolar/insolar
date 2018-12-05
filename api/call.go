@@ -131,7 +131,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 
 func processError(err error, extraMsg string, resp *answer, insLog core.Logger) {
 	resp.Error = err.Error()
-	insLog.Error(errors.Wrap(err, "[ CallHandler ] "+extraMsg))
+	insLog.Error(errors.Wrapf(err, "[ CallHandler ] ", extraMsg))
 }
 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
@@ -143,6 +143,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		traceID := utils.RandTraceID()
 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 		resp.TraceID = traceID
+
+		insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
 
 		defer func() {
 			res, err := json.MarshalIndent(resp, "", "    ")
