@@ -162,7 +162,7 @@ type memoryTape struct {
 
 type memoryTapeMessage struct {
 	msgHash []byte
-	reply   interface{}
+	reply   core.Reply
 }
 
 func NewMemorytape(pulse core.PulseNumber) memoryTape {
@@ -202,6 +202,12 @@ func (t *memoryTape) Write(ctx context.Context, w io.Writer) error {
 }
 
 func (t *memoryTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
+	if !bytes.Equal(msgHash, t.storage[0].msgHash) {
+		return nil, errors.New("Validation error. Message mismatch")
+	}
+	ret := t.storage[0]
+	t.storage = t.storage[1:]
+	return ret.reply, nil
 }
 
 func (t *memoryTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
