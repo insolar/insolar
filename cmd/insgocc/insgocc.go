@@ -170,6 +170,8 @@ func main() {
 	}
 	cmdImports.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
 
+
+	keepTemp := false
 	var cmdCompile = &cobra.Command{
 		Use:   "compile [flags] <file name to compile>",
 		Short: "Compile contract",
@@ -190,12 +192,19 @@ func main() {
 			}
 
 			// make temporary dir
-			tmpDir, err := ioutil.TempDir("", "test-")
+			tmpDir, err := ioutil.TempDir("", "temp-")
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
-			defer os.RemoveAll(tmpDir) // nolint: errcheck
+
+			defer func() {
+				if keepTemp {
+					fmt.Printf("Temp directory: %s\n", tmpDir)
+				} else {
+					os.RemoveAll(tmpDir) // nolint: errcheck
+				}
+			}()
 
 			name := parsed.ContractName()
 
@@ -239,7 +248,10 @@ func main() {
 			}
 		},
 	}
-	cmdCompile.Flags().StringVarP(&outdir, "output-dir", "o", ".", "output dir (default .)")
+	// default value for string flags is displayed automatically
+	cmdCompile.Flags().StringVarP(&outdir, "output-dir", "o", ".", "output dir")
+	// default value for bool flags is not displayed automatically, thus it's done manually here
+	cmdCompile.Flags().BoolVarP(&keepTemp, "keep-temp", "k", false, "keep temp directory (default \"false\")")
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(cmdProxy, cmdWrapper, cmdImports, cmdCompile)

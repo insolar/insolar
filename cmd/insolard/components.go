@@ -142,7 +142,7 @@ func initComponents(
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
-	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics)
+	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry())
 	checkError(ctx, err, "failed to start Metrics")
 
 	networkSwitcher, err := state.NewNetworkSwitcher()
