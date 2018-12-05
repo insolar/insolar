@@ -33,7 +33,7 @@ import (
 )
 
 type CertificateManager struct {
-	CS          core.CryptographyService `inject:"" json:"-"`
+	CS          core.CryptographyService `inject:""`
 	certificate core.Certificate
 }
 
@@ -238,6 +238,10 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 	return &cert, nil
 }
 
+func newCertificateManager(cert core.Certificate) *CertificateManager {
+	return &CertificateManager{certificate: cert}
+}
+
 // ReadCertificate constructor creates new Certificate component
 func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, certPath string) (*Certificate, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(certPath))
@@ -249,6 +253,16 @@ func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor,
 		return nil, errors.Wrap(err, "[ ReadCertificate ]")
 	}
 	return cert, nil
+}
+
+// NewManagerReadCertificate constructor creates new CertificateManager component
+func NewManagerReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, certPath string) (*CertificateManager, error) {
+	cert, err := ReadCertificate(publicKey, keyProcessor, certPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NewManagerReadCertificate ] failed to read certificate:")
+	}
+	certManager := newCertificateManager(cert)
+	return certManager, nil
 }
 
 // ReadCertificateFromReader constructor creates new Certificate component
