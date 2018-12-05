@@ -43,6 +43,51 @@ func (m *CertificateManager) GetCertificate() core.Certificate {
 	return m.certificate
 }
 
+// VerifyAuthorizationCertificate verifies certificate from some node
+func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
+	discoveryNodes := m.certificate.GetDiscoveryNodes()
+	if len(discoveryNodes) != len(authCert.GetDiscoveryNodes()) {
+		return false, nil
+	}
+	data := authCert.SerializeNodePart()
+	for _, node := range discoveryNodes {
+		sign := authCert.GetDiscoverySign(node.GetNodeRef())
+		ok := m.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sign), data)
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// NewCertForHost returns new certificate
+func (m *CertificateManager) NewCertForHost(pKey string, ref string, role string) (core.Certificate, error) {
+	cert := m.certificate.(*Certificate)
+	newCert := Certificate{
+		MajorityRule: cert.MajorityRule,
+		MinRoles:     cert.MinRoles,
+		AuthorizationCertificate: AuthorizationCertificate{
+			PublicKey:      pKey,
+			Reference:      ref,
+			Role:           role,
+			BootstrapNodes: make([]BootstrapNode, len(cert.BootstrapNodes)),
+		},
+		PulsarPublicKeys:    cert.PulsarPublicKeys,
+		RootDomainReference: cert.RootDomainReference,
+	}
+	for i, node := range cert.BootstrapNodes {
+		newCert.BootstrapNodes[i].Host = node.Host
+		newCert.BootstrapNodes[i].PublicKey = node.PublicKey
+		newCert.BootstrapNodes[i].NetworkSign = node.NetworkSign
+	}
+	return &newCert, nil
+}
+
+// GetRootDomainReference returns RootDomain reference
+func (m *CertificateManager) GetRootDomainReference() *core.RecordRef {
+	return m.certificate.GetRootDomainReference()
+}
+
 // AuthorizationCertificate holds info about node from it certificate
 type AuthorizationCertificate struct {
 	PublicKey         string          `json:"public_key"`
@@ -325,28 +370,6 @@ func (cert *Certificate) Dump() (string, error) {
 	return string(result), nil
 }
 
-// NewCertForHost returns new certificate
-func (cert *Certificate) NewCertForHost(pKey string, ref string, role string) (core.Certificate, error) {
-	newCert := Certificate{
-		MajorityRule: cert.MajorityRule,
-		MinRoles:     cert.MinRoles,
-		AuthorizationCertificate: AuthorizationCertificate{
-			PublicKey:      pKey,
-			Reference:      ref,
-			Role:           role,
-			BootstrapNodes: make([]BootstrapNode, len(cert.BootstrapNodes)),
-		},
-		PulsarPublicKeys:    cert.PulsarPublicKeys,
-		RootDomainReference: cert.RootDomainReference,
-	}
-	for i, node := range cert.BootstrapNodes {
-		newCert.BootstrapNodes[i].Host = node.Host
-		newCert.BootstrapNodes[i].PublicKey = node.PublicKey
-		newCert.BootstrapNodes[i].NetworkSign = node.NetworkSign
-	}
-	return &newCert, nil
-}
-
 // Deserialize deserializes data to AuthorizationCertificate interface
 func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
 	cert := AuthorizationCertificate{}
@@ -364,22 +387,4 @@ func Serialize(authCert core.AuthorizationCertificate) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Serialize ]")
 	}
 	return data, nil
-}
-
-// VerifyAuthorizationCertificate verifies certificate from some node
-func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
-	cert := m.GetCertificate()
-	discoveryNodes := cert.GetDiscoveryNodes()
-	if len(discoveryNodes) != len(authCert.GetDiscoveryNodes()) {
-		return false, nil
-	}
-	data := authCert.SerializeNodePart()
-	for _, node := range discoveryNodes {
-		sign := authCert.GetDiscoverySign(node.GetNodeRef())
-		ok := m.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sign), data)
-		if !ok {
-			return false, nil
-		}
-	}
-	return true, nil
 }

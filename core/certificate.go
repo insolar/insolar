@@ -31,7 +31,6 @@ type Certificate interface {
 	AuthorizationCertificate
 
 	GetRootDomainReference() *RecordRef
-	NewCertForHost(pKey string, role string, nodeRef string) (Certificate, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/core.DiscoveryNode -o ../testutils -s _mock.go
@@ -57,4 +56,6 @@ type AuthorizationCertificate interface {
 type CertificateManager interface {
 	GetCertificate() Certificate
 	VerifyAuthorizationCertificate(authCert AuthorizationCertificate) (bool, error)
+	GetRootDomainReference() *RecordRef
+	NewCertForHost(pKey string, role string, nodeRef string) (Certificate, error)
 }
