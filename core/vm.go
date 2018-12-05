@@ -65,6 +65,7 @@ type LogicRunner interface {
 
 // LogicCallContext is a context of contract execution
 type LogicCallContext struct {
+	Mode            string     // either "execution" or "validation"
 	Callee          *RecordRef // Contract that was called
 	Request         *RecordRef // ref of request
 	Prototype       *RecordRef // Image of the callee

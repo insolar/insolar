@@ -68,8 +68,9 @@ type RPC struct {
 
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
@@ -98,8 +99,9 @@ func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
 
 // RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
 	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
@@ -153,8 +155,9 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
 	if gpr.lr.MessageBus == nil {
 		return errors.New("event bus was not set during initialization")
@@ -209,8 +212,9 @@ var iteratorBuffSize = 1000
 
 // GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
 func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq, rep *rpctypes.UpGetObjChildrenIteratorResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
 	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
@@ -284,8 +288,9 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
 	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
@@ -333,8 +338,9 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
 	cr, step := gpr.lr.nextValidationStep(req.Callee)
 	if step >= 0 { // validate
@@ -365,14 +371,9 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
-	state := gpr.lr.GetExecution(req.Callee)
-	if state == nil {
-		return errors.New("no execution state, impossible, shouldn't be")
-	}
-
-	// TODO: is it race? make sure it's not!
-	state.deactivate = true
-
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	es.deactivate = true
 	return nil
 }
 

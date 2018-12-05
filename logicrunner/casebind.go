@@ -43,39 +43,25 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb c
 		return 0, errors.New("casebind is empty")
 	}
 
-	es := lr.UpsertExecution(ref)
-	es.insContext = ctx
-	es.validate = true
-	es.objectbody = nil
-	var cbr core.CaseBindReplay
-	err := func() error {
-		lr.caseBindReplaysMutex.Lock()
-		defer lr.caseBindReplaysMutex.Unlock()
-		if _, ok := lr.caseBindReplays[ref]; ok {
-			return errors.New("already validating this ref")
-		}
-		lr.caseBindReplays[ref] = core.CaseBindReplay{
-			Pulse:    p,
-			CaseBind: cb,
-			Request:  0,
-			Record:   -1,
-			Steps:    0,
-		}
-		cbr = lr.caseBindReplays[ref]
-		return nil
-	}()
-	if err != nil {
-		return 0, err
+	os := lr.UpsertObjectState(ref)
+	vs := os.StartValidation()
+
+	vs.Lock()
+	defer vs.Unlock()
+
+	vs.Replay = &core.CaseBindReplay{
+		Pulse:    p,
+		CaseBind: cb,
+		Request:  0,
+		Record:   -1,
+		Steps:    0,
+	}
+	vs.Current = &CurrentExecution{
+		Context: ctx,
 	}
 
-	defer func() {
-		lr.caseBindReplaysMutex.Lock()
-		defer lr.caseBindReplaysMutex.Unlock()
-		delete(lr.caseBindReplays, ref)
-	}()
-
 	for {
-		start, step := lr.nextValidationStep(ref)
+		start, step := vs.NextStep()
 		if step < 0 {
 			return step, errors.New("no validation data")
 		} else if start == nil { // finish
@@ -91,7 +77,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb c
 			return 0, errors.New("failed to create a parcel message")
 		}
 
-		traceStep, step := lr.nextValidationStep(ref)
+		traceStep, step := vs.NextStep()
 		if traceStep == nil {
 			return step, errors.New("trace is missing")
 		}
@@ -101,13 +87,14 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb c
 			return step, errors.New("trace is wrong type")
 		}
 
-		es.insContext = inslogger.ContextWithTrace(es.insContext, traceID)
-		es.Lock()
-		ret, err := lr.executeOrValidate(es.insContext, es, ValidationChecker{lr: lr, cb: cbr}, parcel)
+		vs.Current.Context = inslogger.ContextWithTrace(
+			vs.Current.Context, traceID,
+		)
+		ret, err := lr.executeOrValidate(vs.Current.Context, os.ExecutionState, parcel) // FIXME
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
-		stop, step := lr.nextValidationStep(ref)
+		stop, step := vs.NextStep()
 		if step < 0 {
 			return 0, errors.New("validation container broken")
 		} else if stop.Type != core.CaseRecordTypeResult {
@@ -175,7 +162,8 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
+
+	c := lr.GetConsensus(ctx, msg.RecordRef)
 	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
 		return nil, err
 	}
@@ -187,23 +175,27 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
+	c := lr.GetConsensus(ctx, msg.RecordRef)
 	c.AddExecutor(ctx, inmsg, msg)
 	return &reply.OK{}, nil
 }
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
 type ValidationBehaviour interface {
+	Mode() string
 	Begin(refs Ref, record core.CaseRecord)
 	End(refs Ref, record core.CaseRecord)
-	GetRole() core.DynamicRole
 	ModifyContext(ctx *core.LogicCallContext)
-	NeedSave() bool
 	RegisterRequest(p core.Parcel) (*Ref, error)
+	GetObject(ctx context.Context, ref Ref) (core.ObjectDescriptor, error)
 }
 
 type ValidationSaver struct {
 	lr *LogicRunner
+}
+
+func (vb ValidationSaver) Mode() string {
+	return "execution"
 }
 
 func (vb ValidationSaver) RegisterRequest(p core.Parcel) (*Ref, error) {
@@ -225,8 +217,12 @@ func (vb ValidationSaver) RegisterRequest(p core.Parcel) (*Ref, error) {
 	return &reqref, err
 }
 
-func (vb ValidationSaver) NeedSave() bool {
-	return true
+func (vb ValidationSaver) GetObject(ctx context.Context, ref Ref) (core.ObjectDescriptor, error) {
+	objDesc, err := vb.lr.ArtifactManager.GetObject(ctx, ref, nil, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object")
+	}
+	return objDesc, nil
 }
 
 func (vb ValidationSaver) ModifyContext(ctx *core.LogicCallContext) {
@@ -241,13 +237,13 @@ func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
-func (vb ValidationSaver) GetRole() core.DynamicRole {
-	return core.DynamicRoleVirtualExecutor
-}
-
 type ValidationChecker struct {
 	lr *LogicRunner
 	cb core.CaseBindReplay
+}
+
+func (vb ValidationChecker) Mode() string {
+	return "validation"
 }
 
 func (vb ValidationChecker) RegisterRequest(p core.Parcel) (*Ref, error) {
@@ -263,11 +259,10 @@ func (vb ValidationChecker) RegisterRequest(p core.Parcel) (*Ref, error) {
 		return &req, nil
 	}
 	return nil, errors.Errorf("wrong validation, request contains %t", cr.Resp)
-
 }
 
-func (vb ValidationChecker) NeedSave() bool {
-	return false
+func (vb ValidationChecker) GetObject(ctx context.Context, ref Ref) (core.ObjectDescriptor, error) {
+	panic("not implemented")
 }
 
 func (vb ValidationChecker) ModifyContext(ctx *core.LogicCallContext) {
@@ -280,8 +275,4 @@ func (vb ValidationChecker) Begin(refs Ref, record core.CaseRecord) {
 
 func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
-}
-
-func (vb ValidationChecker) GetRole() core.DynamicRole {
-	return core.DynamicRoleVirtualValidator
 }
