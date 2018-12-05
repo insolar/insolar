@@ -16,7 +16,7 @@ var InsgorundContractExecutionTime = prometheus.NewSummary(prometheus.SummaryOpt
 	Name:       "contract_execution_time",
 	Help:       "Time spent on execution contract",
 	Namespace:  insgorundNamespace,
-	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.05, 0.95: 0.05, 0.99: 0.05},
+	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
 })
 
 func GetInsgorundRegistry() *prometheus.Registry {
