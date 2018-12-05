@@ -17,7 +17,11 @@
 package api
 
 import (
+	"context"
 	"net/http"
+
+	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // StatusReply is reply for Status service requests.
@@ -37,6 +41,11 @@ func NewStatusService(runner *Runner) *StatusService {
 
 // Get returns status info
 func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusReply) error {
+	traceId := utils.RandTraceID()
+	_, inslog := inslogger.WithTraceField(context.Background(), traceId)
+
+	inslog.Infof("[ StatusService.Get ] Incoming request: %s", r.RequestURI)
+
 	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
 
 	return nil
