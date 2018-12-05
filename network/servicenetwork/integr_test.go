@@ -100,8 +100,22 @@ type networkNode struct {
 	serviceNetwork   *ServiceNetwork
 }
 
-func initCertificate() *certificate.Certificate {
-	result := &certificate.AuthorizationCertificate{}
+func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey) core.Certificate {
+	proc := platformpolicy.NewKeyProcessor()
+	publicKey, err := proc.ExportPublicKey(key)
+	assert.NoError(t, err)
+	bytes.NewReader(publicKey)
+
+	type сertInfo map[string]interface{}
+	j := сertInfo{
+		"public_key": string(publicKey[:]),
+	}
+
+	data, err := json.Marshal(j)
+
+	result, err := certificate.ReadCertificateFromReader(key, proc, bytes.NewReader(data))
+	assert.NoError(t, err)
+	result.BootstrapNodes = nodes
 	return result
 }
 
