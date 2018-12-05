@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -19,15 +19,15 @@ import (
 type RecentStorageMock struct {
 	t minimock.Tester
 
-	AddObjectFunc       func(p core.RecordID)
+	AddObjectFunc       func(p core.RecordID, p1 bool)
 	AddObjectCounter    uint64
 	AddObjectPreCounter uint64
 	AddObjectMock       mRecentStorageMockAddObject
 
-	AddObjectWithTTLFunc       func(p core.RecordID, p1 int)
-	AddObjectWithTTLCounter    uint64
-	AddObjectWithTTLPreCounter uint64
-	AddObjectWithTTLMock       mRecentStorageMockAddObjectWithTTL
+	AddObjectWithTLLFunc       func(p core.RecordID, p1 int, p2 bool)
+	AddObjectWithTLLCounter    uint64
+	AddObjectWithTLLPreCounter uint64
+	AddObjectWithTLLMock       mRecentStorageMockAddObjectWithTLL
 
 	AddPendingRequestFunc       func(p core.RecordID)
 	AddPendingRequestCounter    uint64
@@ -54,6 +54,11 @@ type RecentStorageMock struct {
 	GetRequestsPreCounter uint64
 	GetRequestsMock       mRecentStorageMockGetRequests
 
+	IsMineFunc       func(p core.RecordID) (r bool)
+	IsMineCounter    uint64
+	IsMinePreCounter uint64
+	IsMineMock       mRecentStorageMockIsMine
+
 	RemovePendingRequestFunc       func(p core.RecordID)
 	RemovePendingRequestCounter    uint64
 	RemovePendingRequestPreCounter uint64
@@ -69,12 +74,13 @@ func NewRecentStorageMock(t minimock.Tester) *RecentStorageMock {
 	}
 
 	m.AddObjectMock = mRecentStorageMockAddObject{mock: m}
-	m.AddObjectWithTTLMock = mRecentStorageMockAddObjectWithTTL{mock: m}
+	m.AddObjectWithTLLMock = mRecentStorageMockAddObjectWithTLL{mock: m}
 	m.AddPendingRequestMock = mRecentStorageMockAddPendingRequest{mock: m}
 	m.ClearObjectsMock = mRecentStorageMockClearObjects{mock: m}
 	m.ClearZeroTTLObjectsMock = mRecentStorageMockClearZeroTTLObjects{mock: m}
 	m.GetObjectsMock = mRecentStorageMockGetObjects{mock: m}
 	m.GetRequestsMock = mRecentStorageMockGetRequests{mock: m}
+	m.IsMineMock = mRecentStorageMockIsMine{mock: m}
 	m.RemovePendingRequestMock = mRecentStorageMockRemovePendingRequest{mock: m}
 
 	return m
@@ -91,18 +97,19 @@ type RecentStorageMockAddObjectExpectation struct {
 }
 
 type RecentStorageMockAddObjectInput struct {
-	p core.RecordID
+	p  core.RecordID
+	p1 bool
 }
 
 //Expect specifies that invocation of RecentStorage.AddObject is expected from 1 to Infinity times
-func (m *mRecentStorageMockAddObject) Expect(p core.RecordID) *mRecentStorageMockAddObject {
+func (m *mRecentStorageMockAddObject) Expect(p core.RecordID, p1 bool) *mRecentStorageMockAddObject {
 	m.mock.AddObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &RecentStorageMockAddObjectExpectation{}
 	}
-	m.mainExpectation.input = &RecentStorageMockAddObjectInput{p}
+	m.mainExpectation.input = &RecentStorageMockAddObjectInput{p, p1}
 	return m
 }
 
@@ -119,18 +126,18 @@ func (m *mRecentStorageMockAddObject) Return() *RecentStorageMock {
 }
 
 //ExpectOnce specifies that invocation of RecentStorage.AddObject is expected once
-func (m *mRecentStorageMockAddObject) ExpectOnce(p core.RecordID) *RecentStorageMockAddObjectExpectation {
+func (m *mRecentStorageMockAddObject) ExpectOnce(p core.RecordID, p1 bool) *RecentStorageMockAddObjectExpectation {
 	m.mock.AddObjectFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &RecentStorageMockAddObjectExpectation{}
-	expectation.input = &RecentStorageMockAddObjectInput{p}
+	expectation.input = &RecentStorageMockAddObjectInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of RecentStorage.AddObject method
-func (m *mRecentStorageMockAddObject) Set(f func(p core.RecordID)) *RecentStorageMock {
+func (m *mRecentStorageMockAddObject) Set(f func(p core.RecordID, p1 bool)) *RecentStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -139,18 +146,18 @@ func (m *mRecentStorageMockAddObject) Set(f func(p core.RecordID)) *RecentStorag
 }
 
 //AddObject implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
-func (m *RecentStorageMock) AddObject(p core.RecordID) {
+func (m *RecentStorageMock) AddObject(p core.RecordID, p1 bool) {
 	counter := atomic.AddUint64(&m.AddObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.AddObjectCounter, 1)
 
 	if len(m.AddObjectMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.AddObjectMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RecentStorageMock.AddObject. %v", p)
+			m.t.Fatalf("Unexpected call to RecentStorageMock.AddObject. %v %v", p, p1)
 			return
 		}
 
 		input := m.AddObjectMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RecentStorageMockAddObjectInput{p}, "RecentStorage.AddObject got unexpected parameters")
+		testify_assert.Equal(m.t, *input, RecentStorageMockAddObjectInput{p, p1}, "RecentStorage.AddObject got unexpected parameters")
 
 		return
 	}
@@ -159,18 +166,18 @@ func (m *RecentStorageMock) AddObject(p core.RecordID) {
 
 		input := m.AddObjectMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RecentStorageMockAddObjectInput{p}, "RecentStorage.AddObject got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RecentStorageMockAddObjectInput{p, p1}, "RecentStorage.AddObject got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.AddObjectFunc == nil {
-		m.t.Fatalf("Unexpected call to RecentStorageMock.AddObject. %v", p)
+		m.t.Fatalf("Unexpected call to RecentStorageMock.AddObject. %v %v", p, p1)
 		return
 	}
 
-	m.AddObjectFunc(p)
+	m.AddObjectFunc(p, p1)
 }
 
 //AddObjectMinimockCounter returns a count of RecentStorageMock.AddObjectFunc invocations
@@ -203,125 +210,126 @@ func (m *RecentStorageMock) AddObjectFinished() bool {
 	return true
 }
 
-type mRecentStorageMockAddObjectWithTTL struct {
+type mRecentStorageMockAddObjectWithTLL struct {
 	mock              *RecentStorageMock
-	mainExpectation   *RecentStorageMockAddObjectWithTTLExpectation
-	expectationSeries []*RecentStorageMockAddObjectWithTTLExpectation
+	mainExpectation   *RecentStorageMockAddObjectWithTLLExpectation
+	expectationSeries []*RecentStorageMockAddObjectWithTLLExpectation
 }
 
-type RecentStorageMockAddObjectWithTTLExpectation struct {
-	input *RecentStorageMockAddObjectWithTTLInput
+type RecentStorageMockAddObjectWithTLLExpectation struct {
+	input *RecentStorageMockAddObjectWithTLLInput
 }
 
-type RecentStorageMockAddObjectWithTTLInput struct {
+type RecentStorageMockAddObjectWithTLLInput struct {
 	p  core.RecordID
 	p1 int
+	p2 bool
 }
 
-//Expect specifies that invocation of RecentStorage.AddObjectWithTTL is expected from 1 to Infinity times
-func (m *mRecentStorageMockAddObjectWithTTL) Expect(p core.RecordID, p1 int) *mRecentStorageMockAddObjectWithTTL {
-	m.mock.AddObjectWithTTLFunc = nil
+//Expect specifies that invocation of RecentStorage.AddObjectWithTLL is expected from 1 to Infinity times
+func (m *mRecentStorageMockAddObjectWithTLL) Expect(p core.RecordID, p1 int, p2 bool) *mRecentStorageMockAddObjectWithTLL {
+	m.mock.AddObjectWithTLLFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RecentStorageMockAddObjectWithTTLExpectation{}
+		m.mainExpectation = &RecentStorageMockAddObjectWithTLLExpectation{}
 	}
-	m.mainExpectation.input = &RecentStorageMockAddObjectWithTTLInput{p, p1}
+	m.mainExpectation.input = &RecentStorageMockAddObjectWithTLLInput{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of RecentStorage.AddObjectWithTTL
-func (m *mRecentStorageMockAddObjectWithTTL) Return() *RecentStorageMock {
-	m.mock.AddObjectWithTTLFunc = nil
+//Return specifies results of invocation of RecentStorage.AddObjectWithTLL
+func (m *mRecentStorageMockAddObjectWithTLL) Return() *RecentStorageMock {
+	m.mock.AddObjectWithTLLFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RecentStorageMockAddObjectWithTTLExpectation{}
+		m.mainExpectation = &RecentStorageMockAddObjectWithTLLExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of RecentStorage.AddObjectWithTTL is expected once
-func (m *mRecentStorageMockAddObjectWithTTL) ExpectOnce(p core.RecordID, p1 int) *RecentStorageMockAddObjectWithTTLExpectation {
-	m.mock.AddObjectWithTTLFunc = nil
+//ExpectOnce specifies that invocation of RecentStorage.AddObjectWithTLL is expected once
+func (m *mRecentStorageMockAddObjectWithTLL) ExpectOnce(p core.RecordID, p1 int, p2 bool) *RecentStorageMockAddObjectWithTLLExpectation {
+	m.mock.AddObjectWithTLLFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &RecentStorageMockAddObjectWithTTLExpectation{}
-	expectation.input = &RecentStorageMockAddObjectWithTTLInput{p, p1}
+	expectation := &RecentStorageMockAddObjectWithTLLExpectation{}
+	expectation.input = &RecentStorageMockAddObjectWithTLLInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of RecentStorage.AddObjectWithTTL method
-func (m *mRecentStorageMockAddObjectWithTTL) Set(f func(p core.RecordID, p1 int)) *RecentStorageMock {
+//Set uses given function f as a mock of RecentStorage.AddObjectWithTLL method
+func (m *mRecentStorageMockAddObjectWithTLL) Set(f func(p core.RecordID, p1 int, p2 bool)) *RecentStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.AddObjectWithTTLFunc = f
+	m.mock.AddObjectWithTLLFunc = f
 	return m.mock
 }
 
-//AddObjectWithTTL implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
-func (m *RecentStorageMock) AddObjectWithTTL(p core.RecordID, p1 int) {
-	counter := atomic.AddUint64(&m.AddObjectWithTTLPreCounter, 1)
-	defer atomic.AddUint64(&m.AddObjectWithTTLCounter, 1)
+//AddObjectWithTLL implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
+func (m *RecentStorageMock) AddObjectWithTLL(p core.RecordID, p1 int, p2 bool) {
+	counter := atomic.AddUint64(&m.AddObjectWithTLLPreCounter, 1)
+	defer atomic.AddUint64(&m.AddObjectWithTLLCounter, 1)
 
-	if len(m.AddObjectWithTTLMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.AddObjectWithTTLMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RecentStorageMock.AddObjectWithTTL. %v %v", p, p1)
+	if len(m.AddObjectWithTLLMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.AddObjectWithTLLMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RecentStorageMock.AddObjectWithTLL. %v %v %v", p, p1, p2)
 			return
 		}
 
-		input := m.AddObjectWithTTLMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RecentStorageMockAddObjectWithTTLInput{p, p1}, "RecentStorage.AddObjectWithTTL got unexpected parameters")
+		input := m.AddObjectWithTLLMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, RecentStorageMockAddObjectWithTLLInput{p, p1, p2}, "RecentStorage.AddObjectWithTLL got unexpected parameters")
 
 		return
 	}
 
-	if m.AddObjectWithTTLMock.mainExpectation != nil {
+	if m.AddObjectWithTLLMock.mainExpectation != nil {
 
-		input := m.AddObjectWithTTLMock.mainExpectation.input
+		input := m.AddObjectWithTLLMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RecentStorageMockAddObjectWithTTLInput{p, p1}, "RecentStorage.AddObjectWithTTL got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RecentStorageMockAddObjectWithTLLInput{p, p1, p2}, "RecentStorage.AddObjectWithTLL got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.AddObjectWithTTLFunc == nil {
-		m.t.Fatalf("Unexpected call to RecentStorageMock.AddObjectWithTTL. %v %v", p, p1)
+	if m.AddObjectWithTLLFunc == nil {
+		m.t.Fatalf("Unexpected call to RecentStorageMock.AddObjectWithTLL. %v %v %v", p, p1, p2)
 		return
 	}
 
-	m.AddObjectWithTTLFunc(p, p1)
+	m.AddObjectWithTLLFunc(p, p1, p2)
 }
 
-//AddObjectWithTTLMinimockCounter returns a count of RecentStorageMock.AddObjectWithTTLFunc invocations
-func (m *RecentStorageMock) AddObjectWithTTLMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.AddObjectWithTTLCounter)
+//AddObjectWithTLLMinimockCounter returns a count of RecentStorageMock.AddObjectWithTLLFunc invocations
+func (m *RecentStorageMock) AddObjectWithTLLMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AddObjectWithTLLCounter)
 }
 
-//AddObjectWithTTLMinimockPreCounter returns the value of RecentStorageMock.AddObjectWithTTL invocations
-func (m *RecentStorageMock) AddObjectWithTTLMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.AddObjectWithTTLPreCounter)
+//AddObjectWithTLLMinimockPreCounter returns the value of RecentStorageMock.AddObjectWithTLL invocations
+func (m *RecentStorageMock) AddObjectWithTLLMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AddObjectWithTLLPreCounter)
 }
 
-//AddObjectWithTTLFinished returns true if mock invocations count is ok
-func (m *RecentStorageMock) AddObjectWithTTLFinished() bool {
+//AddObjectWithTLLFinished returns true if mock invocations count is ok
+func (m *RecentStorageMock) AddObjectWithTLLFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.AddObjectWithTTLMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.AddObjectWithTTLCounter) == uint64(len(m.AddObjectWithTTLMock.expectationSeries))
+	if len(m.AddObjectWithTLLMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.AddObjectWithTLLCounter) == uint64(len(m.AddObjectWithTLLMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.AddObjectWithTTLMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.AddObjectWithTTLCounter) > 0
+	if m.AddObjectWithTLLMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.AddObjectWithTLLCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.AddObjectWithTTLFunc != nil {
-		return atomic.LoadUint64(&m.AddObjectWithTTLCounter) > 0
+	if m.AddObjectWithTLLFunc != nil {
+		return atomic.LoadUint64(&m.AddObjectWithTLLCounter) > 0
 	}
 
 	return true
@@ -938,6 +946,153 @@ func (m *RecentStorageMock) GetRequestsFinished() bool {
 	return true
 }
 
+type mRecentStorageMockIsMine struct {
+	mock              *RecentStorageMock
+	mainExpectation   *RecentStorageMockIsMineExpectation
+	expectationSeries []*RecentStorageMockIsMineExpectation
+}
+
+type RecentStorageMockIsMineExpectation struct {
+	input  *RecentStorageMockIsMineInput
+	result *RecentStorageMockIsMineResult
+}
+
+type RecentStorageMockIsMineInput struct {
+	p core.RecordID
+}
+
+type RecentStorageMockIsMineResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of RecentStorage.IsMine is expected from 1 to Infinity times
+func (m *mRecentStorageMockIsMine) Expect(p core.RecordID) *mRecentStorageMockIsMine {
+	m.mock.IsMineFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RecentStorageMockIsMineExpectation{}
+	}
+	m.mainExpectation.input = &RecentStorageMockIsMineInput{p}
+	return m
+}
+
+//Return specifies results of invocation of RecentStorage.IsMine
+func (m *mRecentStorageMockIsMine) Return(r bool) *RecentStorageMock {
+	m.mock.IsMineFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RecentStorageMockIsMineExpectation{}
+	}
+	m.mainExpectation.result = &RecentStorageMockIsMineResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of RecentStorage.IsMine is expected once
+func (m *mRecentStorageMockIsMine) ExpectOnce(p core.RecordID) *RecentStorageMockIsMineExpectation {
+	m.mock.IsMineFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &RecentStorageMockIsMineExpectation{}
+	expectation.input = &RecentStorageMockIsMineInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *RecentStorageMockIsMineExpectation) Return(r bool) {
+	e.result = &RecentStorageMockIsMineResult{r}
+}
+
+//Set uses given function f as a mock of RecentStorage.IsMine method
+func (m *mRecentStorageMockIsMine) Set(f func(p core.RecordID) (r bool)) *RecentStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsMineFunc = f
+	return m.mock
+}
+
+//IsMine implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
+func (m *RecentStorageMock) IsMine(p core.RecordID) (r bool) {
+	counter := atomic.AddUint64(&m.IsMinePreCounter, 1)
+	defer atomic.AddUint64(&m.IsMineCounter, 1)
+
+	if len(m.IsMineMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsMineMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RecentStorageMock.IsMine. %v", p)
+			return
+		}
+
+		input := m.IsMineMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, RecentStorageMockIsMineInput{p}, "RecentStorage.IsMine got unexpected parameters")
+
+		result := m.IsMineMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the RecentStorageMock.IsMine")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsMineMock.mainExpectation != nil {
+
+		input := m.IsMineMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, RecentStorageMockIsMineInput{p}, "RecentStorage.IsMine got unexpected parameters")
+		}
+
+		result := m.IsMineMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the RecentStorageMock.IsMine")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsMineFunc == nil {
+		m.t.Fatalf("Unexpected call to RecentStorageMock.IsMine. %v", p)
+		return
+	}
+
+	return m.IsMineFunc(p)
+}
+
+//IsMineMinimockCounter returns a count of RecentStorageMock.IsMineFunc invocations
+func (m *RecentStorageMock) IsMineMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsMineCounter)
+}
+
+//IsMineMinimockPreCounter returns the value of RecentStorageMock.IsMine invocations
+func (m *RecentStorageMock) IsMineMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsMinePreCounter)
+}
+
+//IsMineFinished returns true if mock invocations count is ok
+func (m *RecentStorageMock) IsMineFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsMineMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsMineCounter) == uint64(len(m.IsMineMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsMineMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsMineCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsMineFunc != nil {
+		return atomic.LoadUint64(&m.IsMineCounter) > 0
+	}
+
+	return true
+}
+
 type mRecentStorageMockRemovePendingRequest struct {
 	mock              *RecentStorageMock
 	mainExpectation   *RecentStorageMockRemovePendingRequestExpectation
@@ -1069,8 +1224,8 @@ func (m *RecentStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RecentStorageMock.AddObject")
 	}
 
-	if !m.AddObjectWithTTLFinished() {
-		m.t.Fatal("Expected call to RecentStorageMock.AddObjectWithTTL")
+	if !m.AddObjectWithTLLFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.AddObjectWithTLL")
 	}
 
 	if !m.AddPendingRequestFinished() {
@@ -1091,6 +1246,10 @@ func (m *RecentStorageMock) ValidateCallCounters() {
 
 	if !m.GetRequestsFinished() {
 		m.t.Fatal("Expected call to RecentStorageMock.GetRequests")
+	}
+
+	if !m.IsMineFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.IsMine")
 	}
 
 	if !m.RemovePendingRequestFinished() {
@@ -1118,8 +1277,8 @@ func (m *RecentStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RecentStorageMock.AddObject")
 	}
 
-	if !m.AddObjectWithTTLFinished() {
-		m.t.Fatal("Expected call to RecentStorageMock.AddObjectWithTTL")
+	if !m.AddObjectWithTLLFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.AddObjectWithTLL")
 	}
 
 	if !m.AddPendingRequestFinished() {
@@ -1142,6 +1301,10 @@ func (m *RecentStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RecentStorageMock.GetRequests")
 	}
 
+	if !m.IsMineFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.IsMine")
+	}
+
 	if !m.RemovePendingRequestFinished() {
 		m.t.Fatal("Expected call to RecentStorageMock.RemovePendingRequest")
 	}
@@ -1161,12 +1324,13 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.AddObjectFinished()
-		ok = ok && m.AddObjectWithTTLFinished()
+		ok = ok && m.AddObjectWithTLLFinished()
 		ok = ok && m.AddPendingRequestFinished()
 		ok = ok && m.ClearObjectsFinished()
 		ok = ok && m.ClearZeroTTLObjectsFinished()
 		ok = ok && m.GetObjectsFinished()
 		ok = ok && m.GetRequestsFinished()
+		ok = ok && m.IsMineFinished()
 		ok = ok && m.RemovePendingRequestFinished()
 
 		if ok {
@@ -1180,8 +1344,8 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to RecentStorageMock.AddObject")
 			}
 
-			if !m.AddObjectWithTTLFinished() {
-				m.t.Error("Expected call to RecentStorageMock.AddObjectWithTTL")
+			if !m.AddObjectWithTLLFinished() {
+				m.t.Error("Expected call to RecentStorageMock.AddObjectWithTLL")
 			}
 
 			if !m.AddPendingRequestFinished() {
@@ -1204,6 +1368,10 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to RecentStorageMock.GetRequests")
 			}
 
+			if !m.IsMineFinished() {
+				m.t.Error("Expected call to RecentStorageMock.IsMine")
+			}
+
 			if !m.RemovePendingRequestFinished() {
 				m.t.Error("Expected call to RecentStorageMock.RemovePendingRequest")
 			}
@@ -1224,7 +1392,7 @@ func (m *RecentStorageMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.AddObjectWithTTLFinished() {
+	if !m.AddObjectWithTLLFinished() {
 		return false
 	}
 
@@ -1245,6 +1413,10 @@ func (m *RecentStorageMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetRequestsFinished() {
+		return false
+	}
+
+	if !m.IsMineFinished() {
 		return false
 	}
 
