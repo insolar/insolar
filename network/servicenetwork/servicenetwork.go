@@ -121,28 +121,29 @@ func incrementPort(address string) (string, error) {
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	var err error
 	n.PhaseManager = phases.NewPhaseManager()
 	n.MerkleCalculator = merkle.NewCalculator()
 	n.Communicator = phases.NewNaiveCommunicator()
 	n.PulseHandler = n // self
 
+	firstPhase := &phases.FirstPhase{}
+	secondPhase := &phases.SecondPhase{}
+	thirdPhase := &phases.ThirdPhase{}
 	// inject workaround
-	n.PhaseManager.(*phases.Phases).FirstPhase = &phases.FirstPhase{}
-	n.PhaseManager.(*phases.Phases).SecondPhase = &phases.SecondPhase{}
-	n.PhaseManager.(*phases.Phases).ThirdPhase = &phases.ThirdPhase{}
+	n.PhaseManager.(*phases.Phases).FirstPhase = firstPhase
+	n.PhaseManager.(*phases.Phases).SecondPhase = secondPhase
+	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
 
 	n.routingTable = &routing.Table{}
+	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.Certificate.GetNodeRef().String())
+	if err != nil {
+		return errors.Wrap(err, "Failed to create internal transport")
+	}
 
 	// workaround for Consensus transport, port+=1 of default transport
 	n.cfg.Host.Transport.Address, err = incrementPort(n.cfg.Host.Transport.Address)
 	if err != nil {
 		return errors.Wrap(err, "failed to increment port.")
-	}
-
-	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.Certificate.GetNodeRef().String())
-	if err != nil {
-		return errors.Wrap(err, "Failed to create internal transport")
 	}
 
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
@@ -173,7 +174,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.controller = controller.NewNetworkController(n, options, n.Certificate, internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
-
 	return nil
 }
 
