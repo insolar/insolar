@@ -206,6 +206,10 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 		return nil, errors.Wrap(err, "[ newCertificate ] Incorrect fields")
 	}
 
+	for _, node := range cert.BootstrapNodes {
+		cert.DiscoverySigns[node.GetNodeRef()] = node.NodeSign
+	}
+
 	return &cert, nil
 }
 
@@ -326,7 +330,7 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.Key
 	return cert, nil
 }
 
-// NewManagerReadCertificate constructor creates new CertificateManager component
+// NewManagerReadCertificateFromReader constructor creates new CertificateManager component
 func NewManagerReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, reader io.Reader) (*CertificateManager, error) {
 	cert, err := ReadCertificateFromReader(publicKey, keyProcessor, reader)
 	if err != nil {
