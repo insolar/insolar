@@ -180,7 +180,8 @@ func TestTriStateBitSet_SerializeCompressed(t *testing.T) {
 
 	bitset, _ := NewTriStateBitSet(len(cells))
 	bitset.CompressedSet = true
-	bitset.ApplyChanges(cells, mapper)
+	err := bitset.ApplyChanges(cells, mapper)
+	assert.NoError(t, err)
 	data, err := bitset.Serialize()
 	assert.NoError(t, err)
 
