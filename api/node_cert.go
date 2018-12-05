@@ -49,7 +49,9 @@ func NewNodeCertService(runner *Runner) *NodeCertService {
 
 // Get returns certificate for node with given reference.
 func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCertReply) error {
-	ctx, _ := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+
+	inslog.Infof("[ NodeCertService.Get ] Incoming request: %s", r.RequestURI)
 
 	cert, err := s.runner.NetworkCoordinator.GetCert(ctx, core.NewRefFromBase58(args.Ref))
 	if err != nil {
