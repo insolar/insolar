@@ -121,7 +121,7 @@ func generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.
 		return nil, err
 	}
 	cells := make([]packets.BitSetCell, 0)
-	for node, _ := range proofs {
+	for node := range proofs {
 		cells = append(cells, packets.BitSetCell{NodeID: node.ID(), State: packets.Legit})
 	}
 	err = bitset.ApplyChanges(cells, list)
