@@ -32,52 +32,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// AuthorizationCertificate holds info about node from it certificate
-type AuthorizationCertificate struct {
-	PublicKey      string                     `json:"public_key"`
-	Reference      string                     `json:"reference"`
-	Role           string                     `json:"role"`
-	DiscoverySigns map[*core.RecordRef][]byte `json:"-"`
-
-	nodePublicKey crypto.PublicKey
-}
-
-// GetPublicKey returns public key reference from node certificate
-func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
-	return authCert.nodePublicKey
-}
-
-// GetNodeRef returns reference from node certificate
-func (authCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
-	ref := core.NewRefFromBase58(authCert.Reference)
-	return &ref
-}
-
-// GetRole returns role from node certificate
-func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
-	return core.GetStaticRoleFromString(authCert.Role)
-}
-
-// GetDiscoverySigns return map of discovery nodes signs
-func (authCert *AuthorizationCertificate) GetDiscoverySigns() map[*core.RecordRef][]byte {
-	return authCert.DiscoverySigns
-}
-
-// SerializeNodePart returns some node info decoded in bytes
-func (authCert *AuthorizationCertificate) SerializeNodePart() []byte {
-	return []byte(authCert.PublicKey + authCert.Reference + authCert.Role)
-}
-
-// SignNodePart signs node part in certificate
-func (authCert *AuthorizationCertificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
-	signer := scheme.Signer(key)
-	sign, err := signer.Sign(authCert.SerializeNodePart())
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignNodePart ] Can't Sign")
-	}
-	return sign.Bytes(), nil
-}
-
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
 	PublicKey   string `json:"public_key"`
@@ -281,23 +235,4 @@ func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyPr
 	cert.PublicKey = string(keyBytes)
 	cert.nodePublicKey = publicKey
 	return &cert, nil
-}
-
-// Deserialize deserializes data to AuthorizationCertificate interface
-func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
-	cert := AuthorizationCertificate{}
-	err := core.Deserialize(data, &cert)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ]")
-	}
-	return &cert, nil
-}
-
-// Serialize serializes AuthorizationCertificate interface
-func Serialize(authCert core.AuthorizationCertificate) ([]byte, error) {
-	data, err := core.Serialize(authCert)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Serialize ]")
-	}
-	return data, nil
 }
