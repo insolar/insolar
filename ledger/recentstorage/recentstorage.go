@@ -14,7 +14,7 @@ type RecentStorage interface {
 	RemovePendingRequest(id core.RecordID)
 
 	IsMine(id core.RecordID) bool
-	MaskAsMine(id core.RecordID) error
+	MarkAsMine(id core.RecordID) error
 
 	GetObjects() map[core.RecordID]int
 	GetRequests() []core.RecordID

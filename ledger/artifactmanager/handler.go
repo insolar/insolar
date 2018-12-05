@@ -440,7 +440,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 
 		h.Recent.AddObject(*msg.Object.Record())
-		err = h.Recent.MaskAsMine(*msg.Object.Record())
+		err = h.Recent.MarkAsMine(*msg.Object.Record())
 		if err != nil {
 			return err
 		}
@@ -464,7 +464,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 	}
 
 	h.Recent.AddObject(*msg.Object.Record())
-	err = h.Recent.MaskAsMine(*msg.Object.Record())
+	err = h.Recent.MarkAsMine(*msg.Object.Record())
 	if err != nil {
 		return nil, err
 	}
@@ -505,7 +505,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 			return err
 		}
 		h.Recent.AddObject(*msg.Parent.Record())
-		err = h.Recent.MaskAsMine(*msg.Parent.Record())
+		err = h.Recent.MarkAsMine(*msg.Parent.Record())
 		if err != nil {
 			return err
 		}
@@ -536,7 +536,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	}
 
 	h.Recent.AddObject(*msg.Parent.Record())
-	err = h.Recent.MaskAsMine(*msg.Parent.Record())
+	err = h.Recent.MarkAsMine(*msg.Parent.Record())
 	if err != nil {
 		return nil, err
 	}
@@ -849,7 +849,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		meta.TTL--
 		h.Recent.AddObjectWithTLL(id, meta.TTL)
 		if savedIndex != nil {
-			err = h.Recent.MaskAsMine(id)
+			err = h.Recent.MarkAsMine(id)
 			if err != nil {
 				return nil, err
 			}

@@ -81,7 +81,7 @@ func (r *RecentStorage) RemovePendingRequest(id core.RecordID) {
 	delete(r.pendingRequests, id)
 }
 
-// MaskAsMine marks object as created on the current ME
+// MarkAsMine marks object as created on the current ME
 func (r *RecentStorage) MaskAsMine(id core.RecordID) error {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
