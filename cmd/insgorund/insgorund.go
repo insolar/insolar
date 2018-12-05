@@ -92,7 +92,7 @@ func main() {
 	}
 
 	if *metricsAddress != "" {
-		ctx := context.TODO()
+		ctx := context.Background() // TODO add tradeId and logger
 
 		metricsConfiguration := configuration.Metrics{
 			ListenAddress: *metricsAddress,
