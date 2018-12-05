@@ -52,8 +52,8 @@ type couple struct {
 	Value []byte
 }
 
-// NewTape creates new storageTape with random id.
-func NewTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
+// NewStorageTape creates new storageTape with random id.
+func NewStorageTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
@@ -61,10 +61,10 @@ func NewTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error)
 	return &storageTape{ls: ls, pulse: pulse, id: id}, nil
 }
 
-// NewTapeFromReader creates and fills a new storageTape from a stream.
+// NewStorageTapeFromReader creates and fills a new storageTape from a stream.
 //
 // This is a very long operation, as it saves replies in storage until the stream is exhausted.
-func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storageTape, error) {
+func NewStorageTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storageTape, error) {
 	var err error
 	tape := storageTape{ls: ls}
 
