@@ -48,6 +48,7 @@ const (
 	sysLatestPulse            byte = 2
 	sysReplicatedPulse        byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
+	sysJetTree                byte = 4
 )
 
 // DB represents BadgerDB storage implementation.

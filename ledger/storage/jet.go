@@ -17,13 +17,30 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"sync"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetdrop"
+	"github.com/insolar/insolar/ledger/record"
+	"github.com/ugorji/go/codec"
 )
+
+// JetTree stores jet in a binary tree.
+type JetTree struct {
+	// TODO: implement tree.
+	Jets []record.JetRecord
+}
+
+// Bytes serializes pulse.
+func (t *JetTree) Bytes() []byte {
+	var buf bytes.Buffer
+	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+	enc.MustEncode(t)
+	return buf.Bytes()
+}
 
 // GetDrop returns jet drop for a given pulse number.
 func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
@@ -138,4 +155,33 @@ func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
 		return err
 	}
 	return db.set(ctx, k, encoded)
+}
+
+// SetJetTree stores jet tree for specified pulse.
+func (db *DB) SetJetTree(ctx context.Context, pulse core.PulseNumber, tree *JetTree) error {
+	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
+	_, err := db.get(ctx, k)
+	if err == nil {
+		return ErrOverride
+	}
+
+	return db.set(ctx, k, tree.Bytes())
+}
+
+// GetJetTree fetches tree for specified pulse.
+func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*JetTree, error) {
+	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
+	buff, err := db.get(ctx, k)
+	if err == nil {
+		return nil, err
+	}
+
+	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
+	var tree JetTree
+	err = dec.Decode(&tree)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tree, nil
 }
