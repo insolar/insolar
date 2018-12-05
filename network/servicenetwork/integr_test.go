@@ -126,7 +126,6 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	keeper := nodenetwork.NewNodeKeeper(origin)
 
 	cfg := configuration.NewConfiguration()
-	cfg.Node.Node.ID = origin.ID().String()
 	cfg.Host.Transport.Address = address
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()

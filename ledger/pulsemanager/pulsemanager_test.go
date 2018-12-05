@@ -17,6 +17,7 @@
 package pulsemanager_test
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -86,6 +87,9 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		*firstID: 1,
 	})
 	recentMock.GetRequestsMock.Return([]core.RecordID{*secondID})
+	recentMock.IsMineFunc = func(inputID core.RecordID) (r bool) {
+		return bytes.Equal(firstID.Bytes(), inputID.Bytes())
+	}
 
 	mbMock := testutils.NewMessageBusMock(t)
 	mbMock.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
@@ -128,8 +132,12 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 	// Act
 	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
+	require.NoError(t, err)
+	savedIndex, err := db.GetObjectIndex(ctx, firstID, false)
+	require.NoError(t, err)
 
 	// Assert
-	require.NoError(t, err)
+	require.NotNil(t, savedIndex)
+	require.NotNil(t, firstIndex, savedIndex)
 	recentMock.MinimockFinish()
 }

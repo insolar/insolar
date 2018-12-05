@@ -1,0 +1,15 @@
+# reference implementation
+goos: darwin
+goarch: amd64
+pkg: github.com/insolar/insolar/utils/entropy
+BenchmarkSelectByEntropy/1_from_10         	  200000	     10133 ns/op	   10416 B/op	      64 allocs/op
+BenchmarkSelectByEntropy/5_from_10         	  200000	      9988 ns/op	   10512 B/op	      64 allocs/op
+BenchmarkSelectByEntropy/10_from_10        	  200000	      9964 ns/op	   10624 B/op	      64 allocs/op
+BenchmarkSelectByEntropy/1_from_100        	   10000	    109825 ns/op	  103392 B/op	     604 allocs/op
+BenchmarkSelectByEntropy/50_from_100       	   10000	    109605 ns/op	  104640 B/op	     604 allocs/op
+BenchmarkSelectByEntropy/100_from_100      	   10000	    110042 ns/op	  106048 B/op	     604 allocs/op
+BenchmarkSelectByEntropy/1_from_1000       	    1000	   1322753 ns/op	 1032288 B/op	    6004 allocs/op
+BenchmarkSelectByEntropy/500_from_1000     	    1000	   1316125 ns/op	 1044544 B/op	    6004 allocs/op
+BenchmarkSelectByEntropy/1000_from_1000    	    1000	   1361299 ns/op	 1056832 B/op	    6004 allocs/op
+PASS
+ok  	github.com/insolar/insolar/utils/entropy	14.131s

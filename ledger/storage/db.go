@@ -294,6 +294,13 @@ func (db *DB) SetObjectIndex(
 	})
 }
 
+// RemoveObjectIndex removes an index of an object
+func (db *DB) RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error {
+	return db.Update(ctx, func(tx *TransactionManager) error {
+		return tx.RemoveObjectIndex(ctx, ref)
+	})
+}
+
 // GetDrop returns jet drop for a given pulse number.
 func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, pulse.Bytes())

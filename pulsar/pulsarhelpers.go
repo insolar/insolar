@@ -21,11 +21,12 @@ import (
 	"context"
 	"sort"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/utils/entropy"
 )
 
 // FetchNeighbour searches neighbour of the pulsar by pubKey of a neighbout
@@ -80,8 +81,8 @@ func (currentPulsar *Pulsar) clearState() {
 }
 
 func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
-	entropy := currentPulsar.EntropyGenerator.GenerateEntropy()
-	currentPulsar.SetGeneratedEntropy(&entropy)
+	e := currentPulsar.EntropyGenerator.GenerateEntropy()
+	currentPulsar.SetGeneratedEntropy(&e)
 	signature, err := signData(currentPulsar.CryptographyService, currentPulsar.GetGeneratedEntropy())
 	if err != nil {
 		return err
@@ -143,40 +144,30 @@ func signData(service core.CryptographyService, data interface{}) ([]byte, error
 	return signature.Bytes(), nil
 }
 
-func selectByEntropy(scheme core.PlatformCryptographyScheme, entropy core.Entropy, values []string, count int) ([]string, error) { // nolint: megacheck
-	type idxHash struct {
-		idx  int
-		hash []byte
+// copied from jetcoordinator
+// (the only difference is type of input/output arrays)
+func selectByEntropy(
+	scheme core.PlatformCryptographyScheme,
+	e core.Entropy,
+	values []string,
+	count int,
+) ([]string, error) { // nolint: megacheck
+	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
+	sort.Strings(values)
+	in := make([]interface{}, 0, len(values))
+	for _, value := range values {
+		in = append(in, interface{}(value))
 	}
 
-	if len(values) < count {
-		return nil, errors.New("count value should be less than values size")
+	res, err := entropy.SelectByEntropy(scheme, e[:], in, count)
+	if err != nil {
+		return nil, err
 	}
-
-	hashes := make([]*idxHash, 0, len(values))
-	for i, value := range values {
-		h := scheme.ReferenceHasher()
-		_, err := h.Write(entropy[:])
-		if err != nil {
-			return nil, err
-		}
-		_, err = h.Write([]byte(value))
-		if err != nil {
-			return nil, err
-		}
-		hashes = append(hashes, &idxHash{
-			idx:  i,
-			hash: h.Sum(nil),
-		})
+	out := make([]string, 0, len(res))
+	for _, value := range res {
+		out = append(out, value.(string))
 	}
-
-	sort.SliceStable(hashes, func(i, j int) bool { return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0 })
-
-	selected := make([]string, 0, count)
-	for i := 0; i < count; i++ {
-		selected = append(selected, values[hashes[i].idx])
-	}
-	return selected, nil
+	return out, nil
 }
 
 // GetLastPulse returns last pulse in the thread-safe mode

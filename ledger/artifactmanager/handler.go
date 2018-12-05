@@ -223,7 +223,7 @@ func (h *MessageHandler) handleGetObject(
 		}
 		return nil, err
 	}
-	h.Recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record(), false)
 
 	state, err := getObjectStateRecord(ctx, h.db, stateID)
 	if err != nil {
@@ -297,7 +297,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	h.Recent.AddObject(*msg.Head.Record())
+	h.Recent.AddObject(*msg.Head.Record(), false)
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -331,7 +331,7 @@ func (h *MessageHandler) handleGetChildren(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.Recent.AddObject(*msg.Parent.Record())
+	h.Recent.AddObject(*msg.Parent.Record(), false)
 
 	var (
 		refs         []core.RecordRef
@@ -438,7 +438,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
 			return errors.New("invalid state record")
 		}
-		h.Recent.AddObject(*msg.Object.Record())
+
+		h.Recent.AddObject(*msg.Object.Record(), true)
 
 		id, err := tx.SetRecord(ctx, pulseNumber, rec)
 		if err != nil {
@@ -457,7 +458,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		}
 		return nil, err
 	}
-	h.Recent.AddObject(*msg.Object.Record())
+
+	h.Recent.AddObject(*msg.Object.Record(), true)
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -494,7 +496,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		} else if err != nil {
 			return err
 		}
-		h.Recent.AddObject(*msg.Parent.Record())
+		h.Recent.AddObject(*msg.Parent.Record(), true)
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -520,7 +522,8 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 	if err != nil {
 		return nil, err
 	}
-	h.Recent.AddObject(*msg.Parent.Record())
+
+	h.Recent.AddObject(*msg.Parent.Record(), true)
 
 	return &reply.ID{ID: *child}, nil
 }
@@ -815,13 +818,21 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 			inslog.Error(err)
 			continue
 		}
+
+		savedIndex, err := h.db.GetObjectIndex(ctx, &id, false)
+		if err != nil {
+			return nil, err
+		}
+		isMine := savedIndex != nil
+
 		err = h.db.SetObjectIndex(ctx, &id, decodedIndex)
 		if err != nil {
 			inslog.Error(err)
 			continue
 		}
+
 		meta.TTL--
-		h.Recent.AddObjectWithTTL(id, meta.TTL)
+		h.Recent.AddObjectWithTLL(id, meta.TTL, isMine)
 	}
 
 	return &reply.OK{}, nil
