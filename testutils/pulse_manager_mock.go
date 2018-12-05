@@ -46,119 +46,55 @@ func NewPulseManagerMock(t minimock.Tester) *PulseManagerMock {
 }
 
 type mPulseManagerMockCurrent struct {
-	mock              *PulseManagerMock
-	mainExpectation   *PulseManagerMockCurrentExpectation
-	expectationSeries []*PulseManagerMockCurrentExpectation
+	mock             *PulseManagerMock
+	mockExpectations *PulseManagerMockCurrentParams
 }
 
-type PulseManagerMockCurrentExpectation struct {
-	input  *PulseManagerMockCurrentInput
-	result *PulseManagerMockCurrentResult
-}
-
-type PulseManagerMockCurrentInput struct {
+//PulseManagerMockCurrentParams represents input parameters of the PulseManager.Current
+type PulseManagerMockCurrentParams struct {
 	p context.Context
 }
 
-type PulseManagerMockCurrentResult struct {
-	r  *core.Pulse
-	r1 error
-}
-
-//Expect specifies that invocation of PulseManager.Current is expected from 1 to Infinity times
+//Expect sets up expected params for the PulseManager.Current
 func (m *mPulseManagerMockCurrent) Expect(p context.Context) *mPulseManagerMockCurrent {
-	m.mock.CurrentFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PulseManagerMockCurrentExpectation{}
-	}
-	m.mainExpectation.input = &PulseManagerMockCurrentInput{p}
+	m.mockExpectations = &PulseManagerMockCurrentParams{p}
 	return m
 }
 
-//Return specifies results of invocation of PulseManager.Current
+//Return sets up a mock for PulseManager.Current to return Return's arguments
 func (m *mPulseManagerMockCurrent) Return(r *core.Pulse, r1 error) *PulseManagerMock {
-	m.mock.CurrentFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PulseManagerMockCurrentExpectation{}
+	m.mock.CurrentFunc = func(p context.Context) (*core.Pulse, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &PulseManagerMockCurrentResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of PulseManager.Current is expected once
-func (m *mPulseManagerMockCurrent) ExpectOnce(p context.Context) *PulseManagerMockCurrentExpectation {
-	m.mock.CurrentFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &PulseManagerMockCurrentExpectation{}
-	expectation.input = &PulseManagerMockCurrentInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *PulseManagerMockCurrentExpectation) Return(r *core.Pulse, r1 error) {
-	e.result = &PulseManagerMockCurrentResult{r, r1}
 }
 
 //Set uses given function f as a mock of PulseManager.Current method
 func (m *mPulseManagerMockCurrent) Set(f func(p context.Context) (r *core.Pulse, r1 error)) *PulseManagerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.CurrentFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Current implements github.com/insolar/insolar/core.PulseManager interface
 func (m *PulseManagerMock) Current(p context.Context) (r *core.Pulse, r1 error) {
-	counter := atomic.AddUint64(&m.CurrentPreCounter, 1)
+	atomic.AddUint64(&m.CurrentPreCounter, 1)
 	defer atomic.AddUint64(&m.CurrentCounter, 1)
 
-	if len(m.CurrentMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.CurrentMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PulseManagerMock.Current. %v", p)
+	if m.CurrentMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.CurrentMock.mockExpectations, PulseManagerMockCurrentParams{p},
+			"PulseManager.Current got unexpected parameters")
+
+		if m.CurrentFunc == nil {
+
+			m.t.Fatal("No results are set for the PulseManagerMock.Current")
+
 			return
 		}
-
-		input := m.CurrentMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PulseManagerMockCurrentInput{p}, "PulseManager.Current got unexpected parameters")
-
-		result := m.CurrentMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the PulseManagerMock.Current")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.CurrentMock.mainExpectation != nil {
-
-		input := m.CurrentMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, PulseManagerMockCurrentInput{p}, "PulseManager.Current got unexpected parameters")
-		}
-
-		result := m.CurrentMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the PulseManagerMock.Current")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.CurrentFunc == nil {
-		m.t.Fatalf("Unexpected call to PulseManagerMock.Current. %v", p)
+		m.t.Fatal("Unexpected call to PulseManagerMock.Current")
 		return
 	}
 
@@ -175,139 +111,58 @@ func (m *PulseManagerMock) CurrentMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.CurrentPreCounter)
 }
 
-//CurrentFinished returns true if mock invocations count is ok
-func (m *PulseManagerMock) CurrentFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.CurrentMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.CurrentCounter) == uint64(len(m.CurrentMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.CurrentMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.CurrentCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.CurrentFunc != nil {
-		return atomic.LoadUint64(&m.CurrentCounter) > 0
-	}
-
-	return true
-}
-
 type mPulseManagerMockSet struct {
-	mock              *PulseManagerMock
-	mainExpectation   *PulseManagerMockSetExpectation
-	expectationSeries []*PulseManagerMockSetExpectation
+	mock             *PulseManagerMock
+	mockExpectations *PulseManagerMockSetParams
 }
 
-type PulseManagerMockSetExpectation struct {
-	input  *PulseManagerMockSetInput
-	result *PulseManagerMockSetResult
-}
-
-type PulseManagerMockSetInput struct {
+//PulseManagerMockSetParams represents input parameters of the PulseManager.Set
+type PulseManagerMockSetParams struct {
 	p  context.Context
 	p1 core.Pulse
 	p2 bool
 }
 
-type PulseManagerMockSetResult struct {
-	r error
-}
-
-//Expect specifies that invocation of PulseManager.Set is expected from 1 to Infinity times
+//Expect sets up expected params for the PulseManager.Set
 func (m *mPulseManagerMockSet) Expect(p context.Context, p1 core.Pulse, p2 bool) *mPulseManagerMockSet {
-	m.mock.SetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PulseManagerMockSetExpectation{}
-	}
-	m.mainExpectation.input = &PulseManagerMockSetInput{p, p1, p2}
+	m.mockExpectations = &PulseManagerMockSetParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of PulseManager.Set
+//Return sets up a mock for PulseManager.Set to return Return's arguments
 func (m *mPulseManagerMockSet) Return(r error) *PulseManagerMock {
-	m.mock.SetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PulseManagerMockSetExpectation{}
+	m.mock.SetFunc = func(p context.Context, p1 core.Pulse, p2 bool) error {
+		return r
 	}
-	m.mainExpectation.result = &PulseManagerMockSetResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of PulseManager.Set is expected once
-func (m *mPulseManagerMockSet) ExpectOnce(p context.Context, p1 core.Pulse, p2 bool) *PulseManagerMockSetExpectation {
-	m.mock.SetFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &PulseManagerMockSetExpectation{}
-	expectation.input = &PulseManagerMockSetInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *PulseManagerMockSetExpectation) Return(r error) {
-	e.result = &PulseManagerMockSetResult{r}
 }
 
 //Set uses given function f as a mock of PulseManager.Set method
 func (m *mPulseManagerMockSet) Set(f func(p context.Context, p1 core.Pulse, p2 bool) (r error)) *PulseManagerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.SetFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Set implements github.com/insolar/insolar/core.PulseManager interface
 func (m *PulseManagerMock) Set(p context.Context, p1 core.Pulse, p2 bool) (r error) {
-	counter := atomic.AddUint64(&m.SetPreCounter, 1)
+	atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 
-	if len(m.SetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PulseManagerMock.Set. %v %v %v", p, p1, p2)
+	if m.SetMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.SetMock.mockExpectations, PulseManagerMockSetParams{p, p1, p2},
+			"PulseManager.Set got unexpected parameters")
+
+		if m.SetFunc == nil {
+
+			m.t.Fatal("No results are set for the PulseManagerMock.Set")
+
 			return
 		}
-
-		input := m.SetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PulseManagerMockSetInput{p, p1, p2}, "PulseManager.Set got unexpected parameters")
-
-		result := m.SetMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the PulseManagerMock.Set")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetMock.mainExpectation != nil {
-
-		input := m.SetMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, PulseManagerMockSetInput{p, p1, p2}, "PulseManager.Set got unexpected parameters")
-		}
-
-		result := m.SetMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the PulseManagerMock.Set")
-		}
-
-		r = result.r
-
-		return
 	}
 
 	if m.SetFunc == nil {
-		m.t.Fatalf("Unexpected call to PulseManagerMock.Set. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to PulseManagerMock.Set")
 		return
 	}
 
@@ -324,35 +179,15 @@ func (m *PulseManagerMock) SetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetPreCounter)
 }
 
-//SetFinished returns true if mock invocations count is ok
-func (m *PulseManagerMock) SetFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetCounter) == uint64(len(m.SetMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetFunc != nil {
-		return atomic.LoadUint64(&m.SetCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PulseManagerMock) ValidateCallCounters() {
 
-	if !m.CurrentFinished() {
+	if m.CurrentFunc != nil && atomic.LoadUint64(&m.CurrentCounter) == 0 {
 		m.t.Fatal("Expected call to PulseManagerMock.Current")
 	}
 
-	if !m.SetFinished() {
+	if m.SetFunc != nil && atomic.LoadUint64(&m.SetCounter) == 0 {
 		m.t.Fatal("Expected call to PulseManagerMock.Set")
 	}
 
@@ -373,11 +208,11 @@ func (m *PulseManagerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PulseManagerMock) MinimockFinish() {
 
-	if !m.CurrentFinished() {
+	if m.CurrentFunc != nil && atomic.LoadUint64(&m.CurrentCounter) == 0 {
 		m.t.Fatal("Expected call to PulseManagerMock.Current")
 	}
 
-	if !m.SetFinished() {
+	if m.SetFunc != nil && atomic.LoadUint64(&m.SetCounter) == 0 {
 		m.t.Fatal("Expected call to PulseManagerMock.Set")
 	}
 
@@ -395,8 +230,8 @@ func (m *PulseManagerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.CurrentFinished()
-		ok = ok && m.SetFinished()
+		ok = ok && (m.CurrentFunc == nil || atomic.LoadUint64(&m.CurrentCounter) > 0)
+		ok = ok && (m.SetFunc == nil || atomic.LoadUint64(&m.SetCounter) > 0)
 
 		if ok {
 			return
@@ -405,11 +240,11 @@ func (m *PulseManagerMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.CurrentFinished() {
+			if m.CurrentFunc != nil && atomic.LoadUint64(&m.CurrentCounter) == 0 {
 				m.t.Error("Expected call to PulseManagerMock.Current")
 			}
 
-			if !m.SetFinished() {
+			if m.SetFunc != nil && atomic.LoadUint64(&m.SetCounter) == 0 {
 				m.t.Error("Expected call to PulseManagerMock.Set")
 			}
 
@@ -425,11 +260,11 @@ func (m *PulseManagerMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PulseManagerMock) AllMocksCalled() bool {
 
-	if !m.CurrentFinished() {
+	if m.CurrentFunc != nil && atomic.LoadUint64(&m.CurrentCounter) == 0 {
 		return false
 	}
 
-	if !m.SetFinished() {
+	if m.SetFunc != nil && atomic.LoadUint64(&m.SetCounter) == 0 {
 		return false
 	}
 

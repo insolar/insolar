@@ -58,120 +58,56 @@ func NewNetworkCoordinatorMock(t minimock.Tester) *NetworkCoordinatorMock {
 }
 
 type mNetworkCoordinatorMockGetCert struct {
-	mock              *NetworkCoordinatorMock
-	mainExpectation   *NetworkCoordinatorMockGetCertExpectation
-	expectationSeries []*NetworkCoordinatorMockGetCertExpectation
+	mock             *NetworkCoordinatorMock
+	mockExpectations *NetworkCoordinatorMockGetCertParams
 }
 
-type NetworkCoordinatorMockGetCertExpectation struct {
-	input  *NetworkCoordinatorMockGetCertInput
-	result *NetworkCoordinatorMockGetCertResult
-}
-
-type NetworkCoordinatorMockGetCertInput struct {
+//NetworkCoordinatorMockGetCertParams represents input parameters of the NetworkCoordinator.GetCert
+type NetworkCoordinatorMockGetCertParams struct {
 	p  context.Context
 	p1 core.RecordRef
 }
 
-type NetworkCoordinatorMockGetCertResult struct {
-	r  core.Certificate
-	r1 error
-}
-
-//Expect specifies that invocation of NetworkCoordinator.GetCert is expected from 1 to Infinity times
+//Expect sets up expected params for the NetworkCoordinator.GetCert
 func (m *mNetworkCoordinatorMockGetCert) Expect(p context.Context, p1 core.RecordRef) *mNetworkCoordinatorMockGetCert {
-	m.mock.GetCertFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockGetCertExpectation{}
-	}
-	m.mainExpectation.input = &NetworkCoordinatorMockGetCertInput{p, p1}
+	m.mockExpectations = &NetworkCoordinatorMockGetCertParams{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of NetworkCoordinator.GetCert
+//Return sets up a mock for NetworkCoordinator.GetCert to return Return's arguments
 func (m *mNetworkCoordinatorMockGetCert) Return(r core.Certificate, r1 error) *NetworkCoordinatorMock {
-	m.mock.GetCertFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockGetCertExpectation{}
+	m.mock.GetCertFunc = func(p context.Context, p1 core.RecordRef) (core.Certificate, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &NetworkCoordinatorMockGetCertResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NetworkCoordinator.GetCert is expected once
-func (m *mNetworkCoordinatorMockGetCert) ExpectOnce(p context.Context, p1 core.RecordRef) *NetworkCoordinatorMockGetCertExpectation {
-	m.mock.GetCertFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NetworkCoordinatorMockGetCertExpectation{}
-	expectation.input = &NetworkCoordinatorMockGetCertInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NetworkCoordinatorMockGetCertExpectation) Return(r core.Certificate, r1 error) {
-	e.result = &NetworkCoordinatorMockGetCertResult{r, r1}
 }
 
 //Set uses given function f as a mock of NetworkCoordinator.GetCert method
 func (m *mNetworkCoordinatorMockGetCert) Set(f func(p context.Context, p1 core.RecordRef) (r core.Certificate, r1 error)) *NetworkCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.GetCertFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //GetCert implements github.com/insolar/insolar/core.NetworkCoordinator interface
 func (m *NetworkCoordinatorMock) GetCert(p context.Context, p1 core.RecordRef) (r core.Certificate, r1 error) {
-	counter := atomic.AddUint64(&m.GetCertPreCounter, 1)
+	atomic.AddUint64(&m.GetCertPreCounter, 1)
 	defer atomic.AddUint64(&m.GetCertCounter, 1)
 
-	if len(m.GetCertMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetCertMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.GetCert. %v %v", p, p1)
+	if m.GetCertMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.GetCertMock.mockExpectations, NetworkCoordinatorMockGetCertParams{p, p1},
+			"NetworkCoordinator.GetCert got unexpected parameters")
+
+		if m.GetCertFunc == nil {
+
+			m.t.Fatal("No results are set for the NetworkCoordinatorMock.GetCert")
+
 			return
 		}
-
-		input := m.GetCertMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkCoordinatorMockGetCertInput{p, p1}, "NetworkCoordinator.GetCert got unexpected parameters")
-
-		result := m.GetCertMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.GetCert")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetCertMock.mainExpectation != nil {
-
-		input := m.GetCertMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkCoordinatorMockGetCertInput{p, p1}, "NetworkCoordinator.GetCert got unexpected parameters")
-		}
-
-		result := m.GetCertMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.GetCert")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.GetCertFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.GetCert. %v %v", p, p1)
+		m.t.Fatal("Unexpected call to NetworkCoordinatorMock.GetCert")
 		return
 	}
 
@@ -188,138 +124,57 @@ func (m *NetworkCoordinatorMock) GetCertMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetCertPreCounter)
 }
 
-//GetCertFinished returns true if mock invocations count is ok
-func (m *NetworkCoordinatorMock) GetCertFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetCertMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetCertCounter) == uint64(len(m.GetCertMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetCertMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetCertCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetCertFunc != nil {
-		return atomic.LoadUint64(&m.GetCertCounter) > 0
-	}
-
-	return true
-}
-
 type mNetworkCoordinatorMockSetPulse struct {
-	mock              *NetworkCoordinatorMock
-	mainExpectation   *NetworkCoordinatorMockSetPulseExpectation
-	expectationSeries []*NetworkCoordinatorMockSetPulseExpectation
+	mock             *NetworkCoordinatorMock
+	mockExpectations *NetworkCoordinatorMockSetPulseParams
 }
 
-type NetworkCoordinatorMockSetPulseExpectation struct {
-	input  *NetworkCoordinatorMockSetPulseInput
-	result *NetworkCoordinatorMockSetPulseResult
-}
-
-type NetworkCoordinatorMockSetPulseInput struct {
+//NetworkCoordinatorMockSetPulseParams represents input parameters of the NetworkCoordinator.SetPulse
+type NetworkCoordinatorMockSetPulseParams struct {
 	p  context.Context
 	p1 core.Pulse
 }
 
-type NetworkCoordinatorMockSetPulseResult struct {
-	r error
-}
-
-//Expect specifies that invocation of NetworkCoordinator.SetPulse is expected from 1 to Infinity times
+//Expect sets up expected params for the NetworkCoordinator.SetPulse
 func (m *mNetworkCoordinatorMockSetPulse) Expect(p context.Context, p1 core.Pulse) *mNetworkCoordinatorMockSetPulse {
-	m.mock.SetPulseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockSetPulseExpectation{}
-	}
-	m.mainExpectation.input = &NetworkCoordinatorMockSetPulseInput{p, p1}
+	m.mockExpectations = &NetworkCoordinatorMockSetPulseParams{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of NetworkCoordinator.SetPulse
+//Return sets up a mock for NetworkCoordinator.SetPulse to return Return's arguments
 func (m *mNetworkCoordinatorMockSetPulse) Return(r error) *NetworkCoordinatorMock {
-	m.mock.SetPulseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockSetPulseExpectation{}
+	m.mock.SetPulseFunc = func(p context.Context, p1 core.Pulse) error {
+		return r
 	}
-	m.mainExpectation.result = &NetworkCoordinatorMockSetPulseResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NetworkCoordinator.SetPulse is expected once
-func (m *mNetworkCoordinatorMockSetPulse) ExpectOnce(p context.Context, p1 core.Pulse) *NetworkCoordinatorMockSetPulseExpectation {
-	m.mock.SetPulseFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NetworkCoordinatorMockSetPulseExpectation{}
-	expectation.input = &NetworkCoordinatorMockSetPulseInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NetworkCoordinatorMockSetPulseExpectation) Return(r error) {
-	e.result = &NetworkCoordinatorMockSetPulseResult{r}
 }
 
 //Set uses given function f as a mock of NetworkCoordinator.SetPulse method
 func (m *mNetworkCoordinatorMockSetPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *NetworkCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.SetPulseFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //SetPulse implements github.com/insolar/insolar/core.NetworkCoordinator interface
 func (m *NetworkCoordinatorMock) SetPulse(p context.Context, p1 core.Pulse) (r error) {
-	counter := atomic.AddUint64(&m.SetPulsePreCounter, 1)
+	atomic.AddUint64(&m.SetPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SetPulseCounter, 1)
 
-	if len(m.SetPulseMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetPulseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.SetPulse. %v %v", p, p1)
+	if m.SetPulseMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.SetPulseMock.mockExpectations, NetworkCoordinatorMockSetPulseParams{p, p1},
+			"NetworkCoordinator.SetPulse got unexpected parameters")
+
+		if m.SetPulseFunc == nil {
+
+			m.t.Fatal("No results are set for the NetworkCoordinatorMock.SetPulse")
+
 			return
 		}
-
-		input := m.SetPulseMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkCoordinatorMockSetPulseInput{p, p1}, "NetworkCoordinator.SetPulse got unexpected parameters")
-
-		result := m.SetPulseMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.SetPulse")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetPulseMock.mainExpectation != nil {
-
-		input := m.SetPulseMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkCoordinatorMockSetPulseInput{p, p1}, "NetworkCoordinator.SetPulse got unexpected parameters")
-		}
-
-		result := m.SetPulseMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.SetPulse")
-		}
-
-		r = result.r
-
-		return
 	}
 
 	if m.SetPulseFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.SetPulse. %v %v", p, p1)
+		m.t.Fatal("Unexpected call to NetworkCoordinatorMock.SetPulse")
 		return
 	}
 
@@ -336,141 +191,57 @@ func (m *NetworkCoordinatorMock) SetPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetPulsePreCounter)
 }
 
-//SetPulseFinished returns true if mock invocations count is ok
-func (m *NetworkCoordinatorMock) SetPulseFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetPulseMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetPulseCounter) == uint64(len(m.SetPulseMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetPulseMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetPulseCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetPulseFunc != nil {
-		return atomic.LoadUint64(&m.SetPulseCounter) > 0
-	}
-
-	return true
-}
-
 type mNetworkCoordinatorMockValidateCert struct {
-	mock              *NetworkCoordinatorMock
-	mainExpectation   *NetworkCoordinatorMockValidateCertExpectation
-	expectationSeries []*NetworkCoordinatorMockValidateCertExpectation
+	mock             *NetworkCoordinatorMock
+	mockExpectations *NetworkCoordinatorMockValidateCertParams
 }
 
-type NetworkCoordinatorMockValidateCertExpectation struct {
-	input  *NetworkCoordinatorMockValidateCertInput
-	result *NetworkCoordinatorMockValidateCertResult
-}
-
-type NetworkCoordinatorMockValidateCertInput struct {
+//NetworkCoordinatorMockValidateCertParams represents input parameters of the NetworkCoordinator.ValidateCert
+type NetworkCoordinatorMockValidateCertParams struct {
 	p  context.Context
 	p1 core.AuthorizationCertificate
 }
 
-type NetworkCoordinatorMockValidateCertResult struct {
-	r  bool
-	r1 error
-}
-
-//Expect specifies that invocation of NetworkCoordinator.ValidateCert is expected from 1 to Infinity times
+//Expect sets up expected params for the NetworkCoordinator.ValidateCert
 func (m *mNetworkCoordinatorMockValidateCert) Expect(p context.Context, p1 core.AuthorizationCertificate) *mNetworkCoordinatorMockValidateCert {
-	m.mock.ValidateCertFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockValidateCertExpectation{}
-	}
-	m.mainExpectation.input = &NetworkCoordinatorMockValidateCertInput{p, p1}
+	m.mockExpectations = &NetworkCoordinatorMockValidateCertParams{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of NetworkCoordinator.ValidateCert
+//Return sets up a mock for NetworkCoordinator.ValidateCert to return Return's arguments
 func (m *mNetworkCoordinatorMockValidateCert) Return(r bool, r1 error) *NetworkCoordinatorMock {
-	m.mock.ValidateCertFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockValidateCertExpectation{}
+	m.mock.ValidateCertFunc = func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &NetworkCoordinatorMockValidateCertResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NetworkCoordinator.ValidateCert is expected once
-func (m *mNetworkCoordinatorMockValidateCert) ExpectOnce(p context.Context, p1 core.AuthorizationCertificate) *NetworkCoordinatorMockValidateCertExpectation {
-	m.mock.ValidateCertFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NetworkCoordinatorMockValidateCertExpectation{}
-	expectation.input = &NetworkCoordinatorMockValidateCertInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NetworkCoordinatorMockValidateCertExpectation) Return(r bool, r1 error) {
-	e.result = &NetworkCoordinatorMockValidateCertResult{r, r1}
 }
 
 //Set uses given function f as a mock of NetworkCoordinator.ValidateCert method
 func (m *mNetworkCoordinatorMockValidateCert) Set(f func(p context.Context, p1 core.AuthorizationCertificate) (r bool, r1 error)) *NetworkCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.ValidateCertFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //ValidateCert implements github.com/insolar/insolar/core.NetworkCoordinator interface
 func (m *NetworkCoordinatorMock) ValidateCert(p context.Context, p1 core.AuthorizationCertificate) (r bool, r1 error) {
-	counter := atomic.AddUint64(&m.ValidateCertPreCounter, 1)
+	atomic.AddUint64(&m.ValidateCertPreCounter, 1)
 	defer atomic.AddUint64(&m.ValidateCertCounter, 1)
 
-	if len(m.ValidateCertMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ValidateCertMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.ValidateCert. %v %v", p, p1)
+	if m.ValidateCertMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.ValidateCertMock.mockExpectations, NetworkCoordinatorMockValidateCertParams{p, p1},
+			"NetworkCoordinator.ValidateCert got unexpected parameters")
+
+		if m.ValidateCertFunc == nil {
+
+			m.t.Fatal("No results are set for the NetworkCoordinatorMock.ValidateCert")
+
 			return
 		}
-
-		input := m.ValidateCertMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkCoordinatorMockValidateCertInput{p, p1}, "NetworkCoordinator.ValidateCert got unexpected parameters")
-
-		result := m.ValidateCertMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.ValidateCert")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ValidateCertMock.mainExpectation != nil {
-
-		input := m.ValidateCertMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkCoordinatorMockValidateCertInput{p, p1}, "NetworkCoordinator.ValidateCert got unexpected parameters")
-		}
-
-		result := m.ValidateCertMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.ValidateCert")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.ValidateCertFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.ValidateCert. %v %v", p, p1)
+		m.t.Fatal("Unexpected call to NetworkCoordinatorMock.ValidateCert")
 		return
 	}
 
@@ -487,139 +258,58 @@ func (m *NetworkCoordinatorMock) ValidateCertMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ValidateCertPreCounter)
 }
 
-//ValidateCertFinished returns true if mock invocations count is ok
-func (m *NetworkCoordinatorMock) ValidateCertFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ValidateCertMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ValidateCertCounter) == uint64(len(m.ValidateCertMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ValidateCertMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ValidateCertCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ValidateCertFunc != nil {
-		return atomic.LoadUint64(&m.ValidateCertCounter) > 0
-	}
-
-	return true
-}
-
 type mNetworkCoordinatorMockWriteActiveNodes struct {
-	mock              *NetworkCoordinatorMock
-	mainExpectation   *NetworkCoordinatorMockWriteActiveNodesExpectation
-	expectationSeries []*NetworkCoordinatorMockWriteActiveNodesExpectation
+	mock             *NetworkCoordinatorMock
+	mockExpectations *NetworkCoordinatorMockWriteActiveNodesParams
 }
 
-type NetworkCoordinatorMockWriteActiveNodesExpectation struct {
-	input  *NetworkCoordinatorMockWriteActiveNodesInput
-	result *NetworkCoordinatorMockWriteActiveNodesResult
-}
-
-type NetworkCoordinatorMockWriteActiveNodesInput struct {
+//NetworkCoordinatorMockWriteActiveNodesParams represents input parameters of the NetworkCoordinator.WriteActiveNodes
+type NetworkCoordinatorMockWriteActiveNodesParams struct {
 	p  context.Context
 	p1 core.PulseNumber
 	p2 []core.Node
 }
 
-type NetworkCoordinatorMockWriteActiveNodesResult struct {
-	r error
-}
-
-//Expect specifies that invocation of NetworkCoordinator.WriteActiveNodes is expected from 1 to Infinity times
+//Expect sets up expected params for the NetworkCoordinator.WriteActiveNodes
 func (m *mNetworkCoordinatorMockWriteActiveNodes) Expect(p context.Context, p1 core.PulseNumber, p2 []core.Node) *mNetworkCoordinatorMockWriteActiveNodes {
-	m.mock.WriteActiveNodesFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockWriteActiveNodesExpectation{}
-	}
-	m.mainExpectation.input = &NetworkCoordinatorMockWriteActiveNodesInput{p, p1, p2}
+	m.mockExpectations = &NetworkCoordinatorMockWriteActiveNodesParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of NetworkCoordinator.WriteActiveNodes
+//Return sets up a mock for NetworkCoordinator.WriteActiveNodes to return Return's arguments
 func (m *mNetworkCoordinatorMockWriteActiveNodes) Return(r error) *NetworkCoordinatorMock {
-	m.mock.WriteActiveNodesFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockWriteActiveNodesExpectation{}
+	m.mock.WriteActiveNodesFunc = func(p context.Context, p1 core.PulseNumber, p2 []core.Node) error {
+		return r
 	}
-	m.mainExpectation.result = &NetworkCoordinatorMockWriteActiveNodesResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NetworkCoordinator.WriteActiveNodes is expected once
-func (m *mNetworkCoordinatorMockWriteActiveNodes) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 []core.Node) *NetworkCoordinatorMockWriteActiveNodesExpectation {
-	m.mock.WriteActiveNodesFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NetworkCoordinatorMockWriteActiveNodesExpectation{}
-	expectation.input = &NetworkCoordinatorMockWriteActiveNodesInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NetworkCoordinatorMockWriteActiveNodesExpectation) Return(r error) {
-	e.result = &NetworkCoordinatorMockWriteActiveNodesResult{r}
 }
 
 //Set uses given function f as a mock of NetworkCoordinator.WriteActiveNodes method
 func (m *mNetworkCoordinatorMockWriteActiveNodes) Set(f func(p context.Context, p1 core.PulseNumber, p2 []core.Node) (r error)) *NetworkCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.WriteActiveNodesFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //WriteActiveNodes implements github.com/insolar/insolar/core.NetworkCoordinator interface
 func (m *NetworkCoordinatorMock) WriteActiveNodes(p context.Context, p1 core.PulseNumber, p2 []core.Node) (r error) {
-	counter := atomic.AddUint64(&m.WriteActiveNodesPreCounter, 1)
+	atomic.AddUint64(&m.WriteActiveNodesPreCounter, 1)
 	defer atomic.AddUint64(&m.WriteActiveNodesCounter, 1)
 
-	if len(m.WriteActiveNodesMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.WriteActiveNodesMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.WriteActiveNodes. %v %v %v", p, p1, p2)
+	if m.WriteActiveNodesMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.WriteActiveNodesMock.mockExpectations, NetworkCoordinatorMockWriteActiveNodesParams{p, p1, p2},
+			"NetworkCoordinator.WriteActiveNodes got unexpected parameters")
+
+		if m.WriteActiveNodesFunc == nil {
+
+			m.t.Fatal("No results are set for the NetworkCoordinatorMock.WriteActiveNodes")
+
 			return
 		}
-
-		input := m.WriteActiveNodesMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkCoordinatorMockWriteActiveNodesInput{p, p1, p2}, "NetworkCoordinator.WriteActiveNodes got unexpected parameters")
-
-		result := m.WriteActiveNodesMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.WriteActiveNodes")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WriteActiveNodesMock.mainExpectation != nil {
-
-		input := m.WriteActiveNodesMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkCoordinatorMockWriteActiveNodesInput{p, p1, p2}, "NetworkCoordinator.WriteActiveNodes got unexpected parameters")
-		}
-
-		result := m.WriteActiveNodesMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.WriteActiveNodes")
-		}
-
-		r = result.r
-
-		return
 	}
 
 	if m.WriteActiveNodesFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.WriteActiveNodes. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to NetworkCoordinatorMock.WriteActiveNodes")
 		return
 	}
 
@@ -636,43 +326,23 @@ func (m *NetworkCoordinatorMock) WriteActiveNodesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.WriteActiveNodesPreCounter)
 }
 
-//WriteActiveNodesFinished returns true if mock invocations count is ok
-func (m *NetworkCoordinatorMock) WriteActiveNodesFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.WriteActiveNodesMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.WriteActiveNodesCounter) == uint64(len(m.WriteActiveNodesMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.WriteActiveNodesMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.WriteActiveNodesCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.WriteActiveNodesFunc != nil {
-		return atomic.LoadUint64(&m.WriteActiveNodesCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NetworkCoordinatorMock) ValidateCallCounters() {
 
-	if !m.GetCertFinished() {
+	if m.GetCertFunc != nil && atomic.LoadUint64(&m.GetCertCounter) == 0 {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.GetCert")
 	}
 
-	if !m.SetPulseFinished() {
+	if m.SetPulseFunc != nil && atomic.LoadUint64(&m.SetPulseCounter) == 0 {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.SetPulse")
 	}
 
-	if !m.ValidateCertFinished() {
+	if m.ValidateCertFunc != nil && atomic.LoadUint64(&m.ValidateCertCounter) == 0 {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.ValidateCert")
 	}
 
-	if !m.WriteActiveNodesFinished() {
+	if m.WriteActiveNodesFunc != nil && atomic.LoadUint64(&m.WriteActiveNodesCounter) == 0 {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.WriteActiveNodes")
 	}
 
@@ -693,19 +363,19 @@ func (m *NetworkCoordinatorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *NetworkCoordinatorMock) MinimockFinish() {
 
-	if !m.GetCertFinished() {
+	if m.GetCertFunc != nil && atomic.LoadUint64(&m.GetCertCounter) == 0 {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.GetCert")
 	}
 
-	if !m.SetPulseFinished() {
+	if m.SetPulseFunc != nil && atomic.LoadUint64(&m.SetPulseCounter) == 0 {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.SetPulse")
 	}
 
-	if !m.ValidateCertFinished() {
+	if m.ValidateCertFunc != nil && atomic.LoadUint64(&m.ValidateCertCounter) == 0 {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.ValidateCert")
 	}
 
-	if !m.WriteActiveNodesFinished() {
+	if m.WriteActiveNodesFunc != nil && atomic.LoadUint64(&m.WriteActiveNodesCounter) == 0 {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.WriteActiveNodes")
 	}
 
@@ -723,10 +393,10 @@ func (m *NetworkCoordinatorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.GetCertFinished()
-		ok = ok && m.SetPulseFinished()
-		ok = ok && m.ValidateCertFinished()
-		ok = ok && m.WriteActiveNodesFinished()
+		ok = ok && (m.GetCertFunc == nil || atomic.LoadUint64(&m.GetCertCounter) > 0)
+		ok = ok && (m.SetPulseFunc == nil || atomic.LoadUint64(&m.SetPulseCounter) > 0)
+		ok = ok && (m.ValidateCertFunc == nil || atomic.LoadUint64(&m.ValidateCertCounter) > 0)
+		ok = ok && (m.WriteActiveNodesFunc == nil || atomic.LoadUint64(&m.WriteActiveNodesCounter) > 0)
 
 		if ok {
 			return
@@ -735,19 +405,19 @@ func (m *NetworkCoordinatorMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.GetCertFinished() {
+			if m.GetCertFunc != nil && atomic.LoadUint64(&m.GetCertCounter) == 0 {
 				m.t.Error("Expected call to NetworkCoordinatorMock.GetCert")
 			}
 
-			if !m.SetPulseFinished() {
+			if m.SetPulseFunc != nil && atomic.LoadUint64(&m.SetPulseCounter) == 0 {
 				m.t.Error("Expected call to NetworkCoordinatorMock.SetPulse")
 			}
 
-			if !m.ValidateCertFinished() {
+			if m.ValidateCertFunc != nil && atomic.LoadUint64(&m.ValidateCertCounter) == 0 {
 				m.t.Error("Expected call to NetworkCoordinatorMock.ValidateCert")
 			}
 
-			if !m.WriteActiveNodesFinished() {
+			if m.WriteActiveNodesFunc != nil && atomic.LoadUint64(&m.WriteActiveNodesCounter) == 0 {
 				m.t.Error("Expected call to NetworkCoordinatorMock.WriteActiveNodes")
 			}
 
@@ -763,19 +433,19 @@ func (m *NetworkCoordinatorMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *NetworkCoordinatorMock) AllMocksCalled() bool {
 
-	if !m.GetCertFinished() {
+	if m.GetCertFunc != nil && atomic.LoadUint64(&m.GetCertCounter) == 0 {
 		return false
 	}
 
-	if !m.SetPulseFinished() {
+	if m.SetPulseFunc != nil && atomic.LoadUint64(&m.SetPulseCounter) == 0 {
 		return false
 	}
 
-	if !m.ValidateCertFinished() {
+	if m.ValidateCertFunc != nil && atomic.LoadUint64(&m.ValidateCertCounter) == 0 {
 		return false
 	}
 
-	if !m.WriteActiveNodesFinished() {
+	if m.WriteActiveNodesFunc != nil && atomic.LoadUint64(&m.WriteActiveNodesCounter) == 0 {
 		return false
 	}
 
