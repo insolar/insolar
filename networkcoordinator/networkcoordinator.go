@@ -18,7 +18,6 @@ package networkcoordinator
 
 import (
 	"context"
-	"encoding/gob"
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/certificate"
@@ -48,8 +47,6 @@ func New() (*NetworkCoordinator, error) {
 
 // Init implements interface of Component
 func (nc *NetworkCoordinator) Init(ctx context.Context) error {
-	gob.Register(&message.NodeSignPayload{})
-
 	nc.zeroCoordinator = newZeroNetworkCoordinator()
 	nc.realCoordinator = newRealNetworkCoordinator()
 	return nil

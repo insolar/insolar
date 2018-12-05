@@ -24,7 +24,7 @@ DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 stop_listening()
 {
     stop_insgorund=$1
-    ports="53835 53837 53839 38181"
+    ports="53835 53837 53839"
     if [ "$stop_insgorund" == "true" ]
     then
         ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
@@ -121,7 +121,7 @@ usage()
     echo "possible options: "
     echo -e "\t-h - show help"
     echo -e "\t-n - don't run insgorund"
-    echo -e "\t-g - generate initial ledger"
+    echo -e "\t-g - preventively generate initial ledger"
     echo -e "\t-l - clear all and exit"
 }
 

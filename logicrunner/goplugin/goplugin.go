@@ -120,13 +120,13 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 			if err != rpc.ErrShutdown {
 				break
 			} else {
-				log.Infof("Connection to insgorund is closed, need to reconnect")
+				inslogger.FromContext(ctx).Debug("Connection to insgorund is closed, need to reconnect")
 				gp.CloseDownstream()
-				log.Infof(("Reconnecting..."))
+				inslogger.FromContext(ctx).Debugf(("Reconnecting..."))
 			}
 		} else {
-			log.Infof(("Can't connect to to insgorund, err: $+v"), err)
-			log.Infof(("Reconnecting..."))
+			inslogger.FromContext(ctx).Debugf(("Can't connect to to insgorund, err: $+v"), err)
+			inslogger.FromContext(ctx).Debugf(("Reconnecting..."))
 		}
 	}
 
