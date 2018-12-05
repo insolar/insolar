@@ -22,6 +22,9 @@ import (
 	"encoding/gob"
 	"io"
 
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
+
 	"github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
@@ -147,4 +150,50 @@ func (t *storageTape) SetReply(ctx context.Context, msgHash []byte, rep core.Rep
 func (t *storageTape) setReplyBinary(ctx context.Context, msgHash []byte, rep []byte) error {
 	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
 	return t.ls.Set(ctx, t.pulse, key, rep)
+}
+
+// memoryTape saves and fetches message replies to/from memory array.
+//
+// It uses <storageTape id> + <message hash> for Value keys.
+type memoryTape struct {
+	pulse   core.PulseNumber
+	storage []message
+}
+
+type message struct {
+	mesasgeSig []byte
+	reply      interface{}
+}
+
+func NewMemorytape(pulse core.PulseNumber) memoryTape {
+	return memoryTape{
+		pulse: pulse,
+	}
+}
+
+func NewMemoryTapeFromReader(ctx context.Context, r io.Reader) (*memoryTape, error) {
+	t := memoryTape{}
+	ch := new(codec.CborHandle)
+	decoder := codec.NewDecoder(r, ch)
+	err := decoder.Decode(&t.pulse)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MemoryTape ] can't read pulse")
+	}
+	err = decoder.Decode(&t.storage)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MemoryTape ] can't read storage")
+	}
+	return &t, nil
+}
+
+func (t *memoryTape) Write(ctx context.Context, writer io.Writer) error {
+	panic("implement me")
+}
+
+func (t *memoryTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
+	panic("implement me")
+}
+
+func (t *memoryTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
+	panic("implement me")
 }
