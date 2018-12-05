@@ -9,12 +9,14 @@ CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
 INSGORUND_LISTEN_PORT=18181
 INSGORUND_RPS_PORT=18182
+INSGOLAR_METRICS_PORT=9090
+INSGORUND_METRICS_PORT=9091
 CONFIGS_DIR=configs
 ROOT_MEMBER_KEYS_FILE=scripts/insolard/$CONFIGS_DIR/root_member_keys.json
 
 stop_listening()
 {
-    ports="19191 $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 8090 8080"
+    ports="19191 $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 8090 8080 $INSGOLAR_METRICS_PORT $INSGORUND_METRICS_PORT"
     if [ "$1" != "" ]
     then
         ports=$@
@@ -115,7 +117,7 @@ process_input_params()
 run_insgorund()
 {
     host=127.0.0.1
-    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT
+    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT --metrics $host:$INSGORUND_METRICS_PORT
 }
 
 trap stop_listening EXIT
