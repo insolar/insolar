@@ -24,7 +24,7 @@ import (
 )
 
 // SelectByEntropy selects value from list based on provided crypto scheme and entropy data.
-// Beware: requres sorted values for deterministicaly selection!
+// Beware: requires sorted values for deterministic selection!
 func SelectByEntropy(
 	scheme core.PlatformCryptographyScheme,
 	entropy []byte,
@@ -39,24 +39,36 @@ func SelectByEntropy(
 		return values, nil
 	}
 
+	// prepare buffers and objects before selection loop
 	h := scheme.ReferenceHasher()
-	if _, err := h.Write(entropy); err != nil {
-		panic(err)
-	}
-
-	countVarintBuf := make([]byte, binary.MaxVarintLen64)
-	hashUint64Buf := make([]byte, 8)
 
 	selected := make([]interface{}, count)
 	indexes := make([]int, len(values))
 	for i := 0; i < len(values); i++ {
 		indexes[i] = i
 	}
+
+	countVarintBuf := make([]byte, binary.MaxVarintLen64)
+	hashUint64Buf := make([]byte, 8)
+
+	entopylen := len(entropy)
+	hashbytes := make([]byte, 0, entopylen+len(countVarintBuf))
+	hashbytes = append(hashbytes, entropy...)
+
 	ucount := uint64(count)
 	for i := uint64(0); i < ucount; i++ {
+		// reset state
+		hashbytes = hashbytes[:entopylen]
+		h.Reset()
+
 		// put i-step as hash input (convert to variadic uint)
 		binary.PutUvarint(countVarintBuf, i)
-		hsum := h.Sum(countVarintBuf)
+		hashbytes = append(hashbytes, countVarintBuf...)
+		_, err := h.Write(hashbytes)
+		if err != nil {
+			return nil, err
+		}
+		hsum := h.Sum(nil)
 
 		// convert first hash bytes to uint64
 		copy(hashUint64Buf, hsum)
