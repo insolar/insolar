@@ -165,8 +165,8 @@ type memoryTapeMessage struct {
 	reply   core.Reply
 }
 
-func NewMemorytape(pulse core.PulseNumber) memoryTape {
-	return memoryTape{
+func NewMemorytape(pulse core.PulseNumber) *memoryTape {
+	return &memoryTape{
 		pulse: pulse,
 	}
 }
