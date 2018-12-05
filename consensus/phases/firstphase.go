@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -66,7 +67,11 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
-		err = packet.AddClaim(fp.NodeKeeper.GetOriginClaim())
+		originClaim, err := fp.NodeKeeper.GetOriginClaim()
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Execute ] Failed to get origin claim")
+		}
+		err = packet.AddClaim(originClaim)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Execute ] Failed to add origin claim in Phase1Packet.")
 		}
@@ -99,7 +104,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 			},
 			StateHash: rawProof.StateHash(),
 		}
-		claimMap[ref] = packet.GetClaims()
+		claimMap[ref] = fp.getSignedClaims(packet.GetClaims())
 	}
 
 	if fp.NodeKeeper.GetState() == network.Waiting {
@@ -167,6 +172,39 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 
 func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
 	return 0, errors.New("not implemented")
+}
+
+func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+	result := make([]packets.ReferendumClaim, 0)
+	for _, claim := range claims {
+		joinClaim, ok := claim.(*packets.NodeJoinClaim)
+		if ok {
+			signConfirmed, err := fp.claimSignIsOk(joinClaim)
+			if err != nil {
+				log.Error("[ getSignedClaims ] failed to check a claim sign")
+				continue
+			}
+			if !signConfirmed {
+				log.Error("[ getSginedClaims ] sign is unconfirmed")
+				continue
+			}
+		}
+		result = append(result, claim)
+	}
+	return result
+}
+
+func (fp *FirstPhase) claimSignIsOk(claim *packets.NodeJoinClaim) (bool, error) {
+	keyProc := platformpolicy.NewKeyProcessor()
+	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
+	if err != nil {
+		return false, errors.Wrap(err, "[ claimSignIsOk ] failed to import a key")
+	}
+	rawClaim, err := claim.SerializeWithoutSign()
+	if err != nil {
+		return false, errors.Wrap(err, "[ claimSignIsOk ] failed to serialize a claim")
+	}
+	return fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.Signature[:]), rawClaim), nil
 }
 
 func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim, addressMap map[core.RecordRef]string) {
