@@ -194,7 +194,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.routingTable.Inject(n.NodeKeeper)
 
 	log.Infoln("Bootstrapping network...")
-	err := n.controller.Bootstrap(ctx)
+	err = n.controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
