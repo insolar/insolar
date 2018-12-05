@@ -68,7 +68,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 //
 // Player can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageBus, error) {
-	tape, err := NewMemoryTapeFromReader(ctx, r)
+	tape, err := newMemoryTapeFromReader(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) 
 	if err != nil {
 		return nil, err
 	}
-	tape := NewMemorytape(pulse.PulseNumber)
+	tape := newMemoryTape(pulse.PulseNumber)
 	rec := newRecorder(mb, tape, mb.PulseManager, mb.PlatformCryptographyScheme)
 	return rec, nil
 }

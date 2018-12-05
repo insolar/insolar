@@ -55,8 +55,8 @@ type couple struct {
 	Value []byte
 }
 
-// NewStorageTape creates new storageTape with random id.
-func NewStorageTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
+// newStorageTape creates new storageTape with random id.
+func newStorageTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
@@ -64,10 +64,10 @@ func NewStorageTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape,
 	return &storageTape{ls: ls, pulse: pulse, id: id}, nil
 }
 
-// NewStorageTapeFromReader creates and fills a new storageTape from a stream.
+// newStorageTapeFromReader creates and fills a new storageTape from a stream.
 //
 // This is a very long operation, as it saves replies in storage until the stream is exhausted.
-func NewStorageTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storageTape, error) {
+func newStorageTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storageTape, error) {
 	var err error
 	tape := storageTape{ls: ls}
 
@@ -165,13 +165,13 @@ type memoryTapeMessage struct {
 	reply   core.Reply
 }
 
-func NewMemorytape(pulse core.PulseNumber) *memoryTape {
+func newMemoryTape(pulse core.PulseNumber) *memoryTape {
 	return &memoryTape{
 		pulse: pulse,
 	}
 }
 
-func NewMemoryTapeFromReader(ctx context.Context, r io.Reader) (*memoryTape, error) {
+func newMemoryTapeFromReader(ctx context.Context, r io.Reader) (*memoryTape, error) {
 	t := memoryTape{}
 	ch := new(codec.CborHandle)
 	decoder := codec.NewDecoder(r, ch)
