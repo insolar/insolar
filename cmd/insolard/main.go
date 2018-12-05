@@ -120,7 +120,7 @@ func main() {
 	}
 
 	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
-	cert := initCertificate(
+	certManager := initCertificateManager(
 		ctx,
 		*cfg,
 		params.isGenesis,
@@ -128,9 +128,9 @@ func main() {
 		bootstrapComponents.KeyProcessor,
 	)
 
-	if !params.isGenesis {
-		mergeConfigAndCertificate(ctx, cfg, cert)
-	}
+	// if !params.isGenesis {
+	// 	mergeConfigAndCertificate(ctx, cfg, cert)
+	// }
 	cfg.Metrics.Namespace = "insolard"
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
@@ -150,7 +150,7 @@ func main() {
 		bootstrapComponents.PlatformCryptographyScheme,
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
-		cert,
+		certManager,
 		params.isGenesis,
 		params.genesisConfigPath,
 		params.genesisKeyOut,
