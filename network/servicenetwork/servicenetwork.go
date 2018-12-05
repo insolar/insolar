@@ -121,6 +121,7 @@ func incrementPort(address string) (string, error) {
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
+
 	n.PhaseManager = phases.NewPhaseManager()
 	n.MerkleCalculator = merkle.NewCalculator()
 	n.Communicator = phases.NewNaiveCommunicator()
@@ -129,6 +130,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	firstPhase := &phases.FirstPhase{}
 	secondPhase := &phases.SecondPhase{}
 	thirdPhase := &phases.ThirdPhase{}
+
 	// inject workaround
 	n.PhaseManager.(*phases.Phases).FirstPhase = firstPhase
 	n.PhaseManager.(*phases.Phases).SecondPhase = secondPhase
@@ -165,9 +167,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.MerkleCalculator,
 		n.ConsensusNetwork,
 		n.Communicator,
-		n.PhaseManager.(*phases.Phases).FirstPhase,
-		n.PhaseManager.(*phases.Phases).SecondPhase,
-		n.PhaseManager.(*phases.Phases).ThirdPhase,
+		firstPhase,
+		secondPhase,
+		thirdPhase,
 	)
 
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
