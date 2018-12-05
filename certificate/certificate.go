@@ -32,6 +32,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+type CertificateManager struct {
+	CS          core.CryptographyService `inject:"" json:"-"`
+	certificate core.Certificate
+}
+
+// GetCertificate returns current node certificate
+func (m *CertificateManager) GetCertificate() core.Certificate {
+	return m.certificate
+}
+
 // AuthorizationCertificate holds info about node from it certificate
 type AuthorizationCertificate struct {
 	PublicKey         string          `json:"public_key"`
@@ -101,8 +111,7 @@ func (authCert *AuthorizationCertificate) SignNodePart(key crypto.PrivateKey) ([
 // Certificate holds info about certificate
 type Certificate struct {
 	AuthorizationCertificate
-	CS           core.CryptographyService `inject:"" json:"-"`
-	MajorityRule int                      `json:"majority_rule"`
+	MajorityRule int `json:"majority_rule"`
 	MinRoles     struct {
 		Virtual       uint `json:"virtual"`
 		HeavyMaterial uint `json:"heavy_material"`
@@ -329,7 +338,8 @@ func Serialize(authCert core.AuthorizationCertificate) ([]byte, error) {
 	return data, nil
 }
 
-func (cert *Certificate) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
+func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
+	cert := m.GetCertificate()
 	discoveryNodes := cert.GetDiscoveryNodes()
 	if len(discoveryNodes) != len(authCert.GetDiscoveryNodes()) {
 		return false, nil
@@ -337,7 +347,7 @@ func (cert *Certificate) VerifyAuthorizationCertificate(authCert core.Authorizat
 	data := authCert.SerializeNodePart()
 	for _, node := range discoveryNodes {
 		sign := authCert.GetDiscoverySign(node.GetNodeRef())
-		ok := cert.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sign), data)
+		ok := m.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sign), data)
 		if !ok {
 			return false, nil
 		}
