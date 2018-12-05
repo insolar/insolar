@@ -28,11 +28,6 @@ type DiscoveryNodeMock struct {
 	GetNodeRefPreCounter uint64
 	GetNodeRefMock       mDiscoveryNodeMockGetNodeRef
 
-	GetNodeSignFunc       func() (r []byte)
-	GetNodeSignCounter    uint64
-	GetNodeSignPreCounter uint64
-	GetNodeSignMock       mDiscoveryNodeMockGetNodeSign
-
 	GetPublicKeyFunc       func() (r crypto.PublicKey)
 	GetPublicKeyCounter    uint64
 	GetPublicKeyPreCounter uint64
@@ -49,7 +44,6 @@ func NewDiscoveryNodeMock(t minimock.Tester) *DiscoveryNodeMock {
 
 	m.GetHostMock = mDiscoveryNodeMockGetHost{mock: m}
 	m.GetNodeRefMock = mDiscoveryNodeMockGetNodeRef{mock: m}
-	m.GetNodeSignMock = mDiscoveryNodeMockGetNodeSign{mock: m}
 	m.GetPublicKeyMock = mDiscoveryNodeMockGetPublicKey{mock: m}
 
 	return m
@@ -323,140 +317,6 @@ func (m *DiscoveryNodeMock) GetNodeRefFinished() bool {
 	return true
 }
 
-type mDiscoveryNodeMockGetNodeSign struct {
-	mock              *DiscoveryNodeMock
-	mainExpectation   *DiscoveryNodeMockGetNodeSignExpectation
-	expectationSeries []*DiscoveryNodeMockGetNodeSignExpectation
-}
-
-type DiscoveryNodeMockGetNodeSignExpectation struct {
-	result *DiscoveryNodeMockGetNodeSignResult
-}
-
-type DiscoveryNodeMockGetNodeSignResult struct {
-	r []byte
-}
-
-//Expect specifies that invocation of DiscoveryNode.GetNodeSign is expected from 1 to Infinity times
-func (m *mDiscoveryNodeMockGetNodeSign) Expect() *mDiscoveryNodeMockGetNodeSign {
-	m.mock.GetNodeSignFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DiscoveryNodeMockGetNodeSignExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of DiscoveryNode.GetNodeSign
-func (m *mDiscoveryNodeMockGetNodeSign) Return(r []byte) *DiscoveryNodeMock {
-	m.mock.GetNodeSignFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DiscoveryNodeMockGetNodeSignExpectation{}
-	}
-	m.mainExpectation.result = &DiscoveryNodeMockGetNodeSignResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of DiscoveryNode.GetNodeSign is expected once
-func (m *mDiscoveryNodeMockGetNodeSign) ExpectOnce() *DiscoveryNodeMockGetNodeSignExpectation {
-	m.mock.GetNodeSignFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &DiscoveryNodeMockGetNodeSignExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *DiscoveryNodeMockGetNodeSignExpectation) Return(r []byte) {
-	e.result = &DiscoveryNodeMockGetNodeSignResult{r}
-}
-
-//Set uses given function f as a mock of DiscoveryNode.GetNodeSign method
-func (m *mDiscoveryNodeMockGetNodeSign) Set(f func() (r []byte)) *DiscoveryNodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodeSignFunc = f
-	return m.mock
-}
-
-//GetNodeSign implements github.com/insolar/insolar/core.DiscoveryNode interface
-func (m *DiscoveryNodeMock) GetNodeSign() (r []byte) {
-	counter := atomic.AddUint64(&m.GetNodeSignPreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodeSignCounter, 1)
-
-	if len(m.GetNodeSignMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodeSignMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetNodeSign.")
-			return
-		}
-
-		result := m.GetNodeSignMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetNodeSign")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeSignMock.mainExpectation != nil {
-
-		result := m.GetNodeSignMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetNodeSign")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeSignFunc == nil {
-		m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetNodeSign.")
-		return
-	}
-
-	return m.GetNodeSignFunc()
-}
-
-//GetNodeSignMinimockCounter returns a count of DiscoveryNodeMock.GetNodeSignFunc invocations
-func (m *DiscoveryNodeMock) GetNodeSignMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeSignCounter)
-}
-
-//GetNodeSignMinimockPreCounter returns the value of DiscoveryNodeMock.GetNodeSign invocations
-func (m *DiscoveryNodeMock) GetNodeSignMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeSignPreCounter)
-}
-
-//GetNodeSignFinished returns true if mock invocations count is ok
-func (m *DiscoveryNodeMock) GetNodeSignFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodeSignMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodeSignCounter) == uint64(len(m.GetNodeSignMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodeSignMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodeSignCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodeSignFunc != nil {
-		return atomic.LoadUint64(&m.GetNodeSignCounter) > 0
-	}
-
-	return true
-}
-
 type mDiscoveryNodeMockGetPublicKey struct {
 	mock              *DiscoveryNodeMock
 	mainExpectation   *DiscoveryNodeMockGetPublicKeyExpectation
@@ -603,10 +463,6 @@ func (m *DiscoveryNodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetNodeRef")
 	}
 
-	if !m.GetNodeSignFinished() {
-		m.t.Fatal("Expected call to DiscoveryNodeMock.GetNodeSign")
-	}
-
 	if !m.GetPublicKeyFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetPublicKey")
 	}
@@ -636,10 +492,6 @@ func (m *DiscoveryNodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetNodeRef")
 	}
 
-	if !m.GetNodeSignFinished() {
-		m.t.Fatal("Expected call to DiscoveryNodeMock.GetNodeSign")
-	}
-
 	if !m.GetPublicKeyFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetPublicKey")
 	}
@@ -660,7 +512,6 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.GetHostFinished()
 		ok = ok && m.GetNodeRefFinished()
-		ok = ok && m.GetNodeSignFinished()
 		ok = ok && m.GetPublicKeyFinished()
 
 		if ok {
@@ -676,10 +527,6 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetNodeRefFinished() {
 				m.t.Error("Expected call to DiscoveryNodeMock.GetNodeRef")
-			}
-
-			if !m.GetNodeSignFinished() {
-				m.t.Error("Expected call to DiscoveryNodeMock.GetNodeSign")
 			}
 
 			if !m.GetPublicKeyFinished() {
@@ -703,10 +550,6 @@ func (m *DiscoveryNodeMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetNodeRefFinished() {
-		return false
-	}
-
-	if !m.GetNodeSignFinished() {
 		return false
 	}
 
