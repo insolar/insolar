@@ -20,7 +20,9 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 )
@@ -31,6 +33,8 @@ type NetworkCoordinator struct {
 	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
 	ContractRequester   core.ContractRequester   `inject:""`
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
+	Bus                 core.MessageBus          `inject:""`
+	CS                  core.CryptographyService `inject:""`
 
 	realCoordinator core.NetworkCoordinator
 	zeroCoordinator core.NetworkCoordinator
@@ -46,6 +50,10 @@ func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 	nc.zeroCoordinator = newZeroNetworkCoordinator()
 	nc.realCoordinator = newRealNetworkCoordinator()
 	return nil
+}
+
+func (nc *NetworkCoordinator) Start(ctx context.Context) error {
+	return nc.Bus.Register(core.NetworkCoordinatorNodeSignRequest, nc.SignNode)
 }
 
 func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
@@ -70,6 +78,29 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
 	}
+
+	for i, node := range nc.Certificate.GetDiscoveryNodes() {
+		if node.GetNodeRef() == nc.Certificate.GetNodeRef() {
+			sign, err := nc.signNode(ctx, node.GetNodeRef())
+			if err != nil {
+				return nil, err
+			}
+			nc.Certificate.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
+		} else {
+			msg := message.NodeSignPayload{
+				NodeRef: &nodeRef,
+			}
+			opts := core.MessageSendOptions{
+				Receiver: node.GetNodeRef(),
+			}
+			r, err := nc.Bus.Send(ctx, &msg, &opts)
+			if err != nil {
+				return nil, err
+			}
+			sign := r.(reply.NodeSignInt).GetSign()
+			nc.Certificate.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
+		}
+	}
 	return cert, nil
 }
 
@@ -86,4 +117,35 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 // SetPulse writes pulse data on local storage
 func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return nc.getCoordinator().SetPulse(ctx, pulse)
+}
+
+func (nc *NetworkCoordinator) SignNode(ctx context.Context, p core.Parcel) (core.Reply, error) {
+	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
+	sign, err := nc.signNode(ctx, nodeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignNode ] Couldn't extract response")
+	}
+	return &reply.NodeSign{
+		Sign: sign,
+	}, nil
+
+}
+
+func (nc *NetworkCoordinator) signNode(ctx context.Context, nodeRef *core.RecordRef) ([]byte, error) {
+	res, err := nc.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignNode ] Couldn't call GetNodeInfo")
+	}
+	pKey, role, err := extractor.NodeInfoResponse(res.(*reply.CallMethod).Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignNode ] Couldn't extract response")
+	}
+
+	data := []byte(pKey + nodeRef.String() + role)
+	sign, err := nc.CS.Sign(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignNode ] Couldn't sign")
+	}
+
+	return sign.Bytes(), nil
 }
