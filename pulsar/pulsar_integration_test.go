@@ -149,7 +149,6 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	c.Ledger = tempLedger
 
 	nodeConfig := configuration.NewConfiguration()
-	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig, scheme)
 	require.NotNil(t, serviceNetwork)
 
@@ -169,6 +168,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	cm.Register(initCrypto(t))
 	cm.Inject(serviceNetwork, c.NodeNetwork, pulseManagerMock, netCoordinator, amMock, netSwitcher)
 
+	// TODO: We need to use only transport from service Network in pulsar
 	err = serviceNetwork.Init(ctx)
 	require.NoError(t, err)
 

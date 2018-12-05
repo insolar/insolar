@@ -29,7 +29,6 @@ import (
 // Configuration contains configuration params for all Insolar components
 type Configuration struct {
 	Host            HostNetwork
-	Node            NodeNetwork
 	Service         ServiceNetwork
 	Ledger          Ledger
 	Log             Log
@@ -53,7 +52,6 @@ type Holder struct {
 func NewConfiguration() Configuration {
 	cfg := Configuration{
 		Host:            NewHostNetwork(),
-		Node:            NewNodeNetwork(),
 		Service:         NewServiceNetwork(),
 		Ledger:          NewLedger(),
 		Log:             NewLog(),

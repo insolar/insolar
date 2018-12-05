@@ -139,12 +139,12 @@ func (h *hostTransport) BuildResponse(request network.Request, responseData inte
 	return (*packetWrapper)(p)
 }
 
-func NewInternalTransport(conf configuration.Configuration) (network.InternalTransport, error) {
+func NewInternalTransport(conf configuration.Configuration, nodeRef string) (network.InternalTransport, error) {
 	tp, err := transport.NewTransport(conf.Host.Transport, relay.NewProxy())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}
-	origin, err := getOrigin(tp, conf.Node.Node.ID)
+	origin, err := getOrigin(tp, nodeRef)
 	if err != nil {
 		go tp.Stop()
 		<-tp.Stopped()
