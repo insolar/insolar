@@ -176,7 +176,7 @@ func (m *PulseManager) processRecentObjects(
 			err := m.db.RemoveObjectIndex(ctx, &id)
 			if err != nil {
 				logger.Error(err)
-				continue
+				return err
 			}
 		}
 	}
