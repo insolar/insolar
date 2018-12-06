@@ -148,12 +148,6 @@ func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) 
 }
 
 func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
-	importedNodePubKey, err := keyProcessor.ImportPublicKey([]byte(cert.PublicKey))
-	if err != nil {
-		return errors.Wrapf(err, "[ fillExtraFields ] Bad PublicKey: %s", cert.PublicKey)
-	}
-	cert.nodePublicKey = importedNodePubKey
-
 	for _, pulsarKey := range cert.PulsarPublicKeys {
 		importedPulsarPubKey, err := keyProcessor.ImportPublicKey([]byte(pulsarKey))
 		if err != nil {
@@ -239,6 +233,5 @@ func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyPr
 	}
 
 	cert.PublicKey = string(keyBytes)
-	cert.nodePublicKey = publicKey
 	return &cert, nil
 }
