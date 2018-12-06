@@ -34,8 +34,8 @@ type AuthorizationCertificate struct {
 	keyProc core.KeyProcessor
 }
 
-func NewAuthorizationCertificate() AuthorizationCertificate {
-	return AuthorizationCertificate{
+func NewAuthorizationCertificate() *AuthorizationCertificate {
+	return &AuthorizationCertificate{
 		keyProc: platformpolicy.NewKeyProcessor(),
 	}
 }
@@ -89,7 +89,7 @@ func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ]")
 	}
-	return &cert, nil
+	return cert, nil
 }
 
 // Serialize serializes AuthorizationCertificate interface

@@ -204,10 +204,10 @@ func TestSerializeDeserialize(t *testing.T) {
 	cert.Reference = "test_reference"
 	cert.Role = "test_role"
 
-	result, err := Serialize(&cert)
+	result, err := Serialize(cert)
 	require.NoError(t, err)
 
 	deserializedCert, err := Deserialize(result)
 	require.NoError(t, err)
-	require.Equal(t, &cert, deserializedCert)
+	require.Equal(t, cert, deserializedCert)
 }
