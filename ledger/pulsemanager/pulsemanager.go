@@ -35,14 +35,19 @@ import (
 	"github.com/insolar/insolar/utils/backoff"
 )
 
+type ActiveListSwapper interface {
+	MoveSyncToActive()
+}
+
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR             core.LogicRunner            `inject:""`
-	Bus            core.MessageBus             `inject:""`
-	NodeNet        core.NodeNetwork            `inject:""`
-	JetCoordinator core.JetCoordinator         `inject:""`
-	GIL            core.GlobalInsolarLock      `inject:""`
-	Recent         recentstorage.RecentStorage `inject:""`
+	LR                core.LogicRunner            `inject:""`
+	Bus               core.MessageBus             `inject:""`
+	NodeNet           core.NodeNetwork            `inject:""`
+	JetCoordinator    core.JetCoordinator         `inject:""`
+	GIL               core.GlobalInsolarLock      `inject:""`
+	Recent            recentstorage.RecentStorage `inject:""`
+	ActiveListSwapper ActiveListSwapper           `inject:""`
 
 	currentPulse core.Pulse
 
@@ -219,7 +224,8 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// swap pulse
 	m.currentPulse = pulse
 
-	// TODO: swap active nodes and set prev pulse state to network
+	// swap active nodes
+	m.ActiveListSwapper.MoveSyncToActive()
 
 	if !dry {
 		latestPulseNumber, err = m.db.GetLatestPulseNumber(ctx)
