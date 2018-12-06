@@ -29,11 +29,9 @@ type Transport struct {
 // HostNetwork holds configuration for HostNetwork
 type HostNetwork struct {
 	Transport         Transport
-	BootstrapHosts    []string
 	IsRelay           bool // set if node must be relay explicit
 	InfinityBootstrap bool // set true for infinity tries to bootstrap
 	Timeout           int  // bootstrap reconnect timeout
-	MajorityRule      int  // MajorityRule number
 	SignMessages      bool // signing a messages if true
 }
 
@@ -41,14 +39,12 @@ type HostNetwork struct {
 func NewHostNetwork() HostNetwork {
 	// IP address should not be 0.0.0.0!!!
 	transport := Transport{Protocol: "UTP", Address: "127.0.0.1:0", BehindNAT: false}
-	bootstrapHosts := make([]string, 0)
+
 	return HostNetwork{
 		Transport:         transport,
 		IsRelay:           false,
-		BootstrapHosts:    bootstrapHosts,
 		Timeout:           4,
 		InfinityBootstrap: false,
-		MajorityRule:      0,
 		SignMessages:      false,
 	}
 }

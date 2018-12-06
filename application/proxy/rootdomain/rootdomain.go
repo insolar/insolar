@@ -192,6 +192,58 @@ func (r *RootDomain) CreateMemberNoWait(name string, key string) error {
 	return nil
 }
 
+// GetRootMemberRef is proxy generated method
+func (r *RootDomain) GetRootMemberRef() (*core.RecordRef, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 *core.RecordRef
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRootMemberRef", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetRootMemberRefNoWait is proxy generated method
+func (r *RootDomain) GetRootMemberRefNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRootMemberRef", argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // DumpUserInfo is proxy generated method
 func (r *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 	var args [1]interface{}

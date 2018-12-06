@@ -347,11 +347,34 @@ func TestExtractPacket_Phase1_BadExtract(t *testing.T) {
 func TestPhase1Packet_AddClaim(t *testing.T) {
 	packet := makePhase1Packet()
 
-	err := packet.AddClaim(makeNodeJoinClaim())
+	success := packet.AddClaim(makeNodeJoinClaim())
+	assert.True(t, success)
+
+	for success {
+		success = packet.AddClaim(&NodeLeaveClaim{})
+	}
+	assert.False(t, success)
+}
+
+func TestPhase3Packet_Serialize(t *testing.T) {
+	checkSerializationDeserialization(t, getPhase3Packet(t))
+}
+
+func getPhase3Packet(t *testing.T) *Phase3Packet {
+	packet := &Phase3Packet{}
+	packet.packetHeader = *makeDefaultPacketHeader(Phase3)
+	packet.globuleHashSignature = randomArray71()
+	packet.SignatureHeaderSection1 = randomArray71()
+	var err error
+	packet.deviantBitSet, err = NewBitSet(100)
 	assert.NoError(t, err)
 
-	for err == nil {
-		err = packet.AddClaim(&NodeLeaveClaim{})
-	}
-	assert.EqualError(t, err, "No space for claim")
+	refs := initRefs()
+	cells := initBitCells(refs)
+	bitset, err := NewBitSet(len(cells))
+	assert.NoError(t, err)
+
+	packet.deviantBitSet = bitset
+
+	return packet
 }

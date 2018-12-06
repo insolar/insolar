@@ -20,15 +20,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
-
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -64,22 +63,12 @@ func parseInputParams() inputParams {
 	return result
 }
 
-func mergeConfigAndCertificate(ctx context.Context, cfg *configuration.Configuration, cert *certificate.Certificate) {
-	inslog := inslogger.FromContext(ctx)
-	if len(cfg.CertificatePath) == 0 {
-		inslog.Info("No certificate path - No merge")
-		return
-	}
-
-	cfg.Host.BootstrapHosts = []string{}
-	for _, bn := range cert.BootstrapNodes {
-		cfg.Host.BootstrapHosts = append(cfg.Host.BootstrapHosts, bn.Host)
-	}
-	cfg.Node.Node.ID = cert.Reference
-	cfg.Host.MajorityRule = cert.MajorityRule
-
-	inslog.Infof("Add %d bootstrap nodes. Set node id to %s. Set majority rule to %d",
-		len(cfg.Host.BootstrapHosts), cfg.Node.Node.ID, cfg.Host.MajorityRule)
+func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) {
+	_, err := exec.Command(
+		"rm", "-rfv",
+		cfg.Ledger.Storage.DataDirectory,
+	).CombinedOutput()
+	checkError(ctx, err, "failed to delete ledger storage data directory")
 }
 
 func main() {
@@ -103,12 +92,18 @@ func main() {
 	}
 
 	cfg := &cfgHolder.Configuration
+	cfg.Metrics.Namespace = "insolard"
 
-	traceid := utils.RandTraceID()
-	ctx, inslog := initLogger(context.Background(), cfg.Log, traceid)
+	traceID := utils.RandTraceID()
+	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
+
+	if params.isGenesis {
+		removeLedgerDataDir(ctx, cfg)
+		cfg.Ledger.PulseManager.HeavySyncEnabled = false
+	}
 
 	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
-	cert := initCertificate(
+	certManager := initCertificateManager(
 		ctx,
 		*cfg,
 		params.isGenesis,
@@ -116,29 +111,24 @@ func main() {
 		bootstrapComponents.KeyProcessor,
 	)
 
-	if !params.isGenesis {
-		mergeConfigAndCertificate(ctx, cfg, cert)
-	}
-	cfg.Metrics.Namespace = "insolard"
-
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	jaegerflush := func() {}
 	if params.traceEnabled {
 		jconf := cfg.Tracer.Jaeger
 		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint)
-		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceid})
+		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
 	}
 	defer jaegerflush()
 
-	cm, repl, err := initComponents(
+	cm, err := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.PlatformCryptographyScheme,
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
-		cert,
+		certManager,
 		params.isGenesis,
 		params.genesisConfigPath,
 		params.genesisKeyOut,
@@ -148,18 +138,11 @@ func main() {
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	err = cm.Start(ctx)
-	checkError(ctx, err, "failed to start components")
-
-	defer func() {
-		inslog.Warn("DEFER STOP APP")
-		err = cm.Stop(ctx)
-		checkError(ctx, err, "failed to stop components")
-	}()
-
-	var gracefulStop = make(chan os.Signal)
+	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
+
+	var waitChannel = make(chan bool)
 
 	go func() {
 		sig := <-gracefulStop
@@ -172,9 +155,11 @@ func main() {
 		os.Exit(0)
 	}()
 
+	err = cm.Start(ctx)
+	checkError(ctx, err, "failed to start components")
 	fmt.Println("Version: ", version.GetFullVersion())
-	fmt.Println("Running interactive mode:")
-	repl.Start(ctx)
+	fmt.Println("All components were started")
+	<-waitChannel
 }
 
 func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, core.Logger) {

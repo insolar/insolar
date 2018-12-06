@@ -26,7 +26,7 @@ import (
 // RecordInfo holds record info
 type RecordInfo struct {
 	PublicKey string
-	Role      core.NodeRole
+	Role      core.StaticRole
 }
 
 // NodeRecord contains info about node
@@ -38,7 +38,6 @@ type NodeRecord struct {
 
 // NewNodeRecord creates new NodeRecord
 func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
-
 	if len(publicKey) == 0 {
 		return nil, fmt.Errorf("[ NewNodeRecord ] public key is required")
 	}
@@ -46,8 +45,8 @@ func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 		return nil, fmt.Errorf("[ NewNodeRecord ] role is required")
 	}
 
-	role := core.GetRoleFromString(roleStr)
-	if role == core.RoleUnknown {
+	role := core.GetStaticRoleFromString(roleStr)
+	if role == core.StaticRoleUnknown {
 		return nil, fmt.Errorf("Role is not supported: %s", roleStr)
 	}
 
@@ -58,6 +57,8 @@ func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 		},
 	}, nil
 }
+
+var INSATTR_GetNodeInfo_API = true
 
 // GetNodeInfo returns RecordInfo
 func (nr *NodeRecord) GetNodeInfo() (RecordInfo, error) {
@@ -72,7 +73,7 @@ func (nr *NodeRecord) GetPublicKey() (string, error) {
 }
 
 // GetRole returns role
-func (nr *NodeRecord) GetRole() (core.NodeRole, error) {
+func (nr *NodeRecord) GetRole() (core.StaticRole, error) {
 	return nr.Record.Role, nil
 }
 

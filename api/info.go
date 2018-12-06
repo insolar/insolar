@@ -18,51 +18,88 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/insolar/insolar/core/utils"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
-func (ar *Runner) infoHandler() func(http.ResponseWriter, *http.Request) {
-	return func(response http.ResponseWriter, req *http.Request) {
+// InfoArgs is arguments that Info service accepts.
+type InfoArgs struct{}
 
-		ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+// InfoReply is reply for Info service requests.
+type InfoReply struct {
+	RootDomain string
+	RootMember string
+	NodeDomain string
+	TraceID    string
+}
 
-		rootDomain := ar.GenesisDataProvider.GetRootDomain(ctx)
-		if rootDomain == nil {
-			inslog.Error("[ INFO ] rootDomain ref is nil")
-		}
-		rootMember, err := ar.GenesisDataProvider.GetRootMember(ctx)
-		if err != nil {
-			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get rootMember ref"))
-		}
-		if rootMember == nil {
-			inslog.Error("[ INFO ] rootMember ref is nil")
-		}
-		nodeDomain, err := ar.GenesisDataProvider.GetNodeDomain(ctx)
-		if err != nil {
-			inslog.Error(errors.Wrap(err, "[ INFO ] Can't get nodeDomain ref"))
-		}
-		if nodeDomain == nil {
-			inslog.Error("[ INFO ] nodeDomain ref is nil")
-		}
-		data, err := json.MarshalIndent(map[string]interface{}{
-			"root_domain": rootDomain.String(),
-			"root_member": rootMember.String(),
-			"node_domain": nodeDomain.String(),
-		}, "", "   ")
-		if err != nil {
-			inslog.Error(errors.Wrap(err, "[ INFO ] Can't marshal response"))
-		}
+// InfoService is a service that provides API for getting info about genesis objects.
+type InfoService struct {
+	runner *Runner
+}
 
-		response.Header().Add("Content-Type", "application/json")
-		_, err = response.Write(data)
-		if err != nil {
-			inslog.Error(errors.Wrap(err, "[ INFO ] Can't write response"))
-		}
+// NewInfoService creates new Info service instance.
+func NewInfoService(runner *Runner) *InfoService {
+	return &InfoService{runner: runner}
+}
+
+// Get returns info about genesis objects.
+//
+//   Request structure:
+//   {
+//     "jsonrpc": "2.0",
+//     "method": "info.Get",
+//     "id": str|int|null
+//   }
+//
+//     Response structure:
+// 	{
+// 		"jsonrpc": "2.0",
+// 		"result": {
+// 			"RootDomain": str, // reference to RootDomain instance
+// 			"RootMember": str, // reference to RootMember instance
+// 			"NodeDomain": str, // reference to NodeDomain instance
+// 			"TraceID": str // traceID for request
+// 		},
+// 		"id": str|int|null // same as in request
+// 	}
+//
+func (s *InfoService) Get(r *http.Request, args *InfoArgs, reply *InfoReply) error {
+	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+
+	inslog.Infof("[ INFO ] Incoming request: %s", r.RequestURI)
+
+	rootDomain := s.runner.GenesisDataProvider.GetRootDomain(ctx)
+	if rootDomain == nil {
+		inslog.Error("[ INFO ] rootDomain ref is nil")
+		return errors.New("[ INFO ] rootDomain ref is nil")
 	}
+	rootMember, err := s.runner.GenesisDataProvider.GetRootMember(ctx)
+	if err != nil {
+		inslog.Error(errors.Wrap(err, "[ INFO ] Can't get rootMember ref"))
+		return errors.Wrap(err, "[ INFO ] Can't get rootMember ref")
+	}
+	if rootMember == nil {
+		inslog.Error("[ INFO ] rootMember ref is nil")
+		return errors.New("[ INFO ] rootMember ref is nil")
+	}
+	nodeDomain, err := s.runner.GenesisDataProvider.GetNodeDomain(ctx)
+	if err != nil {
+		inslog.Error(errors.Wrap(err, "[ INFO ] Can't get nodeDomain ref"))
+		return errors.Wrap(err, "[ INFO ] Can't get nodeDomain ref")
+	}
+	if nodeDomain == nil {
+		inslog.Error("[ INFO ] nodeDomain ref is nil")
+		return errors.New("[ INFO ] nodeDomain ref is nil")
+	}
+
+	reply.RootDomain = rootDomain.String()
+	reply.RootMember = rootMember.String()
+	reply.NodeDomain = nodeDomain.String()
+	reply.TraceID = utils.RandTraceID()
+
+	return nil
 }

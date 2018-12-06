@@ -16,32 +16,46 @@
 
 package core
 
-// NodeRole holds role of node
-type NodeRole int
+// StaticRole holds role of node.
+type StaticRole int
 
 const (
-	RoleUnknown = NodeRole(iota)
-	RoleVirtual
-	RoleHeavyMaterial
-	RoleLightMaterial
+	StaticRoleUnknown = StaticRole(iota)
+	StaticRoleVirtual
+	StaticRoleHeavyMaterial
+	StaticRoleLightMaterial
 )
 
-var AllNodeRoles = []NodeRole{
-	RoleVirtual,
-	RoleLightMaterial,
-	RoleHeavyMaterial,
+// AllStaticRoles is an array of all possible StaticRoles.
+var AllStaticRoles = []StaticRole{
+	StaticRoleVirtual,
+	StaticRoleLightMaterial,
+	StaticRoleHeavyMaterial,
 }
 
-// GetRoleFromString converts role from string to NodeRole
-func GetRoleFromString(role string) NodeRole {
+// GetStaticRoleFromString converts role from string to StaticRole.
+func GetStaticRoleFromString(role string) StaticRole {
 	switch role {
 	case "virtual":
-		return RoleVirtual
+		return StaticRoleVirtual
 	case "heavy_material":
-		return RoleHeavyMaterial
+		return StaticRoleHeavyMaterial
 	case "light_material":
-		return RoleLightMaterial
+		return StaticRoleLightMaterial
 	}
 
-	return RoleUnknown
+	return StaticRoleUnknown
+}
+
+func (nr StaticRole) String() string {
+	switch nr {
+	case StaticRoleVirtual:
+		return "virtual"
+	case StaticRoleHeavyMaterial:
+		return "heavy_material"
+	case StaticRoleLightMaterial:
+		return "light_material"
+	}
+
+	return "unknown"
 }

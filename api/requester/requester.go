@@ -20,18 +20,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
 // verbose switches on verbose mode
 var verbose = false
+var scheme = platformpolicy.NewPlatformCryptographyScheme()
 
 func verboseInfo(ctx context.Context, msg string) {
 	if verbose {
@@ -71,24 +73,32 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	return body, nil
 }
 
-// GetSeed makes get_seed request and extracts it
+// GetSeed makes rpc request to seed.Get method and extracts it
 func GetSeed(url string) ([]byte, error) {
-	body, err := GetResponseBody(url, PostParams{
-		"query_type": "get_seed",
+	body, err := GetResponseBody(url+"/rpc", PostParams{
+		"jsonrpc": "2.0",
+		"method":  "seed.Get",
+		"id":      "",
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getSeed ]")
 	}
 
-	type seedResponse struct{ Seed []byte }
-	seedResp := seedResponse{}
+	seedResp := rpcSeedResponse{}
 
 	err = json.Unmarshal(body, &seedResp)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getSeed ]")
+		return nil, errors.Wrap(err, "[ getSeed ] Can't unmarshal")
+	}
+	if seedResp.Error != nil {
+		return nil, errors.New("[ getSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
+	}
+	res := &seedResp.Result
+	if res == nil {
+		return nil, errors.New("[ getSeed ] Field 'result' is nil")
 	}
 
-	return seedResp.Seed, nil
+	return res.Seed, nil
 }
 
 func constructParams(params []interface{}) ([]byte, error) {
@@ -120,7 +130,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 
 	verboseInfo(ctx, "Signing request ...")
-	cs := cryptography.NewKeyBoundCryptographyService(userCfg.privateKeyObject)
+	cs := scheme.Signer(userCfg.privateKeyObject)
 	signature, err := cs.Sign(serRequest)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
@@ -159,26 +169,62 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	return response, nil
 }
 
-// InfoResponse represents response from /info
-type InfoResponse struct {
-	Prototypes map[string]string `json:"prototypes"`
-	RootDomain string            `json:"root_domain"`
-	RootMember string            `json:"root_member"`
+func getDefaultRPCParams(method string) PostParams {
+	return PostParams{
+		"jsonrpc": "2.0",
+		"id":      "",
+		"method":  method,
+	}
 }
 
-// Info sends request to /info and return result
+// Info makes rpc request to info.Get method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	body, err := GetResponseBody(url+"/info", PostParams{})
+	params := getDefaultRPCParams("info.Get")
+
+	body, err := GetResponseBody(url+"/rpc", params)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Info ] problem with sending request:")
+		return nil, errors.Wrap(err, "[ Info ]")
 	}
 
-	infoResp := InfoResponse{}
+	infoResp := rpcInfoResponse{}
 
 	err = json.Unmarshal(body, &infoResp)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Info ] problem with unmarshal response:")
+		return nil, errors.Wrap(err, "[ Info ] Can't unmarshal")
+	}
+	if infoResp.Error != nil {
+		return nil, errors.New("[ Info ] Field 'error' is not nil: " + fmt.Sprint(infoResp.Error))
+	}
+	res := &infoResp.Result
+	if res == nil {
+		return nil, errors.New("[ Info ] Field 'result' is nil")
 	}
 
-	return &infoResp, nil
+	return res, nil
+}
+
+// Status makes rpc request to info.Status method and extracts it
+func Status(url string) (*StatusResponse, error) {
+	params := getDefaultRPCParams("status.Get")
+
+	body, err := GetResponseBody(url+"/rpc", params)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Status ]")
+	}
+
+	statusResp := rpcStatusResponse{}
+
+	err = json.Unmarshal(body, &statusResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Status ] Can't unmarshal")
+	}
+	if statusResp.Error != nil {
+		return nil, errors.New("[ Status ] Field 'error' is not nil: " + fmt.Sprint(statusResp.Error))
+	}
+	res := &statusResp.Result
+	if res == nil {
+		return nil, errors.New("[ Status ] Field 'result' is nil")
+	}
+
+	return res, nil
 }

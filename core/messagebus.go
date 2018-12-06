@@ -109,6 +109,7 @@ type MessageBus interface {
 	WriteTape(ctx context.Context, writer io.Writer) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/core.GlobalInsolarLock -o ../testutils -s _mock.go
 type GlobalInsolarLock interface {
 	Acquire(context.Context)
 	Release(context.Context)
@@ -175,6 +176,13 @@ const (
 	TypeValidateRecord
 	// TypeSetBlob saves blob in storage.
 	TypeSetBlob
+	// TypeGetObjectIndex fetches object index from storage.
+	TypeGetObjectIndex
+	// TypeHotRecords saves hot-records in storage.
+	TypeHotRecords
+
+	// TypeValidationCheck checks if validation of a particular record can be performed.
+	TypeValidationCheck
 
 	// Heavy replication
 
@@ -182,11 +190,18 @@ const (
 	TypeHeavyStartStop
 	// TypeHeavyPayload carries Key/Value records for replication to Heavy Material node.
 	TypeHeavyPayload
+	// TypeHeavyReset resets current sync (on errors)
+	TypeHeavyReset
 
 	// Bootstrap
 
 	// TypeBootstrapRequest used for bootstrap object generation.
 	TypeBootstrapRequest
+
+	// NetworkCoordinator
+
+	// NetworkCoordinatorNodeSignRequest used to request signature for new node
+	NetworkCoordinatorNodeSignRequest
 )
 
 // DelegationTokenType is an enum type of delegation token
@@ -197,4 +212,6 @@ const (
 	// DTTypePendingExecution allows to continue method calls
 	DTTypePendingExecution DelegationTokenType = iota + 1
 	DTTypeGetObjectRedirect
+	DTTypeGetChildrenRedirect
+	DTTypeGetCodeRedirect
 )

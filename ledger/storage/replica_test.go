@@ -19,11 +19,12 @@ package storage_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_ReplicatedPulse(t *testing.T) {
@@ -46,16 +47,16 @@ func Test_ReplicatedPulse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, expect, got)
 
-	// test {Set/Get}LastPulseAsLightMaterial methods pair
-	lightGot0, err := db.GetLastPulseAsLightMaterial(ctx)
+	// test {Set/Get}HeavySyncedPulse methods pair
+	heavyGot0, err := db.GetHeavySyncedPulse(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, core.PulseNumber(0), lightGot0)
+	assert.Equal(t, core.PulseNumber(0), heavyGot0)
 
-	expectLight := core.PulseNumber(100500)
-	err = db.SetLastPulseAsLightMaterial(ctx, expectLight)
+	expectHeavy := core.PulseNumber(100500)
+	err = db.SetHeavySyncedPulse(ctx, expectHeavy)
 	require.NoError(t, err)
 
-	gotLight, err := db.GetLastPulseAsLightMaterial(ctx)
+	gotHeavy, err := db.GetHeavySyncedPulse(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, expectLight, gotLight)
+	assert.Equal(t, expectHeavy, gotHeavy)
 }

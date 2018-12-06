@@ -20,7 +20,6 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -37,6 +36,7 @@ import (
 )
 
 const insolarNamespace = "insolar"
+const insgorundNamespace = "insgorund"
 
 // Metrics is a component which serve metrics data to Prometheus.
 type Metrics struct {
@@ -45,8 +45,7 @@ type Metrics struct {
 }
 
 // NewMetrics creates new Metrics component.
-func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error) {
-	registry := prometheus.NewRegistry()
+func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *prometheus.Registry) (*Metrics, error) {
 	errlogger := &errorLogger{inslogger.FromContext(ctx)}
 	promhandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorLog: errlogger})
 
@@ -64,19 +63,6 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics) (*Metrics, error
 			Handler: mux,
 		},
 	}
-
-	// badger metrics
-	registry.MustRegister(badgerCollector(cfg.Namespace))
-
-	// default system collectors
-	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), cfg.Namespace))
-	registry.MustRegister(prometheus.NewGoCollector())
-
-	// insolar collectors
-	registry.MustRegister(NetworkMessageSentTotal)
-	registry.MustRegister(NetworkFutures)
-	registry.MustRegister(NetworkPacketSentTotal)
-	registry.MustRegister(NetworkPacketReceivedTotal)
 
 	_, err := insmetrics.RegisterPrometheus(ctx, cfg.Namespace, registry, cfg.ReportingPeriod)
 	if err != nil {

@@ -17,9 +17,8 @@
 package message
 
 import (
-	"encoding/gob"
-
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/jetdrop"
 )
 
 type ledgerMessage struct {
@@ -157,12 +156,54 @@ type SetBlob struct {
 	Memory    []byte
 }
 
-func init() {
-	gob.Register(&SetBlob{})
-	gob.Register(&ValidateRecord{})
-}
-
 // Type implementation of Message interface.
 func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
+}
+
+// GetObjectIndex fetches objects index.
+type GetObjectIndex struct {
+	ledgerMessage
+
+	Object core.RecordRef
+}
+
+// Type implementation of Message interface.
+func (*GetObjectIndex) Type() core.MessageType {
+	return core.TypeGetObjectIndex
+}
+
+// ValidationCheck checks if validation of a particular record can be performed.
+type ValidationCheck struct {
+	ledgerMessage
+
+	Object              core.RecordRef
+	ValidatedState      core.RecordID
+	LatestStateApproved *core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*ValidationCheck) Type() core.MessageType {
+	return core.TypeValidationCheck
+}
+
+// HotData contains hot-data
+type HotData struct {
+	ledgerMessage
+	Jet             core.RecordRef
+	Drop            jetdrop.JetDrop
+	RecentObjects   map[core.RecordID]*HotIndex
+	PendingRequests map[core.RecordID][]byte
+	PulseNumber     core.PulseNumber
+}
+
+// HotIndex contains meat about hot-data
+type HotIndex struct {
+	TTL   int
+	Index []byte
+}
+
+// Type implementation of Message interface.
+func (*HotData) Type() core.MessageType {
+	return core.TypeHotRecords
 }

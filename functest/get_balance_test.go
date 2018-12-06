@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *
@@ -31,5 +33,5 @@ func TestGetBalance(t *testing.T) {
 
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
-	require.EqualError(t, err, "[ getBalance ] : on calling main API: failed to fetch object index: storage object not found")
+	require.Contains(t, err.Error(), "[ getBalance ] : [ GetDelegate ] on calling main API")
 }

@@ -17,6 +17,7 @@
 package packets
 
 import (
+	"bytes"
 	"encoding/binary"
 	"io"
 
@@ -32,6 +33,7 @@ const (
 	TypeStateFraudNodeSupplementaryVote
 	TypeNodeListSupplementaryVote
 	TypeMissingNodeSupplementaryVote
+	TypeMissingNode
 )
 
 type ReferendumVote interface {
@@ -55,6 +57,31 @@ type NodeListSupplementaryVote struct {
 
 type MissingNodeSupplementaryVote struct {
 	NodePulseProof NodePulseProof
+}
+
+type MissingNode struct {
+	NodeIndex uint16
+}
+
+func (mn *MissingNode) Type() VoteType {
+	return TypeMissingNode
+}
+
+func (mn *MissingNode) Serialize() ([]byte, error) {
+	var result bytes.Buffer
+	err := binary.Write(&result, defaultByteOrder, mn.NodeIndex)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNode.Serialize ] failed to write ti a buffer")
+	}
+	return result.Bytes(), nil
+}
+
+func (mn *MissingNode) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &mn.NodeIndex)
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNode.Deserialize ] failed to read a node index")
+	}
+	return nil
 }
 
 func (v *NodeListSupplementaryVote) Type() VoteType {

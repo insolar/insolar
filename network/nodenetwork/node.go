@@ -19,9 +19,9 @@ package nodenetwork
 import (
 	"crypto"
 	"encoding/gob"
-	"hash/crc32"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/utils"
 )
 
 type MutableNode interface {
@@ -34,7 +34,7 @@ type MutableNode interface {
 type node struct {
 	NodeID        core.RecordRef
 	NodeShortID   core.ShortNodeID
-	NodeRoles     []core.NodeRole
+	NodeRole      core.StaticRole
 	NodePublicKey crypto.PublicKey
 
 	NodePulseNum core.PulseNumber
@@ -45,17 +45,15 @@ type node struct {
 
 func newMutableNode(
 	id core.RecordRef,
-	roles []core.NodeRole,
+	role core.StaticRole,
 	publicKey crypto.PublicKey,
-	pulseNum core.PulseNumber,
 	physicalAddress,
 	version string) MutableNode {
 	return &node{
 		NodeID:              id,
-		NodeShortID:         generateShortID(id),
-		NodeRoles:           roles,
+		NodeShortID:         utils.GenerateShortID(id),
+		NodeRole:            role,
 		NodePublicKey:       publicKey,
-		NodePulseNum:        pulseNum,
 		NodePhysicalAddress: physicalAddress,
 		NodeVersion:         version,
 	}
@@ -63,12 +61,11 @@ func newMutableNode(
 
 func NewNode(
 	id core.RecordRef,
-	roles []core.NodeRole,
+	role core.StaticRole,
 	publicKey crypto.PublicKey,
-	pulseNum core.PulseNumber,
 	physicalAddress,
 	version string) core.Node {
-	return newMutableNode(id, roles, publicKey, pulseNum, physicalAddress, version)
+	return newMutableNode(id, role, publicKey, physicalAddress, version)
 }
 
 func (n *node) ID() core.RecordRef {
@@ -83,12 +80,8 @@ func (n *node) Pulse() core.PulseNumber {
 	return n.NodePulseNum
 }
 
-func (n *node) Roles() []core.NodeRole {
-	return n.NodeRoles
-}
-
-func (n *node) Role() core.NodeRole {
-	return n.NodeRoles[0]
+func (n *node) Role() core.StaticRole {
+	return n.NodeRole
 }
 
 func (n *node) PublicKey() crypto.PublicKey {
@@ -119,11 +112,6 @@ func (mn mutableNodes) Export() []core.Node {
 		nodes[i] = mn[i]
 	}
 	return nodes
-}
-
-func generateShortID(ref core.RecordRef) core.ShortNodeID {
-	result := crc32.ChecksumIEEE(ref[:])
-	return core.ShortNodeID(result)
 }
 
 func init() {

@@ -17,6 +17,7 @@
 package ledgertestutils
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -27,11 +28,12 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
@@ -48,14 +50,15 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
-	handler := artifactmanager.NewMessageHandler(db, storage.NewRecentStorage(0), nil)
+	handler := artifactmanager.NewMessageHandler(db, nil)
 	handler.PlatformCryptographyScheme = pcs
 
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
 	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	jc.PlatformCryptographyScheme = pcs
-	pm := pulsemanager.NewPulseManager(db)
+	conf.PulseManager.HeavySyncEnabled = false
+	pm := pulsemanager.NewPulseManager(db, conf)
 	ls := localstorage.NewLocalStorage(db)
 
 	// Init components.
@@ -63,15 +66,26 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		c.MessageBus = testmessagebus.NewTestMessageBus(t)
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, nil, nil, 0, "", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", ""))
 	}
+
+	gilMock := testutils.NewGlobalInsolarLockMock(t)
+	gilMock.AcquireFunc = func(context.Context) {}
+	gilMock.ReleaseFunc = func(context.Context) {}
 
 	handler.Bus = c.MessageBus
 	am.DefaultBus = c.MessageBus
 	jc.NodeNet = c.NodeNetwork
 	pm.NodeNet = c.NodeNetwork
+	pm.GIL = gilMock
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+	handler.Recent = recentStorageMock
 
 	err := handler.Init(ctx)
 	if err != nil {

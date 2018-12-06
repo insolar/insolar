@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/network"
@@ -74,12 +75,15 @@ func TestBareHelloworld(t *testing.T) {
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 
+	recent := recentstorage.NewRecentStorageMock(t)
+
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseNumber = 0
 
-	l.GetPulseManager().Set(
+	_ = l.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: mb.PulseNumber, Entropy: core.Entropy{}},
+		false,
 	)
 
 	nw := network.GetTestNetwork()
@@ -88,7 +92,7 @@ func TestBareHelloworld(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Register(scheme)
 	cm.Register(l.GetPulseManager(), l.GetArtifactManager(), l.GetJetCoordinator())
-	cm.Inject(nk, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 

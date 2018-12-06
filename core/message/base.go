@@ -61,6 +61,18 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &JetDrop{}, nil
 	case core.TypeSetRecord:
 		return &SetRecord{}, nil
+	case core.TypeGetObjectIndex:
+		return &GetObjectIndex{}, nil
+	case core.TypeValidationCheck:
+		return &ValidationCheck{}, nil
+
+	// heavy sync
+	case core.TypeHeavyStartStop:
+		return &HeavyStartStop{}, nil
+	case core.TypeHeavyPayload:
+		return &HeavyPayload{}, nil
+	case core.TypeHeavyReset:
+		return &HeavyReset{}, nil
 
 	// Bootstrap
 	case core.TypeBootstrapRequest:
@@ -159,7 +171,7 @@ func ParcelToBytes(msg core.Parcel) []byte {
 
 func init() {
 	// Bootstrap
-	gob.Register(&GenesisRequest{})
+	gob.Register(&NodeSignPayload{})
 
 	// Logicrunner
 	gob.Register(&CallConstructor{})
@@ -176,6 +188,10 @@ func init() {
 	gob.Register(&RegisterChild{})
 	gob.Register(&JetDrop{})
 	gob.Register(&SetRecord{})
+	gob.Register(&GetObjectIndex{})
+	gob.Register(&SetBlob{})
+	gob.Register(&ValidateRecord{})
+	gob.Register(&ValidationCheck{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})

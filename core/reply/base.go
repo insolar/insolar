@@ -32,10 +32,14 @@ const (
 
 	// TypeError is reply with error.
 	TypeError = core.ReplyType(iota + 1)
-	// TypeOK is a generic reply for success calls without returned value.
+	// TypeOK is a generic reply for signaling a positive result.
 	TypeOK
-	
+	// TypeNotOK is a generic reply for signaling a negative result.
+	TypeNotOK
+
+	TypeGetCodeRedirect
 	TypeGetObjectRedirect
+	TypeGetChildrenRedirect
 
 	// Logicrunner
 
@@ -56,6 +60,13 @@ const (
 	TypeID
 	// TypeChildren is a reply for fetching objects children in chunks.
 	TypeChildren
+	// TypeObjectIndex contains serialized object index. It can be stored in DB without processing.
+	TypeObjectIndex
+
+	// TypeHeavyError carries heavy record sync
+	TypeHeavyError
+
+	TypeNodeSign
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -85,8 +96,18 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &Children{}, nil
 	case TypeError:
 		return &Error{}, nil
+	case TypeHeavyError:
+		return &HeavyError{}, nil
 	case TypeOK:
 		return &OK{}, nil
+	case TypeObjectIndex:
+		return &ObjectIndex{}, nil
+	case TypeGetCodeRedirect:
+		return &GetCodeRedirect{}, nil
+	case TypeGetObjectRedirect:
+		return &GetObjectRedirect{}, nil
+	case TypeGetChildrenRedirect:
+		return &GetChildrenRedirect{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -145,4 +166,9 @@ func init() {
 	gob.Register(&Children{})
 	gob.Register(&Error{})
 	gob.Register(&OK{})
+	gob.Register(&ObjectIndex{})
+	gob.Register(&GetCodeRedirect{})
+	gob.Register(&GetObjectRedirect{})
+	gob.Register(&GetChildrenRedirect{})
+	gob.Register(&HeavyError{})
 }

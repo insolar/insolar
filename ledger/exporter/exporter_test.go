@@ -17,6 +17,7 @@
 package exporter
 
 import (
+	"encoding/json"
 	"strconv"
 	"testing"
 
@@ -47,9 +48,14 @@ func TestExporter_Export(t *testing.T) {
 
 	type testData struct {
 		Field string
+		Data  struct {
+			Field string
+		}
 	}
 	mem := make([]byte, 0)
-	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(testData{Field: "objectValue"})
+	blobData := testData{Field: "objectValue"}
+	blobData.Data.Field = "anotherValue"
+	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
 	blobID, err := db.SetBlob(ctx, core.FirstPulseNumber+1, mem)
 	require.NoError(t, err)
 	_, err = db.SetRecord(ctx, core.FirstPulseNumber+1, &record.GenesisRecord{})
@@ -60,13 +66,12 @@ func TestExporter_Export(t *testing.T) {
 		},
 		IsDelegate: true,
 	})
-	payload := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest"})
+	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest"})
 	requestID, err := db.SetRecord(ctx, core.FirstPulseNumber+1, &record.CallRequest{
-		Payload: payload,
+		Payload: pl,
 	})
 	require.NoError(t, err)
 
-	type kv = map[string]interface{}
 	result, err := exporter.Export(ctx, 0, 10)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(result.Data))
@@ -78,6 +83,8 @@ func TestExporter_Export(t *testing.T) {
 	assert.Equal(t, 2, len(result.Data))
 	assert.Equal(t, 2, result.Size)
 	assert.Equal(t, core.FirstPulseNumber+2, int(*result.NextFrom))
+	_, err = json.Marshal(result)
+	assert.NoError(t, err)
 
 	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].(pulseData).Pulse
 	assert.Equal(t, core.FirstPulseNumber, int(pulse.PulseNumber))
@@ -90,10 +97,10 @@ func TestExporter_Export(t *testing.T) {
 	object := records[base58.Encode(objectID[:])]
 	assert.Equal(t, "TypeActivate", object.Type)
 	assert.Equal(t, true, object.Data.(*record.ObjectActivateRecord).IsDelegate)
-	assert.Equal(t, "objectValue", object.Payload["Memory"].(kv)["Field"])
+	assert.Equal(t, "objectValue", object.Payload["Memory"].(payload)["Field"])
 
 	request := records[base58.Encode(requestID[:])]
 	assert.Equal(t, "TypeCallRequest", request.Type)
-	assert.Equal(t, payload, request.Data.(*record.CallRequest).Payload)
+	assert.Equal(t, pl, request.Data.(*record.CallRequest).Payload)
 	assert.Equal(t, "callRequest", request.Payload["Payload"].(*message.Parcel).LogTraceID)
 }

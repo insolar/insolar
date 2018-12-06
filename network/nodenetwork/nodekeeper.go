@@ -17,7 +17,6 @@
 package nodenetwork
 
 import (
-	"bytes"
 	"sort"
 	"strings"
 	"sync"
@@ -28,48 +27,50 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )
 
 // NewNodeNetwork create active node component
-func NewNodeNetwork(configuration configuration.Configuration) (core.NodeNetwork, error) {
-	origin, err := createOrigin(configuration)
+func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Certificate) (core.NodeNetwork, error) {
+	origin, err := createOrigin(configuration, certificate)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
-
-	if len(configuration.Host.BootstrapHosts) == 0 {
-		log.Info("Bootstrap nodes are not set. Init zeronet.")
+	if len(certificate.GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certificate) {
 		nodeKeeper.AddActiveNodes([]core.Node{origin})
 	}
-
 	return nodeKeeper, nil
 }
 
-func createOrigin(configuration configuration.Configuration) (MutableNode, error) {
-	nodeID := core.NewRefFromBase58(configuration.Node.Node.ID)
+func createOrigin(configuration configuration.HostNetwork, certificate core.Certificate) (MutableNode, error) {
 	publicAddress, err := resolveAddress(configuration)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to resolve public address")
 	}
 
+	role := certificate.GetRole()
+	if role == core.StaticRoleUnknown {
+		log.Info("[ createOrigin ] Use core.StaticRoleLightMaterial, since no role in certificate")
+		role = core.StaticRoleLightMaterial
+	}
+
 	// TODO: get roles from certificate
-	// TODO: pass public key
 	return newMutableNode(
-		nodeID,
-		[]core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
-		nil,
-		0,
+		*certificate.GetNodeRef(),
+		role,
+		certificate.GetPublicKey(),
 		publicAddress,
 		version.Version,
 	), nil
 }
 
-func resolveAddress(configuration configuration.Configuration) (string, error) {
-	conn, address, err := transport.NewConnection(configuration.Host.Transport)
+func resolveAddress(configuration configuration.HostNetwork) (string, error) {
+	conn, address, err := transport.NewConnection(configuration.Transport)
 	if err != nil {
 		return "", err
 	}
@@ -87,17 +88,16 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		state:        network.Undefined,
 		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
-		indexNode:    make(map[core.NodeRole]*recordRefSet),
+		indexNode:    make(map[core.StaticRole]*recordRefSet),
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 	}
 }
 
 type nodekeeper struct {
-	origin      core.Node
-	originClaim *consensus.NodeJoinClaim
-	originLock  sync.RWMutex
-	state       network.NodeKeeperState
-	claimQueue  *claimQueue
+	origin     core.Node
+	originLock sync.RWMutex
+	state      network.NodeKeeperState
+	claimQueue *claimQueue
 
 	nodesJoinedDuringPrevPulse bool
 
@@ -106,8 +106,34 @@ type nodekeeper struct {
 
 	activeLock   sync.RWMutex
 	active       map[core.RecordRef]core.Node
-	indexNode    map[core.NodeRole]*recordRefSet
+	indexNode    map[core.StaticRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
+
+	sync     network.UnsyncList
+	syncLock sync.Mutex
+
+	isBootstrap     bool
+	isBootstrapLock sync.RWMutex
+
+	Cryptography core.CryptographyService `inject:""`
+}
+
+// TODO: remove this method when bootstrap mechanism completed
+// IsBootstrapped method returns true when bootstrapNodes are connected to each other
+func (nk *nodekeeper) IsBootstrapped() bool {
+	nk.isBootstrapLock.RLock()
+	defer nk.isBootstrapLock.RUnlock()
+
+	return nk.isBootstrap
+}
+
+// TODO: remove this method when bootstrap mechanism completed
+// SetIsBootstrapped method set is bootstrap completed
+func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
+	nk.isBootstrapLock.Lock()
+	defer nk.isBootstrapLock.Unlock()
+
+	nk.isBootstrap = isBootstrap
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {
@@ -143,12 +169,12 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 	// Sort active nodes to return list with determinate order on every node.
 	// If we have more than 10k nodes, we need to optimize this
 	sort.Slice(result, func(i, j int) bool {
-		return bytes.Compare(result[i].ID().Bytes(), result[j].ID().Bytes()) < 0
+		return result[i].ID().Compare(result[j].ID()) < 0
 	})
 	return result
 }
 
-func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
+func (nk *nodekeeper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
@@ -191,14 +217,14 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 		log.Infof("Added origin node %s to active list", nk.origin.ID())
 	}
 	nk.active[node.ID()] = node
-	for _, role := range node.Roles() {
-		list, ok := nk.indexNode[role]
-		if !ok {
-			list = newRecordRefSet()
-		}
-		list.Add(node.ID())
-		nk.indexNode[role] = list
+
+	list, ok := nk.indexNode[node.Role()]
+	if !ok {
+		list = newRecordRefSet()
 	}
+	list.Add(node.ID())
+	nk.indexNode[node.Role()] = list
+
 	nk.indexShortID[node.ShortID()] = node
 }
 
@@ -225,18 +251,11 @@ func (nk *nodekeeper) GetState() network.NodeKeeperState {
 	return nk.state
 }
 
-func (nk *nodekeeper) SetOriginClaim(claim *consensus.NodeJoinClaim) {
-	nk.originLock.Lock()
-	defer nk.originLock.Unlock()
-
-	nk.originClaim = claim
-}
-
-func (nk *nodekeeper) GetOriginClaim() *consensus.NodeJoinClaim {
+func (nk *nodekeeper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
 	nk.originLock.RLock()
 	defer nk.originLock.RUnlock()
 
-	return nk.originClaim
+	return nk.nodeToClaim()
 }
 
 func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
@@ -253,34 +272,91 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	panic("not implemented")
+	return newUnsyncList(nk.GetActiveNodes())
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
-	panic("not implemented")
+	return newSparseUnsyncList(length)
 }
 
 func (nk *nodekeeper) Sync(list network.UnsyncList) {
-	panic("not implemented")
+	nk.syncLock.Lock()
+	defer nk.syncLock.Unlock()
+
+	nk.sync = list
 }
 
 func (nk *nodekeeper) MoveSyncToActive() {
-	panic("not implemented")
+	nk.activeLock.Lock()
+	nk.syncLock.Lock()
+	defer func() {
+		nk.syncLock.Unlock()
+		nk.activeLock.Unlock()
+	}()
+
+	sync := nk.sync.(*unsyncList)
+	sync.mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
 }
 
-func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
+func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
+	key, err := nk.Cryptography.GetPublicKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to get a public key")
+	}
+	keyProc := platformpolicy.NewKeyProcessor()
+	exportedKey, err := keyProc.ExportPublicKey(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to export a public key")
+	}
+	var keyData [consensus.PublicKeyLength]byte
+	copy(keyData[:], exportedKey[:consensus.PublicKeyLength])
+
+	var s [consensus.SignatureLength]byte
+	claim := consensus.NodeJoinClaim{
+		ShortNodeID:             nk.origin.ShortID(),
+		RelayNodeID:             nk.origin.ShortID(),
+		ProtocolVersionAndFlags: 0,
+		JoinsAfter:              0,
+		NodeRoleRecID:           0, // TODO: how to get a role as int?
+		NodeRef:                 nk.origin.ID(),
+		NodePK:                  keyData,
+		Signature:               s,
+	}
+
+	dataToSign, err := claim.SerializeWithoutSign()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to serialize a claim")
+	}
+	sign, err := nk.sign(dataToSign)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to sign a claim")
+	}
+
+	copy(claim.Signature[:], sign[:consensus.SignatureLength])
+	return &claim, nil
+}
+
+func (nk *nodekeeper) sign(data []byte) ([]byte, error) {
+	sign, err := nk.Cryptography.Sign(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ sign ] failed to sign a claim")
+	}
+	return sign.Bytes(), nil
+}
+
+func jetRoleToNodeRole(role core.DynamicRole) core.StaticRole {
 	switch role {
-	case core.RoleVirtualExecutor:
-		return core.RoleVirtual
-	case core.RoleVirtualValidator:
-		return core.RoleVirtual
-	case core.RoleLightExecutor:
-		return core.RoleLightMaterial
-	case core.RoleLightValidator:
-		return core.RoleLightMaterial
-	case core.RoleHeavyExecutor:
-		return core.RoleHeavyMaterial
+	case core.DynamicRoleVirtualExecutor:
+		return core.StaticRoleVirtual
+	case core.DynamicRoleVirtualValidator:
+		return core.StaticRoleVirtual
+	case core.DynamicRoleLightExecutor:
+		return core.StaticRoleLightMaterial
+	case core.DynamicRoleLightValidator:
+		return core.StaticRoleLightMaterial
+	case core.DynamicRoleHeavyExecutor:
+		return core.StaticRoleHeavyMaterial
 	default:
-		return core.RoleUnknown
+		return core.StaticRoleUnknown
 	}
 }

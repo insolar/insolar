@@ -34,16 +34,8 @@ type Controller interface {
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
 	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
-	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
+	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
 	Bootstrap(ctx context.Context) error
-	// Authorize start authorization process on discovery node.
-	Authorize(ctx context.Context) error
-	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon.
-	// DEPRECATED
-	ResendPulseToKnownHosts(pulse core.Pulse)
-
-	// GetNodeID get self node id (should be removed in far future).
-	GetNodeID() core.RecordRef
 
 	// Inject inject components.
 	Inject(cryptographyService core.CryptographyService,
@@ -145,21 +137,22 @@ const (
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
 type NodeKeeper interface {
 	core.NodeNetwork
+
+	// TODO: remove this interface when bootstrap mechanism completed
+	core.SwitcherWorkAround
+
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
-
 	// SetState set state of the NodeKeeper
 	SetState(NodeKeeperState)
 	// GetState get state of the NodeKeeper
 	GetState() NodeKeeperState
-	// SetOriginClaim set origin NodeJoinClaim. It is needed to join to discovery node or (sometimes) in consensus
-	SetOriginClaim(*consensus.NodeJoinClaim)
 	// GetOriginClaim get origin NodeJoinClaim
-	GetOriginClaim() *consensus.NodeJoinClaim
+	GetOriginClaim() (*consensus.NodeJoinClaim, error)
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
 	// AddPendingClaim add pending claim to the internal queue of claims
@@ -184,11 +177,15 @@ type NodeKeeper interface {
 type UnsyncList interface {
 	consensus.BitSetMapper
 	// RemoveClaims
-	RemoveClaims(from core.RecordRef)
+	RemoveClaims(core.RecordRef)
 	// AddClaims
-	AddClaims(from core.RecordRef, claims []consensus.ReferendumClaim)
+	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim, map[core.RecordRef]string)
 	// CalculateHash calculate node list hash based on active node list and claims
-	CalculateHash() []byte
+	CalculateHash() ([]byte, error)
+	// GetActiveNode get active node by reference ID for current consensus
+	GetActiveNode(ref core.RecordRef) core.Node
+	// GetActiveNodes get active nodes for current consensus
+	GetActiveNodes() []core.Node
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -208,8 +205,6 @@ type RoutingTable interface {
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
 	Rebalance(PartitionPolicy)
-	// GetLocalNodes get all nodes from the local globe.
-	GetLocalNodes() []core.RecordRef
 	// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
 	GetRandomNodes(count int) []host.Host
 }
@@ -236,6 +231,7 @@ type InternalTransport interface {
 }
 
 // ClaimQueue is the queue that contains consensus claims.
+//go:generate minimock -i github.com/insolar/insolar/network.ClaimQueue -o ../testutils/network -s _mock.go
 type ClaimQueue interface {
 	// Pop takes claim from the queue.
 	Pop() consensus.ReferendumClaim

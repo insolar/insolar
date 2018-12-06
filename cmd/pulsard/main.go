@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -84,26 +86,18 @@ func main() {
 	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
-	fmt.Println("Press any button to exit")
-	rl, err := readline.New("")
+	var gracefulStop = make(chan os.Signal, 1)
+	signal.Notify(gracefulStop, syscall.SIGTERM)
+	signal.Notify(gracefulStop, syscall.SIGINT)
+
+	<-gracefulStop
+	pulseTicker.Stop()
+	refreshTicker.Stop()
+	err = storage.Close()
 	if err != nil {
 		inslog.Error(err)
-		panic(err)
 	}
-	_, err = rl.Readline()
-	if err != nil {
-		inslog.Warn(err)
-	}
-
-	defer func() {
-		pulseTicker.Stop()
-		refreshTicker.Stop()
-		err := storage.Close()
-		if err != nil {
-			inslog.Error(err)
-		}
-		server.StopServer(ctx)
-	}()
+	server.StopServer(ctx)
 
 }
 
@@ -189,9 +183,9 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 
 // RandTraceID returns random traceID in uuid format
 func RandTraceID() string {
-	qid, err := uuid.NewV4()
+	traceID, err := uuid.NewV4()
 	if err != nil {
 		panic("createRandomTraceIDFailed:" + err.Error())
 	}
-	return qid.String()
+	return traceID.String()
 }

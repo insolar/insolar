@@ -9,14 +9,14 @@ CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
 INSGORUND_LISTEN_PORT=18181
 INSGORUND_RPS_PORT=18182
+INSGOLAR_METRICS_PORT=9090
+INSGORUND_METRICS_PORT=9091
 CONFIGS_DIR=configs
-KEYS_FILE=scripts/insolard/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=scripts/insolard/$CONFIGS_DIR/root_member_keys.json
-CERTIFICATE_FILE=scripts/insolard/$CONFIGS_DIR/certificate.json
 
 stop_listening()
 {
-    ports="19191 $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 8090 8080"
+    ports="19191 $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 8090 8080 $INSGOLAR_METRICS_PORT $INSGORUND_METRICS_PORT"
     if [ "$1" != "" ]
     then
         ports=$@
@@ -41,6 +41,7 @@ create_required_dirs()
     mkdir -p $CONTRACT_STORAGE
     mkdir -p $LEDGER_DIR
     mkdir -p scripts/insolard/$CONFIGS_DIR
+    mkdir -p scripts/insolard/$CONFIGS_DIR/certs
 }
 
 prepare()
@@ -66,19 +67,9 @@ rebuild_binaries()
     build_binaries
 }
 
-generate_bootstrap_keys()
-{
-	bin/insolar -c gen_keys > $KEYS_FILE
-}
-
 generate_root_member_keys()
 {
 	bin/insolar -c gen_keys > $ROOT_MEMBER_KEYS_FILE
-}
-
-generate_certificate()
-{
-    bin/insolar -c gen_certificate -g $KEYS_FILE > $CERTIFICATE_FILE 
 }
 
 check_working_dir()
@@ -126,7 +117,7 @@ process_input_params()
 run_insgorund()
 {
     host=127.0.0.1
-    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT
+    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT --metrics $host:$INSGORUND_METRICS_PORT
 }
 
 trap stop_listening EXIT
@@ -138,14 +129,13 @@ process_input_params $param
 
 prepare
 build_binaries
-generate_bootstrap_keys
 generate_root_member_keys
-generate_certificate
 
 if [ "$gorund_only" == "1" ]
 then
     run_insgorund
 else
     run_insgorund &
-    $INSOLARD --config scripts/insolard/insolar.yaml
+    $INSOLARD --config scripts/insolard/one_node_insolar.yaml --genesis scripts/insolard/one_node_genesis.yaml --keyout scripts/insolard/$CONFIGS_DIR/certs
+    $INSOLARD --config scripts/insolard/one_node_insolar.yaml
 fi

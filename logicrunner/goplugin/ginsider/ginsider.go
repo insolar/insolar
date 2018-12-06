@@ -27,6 +27,11 @@ import (
 	"reflect"
 	"runtime/debug"
 	"sync"
+	"time"
+
+	"github.com/insolar/insolar/metrics"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -39,6 +44,11 @@ import (
 	"github.com/tylerb/gls"
 )
 
+type pluginRec struct {
+	sync.Mutex
+	plugin *plugin.Plugin
+}
+
 // GoInsider is an RPC interface to run code of plugins
 type GoInsider struct {
 	dir              string
@@ -48,7 +58,7 @@ type GoInsider struct {
 	upstreamMutex  sync.Mutex // lock UpstreamClient change
 	UpstreamClient *rpc.Client
 
-	plugins      map[string]*plugin.Plugin
+	plugins      map[core.RecordRef]*pluginRec
 	pluginsMutex sync.Mutex
 }
 
@@ -56,7 +66,8 @@ type GoInsider struct {
 func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
 	res := GoInsider{dir: path, upstreamProtocol: network, upstreamAddress: address}
-	res.plugins = make(map[string]*plugin.Plugin)
+	res.plugins = make(map[core.RecordRef]*pluginRec)
+	proxyctx.Current = &res
 	return &res
 }
 
@@ -81,6 +92,8 @@ func recoverRPC(ctx context.Context, err *error) {
 // CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) (err error) {
+	start := time.Now()
+	metrics.InsgorundCallsTotal.Inc()
 	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
 	inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	defer recoverRPC(ctx, &err)
@@ -130,12 +143,16 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	}
 	reply.Data = state
 	reply.Ret = result
+
+	metrics.InsgorundContractExecutionTime.Observe(time.Since(start).Seconds())
+
 	return nil
 }
 
 // CallConstructor is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (err error) {
+	metrics.InsgorundCallsTotal.Inc()
 	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
 	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
 	defer recoverRPC(ctx, &err)
@@ -178,6 +195,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 
 	client, err := rpc.Dial(gi.upstreamProtocol, gi.upstreamAddress)
 	if err != nil {
+		log.Fatalf("can't connect to upstream, protocol: %s, address: %s", gi.upstreamProtocol, gi.upstreamAddress)
 		os.Exit(0)
 	}
 
@@ -212,14 +230,15 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 	err = client.Call("RPC.GetCode", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return "", errors.Wrap(err, "on calling main API")
+		return "", errors.Wrap(err, "[ ObtainCode ] on calling main API")
 	}
 
 	err = ioutil.WriteFile(path, res.Code, 0666)
 	if err != nil {
-		return "", errors.Wrap(err, "on writing file down")
+		return "", errors.Wrap(err, "[ ObtainCode ] on writing file down")
 	}
 
 	return path, nil
@@ -228,11 +247,13 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Plugin, error) {
-	gi.pluginsMutex.Lock()
-	defer gi.pluginsMutex.Unlock()
-	key := ref.String()
-	if gi.plugins[key] != nil {
-		return gi.plugins[key], nil
+	rec := gi.getPluginRec(ref)
+
+	rec.Lock()
+	defer rec.Unlock()
+
+	if rec.plugin != nil {
+		return rec.plugin, nil
 	}
 
 	path, err := gi.ObtainCode(ctx, ref)
@@ -246,8 +267,21 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref core.RecordRef) (*plugin.Pl
 		return nil, errors.Wrap(err, "couldn't open plugin")
 	}
 
-	gi.plugins[key] = p
+	rec.plugin = p
 	return p, nil
+}
+
+// getPluginRec return existed gi.plugins[ref] or create a new one
+// also set gi.plugins[ref].Lock()
+func (gi *GoInsider) getPluginRec(ref core.RecordRef) *pluginRec {
+	gi.pluginsMutex.Lock()
+	defer gi.pluginsMutex.Unlock()
+
+	if gi.plugins[ref] == nil {
+		gi.plugins[ref] = &pluginRec{}
+	}
+	res := gi.plugins[ref]
+	return res
 }
 
 // MakeUpBaseReq makes base of request from current CallContext
@@ -282,9 +316,10 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, arg
 	err = client.Call("RPC.RouteCall", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return nil, errors.Wrap(err, "on calling main API")
+		return nil, errors.Wrap(err, "[ RouteCall ] on calling main API")
 	}
 
 	return []byte(res.Result), nil
@@ -309,9 +344,10 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -333,6 +369,7 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([
 	err = client.Call("RPC.GetObjChildren", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
 		return nil, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
@@ -360,9 +397,10 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 	err = client.Call("RPC.SaveAsDelegate", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -385,9 +423,10 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 	err = client.Call("RPC.GetDelegate", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "[ GetDelegate ] on calling main API")
 	}
 
 	return res.Object, nil
@@ -408,9 +447,10 @@ func (gi *GoInsider) DeactivateObject(object core.RecordRef) error {
 	err = client.Call("RPC.DeactivateObject", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return errors.Wrap(err, "on calling main API")
+		return errors.Wrap(err, "[ DeactivateObject ] on calling main API")
 	}
 
 	return nil
@@ -436,4 +476,25 @@ func (gi *GoInsider) MakeErrorSerializable(e error) error {
 		return nil
 	}
 	return &foundation.Error{S: e.Error()}
+}
+
+// AddPlugin inject plugin by ref in gi memory
+func (gi *GoInsider) AddPlugin(ref core.RecordRef, path string) error {
+	rec := gi.getPluginRec(ref)
+
+	rec.Lock()
+	defer rec.Unlock()
+
+	if rec.plugin != nil {
+		return errors.New("ref already in use")
+	}
+
+	p, err := plugin.Open(path)
+	if err != nil {
+		return errors.Wrap(err, "[ AddPlugin ] couldn't open plugin")
+	}
+
+	inslogger.FromContext(context.TODO()).Debugf("AddPlugin plugins %+v", gi.plugins)
+	rec.plugin = p
+	return nil
 }

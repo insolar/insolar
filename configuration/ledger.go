@@ -17,6 +17,8 @@
 package configuration
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -34,10 +36,29 @@ type JetCoordinator struct {
 	RoleCounts map[int]int
 }
 
-// ArtifactManager holds configuration for ArtifactManager.
-type ArtifactManager struct {
-	// Maximum pulse difference (NOT number of pulses) between current and the latest replicated on heavy.
-	LightChainLimit core.PulseNumber
+// PulseManager holds configuration for PulseManager.
+type PulseManager struct {
+	// HeavySyncEnabled enables replication to heavy (could be disabled for testing purposes)
+	HeavySyncEnabled bool
+	// HeavySyncMessageLimit soft limit of single message for replication to heavy.
+	HeavySyncMessageLimit int
+	// Backoff configures retry backoff algorithm for Heavy Sync
+	HeavyBackoff Backoff
+}
+
+// Backoff configures retry backoff algorithm
+type Backoff struct {
+	Factor float64
+	//Jitter eases contention by randomizing backoff steps
+	Jitter bool
+	//Min and Max are the minimum and maximum values of the counter
+	Min, Max time.Duration
+}
+
+// RecentStorage holds configuration for RecentStorage
+type RecentStorage struct {
+	// Default TTL is a value of default ttl for redirects
+	DefaultTTL int
 }
 
 // Ledger holds configuration for ledger.
@@ -46,15 +67,18 @@ type Ledger struct {
 	Storage Storage
 	// JetCoordinator defines jet coordinator configuration.
 	JetCoordinator JetCoordinator
-	// HeavyReplication defines replication to heavy storage node.
-	HeavyReplication HeavyReplication
-	// ArtifactManager holds configuration for ArtifactManager.
-	ArtifactManager ArtifactManager
-}
+	// PulseManager holds configuration for PulseManager.
+	PulseManager PulseManager
+	// RecentStorage holds configuration for RecentStorage
+	RecentStorage RecentStorage
 
-// HeavyReplication configures replication to heavy node
-type HeavyReplication struct {
-	SyncMessageLimit int
+	// common/sharable values:
+
+	// LightChainLimit is maximum pulse difference (NOT number of pulses)
+	// between current and the latest replicated on heavy.
+	//
+	// IMPORTANT: It should be the same on ALL nodes.
+	LightChainLimit core.PulseNumber
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -67,16 +91,29 @@ func NewLedger() Ledger {
 
 		JetCoordinator: JetCoordinator{
 			RoleCounts: map[int]int{
-				int(core.RoleVirtualExecutor):  1,
-				int(core.RoleHeavyExecutor):    1,
-				int(core.RoleLightExecutor):    1,
-				int(core.RoleVirtualValidator): 1,
-				int(core.RoleLightValidator):   1,
+				int(core.DynamicRoleVirtualExecutor):  1,
+				int(core.DynamicRoleHeavyExecutor):    1,
+				int(core.DynamicRoleLightExecutor):    1,
+				int(core.DynamicRoleVirtualValidator): 1,
+				int(core.DynamicRoleLightValidator):   1,
 			},
 		},
 
-		ArtifactManager: ArtifactManager{
-			LightChainLimit: 10 * 30, // 30 pulses
+		PulseManager: PulseManager{
+			HeavySyncEnabled:      true,
+			HeavySyncMessageLimit: 1 << 20, // 1Mb
+			HeavyBackoff: Backoff{
+				Jitter: true,
+				Min:    200 * time.Millisecond,
+				Max:    2 * time.Second,
+				Factor: 2,
+			},
 		},
+
+		RecentStorage: RecentStorage{
+			DefaultTTL: 50,
+		},
+
+		LightChainLimit: 10 * 30, // 30 pulses
 	}
 }

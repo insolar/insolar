@@ -18,7 +18,7 @@ package reply
 
 import "github.com/insolar/insolar/core"
 
-// OK is a generic reply for success calls without returned value.
+// OK is a generic reply for signaling a positive result.
 type OK struct {
 }
 
@@ -27,7 +27,16 @@ func (e *OK) Type() core.ReplyType {
 	return TypeOK
 }
 
-// Error is common reaction for methods returning id to lifeline states.
+// NotOK is a generic reply for signaling a negative result.
+type NotOK struct {
+}
+
+// Type implementation of Reply interface.
+func (e *NotOK) Type() core.ReplyType {
+	return TypeNotOK
+}
+
+// Error is common error reaction.
 type Error struct {
 	ErrType ErrType
 }

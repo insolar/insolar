@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -65,7 +66,6 @@ func (m *MockResolver) ResolveS(id core.ShortNodeID) (*host.Host, error) {
 func (m *MockResolver) Inject(nodeKeeper network.NodeKeeper) {}
 func (m *MockResolver) AddToKnownHosts(h *host.Host)         {}
 func (m *MockResolver) Rebalance(network.PartitionPolicy)    {}
-func (m *MockResolver) GetLocalNodes() []core.RecordRef      { return nil }
 func (m *MockResolver) GetRandomNodes(int) []host.Host       { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
@@ -90,19 +90,18 @@ func newMockResolver() *MockResolver {
 	}
 }
 
-func mockConfiguration(nodeID string, address string) configuration.Configuration {
+func mockConfiguration(address string) configuration.Configuration {
 	result := configuration.Configuration{}
 	result.Host.Transport = configuration.Transport{Protocol: "UTP", Address: address, BehindNAT: false}
-	result.Node.Node = &configuration.Node{nodeID}
 	return result
 }
 
 func TestNewInternalTransport(t *testing.T) {
 	// broken address
-	_, err := NewInternalTransport(mockConfiguration(ID1, "abirvalg"))
+	_, err := NewInternalTransport(mockConfiguration("abirvalg"), ID1)
 	require.Error(t, err)
 	address := "127.0.0.1:0"
-	tp, err := NewInternalTransport(mockConfiguration(ID1, address))
+	tp, err := NewInternalTransport(mockConfiguration(address), ID1)
 	require.NoError(t, err)
 	defer tp.Stop()
 	// require that new address with correct port has been assigned
@@ -112,7 +111,7 @@ func TestNewInternalTransport(t *testing.T) {
 
 func TestNewInternalTransport2(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	go tp.Start(ctx)
 	// no assertion, check that Stop does not block
@@ -125,12 +124,12 @@ func TestNewInternalTransport2(t *testing.T) {
 func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err error) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	if err != nil {
 		return nil, nil, err
 	}
 	tr1 := NewHostTransport(i1, m)
-	i2, err := NewInternalTransport(mockConfiguration(ID2, "127.0.0.1:0"))
+	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,7 +148,7 @@ func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err err
 }
 
 func TestNewInternalTransport3(t *testing.T) {
-	_, err := NewInternalTransport(mockConfiguration("", "127.0.0.1:0"))
+	_, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "")
 	require.Error(t, err)
 }
 
@@ -185,7 +184,7 @@ func TestNewHostTransport(t *testing.T) {
 		_, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
 		require.NoError(t, err)
 	}
-	success := network.WaitTimeout(&wg, time.Second)
+	success := utils.WaitTimeout(&wg, time.Second)
 	require.True(t, success)
 }
 
@@ -193,7 +192,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	m := newMockResolver()
 	ctx := context.Background()
 
-	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	t1 := NewHostTransport(i1, m)
 	t1.Start(ctx)
@@ -208,7 +207,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 
 	err = m.addMapping(ID2, "abirvalg")
 	require.Error(t, err)
-	err = m.addMapping(ID3, "127.0.0.1:9090")
+	err = m.addMapping(ID3, "127.0.0.1:7654")
 	require.NoError(t, err)
 
 	// should return error because resolved address is invalid
@@ -248,7 +247,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
 	require.NoError(t, err)
-	success := network.WaitTimeout(&wg, time.Second)
+	success := utils.WaitTimeout(&wg, time.Second)
 	require.True(t, success)
 }
 
@@ -359,13 +358,13 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
-	result := network.WaitTimeout(&wg, time.Millisecond*10)
+	result := utils.WaitTimeout(&wg, time.Millisecond*10)
 	require.False(t, result)
 }
 
 func TestDoubleStart(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -383,7 +382,7 @@ func TestDoubleStart(t *testing.T) {
 func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	tr1 := NewHostTransport(i1, m)
 	defer tr1.Stop()

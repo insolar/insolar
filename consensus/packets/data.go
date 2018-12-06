@@ -18,8 +18,6 @@ package packets
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
 )
 
 type PacketType uint8
@@ -27,118 +25,15 @@ type PacketType uint8
 const (
 	Phase1 = PacketType(iota + 1)
 	Phase2
+	Phase3
 )
 
 const HashLength = 64
 const SignatureLength = 71
 const ReferenceLength = 64
+const PublicKeyLength = 64
 
-// ----------------------------------PHASE 1--------------------------------
-
-type Phase1Packet struct {
-	// -------------------- Header
-	packetHeader PacketHeader
-
-	// -------------------- Section 1 ( Pulse )
-	pulseData      PulseDataExt // optional
-	proofNodePulse NodePulseProof
-
-	// -------------------- Section 2 ( Claims ) ( optional )
-	claims []ReferendumClaim
-
-	// --------------------
-	// signature contains signature of Header + Section 1 + Section 2
-	Signature [SignatureLength]byte
-}
-
-func NewPhase1Packet() *Phase1Packet {
-	return &Phase1Packet{}
-}
-
-func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck
-	return p1p.packetHeader.f00
-}
-
-func (p1p *Phase1Packet) hasSection2() bool {
-	return p1p.packetHeader.f01
-}
-
-func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
-	if header.PacketType != types.Phase1 {
-		return errors.New("Phase1Packet.SetPacketHeader: wrong packet type")
-	}
-	p1p.packetHeader.setRoutingFields(header, Phase1)
-
-	return nil
-}
-
-func (p1p *Phase1Packet) GetPulseNumber() core.PulseNumber {
-	return core.PulseNumber(p1p.packetHeader.Pulse)
-}
-
-func (p1p *Phase1Packet) GetPulse() core.Pulse {
-	//TODO: need convert method with pulse signature check
-	return core.Pulse{
-		PulseNumber: core.PulseNumber(p1p.packetHeader.Pulse),
-		Entropy:     p1p.pulseData.Entropy,
-	}
-}
-
-func (p1p *Phase1Packet) GetPulseProof() *NodePulseProof {
-	return &p1p.proofNodePulse
-}
-
-func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
-	header := &RoutingHeader{}
-
-	if p1p.packetHeader.PacketT != Phase1 {
-		return nil, errors.New("Phase1Packet.GetPacketHeader: wrong packet type")
-	}
-
-	header.PacketType = types.Phase1
-	header.OriginID = p1p.packetHeader.OriginNodeID
-	header.TargetID = p1p.packetHeader.TargetNodeID
-
-	return header, nil
-}
-
-// SetPulseProof sets PulseProof and check struct fields len, returns error if invalid len
-func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) error {
-	if len(proofStateHash) == HashLength && len(proofSignature) == SignatureLength {
-		copy(p1p.proofNodePulse.NodeStateHash[:], proofStateHash[:HashLength])
-		copy(p1p.proofNodePulse.NodeSignature[:], proofSignature[:SignatureLength])
-		return nil
-	}
-
-	return errors.New("invalid proof fields len")
-}
-
-// AddClaim adds claim if phase1Packet has space for it, otherwise returns error
-func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) error {
-
-	getClaimSize := func(claims ...ReferendumClaim) int {
-		result := 0
-		for _, cl := range claims {
-			result += int(getClaimWithHeaderSize(cl))
-			result += claimHeaderSize
-		}
-		return result
-	}
-
-	claimSize := getClaimSize(append(p1p.claims, claim)...)
-
-	if claimSize > phase1PacketSizeForClaims {
-		return errors.New("No space for claim")
-	}
-
-	p1p.claims = append(p1p.claims, claim)
-	p1p.packetHeader.f01 = true
-	return nil
-}
-
-func (p1p *Phase1Packet) GetClaims() []ReferendumClaim {
-	return p1p.claims
-}
+// ------------------------------PACKET HEADER------------------------------
 
 type PacketHeader struct {
 	PacketT    PacketType
@@ -152,12 +47,7 @@ type PacketHeader struct {
 	TargetNodeID core.ShortNodeID
 }
 
-func (ph *PacketHeader) setRoutingFields(header *RoutingHeader, packetType PacketType) {
-	ph.TargetNodeID = header.TargetID
-	ph.OriginNodeID = header.OriginID
-	ph.HasRouting = true
-	ph.PacketT = packetType
-}
+// ------------------------------PULSE DATA------------------------------
 
 // PulseDataExt is a pulse data extension.
 type PulseDataExt struct {
@@ -186,70 +76,4 @@ func (npp *NodePulseProof) StateHash() []byte {
 
 func (npp *NodePulseProof) Signature() []byte {
 	return npp.NodeSignature[:]
-}
-
-// ----------------------------------PHASE 2--------------------------------
-
-type Phase2Packet struct {
-	// -------------------- Header
-	packetHeader PacketHeader
-
-	// -------------------- Section 1
-	globuleHashSignature [HashLength]byte
-	// TODO: uncomment this after impl (de)serializers
-	// deviantBitSet           BitSet
-	SignatureHeaderSection1 [SignatureLength]byte
-
-	// -------------------- Section 2 (optional)
-	votesAndAnswers         []ReferendumVote
-	SignatureHeaderSection2 [SignatureLength]byte
-}
-
-func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {
-	return core.PulseNumber(p2p.packetHeader.Pulse)
-}
-
-func (p2p *Phase2Packet) isPhase3Needed() bool {
-	return p2p.packetHeader.f00
-}
-
-func (p2p *Phase2Packet) hasSection2() bool {
-	return p2p.packetHeader.f01
-}
-
-func (p2p *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
-	if header.PacketType != types.Phase2 {
-		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
-	}
-
-	p2p.packetHeader.setRoutingFields(header, Phase2)
-
-	return nil
-}
-
-func (p2p *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
-	header := &RoutingHeader{}
-
-	if p2p.packetHeader.PacketT != Phase2 {
-		return nil, errors.New("Phase2Packet.GetPacketHeader: wrong packet type")
-	}
-
-	header.PacketType = types.Phase2
-	header.OriginID = p2p.packetHeader.OriginNodeID
-	header.TargetID = p2p.packetHeader.TargetNodeID
-
-	return header, nil
-}
-
-func (p2p *Phase2Packet) GetGlobuleHashSignature() []byte {
-	return p2p.globuleHashSignature[:]
-}
-
-func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {
-	if len(globuleHashSignature) == SignatureLength {
-		copy(p2p.globuleHashSignature[:], globuleHashSignature[:SignatureLength])
-		return nil
-	}
-
-	return errors.New("invalid proof fields len")
 }

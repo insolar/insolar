@@ -25,10 +25,11 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
-const ConsensusAtPercents = 0.66
+const ConsensusAtPercents = 2.0 / 3.0
 
 func consensusReached(resultLen, participanstLen int) bool {
 	minParticipants := int(math.Floor(ConsensusAtPercents*float64(participanstLen))) + 1
@@ -65,20 +66,31 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase1Packet.")
 	}
 
+	var success bool
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
-		err = packet.AddClaim(fp.NodeKeeper.GetOriginClaim())
+		originClaim, err := fp.NodeKeeper.GetOriginClaim()
 		if err != nil {
+			return nil, errors.Wrap(err, "[ Execute ] Failed to get origin claim")
+		}
+		success = packet.AddClaim(originClaim)
+		if !success {
 			return nil, errors.Wrap(err, "[ Execute ] Failed to add origin claim in Phase1Packet.")
 		}
 	}
-	// TODO: add other claims
+	for {
+		success = packet.AddClaim(fp.NodeKeeper.GetClaimQueue().Front())
+		if !success {
+			break
+		}
+		_ = fp.NodeKeeper.GetClaimQueue().Pop()
+	}
 
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
 	err = fp.signPhase1Packet(&packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a packet")
 	}
-	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, packet)
+	resultPackets, addressMap, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
@@ -99,7 +111,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 			},
 			StateHash: rawProof.StateHash(),
 		}
-		claimMap[ref] = packet.GetClaims()
+		claimMap[ref] = fp.getSignedClaims(packet.GetClaims())
 	}
 
 	if fp.NodeKeeper.GetState() == network.Waiting {
@@ -110,35 +122,17 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		fp.UnsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
-	fp.processClaims(ctx, claimMap)
+	fp.UnsyncList.AddClaims(claimMap, addressMap)
 
-	// Get active nodes again for case when current node just joined to network and don't have full active list
-	activeNodes = fp.NodeKeeper.GetActiveNodes()
-	deviantsNodes := make([]core.Node, 0)
-	timedOutNodes := make([]core.Node, 0)
-	validProofs := make(map[core.Node]*merkle.PulseProof)
-
-	for _, node := range activeNodes {
-		proof, ok := proofSet[node.ID()]
-		if !ok {
-			timedOutNodes = append(timedOutNodes, node)
-		}
-
-		if !fp.Calculator.IsValid(proof, pulseHash, node.PublicKey()) {
-			validProofs[node] = proof
-		} else {
-			deviantsNodes = append(deviantsNodes, node)
-		}
-	}
+	valid, fault := fp.validateProofs(pulseHash, proofSet)
 
 	return &FirstPhaseState{
-		PulseEntry:    entry,
-		PulseHash:     pulseHash,
-		PulseProof:    pulseProof,
-		PulseProofSet: validProofs,
-		TimedOutNodes: timedOutNodes,
-		DeviantNodes:  deviantsNodes,
-		UnsyncList:    fp.UnsyncList,
+		PulseEntry:  entry,
+		PulseHash:   pulseHash,
+		PulseProof:  pulseProof,
+		ValidProofs: valid,
+		FaultProofs: fault,
+		UnsyncList:  fp.UnsyncList,
 	}, nil
 }
 
@@ -165,12 +159,77 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }
 
-func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
-	return 0, errors.New("not implemented")
+func (fp *FirstPhase) validateProofs(
+	pulseHash merkle.OriginHash,
+	proofs map[core.RecordRef]*merkle.PulseProof,
+) (valid map[core.Node]*merkle.PulseProof, fault map[core.RecordRef]*merkle.PulseProof) {
+
+	validProofs := make(map[core.Node]*merkle.PulseProof)
+	faultProofs := make(map[core.RecordRef]*merkle.PulseProof)
+	for nodeID, proof := range proofs {
+		valid := fp.validateProof(pulseHash, nodeID, proof)
+		if valid {
+			validProofs[fp.UnsyncList.GetActiveNode(nodeID)] = proof
+		} else {
+			faultProofs[nodeID] = proof
+		}
+	}
+	return validProofs, faultProofs
 }
 
-func (fp *FirstPhase) processClaims(ctx context.Context, claims map[core.RecordRef][]packets.ReferendumClaim) {
-	for ref, claimList := range claims {
-		fp.UnsyncList.AddClaims(ref, claimList)
+func (fp *FirstPhase) validateProof(pulseHash merkle.OriginHash, nodeID core.RecordRef, proof *merkle.PulseProof) bool {
+	node := fp.UnsyncList.GetActiveNode(nodeID)
+	if node == nil {
+		return false
 	}
+	return fp.Calculator.IsValid(proof, pulseHash, node.PublicKey())
+}
+
+func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
+	// TODO: NETD18-47
+	for _, claimList := range claims {
+		for _, claim := range claimList {
+			if claim.Type() == packets.TypeNodeAnnounceClaim {
+				announceClaim, ok := claim.(*packets.NodeAnnounceClaim)
+				if !ok {
+					continue
+				}
+				return int(announceClaim.NodeCount), nil
+			}
+		}
+	}
+	return 0, errors.New("no announce claims were received")
+}
+
+func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+	result := make([]packets.ReferendumClaim, 0)
+	for _, claim := range claims {
+		joinClaim, ok := claim.(*packets.NodeJoinClaim)
+		if ok {
+			signConfirmed, err := fp.claimSignIsOk(joinClaim)
+			if err != nil {
+				log.Error("[ getSignedClaims ] failed to check a claim sign")
+				continue
+			}
+			if !signConfirmed {
+				log.Error("[ getSginedClaims ] sign is unconfirmed")
+				continue
+			}
+		}
+		result = append(result, claim)
+	}
+	return result
+}
+
+func (fp *FirstPhase) claimSignIsOk(claim *packets.NodeJoinClaim) (bool, error) {
+	keyProc := platformpolicy.NewKeyProcessor()
+	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
+	if err != nil {
+		return false, errors.Wrap(err, "[ claimSignIsOk ] failed to import a key")
+	}
+	rawClaim, err := claim.SerializeWithoutSign()
+	if err != nil {
+		return false, errors.Wrap(err, "[ claimSignIsOk ] failed to serialize a claim")
+	}
+	return fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.Signature[:]), rawClaim), nil
 }

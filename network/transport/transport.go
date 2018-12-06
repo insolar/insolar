@@ -63,10 +63,14 @@ type Transport interface {
 func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
 	conn, publicAddress, err := NewConnection(cfg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create connection.")
 	}
 
 	switch cfg.Protocol {
+	case "TCP":
+		// TODO: little hack: It's better to change interface for NewConnection
+		conn.Close()
+		return newTCPTransport(conn.LocalAddr().String(), proxy, publicAddress)
 	case "UTP":
 		return newUTPTransport(conn, proxy, publicAddress)
 	case "KCP":

@@ -16,9 +16,44 @@
 
 package core
 
+import (
+	"crypto"
+)
+
+type NodeMeta interface {
+	GetNodeRef() *RecordRef
+	GetPublicKey() crypto.PublicKey
+}
+
 // Certificate interface provides methods to manage keys
+//go:generate minimock -i github.com/insolar/insolar/core.Certificate -o ../testutils -s _mock.go
 type Certificate interface {
-	GetRole() NodeRole
+	AuthorizationCertificate
+
 	GetRootDomainReference() *RecordRef
-	SetRootDomainReference(ref *RecordRef)
+	GetDiscoveryNodes() []DiscoveryNode
+}
+
+//go:generate minimock -i github.com/insolar/insolar/core.DiscoveryNode -o ../testutils -s _mock.go
+type DiscoveryNode interface {
+	NodeMeta
+
+	GetHost() string
+}
+
+// AuthorizationCertificate interface provides methods to manage info about node from it certificate
+type AuthorizationCertificate interface {
+	NodeMeta
+
+	GetRole() StaticRole
+	SerializeNodePart() []byte
+	GetDiscoverySigns() map[*RecordRef][]byte
+}
+
+// CertificateManager interface provides methods to manage nodes certificate
+//go:generate minimock -i github.com/insolar/insolar/core.CertificateManager -o ../testutils -s _mock.go
+type CertificateManager interface {
+	GetCertificate() Certificate
+	VerifyAuthorizationCertificate(authCert AuthorizationCertificate) (bool, error)
+	NewUnsignedCertificate(pKey string, role string, nodeRef string) (Certificate, error)
 }

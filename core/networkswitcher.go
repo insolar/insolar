@@ -16,9 +16,17 @@
 
 package core
 
+import (
+	"context"
+)
+
+// NetworkState type for bootstrapping process
+type NetworkState int
+
+//go:generate stringer -type=NetworkState
 const (
 	// NoNetworkState state means that nodes doesn`t match majority_rule
-	NoNetworkState = iota
+	NoNetworkState NetworkState = iota
 	// VoidNetworkState state means that nodes have not complete min_role_count rule for proper work
 	VoidNetworkState
 	// JetlessNetworkState state means that every Jet need proof completeness of stored data
@@ -29,11 +37,11 @@ const (
 	CompleteNetworkState
 )
 
-// NetworkState type for bootstrapping process
-type NetworkState int
-
 // NetworkSwitcher is a network FSM using for bootstrapping
+//go:generate minimock -i github.com/insolar/insolar/core.NetworkSwitcher -o ../testutils -s _mock.go
 type NetworkSwitcher interface {
 	// GetState method returns current network state
 	GetState() NetworkState
+	// OnPulse method checks current state and finds out reasons to update this state
+	OnPulse(context.Context, Pulse) error
 }

@@ -17,6 +17,7 @@
 package phases
 
 import (
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
@@ -28,10 +29,8 @@ type FirstPhaseState struct {
 	PulseHash  merkle.OriginHash
 	PulseProof *merkle.PulseProof
 
-	PulseProofSet map[core.Node]*merkle.PulseProof
-
-	TimedOutNodes []core.Node
-	DeviantNodes  []core.Node
+	ValidProofs map[core.Node]*merkle.PulseProof
+	FaultProofs map[core.RecordRef]*merkle.PulseProof
 
 	UnsyncList network.UnsyncList
 }
@@ -48,6 +47,8 @@ type SecondPhaseState struct {
 
 	NodeListCount uint16
 	NodeListHash  []byte
+
+	DBitSet packets.BitSet
 }
 
 type ThirdPhasePulseState struct {

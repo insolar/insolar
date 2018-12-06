@@ -17,9 +17,8 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 	keeper := nodenetwork.NewNodeKeeper(
 		nodenetwork.NewNode(
 			nw.GetNodeID(),
-			[]core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+			core.StaticRoleVirtual,
 			pk,
-			core.PulseNumber(0),
 			// TODO implement later
 			"",
 			"",
@@ -29,9 +28,8 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 	getValidator := func() core.Node {
 		return nodenetwork.NewNode(
 			nw.GetNodeID(),
-			[]core.NodeRole{core.RoleVirtual, core.RoleLightMaterial},
+			core.StaticRoleVirtual,
 			pk,
-			core.PulseNumber(0),
 			// TODO implement later
 			"",
 			"",

@@ -45,63 +45,62 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.RecordRef
 	case *HeavyPayload:
 		return core.RecordRef{}
+	case *HotData:
+		return t.Jet
+	case *GetObjectIndex:
+		return t.Object
 	case *Parcel:
 		return ExtractTarget(t.Msg)
+	case *NodeSignPayload:
+		return *t.NodeRef
 	default:
-		panic(fmt.Sprintf("unknow message type - %v", t))
+		panic(fmt.Sprintf("[ ExtractTarget ] unknow message type - %s", t.Type().String()))
 	}
 }
 
-func ExtractRole(msg core.Message) core.JetRole {
+func ExtractRole(msg core.Message) core.DynamicRole {
 	switch t := msg.(type) {
-	case *GenesisRequest:
-		return core.RoleLightExecutor
-	case *CallConstructor:
-		return core.RoleVirtualExecutor
-	case *CallMethod:
-		return core.RoleVirtualExecutor
-	case *ExecutorResults:
-		return core.RoleVirtualExecutor
-	case *GetChildren:
-		return core.RoleLightExecutor
-	case *GetCode:
-		return core.RoleLightExecutor
-	case *GetDelegate:
-		return core.RoleLightExecutor
-	case *GetObject:
-		return core.RoleLightExecutor
-	case *JetDrop:
-		return core.RoleLightExecutor
-	case *RegisterChild:
-		return core.RoleLightExecutor
-	case *SetBlob:
-		return core.RoleLightExecutor
-	case *SetRecord:
-		return core.RoleLightExecutor
-	case *UpdateObject:
-		return core.RoleLightExecutor
+	case
+		*ExecutorResults,
+		*CallMethod,
+		*CallConstructor,
+		*GenesisRequest,
+		*ValidationResults:
+		return core.DynamicRoleVirtualExecutor
+	case
+		*GetChildren,
+		*GetCode,
+		*GetDelegate,
+		*GetObject,
+		*JetDrop,
+		*RegisterChild,
+		*SetBlob,
+		*SetRecord,
+		*UpdateObject,
+		*ValidateRecord,
+		*HotData:
+		return core.DynamicRoleLightExecutor
 	case *ValidateCaseBind:
-		return core.RoleVirtualValidator
-	case *ValidateRecord:
-		return core.RoleLightExecutor
-	case *ValidationResults:
-		return core.RoleVirtualExecutor
+		return core.DynamicRoleVirtualValidator
 	case
 		*HeavyStartStop,
-		*HeavyPayload:
-		return core.RoleHeavyExecutor
+		*HeavyPayload,
+		*GetObjectIndex:
+		return core.DynamicRoleHeavyExecutor
 	case *Parcel:
 		return ExtractRole(t.Msg)
+	case *NodeSignPayload:
+		return core.DynamicRoleUndefined
 	default:
-		panic(fmt.Sprintf("unknow message type - %v", t))
+		panic(fmt.Sprintf("[ ExtractRole ] unknow message type - %s", t.Type().String()))
 	}
 }
 
 // ExtractAllowedSenderObjectAndRole extracts information from message
-// verify senderrequired to 's "caller" for sender
+// verify sender required to 's "caller" for sender
 // verification purpose. If nil then check of sender's role is not
 // provided by the message bus
-func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.JetRole) {
+func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.DynamicRole) {
 	switch t := msg.(type) {
 	case *GenesisRequest:
 		return nil, 0
@@ -110,42 +109,49 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		if c.IsEmpty() {
 			return nil, 0
 		}
-		return c, core.RoleVirtualExecutor
+		return c, core.DynamicRoleVirtualExecutor
 	case *CallMethod:
 		c := t.GetCaller()
 		if c.IsEmpty() {
 			return nil, 0
 		}
-		return c, core.RoleVirtualExecutor
+		return c, core.DynamicRoleVirtualExecutor
 	case *ExecutorResults:
 		return nil, 0
 	case *GetChildren:
-		return nil, 0
+		return &t.Parent, core.DynamicRoleVirtualExecutor
 	case *GetCode:
-		return nil, 0
+		return &t.Code, core.DynamicRoleVirtualExecutor
 	case *GetDelegate:
-		return nil, 0
+		return &t.Head, core.DynamicRoleVirtualExecutor
 	case *GetObject:
-		return nil, 0
+		return &t.Head, core.DynamicRoleVirtualExecutor
 	case *JetDrop:
-		return nil, 0
+		// This check is not needed, because JetDrop sender is explicitly checked in handler.
+		return nil, core.DynamicRoleUndefined
 	case *RegisterChild:
-		return nil, 0
+		return &t.Child, core.DynamicRoleVirtualExecutor
 	case *SetBlob:
-		return nil, 0
+		return &t.TargetRef, core.DynamicRoleVirtualExecutor
 	case *SetRecord:
-		return nil, 0
+		return &t.TargetRef, core.DynamicRoleVirtualExecutor
 	case *UpdateObject:
-		return nil, 0
+		return &t.Object, core.DynamicRoleVirtualExecutor
 	case *ValidateCaseBind:
-		return &t.RecordRef, core.RoleVirtualExecutor
+		return &t.RecordRef, core.DynamicRoleVirtualExecutor
 	case *ValidateRecord:
-		return nil, 0
+		return &t.Object, core.DynamicRoleVirtualExecutor
 	case *ValidationResults:
-		return &t.RecordRef, core.RoleVirtualValidator
+		return &t.RecordRef, core.DynamicRoleVirtualValidator
+	case *GetObjectIndex:
+		return &t.Object, core.DynamicRoleLightExecutor
+	case *HotData:
+		return &t.Jet, core.DynamicRoleLightExecutor
 	case *Parcel:
 		return ExtractAllowedSenderObjectAndRole(t.Msg)
+	case *NodeSignPayload:
+		return nil, core.DynamicRoleUndefined
 	default:
-		panic(fmt.Sprintf("unknow message type - %v", t))
+		panic(fmt.Sprintf("unknown message type - %s", t.Type().String()))
 	}
 }

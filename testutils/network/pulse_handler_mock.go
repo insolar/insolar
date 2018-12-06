@@ -40,56 +40,93 @@ func NewPulseHandlerMock(t minimock.Tester) *PulseHandlerMock {
 }
 
 type mPulseHandlerMockHandlePulse struct {
-	mock             *PulseHandlerMock
-	mockExpectations *PulseHandlerMockHandlePulseParams
+	mock              *PulseHandlerMock
+	mainExpectation   *PulseHandlerMockHandlePulseExpectation
+	expectationSeries []*PulseHandlerMockHandlePulseExpectation
 }
 
-//PulseHandlerMockHandlePulseParams represents input parameters of the PulseHandler.HandlePulse
-type PulseHandlerMockHandlePulseParams struct {
+type PulseHandlerMockHandlePulseExpectation struct {
+	input *PulseHandlerMockHandlePulseInput
+}
+
+type PulseHandlerMockHandlePulseInput struct {
 	p  context.Context
 	p1 core.Pulse
 }
 
-//Expect sets up expected params for the PulseHandler.HandlePulse
+//Expect specifies that invocation of PulseHandler.HandlePulse is expected from 1 to Infinity times
 func (m *mPulseHandlerMockHandlePulse) Expect(p context.Context, p1 core.Pulse) *mPulseHandlerMockHandlePulse {
-	m.mockExpectations = &PulseHandlerMockHandlePulseParams{p, p1}
+	m.mock.HandlePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulseHandlerMockHandlePulseExpectation{}
+	}
+	m.mainExpectation.input = &PulseHandlerMockHandlePulseInput{p, p1}
 	return m
 }
 
-//Return sets up a mock for PulseHandler.HandlePulse to return Return's arguments
+//Return specifies results of invocation of PulseHandler.HandlePulse
 func (m *mPulseHandlerMockHandlePulse) Return() *PulseHandlerMock {
-	m.mock.HandlePulseFunc = func(p context.Context, p1 core.Pulse) {
-		return
+	m.mock.HandlePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulseHandlerMockHandlePulseExpectation{}
 	}
+
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PulseHandler.HandlePulse is expected once
+func (m *mPulseHandlerMockHandlePulse) ExpectOnce(p context.Context, p1 core.Pulse) *PulseHandlerMockHandlePulseExpectation {
+	m.mock.HandlePulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PulseHandlerMockHandlePulseExpectation{}
+	expectation.input = &PulseHandlerMockHandlePulseInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
 }
 
 //Set uses given function f as a mock of PulseHandler.HandlePulse method
 func (m *mPulseHandlerMockHandlePulse) Set(f func(p context.Context, p1 core.Pulse)) *PulseHandlerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.HandlePulseFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //HandlePulse implements github.com/insolar/insolar/network.PulseHandler interface
 func (m *PulseHandlerMock) HandlePulse(p context.Context, p1 core.Pulse) {
-	atomic.AddUint64(&m.HandlePulsePreCounter, 1)
+	counter := atomic.AddUint64(&m.HandlePulsePreCounter, 1)
 	defer atomic.AddUint64(&m.HandlePulseCounter, 1)
 
-	if m.HandlePulseMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.HandlePulseMock.mockExpectations, PulseHandlerMockHandlePulseParams{p, p1},
-			"PulseHandler.HandlePulse got unexpected parameters")
-
-		if m.HandlePulseFunc == nil {
-
-			m.t.Fatal("No results are set for the PulseHandlerMock.HandlePulse")
-
+	if len(m.HandlePulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.HandlePulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PulseHandlerMock.HandlePulse. %v %v", p, p1)
 			return
 		}
+
+		input := m.HandlePulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PulseHandlerMockHandlePulseInput{p, p1}, "PulseHandler.HandlePulse got unexpected parameters")
+
+		return
+	}
+
+	if m.HandlePulseMock.mainExpectation != nil {
+
+		input := m.HandlePulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PulseHandlerMockHandlePulseInput{p, p1}, "PulseHandler.HandlePulse got unexpected parameters")
+		}
+
+		return
 	}
 
 	if m.HandlePulseFunc == nil {
-		m.t.Fatal("Unexpected call to PulseHandlerMock.HandlePulse")
+		m.t.Fatalf("Unexpected call to PulseHandlerMock.HandlePulse. %v %v", p, p1)
 		return
 	}
 
@@ -106,11 +143,31 @@ func (m *PulseHandlerMock) HandlePulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.HandlePulsePreCounter)
 }
 
+//HandlePulseFinished returns true if mock invocations count is ok
+func (m *PulseHandlerMock) HandlePulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.HandlePulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.HandlePulseCounter) == uint64(len(m.HandlePulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.HandlePulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.HandlePulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.HandlePulseFunc != nil {
+		return atomic.LoadUint64(&m.HandlePulseCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PulseHandlerMock) ValidateCallCounters() {
 
-	if m.HandlePulseFunc != nil && atomic.LoadUint64(&m.HandlePulseCounter) == 0 {
+	if !m.HandlePulseFinished() {
 		m.t.Fatal("Expected call to PulseHandlerMock.HandlePulse")
 	}
 
@@ -131,7 +188,7 @@ func (m *PulseHandlerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PulseHandlerMock) MinimockFinish() {
 
-	if m.HandlePulseFunc != nil && atomic.LoadUint64(&m.HandlePulseCounter) == 0 {
+	if !m.HandlePulseFinished() {
 		m.t.Fatal("Expected call to PulseHandlerMock.HandlePulse")
 	}
 
@@ -149,7 +206,7 @@ func (m *PulseHandlerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.HandlePulseFunc == nil || atomic.LoadUint64(&m.HandlePulseCounter) > 0)
+		ok = ok && m.HandlePulseFinished()
 
 		if ok {
 			return
@@ -158,7 +215,7 @@ func (m *PulseHandlerMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.HandlePulseFunc != nil && atomic.LoadUint64(&m.HandlePulseCounter) == 0 {
+			if !m.HandlePulseFinished() {
 				m.t.Error("Expected call to PulseHandlerMock.HandlePulse")
 			}
 
@@ -174,7 +231,7 @@ func (m *PulseHandlerMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PulseHandlerMock) AllMocksCalled() bool {
 
-	if m.HandlePulseFunc != nil && atomic.LoadUint64(&m.HandlePulseCounter) == 0 {
+	if !m.HandlePulseFinished() {
 		return false
 	}
 

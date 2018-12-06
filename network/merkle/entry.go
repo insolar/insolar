@@ -17,7 +17,6 @@
 package merkle
 
 import (
-	"bytes"
 	"sort"
 
 	"github.com/insolar/insolar/core"
@@ -44,7 +43,7 @@ func (ge *GlobuleEntry) hash(helper *merkleHelper) ([]byte, error) {
 	nodeEntryByRole := nodeEntryByRole(ge.PulseEntry, ge.ProofSet)
 	var bucketHashes [][]byte
 
-	for _, role := range core.AllNodeRoles {
+	for _, role := range core.AllStaticRoles {
 		roleEntries, ok := nodeEntryByRole[role]
 		if !ok {
 			continue
@@ -105,8 +104,8 @@ func (ne *nodeEntry) hash(helper *merkleHelper) []byte {
 	return helper.nodeHash(ne.PulseProof.Signature.Bytes(), nodeInfoHash)
 }
 
-func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[core.Node]*PulseProof) map[core.NodeRole][]*nodeEntry {
-	roleMap := make(map[core.NodeRole][]*nodeEntry)
+func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[core.Node]*PulseProof) map[core.StaticRole][]*nodeEntry {
+	roleMap := make(map[core.StaticRole][]*nodeEntry)
 	for node, pulseProof := range nodeProofs {
 		role := node.Role()
 		roleMap[role] = append(roleMap[role], &nodeEntry{
@@ -120,9 +119,7 @@ func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[core.Node]*PulseProo
 
 func sortEntries(roleEntries []*nodeEntry) {
 	sort.SliceStable(roleEntries, func(i, j int) bool {
-		return bytes.Compare(
-			roleEntries[i].Node.ID().Bytes(),
-			roleEntries[j].Node.ID().Bytes()) < 0
+		return roleEntries[i].Node.ID().Compare(roleEntries[j].Node.ID()) < 0
 	})
 }
 

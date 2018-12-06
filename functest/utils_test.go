@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *
@@ -32,89 +34,55 @@ import (
 
 type postParams map[string]interface{}
 
-type errorResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+type RPCResponseInterface interface {
+	getRPCVersion() string
+	getError() map[string]interface{}
 }
 
-type responseInterface interface {
-	getError() *errorResponse
+type RPCResponse struct {
+	RPCVersion string                 `json:"jsonrpc"`
+	Error      map[string]interface{} `json:"error"`
 }
 
-type baseResponse struct {
-	Qid string         `json:"qid"`
-	Err *errorResponse `json:"error"`
+func (r *RPCResponse) getRPCVersion() string {
+	return r.RPCVersion
 }
 
-func (r *baseResponse) getError() *errorResponse {
-	return r.Err
-}
-
-type createMemberResponse struct {
-	baseResponse
-	Reference string `json:"reference"`
-}
-
-type sendMoneyResponse struct {
-	baseResponse
-	Success bool `json:"success"`
-}
-
-type getBalanceResponse struct {
-	baseResponse
-	Amount   uint   `json:"amount"`
-	Currency string `json:"currency"`
+func (r *RPCResponse) getError() map[string]interface{} {
+	return r.Error
 }
 
 type getSeedResponse struct {
-	baseResponse
-	Seed string `json:"seed"`
-}
-
-type isAuthorized struct {
-	baseResponse
-	PublicKey     string `json:"public_key"`
-	Role          int    `json:"role"`
-	NetCoordCheck bool   `json:"netcoord_auth_success"`
-}
-
-type userInfo struct {
-	Member string `json:"member"`
-	Wallet uint   `json:"wallet"`
-}
-
-type dumpUserInfoResponse struct {
-	baseResponse
-	DumpInfo userInfo `json:"dump_info"`
-}
-
-type dumpAllUsersResponse struct {
-	baseResponse
-	DumpInfo []userInfo `json:"dump_info"`
+	RPCResponse
+	Result struct {
+		Seed    string `json:"Seed"`
+		TraceID string `json:"TraceID"`
+	} `json:"result"`
 }
 
 type bootstrapNode struct {
 	PublicKey string `json:"public_key"`
 }
 
-type certificate struct {
-	MajorityRule   int             `json:"majority_rule"`
-	PublicKey      string          `json:"public_key"`
-	Reference      string          `json:"reference"`
-	Roles          []string        `json:"roles"`
-	BootstrapNodes []bootstrapNode `json:"bootstrap_nodes"`
-}
-
-type registerNodeResponse struct {
-	baseResponse
-	Certificate certificate `json:"certificate"`
-}
-
 type infoResponse struct {
-	Error      string `json:"error"`
-	RootDomain string `json:"root_domain"`
-	RootMember string `json:"root_member"`
-	NodeDomain string `json:"node_domain"`
+	RootDomain string `json:"RootDomain"`
+	RootMember string `json:"RootMember"`
+	NodeDomain string `json:"NodeDomain"`
+	TraceID    string `json:"TraceID"`
+}
+
+type rpcInfoResponse struct {
+	RPCResponse
+	Result infoResponse `json:"result"`
+}
+
+type statusResponse struct {
+	NetworkState string `json:"NetworkState"`
+}
+
+type rpcStatusResponse struct {
+	RPCResponse
+	Result statusResponse `json:"result"`
 }
 
 func createMember(t *testing.T, name string) *user {
@@ -146,9 +114,9 @@ func getBalance(caller *user, reference string) (int, error) {
 	return int(amount), nil
 }
 
-func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
+func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer(jsonValue))
+	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -157,36 +125,51 @@ func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 }
 
 func getSeed(t *testing.T) string {
-	body := getResponseBody(t, postParams{
-		"query_type": "get_seed",
+	body := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "seed.Get",
+		"id":      "",
 	})
-
 	getSeedResponse := &getSeedResponse{}
-	unmarshalResponse(t, body, getSeedResponse)
-
-	return getSeedResponse.Seed
+	unmarshalRPCResponse(t, body, getSeedResponse)
+	require.NotNil(t, getSeedResponse.Result)
+	return getSeedResponse.Result.Seed
 }
 
 func getInfo(t *testing.T) infoResponse {
-	resp, err := http.Get(TestURL + "/info")
-	require.NoError(t, err)
-	body, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-	err = json.Unmarshal(body, &info)
-	require.NoError(t, err)
-	return info
+	body := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "info.Get",
+		"id":      "",
+	})
+	rpcInfoResponse := &rpcInfoResponse{}
+	unmarshalRPCResponse(t, body, rpcInfoResponse)
+	require.NotNil(t, rpcInfoResponse.Result)
+	return rpcInfoResponse.Result
 }
 
-func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
+func getStatus(t *testing.T) statusResponse {
+	body := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "status.Get",
+		"id":      "",
+	})
+	rpcStatusResponse := &rpcStatusResponse{}
+	unmarshalRPCResponse(t, body, rpcStatusResponse)
+	require.NotNil(t, rpcStatusResponse.Result)
+	return rpcStatusResponse.Result
+}
+
+func unmarshalRPCResponse(t *testing.T, body []byte, response RPCResponseInterface) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
+	require.Equal(t, "2.0", response.getRPCVersion())
 	require.Nil(t, response.getError())
 }
 
-func unmarshalResponseWithError(t *testing.T, body []byte, response responseInterface) {
+func unmarshalCallResponse(t *testing.T, body []byte, response *response) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
-	require.NotNil(t, response.getError())
 }
 
 type response struct {
@@ -200,7 +183,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 	if err != nil {
 		return nil, err
 	}
-	res, err := requester.Send(ctx, TestURL, rootCfg, &requester.RequestConfigJSON{
+	res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
 		Method: method,
 		Params: params,
 	})

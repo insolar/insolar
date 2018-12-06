@@ -44,10 +44,10 @@ const (
 	scopeIDBlob     byte = 7
 	scopeIDLocal    byte = 8
 
-	sysGenesis                  byte = 1
-	sysLatestPulse              byte = 2
-	sysReplicatedPulse          byte = 3
-	sysLastPulseAsLightMaterial byte = 4
+	sysGenesis                byte = 1
+	sysLatestPulse            byte = 2
+	sysReplicatedPulse        byte = 3
+	sysLastSyncedPulseOnHeavy byte = 4
 )
 
 // DB represents BadgerDB storage implementation.
@@ -140,6 +140,7 @@ func (db *DB) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
+		// It should be 0. Becase pulse after 65537 will try to use a hash of drop between 0 - 65537
 		err = db.SetDrop(ctx, &jetdrop.JetDrop{})
 		if err != nil {
 			return nil, err
@@ -293,6 +294,13 @@ func (db *DB) SetObjectIndex(
 	})
 }
 
+// RemoveObjectIndex removes an index of an object
+func (db *DB) RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error {
+	return db.Update(ctx, func(tx *TransactionManager) error {
+		return tx.RemoveObjectIndex(ctx, ref)
+	})
+}
+
 // GetDrop returns jet drop for a given pulse number.
 func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
@@ -328,26 +336,65 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 		return nil, nil, err
 	}
 
-	prefix := make([]byte, core.PulseNumberSize+1)
-	prefix[0] = scopeIDMessage
-	copy(prefix[1:], pulse.Bytes())
+	wg := sync.WaitGroup{}
+	wg.Add(2)
 
 	var messages [][]byte
-	err = db.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
+	var messagesError error
 
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			val, err := it.Item().ValueCopy(nil)
-			if err != nil {
-				return err
+	go func() {
+		messagesPrefix := make([]byte, core.PulseNumberSize+1)
+		messagesPrefix[0] = scopeIDMessage
+		copy(messagesPrefix[1:], pulse.Bytes())
+
+		messagesError = db.db.View(func(txn *badger.Txn) error {
+			it := txn.NewIterator(badger.DefaultIteratorOptions)
+			defer it.Close()
+
+			for it.Seek(messagesPrefix); it.ValidForPrefix(messagesPrefix); it.Next() {
+				val, err := it.Item().ValueCopy(nil)
+				if err != nil {
+					return err
+				}
+				messages = append(messages, val)
 			}
-			messages = append(messages, val)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, nil, err
+			return nil
+		})
+
+		wg.Done()
+	}()
+
+	var jetDropHashError error
+
+	go func() {
+		recordPrefix := make([]byte, core.PulseNumberSize+1)
+		recordPrefix[0] = scopeIDRecord
+		copy(recordPrefix[1:], pulse.Bytes())
+
+		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
+			it := txn.NewIterator(badger.DefaultIteratorOptions)
+			defer it.Close()
+
+			for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
+				val, err := it.Item().ValueCopy(nil)
+				if err != nil {
+					return err
+				}
+				hw.Sum(val)
+			}
+			return nil
+		})
+
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	if messagesError != nil {
+		return nil, nil, messagesError
+	}
+	if jetDropHashError != nil {
+		return nil, nil, jetDropHashError
 	}
 
 	drop := jetdrop.JetDrop{

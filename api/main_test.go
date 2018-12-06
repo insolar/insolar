@@ -17,9 +17,7 @@
 package api
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -35,15 +33,15 @@ import (
 )
 
 const HOST = "http://localhost:19191"
-const TestUrl = HOST + "/api/v1?query_type=LOL"
+const TestUrl = HOST + "/api/call"
 
 func TestMain(m *testing.M) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
 	api, _ := NewRunner(&cfg)
 
-	c := certificate.Certificate{}
-	api.Certificate = &c
+	cm := certificate.NewCertificateManager(&certificate.Certificate{})
+	api.CertificateManager = cm
 	api.Start(ctx)
 
 	code := m.Run()
@@ -53,22 +51,12 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestWrongQueryParam(t *testing.T) {
-	postParams := map[string]string{"query_type": "TEST", "reference": "test"}
-	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	require.NoError(t, err)
-	body, err := ioutil.ReadAll(postResp.Body)
-	require.NoError(t, err)
-	require.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
-}
-
-func TestBadRequest(t *testing.T) {
+func TestGetRequest(t *testing.T) {
 	resp, err := http.Get(TestUrl)
 	require.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Contains(t, string(body[:]), `"message": "Bad request"`)
+	require.Contains(t, string(body[:]), `"[ UnmarshalRequest ] Empty body"`)
 }
 
 func TestSerialization(t *testing.T) {
@@ -96,19 +84,23 @@ func TestSerialization(t *testing.T) {
 
 func TestNewApiRunnerNilConfig(t *testing.T) {
 	_, err := NewRunner(nil)
-	require.EqualError(t, err, "[ NewAPIRunner ] config is nil")
+	require.Contains(t, err.Error(), "config is nil")
 }
 
 func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 	cfg := configuration.APIRunner{}
 	_, err := NewRunner(&cfg)
-	require.EqualError(t, err, "[ NewAPIRunner ] Address must not be empty")
+	require.Contains(t, err.Error(), "Address must not be empty")
 
 	cfg.Address = "address:100"
 	_, err = NewRunner(&cfg)
-	require.EqualError(t, err, "[ NewAPIRunner ] Location must exist")
+	require.Contains(t, err.Error(), "Call must exist")
 
-	cfg.Location = "test"
+	cfg.Call = "test"
+	_, err = NewRunner(&cfg)
+	require.Contains(t, err.Error(), "RPC must exist")
+
+	cfg.RPC = "test"
 	_, err = NewRunner(&cfg)
 	require.NoError(t, err)
 }

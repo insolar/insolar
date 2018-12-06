@@ -31,14 +31,14 @@ func TestInitComponents(t *testing.T) {
 	cfg.CertificatePath = "testdata/certificate.json"
 
 	bootstrapComponents := initBootstrapComponents(ctx, cfg)
-	cert := initCertificate(
+	cert := initCertificateManager(
 		ctx,
 		cfg,
 		false,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
-	cm, repl, err := initComponents(
+	cm, err := initComponents(
 		ctx,
 		cfg,
 		bootstrapComponents.CryptographyService,
@@ -52,7 +52,6 @@ func TestInitComponents(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, cm)
-	require.NotNil(t, repl)
 
 	err = cm.Init(ctx)
 	require.NoError(t, err)

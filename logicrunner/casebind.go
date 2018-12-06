@@ -47,6 +47,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb c
 	es.insContext = ctx
 	es.validate = true
 	es.objectbody = nil
+	var cbr core.CaseBindReplay
 	err := func() error {
 		lr.caseBindReplaysMutex.Lock()
 		defer lr.caseBindReplaysMutex.Unlock()
@@ -60,6 +61,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb c
 			Record:   -1,
 			Steps:    0,
 		}
+		cbr = lr.caseBindReplays[ref]
 		return nil
 	}()
 	if err != nil {
@@ -102,7 +104,8 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb c
 		}
 
 		es.insContext = inslogger.ContextWithTrace(es.insContext, traceID)
-		ret, err := lr.Execute(es.insContext, parcel)
+		es.Lock()
+		ret, err := lr.executeOrValidate(es.insContext, es, ValidationChecker{lr: lr, cb: cbr}, parcel)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -139,12 +142,18 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
+
+	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualValidator)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't play role")
+	}
+
 	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.CaseBind)
 	errstr := ""
 	if validationError != nil {
 		errstr = validationError.Error()
 	}
-	_, err := lr.MessageBus.Send(
+	_, err = lr.MessageBus.Send(
 		ctx,
 		&message.ValidationResults{
 			RecordRef:        msg.GetReference(),
@@ -183,7 +192,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 type ValidationBehaviour interface {
 	Begin(refs Ref, record core.CaseRecord)
 	End(refs Ref, record core.CaseRecord)
-	GetRole() core.JetRole
+	GetRole() core.DynamicRole
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
 	RegisterRequest(p core.Parcel) (*Ref, error)
@@ -228,8 +237,8 @@ func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
-func (vb ValidationSaver) GetRole() core.JetRole {
-	return core.RoleVirtualExecutor
+func (vb ValidationSaver) GetRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
 }
 
 type ValidationChecker struct {
@@ -269,6 +278,6 @@ func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
 }
 
-func (vb ValidationChecker) GetRole() core.JetRole {
-	return core.RoleVirtualValidator
+func (vb ValidationChecker) GetRole() core.DynamicRole {
+	return core.DynamicRoleVirtualValidator
 }

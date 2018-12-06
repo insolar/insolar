@@ -22,12 +22,14 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -71,7 +73,18 @@ func getTestData(t *testing.T) (
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	mb := testmessagebus.NewTestMessageBus(t)
-	handler := MessageHandler{db: db, jetDropHandlers: map[core.MessageType]internalHandler{}, PlatformCryptographyScheme: scheme, recent: storage.NewRecentStorage(1)}
+	handler := MessageHandler{
+		db:                         db,
+		jetDropHandlers:            map[core.MessageType]internalHandler{},
+		PlatformCryptographyScheme: scheme,
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
+	}
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+	handler.Recent = recentStorageMock
 
 	handler.Bus = mb
 	err := handler.Init(ctx)
@@ -159,9 +172,10 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 			},
 		},
 	)
-	db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
+	require.NoError(t, err)
 
 	objRef := *genRandomRef(0)
 	objDesc, err := am.ActivateObject(
@@ -216,10 +230,11 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 			},
 		},
 	)
-	db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
+	require.NoError(t, err)
 	deactivateID, err := am.DeactivateObject(
 		ctx,
 		domainRef,
@@ -256,10 +271,11 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 			},
 		},
 	)
-	db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
+	require.NoError(t, err)
 	memory := []byte{1, 2, 3}
 	prototype := genRandomRef(0)
 	obj, err := am.UpdateObject(
@@ -299,7 +315,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
 	objRef := genRandomRef(0)
-	db.SetRecord(
+	_, err := db.SetRecord(
 		ctx,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{
@@ -312,7 +328,9 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 			Parent: *parentRef,
 		},
 	)
-	db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{3})
+	require.NoError(t, err)
+	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{3})
+	require.NoError(t, err)
 	objectAmendID, _ := db.SetRecord(ctx, core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
@@ -322,7 +340,9 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 			Image:  *prototypeRef,
 		},
 	})
-	db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{4})
+	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{4})
+	require.NoError(t, err)
+
 	objectIndex := index.ObjectLifeline{
 		LatestState:  objectAmendID,
 		ChildPointer: genRandomID(0),
@@ -360,7 +380,7 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
-			return &reply.GetObjectRedirectReply{
+			return &reply.GetObjectRedirect{
 				Receiver: nodeRef,
 				Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
 			}, nil
@@ -503,6 +523,37 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	})
 }
 
+func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	am := NewArtifactManger(nil)
+	mb := testutils.NewMessageBusMock(mc)
+
+	objRef := genRandomRef(0)
+	nodeRef := genRandomRef(0)
+	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		o = o.Safe()
+		if o.Receiver == nil {
+			return &reply.GetChildrenRedirect{
+				Receiver: nodeRef,
+				Token:    &delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}},
+			}, nil
+		} else {
+			token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
+			assert.True(t, ok)
+			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+			assert.Equal(t, nodeRef, o.Receiver)
+		}
+
+		return &reply.Children{}, nil
+	}
+	am.DefaultBus = mb
+
+	_, err := am.GetChildren(ctx, *objRef, nil)
+	require.NoError(t, err)
+}
+
 func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
@@ -542,12 +593,46 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 
 func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	t.Parallel()
-	ctx, _, am, cleaner := getTestData(t)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	defer mc.Finish()
+
+	mb := testmessagebus.NewTestMessageBus(t)
+	jc := testutils.NewJetCoordinatorMock(mc)
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+
+	handler := MessageHandler{
+		db:                         db,
+		jetDropHandlers:            map[core.MessageType]internalHandler{},
+		PlatformCryptographyScheme: scheme,
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
+	}
+
+	handler.Bus = mb
+	handler.JetCoordinator = jc
+	handler.Recent = recentStorageMock
+
+	err := handler.Init(ctx)
+	require.NoError(t, err)
+	am := LedgerArtifactManager{
+		db:                         db,
+		DefaultBus:                 mb,
+		getChildrenChunkSize:       100,
+		PlatformCryptographyScheme: scheme,
+	}
+
+	jc.QueryRoleMock.Return([]core.RecordRef{*genRandomRef(0)}, nil)
 
 	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "object"}})
+	require.NoError(t, err)
 	objRef := genRefWithID(objID)
-	assert.NoError(t, err)
 
 	desc, err := am.ActivateObject(
 		ctx,
@@ -558,28 +643,18 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		false,
 		[]byte{1},
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	stateID1 := desc.StateID()
 
 	desc, err = am.GetObject(ctx, *objRef, nil, false)
-	assert.NoError(t, err)
-	assert.Equal(t, *stateID1, *desc.StateID())
+	require.NoError(t, err)
+	require.Equal(t, *stateID1, *desc.StateID())
 
 	_, err = am.GetObject(ctx, *objRef, nil, true)
-	assert.Equal(t, err, core.ErrStateNotAvailable)
-
-	desc, err = am.UpdateObject(
-		ctx,
-		domainRef,
-		*genRandomRef(0),
-		desc,
-		[]byte{2},
-	)
-	assert.NoError(t, err)
-	stateID2 := desc.StateID()
+	require.Equal(t, err, core.ErrStateNotAvailable)
 
 	desc, err = am.GetObject(ctx, *objRef, nil, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	desc, err = am.UpdateObject(
 		ctx,
 		domainRef,
@@ -587,17 +662,17 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		desc,
 		[]byte{3},
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	stateID3 := desc.StateID()
-	err = am.RegisterValidation(ctx, *objRef, *stateID2, true, nil)
-	assert.NoError(t, err)
+	err = am.RegisterValidation(ctx, *objRef, *stateID1, true, nil)
+	require.NoError(t, err)
 
 	desc, err = am.GetObject(ctx, *objRef, nil, false)
 	assert.NoError(t, err)
 	assert.Equal(t, *stateID3, *desc.StateID())
 	desc, err = am.GetObject(ctx, *objRef, nil, true)
 	assert.NoError(t, err)
-	assert.Equal(t, *stateID2, *desc.StateID())
+	assert.Equal(t, *stateID1, *desc.StateID())
 }
 
 func TestLedgerArtifactManager_RegisterResult(t *testing.T) {

@@ -61,14 +61,14 @@ type BitSetMapper interface {
 
 // BitSet is interface
 type BitSet interface {
-	Serializer
+	Serialize() ([]byte, error)
 	// GetCells get buckets of bitset
-	GetCells() []BitSetCell
+	GetCells(mapper BitSetMapper) ([]BitSetCell, error)
 	// ApplyChanges returns copy of the current bitset with changes applied
-	ApplyChanges(changes []BitSetCell)
+	ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error
 }
 
-// NewBitSet creates bitset from a set of buckets and the mapper
-func NewBitSet(cells []BitSetCell, mapper BitSetMapper) (BitSet, error) {
-	return NewTriStateBitSet(cells, mapper)
+// NewBitSet creates bitset from a set of buckets and the mapper. Size == cells count.
+func NewBitSet(size int) (BitSet, error) {
+	return NewTriStateBitSet(size)
 }

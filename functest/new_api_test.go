@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *
@@ -30,8 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const TestCallUrl = TestURL + "/call"
-
 func contractError(body []byte) error {
 	var t map[string]interface{}
 	err := json.Unmarshal(body, &t)
@@ -55,7 +55,7 @@ func TestBadSeed(t *testing.T) {
 		Params: nil,
 	}, []byte("111"))
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ CallHandler ] Bad seed param")
+	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
 
 func TestIncorrectSeed(t *testing.T) {
@@ -67,7 +67,7 @@ func TestIncorrectSeed(t *testing.T) {
 		Params: nil,
 	}, []byte("12345678901234567890123456789012"))
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ CallHandler ] Incorrect seed")
+	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
 }
 
 func customSend(data string) (map[string]interface{}, error) {
@@ -106,7 +106,7 @@ func TestCrazyJSON(t *testing.T) {
 func TestIncorrectSign(t *testing.T) {
 	args, err := core.MarshalArgs(nil)
 	require.NoError(t, err)
-	seed, err := requester.GetSeed(TestURL)
+	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBody(TestCallUrl, requester.PostParams{
 		"params":    args,

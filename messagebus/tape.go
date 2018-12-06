@@ -22,6 +22,9 @@ import (
 	"encoding/gob"
 	"io"
 
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
+
 	"github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
@@ -52,8 +55,8 @@ type couple struct {
 	Value []byte
 }
 
-// NewTape creates new storageTape with random id.
-func NewTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
+// newStorageTape creates new storageTape with random id.
+func newStorageTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
@@ -61,10 +64,10 @@ func NewTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error)
 	return &storageTape{ls: ls, pulse: pulse, id: id}, nil
 }
 
-// NewTapeFromReader creates and fills a new storageTape from a stream.
+// newStorageTapeFromReader creates and fills a new storageTape from a stream.
 //
 // This is a very long operation, as it saves replies in storage until the stream is exhausted.
-func NewTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storageTape, error) {
+func newStorageTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storageTape, error) {
 	var err error
 	tape := storageTape{ls: ls}
 
@@ -147,4 +150,70 @@ func (t *storageTape) SetReply(ctx context.Context, msgHash []byte, rep core.Rep
 func (t *storageTape) setReplyBinary(ctx context.Context, msgHash []byte, rep []byte) error {
 	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
 	return t.ls.Set(ctx, t.pulse, key, rep)
+}
+
+// memoryTape saves and fetches message replies to/from memory array.
+//
+// It uses <storageTape id> + <message hash> for Value keys.
+type memoryTape struct {
+	pulse   core.PulseNumber
+	storage []memoryTapeMessage
+}
+
+type memoryTapeMessage struct {
+	msgHash []byte
+	reply   core.Reply
+}
+
+func newMemoryTape(pulse core.PulseNumber) *memoryTape {
+	return &memoryTape{
+		pulse: pulse,
+	}
+}
+
+func newMemoryTapeFromReader(ctx context.Context, r io.Reader) (*memoryTape, error) {
+	t := memoryTape{}
+	ch := new(codec.CborHandle)
+	decoder := codec.NewDecoder(r, ch)
+	err := decoder.Decode(&t.pulse)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MemoryTape ] can't read pulse")
+	}
+	err = decoder.Decode(&t.storage)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MemoryTape ] can't read storage")
+	}
+	return &t, nil
+}
+
+func (t *memoryTape) Write(ctx context.Context, w io.Writer) error {
+	encoder := codec.NewEncoder(w, new(codec.CborHandle))
+
+	err := encoder.Encode(t.pulse)
+	if err != nil {
+		return errors.Wrap(err, "[ MemoryTape ] can't write pulse")
+	}
+
+	err = encoder.Encode(t.storage)
+	if err != nil {
+		return errors.Wrap(err, "[ MemoryTape ] can't write storage")
+	}
+	return nil
+}
+
+func (t *memoryTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
+	if !bytes.Equal(msgHash, t.storage[0].msgHash) {
+		return nil, errors.New("Validation error. Message mismatch")
+	}
+	ret := t.storage[0]
+	t.storage = t.storage[1:]
+	return ret.reply, nil
+}
+
+func (t *memoryTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
+	t.storage = append(t.storage, memoryTapeMessage{
+		msgHash: msgHash,
+		reply:   rep,
+	})
+	return nil
 }

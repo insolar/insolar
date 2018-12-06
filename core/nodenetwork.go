@@ -31,10 +31,8 @@ type Node interface {
 	ShortID() ShortNodeID
 	// Pulse is the pulse number after which the new state is assigned to the node
 	Pulse() PulseNumber
-	// Roles is the set of candidate Roles for the node
-	Roles() []NodeRole
 	// Role is the candidate Role for the node
-	Role() NodeRole
+	Role() StaticRole
 	// PublicKey is the public key of the node
 	PublicKey() crypto.PublicKey
 	// PhysicalAddress is the network address of the node
@@ -52,7 +50,16 @@ type NodeNetwork interface {
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
-	GetActiveNodesByRole(role JetRole) []RecordRef
+	GetActiveNodesByRole(role DynamicRole) []RecordRef
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte
+}
+
+// TODO: remove this interface when bootstrap mechanism completed
+// SwitcherWorkAround temp interface for NetworkSwitcher interaction
+type SwitcherWorkAround interface {
+	// IsBootstrapped method shows that all DiscoveryNodes finds each other
+	IsBootstrapped() bool
+	// SetIsBootstrapped method set is bootstrap completed
+	SetIsBootstrapped(isBootstrap bool)
 }

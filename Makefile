@@ -6,8 +6,12 @@ PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 EXPORTER = exporter
+APIREQUESTER = apirequester
+HEALTHCHECK = healthcheck
 
 ALL_PACKAGES = ./...
+MOCKS_PACKAGE = github.com/insolar/insolar/testutils
+TESTED_PACKAGES = $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE = coverage.txt
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
@@ -22,7 +26,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps pre-build build test test_with_coverage regen-proxies
+.PHONY: all lint ci-lint metalint clean install-deps pre-build build functest test test_with_coverage regen-proxies generate ensure test_git_no_changes
 
 all: clean install-deps pre-build build test
 
@@ -38,21 +42,27 @@ clean:
 	go clean $(ALL_PACKAGES)
 	rm -f $(COVERPROFILE)
 	rm -rf $(BIN_DIR)
-	./scripts/insolard/launch.sh clear
+	./scripts/insolard/launchnet.sh -l
 
 install-deps:
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u golang.org/x/tools/cmd/stringer
 	go get -u github.com/gojuno/minimock/cmd/minimock
 
-pre-build:
-	dep ensure
-	# workaround for minimock
+pre-build: ensure generate
+
+generate:
 	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
 
-build: 
+test_git_no_changes:
+	git diff --exit-code
+
+ensure:
+	dep ensure
+
+build:
 	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK)
 
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
@@ -67,13 +77,23 @@ $(PULSARD):
 	go build -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
 
 $(INSGORUND):
-	go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
+	CGO_ENABLED=1 go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
 
 $(BENCHMARK):
 	go build -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
 
+$(APIREQUESTER):
+	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
+
 $(EXPORTER):
 	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
+
+$(HEALTHCHECK):
+	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
+
+
+functest:
+	CGO_ENABLED=1 go test -tags functest ./functest
 
 test:
 	go test -v $(ALL_PACKAGES)
@@ -82,7 +102,7 @@ test_fast:
 	go test -count 1 -v $(ALL_PACKAGES)
 
 test_with_coverage:
-	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)
 
 test_with_coverage_fast:
 	CGO_ENABLED=1 go test -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)

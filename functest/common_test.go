@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *
@@ -23,92 +25,43 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/insolar/insolar/api"
 	"github.com/stretchr/testify/require"
 )
 
 func TestWrongUrl(t *testing.T) {
-	jsonValue, _ := json.Marshal(postParams{
-		"query_type": "dump_all_users",
-	})
-	testURL := HOST + "/not_api/v1"
+	jsonValue, _ := json.Marshal(postParams{})
+	testURL := HOST + "/not_api"
 	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNotFound, postResp.StatusCode)
 }
 
 func TestGetRequest(t *testing.T) {
-	postResp, err := http.Get(TestURL)
+	postResp, err := http.Get(TestCallUrl)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
 	require.NoError(t, err)
 
-	getResponse := &baseResponse{}
-	unmarshalResponseWithError(t, body, getResponse)
+	getResponse := &response{}
+	unmarshalCallResponse(t, body, getResponse)
+	require.NotNil(t, getResponse.Error)
 
-	require.Equal(t, api.BadRequest, getResponse.Err.Code)
-	require.Equal(t, "Bad request", getResponse.Err.Message)
+	require.Equal(t, "[ UnmarshalRequest ] Empty body", getResponse.Error)
+	require.Nil(t, getResponse.Result)
 }
 
 func TestWrongJson(t *testing.T) {
-	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer([]byte("some not json value")))
+	postResp, err := http.Post(TestCallUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
 	require.NoError(t, err)
 
-	response := &baseResponse{}
-	unmarshalResponseWithError(t, body, response)
+	response := &response{}
+	unmarshalCallResponse(t, body, response)
+	require.NotNil(t, response.Error)
 
-	require.Equal(t, api.BadRequest, response.Err.Code)
-	require.Equal(t, "Bad request", response.Err.Message)
-}
-
-func TestWrongQueryType(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "wrong_query_type",
-	})
-
-	response := &baseResponse{}
-	unmarshalResponseWithError(t, body, response)
-
-	require.Equal(t, api.BadRequest, response.Err.Code)
-	require.Equal(t, "Wrong query parameter 'query_type' = 'wrong_query_type'", response.Err.Message)
-}
-
-func TestWithoutQueryType(t *testing.T) {
-	body := getResponseBody(t, postParams{})
-
-	response := &baseResponse{}
-	unmarshalResponseWithError(t, body, response)
-
-	require.Equal(t, api.BadRequest, response.Err.Code)
-	require.Equal(t, "Wrong query parameter 'query_type' = ''", response.Err.Message)
-}
-
-func _TestTooMuchParams(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "is_auth",
-		"some_param": "irrelevant info",
-	})
-
-	isAuthResponse := &isAuthorized{}
-	unmarshalResponse(t, body, isAuthResponse)
-
-	require.Equal(t, 1, isAuthResponse.Role)
-	require.NotEmpty(t, isAuthResponse.PublicKey)
-	require.Equal(t, true, isAuthResponse.NetCoordCheck)
-}
-
-func TestQueryTypeAsIntParams(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": 100,
-	})
-
-	response := &baseResponse{}
-	unmarshalResponseWithError(t, body, response)
-
-	require.Equal(t, api.BadRequest, response.Err.Code)
-	require.Equal(t, "Bad request", response.Err.Message)
+	require.Equal(t, "[ UnmarshalRequest ] Can't unmarshal input params: invalid character 's' looking for beginning of value", response.Error)
+	require.Nil(t, response.Result)
 }

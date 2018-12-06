@@ -18,6 +18,7 @@ package genesisdataprovider
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core"
@@ -27,11 +28,12 @@ import (
 
 // GenesisDataProvider gives access to basic information about genesis objects
 type GenesisDataProvider struct {
-	Certificate       core.Certificate       `inject:""`
-	ContractRequester core.ContractRequester `inject:""`
-	nodeDomainRef     *core.RecordRef
-	rootDomainRef     *core.RecordRef
-	rootMemberRef     *core.RecordRef
+	CertificateManager core.CertificateManager `inject:""`
+	ContractRequester  core.ContractRequester  `inject:""`
+
+	rootMemberRef *core.RecordRef
+	nodeDomainRef *core.RecordRef
+	lock          sync.RWMutex
 }
 
 // New creates new GenesisDataProvider
@@ -59,14 +61,13 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 
 // GetRootDomain returns reference to RootDomain
 func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordRef {
-	if gdp.rootDomainRef == nil {
-		gdp.rootDomainRef = gdp.Certificate.GetRootDomainReference()
-	}
-	return gdp.rootDomainRef
+	return gdp.CertificateManager.GetCertificate().GetRootDomainReference()
 }
 
 // GetNodeDomain returns reference to NodeDomain
 func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.RecordRef, error) {
+	gdp.lock.Lock()
+	defer gdp.lock.Unlock()
 	if gdp.nodeDomainRef == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {
@@ -78,6 +79,8 @@ func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.Record
 
 // GetRootMember returns reference to RootMember
 func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*core.RecordRef, error) {
+	gdp.lock.Lock()
+	defer gdp.lock.Unlock()
 	if gdp.rootMemberRef == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {

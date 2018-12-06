@@ -32,10 +32,9 @@ type PhaseManager interface {
 }
 
 type Phases struct {
-	FirstPhase           *FirstPhase
-	SecondPhase          *SecondPhase
-	ThirdPhasePulse      *ThirdPhasePulse
-	ThirdPhaseReferendum *ThirdPhaseReferendum
+	FirstPhase  *FirstPhase  //`inject:""`
+	SecondPhase *SecondPhase //`inject:""`
+	ThirdPhase  *ThirdPhase  //`inject:""`
 
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`
@@ -72,12 +71,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	fmt.Println(secondPhaseState) // TODO: remove after use
 
-	// checkError(runPhase(ctx, func() error {
-	// 	return pm.ThirdPhasePulse.Execute(secondPhaseState)
-	// }))
-	// checkError(runPhase(ctx, func() error {
-	// 	return pm.ThirdPhaseReferendum.Execute(secondPhaseState)
-	// }))
+	checkError(pm.ThirdPhase.Execute(ctx, secondPhaseState))
 
 	return nil
 }

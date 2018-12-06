@@ -36,8 +36,15 @@ import (
 
 const TESTREFERENCE = "222222"
 const TESTSEED = "VGVzdA=="
-const TESTROOTMEMBER = "root_member_ref"
-const TESTROOTDOMAIN = "root_domain_ref"
+
+var testSeedResponse = seedResponse{Seed: []byte("Test"), TraceID: "testTraceID"}
+var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
+var testStatusResponse = StatusResponse{NetworkState: "OK"}
+
+type rpcRequest struct {
+	RPCVersion string `json:"jsonrpc"`
+	Method     string `json:"method"`
+}
 
 func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 	serJSON, err := json.MarshalIndent(answer, "", "    ")
@@ -54,19 +61,16 @@ func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 
-	ctx := inslogger.ContextWithTrace(context.Background(), "FakeHandler")
-	params, err := api.PreprocessRequest(ctx, req)
+	params := api.Request{}
+	_, err := api.UnmarshalRequest(req, &params)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
 	}
 
-	qtype := api.QTypeFromString(params.QueryType)
 	answer := map[string]interface{}{}
-	if qtype == api.GetSeed {
-		answer[api.SEED] = TESTSEED
-	} else if params.Method == "CreateMember" {
-		answer[api.REFERENCE] = TESTREFERENCE
+	if params.Method == "CreateMember" {
+		answer["reference"] = TESTREFERENCE
 	} else {
 		answer["random_data"] = TESTSEED
 	}
@@ -74,20 +78,35 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	writeReponse(response, answer)
 }
 
-func FakeInfoHandler(response http.ResponseWriter, req *http.Request) {
+func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 	answer := map[string]interface{}{
-		"root_domain": TESTROOTDOMAIN,
-		"root_member": TESTROOTMEMBER,
-		"prototypes":  map[string]string{},
+		"jsonrpc": "2.0",
+		"id":      "",
+	}
+	rpcReq := rpcRequest{}
+	_, err := api.UnmarshalRequest(req, &rpcReq)
+	if err != nil {
+		log.Errorf("Can't read request\n")
+		return
+	}
+
+	switch rpcReq.Method {
+	case "status.Get":
+		answer["result"] = testStatusResponse
+	case "info.Get":
+		answer["result"] = testInfoResponse
+	case "seed.Get":
+		answer["result"] = testSeedResponse
 	}
 	writeReponse(response, answer)
 }
 
-const LOCATION = "/api/v1"
+const callLOCATION = "/api/call"
+const rpcLOCATION = "/api/rpc"
 const PORT = "12221"
 const HOST = "127.0.0.1"
-const URL = "http://" + HOST + ":" + PORT + LOCATION
+const URL = "http://" + HOST + ":" + PORT + "/api"
 
 var server = &http.Server{Addr: ":" + PORT}
 
@@ -121,10 +140,9 @@ func startServer() error {
 
 func setup() error {
 	fh := FakeHandler
-	fih := FakeInfoHandler
-	http.HandleFunc(LOCATION, fh)
-	http.HandleFunc(LOCATION+"/call", fh)
-	http.HandleFunc(LOCATION+"/info", fih)
+	fRPCh := FakeRPCHandler
+	http.HandleFunc(callLOCATION, fh)
+	http.HandleFunc(rpcLOCATION, fRPCh)
 	log.Info("Starting Test api server ...")
 
 	err := startServer()
@@ -177,7 +195,7 @@ func TestGetSeed(t *testing.T) {
 	require.Equal(t, decodedSeed, seed)
 }
 
-func TestGetResponseBodyBadRequest(t *testing.T) {
+func TestGetResponseBodyEmpty(t *testing.T) {
 	_, err := GetResponseBody("test", PostParams{})
 	require.EqualError(t, err, "[ getResponseBody ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
 }
@@ -188,7 +206,7 @@ func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 }
 
 func TestGetResponseBody(t *testing.T) {
-	data, err := GetResponseBody(URL, PostParams{})
+	data, err := GetResponseBody(URL+"/call", PostParams{})
 	require.NoError(t, err)
 	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
 }
@@ -219,7 +237,7 @@ func TestSend(t *testing.T) {
 func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
-	resp, err := SendWithSeed(ctx, URL, userConf, reqConf, []byte(TESTSEED))
+	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, []byte(TESTSEED))
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
@@ -237,20 +255,14 @@ func TestSendWithSeed_NilConfigs(t *testing.T) {
 	require.EqualError(t, err, "[ Send ] Configs must be initialized")
 }
 
-func TestSend_BadSeedUrl(t *testing.T) {
-	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend_BadSeedUrl")
-	userConf, reqConf := readConfigs(t)
-	_, err := Send(ctx, URL+"TTT", userConf, reqConf)
-	require.EqualError(t, err, "[ Send ] Problem with getting seed: [ getSeed ]: [ getResponseBody ] Bad http response code: 404")
-}
-
 func TestInfo(t *testing.T) {
 	resp, err := Info(URL)
 	require.NoError(t, err)
-	fmt.Println(resp.RootDomain)
-	require.Equal(t, resp, &InfoResponse{
-		RootMember: "root_member_ref",
-		RootDomain: "root_domain_ref",
-		Prototypes: map[string]string{},
-	})
+	require.Equal(t, resp, &testInfoResponse)
+}
+
+func TestStatus(t *testing.T) {
+	resp, err := Status(URL)
+	require.NoError(t, err)
+	require.Equal(t, resp, &testStatusResponse)
 }

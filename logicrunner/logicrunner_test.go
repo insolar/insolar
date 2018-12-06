@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
@@ -133,12 +134,14 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		},
 	)
 
+	recentMock := recentstorage.NewRecentStorageMock(t)
+
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
-	cm.Inject(nk, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(nk, recentMock, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -179,6 +182,7 @@ func newTestPulse(ctx context.Context, lr *LogicRunner, mb *testmessagebus.TestM
 	lr.Ledger.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
+		false,
 	)
 
 	mb.PulseNumber = newPulseNumber
@@ -1376,6 +1380,7 @@ func New(n int) (*Child, error) {
 	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}},
+		false,
 	)
 	assert.NoError(t, err)
 
@@ -1737,6 +1742,7 @@ package main
 }
 
 func TestReleaseRequestsAfterPulse(t *testing.T) {
+	t.Skip("Test for old architecture. Unskip when new queue mechanism will release.")
 	if parallel {
 		t.Parallel()
 	}
@@ -1810,6 +1816,7 @@ func (r *One) ShortSleep() (error) {
 		err = pm.Set(
 			ctx,
 			core.Pulse{PulseNumber: 1, Entropy: core.Entropy{}},
+			false,
 		)
 		log.Debugf("!!!!! Pulse end")
 	}()
