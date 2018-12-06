@@ -18,10 +18,14 @@ package transport
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
+	"math/big"
 	"net"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/lucas-clemente/quic-go"
@@ -47,17 +51,21 @@ func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress stri
 	return transport, nil
 }
 
-func (tcp *quicTransport) send(recvAddress string, data []byte) error {
+func (q *quicTransport) send(recvAddress string, data []byte) error {
 	ctx := context.Background()
 	session, err := quic.DialAddrContext(ctx, recvAddress, &tls.Config{InsecureSkipVerify: true}, nil)
 	if err != nil {
 		return err
 	}
+	//defer session.Close()
+
+	log.Infof("connected to: %s", session.RemoteAddr().String())
 
 	stream, err := session.OpenStreamSync()
 	if err != nil {
 		return err
 	}
+	//defer stream.Close()
 
 	_, err = stream.Write(data)
 	if err != nil {
@@ -69,45 +77,65 @@ func (tcp *quicTransport) send(recvAddress string, data []byte) error {
 
 // Start starts networking.
 func (q *quicTransport) Start(ctx context.Context) error {
-	inslogger.FromContext(ctx).Info("Start TCP transport")
+	log.Info("Start QUIC transport")
 	for {
-
-		//q.maxChan <- true
-
 		session, err := q.l.Accept()
 		if err != nil {
-			//<-q.maxChan
 			<-q.disconnectFinished
 			return err
 		}
 
+		log.Infof("accept from: %s", session.RemoteAddr().String())
 		go q.handleAcceptedConnection(session)
 	}
 }
 
 // Stop stops networking.
-func (tcp *quicTransport) Stop() {
-	tcp.mutex.Lock()
-	defer tcp.mutex.Unlock()
+func (q *quicTransport) Stop() {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 
-	log.Info("Stop TCP transport")
-	tcp.prepareDisconnect()
+	log.Info("Stop QUIC transport")
+	q.prepareDisconnect()
 
-	err := tcp.l.Close()
+	err := q.l.Close()
 	if err != nil {
 		log.Errorln("Failed to close socket:", err.Error())
 	}
 }
 
-func (tcp *quicTransport) handleAcceptedConnection(conn quic.Session) {
-	/*
-		defer conn.Close()
-		msg, err := tcp.serializer.DeserializePacket(conn)
-		if err != nil {
-			log.Error("[ handleAcceptedConnection ] ", err)
-			return
-		}
+func (q *quicTransport) handleAcceptedConnection(session quic.Session) {
+	defer session.Close()
 
-		tcp.handlePacket(msg)
-	*/
+	stream, err := session.AcceptStream()
+
+	msg, err := q.serializer.DeserializePacket(stream)
+	if err != nil {
+		log.Error("[ handleAcceptedConnection ] ", err)
+		return
+	}
+
+	q.handlePacket(msg)
+
+}
+
+// Setup a bare-bones TLS config for the server
+func generateTLSConfig() *tls.Config {
+	key, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		panic(err)
+	}
+	template := x509.Certificate{SerialNumber: big.NewInt(1)}
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		panic(err)
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	tlsCert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		panic(err)
+	}
+	return &tls.Config{Certificates: []tls.Certificate{tlsCert}}
 }
