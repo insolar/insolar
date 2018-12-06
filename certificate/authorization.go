@@ -83,9 +83,18 @@ func (authCert *AuthorizationCertificate) SignNodePart(key crypto.PrivateKey) ([
 }
 
 // Deserialize deserializes data to AuthorizationCertificate interface
-func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
-	cert := NewAuthorizationCertificate()
+func Deserialize(data []byte, keyProc core.KeyProcessor) (core.AuthorizationCertificate, error) {
+	cert := &AuthorizationCertificate{}
 	err := core.Deserialize(data, &cert)
+
+	key, err := keyProc.ImportPublicKey([]byte(cert.PublicKey))
+
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Deserialize ] failed to import a public key")
+	}
+
+	cert.nodePublicKey = key
+
 	if err != nil {
 		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ]")
 	}
