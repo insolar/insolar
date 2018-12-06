@@ -159,7 +159,6 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 		address,
 		"",
 	)
-	keeper := &nodeKeeperWrapper{nodenetwork.NewNodeKeeper(origin)}
 
 	cfg := configuration.NewConfiguration()
 	cfg.Host.Transport.Address = address
@@ -176,11 +175,14 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 
 	amMock := testutils.NewArtifactManagerMock(t)
 
-	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t))
+	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t), origin.ID())
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
+	realKeeper := nodenetwork.NewNodeKeeper(origin)
+	keeper := &nodeKeeperWrapper{realKeeper}
+
 	cm := &component.Manager{}
-	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock)
+	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
 	cm.Register(certManager, cryptographyService)
 	cm.Inject(serviceNetwork, netSwitcher)
 
