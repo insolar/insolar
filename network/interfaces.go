@@ -147,15 +147,12 @@ type NodeKeeper interface {
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
-
 	// SetState set state of the NodeKeeper
 	SetState(NodeKeeperState)
 	// GetState get state of the NodeKeeper
 	GetState() NodeKeeperState
-	// SetOriginClaim set origin NodeJoinClaim. It is needed to join to discovery node or (sometimes) in consensus
-	SetOriginClaim(*consensus.NodeJoinClaim)
 	// GetOriginClaim get origin NodeJoinClaim
-	GetOriginClaim() *consensus.NodeJoinClaim
+	GetOriginClaim() (*consensus.NodeJoinClaim, error)
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
 	// AddPendingClaim add pending claim to the internal queue of claims
@@ -182,9 +179,13 @@ type UnsyncList interface {
 	// RemoveClaims
 	RemoveClaims(core.RecordRef)
 	// AddClaims
-	AddClaims(core.RecordRef, []consensus.ReferendumClaim, map[core.RecordRef]string)
+	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim, map[core.RecordRef]string)
 	// CalculateHash calculate node list hash based on active node list and claims
 	CalculateHash() ([]byte, error)
+	// GetActiveNode get active node by reference ID for current consensus
+	GetActiveNode(ref core.RecordRef) core.Node
+	// GetActiveNodes get active nodes for current consensus
+	GetActiveNodes() []core.Node
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.

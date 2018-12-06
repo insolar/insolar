@@ -37,12 +37,12 @@ type Communicator interface {
 	ExchangePhase1(
 		ctx context.Context,
 		participants []core.Node,
-		packet packets.Phase1Packet,
+		packet *packets.Phase1Packet,
 	) (map[core.RecordRef]*packets.Phase1Packet, map[core.RecordRef]string, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
-	ExchangePhase2(ctx context.Context, participants []core.Node, packet packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
+	ExchangePhase2(ctx context.Context, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
-	ExchangePhase3(ctx context.Context, participants []core.Node, packet packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
+	ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
 }
 
 type phase1Result struct {
@@ -116,12 +116,12 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, reques
 func (nc *NaiveCommunicator) ExchangePhase1(
 	ctx context.Context,
 	participants []core.Node,
-	packet packets.Phase1Packet,
+	packet *packets.Phase1Packet,
 ) (map[core.RecordRef]*packets.Phase1Packet, map[core.RecordRef]string, error) {
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
 	addresses := make(map[core.RecordRef]string, len(participants))
 
-	result[nc.ConsensusNetwork.GetNodeID()] = &packet
+	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 
@@ -163,10 +163,10 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 }
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []core.Node, packet packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase2Packet, len(participants))
 
-	result[nc.ConsensusNetwork.GetNodeID()] = &packet
+	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
 	packetBuffer, err := packet.Serialize()
 	if err != nil {
@@ -208,10 +208,10 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 }
 
 // ExchangePhase3 used in third consensus step to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []core.Node, packet packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
+func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase3Packet, len(participants))
 
-	result[nc.ConsensusNetwork.GetNodeID()] = &packet
+	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
 	packetBuffer, err := packet.Serialize()
 	if err != nil {

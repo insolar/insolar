@@ -80,7 +80,9 @@ func (s *testSuite) StartNodes() {
 	<-time.After(time.Second * 1)
 
 	if s.testNode.componentManager != nil {
-		err := s.testNode.componentManager.Start(s.ctx)
+		err := s.testNode.componentManager.Init(s.ctx)
+		s.NoError(err)
+		err = s.testNode.componentManager.Start(s.ctx)
 		s.NoError(err)
 	}
 
@@ -103,7 +105,7 @@ type networkNode struct {
 	serviceNetwork   *ServiceNetwork
 }
 
-func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey) core.Certificate {
+func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey) *certificate.CertificateManager {
 	proc := platformpolicy.NewKeyProcessor()
 	publicKey, err := proc.ExportPublicKey(key)
 	assert.NoError(t, err)
@@ -119,26 +121,27 @@ func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto
 	result, err := certificate.ReadCertificateFromReader(key, proc, bytes.NewReader(data))
 	assert.NoError(t, err)
 	result.BootstrapNodes = nodes
-	return result
+	mngr := certificate.NewCertificateManager(result)
+	return mngr
 }
 
-func initCrypto(t *testing.T, nodes []certificate.BootstrapNode) (core.Certificate, core.CryptographyService) {
+func initCrypto(t *testing.T, nodes []certificate.BootstrapNode) (*certificate.CertificateManager, core.CryptographyService) {
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 	cs := cryptography.NewKeyBoundCryptographyService(key)
 	pubKey, err := cs.GetPublicKey()
 	assert.NoError(t, err)
-	cert := initCertificate(t, nodes, pubKey)
+	mngr := initCertificate(t, nodes, pubKey)
 
-	return cert, cs
+	return mngr, cs
 }
 
 func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode {
 	result := make([]certificate.BootstrapNode, 0)
 	for _, b := range s.bootstrapNodes {
-		node := certificate.NewBootstrapNode(b.serviceNetwork.Certificate.GetPublicKey())
+		node := certificate.NewBootstrapNode(b.serviceNetwork.CertificateManager.GetCertificate().GetPublicKey())
 		node.Host = b.serviceNetwork.cfg.Host.Transport.Address
-		node.PublicKey = b.serviceNetwork.Certificate.(*certificate.Certificate).PublicKey
+		node.PublicKey = b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey
 		node.NodeRef = b.serviceNetwork.NodeNetwork.GetOrigin().ID().String()
 		result = append(result, node)
 	}
@@ -150,7 +153,7 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	s.networkPort += 2 // coz consensus transport port+=1
 
 	origin := nodenetwork.NewNode(testutils.RandomRef(),
-		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
+		core.StaticRoleVirtual,
 		nil,
 		address,
 		"",
@@ -158,7 +161,6 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	keeper := &nodeKeeperWrapper{nodenetwork.NewNodeKeeper(origin)}
 
 	cfg := configuration.NewConfiguration()
-	cfg.Node.Node.ID = origin.ID().String()
 	cfg.Host.Transport.Address = address
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -173,12 +175,12 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 
 	amMock := testutils.NewArtifactManagerMock(t)
 
-	cert, cryptographyService := initCrypto(t, s.getBootstrapNodes(t))
+	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t))
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
 	cm := &component.Manager{}
 	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock)
-	cm.Register(cert, cryptographyService)
+	cm.Register(certManager, cryptographyService)
 	cm.Inject(serviceNetwork, netSwitcher)
 
 	serviceNetwork.NodeKeeper = keeper

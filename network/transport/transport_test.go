@@ -169,3 +169,10 @@ func TestUDPTransport(t *testing.T) {
 
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }
+
+func TestTCPTransport(t *testing.T) {
+	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17014", BehindNAT: false}
+	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17015", BehindNAT: false}
+
+	suite.Run(t, NewSuite(cfg1, cfg2))
+}

@@ -17,17 +17,22 @@
 package main
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 	"net/rpc"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/metrics"
 
-	"github.com/insolar/insolar/log"
 	"github.com/spf13/pflag"
 
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
 )
 
@@ -37,6 +42,7 @@ func main() {
 	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
 	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
 	rpcProtocol := pflag.String("rpc-proto", "tcp", "protocol of RPC API")
+	metricsAddress := pflag.String("metrics", "", "address and port of prometheus metrics")
 	code := pflag.String("code", "", "add pre-compiled code to cache (<ref>:</path/to/plugin.so>)")
 
 	pflag.Parse()
@@ -87,7 +93,42 @@ func main() {
 		os.Exit(1)
 	}
 
+	var gracefulStop = make(chan os.Signal, 1)
+	signal.Notify(gracefulStop, syscall.SIGTERM)
+	signal.Notify(gracefulStop, syscall.SIGINT)
+
+	go func() {
+		sig := <-gracefulStop
+
+		log.Info("ginsider get signal: ", sig.String())
+		os.Exit(1)
+	}()
+
+	if *metricsAddress != "" {
+		ctx := context.Background() // TODO add tradeId and logger
+
+		metricsConfiguration := configuration.Metrics{
+			ListenAddress: *metricsAddress,
+			Namespace:     "insgorund",
+			ZpagesEnabled: true,
+		}
+
+		m, err := metrics.NewMetrics(ctx, metricsConfiguration, metrics.GetInsgorundRegistry())
+		if err != nil {
+			log.Fatal("couldn't setup metrics ", err)
+			os.Exit(1)
+		}
+		err = m.Start(ctx)
+		if err != nil {
+			log.Fatal("couldn't setup metrics ", err)
+			os.Exit(1)
+		}
+
+		defer m.Stop(ctx) // nolint: errcheck
+	}
+
 	log.Debug("ginsider launched, listens " + *listen)
 	rpc.Accept(listener)
+
 	log.Debug("bye\n")
 }

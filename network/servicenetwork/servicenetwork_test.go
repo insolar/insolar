@@ -123,7 +123,6 @@ func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID strin
 	h := configuration.HostNetwork{
 		Transport:      transport,
 		IsRelay:        false,
-		BootstrapHosts: bootstrapHosts,
 	}
 
 	n := configuration.NodeNetwork{Node: &configuration.Node{ID: nodeID}}

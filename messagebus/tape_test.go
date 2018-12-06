@@ -87,7 +87,7 @@ func TestTape_Write(t *testing.T) {
 	// Prepare test data.
 	ctx := inslogger.TestContext(t)
 	ls := testutils.NewLocalStorageMock(mc)
-	tp, err := NewTape(ls, 42)
+	tp, err := newStorageTape(ls, 42)
 	require.NoError(t, err)
 	ls.IterateFunc = func(ctx context.Context, pulse core.PulseNumber, prefix []byte, handler func(k, v []byte) error) error {
 		err := handler(bytes.Join([][]byte{tp.id[:], {1}}, nil), []byte{2})
@@ -138,7 +138,7 @@ func TestNewTapeFromReader(t *testing.T) {
 		return nil
 	}
 
-	_, err := NewTapeFromReader(ctx, ls, bytes.NewBuffer(buff.Bytes()))
+	_, err := newStorageTapeFromReader(ctx, ls, bytes.NewBuffer(buff.Bytes()))
 	require.NoError(t, err)
 	require.Equal(t, expectedValues, values)
 }

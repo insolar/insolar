@@ -40,8 +40,8 @@ func TestMain(m *testing.M) {
 	cfg := configuration.NewAPIRunner()
 	api, _ := NewRunner(&cfg)
 
-	c := certificate.Certificate{}
-	api.Certificate = &c
+	cm := certificate.NewCertificateManager(&certificate.Certificate{})
+	api.CertificateManager = cm
 	api.Start(ctx)
 
 	code := m.Run()

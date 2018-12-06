@@ -147,10 +147,11 @@ func (m *PulseManager) processRecentObjects(
 	drop *jetdrop.JetDrop,
 	dropSerialized []byte,
 ) error {
+	logger := inslogger.FromContext(ctx)
 	m.Recent.ClearZeroTTLObjects()
 	recentObjectsIds := m.Recent.GetObjects()
 	pendingRequestsIds := m.Recent.GetRequests()
-	m.Recent.ClearObjects()
+	defer m.Recent.ClearObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID][]byte{}
@@ -158,17 +159,25 @@ func (m *PulseManager) processRecentObjects(
 	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
 		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
+			logger.Error(err)
 			continue
 		}
 		encoded, err := index.EncodeObjectLifeline(lifeline)
 		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
+			logger.Error(err)
 			continue
 		}
 		recentObjects[id] = &message.HotIndex{
 			TTL:   ttl,
 			Index: encoded,
+		}
+
+		if !m.Recent.IsMine(id) {
+			err := m.db.RemoveObjectIndex(ctx, &id)
+			if err != nil {
+				logger.Error(err)
+				return err
+			}
 		}
 	}
 
@@ -181,8 +190,8 @@ func (m *PulseManager) processRecentObjects(
 		pendingRequests[id] = record.SerializeRecord(pendingRecord)
 	}
 
-	msg := &message.HotIndexes{
-		Drop:            dropSerialized,
+	msg := &message.HotData{
+		Drop:            *drop,
 		PulseNumber:     *latestPulse.Prev,
 		RecentObjects:   recentObjects,
 		PendingRequests: pendingRequests,

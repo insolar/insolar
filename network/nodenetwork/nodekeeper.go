@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
@@ -52,10 +53,16 @@ func createOrigin(configuration configuration.HostNetwork, certificate core.Cert
 		return nil, errors.Wrap(err, "Failed to resolve public address")
 	}
 
+	role := certificate.GetRole()
+	if role == core.StaticRoleUnknown {
+		log.Info("[ createOrigin ] Use core.StaticRoleLightMaterial, since no role in certificate")
+		role = core.StaticRoleLightMaterial
+	}
+
 	// TODO: get roles from certificate
 	return newMutableNode(
 		*certificate.GetNodeRef(),
-		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
+		role,
 		certificate.GetPublicKey(),
 		publicAddress,
 		version.Version,
@@ -87,11 +94,10 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 }
 
 type nodekeeper struct {
-	origin      core.Node
-	originClaim *consensus.NodeJoinClaim
-	originLock  sync.RWMutex
-	state       network.NodeKeeperState
-	claimQueue  *claimQueue
+	origin     core.Node
+	originLock sync.RWMutex
+	state      network.NodeKeeperState
+	claimQueue *claimQueue
 
 	nodesJoinedDuringPrevPulse bool
 
@@ -108,6 +114,8 @@ type nodekeeper struct {
 
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
+
+	Cryptography core.CryptographyService `inject:""`
 }
 
 // TODO: remove this method when bootstrap mechanism completed
@@ -209,14 +217,14 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 		log.Infof("Added origin node %s to active list", nk.origin.ID())
 	}
 	nk.active[node.ID()] = node
-	for _, role := range node.Roles() {
-		list, ok := nk.indexNode[role]
-		if !ok {
-			list = newRecordRefSet()
-		}
-		list.Add(node.ID())
-		nk.indexNode[role] = list
+
+	list, ok := nk.indexNode[node.Role()]
+	if !ok {
+		list = newRecordRefSet()
 	}
+	list.Add(node.ID())
+	nk.indexNode[node.Role()] = list
+
 	nk.indexShortID[node.ShortID()] = node
 }
 
@@ -243,18 +251,11 @@ func (nk *nodekeeper) GetState() network.NodeKeeperState {
 	return nk.state
 }
 
-func (nk *nodekeeper) SetOriginClaim(claim *consensus.NodeJoinClaim) {
-	nk.originLock.Lock()
-	defer nk.originLock.Unlock()
-
-	nk.originClaim = claim
-}
-
-func (nk *nodekeeper) GetOriginClaim() *consensus.NodeJoinClaim {
+func (nk *nodekeeper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
 	nk.originLock.RLock()
 	defer nk.originLock.RUnlock()
 
-	return nk.originClaim
+	return nk.nodeToClaim()
 }
 
 func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
@@ -295,6 +296,52 @@ func (nk *nodekeeper) MoveSyncToActive() {
 
 	sync := nk.sync.(*unsyncList)
 	sync.mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
+}
+
+func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
+	key, err := nk.Cryptography.GetPublicKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to get a public key")
+	}
+	keyProc := platformpolicy.NewKeyProcessor()
+	exportedKey, err := keyProc.ExportPublicKey(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to export a public key")
+	}
+	var keyData [consensus.PublicKeyLength]byte
+	copy(keyData[:], exportedKey[:consensus.PublicKeyLength])
+
+	var s [consensus.SignatureLength]byte
+	claim := consensus.NodeJoinClaim{
+		ShortNodeID:             nk.origin.ShortID(),
+		RelayNodeID:             nk.origin.ShortID(),
+		ProtocolVersionAndFlags: 0,
+		JoinsAfter:              0,
+		NodeRoleRecID:           0, // TODO: how to get a role as int?
+		NodeRef:                 nk.origin.ID(),
+		NodePK:                  keyData,
+		Signature:               s,
+	}
+
+	dataToSign, err := claim.SerializeWithoutSign()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to serialize a claim")
+	}
+	sign, err := nk.sign(dataToSign)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to sign a claim")
+	}
+
+	copy(claim.Signature[:], sign[:consensus.SignatureLength])
+	return &claim, nil
+}
+
+func (nk *nodekeeper) sign(data []byte) ([]byte, error) {
+	sign, err := nk.Cryptography.Sign(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ sign ] failed to sign a claim")
+	}
+	return sign.Bytes(), nil
 }
 
 func jetRoleToNodeRole(role core.DynamicRole) core.StaticRole {

@@ -91,11 +91,7 @@ func (n *nodeKeeperWrapper) GetState() network.NodeKeeperState {
 	return n.original.GetState()
 }
 
-func (n *nodeKeeperWrapper) SetOriginClaim(claim *consensus.NodeJoinClaim) {
-	n.original.SetOriginClaim(claim)
-}
-
-func (n *nodeKeeperWrapper) GetOriginClaim() *consensus.NodeJoinClaim {
+func (n *nodeKeeperWrapper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
 	return n.original.GetOriginClaim()
 }
 

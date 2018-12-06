@@ -10,6 +10,8 @@ APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 
 ALL_PACKAGES = ./...
+MOCKS_PACKAGE = github.com/insolar/insolar/testutils
+TESTED_PACKAGES = $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE = coverage.txt
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
@@ -40,7 +42,7 @@ clean:
 	go clean $(ALL_PACKAGES)
 	rm -f $(COVERPROFILE)
 	rm -rf $(BIN_DIR)
-	./scripts/insolard/launch.sh clear
+	./scripts/insolard/launchnet.sh -l
 
 install-deps:
 	go get -u github.com/golang/dep/cmd/dep
@@ -97,7 +99,7 @@ test:
 	go test -v $(ALL_PACKAGES)
 
 test_with_coverage:
-	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)
 
 
 CONTRACTS = $(wildcard application/contract/*)

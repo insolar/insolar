@@ -28,8 +28,8 @@ import (
 
 // GenesisDataProvider gives access to basic information about genesis objects
 type GenesisDataProvider struct {
-	Certificate       core.Certificate       `inject:""`
-	ContractRequester core.ContractRequester `inject:""`
+	CertificateManager core.CertificateManager `inject:""`
+	ContractRequester  core.ContractRequester  `inject:""`
 
 	rootMemberRef *core.RecordRef
 	nodeDomainRef *core.RecordRef
@@ -61,7 +61,7 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 
 // GetRootDomain returns reference to RootDomain
 func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordRef {
-	return gdp.Certificate.GetRootDomainReference()
+	return gdp.CertificateManager.GetCertificate().GetRootDomainReference()
 }
 
 // GetNodeDomain returns reference to NodeDomain
