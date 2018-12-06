@@ -543,7 +543,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 
 func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	jetID := testutils.RandomID()
+	jetID := core.TODOJetID
 
 	idCreator, idCreatorCleaner := storagetest.TmpDB(ctx, t)
 	defer idCreatorCleaner()

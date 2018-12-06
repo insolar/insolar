@@ -36,6 +36,7 @@ func TestExporter_Export(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, clean := storagetest.TmpDB(ctx, t)
 	defer clean()
+	jetID := core.TODOJetID
 
 	exporter := NewExporter(db)
 
@@ -56,7 +57,7 @@ func TestExporter_Export(t *testing.T) {
 	blobData := testData{Field: "objectValue"}
 	blobData.Data.Field = "anotherValue"
 	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
-	blobID, err := db.SetBlob(ctx, core.FirstPulseNumber+1, mem)
+	blobID, err := db.SetBlob(ctx, jetID, core.FirstPulseNumber+1, mem)
 	require.NoError(t, err)
 	_, err = db.SetRecord(ctx, core.FirstPulseNumber+1, &record.GenesisRecord{})
 	require.NoError(t, err)

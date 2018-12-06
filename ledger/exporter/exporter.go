@@ -119,12 +119,13 @@ func (e *Exporter) exportPulse(ctx context.Context, pulse *core.Pulse) (*pulseDa
 }
 
 func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, error) {
+	jetID := core.TODOJetID
 	switch r := rec.(type) {
 	case record.ObjectState:
 		if r.GetMemory() == nil {
 			break
 		}
-		blob, err := e.db.GetBlob(ctx, r.GetMemory())
+		blob, err := e.db.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
 			return nil, err
 		}

@@ -56,7 +56,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cleaner()
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := core.PulseNumber(pulseDelta(n))
-			addRecords(ctx, t, db, lastPulse)
+			addRecords(ctx, t, db, jetID, lastPulse)
 			setDrop(ctx, t, db, jetID, lastPulse)
 		}
 
@@ -101,7 +101,7 @@ func Test_ReplicaIter_FirstPulse(t *testing.T) {
 	defer cleaner()
 
 	jetID := testutils.RandomID()
-	addRecords(ctx, t, db, core.FirstPulseNumber)
+	addRecords(ctx, t, db, jetID, core.FirstPulseNumber)
 
 	replicator := storage.NewReplicaIter(ctx, db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
 	var got []key
@@ -157,7 +157,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	for i := 0; i < pulsescount; i++ {
 		lastPulse = pulseDelta(i)
 
-		addRecords(ctx, t, db, lastPulse)
+		addRecords(ctx, t, db, jetID, lastPulse)
 		setDrop(ctx, t, db, jetID, lastPulse)
 
 		recs, _ := getallkeys(db.GetBadgerDB())
@@ -220,7 +220,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	lastPulse = lastPulse + 1
 	// addRecords here is for purpose:
 	// new records on +1 pulse should not affect iterator result on previous pulse range
-	addRecords(ctx, t, db, lastPulse)
+	addRecords(ctx, t, db, jetID, lastPulse)
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
 
@@ -273,6 +273,7 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	db *storage.DB,
+	jet core.RecordID,
 	pulsenum core.PulseNumber,
 ) {
 	// set record
@@ -288,7 +289,7 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set blob
-	_, err = db.SetBlob(ctx, pulsenum, []byte("100500"))
+	_, err = db.SetBlob(ctx, jet, pulsenum, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
@@ -354,7 +355,11 @@ func (b key) pulse() core.PulseNumber {
 	pulseStartsAt := 1
 	pulseEndsAt := 1 + core.PulseNumberSize
 	// if jet defined for record type
-	if b[0] == scopeIDJetDrop {
+	switch b[0] {
+	case
+		scopeIDBlob,
+		scopeIDJetDrop:
+
 		pulseStartsAt += core.RecordIDSize
 		pulseEndsAt += core.RecordIDSize
 	}

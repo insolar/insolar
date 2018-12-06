@@ -110,6 +110,7 @@ func TestDB_CreateDrop(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jetID := testutils.RandomID()
 
 	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
 	err := db.AddPulse(
@@ -127,11 +128,11 @@ func TestDB_CreateDrop(t *testing.T) {
 				Code: record.CalculateIDForBlob(cs, pulse, []byte{byte(i)}),
 			}),
 		}
-		db.SetMessage(ctx, core.TODOJetID, pulse, &setRecordMessage)
-		db.SetBlob(ctx, pulse, []byte{byte(i)})
+		db.SetMessage(ctx, jetID, pulse, &setRecordMessage)
+		db.SetBlob(ctx, jetID, pulse, []byte{byte(i)})
 	}
 
-	drop, messages, err := db.CreateDrop(ctx, core.TODOJetID, pulse, []byte{4, 5, 6})
+	drop, messages, err := db.CreateDrop(ctx, jetID, pulse, []byte{4, 5, 6})
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(messages))
 	assert.Equal(t, pulse, drop.Pulse)

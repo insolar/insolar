@@ -203,14 +203,15 @@ func (db *DB) Stop(ctx context.Context) error {
 }
 
 // GetBlob returns binary value stored by record ID.
-func (db *DB) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
+// TODO: switch from reference to passing blob id for consistency - @nordicdyno 6.Dec.2018
+func (db *DB) GetBlob(ctx context.Context, jet core.RecordID, id *core.RecordID) ([]byte, error) {
 	var (
 		blob []byte
 		err  error
 	)
 
 	err = db.View(ctx, func(tx *TransactionManager) error {
-		blob, err = tx.GetBlob(ctx, id)
+		blob, err = tx.GetBlob(ctx, jet, id)
 		return err
 	})
 	if err != nil {
@@ -220,13 +221,13 @@ func (db *DB) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 }
 
 // SetBlob saves binary value for provided pulse.
-func (db *DB) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+func (db *DB) SetBlob(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
 	)
 	err = db.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetBlob(ctx, pulseNumber, blob)
+		id, err = tx.SetBlob(ctx, jet, pulseNumber, blob)
 		return err
 	})
 	if err != nil {

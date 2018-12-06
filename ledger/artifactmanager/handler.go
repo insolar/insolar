@@ -134,9 +134,11 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 
 func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetBlob)
+	// TODO: add jetIS in message - @nordicdyno 6.Dec.2018
+	jetID := core.TODOJetID
 
 	calculatedID := record.CalculateIDForBlob(h.PlatformCryptographyScheme, pulseNumber, msg.Memory)
-	_, err := h.db.GetBlob(ctx, calculatedID)
+	_, err := h.db.GetBlob(ctx, jetID, calculatedID)
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
@@ -144,7 +146,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 		return nil, err
 	}
 
-	id, err := h.db.SetBlob(ctx, pulseNumber, msg.Memory)
+	id, err := h.db.SetBlob(ctx, jetID, pulseNumber, msg.Memory)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +156,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
+	jetID := core.TODOJetID
 
 	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
 	if err == storage.ErrNotFound {
@@ -178,7 +181,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	if err != nil {
 		return nil, err
 	}
-	code, err := h.db.GetBlob(ctx, codeRec.Code)
+	code, err := h.db.GetBlob(ctx, jetID, codeRec.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -195,6 +198,7 @@ func (h *MessageHandler) handleGetObject(
 	ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel,
 ) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetObject)
+	jetID := core.TODOJetID
 
 	var (
 		idx *index.ObjectLifeline
@@ -267,7 +271,7 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	if state.GetMemory() != nil {
-		rep.Memory, err = h.db.GetBlob(ctx, state.GetMemory())
+		rep.Memory, err = h.db.GetBlob(ctx, jetID, state.GetMemory())
 		if err != nil {
 			return nil, err
 		}

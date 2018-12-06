@@ -116,15 +116,15 @@ func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) 
 }
 
 // GetBlob returns binary value stored by record ID.
-func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
-	k := prefixkey(scopeIDBlob, id[:])
+func (m *TransactionManager) GetBlob(ctx context.Context, jet core.RecordID, id *core.RecordID) ([]byte, error) {
+	k := prefixkeyany(scopeIDBlob, jet[:], id[:])
 	return m.get(ctx, k)
 }
 
 // SetBlob saves binary value for provided pulse.
-func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+func (m *TransactionManager) SetBlob(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	id := record.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
-	k := prefixkey(scopeIDBlob, id[:])
+	k := prefixkeyany(scopeIDBlob, jet[:], id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
 		return err

@@ -311,6 +311,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
+	jetID := core.TODOJetID
 
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
@@ -329,7 +330,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		},
 	)
 	require.NoError(t, err)
-	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{3})
+	_, err = db.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{3})
 	require.NoError(t, err)
 	objectAmendID, _ := db.SetRecord(ctx, core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -340,7 +341,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 			Image:  *prototypeRef,
 		},
 	})
-	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{4})
+	_, err = db.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{4})
 	require.NoError(t, err)
 
 	objectIndex := index.ObjectLifeline{

@@ -58,6 +58,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jetID := core.TODOJetID
 
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(t)
@@ -172,7 +173,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(ctx, t, db, core.PulseNumber(lastpulse+i))
+		addRecords(ctx, t, db, jetID, core.PulseNumber(lastpulse+i))
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
@@ -185,7 +186,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		addRecords(ctx, t, db, core.PulseNumber(lastpulse))
+		addRecords(ctx, t, db, jetID, core.PulseNumber(lastpulse))
 
 		lastpulse++
 		err = setpulse(ctx, pm, lastpulse)
@@ -226,6 +227,7 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	db *storage.DB,
+	jetID core.RecordID,
 	pn core.PulseNumber,
 ) {
 	// fmt.Printf("CALL addRecords for pulse %v\n", pn)
@@ -241,7 +243,7 @@ func addRecords(
 	)
 	require.NoError(t, err)
 
-	_, err = db.SetBlob(ctx, pn, []byte("100500"))
+	_, err = db.SetBlob(ctx, jetID, pn, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
@@ -286,7 +288,18 @@ func getallkeys(db *badger.DB) (records []key) {
 }
 
 func (b key) pulse() core.PulseNumber {
-	return core.NewPulseNumber(b[1 : 1+core.PulseNumberSize])
+	pulseStartsAt := 1
+	pulseEndsAt := 1 + core.PulseNumberSize
+	// if jet defined for record type
+	switch b[0] {
+	case
+		scopeIDBlob,
+		scopeIDJetDrop:
+
+		pulseStartsAt += core.RecordIDSize
+		pulseEndsAt += core.RecordIDSize
+	}
+	return core.NewPulseNumber(b[pulseStartsAt:pulseEndsAt])
 }
 
 func (b key) String() string {
