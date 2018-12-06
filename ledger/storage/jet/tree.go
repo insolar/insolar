@@ -25,13 +25,35 @@ import (
 
 // Jet contain jet record.
 type Jet struct {
-	ID core.RecordID
+	ID     core.RecordID
+	Prefix []byte
+
+	Left  *Jet
+	Right *Jet
+}
+
+// Find returns jet for provided reference.
+func (j *Jet) Find(ref *core.RecordRef, depth uint) *Jet {
+	if j == nil || ref == nil {
+		return nil
+	}
+
+	if getBit(ref[:], depth) && j.Left != nil {
+		return j.Left.Find(ref, depth+1)
+	} else if j.Right != nil {
+		return j.Right.Find(ref, depth+1)
+	}
+	return j
 }
 
 // Tree stores jet in a binary tree.
 type Tree struct {
-	// TODO: implement tree.
-	Jets []Jet
+	Head *Jet
+}
+
+// Find returns jet for provided reference.
+func (t *Tree) Find(ref *core.RecordRef) *Jet {
+	return t.Head.Find(ref, 0)
 }
 
 // Bytes serializes pulse.
@@ -40,4 +62,14 @@ func (t *Tree) Bytes() []byte {
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	enc.MustEncode(t)
 	return buf.Bytes()
+}
+
+func getBit(value []byte, index uint) bool {
+	if index > uint(len(value)*8) {
+		panic("index overflow")
+	}
+	byteIndex := uint(index / 8)
+	bitIndex := 7 - index%8
+	mask := byte(1 << bitIndex)
+	return value[byteIndex]&mask != 0
 }
