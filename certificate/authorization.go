@@ -31,13 +31,14 @@ type AuthorizationCertificate struct {
 	Role           string                     `json:"role"`
 	DiscoverySigns map[*core.RecordRef][]byte `json:"-"`
 
-	nodePublicKey crypto.PublicKey
+	keyProc core.KeyProcessor
+}
+
 }
 
 // GetPublicKey returns public key reference from node certificate
 func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
-	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKey([]byte(authCert.PublicKey))
+	key, err := authCert.keyProc.ImportPublicKey([]byte(authCert.PublicKey))
 
 	if err != nil {
 		panic(err)
