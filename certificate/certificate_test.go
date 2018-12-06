@@ -199,15 +199,15 @@ func TestReadCertificateFromReader(t *testing.T) {
 }
 
 func TestSerializeDeserialize(t *testing.T) {
-	cert := &AuthorizationCertificate{
-		PublicKey: "test_public_key",
-		Reference: "test_reference",
-		Role:      "test_role",
-	}
-	result, err := Serialize(cert)
+	cert := NewAuthorizationCertificate()
+	cert.PublicKey = "test_public_key"
+	cert.Reference = "test_reference"
+	cert.Role = "test_role"
+
+	result, err := Serialize(&cert)
 	require.NoError(t, err)
 
 	deserializedCert, err := Deserialize(result)
 	require.NoError(t, err)
-	require.Equal(t, cert, deserializedCert)
+	require.Equal(t, &cert, deserializedCert)
 }
