@@ -3,8 +3,14 @@
 REPO=$1
 COMMIT_VERSION=$2
 
-export GOPATH=`go env GOPATH`
-go get -u $REPO
-cd "$GOPATH/src/$REPO"
-git checkout $COMMIT_VERSION
+# GOPATH may contain multiple paths. We use only the first one.
+export GOPATH=$(go env GOPATH | cut -d':' -f1)
+REPODIR="$GOPATH/src/$REPO"
+
+if [ ! -d $REPODIR ]; then
+    go get -u $REPO
+fi
+
+cd $REPODIR
+git checkout -q $COMMIT_VERSION
 go install
