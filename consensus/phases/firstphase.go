@@ -29,11 +29,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-const ConsensusAtPercents = 2.0 / 3.0
+const BFTPercent = 2.0 / 3.0
+const MajorityPercent = 0.5
 
-func consensusReached(resultLen, participanstLen int) bool {
-	minParticipants := int(math.Floor(ConsensusAtPercents*float64(participanstLen))) + 1
+func consensusReachedBFT(resultLen, participanstLen int) bool {
+	return consensusReachedWithPercent(resultLen, participanstLen, BFTPercent)
+}
 
+func consensusReachedMajority(resultLen, participanstLen int) bool {
+	return consensusReachedWithPercent(resultLen, participanstLen, MajorityPercent)
+}
+
+func consensusReachedWithPercent(resultLen, participanstLen int, percent float64) bool {
+	minParticipants := int(math.Floor(percent*float64(participanstLen))) + 1
 	return resultLen >= minParticipants
 }
 

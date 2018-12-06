@@ -60,9 +60,15 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 }
 
 func Test_consensusReached(t *testing.T) {
-	assert.True(t, consensusReached(5, 6))
-	assert.False(t, consensusReached(4, 6))
+	assert.True(t, consensusReachedBFT(5, 6))
+	assert.False(t, consensusReachedBFT(4, 6))
 
-	assert.True(t, consensusReached(201, 300))
-	assert.False(t, consensusReached(200, 300))
+	assert.True(t, consensusReachedBFT(201, 300))
+	assert.False(t, consensusReachedBFT(200, 300))
+
+	assert.True(t, consensusReachedMajority(4, 6))
+	assert.False(t, consensusReachedMajority(3, 6))
+
+	assert.True(t, consensusReachedMajority(151, 300))
+	assert.False(t, consensusReachedMajority(150, 300))
 }
