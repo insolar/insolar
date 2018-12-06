@@ -23,15 +23,19 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/jetdrop"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/jet"
 	"github.com/ugorji/go/codec"
 )
+
+// Jet contain jet record.
+type Jet struct {
+	ID core.RecordID
+}
 
 // JetTree stores jet in a binary tree.
 type JetTree struct {
 	// TODO: implement tree.
-	Jets []record.JetRecord
+	Jets []Jet
 }
 
 // Bytes serializes pulse.
@@ -43,13 +47,13 @@ func (t *JetTree) Bytes() []byte {
 }
 
 // GetDrop returns jet drop for a given pulse number.
-func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
+func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jet.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
 	buf, err := db.get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
-	drop, err := jetdrop.Decode(buf)
+	drop, err := jet.Decode(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +64,7 @@ func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.Jet
 //
 // Previous JetDrop hash should be provided. On success returns saved drop and slot records.
 func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash []byte) (
-	*jetdrop.JetDrop,
+	*jet.JetDrop,
 	[][]byte,
 	error,
 ) {
@@ -134,7 +138,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 		return nil, nil, jetDropHashError
 	}
 
-	drop := jetdrop.JetDrop{
+	drop := jet.JetDrop{
 		Pulse:    pulse,
 		PrevHash: prevHash,
 		Hash:     hw.Sum(nil),
@@ -143,14 +147,14 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 }
 
 // SetDrop saves provided JetDrop in db.
-func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
+func (db *DB) SetDrop(ctx context.Context, drop *jet.JetDrop) error {
 	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
 	_, err := db.get(ctx, k)
 	if err == nil {
 		return ErrOverride
 	}
 
-	encoded, err := jetdrop.Encode(drop)
+	encoded, err := jet.Encode(drop)
 	if err != nil {
 		return err
 	}

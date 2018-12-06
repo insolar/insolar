@@ -99,17 +99,37 @@ func (jc *JetCoordinator) QueryRole(
 	if len(candidates) == 0 {
 		return nil, errors.New("no candidates for this role")
 	}
-	count, ok := jc.roleCounts[role]
-	if !ok {
-		return nil, errors.New("no candidate count for this role")
+
+	if obj == nil {
+		count, ok := jc.roleCounts[role]
+		if !ok {
+			return nil, errors.New("no candidate count for this role")
+		}
+		return selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, candidates, count)
 	}
 
-	selected, err := selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, candidates, count)
-	if err != nil {
-		return nil, err
+	if role == core.DynamicRoleLightExecutor {
+		jets := []core.RecordRef{}
+		selectedJets, err := selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, jets, 1)
+		if err != nil {
+			return nil, err
+		}
+		h := jc.PlatformCryptographyScheme.ReferenceHasher()
+		_, err = h.Write(pulseData.Pulse.Entropy[:])
+		if err != nil {
+			return nil, err
+		}
+		_, err = h.Write(selectedJets[0][:])
+		if err != nil {
+			return nil, err
+		}
+		jet, err := selectByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), jets, 1)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return selected, nil
+	return selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, candidates, 1)
 }
 
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
