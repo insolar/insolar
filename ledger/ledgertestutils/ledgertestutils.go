@@ -73,6 +73,9 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	gilMock.AcquireFunc = func(context.Context) {}
 	gilMock.ReleaseFunc = func(context.Context) {}
 
+	alsMock := testutils.NewActiveListSwapperMock(t)
+	alsMock.MoveSyncToActiveFunc = func() {}
+
 	handler.Bus = c.MessageBus
 	am.DefaultBus = c.MessageBus
 	jc.NodeNet = c.NodeNetwork
@@ -80,6 +83,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm.GIL = gilMock
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
+	pm.ActiveListSwapper = alsMock
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
