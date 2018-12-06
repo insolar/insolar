@@ -34,6 +34,10 @@ type AuthorizationCertificate struct {
 	keyProc core.KeyProcessor
 }
 
+func NewAuthorizationCertificate() AuthorizationCertificate {
+	return AuthorizationCertificate{
+		keyProc: platformpolicy.NewKeyProcessor(),
+	}
 }
 
 // GetPublicKey returns public key reference from node certificate
@@ -80,7 +84,7 @@ func (authCert *AuthorizationCertificate) SignNodePart(key crypto.PrivateKey) ([
 
 // Deserialize deserializes data to AuthorizationCertificate interface
 func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
-	cert := AuthorizationCertificate{}
+	cert := NewAuthorizationCertificate()
 	err := core.Deserialize(data, &cert)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ]")
