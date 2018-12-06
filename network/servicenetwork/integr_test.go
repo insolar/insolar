@@ -125,13 +125,14 @@ func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto
 	return mngr
 }
 
-func initCrypto(t *testing.T, nodes []certificate.BootstrapNode) (*certificate.CertificateManager, core.CryptographyService) {
-	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+func initCrypto(t *testing.T, nodes []certificate.BootstrapNode, ref core.RecordRef) (*certificate.CertificateManager, core.CryptographyService) {
+	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	assert.NoError(t, err)
 	require.NotNil(t, key)
 	cs := cryptography.NewKeyBoundCryptographyService(key)
 	pubKey, err := cs.GetPublicKey()
 	assert.NoError(t, err)
-	mngr := initCertificate(t, nodes, pubKey)
+	mngr := initCertificate(t, nodes, pubKey, ref)
 
 	return mngr, cs
 }
