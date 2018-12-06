@@ -58,7 +58,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase2Packet.")
 	}
-	bitset, err := generatePhase2Bitset(state.UnsyncList, state.ValidProofs)
+	bitset, err := sp.generatePhase2Bitset(state.UnsyncList, state.ValidProofs)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to generate bitset for Phase2Packet")
 	}
@@ -99,7 +99,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}
 
 	// TODO: check
-	if !consensusReached(len(nodeProofs), len(activeNodes)) {
+	if !consensusReachedBFT(len(nodeProofs), len(activeNodes)) {
 		return nil, errors.New("[ Execute ] Consensus not reached")
 	}
 
@@ -115,7 +115,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}, nil
 }
 
-func generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
+func (sp *SecondPhase) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
 	bitset, err := packets.NewBitSet(list.Length())
 	if err != nil {
 		return nil, err
@@ -124,6 +124,7 @@ func generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.
 	for node := range proofs {
 		cells = append(cells, packets.BitSetCell{NodeID: node.ID(), State: packets.Legit})
 	}
+	cells = append(cells, packets.BitSetCell{NodeID: sp.NodeKeeper.GetOrigin().ID(), State: packets.Legit})
 	err = bitset.ApplyChanges(cells, list)
 	if err != nil {
 		return nil, err
