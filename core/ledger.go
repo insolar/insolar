@@ -268,4 +268,6 @@ var (
 	// on period Jet ID full implementation
 	// TODO: remove it after jets support readyness - @nordicdyno 5.Dec.2018
 	TODOJetID RecordID
+	// ZeroJetID zero 'empty' jet ID
+	ZeroJetID RecordID
 )
