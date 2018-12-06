@@ -299,7 +299,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	}
 	currentPulsar.ProcessingPulseNumber = pulseNumber
 
-	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%v", currentPulsar.ID, string(pulseNumber)))
+	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%d", currentPulsar.ID, pulseNumber))
 
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 
