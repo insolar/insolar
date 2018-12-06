@@ -13,7 +13,6 @@ INSGORUND_RPS_PORT=18182
 CONFIGS_DIR=configs
 KEYS_FILE=scripts/insolard/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=scripts/insolard/$CONFIGS_DIR/root_member_keys.json
-CERTIFICATE_FILE=scripts/insolard/$CONFIGS_DIR/certificate.json
 NODES_DATA=scripts/insolard/nodes/
 FIRST_NODE=$NODES_DATA/first
 SECOND_NODE=$NODES_DATA/second
@@ -101,11 +100,6 @@ generate_discovery_nodes_keys()
     bin/insolar -c gen_keys > $THIRD_NODE/keys.json
 }
 
-generate_certificate()
-{
-    bin/insolar -c gen_certificate -g $KEYS_FILE > $CERTIFICATE_FILE
-}
-
 check_working_dir()
 {
     if ! pwd | grep -q "src/github.com/insolar/insolar$"
@@ -174,7 +168,6 @@ genesis()
     build_binaries
     generate_bootstrap_keys
     generate_root_member_keys
-    generate_certificate
     generate_discovery_nodes_keys
 
     printf "start genesis ... \n"
