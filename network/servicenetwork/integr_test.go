@@ -68,7 +68,6 @@ func (s *testSuite) InitNodes() {
 		err := s.testNode.componentManager.Init(s.ctx)
 		s.NoError(err)
 	}
-
 }
 
 func (s *testSuite) StartNodes() {
@@ -105,7 +104,7 @@ type networkNode struct {
 	serviceNetwork   *ServiceNetwork
 }
 
-func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey) *certificate.CertificateManager {
+func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey, ref core.RecordRef) *certificate.CertificateManager {
 	proc := platformpolicy.NewKeyProcessor()
 	publicKey, err := proc.ExportPublicKey(key)
 	assert.NoError(t, err)
@@ -118,10 +117,11 @@ func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto
 
 	data, err := json.Marshal(j)
 
-	result, err := certificate.ReadCertificateFromReader(key, proc, bytes.NewReader(data))
+	cert, err := certificate.ReadCertificateFromReader(key, proc, bytes.NewReader(data))
+	cert.Reference = ref.String()
 	assert.NoError(t, err)
-	result.BootstrapNodes = nodes
-	mngr := certificate.NewCertificateManager(result)
+	cert.BootstrapNodes = nodes
+	mngr := certificate.NewCertificateManager(cert)
 	return mngr
 }
 
