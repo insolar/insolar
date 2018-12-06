@@ -119,6 +119,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 func (db *DB) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
+	jetID := core.TODOJetID
 	getGenesisRef := func() (*core.RecordRef, error) {
 		buff, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
@@ -141,7 +142,7 @@ func (db *DB) Init(ctx context.Context) error {
 			return nil, err
 		}
 		// It should be 0. Becase pulse after 65537 will try to use a hash of drop between 0 - 65537
-		err = db.SetDrop(ctx, &jetdrop.JetDrop{})
+		err = db.SetDrop(ctx, jetID, &jetdrop.JetDrop{})
 		if err != nil {
 			return nil, err
 		}
@@ -301,9 +302,10 @@ func (db *DB) RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error {
 	})
 }
 
-// GetDrop returns jet drop for a given pulse number.
-func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
+// GetDrop returns jet drop for a given pulse number and jet id.
+func (db *DB) GetDrop(ctx context.Context, jet core.RecordID, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
+	k := prefixkeyany(scopeIDJetDrop, jet[:], pulse.Bytes())
+
 	buf, err := db.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -404,8 +406,9 @@ func (db *DB) CreateDrop(ctx context.Context, jet core.RecordID, pulse core.Puls
 }
 
 // SetDrop saves provided JetDrop in db.
-func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
-	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
+func (db *DB) SetDrop(ctx context.Context, jet core.RecordID, drop *jetdrop.JetDrop) error {
+	k := prefixkeyany(scopeIDJetDrop, jet[:], drop.Pulse.Bytes())
+
 	_, err := db.get(ctx, k)
 	if err == nil {
 		return ErrOverride

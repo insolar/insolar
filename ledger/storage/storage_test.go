@@ -20,10 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -33,6 +30,10 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDB_GetRecordNotFound(t *testing.T) {
@@ -99,7 +100,7 @@ func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	drop, err := db.GetDrop(ctx, 1)
+	drop, err := db.GetDrop(ctx, testutils.RandomID(), 1)
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, drop)
 }
@@ -153,10 +154,11 @@ func TestDB_SetDrop(t *testing.T) {
 		Pulse: 42,
 		Hash:  []byte{0xFF},
 	}
-	err := db.SetDrop(ctx, &drop42)
+	jetID := testutils.RandomID()
+	err := db.SetDrop(ctx, jetID, &drop42)
 	assert.NoError(t, err)
 
-	got, err := db.GetDrop(ctx, 42)
+	got, err := db.GetDrop(ctx, jetID, 42)
 	assert.NoError(t, err)
 	assert.Equal(t, *got, drop42)
 }

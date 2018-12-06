@@ -543,6 +543,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 
 func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	ctx := inslogger.TestContext(t)
+	jetID := testutils.RandomID()
 
 	idCreator, idCreatorCleaner := storagetest.TmpDB(ctx, t)
 	defer idCreatorCleaner()
@@ -593,7 +594,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, res, &reply.OK{})
 
-	savedDrop, err := h.db.GetDrop(ctx, core.FirstPulseNumber)
+	savedDrop, err := h.db.GetDrop(ctx, jetID, core.FirstPulseNumber)
 	require.NoError(t, err)
 	require.Equal(t, &jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
 

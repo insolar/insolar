@@ -113,15 +113,16 @@ func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Puls
 	messages [][]byte,
 	err error,
 ) {
-	prevDrop, err := m.db.GetDrop(ctx, *latestPulse.Prev)
+	jetID := core.TODOJetID
+	prevDrop, err := m.db.GetDrop(ctx, jetID, *latestPulse.Prev)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	drop, messages, err = m.db.CreateDrop(ctx, core.TODOJetID, latestPulse.Pulse.PulseNumber, prevDrop.Hash)
+	drop, messages, err = m.db.CreateDrop(ctx, jetID, latestPulse.Pulse.PulseNumber, prevDrop.Hash)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	err = m.db.SetDrop(ctx, drop)
+	err = m.db.SetDrop(ctx, jetID, drop)
 	if err != nil {
 		return nil, nil, nil, err
 	}

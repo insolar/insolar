@@ -793,8 +793,9 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		len(msg.RecentObjects),
 		len(msg.PendingRequests),
 	)
+	jetID := core.TODOJetID
 
-	err := h.db.SetDrop(ctx, &msg.Drop)
+	err := h.db.SetDrop(ctx, jetID, &msg.Drop)
 	if err != nil {
 		return nil, err
 	}

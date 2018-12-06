@@ -250,18 +250,19 @@ func setDrop(
 	db *storage.DB,
 	pulsenum core.PulseNumber,
 ) {
-	prevDrop, err := db.GetDrop(ctx, pulsenum-1)
+	jetID := testutils.RandomID()
+	prevDrop, err := db.GetDrop(ctx, jetID, pulsenum-1)
 	var prevhash []byte
 	if err == nil {
 		prevhash = prevDrop.Hash
 	} else if err != storage.ErrNotFound {
 		require.NoError(t, err)
 	}
-	drop, _, err := db.CreateDrop(ctx, core.TODOJetID, pulsenum, prevhash)
+	drop, _, err := db.CreateDrop(ctx, jetID, pulsenum, prevhash)
 	if err != nil {
 		require.NoError(t, err)
 	}
-	err = db.SetDrop(ctx, drop)
+	err = db.SetDrop(ctx, jetID, drop)
 	require.NoError(t, err)
 }
 
