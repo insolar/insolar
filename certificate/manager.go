@@ -70,6 +70,7 @@ func (m *CertificateManager) NewUnsignedCertificate(pKey string, ref string, rol
 		},
 		PulsarPublicKeys:    cert.PulsarPublicKeys,
 		RootDomainReference: cert.RootDomainReference,
+		BootstrapNodes:      make([]BootstrapNode, len(cert.BootstrapNodes)),
 	}
 	for i, node := range cert.BootstrapNodes {
 		newCert.BootstrapNodes[i].Host = node.Host
