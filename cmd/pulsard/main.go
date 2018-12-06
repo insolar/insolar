@@ -86,19 +86,21 @@ func main() {
 	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
+	defer func() {
+		pulseTicker.Stop()
+		refreshTicker.Stop()
+		err = storage.Close()
+		if err != nil {
+			inslog.Error(err)
+		}
+		server.StopServer(ctx)
+	}()
+
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
 
 	<-gracefulStop
-	pulseTicker.Stop()
-	refreshTicker.Stop()
-	err = storage.Close()
-	if err != nil {
-		inslog.Error(err)
-	}
-	server.StopServer(ctx)
-
 }
 
 func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
