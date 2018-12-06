@@ -12,6 +12,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -556,7 +557,11 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
 		LatestState: firstID,
 	})
-	hotIndexes := &message.HotIndexes{
+	err = db.SetObjectIndex(ctx, firstID, &index.ObjectLifeline{
+		LatestState: firstID,
+	})
+	require.NoError(t, err)
+	hotIndexes := &message.HotData{
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {
@@ -567,15 +572,17 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		PendingRequests: map[core.RecordID][]byte{
 			*secondId: record.SerializeRecord(&record.CodeRecord{}),
 		},
+		Drop: jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
 	}
 
 	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.AddPendingRequestFunc = func(p core.RecordID) {
 		require.Equal(t, p, *secondId)
 	}
-	recentMock.AddObjectWithTTLFunc = func(p core.RecordID, ttl int) {
+	recentMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int, isMine bool) {
 		require.Equal(t, p, *firstID)
 		require.Equal(t, 320, ttl)
+		require.Equal(t, true, isMine)
 	}
 
 	h := NewMessageHandler(db, &configuration.Ledger{})
@@ -583,8 +590,13 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 
 	res, err := h.handleHotRecords(ctx, &message.Parcel{Msg: hotIndexes})
 
-	require.Equal(t, res, &reply.OK{})
 	require.NoError(t, err)
+	require.Equal(t, res, &reply.OK{})
+
+	savedDrop, err := h.db.GetDrop(ctx, core.FirstPulseNumber)
+	require.NoError(t, err)
+	require.Equal(t, &jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+
 	recentMock.MinimockFinish()
 }
 

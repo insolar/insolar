@@ -347,13 +347,13 @@ func TestExtractPacket_Phase1_BadExtract(t *testing.T) {
 func TestPhase1Packet_AddClaim(t *testing.T) {
 	packet := makePhase1Packet()
 
-	err := packet.AddClaim(makeNodeJoinClaim())
-	assert.NoError(t, err)
+	success := packet.AddClaim(makeNodeJoinClaim())
+	assert.True(t, success)
 
-	for err == nil {
-		err = packet.AddClaim(&NodeLeaveClaim{})
+	for success {
+		success = packet.AddClaim(&NodeLeaveClaim{})
 	}
-	assert.EqualError(t, err, "No space for claim")
+	assert.False(t, success)
 }
 
 func TestPhase3Packet_Serialize(t *testing.T) {

@@ -25,7 +25,7 @@ import (
 )
 
 func newActiveNode(ver string) core.Node {
-	return nodenetwork.NewNode(core.RecordRef{255}, []core.StaticRole{core.StaticRoleUnknown}, nil, "", ver)
+	return nodenetwork.NewNode(core.RecordRef{255}, core.StaticRoleUnknown, nil, "", ver)
 }
 
 func TestGetMapOfVersions(t *testing.T) {

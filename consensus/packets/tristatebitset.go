@@ -42,6 +42,12 @@ func NewTriStateBitSet(size int) (*TriStateBitSet, error) {
 	bitset := &TriStateBitSet{
 		array: newBitArray(size * 2),
 	}
+	for i := 0; i < size; i++ {
+		err := bitset.changeBitState(i, TimedOut)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return bitset, nil
 }
 

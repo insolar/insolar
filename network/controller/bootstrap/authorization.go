@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/gob"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -47,7 +48,7 @@ const (
 
 // AuthorizationRequest
 type AuthorizationRequest struct {
-	Certificate core.AuthorizationCertificate
+	Certificate []byte
 }
 
 // AuthorizationResponse
@@ -77,11 +78,16 @@ func init() {
 }
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
-func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, certificate core.AuthorizationCertificate) (SessionID, error) {
+func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error) {
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode)
 
+	serializedCert, err := certificate.Serialize(cert)
+	if err != nil {
+		return 0, errors.Wrap(err, "Error serializing certificate")
+	}
+
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
-		Certificate: certificate,
+		Certificate: serializedCert,
 	}).Build()
 	future, err := ac.transport.SendRequestPacket(request, discoveryNode.Host)
 	if err != nil {
@@ -102,9 +108,13 @@ func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode 
 func (ac *AuthorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
 	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode)
 
+	originClaim, err := ac.keeper.GetOriginClaim()
+	if err != nil {
+		return errors.Wrap(err, "[ Register ] failed to get origin claim")
+	}
 	request := ac.transport.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
 		SessionID: sessionID,
-		JoinClaim: ac.keeper.GetOriginClaim(),
+		JoinClaim: originClaim,
 	}).Build()
 	future, err := ac.transport.SendRequestPacket(request, discoveryNode.Host)
 	if err != nil {
@@ -146,14 +156,18 @@ func (ac *AuthorizationController) processRegisterRequest(request network.Reques
 
 func (ac *AuthorizationController) processAuthorizeRequest(request network.Request) (network.Response, error) {
 	data := request.GetData().(*AuthorizationRequest)
-	valid, err := ac.coordinator.ValidateCert(context.Background(), data.Certificate)
+	cert, err := certificate.Deserialize(data.Certificate)
+	if err != nil {
+		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+	}
+	valid, err := ac.coordinator.ValidateCert(context.Background(), cert)
 	if !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
 		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
-	session := ac.sessionManager.NewSession(request.GetSender(), data.Certificate)
+	session := ac.sessionManager.NewSession(request.GetSender(), cert)
 	return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 

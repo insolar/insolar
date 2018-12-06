@@ -45,14 +45,16 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.RecordRef
 	case *HeavyPayload:
 		return core.RecordRef{}
-	case *HotIndexes:
+	case *HotData:
 		return t.Jet
 	case *GetObjectIndex:
 		return t.Object
 	case *Parcel:
 		return ExtractTarget(t.Msg)
+	case *NodeSignPayload:
+		return *t.NodeRef
 	default:
-		panic(fmt.Sprintf("unknow message type - %v", t))
+		panic(fmt.Sprintf("[ ExtractTarget ] unknow message type - %s", t.Type().String()))
 	}
 }
 
@@ -76,7 +78,7 @@ func ExtractRole(msg core.Message) core.DynamicRole {
 		*SetRecord,
 		*UpdateObject,
 		*ValidateRecord,
-		*HotIndexes:
+		*HotData:
 		return core.DynamicRoleLightExecutor
 	case *ValidateCaseBind:
 		return core.DynamicRoleVirtualValidator
@@ -87,8 +89,10 @@ func ExtractRole(msg core.Message) core.DynamicRole {
 		return core.DynamicRoleHeavyExecutor
 	case *Parcel:
 		return ExtractRole(t.Msg)
+	case *NodeSignPayload:
+		return core.DynamicRoleUndefined
 	default:
-		panic(fmt.Sprintf("unknow message type - %v", t))
+		panic(fmt.Sprintf("[ ExtractRole ] unknow message type - %s", t.Type().String()))
 	}
 }
 
@@ -141,12 +145,13 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		return &t.RecordRef, core.DynamicRoleVirtualValidator
 	case *GetObjectIndex:
 		return &t.Object, core.DynamicRoleLightExecutor
-	case *HotIndexes:
-		// TODO: 30.11.2018 It's not clear, what should be here. We need to solve in the nearest future. @egorikas
-		return nil, 0
+	case *HotData:
+		return &t.Jet, core.DynamicRoleLightExecutor
 	case *Parcel:
 		return ExtractAllowedSenderObjectAndRole(t.Msg)
+	case *NodeSignPayload:
+		return nil, core.DynamicRoleUndefined
 	default:
-		panic(fmt.Sprintf("unknown message type - %v", t))
+		panic(fmt.Sprintf("unknown message type - %s", t.Type().String()))
 	}
 }

@@ -18,44 +18,34 @@ package jetcoordinator
 
 import (
 	"bytes"
-	"errors"
 	"sort"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/utils/entropy"
 )
 
-func selectByEntropy(scheme core.PlatformCryptographyScheme, entropy core.Entropy, values []core.RecordRef, count int) ([]core.RecordRef, error) { // nolint: megacheck
-	type idxHash struct {
-		idx  int
-		hash []byte
+func selectByEntropy(
+	scheme core.PlatformCryptographyScheme,
+	e core.Entropy,
+	values []core.RecordRef,
+	count int,
+) ([]core.RecordRef, error) { // nolint: megacheck
+	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
+	sort.SliceStable(values, func(i, j int) bool {
+		return bytes.Compare(values[i][:], values[j][:]) < 0
+	})
+	in := make([]interface{}, 0, len(values))
+	for _, value := range values {
+		in = append(in, interface{}(value))
 	}
 
-	if len(values) < count {
-		return nil, errors.New("count value should be less than values size")
+	res, err := entropy.SelectByEntropy(scheme, e[:], in, count)
+	if err != nil {
+		return nil, err
 	}
-
-	hashes := make([]*idxHash, 0, len(values))
-	for i, value := range values {
-		h := scheme.ReferenceHasher()
-		_, err := h.Write(entropy[:])
-		if err != nil {
-			return nil, err
-		}
-		_, err = h.Write(value[:])
-		if err != nil {
-			return nil, err
-		}
-		hashes = append(hashes, &idxHash{
-			idx:  i,
-			hash: h.Sum(nil),
-		})
+	out := make([]core.RecordRef, 0, len(res))
+	for _, value := range res {
+		out = append(out, value.(core.RecordRef))
 	}
-
-	sort.SliceStable(hashes, func(i, j int) bool { return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0 })
-
-	selected := make([]core.RecordRef, 0, count)
-	for i := 0; i < count; i++ {
-		selected = append(selected, values[hashes[i].idx])
-	}
-	return selected, nil
+	return out, nil
 }

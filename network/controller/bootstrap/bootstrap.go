@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -53,7 +54,7 @@ type NodeBootstrapResponse struct {
 }
 
 type GenesisRequest struct {
-	// Certificate core.AuthorizationCertificate
+	Certificate []byte
 }
 
 type GenesisResponse struct {
@@ -70,7 +71,7 @@ type StartSessionResponse struct {
 type NodeStruct struct {
 	ID      core.RecordRef
 	SID     core.ShortNodeID
-	Roles   []core.StaticRole
+	Role    core.StaticRole
 	PK      []byte
 	Address string
 	Version string
@@ -82,7 +83,7 @@ func newNode(n *NodeStruct) (core.Node, error) {
 		return nil, errors.Wrap(err, "error deserializing node public key")
 	}
 
-	result := nodenetwork.NewNode(n.ID, n.Roles, pk, n.Address, n.Version)
+	result := nodenetwork.NewNode(n.ID, n.Role, pk, n.Address, n.Version)
 	mNode := result.(nodenetwork.MutableNode)
 	mNode.SetShortID(n.SID)
 	return mNode, nil
@@ -97,7 +98,7 @@ func newNodeStruct(node core.Node) (*NodeStruct, error) {
 	return &NodeStruct{
 		ID:      node.ID(),
 		SID:     node.ShortID(),
-		Roles:   node.Roles(),
+		Role:    node.Role(),
 		PK:      pk,
 		Address: node.PhysicalAddress(),
 		Version: node.Version(),
@@ -124,7 +125,7 @@ func init() {
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
-	ch := bc.getBootstrapHostsChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
+	ch := bc.getDiscoveryNodesChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
 	host := bc.waitResultFromChannel(ctx, ch)
 	if host == nil {
 		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
@@ -160,7 +161,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 
 	var hosts []*host.Host
 	for {
-		ch := bc.getBootstrapHostsChannel(ctx, discoveryNodes, discoveryCount)
+		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 		hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 		if len(hosts) == discoveryCount {
 			// we connected to all discovery nodes
@@ -189,8 +190,12 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (core.Node, error) {
+	serializedCert, err := certificate.Serialize(bc.cert)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to serialize certificate")
+	}
 	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
-		// Certificate: bc.cert,
+		Certificate: serializedCert,
 	}).Build()
 	future, err := bc.transport.SendRequestPacket(request, h)
 	if err != nil {
@@ -211,7 +216,7 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (c
 	return discovery, nil
 }
 
-func (bc *Bootstrapper) getBootstrapHostsChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
+func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
 	// we need only one host to bootstrap
 	bootstrapHosts := make(chan *host.Host, needResponses)
 	for _, discoveryNode := range discoveryNodes {
@@ -292,11 +297,15 @@ func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) err
 }
 
 func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
-	/*data := request.GetData().(*GenesisRequest)
-	err := bc.checkGenesisCert(data.Certificate)
+	data := request.GetData().(*GenesisRequest)
+	genesisCert, err := certificate.Deserialize(data.Certificate)
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
-	}*/
+	}
+	err = bc.checkGenesisCert(genesisCert)
+	if err != nil {
+		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
+	}
 	discovery, err := newNodeStruct(bc.keeper.GetOrigin())
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil

@@ -50,7 +50,6 @@ type bootstrapComponents struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme
 	KeyStore                   core.KeyStore
 	KeyProcessor               core.KeyProcessor
-	Certificate                core.Certificate
 }
 
 func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
@@ -74,28 +73,28 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	}
 }
 
-func initCertificate(
+func initCertificateManager(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	isBootstrap bool,
 	cryptographyService core.CryptographyService,
 	keyProcessor core.KeyProcessor,
-) *certificate.Certificate {
-	var cert *certificate.Certificate
+) *certificate.CertificateManager {
+	var certManager *certificate.CertificateManager
 	var err error
 
 	publicKey, err := cryptographyService.GetPublicKey()
 	checkError(ctx, err, "failed to retrieve node public key")
 
 	if isBootstrap {
-		cert, err = certificate.NewCertificatesWithKeys(publicKey, keyProcessor)
+		certManager, err = certificate.NewManagerCertificateWithKeys(publicKey, keyProcessor)
 		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
 	} else {
-		cert, err = certificate.ReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+		certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
 		checkError(ctx, err, "failed to start Certificate")
 	}
 
-	return cert
+	return certManager
 }
 
 // initComponents creates and links all insolard components
@@ -106,13 +105,13 @@ func initComponents(
 	platformCryptographyScheme core.PlatformCryptographyScheme,
 	keyStore core.KeyStore,
 	keyProcessor core.KeyProcessor,
-	cert core.Certificate,
+	certManager core.CertificateManager,
 	isGenesis bool,
 	genesisConfigPath string,
 	genesisKeyOut string,
 
 ) (*component.Manager, error) {
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, cert)
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
@@ -142,7 +141,7 @@ func initComponents(
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
-	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics)
+	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry())
 	checkError(ctx, err, "failed to start Metrics")
 
 	networkSwitcher, err := state.NewNetworkSwitcher()
@@ -164,15 +163,15 @@ func initComponents(
 		keyStore,
 		cryptographyService,
 		keyProcessor,
-		cert,
+		certManager,
 		nodeNetwork,
+		nw,
 	)
 
 	components := ledger.GetLedgerComponents(cfg.Ledger)
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
 
 	components = append(components, []interface{}{
-		nw,
 		messageBus,
 		contractRequester,
 		&ld,

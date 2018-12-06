@@ -2,16 +2,13 @@ versionmanager:
   minalowedversion: v0.3.0
 host:
   transport:
-    protocol: UTP
+    protocol: TCP
     address: 127.0.0.1:53839
     behindnat: false
   bootstraphosts: []
   isrelay: false
   infinitybootstrap: false
   timeout: 4
-node:
-  node:
-    id: "fY4PZgRGxHzAuC2LSh8zT2AuW28epbTgk8SXizqjtJd1BBQkmaxqUwo86cK7m6Hbzueyp2MXXaz7js4H99xPt8M"
 service:
   service: {}
 ledger:

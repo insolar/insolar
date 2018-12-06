@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
 // StorageExporterArgs is arguments that StorageExporter service accepts.
@@ -82,7 +83,7 @@ func (s *StorageExporterService) Export(r *http.Request, args *StorageExporterAr
 	ctx := context.TODO()
 	result, err := exp.Export(ctx, core.PulseNumber(args.From), args.Size)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ Export ]")
 	}
 
 	reply.Data = result.Data

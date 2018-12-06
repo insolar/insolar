@@ -187,7 +187,8 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 
 func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.Entropy, activePulsars []string) {
 	currentPulsar.SetCurrentSlotEntropy(&finalEntropy)
-	chosenPulsar, err := selectByEntropy(currentPulsar.PlatformCryptographyScheme, finalEntropy, activePulsars, len(activePulsars))
+	chosenPulsar, err := selectByEntropy(
+		currentPulsar.PlatformCryptographyScheme, finalEntropy, activePulsars, 1)
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 	}

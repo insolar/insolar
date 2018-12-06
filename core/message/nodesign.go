@@ -14,21 +14,31 @@
  *    limitations under the License.
  */
 
-package configuration
+package message
 
-// Node holds configuration for one Node
-type Node struct {
-	ID string
+import (
+	"github.com/insolar/insolar/core"
+)
+
+type NodeSignPayloadInt interface {
+	core.Message
+	GetNodeRef() *core.RecordRef
 }
 
-// NodeNetwork holds configuration for NodeNetwork
-type NodeNetwork struct {
-	Node *Node
+type NodeSignPayload struct {
+	NodeRef *core.RecordRef
 }
 
-// NewNodeNetwork creates new default NodeNetwork configuration
-func NewNodeNetwork() NodeNetwork {
-	return NodeNetwork{
-		Node: &Node{ID: "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"},
-	}
+// GetCaller implementation of Message interface.
+func (NodeSignPayload) GetCaller() *core.RecordRef {
+	return nil
+}
+
+// Type implementation of Message interface.
+func (e *NodeSignPayload) Type() core.MessageType {
+	return core.NetworkCoordinatorNodeSignRequest
+}
+
+func (e *NodeSignPayload) GetNodeRef() *core.RecordRef {
+	return e.NodeRef
 }

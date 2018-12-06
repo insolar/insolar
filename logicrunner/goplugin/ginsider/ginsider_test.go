@@ -34,6 +34,9 @@ func TestHealthCheck(t *testing.T) {
 	insgoccPath := binaryPath + "/insgocc"
 	healthcheckPath := binaryPath + "/healthcheck"
 	contractPath := currentPath + "/healthcheck/healthcheck.go"
+	if _, err = os.Stat(healthcheckPath); err != nil {
+		t.Fatalf("Binary file %s is not found, please run make build", healthcheckPath)
+	}
 
 	pathToTmp, err := filepath.Rel(currentPath, tmpDir)
 

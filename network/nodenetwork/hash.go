@@ -38,12 +38,14 @@ func hashWriteChecked(hash hash.Hash, data []byte) {
 func calculateNodeHash(scheme core.PlatformCryptographyScheme, processor core.KeyProcessor, node core.Node) []byte {
 	h := scheme.IntegrityHasher()
 	hashWriteChecked(h, node.ID().Bytes())
+
 	b := [8]byte{}
 	binary.LittleEndian.PutUint32(b[:4], uint32(node.ShortID()))
 	hashWriteChecked(h, b[:4])
 	binary.LittleEndian.PutUint32(b[:4], uint32(node.Pulse()))
 	hashWriteChecked(h, b[:4])
 	binary.LittleEndian.PutUint32(b[:4], uint32(node.Role()))
+
 	hashWriteChecked(h, b[:4])
 	pk, err := processor.ExportPublicKey(node.PublicKey())
 	if err != nil {

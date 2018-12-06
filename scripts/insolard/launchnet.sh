@@ -23,15 +23,23 @@ DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
 stop_listening()
 {
-    ports="$INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
-    if [ "$1" != "" ]
+    stop_insgorund=$1
+    ports="53835 53837 53839"
+    if [ "$stop_insgorund" == "true" ]
     then
-        ports=$@
+        ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
     fi
+    
     echo "Stop listening..."
     for port in $ports
     do
-        lsof -i :$port | grep LISTEN | awk '{print $2}' | xargs kill
+        echo "port: $port"
+        pids=$(lsof -i :$port | grep LISTEN | awk '{print $2}')
+        for pid in $pids
+        do
+            echo "killing pid $pid"
+            kill $pid
+        done
     done
 }
 
@@ -60,6 +68,7 @@ create_required_dirs()
 
 prepare()
 {
+    stop_listening $run_insgorund
     clear_dirs
     create_required_dirs
 }
@@ -108,26 +117,39 @@ check_working_dir()
 
 usage()
 {
-    echo "usage: $0 <clear>"
+    echo "usage: $0 [options]"
+    echo "possible options: "
+    echo -e "\t-h - show help"
+    echo -e "\t-n - don't run insgorund"
+    echo -e "\t-g - preventively generate initial ledger"
+    echo -e "\t-l - clear all and exit"
 }
 
 process_input_params()
 {
-    param=$1
-    if [  "$param" == "clear" ]
-    then
-        prepare
-        exit 0
-    fi
-
-    if [ "$param" == "help" ] || [ "$param" == "-h" ] || [ "$param" == "--help" ]
-    then
-        usage
-        exit 0
-    fi
+    OPTIND=1
+    while getopts "h?ngl" opt; do
+        case "$opt" in
+        h|\?)
+            usage
+            exit 0
+            ;;
+        n)
+            run_insgorund=false
+            ;;
+        g)
+            genesis
+            return
+            ;;
+        l)
+            prepare
+            exit 0
+            ;;
+        esac
+    done
 }
 
-run_insgorund()
+launch_insgorund()
 {
     host=127.0.0.1
     $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT
@@ -140,41 +162,52 @@ copy_data()
     cp $LEDGER_DIR/* $THIRD_NODE/data
 }
 
-copy_serts()
+copy_certs()
 {
     cp $NODES_DATA/certs/discovery_cert_1.json $FIRST_NODE/cert.json
     cp $NODES_DATA/certs/discovery_cert_2.json $SECOND_NODE/cert.json
     cp $NODES_DATA/certs/discovery_cert_3.json $THIRD_NODE/cert.json
 }
 
-trap stop_listening EXIT
+genesis()
+{
+    prepare
+    build_binaries
+    generate_bootstrap_keys
+    generate_root_member_keys
+    generate_certificate
+    generate_discovery_nodes_keys
 
-param=$1
+    printf "start genesis ... \n"
+    $INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
+    printf "genesis is done\n"
+
+    copy_data
+    copy_certs
+}
+
+trap 'stop_listening true' EXIT
+
+run_insgorund=true
 check_working_dir
-process_input_params $param
-
-prepare
-build_binaries
-generate_bootstrap_keys
-generate_root_member_keys
-generate_certificate
-generate_discovery_nodes_keys
+process_input_params $@
 
 printf "start pulsar ... \n"
 $PULSARD -c scripts/insolard/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
 
-printf "start insgorund ... \n"
-run_insgorund &
-
-printf "start genesis ... \n"
-$INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
-printf "genesis is done\n"
-
-copy_data
-copy_serts
+if [ "$run_insgorund" == "true" ]
+then
+    printf "start insgorund ... \n"
+    launch_insgorund &
+else
+    echo "INSGORUND IS NOT LAUNCHED"
+fi
 
 printf "start nodes ... \n"
 
 $INSOLARD --config scripts/insolard/first_insolar.yaml &> $FIRST_NODE/output.txt &
+echo "FIRST STARTED"
 $INSOLARD --config scripts/insolard/second_insolar.yaml &> $SECOND_NODE/output.txt &
+echo "SECOND STARTED"
 $INSOLARD --config scripts/insolard/third_insolar.yaml &> $THIRD_NODE/output.txt
+echo "FINISHING ..."
