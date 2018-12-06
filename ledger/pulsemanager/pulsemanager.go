@@ -21,10 +21,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"

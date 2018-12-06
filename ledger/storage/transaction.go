@@ -23,8 +23,8 @@ import (
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/record"
 )
 
 type keyval struct {

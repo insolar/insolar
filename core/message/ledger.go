@@ -18,7 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/jet"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 type ledgerMessage struct {

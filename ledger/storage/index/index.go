@@ -18,7 +18,7 @@ package index
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/record"
 )
 
 // ObjectLifeline represents meta information for record object.

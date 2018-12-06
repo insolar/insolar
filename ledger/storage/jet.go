@@ -23,7 +23,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/jet"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/ugorji/go/codec"
 )
 

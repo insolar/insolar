@@ -28,10 +28,10 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -77,7 +77,7 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:   &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -605,7 +605,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:   &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -626,7 +626,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "object"}})
 	require.NoError(t, err)
 	objRef := genRefWithID(objID)
-
 
 	desc, err := am.ActivateObject(
 		ctx,
