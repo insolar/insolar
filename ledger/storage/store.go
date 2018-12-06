@@ -35,6 +35,6 @@ type Store interface {
 	SetObjectIndex(ctx context.Context, ref *core.RecordID, idx *index.ObjectLifeline) error
 	RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error
 
-	GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error)
+	GetLatestPulse(ctx context.Context) (*Pulse, error)
 	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
 }
