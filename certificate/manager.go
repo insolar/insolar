@@ -21,6 +21,7 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -67,6 +68,7 @@ func (m *CertificateManager) NewUnsignedCertificate(pKey string, ref string, rol
 			PublicKey: pKey,
 			Reference: ref,
 			Role:      role,
+			keyProc:   platformpolicy.NewKeyProcessor(),
 		},
 		PulsarPublicKeys:    cert.PulsarPublicKeys,
 		RootDomainReference: cert.RootDomainReference,

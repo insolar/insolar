@@ -92,6 +92,7 @@ type Certificate struct {
 
 func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, data []byte) (*Certificate, error) {
 	cert := Certificate{}
+	cert.AuthorizationCertificate = NewAuthorizationCertificate()
 	err := json.Unmarshal(data, &cert)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ newCertificate ] failed to parse certificate json")
