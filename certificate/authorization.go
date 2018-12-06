@@ -20,7 +20,6 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -31,24 +30,12 @@ type AuthorizationCertificate struct {
 	Role           string                     `json:"role"`
 	DiscoverySigns map[*core.RecordRef][]byte `json:"-"`
 
-	keyProc core.KeyProcessor
-}
-
-func NewAuthorizationCertificate() *AuthorizationCertificate {
-	return &AuthorizationCertificate{
-		keyProc: platformpolicy.NewKeyProcessor(),
-	}
+	nodePublicKey crypto.PublicKey
 }
 
 // GetPublicKey returns public key reference from node certificate
 func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
-	key, err := authCert.keyProc.ImportPublicKey([]byte(authCert.PublicKey))
-
-	if err != nil {
-		panic(err)
-	}
-
-	return key
+	return authCert.nodePublicKey
 }
 
 // GetNodeRef returns reference from node certificate
