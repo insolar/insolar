@@ -111,22 +111,11 @@ func (jc *JetCoordinator) QueryRole(
 		return refsByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy[:], candidates, count)
 	}
 
-	h := jc.PlatformCryptographyScheme.ReferenceHasher()
-	_, err = h.Write(pulseData.Pulse.Entropy[:])
-	if err != nil {
-		return nil, err
-	}
-	_, err = h.Write(obj[:])
-	if err != nil {
-		return nil, err
-	}
-	objEntropy := h.Sum(nil)
-
 	if role == core.DynamicRoleLightExecutor {
-
+		return jc.getNodeViaJet(ctx, pulseData.Pulse, candidates, obj)
 	}
 
-	return refsByEntropy(jc.PlatformCryptographyScheme, objEntropy, candidates, 1)
+	return jc.getNodeViaEntropy(ctx, pulseData.Pulse, candidates, obj)
 }
 
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
@@ -138,39 +127,51 @@ func (jc *JetCoordinator) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, e
 	return jc.db.GetActiveNodes(pulse)
 }
 
-func (jc *JetCoordinator) getNodeViaJet(
-	ctx context.Context, pulse core.Pulse, ent []byte, candidates []core.RecordRef,
-) (*core.RecordRef, error) {
-	jetTree, err := jc.db.GetJetTree(ctx, pulse.PulseNumber)
-
-	// Select a jet via entropy.
-	// TODO: select jet via binary tree.
-	in := make([]interface{}, 0, len(jetTree.Jets))
-	for _, jet := range jetTree.Jets {
-		in = append(in, interface{}(jet.ID))
-	}
-	selectedJets, err := entropy.SelectByEntropy(jc.PlatformCryptographyScheme, ent, in, 1)
-	if err != nil {
-		return nil, err
-	}
-	selectedJet := selectedJets[0].(core.RecordID)
-
-	// Select a node via jet.
+func (jc *JetCoordinator) getNodeViaEntropy(
+	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef,
+) ([]core.RecordRef, error) {
 	h := jc.PlatformCryptographyScheme.ReferenceHasher()
-	_, err = h.Write(ent)
+	_, err := h.Write(pulse.Entropy[:])
 	if err != nil {
 		return nil, err
 	}
-	_, err = h.Write(selectedJet[:])
+	_, err = h.Write(obj[:])
 	if err != nil {
 		return nil, err
 	}
-	nodes, err := refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, 1)
+	objEntropy := h.Sum(nil)
+	nodes, err := refsByEntropy(jc.PlatformCryptographyScheme, objEntropy, candidates, 1)
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
+func (jc *JetCoordinator) getNodeViaJet(
+	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef,
+) ([]core.RecordRef, error) {
+	// Find a jet for the object.
+	jetTree, err := jc.db.GetJetTree(ctx, pulse.PulseNumber)
+	if err != nil {
+		return nil, err
+	}
+	jet := jetTree.Find(obj)
+	if jet == nil {
+		return nil, errors.New("failed to find jet")
+	}
+
+	// Find a node for the jet.
+	h := jc.PlatformCryptographyScheme.ReferenceHasher()
+	_, err = h.Write(pulse.Entropy[:])
+	if err != nil {
+		return nil, err
+	}
+	_, err = h.Write(jet.ID[:])
 	if err != nil {
 		return nil, err
 	}
 
-	return &nodes[0], nil
+	return refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, 1)
 }
 
 func refsByEntropy(
