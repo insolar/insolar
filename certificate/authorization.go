@@ -20,6 +20,7 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -35,7 +36,14 @@ type AuthorizationCertificate struct {
 
 // GetPublicKey returns public key reference from node certificate
 func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
-	return authCert.nodePublicKey
+	keyProc := platformpolicy.NewKeyProcessor()
+	key, err := keyProc.ImportPublicKey([]byte(authCert.PublicKey))
+
+	if err != nil {
+		panic(err)
+	}
+
+	return key
 }
 
 // GetNodeRef returns reference from node certificate
