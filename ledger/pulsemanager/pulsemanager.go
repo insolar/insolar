@@ -212,7 +212,6 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
-
 	var err error
 	m.GIL.Acquire(ctx)
 
