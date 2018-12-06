@@ -100,7 +100,7 @@ func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (n *nodeKeeperWrapper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
-	panic("nodeKeeperWrapper.AddPendingClaim")
+	// panic("nodeKeeperWrapper.AddPendingClaim")
 	return n.original.AddPendingClaim(claim)
 }
 

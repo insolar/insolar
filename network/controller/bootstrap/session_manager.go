@@ -126,7 +126,7 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	defer sm.lock.Unlock()
 
 	// TODO: fix workaround
-	session, err := sm.checkSession(id, Authorized)
+	session, err := sm.checkSession(id, Challenge2)
 	if err != nil {
 		return nil, err
 	}

@@ -134,7 +134,7 @@ func (ac *AuthorizationController) Register(ctx context.Context, discoveryNode *
 func (ac *AuthorizationController) checkClaim(sessionID SessionID, claim *packets.NodeJoinClaim) error {
 	session, err := ac.sessionManager.ReleaseSession(sessionID)
 	if err != nil {
-		return errors.Wrapf(err, "Error getting section %d for authorization", sessionID)
+		return errors.Wrapf(err, "Error getting session %d for authorization", sessionID)
 	}
 	if !claim.NodeRef.Equal(session.NodeID) {
 		return errors.New("Claim node ID is not equal to session node ID")
