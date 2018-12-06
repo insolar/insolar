@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/utils/backoff"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
 type ActiveListSwapper interface {
 	MoveSyncToActive()
 }
