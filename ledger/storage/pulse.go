@@ -85,7 +85,7 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 
 		// Set next on previousPulseNumber pulse if it exists.
 		if err == nil {
-			if previousPulse != nil{
+			if previousPulse != nil {
 				previousPulseNumber = previousPulse.Pulse.PulseNumber
 			}
 
@@ -130,6 +130,7 @@ func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error
 	return pulse, nil
 }
 
+// GetLatestPulse returns the latest pulse
 func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
 	if err != nil {
@@ -138,17 +139,10 @@ func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error)
 	return toPulse(buf)
 }
 
+// GetLatestPulse returns the latest pulse
 func (db *DB) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
 	return tx.GetLatestPulse(ctx)
 }
-
-// GetLatestPulseNumber returns current pulse number.
-// func (db *DB) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
-// 	tx := db.BeginTransaction(false)
-// 	defer tx.Discard()
-//
-// 	return tx.GetLatestPulseNumber(ctx)
-// }
