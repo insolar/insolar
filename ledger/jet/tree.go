@@ -15,3 +15,29 @@
  */
 
 package jet
+
+import (
+	"bytes"
+
+	"github.com/insolar/insolar/core"
+	"github.com/ugorji/go/codec"
+)
+
+// Jet contain jet record.
+type Jet struct {
+	ID core.RecordID
+}
+
+// Tree stores jet in a binary tree.
+type Tree struct {
+	// TODO: implement tree.
+	Jets []Jet
+}
+
+// Bytes serializes pulse.
+func (t *Tree) Bytes() []byte {
+	var buf bytes.Buffer
+	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+	enc.MustEncode(t)
+	return buf.Bytes()
+}

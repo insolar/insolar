@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/jetdrop"
+	"github.com/insolar/insolar/ledger/jet"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -149,7 +149,7 @@ func TestDB_SetDrop(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	drop42 := jetdrop.JetDrop{
+	drop42 := jet.JetDrop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
 	}

@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/jetdrop"
+	"github.com/insolar/insolar/ledger/jet"
 	"github.com/insolar/insolar/ledger/record"
 )
 
@@ -142,7 +142,7 @@ func (db *DB) Init(ctx context.Context) error {
 			return nil, err
 		}
 		// It should be 0. Becase pulse after 65537 will try to use a hash of drop between 0 - 65537
-		err = db.SetDrop(ctx, &jetdrop.JetDrop{})
+		err = db.SetDrop(ctx, &jet.JetDrop{})
 		if err != nil {
 			return nil, err
 		}

@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/jetdrop"
+	"github.com/insolar/insolar/ledger/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -568,7 +568,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		PendingRequests: map[core.RecordID][]byte{
 			*secondId: record.SerializeRecord(&record.CodeRecord{}),
 		},
-		Drop: jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+		Drop: jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
 	}
 
 	recentMock := recentstorage.NewRecentStorageMock(t)
@@ -590,7 +590,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 
 	savedDrop, err := h.db.GetDrop(ctx, core.FirstPulseNumber)
 	require.NoError(t, err)
-	require.Equal(t, &jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+	require.Equal(t, &jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
 
 	recentMock.MinimockFinish()
 }

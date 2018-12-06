@@ -17,11 +17,14 @@
 package jetcoordinator
 
 import (
+	"bytes"
 	"context"
+	"sort"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
 
@@ -105,31 +108,25 @@ func (jc *JetCoordinator) QueryRole(
 		if !ok {
 			return nil, errors.New("no candidate count for this role")
 		}
-		return selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, candidates, count)
+		return refsByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy[:], candidates, count)
 	}
+
+	h := jc.PlatformCryptographyScheme.ReferenceHasher()
+	_, err = h.Write(pulseData.Pulse.Entropy[:])
+	if err != nil {
+		return nil, err
+	}
+	_, err = h.Write(obj[:])
+	if err != nil {
+		return nil, err
+	}
+	objEntropy := h.Sum(nil)
 
 	if role == core.DynamicRoleLightExecutor {
-		jets := []core.RecordRef{}
-		selectedJets, err := selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, jets, 1)
-		if err != nil {
-			return nil, err
-		}
-		h := jc.PlatformCryptographyScheme.ReferenceHasher()
-		_, err = h.Write(pulseData.Pulse.Entropy[:])
-		if err != nil {
-			return nil, err
-		}
-		_, err = h.Write(selectedJets[0][:])
-		if err != nil {
-			return nil, err
-		}
-		jet, err := selectByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), jets, 1)
-		if err != nil {
-			return nil, err
-		}
+
 	}
 
-	return selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, candidates, 1)
+	return refsByEntropy(jc.PlatformCryptographyScheme, objEntropy, candidates, 1)
 }
 
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
@@ -139,4 +136,65 @@ func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nol
 // GetActiveNodes return active nodes for specified pulse.
 func (jc *JetCoordinator) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
 	return jc.db.GetActiveNodes(pulse)
+}
+
+func (jc *JetCoordinator) getNodeViaJet(
+	ctx context.Context, pulse core.Pulse, ent []byte, candidates []core.RecordRef,
+) (*core.RecordRef, error) {
+	jetTree, err := jc.db.GetJetTree(ctx, pulse.PulseNumber)
+
+	// Select a jet via entropy.
+	// TODO: select jet via binary tree.
+	in := make([]interface{}, 0, len(jetTree.Jets))
+	for _, jet := range jetTree.Jets {
+		in = append(in, interface{}(jet.ID))
+	}
+	selectedJets, err := entropy.SelectByEntropy(jc.PlatformCryptographyScheme, ent, in, 1)
+	if err != nil {
+		return nil, err
+	}
+	selectedJet := selectedJets[0].(core.RecordID)
+
+	// Select a node via jet.
+	h := jc.PlatformCryptographyScheme.ReferenceHasher()
+	_, err = h.Write(ent)
+	if err != nil {
+		return nil, err
+	}
+	_, err = h.Write(selectedJet[:])
+	if err != nil {
+		return nil, err
+	}
+	nodes, err := refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	return &nodes[0], nil
+}
+
+func refsByEntropy(
+	scheme core.PlatformCryptographyScheme,
+	e []byte,
+	values []core.RecordRef,
+	count int,
+) ([]core.RecordRef, error) {
+	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
+	sort.SliceStable(values, func(i, j int) bool {
+		return bytes.Compare(values[i][:], values[j][:]) < 0
+	})
+	in := make([]interface{}, 0, len(values))
+	for _, value := range values {
+		in = append(in, interface{}(value))
+	}
+
+	res, err := entropy.SelectByEntropy(scheme, e, in, count)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]core.RecordRef, 0, len(res))
+	for _, value := range res {
+		out = append(out, value.(core.RecordRef))
+	}
+	return out, nil
 }

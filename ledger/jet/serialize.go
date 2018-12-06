@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package jetdrop
+package jet
 
 import (
 	"bytes"

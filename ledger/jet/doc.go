@@ -15,4 +15,4 @@
  */
 
 // Package jetdrop represents Jet Drops (Blocks) of a blockchain.
-package jetdrop
+package jet

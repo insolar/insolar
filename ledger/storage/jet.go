@@ -27,25 +27,6 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// Jet contain jet record.
-type Jet struct {
-	ID core.RecordID
-}
-
-// JetTree stores jet in a binary tree.
-type JetTree struct {
-	// TODO: implement tree.
-	Jets []Jet
-}
-
-// Bytes serializes pulse.
-func (t *JetTree) Bytes() []byte {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-	enc.MustEncode(t)
-	return buf.Bytes()
-}
-
 // GetDrop returns jet drop for a given pulse number.
 func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jet.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
@@ -162,7 +143,7 @@ func (db *DB) SetDrop(ctx context.Context, drop *jet.JetDrop) error {
 }
 
 // SetJetTree stores jet tree for specified pulse.
-func (db *DB) SetJetTree(ctx context.Context, pulse core.PulseNumber, tree *JetTree) error {
+func (db *DB) SetJetTree(ctx context.Context, pulse core.PulseNumber, tree *jet.Tree) error {
 	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
 	_, err := db.get(ctx, k)
 	if err == nil {
@@ -173,7 +154,7 @@ func (db *DB) SetJetTree(ctx context.Context, pulse core.PulseNumber, tree *JetT
 }
 
 // GetJetTree fetches tree for specified pulse.
-func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*JetTree, error) {
+func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
 	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
 	buff, err := db.get(ctx, k)
 	if err == nil {
@@ -181,7 +162,7 @@ func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*JetTree,
 	}
 
 	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
-	var tree JetTree
+	var tree jet.Tree
 	err = dec.Decode(&tree)
 	if err != nil {
 		return nil, err
