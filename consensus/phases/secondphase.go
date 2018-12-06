@@ -74,6 +74,8 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
+	stateMatrix := NewStateMatrix(state.UnsyncList)
+	stateMatrix.ApplyBitSet(sp.Network.GetNodeID(), bitset)
 
 	for ref, packet := range packets {
 		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
@@ -82,6 +84,8 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		} else if !signIsCorrect {
 			log.Warn("recieved a bad sign packet: ", err.Error())
 		}
+		stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
+
 		node := state.UnsyncList.GetActiveNode(ref)
 		proof := &merkle.GlobuleProof{
 			BaseProof: merkle.BaseProof{

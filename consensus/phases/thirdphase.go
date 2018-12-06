@@ -84,7 +84,7 @@ func getNode(ref core.RecordRef, nodes []core.Node) (core.Node, error) {
 			return node, nil
 		}
 	}
-	return nil, errors.New("[ getNode] failed to find a node on phase 3")
+	return nil, errors.New("[ getNode ] failed to find a node on phase 3")
 }
 
 func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
