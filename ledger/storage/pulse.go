@@ -49,15 +49,6 @@ func toPulse(raw []byte) (*Pulse, error) {
 	return &rec, nil
 }
 
-// // GetLatestPulseNumber returns current pulse number.
-// func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
-// 	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	return core.NewPulseNumber(buf), nil
-// }
-
 // GetPulse returns pulse for provided pulse number.
 func (m *TransactionManager) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
 	buf, err := m.get(ctx, prefixkey(scopeIDPulse, num.Bytes()))
