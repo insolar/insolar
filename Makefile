@@ -47,7 +47,7 @@ clean:
 install-deps:
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u golang.org/x/tools/cmd/stringer
-	go get -u github.com/gojuno/minimock/cmd/minimock
+	bash fetchminimock.sh
 
 pre-build: ensure generate
 
@@ -117,3 +117,5 @@ docker-insgorund:
 
 
 docker: docker-insolard docker-pulsar docker-insgorund
+
+
