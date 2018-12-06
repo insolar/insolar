@@ -72,18 +72,6 @@ func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
 	lr.MustObjectState(ref).AddCaseRecord(cr)
 }
 
-func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
-	validation := lr.MustObjectState(ref).Validation
-	if validation == nil {
-		return nil, -1
-	}
-
-	validation.Lock()
-	defer validation.Unlock()
-
-	return validation.Replay.NextStep()
-}
-
 func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {
 	pulse, err := lr.PulseManager.Current(ctx)
 	if err != nil {
@@ -123,13 +111,13 @@ func (os *ObjectState) RefreshConsensus() {
 	os.Consensus = nil
 }
 
-func (os *ObjectState) StartValidation() *ValidationState {
+func (os *ObjectState) StartValidation() *ExecutionState {
 	os.Lock()
 	defer os.Unlock()
 
 	if os.Validation != nil {
 		panic("Unexpected. Validation already in progress")
 	}
-	os.Validation = &ValidationState{}
+	os.Validation = &ExecutionState{}
 	return os.Validation
 }

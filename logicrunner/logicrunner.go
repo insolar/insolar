@@ -53,11 +53,9 @@ type ExecutionState struct {
 	objectbody *ObjectBody
 	deactivate bool
 
-	Behaviour     ValidationBehaviour
-	caseBind      core.CaseBind
-	caseBindMutex sync.Mutex
-	Current       *CurrentExecution
-	Queue         []ExecutionQueueElement
+	Behaviour ValidationBehaviour
+	Current   *CurrentExecution
+	Queue     []ExecutionQueueElement
 }
 
 type CurrentExecution struct {
@@ -79,10 +77,6 @@ type ExecutionQueueElement struct {
 	request *Ref
 	pulse   core.PulseNumber
 	result  chan ExecutionQueueResult
-}
-
-func (vs *ValidationState) NextStep() (*core.CaseRecord, int) {
-	return vs.Replay.NextStep()
 }
 
 type Error struct {
@@ -299,6 +293,18 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 	return nil
 }
 
+func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) (*Ref, error) {
+	id, err := lr.ArtifactManager.RegisterRequest(ctx, parcel)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: use proper conversion
+	res := &Ref{}
+	res.SetRecord(*id)
+	return res
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg, ok := parcel.Message().(message.IBaseLogicMessage)
@@ -313,13 +319,14 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	}
 
 	os := lr.UpsertObjectState(ref)
+
 	os.Lock()
 	defer os.Unlock()
 
 	if os.ExecutionState == nil {
 		os.ExecutionState = &ExecutionState{
 			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr},
+			Behaviour: &ValidationSaver{lr: lr, caseBind: core.NewCaseBind()},
 		}
 	}
 
@@ -334,7 +341,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		}
 	}
 
-	request, err := es.Behaviour.RegisterRequest(parcel)
+	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
 		return nil, os.WrapError(err, "can't create request")
 	}
@@ -409,8 +416,16 @@ func (lr *LogicRunner) ProcessExecutionQueue(es *ExecutionState) {
 
 		es.Current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
+		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, recordingBus)
+
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
 		// TODO: check pulse change and do different things
+
+		err := es.Behaviour.RequestResult(res.reply, res.err)
+		if err != nil {
+
+		}
+
 		finish()
 	}
 }
@@ -422,12 +437,6 @@ func (lr *LogicRunner) executeOrValidate(
 ) {
 	msg := parcel.Message().(message.IBaseLogicMessage)
 	ref := msg.GetReference()
-
-	//es.Behaviour.RegisterRequest(ctx)
-	// os.AddCaseRequest(core.CaseRecord{
-	//	Type: core.CaseRecordTypeStart,
-	//	Resp: msg,
-	// })
 
 	es.Current.LogicContext = &core.LogicCallContext{
 		Caller:          msg.GetCaller(),

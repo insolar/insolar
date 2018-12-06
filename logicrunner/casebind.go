@@ -39,58 +39,38 @@ func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byt
 }
 
 func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb core.CaseBind) (int, error) {
-	if len(cb.Requests) < 1 {
-		return 0, errors.New("casebind is empty")
-	}
-
 	os := lr.UpsertObjectState(ref)
 	vs := os.StartValidation()
 
 	vs.Lock()
 	defer vs.Unlock()
 
-	vs.Replay = &core.CaseBindReplay{
-		Pulse:    p,
-		CaseBind: cb,
-		Request:  0,
-		Record:   -1,
-		Steps:    0,
+	checker := &ValidationChecker{
+		lr: lr,
+		cb: core.NewCaseBindReplay(cb),
 	}
-	vs.Current = &CurrentExecution{
-		Context: ctx,
-	}
+	vs.Behaviour = checker
 
 	for {
-		start, step := vs.NextStep()
-		if step < 0 {
-			return step, errors.New("no validation data")
-		} else if start == nil { // finish
-			return step, nil
-		}
-		if start.Type != core.CaseRecordTypeStart {
-			return step, errors.New("step between two shores")
+		request := checker.NextRequest()
+		if request == nil {
+			break
 		}
 
 		msg := start.Resp.(core.Message)
 		parcel, err := lr.ParcelFactory.Create(ctx, msg, ref, nil, *core.GenesisPulse)
 		if err != nil {
-			return 0, errors.New("failed to create a parcel message")
+			return 0, errors.New("failed to create a parcel")
 		}
 
-		traceStep, step := vs.NextStep()
-		if traceStep == nil {
-			return step, errors.New("trace is missing")
-		}
+		traceID = "TODO" // FIXME
 
-		traceID, ok := traceStep.Resp.(string)
-		if !ok {
-			return step, errors.New("trace is wrong type")
-		}
+		ctx = inslogger.ContextWithTrace(ctx, traceID)
 
-		vs.Current.Context = inslogger.ContextWithTrace(
-			vs.Current.Context, traceID,
-		)
-		ret, err := lr.executeOrValidate(vs.Current.Context, os.ExecutionState, parcel) // FIXME
+		vs.Current = &CurrentExecution{
+			Context: ctx,
+		}
+		ret, err := lr.executeOrValidate(ctx, vs, parcel)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -120,6 +100,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb c
 			return step, errors.New("unknown result type")
 		}
 	}
+	return 1, nil
 }
 
 func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
@@ -186,35 +167,21 @@ type ValidationBehaviour interface {
 	Begin(refs Ref, record core.CaseRecord)
 	End(refs Ref, record core.CaseRecord)
 	ModifyContext(ctx *core.LogicCallContext)
-	RegisterRequest(p core.Parcel) (*Ref, error)
 	GetObject(ctx context.Context, ref Ref) (core.ObjectDescriptor, error)
 }
 
 type ValidationSaver struct {
-	lr *LogicRunner
+	lr       *LogicRunner
+	caseBind *core.CaseBind
+	current  *core.CaseRequest
 }
 
 func (vb ValidationSaver) Mode() string {
 	return "execution"
 }
 
-func (vb ValidationSaver) RegisterRequest(p core.Parcel) (*Ref, error) {
-	ctx := context.TODO()
-	m := p.Message().(message.IBaseLogicMessage)
-	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, p)
-	if err != nil {
-		return nil, err
-	}
-	// TODO: use proper conversion
-	reqref := Ref{}
-	reqref.SetRecord(*reqid)
-
-	vb.lr.addObjectCaseRecord(m.GetReference(), core.CaseRecord{
-		Type:   core.CaseRecordTypeRequest,
-		ReqSig: HashInterface(vb.lr.PlatformCryptographyScheme, m),
-		Resp:   reqref,
-	})
-	return &reqref, err
+func (vb ValidationSaver) NewRequest(parcel core.Parcel, mb core.MessageBus) {
+	vb.current = vb.caseBind.NewRequest(parcel, mb)
 }
 
 func (vb ValidationSaver) GetObject(ctx context.Context, ref Ref) (core.ObjectDescriptor, error) {
@@ -239,26 +206,16 @@ func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 
 type ValidationChecker struct {
 	lr *LogicRunner
-	cb core.CaseBindReplay
+	cb *core.CaseBindReplay
 }
 
 func (vb ValidationChecker) Mode() string {
 	return "validation"
 }
 
-func (vb ValidationChecker) RegisterRequest(p core.Parcel) (*Ref, error) {
-	m := p.Message().(message.IBaseLogicMessage)
-	cr, _ := vb.lr.nextValidationStep(m.GetReference())
-	if core.CaseRecordTypeRequest != cr.Type {
-		return nil, errors.New("Wrong validation type on Request")
-	}
-	if !bytes.Equal(cr.ReqSig, HashInterface(vb.lr.PlatformCryptographyScheme, m)) {
-		return nil, errors.New("Wrong validation sig on Request")
-	}
-	if req, ok := cr.Resp.(Ref); ok {
-		return &req, nil
-	}
-	return nil, errors.Errorf("wrong validation, request contains %t", cr.Resp)
+func (vb ValidationChecker) NextRequest() *core.CaseRequest {
+	return vb.cb.NextRequest()
+
 }
 
 func (vb ValidationChecker) GetObject(ctx context.Context, ref Ref) (core.ObjectDescriptor, error) {

@@ -98,21 +98,30 @@ const (
 	CaseRecordTypeDeactivateObject
 )
 
-// CaseRecord is one record of validateable object calling history
-type CaseRecord struct {
-	Type   CaseRecordType
-	ReqSig []byte
-	Resp   interface{}
-}
-
 type CaseRequest struct {
-	Request interface{}
-	Records []CaseRecord
+	Message    Message
+	MessageBus MessageBus
+	Reply      Reply
+	Error      error
 }
 
 // CaseBinder is a whole result of executor efforts on every object it seen on this pulse
 type CaseBind struct {
 	Requests []CaseRequest
+}
+
+func NewCaseBind() *CaseBind {
+	return &CaseBind{Requests: make([]CaseRequest, 0)}
+}
+
+func (cb *CaseBind) NewRequest(req interface{}, mb MessageBus) *CaseRequest {
+	res := CaseRequest{
+		MessageBus: mb,
+		Request:    req,
+		Records:    make([]CaseRecord, 0),
+	}
+	cb.Requests = append(cb.Requests, res)
+	return &cb.Requests[len(cb.Requests)-1]
 }
 
 type CaseBindReplay struct {
@@ -122,6 +131,22 @@ type CaseBindReplay struct {
 	Record   int
 	Steps    int
 	Fail     int
+}
+
+func NewCaseBindReplay(cb CaseBind) *CaseBindReplay {
+	return &CaseBindReplay{
+		CaseBind: cb,
+		Request:  -1,
+		Record:   -1,
+	}
+}
+
+func (r *CaseBindReplay) NextRequest() *CaseRequest {
+	if r.Request+1 >= len(r.CaseBind.Requests) {
+		return nil
+	}
+	r.Request++
+	return &r.CaseBind.Requests[r.Request]
 }
 
 func (r *CaseBindReplay) NextStep() (*CaseRecord, int) {
