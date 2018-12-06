@@ -139,7 +139,6 @@ process_input_params()
             ;;
         g)
             genesis
-            return
             ;;
         l)
             prepare
