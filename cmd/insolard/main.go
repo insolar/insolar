@@ -96,6 +96,7 @@ func main() {
 
 	traceID := utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
+	log.SetGlobalLogger(inslog)
 
 	if params.isGenesis {
 		removeLedgerDataDir(ctx, cfg)
