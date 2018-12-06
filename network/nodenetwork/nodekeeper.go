@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	coreutils "github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
@@ -223,8 +224,13 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 func (nk *nodekeeper) delActiveNode(ref core.RecordRef) {
 	if ref.Equal(nk.origin.ID()) {
 		// we received acknowledge to leave, can gracefully stop
-		// TODO: graceful stop instead of panic
-		panic("Node leave acknowledged by network. Goodbye!")
+
+		// graceful stop instead of panic
+		err := coreutils.SendGracefulStopSignal()
+		if err != nil {
+			// we tried :(
+			panic("Node leave acknowledged by network. Goodbye!")
+		}
 	}
 	active, ok := nk.active[ref]
 	if !ok {
