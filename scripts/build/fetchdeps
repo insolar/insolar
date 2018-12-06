@@ -1,0 +1,10 @@
+#!/bin/sh
+
+REPO=$1
+COMMIT_VERSION=$2
+
+export GOPATH=`go env GOPATH`
+go get -u $REPO
+cd $GOPATH/src/$REPO
+git checkout $COMMIT_VERSION
+go install
