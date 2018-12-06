@@ -39,13 +39,14 @@ func (p *Pulse) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// GetLatestPulseNumber returns current pulse number.
-func (m *TransactionManager) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
-	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
+func toPulse(raw []byte) (*Pulse, error) {
+	dec := codec.NewDecoder(bytes.NewReader(raw), &codec.CborHandle{})
+	var rec Pulse
+	err := dec.Decode(&rec)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return core.NewPulseNumber(buf), nil
+	return &rec, nil
 }
 
 // GetPulse returns pulse for provided pulse number.
@@ -67,20 +68,24 @@ func (m *TransactionManager) GetPulse(ctx context.Context, num core.PulseNumber)
 // AddPulse saves new pulse data and updates index.
 func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		var previous core.PulseNumber
-		previous, err := tx.GetLatestPulseNumber(ctx)
+		var previousPulseNumber core.PulseNumber
+		previousPulse, err := tx.GetLatestPulse(ctx)
 		if err != nil && err != ErrNotFound {
 			return err
 		}
 
-		// Set next on previous pulse if it exists.
+		// Set next on previousPulseNumber pulse if it exists.
 		if err == nil {
-			prevPulse, err := tx.GetPulse(ctx, previous)
+			if previousPulse != nil {
+				previousPulseNumber = previousPulse.Pulse.PulseNumber
+			}
+
+			prevPulse, err := tx.GetPulse(ctx, previousPulseNumber)
 			if err != nil {
 				return err
 			}
 			prevPulse.Next = &pulse.PulseNumber
-			err = tx.set(ctx, prefixkey(scopeIDPulse, previous.Bytes()), prevPulse.Bytes())
+			err = tx.set(ctx, prefixkey(scopeIDPulse, previousPulseNumber.Bytes()), prevPulse.Bytes())
 			if err != nil {
 				return err
 			}
@@ -88,7 +93,7 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 
 		// Save new pulse.
 		p := Pulse{
-			Prev:  &previous,
+			Prev:  &previousPulseNumber,
 			Pulse: pulse,
 		}
 		err = tx.set(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), p.Bytes())
@@ -96,7 +101,7 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 			return err
 		}
 
-		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}), pulse.PulseNumber.Bytes())
+		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}), p.Bytes())
 	})
 }
 
@@ -116,10 +121,19 @@ func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error
 	return pulse, nil
 }
 
-// GetLatestPulseNumber returns current pulse number.
-func (db *DB) GetLatestPulseNumber(ctx context.Context) (core.PulseNumber, error) {
+// GetLatestPulse returns the latest pulse
+func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error) {
+	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
+	if err != nil {
+		return nil, err
+	}
+	return toPulse(buf)
+}
+
+// GetLatestPulse returns the latest pulse
+func (db *DB) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	return tx.GetLatestPulseNumber(ctx)
+	return tx.GetLatestPulse(ctx)
 }

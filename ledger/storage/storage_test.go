@@ -172,9 +172,9 @@ func TestDB_AddPulse(t *testing.T) {
 		core.Pulse{PulseNumber: 42, Entropy: core.Entropy{1, 2, 3}},
 	)
 	assert.NoError(t, err)
-	latestPulse, err := db.GetLatestPulseNumber(ctx)
-	assert.Equal(t, core.PulseNumber(42), latestPulse)
-	pulse, err := db.GetPulse(ctx, latestPulse)
+	latestPulse, err := db.GetLatestPulse(ctx)
+	assert.Equal(t, core.PulseNumber(42), latestPulse.Pulse.PulseNumber)
+	pulse, err := db.GetPulse(ctx, latestPulse.Pulse.PulseNumber)
 	assert.NoError(t, err)
 	prev := core.PulseNumber(core.FirstPulseNumber)
 	assert.Equal(t, storage.Pulse{Prev: &prev, Pulse: core.Pulse{Entropy: core.Entropy{1, 2, 3}, PulseNumber: 42}}, *pulse)
