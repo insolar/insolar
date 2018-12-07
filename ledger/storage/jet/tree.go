@@ -33,15 +33,15 @@ type Jet struct {
 }
 
 // Find returns jet for provided reference.
-func (j *Jet) Find(ref *core.RecordRef, depth uint) *Jet {
-	if j == nil || ref == nil {
+func (j *Jet) Find(val []byte, pulse core.PulseNumber, depth uint) *Jet {
+	if j == nil || val == nil {
 		return nil
 	}
 
-	if getBit(ref[:], depth) && j.Left != nil {
-		return j.Left.Find(ref, depth+1)
-	} else if j.Right != nil {
-		return j.Right.Find(ref, depth+1)
+	if getBit(val, depth) && j.Right != nil && j.Right.ID.Pulse() <= pulse {
+		return j.Right.Find(val, pulse, depth+1)
+	} else if j.Left != nil && j.Left.ID.Pulse() <= pulse {
+		return j.Left.Find(val, pulse, depth+1)
 	}
 	return j
 }
@@ -52,8 +52,8 @@ type Tree struct {
 }
 
 // Find returns jet for provided reference.
-func (t *Tree) Find(ref *core.RecordRef) *Jet {
-	return t.Head.Find(ref, 0)
+func (t *Tree) Find(val []byte, pulse core.PulseNumber) *Jet {
+	return t.Head.Find(val, pulse, 0)
 }
 
 // Bytes serializes pulse.

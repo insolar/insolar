@@ -138,7 +138,7 @@ func (jc *JetCoordinator) getNodeViaJet(
 	if err != nil {
 		return nil, err
 	}
-	jet := jetTree.Find(obj)
+	jet := jetTree.Find(obj.Record().Hash(), pulse.PulseNumber)
 	if jet == nil {
 		return nil, errors.New("failed to find jet")
 	}
