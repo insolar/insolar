@@ -793,7 +793,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		&message.GetObjectIndex{
 			Object: obj,
 		},
-		currentPulse,
+		currentPulse.Pulse,
 		&core.MessageSendOptions{
 			Receiver: heavy,
 		})

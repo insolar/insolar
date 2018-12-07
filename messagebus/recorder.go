@@ -50,7 +50,7 @@ func (r *recorder) Send(ctx context.Context, msg core.Message, currentPulse core
 		err error
 	)
 
-	parcel, err := r.CreateParcel(ctx, msg, ops.Safe().Token)
+	parcel, err := r.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
 	if err != nil {
 		return nil, err
 	}
