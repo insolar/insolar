@@ -18,7 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/jetdrop"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 type ledgerMessage struct {
@@ -191,7 +191,7 @@ func (*ValidationCheck) Type() core.MessageType {
 type HotData struct {
 	ledgerMessage
 	Jet             core.RecordRef
-	Drop            jetdrop.JetDrop
+	Drop            jet.JetDrop
 	RecentObjects   map[core.RecordID]*HotIndex
 	PendingRequests map[core.RecordID][]byte
 	PulseNumber     core.PulseNumber
