@@ -97,6 +97,9 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 // NodeJoinClaim is a type 5, len == 272.
 type NodeAnnounceClaim struct {
 	NodeJoinClaim
+
+	NodeIndex uint16
+	NodeCount uint16
 }
 
 func (nac *NodeAnnounceClaim) Type() ClaimType {

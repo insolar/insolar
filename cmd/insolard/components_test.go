@@ -31,7 +31,7 @@ func TestInitComponents(t *testing.T) {
 	cfg.CertificatePath = "testdata/certificate.json"
 
 	bootstrapComponents := initBootstrapComponents(ctx, cfg)
-	cert := initCertificate(
+	cert := initCertificateManager(
 		ctx,
 		cfg,
 		false,

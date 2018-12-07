@@ -12,8 +12,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
-
-	testify_assert "github.com/stretchr/testify/assert"
 )
 
 //CertificateMock implements github.com/insolar/insolar/core.Certificate
@@ -25,15 +23,15 @@ type CertificateMock struct {
 	GetDiscoveryNodesPreCounter uint64
 	GetDiscoveryNodesMock       mCertificateMockGetDiscoveryNodes
 
+	GetDiscoverySignsFunc       func() (r map[*core.RecordRef][]byte)
+	GetDiscoverySignsCounter    uint64
+	GetDiscoverySignsPreCounter uint64
+	GetDiscoverySignsMock       mCertificateMockGetDiscoverySigns
+
 	GetNodeRefFunc       func() (r *core.RecordRef)
 	GetNodeRefCounter    uint64
 	GetNodeRefPreCounter uint64
 	GetNodeRefMock       mCertificateMockGetNodeRef
-
-	GetNodeSignFunc       func(p *core.RecordRef) (r []byte, r1 error)
-	GetNodeSignCounter    uint64
-	GetNodeSignPreCounter uint64
-	GetNodeSignMock       mCertificateMockGetNodeSign
 
 	GetPublicKeyFunc       func() (r crypto.PublicKey)
 	GetPublicKeyCounter    uint64
@@ -50,15 +48,10 @@ type CertificateMock struct {
 	GetRootDomainReferencePreCounter uint64
 	GetRootDomainReferenceMock       mCertificateMockGetRootDomainReference
 
-	NewCertForHostFunc       func(p string, p1 string, p2 string) (r core.Certificate, r1 error)
-	NewCertForHostCounter    uint64
-	NewCertForHostPreCounter uint64
-	NewCertForHostMock       mCertificateMockNewCertForHost
-
-	VerifyAuthorizationCertificateFunc       func(p core.AuthorizationCertificate) (r bool, r1 error)
-	VerifyAuthorizationCertificateCounter    uint64
-	VerifyAuthorizationCertificatePreCounter uint64
-	VerifyAuthorizationCertificateMock       mCertificateMockVerifyAuthorizationCertificate
+	SerializeNodePartFunc       func() (r []byte)
+	SerializeNodePartCounter    uint64
+	SerializeNodePartPreCounter uint64
+	SerializeNodePartMock       mCertificateMockSerializeNodePart
 }
 
 //NewCertificateMock returns a mock for github.com/insolar/insolar/core.Certificate
@@ -70,13 +63,12 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	}
 
 	m.GetDiscoveryNodesMock = mCertificateMockGetDiscoveryNodes{mock: m}
+	m.GetDiscoverySignsMock = mCertificateMockGetDiscoverySigns{mock: m}
 	m.GetNodeRefMock = mCertificateMockGetNodeRef{mock: m}
-	m.GetNodeSignMock = mCertificateMockGetNodeSign{mock: m}
 	m.GetPublicKeyMock = mCertificateMockGetPublicKey{mock: m}
 	m.GetRoleMock = mCertificateMockGetRole{mock: m}
 	m.GetRootDomainReferenceMock = mCertificateMockGetRootDomainReference{mock: m}
-	m.NewCertForHostMock = mCertificateMockNewCertForHost{mock: m}
-	m.VerifyAuthorizationCertificateMock = mCertificateMockVerifyAuthorizationCertificate{mock: m}
+	m.SerializeNodePartMock = mCertificateMockSerializeNodePart{mock: m}
 
 	return m
 }
@@ -215,6 +207,140 @@ func (m *CertificateMock) GetDiscoveryNodesFinished() bool {
 	return true
 }
 
+type mCertificateMockGetDiscoverySigns struct {
+	mock              *CertificateMock
+	mainExpectation   *CertificateMockGetDiscoverySignsExpectation
+	expectationSeries []*CertificateMockGetDiscoverySignsExpectation
+}
+
+type CertificateMockGetDiscoverySignsExpectation struct {
+	result *CertificateMockGetDiscoverySignsResult
+}
+
+type CertificateMockGetDiscoverySignsResult struct {
+	r map[*core.RecordRef][]byte
+}
+
+//Expect specifies that invocation of Certificate.GetDiscoverySigns is expected from 1 to Infinity times
+func (m *mCertificateMockGetDiscoverySigns) Expect() *mCertificateMockGetDiscoverySigns {
+	m.mock.GetDiscoverySignsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateMockGetDiscoverySignsExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Certificate.GetDiscoverySigns
+func (m *mCertificateMockGetDiscoverySigns) Return(r map[*core.RecordRef][]byte) *CertificateMock {
+	m.mock.GetDiscoverySignsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateMockGetDiscoverySignsExpectation{}
+	}
+	m.mainExpectation.result = &CertificateMockGetDiscoverySignsResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Certificate.GetDiscoverySigns is expected once
+func (m *mCertificateMockGetDiscoverySigns) ExpectOnce() *CertificateMockGetDiscoverySignsExpectation {
+	m.mock.GetDiscoverySignsFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CertificateMockGetDiscoverySignsExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CertificateMockGetDiscoverySignsExpectation) Return(r map[*core.RecordRef][]byte) {
+	e.result = &CertificateMockGetDiscoverySignsResult{r}
+}
+
+//Set uses given function f as a mock of Certificate.GetDiscoverySigns method
+func (m *mCertificateMockGetDiscoverySigns) Set(f func() (r map[*core.RecordRef][]byte)) *CertificateMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetDiscoverySignsFunc = f
+	return m.mock
+}
+
+//GetDiscoverySigns implements github.com/insolar/insolar/core.Certificate interface
+func (m *CertificateMock) GetDiscoverySigns() (r map[*core.RecordRef][]byte) {
+	counter := atomic.AddUint64(&m.GetDiscoverySignsPreCounter, 1)
+	defer atomic.AddUint64(&m.GetDiscoverySignsCounter, 1)
+
+	if len(m.GetDiscoverySignsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetDiscoverySignsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CertificateMock.GetDiscoverySigns.")
+			return
+		}
+
+		result := m.GetDiscoverySignsMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateMock.GetDiscoverySigns")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetDiscoverySignsMock.mainExpectation != nil {
+
+		result := m.GetDiscoverySignsMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateMock.GetDiscoverySigns")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetDiscoverySignsFunc == nil {
+		m.t.Fatalf("Unexpected call to CertificateMock.GetDiscoverySigns.")
+		return
+	}
+
+	return m.GetDiscoverySignsFunc()
+}
+
+//GetDiscoverySignsMinimockCounter returns a count of CertificateMock.GetDiscoverySignsFunc invocations
+func (m *CertificateMock) GetDiscoverySignsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDiscoverySignsCounter)
+}
+
+//GetDiscoverySignsMinimockPreCounter returns the value of CertificateMock.GetDiscoverySigns invocations
+func (m *CertificateMock) GetDiscoverySignsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDiscoverySignsPreCounter)
+}
+
+//GetDiscoverySignsFinished returns true if mock invocations count is ok
+func (m *CertificateMock) GetDiscoverySignsFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetDiscoverySignsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetDiscoverySignsCounter) == uint64(len(m.GetDiscoverySignsMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetDiscoverySignsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetDiscoverySignsCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetDiscoverySignsFunc != nil {
+		return atomic.LoadUint64(&m.GetDiscoverySignsCounter) > 0
+	}
+
+	return true
+}
+
 type mCertificateMockGetNodeRef struct {
 	mock              *CertificateMock
 	mainExpectation   *CertificateMockGetNodeRefExpectation
@@ -344,156 +470,6 @@ func (m *CertificateMock) GetNodeRefFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetNodeRefFunc != nil {
 		return atomic.LoadUint64(&m.GetNodeRefCounter) > 0
-	}
-
-	return true
-}
-
-type mCertificateMockGetNodeSign struct {
-	mock              *CertificateMock
-	mainExpectation   *CertificateMockGetNodeSignExpectation
-	expectationSeries []*CertificateMockGetNodeSignExpectation
-}
-
-type CertificateMockGetNodeSignExpectation struct {
-	input  *CertificateMockGetNodeSignInput
-	result *CertificateMockGetNodeSignResult
-}
-
-type CertificateMockGetNodeSignInput struct {
-	p *core.RecordRef
-}
-
-type CertificateMockGetNodeSignResult struct {
-	r  []byte
-	r1 error
-}
-
-//Expect specifies that invocation of Certificate.GetNodeSign is expected from 1 to Infinity times
-func (m *mCertificateMockGetNodeSign) Expect(p *core.RecordRef) *mCertificateMockGetNodeSign {
-	m.mock.GetNodeSignFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateMockGetNodeSignExpectation{}
-	}
-	m.mainExpectation.input = &CertificateMockGetNodeSignInput{p}
-	return m
-}
-
-//Return specifies results of invocation of Certificate.GetNodeSign
-func (m *mCertificateMockGetNodeSign) Return(r []byte, r1 error) *CertificateMock {
-	m.mock.GetNodeSignFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateMockGetNodeSignExpectation{}
-	}
-	m.mainExpectation.result = &CertificateMockGetNodeSignResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Certificate.GetNodeSign is expected once
-func (m *mCertificateMockGetNodeSign) ExpectOnce(p *core.RecordRef) *CertificateMockGetNodeSignExpectation {
-	m.mock.GetNodeSignFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &CertificateMockGetNodeSignExpectation{}
-	expectation.input = &CertificateMockGetNodeSignInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *CertificateMockGetNodeSignExpectation) Return(r []byte, r1 error) {
-	e.result = &CertificateMockGetNodeSignResult{r, r1}
-}
-
-//Set uses given function f as a mock of Certificate.GetNodeSign method
-func (m *mCertificateMockGetNodeSign) Set(f func(p *core.RecordRef) (r []byte, r1 error)) *CertificateMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodeSignFunc = f
-	return m.mock
-}
-
-//GetNodeSign implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) GetNodeSign(p *core.RecordRef) (r []byte, r1 error) {
-	counter := atomic.AddUint64(&m.GetNodeSignPreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodeSignCounter, 1)
-
-	if len(m.GetNodeSignMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodeSignMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CertificateMock.GetNodeSign. %v", p)
-			return
-		}
-
-		input := m.GetNodeSignMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CertificateMockGetNodeSignInput{p}, "Certificate.GetNodeSign got unexpected parameters")
-
-		result := m.GetNodeSignMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the CertificateMock.GetNodeSign")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetNodeSignMock.mainExpectation != nil {
-
-		input := m.GetNodeSignMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, CertificateMockGetNodeSignInput{p}, "Certificate.GetNodeSign got unexpected parameters")
-		}
-
-		result := m.GetNodeSignMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the CertificateMock.GetNodeSign")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetNodeSignFunc == nil {
-		m.t.Fatalf("Unexpected call to CertificateMock.GetNodeSign. %v", p)
-		return
-	}
-
-	return m.GetNodeSignFunc(p)
-}
-
-//GetNodeSignMinimockCounter returns a count of CertificateMock.GetNodeSignFunc invocations
-func (m *CertificateMock) GetNodeSignMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeSignCounter)
-}
-
-//GetNodeSignMinimockPreCounter returns the value of CertificateMock.GetNodeSign invocations
-func (m *CertificateMock) GetNodeSignMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeSignPreCounter)
-}
-
-//GetNodeSignFinished returns true if mock invocations count is ok
-func (m *CertificateMock) GetNodeSignFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodeSignMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodeSignCounter) == uint64(len(m.GetNodeSignMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodeSignMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodeSignCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodeSignFunc != nil {
-		return atomic.LoadUint64(&m.GetNodeSignCounter) > 0
 	}
 
 	return true
@@ -901,303 +877,135 @@ func (m *CertificateMock) GetRootDomainReferenceFinished() bool {
 	return true
 }
 
-type mCertificateMockNewCertForHost struct {
+type mCertificateMockSerializeNodePart struct {
 	mock              *CertificateMock
-	mainExpectation   *CertificateMockNewCertForHostExpectation
-	expectationSeries []*CertificateMockNewCertForHostExpectation
+	mainExpectation   *CertificateMockSerializeNodePartExpectation
+	expectationSeries []*CertificateMockSerializeNodePartExpectation
 }
 
-type CertificateMockNewCertForHostExpectation struct {
-	input  *CertificateMockNewCertForHostInput
-	result *CertificateMockNewCertForHostResult
+type CertificateMockSerializeNodePartExpectation struct {
+	result *CertificateMockSerializeNodePartResult
 }
 
-type CertificateMockNewCertForHostInput struct {
-	p  string
-	p1 string
-	p2 string
+type CertificateMockSerializeNodePartResult struct {
+	r []byte
 }
 
-type CertificateMockNewCertForHostResult struct {
-	r  core.Certificate
-	r1 error
-}
-
-//Expect specifies that invocation of Certificate.NewCertForHost is expected from 1 to Infinity times
-func (m *mCertificateMockNewCertForHost) Expect(p string, p1 string, p2 string) *mCertificateMockNewCertForHost {
-	m.mock.NewCertForHostFunc = nil
+//Expect specifies that invocation of Certificate.SerializeNodePart is expected from 1 to Infinity times
+func (m *mCertificateMockSerializeNodePart) Expect() *mCertificateMockSerializeNodePart {
+	m.mock.SerializeNodePartFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateMockNewCertForHostExpectation{}
+		m.mainExpectation = &CertificateMockSerializeNodePartExpectation{}
 	}
-	m.mainExpectation.input = &CertificateMockNewCertForHostInput{p, p1, p2}
+
 	return m
 }
 
-//Return specifies results of invocation of Certificate.NewCertForHost
-func (m *mCertificateMockNewCertForHost) Return(r core.Certificate, r1 error) *CertificateMock {
-	m.mock.NewCertForHostFunc = nil
+//Return specifies results of invocation of Certificate.SerializeNodePart
+func (m *mCertificateMockSerializeNodePart) Return(r []byte) *CertificateMock {
+	m.mock.SerializeNodePartFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateMockNewCertForHostExpectation{}
+		m.mainExpectation = &CertificateMockSerializeNodePartExpectation{}
 	}
-	m.mainExpectation.result = &CertificateMockNewCertForHostResult{r, r1}
+	m.mainExpectation.result = &CertificateMockSerializeNodePartResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Certificate.NewCertForHost is expected once
-func (m *mCertificateMockNewCertForHost) ExpectOnce(p string, p1 string, p2 string) *CertificateMockNewCertForHostExpectation {
-	m.mock.NewCertForHostFunc = nil
+//ExpectOnce specifies that invocation of Certificate.SerializeNodePart is expected once
+func (m *mCertificateMockSerializeNodePart) ExpectOnce() *CertificateMockSerializeNodePartExpectation {
+	m.mock.SerializeNodePartFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &CertificateMockNewCertForHostExpectation{}
-	expectation.input = &CertificateMockNewCertForHostInput{p, p1, p2}
+	expectation := &CertificateMockSerializeNodePartExpectation{}
+
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *CertificateMockNewCertForHostExpectation) Return(r core.Certificate, r1 error) {
-	e.result = &CertificateMockNewCertForHostResult{r, r1}
+func (e *CertificateMockSerializeNodePartExpectation) Return(r []byte) {
+	e.result = &CertificateMockSerializeNodePartResult{r}
 }
 
-//Set uses given function f as a mock of Certificate.NewCertForHost method
-func (m *mCertificateMockNewCertForHost) Set(f func(p string, p1 string, p2 string) (r core.Certificate, r1 error)) *CertificateMock {
+//Set uses given function f as a mock of Certificate.SerializeNodePart method
+func (m *mCertificateMockSerializeNodePart) Set(f func() (r []byte)) *CertificateMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.NewCertForHostFunc = f
+	m.mock.SerializeNodePartFunc = f
 	return m.mock
 }
 
-//NewCertForHost implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) NewCertForHost(p string, p1 string, p2 string) (r core.Certificate, r1 error) {
-	counter := atomic.AddUint64(&m.NewCertForHostPreCounter, 1)
-	defer atomic.AddUint64(&m.NewCertForHostCounter, 1)
+//SerializeNodePart implements github.com/insolar/insolar/core.Certificate interface
+func (m *CertificateMock) SerializeNodePart() (r []byte) {
+	counter := atomic.AddUint64(&m.SerializeNodePartPreCounter, 1)
+	defer atomic.AddUint64(&m.SerializeNodePartCounter, 1)
 
-	if len(m.NewCertForHostMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.NewCertForHostMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CertificateMock.NewCertForHost. %v %v %v", p, p1, p2)
+	if len(m.SerializeNodePartMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SerializeNodePartMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CertificateMock.SerializeNodePart.")
 			return
 		}
 
-		input := m.NewCertForHostMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CertificateMockNewCertForHostInput{p, p1, p2}, "Certificate.NewCertForHost got unexpected parameters")
-
-		result := m.NewCertForHostMock.expectationSeries[counter-1].result
+		result := m.SerializeNodePartMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the CertificateMock.NewCertForHost")
+			m.t.Fatal("No results are set for the CertificateMock.SerializeNodePart")
 			return
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
 
-	if m.NewCertForHostMock.mainExpectation != nil {
+	if m.SerializeNodePartMock.mainExpectation != nil {
 
-		input := m.NewCertForHostMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, CertificateMockNewCertForHostInput{p, p1, p2}, "Certificate.NewCertForHost got unexpected parameters")
-		}
-
-		result := m.NewCertForHostMock.mainExpectation.result
+		result := m.SerializeNodePartMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the CertificateMock.NewCertForHost")
+			m.t.Fatal("No results are set for the CertificateMock.SerializeNodePart")
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
 
-	if m.NewCertForHostFunc == nil {
-		m.t.Fatalf("Unexpected call to CertificateMock.NewCertForHost. %v %v %v", p, p1, p2)
+	if m.SerializeNodePartFunc == nil {
+		m.t.Fatalf("Unexpected call to CertificateMock.SerializeNodePart.")
 		return
 	}
 
-	return m.NewCertForHostFunc(p, p1, p2)
+	return m.SerializeNodePartFunc()
 }
 
-//NewCertForHostMinimockCounter returns a count of CertificateMock.NewCertForHostFunc invocations
-func (m *CertificateMock) NewCertForHostMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.NewCertForHostCounter)
+//SerializeNodePartMinimockCounter returns a count of CertificateMock.SerializeNodePartFunc invocations
+func (m *CertificateMock) SerializeNodePartMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SerializeNodePartCounter)
 }
 
-//NewCertForHostMinimockPreCounter returns the value of CertificateMock.NewCertForHost invocations
-func (m *CertificateMock) NewCertForHostMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.NewCertForHostPreCounter)
+//SerializeNodePartMinimockPreCounter returns the value of CertificateMock.SerializeNodePart invocations
+func (m *CertificateMock) SerializeNodePartMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SerializeNodePartPreCounter)
 }
 
-//NewCertForHostFinished returns true if mock invocations count is ok
-func (m *CertificateMock) NewCertForHostFinished() bool {
+//SerializeNodePartFinished returns true if mock invocations count is ok
+func (m *CertificateMock) SerializeNodePartFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.NewCertForHostMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.NewCertForHostCounter) == uint64(len(m.NewCertForHostMock.expectationSeries))
+	if len(m.SerializeNodePartMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SerializeNodePartCounter) == uint64(len(m.SerializeNodePartMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.NewCertForHostMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.NewCertForHostCounter) > 0
+	if m.SerializeNodePartMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SerializeNodePartCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.NewCertForHostFunc != nil {
-		return atomic.LoadUint64(&m.NewCertForHostCounter) > 0
-	}
-
-	return true
-}
-
-type mCertificateMockVerifyAuthorizationCertificate struct {
-	mock              *CertificateMock
-	mainExpectation   *CertificateMockVerifyAuthorizationCertificateExpectation
-	expectationSeries []*CertificateMockVerifyAuthorizationCertificateExpectation
-}
-
-type CertificateMockVerifyAuthorizationCertificateExpectation struct {
-	input  *CertificateMockVerifyAuthorizationCertificateInput
-	result *CertificateMockVerifyAuthorizationCertificateResult
-}
-
-type CertificateMockVerifyAuthorizationCertificateInput struct {
-	p core.AuthorizationCertificate
-}
-
-type CertificateMockVerifyAuthorizationCertificateResult struct {
-	r  bool
-	r1 error
-}
-
-//Expect specifies that invocation of Certificate.VerifyAuthorizationCertificate is expected from 1 to Infinity times
-func (m *mCertificateMockVerifyAuthorizationCertificate) Expect(p core.AuthorizationCertificate) *mCertificateMockVerifyAuthorizationCertificate {
-	m.mock.VerifyAuthorizationCertificateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateMockVerifyAuthorizationCertificateExpectation{}
-	}
-	m.mainExpectation.input = &CertificateMockVerifyAuthorizationCertificateInput{p}
-	return m
-}
-
-//Return specifies results of invocation of Certificate.VerifyAuthorizationCertificate
-func (m *mCertificateMockVerifyAuthorizationCertificate) Return(r bool, r1 error) *CertificateMock {
-	m.mock.VerifyAuthorizationCertificateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CertificateMockVerifyAuthorizationCertificateExpectation{}
-	}
-	m.mainExpectation.result = &CertificateMockVerifyAuthorizationCertificateResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Certificate.VerifyAuthorizationCertificate is expected once
-func (m *mCertificateMockVerifyAuthorizationCertificate) ExpectOnce(p core.AuthorizationCertificate) *CertificateMockVerifyAuthorizationCertificateExpectation {
-	m.mock.VerifyAuthorizationCertificateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &CertificateMockVerifyAuthorizationCertificateExpectation{}
-	expectation.input = &CertificateMockVerifyAuthorizationCertificateInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *CertificateMockVerifyAuthorizationCertificateExpectation) Return(r bool, r1 error) {
-	e.result = &CertificateMockVerifyAuthorizationCertificateResult{r, r1}
-}
-
-//Set uses given function f as a mock of Certificate.VerifyAuthorizationCertificate method
-func (m *mCertificateMockVerifyAuthorizationCertificate) Set(f func(p core.AuthorizationCertificate) (r bool, r1 error)) *CertificateMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.VerifyAuthorizationCertificateFunc = f
-	return m.mock
-}
-
-//VerifyAuthorizationCertificate implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) VerifyAuthorizationCertificate(p core.AuthorizationCertificate) (r bool, r1 error) {
-	counter := atomic.AddUint64(&m.VerifyAuthorizationCertificatePreCounter, 1)
-	defer atomic.AddUint64(&m.VerifyAuthorizationCertificateCounter, 1)
-
-	if len(m.VerifyAuthorizationCertificateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.VerifyAuthorizationCertificateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CertificateMock.VerifyAuthorizationCertificate. %v", p)
-			return
-		}
-
-		input := m.VerifyAuthorizationCertificateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CertificateMockVerifyAuthorizationCertificateInput{p}, "Certificate.VerifyAuthorizationCertificate got unexpected parameters")
-
-		result := m.VerifyAuthorizationCertificateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the CertificateMock.VerifyAuthorizationCertificate")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.VerifyAuthorizationCertificateMock.mainExpectation != nil {
-
-		input := m.VerifyAuthorizationCertificateMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, CertificateMockVerifyAuthorizationCertificateInput{p}, "Certificate.VerifyAuthorizationCertificate got unexpected parameters")
-		}
-
-		result := m.VerifyAuthorizationCertificateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the CertificateMock.VerifyAuthorizationCertificate")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.VerifyAuthorizationCertificateFunc == nil {
-		m.t.Fatalf("Unexpected call to CertificateMock.VerifyAuthorizationCertificate. %v", p)
-		return
-	}
-
-	return m.VerifyAuthorizationCertificateFunc(p)
-}
-
-//VerifyAuthorizationCertificateMinimockCounter returns a count of CertificateMock.VerifyAuthorizationCertificateFunc invocations
-func (m *CertificateMock) VerifyAuthorizationCertificateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter)
-}
-
-//VerifyAuthorizationCertificateMinimockPreCounter returns the value of CertificateMock.VerifyAuthorizationCertificate invocations
-func (m *CertificateMock) VerifyAuthorizationCertificateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.VerifyAuthorizationCertificatePreCounter)
-}
-
-//VerifyAuthorizationCertificateFinished returns true if mock invocations count is ok
-func (m *CertificateMock) VerifyAuthorizationCertificateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.VerifyAuthorizationCertificateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) == uint64(len(m.VerifyAuthorizationCertificateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.VerifyAuthorizationCertificateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.VerifyAuthorizationCertificateFunc != nil {
-		return atomic.LoadUint64(&m.VerifyAuthorizationCertificateCounter) > 0
+	if m.SerializeNodePartFunc != nil {
+		return atomic.LoadUint64(&m.SerializeNodePartCounter) > 0
 	}
 
 	return true
@@ -1211,12 +1019,12 @@ func (m *CertificateMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CertificateMock.GetDiscoveryNodes")
 	}
 
-	if !m.GetNodeRefFinished() {
-		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
+	if !m.GetDiscoverySignsFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetDiscoverySigns")
 	}
 
-	if !m.GetNodeSignFinished() {
-		m.t.Fatal("Expected call to CertificateMock.GetNodeSign")
+	if !m.GetNodeRefFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
 
 	if !m.GetPublicKeyFinished() {
@@ -1231,12 +1039,8 @@ func (m *CertificateMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CertificateMock.GetRootDomainReference")
 	}
 
-	if !m.NewCertForHostFinished() {
-		m.t.Fatal("Expected call to CertificateMock.NewCertForHost")
-	}
-
-	if !m.VerifyAuthorizationCertificateFinished() {
-		m.t.Fatal("Expected call to CertificateMock.VerifyAuthorizationCertificate")
+	if !m.SerializeNodePartFinished() {
+		m.t.Fatal("Expected call to CertificateMock.SerializeNodePart")
 	}
 
 }
@@ -1260,12 +1064,12 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.GetDiscoveryNodes")
 	}
 
-	if !m.GetNodeRefFinished() {
-		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
+	if !m.GetDiscoverySignsFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetDiscoverySigns")
 	}
 
-	if !m.GetNodeSignFinished() {
-		m.t.Fatal("Expected call to CertificateMock.GetNodeSign")
+	if !m.GetNodeRefFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
 
 	if !m.GetPublicKeyFinished() {
@@ -1280,12 +1084,8 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.GetRootDomainReference")
 	}
 
-	if !m.NewCertForHostFinished() {
-		m.t.Fatal("Expected call to CertificateMock.NewCertForHost")
-	}
-
-	if !m.VerifyAuthorizationCertificateFinished() {
-		m.t.Fatal("Expected call to CertificateMock.VerifyAuthorizationCertificate")
+	if !m.SerializeNodePartFinished() {
+		m.t.Fatal("Expected call to CertificateMock.SerializeNodePart")
 	}
 
 }
@@ -1303,13 +1103,12 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetDiscoveryNodesFinished()
+		ok = ok && m.GetDiscoverySignsFinished()
 		ok = ok && m.GetNodeRefFinished()
-		ok = ok && m.GetNodeSignFinished()
 		ok = ok && m.GetPublicKeyFinished()
 		ok = ok && m.GetRoleFinished()
 		ok = ok && m.GetRootDomainReferenceFinished()
-		ok = ok && m.NewCertForHostFinished()
-		ok = ok && m.VerifyAuthorizationCertificateFinished()
+		ok = ok && m.SerializeNodePartFinished()
 
 		if ok {
 			return
@@ -1322,12 +1121,12 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to CertificateMock.GetDiscoveryNodes")
 			}
 
-			if !m.GetNodeRefFinished() {
-				m.t.Error("Expected call to CertificateMock.GetNodeRef")
+			if !m.GetDiscoverySignsFinished() {
+				m.t.Error("Expected call to CertificateMock.GetDiscoverySigns")
 			}
 
-			if !m.GetNodeSignFinished() {
-				m.t.Error("Expected call to CertificateMock.GetNodeSign")
+			if !m.GetNodeRefFinished() {
+				m.t.Error("Expected call to CertificateMock.GetNodeRef")
 			}
 
 			if !m.GetPublicKeyFinished() {
@@ -1342,12 +1141,8 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to CertificateMock.GetRootDomainReference")
 			}
 
-			if !m.NewCertForHostFinished() {
-				m.t.Error("Expected call to CertificateMock.NewCertForHost")
-			}
-
-			if !m.VerifyAuthorizationCertificateFinished() {
-				m.t.Error("Expected call to CertificateMock.VerifyAuthorizationCertificate")
+			if !m.SerializeNodePartFinished() {
+				m.t.Error("Expected call to CertificateMock.SerializeNodePart")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1366,11 +1161,11 @@ func (m *CertificateMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetNodeRefFinished() {
+	if !m.GetDiscoverySignsFinished() {
 		return false
 	}
 
-	if !m.GetNodeSignFinished() {
+	if !m.GetNodeRefFinished() {
 		return false
 	}
 
@@ -1386,11 +1181,7 @@ func (m *CertificateMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.NewCertForHostFinished() {
-		return false
-	}
-
-	if !m.VerifyAuthorizationCertificateFinished() {
+	if !m.SerializeNodePartFinished() {
 		return false
 	}
 

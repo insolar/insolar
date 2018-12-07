@@ -43,7 +43,7 @@ type Controller interface {
 }
 
 // RequestHandler handler function to process incoming requests from network.
-type RequestHandler func(Request) (Response, error)
+type RequestHandler func(context.Context, Request) (Response, error)
 
 // HostNetwork simple interface to send network requests and process network responses.
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
@@ -147,7 +147,6 @@ type NodeKeeper interface {
 	AddActiveNodes([]core.Node)
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
-
 	// SetState set state of the NodeKeeper
 	SetState(NodeKeeperState)
 	// GetState get state of the NodeKeeper
@@ -180,9 +179,13 @@ type UnsyncList interface {
 	// RemoveClaims
 	RemoveClaims(core.RecordRef)
 	// AddClaims
-	AddClaims(core.RecordRef, []consensus.ReferendumClaim, map[core.RecordRef]string)
+	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim, map[core.RecordRef]string)
 	// CalculateHash calculate node list hash based on active node list and claims
 	CalculateHash() ([]byte, error)
+	// GetActiveNode get active node by reference ID for current consensus
+	GetActiveNode(ref core.RecordRef) core.Node
+	// GetActiveNodes get active nodes for current consensus
+	GetActiveNodes() []core.Node
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.

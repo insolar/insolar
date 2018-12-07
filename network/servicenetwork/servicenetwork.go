@@ -46,7 +46,7 @@ type ServiceNetwork struct {
 	routingTable network.RoutingTable // TODO: should be injected
 
 	// dependencies
-	Certificate         core.Certificate                `inject:""`
+	CertificateManager  core.CertificateManager         `inject:""`
 	NodeNetwork         core.NodeNetwork                `inject:""`
 	PulseManager        core.PulseManager               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
@@ -137,7 +137,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
 
 	n.routingTable = &routing.Table{}
-	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg)
+	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
 		return errors.Wrap(err, "Failed to create internal transport")
 	}
@@ -150,7 +150,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
 		n.cfg.Host.Transport.Address,
-		n.cfg.Node.Node.ID,
+		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeNetwork.GetOrigin().ShortID(),
 		n.routingTable,
 	)
@@ -159,11 +159,10 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	cm := component.Manager{}
-	cm.Register(n.Certificate, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
+	cm.Register(n.CertificateManager, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
 		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
 
 	cm.Inject(n.NodeKeeper,
-		n.PhaseManager,
 		n.MerkleCalculator,
 		n.ConsensusNetwork,
 		n.Communicator,
@@ -174,7 +173,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
-	n.controller = controller.NewNetworkController(n, options, n.Certificate, internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
+	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
@@ -228,7 +227,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			return
 		}
 
-		// TODO: I don't know why I put it here. If you know better place for that, move it there please
 		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
@@ -244,11 +242,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
-			// TODO: make PhaseManager works and uncomment this
-			// err = n.PhaseManager.OnPulse(ctx, &pulse)
-			// if err != nil {
-			// 	logger.Warn("phase manager fail: " + err.Error())
-			// }
+			err = n.PhaseManager.OnPulse(ctx, &pulse)
+			if err != nil {
+				logger.Warn("phase manager fail: " + err.Error())
+			}
 		}(logger, n)
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)

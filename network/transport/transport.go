@@ -63,7 +63,7 @@ type Transport interface {
 func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
 	conn, publicAddress, err := NewConnection(cfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create connection.")
+		return nil, errors.Wrap(err, "[ NewTransport ] Failed to create connection.")
 	}
 
 	switch cfg.Protocol {
@@ -87,12 +87,12 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) {
 	conn, err := connection.NewConnectionFactory().Create(cfg.Address)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "Failed to create connection")
+		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create connection")
 	}
 	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
 	if err != nil {
 		closeVerbose(conn)
-		return nil, "", errors.Wrap(err, "Failed to create resolver")
+		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create resolver")
 	}
 	return conn, publicAddress, nil
 }

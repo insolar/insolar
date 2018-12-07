@@ -29,7 +29,7 @@ import (
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
-	Certificate         core.Certificate         `inject:""`
+	CertificateManager  core.CertificateManager  `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
 	ContractRequester   core.ContractRequester   `inject:""`
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
@@ -52,6 +52,7 @@ func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 	return nil
 }
 
+// Start implements interface of Component
 func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 	return nc.Bus.Register(core.NetworkCoordinatorNodeSignRequest, nc.SignNode)
 }
@@ -74,18 +75,19 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't extract response")
 	}
 
-	cert, err := nc.Certificate.NewCertForHost(pKey, role, nodeRef.String())
+	currentNodeCert := nc.CertificateManager.GetCertificate()
+	cert, err := nc.CertificateManager.NewUnsignedCertificate(pKey, role, nodeRef.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
 	}
 
-	for i, node := range nc.Certificate.GetDiscoveryNodes() {
-		if node.GetNodeRef() == nc.Certificate.GetNodeRef() {
+	for i, node := range currentNodeCert.GetDiscoveryNodes() {
+		if node.GetNodeRef() == currentNodeCert.GetNodeRef() {
 			sign, err := nc.signNode(ctx, node.GetNodeRef())
 			if err != nil {
 				return nil, err
 			}
-			nc.Certificate.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
+			currentNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
 		} else {
 			msg := message.NodeSignPayload{
 				NodeRef: &nodeRef,
@@ -98,7 +100,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 				return nil, err
 			}
 			sign := r.(reply.NodeSignInt).GetSign()
-			nc.Certificate.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
+			currentNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
 		}
 	}
 	return cert, nil
@@ -106,7 +108,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 
 // ValidateCert validates node certificate
 func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core.AuthorizationCertificate) (bool, error) {
-	return nc.Certificate.VerifyAuthorizationCertificate(certificate)
+	return nc.CertificateManager.VerifyAuthorizationCertificate(certificate)
 }
 
 // WriteActiveNodes writes active nodes to ledger
@@ -119,6 +121,7 @@ func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) er
 	return nc.getCoordinator().SetPulse(ctx, pulse)
 }
 
+// SignNode signs info about some node
 func (nc *NetworkCoordinator) SignNode(ctx context.Context, p core.Parcel) (core.Reply, error) {
 	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
 	sign, err := nc.signNode(ctx, nodeRef)

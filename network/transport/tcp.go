@@ -81,7 +81,7 @@ func (tcp *tcpTransport) Start(ctx context.Context) error {
 		if err != nil {
 			<-tcp.maxChan
 			<-tcp.disconnectFinished
-			return err
+			return errors.Wrap(err, "[ Start ]")
 		}
 
 		go tcp.handleAcceptedConnection(conn)

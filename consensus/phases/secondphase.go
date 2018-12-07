@@ -29,7 +29,6 @@ import (
 
 // SecondPhase is a second phase.
 type SecondPhase struct {
-	NodeNetwork  core.NodeNetwork         `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
 	Network      core.Network             `inject:""`
 	Calculator   merkle.Calculator        `inject:""`
@@ -43,7 +42,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	entry := &merkle.GlobuleEntry{
 		PulseEntry:    state.PulseEntry,
-		ProofSet:      state.PulseProofSet,
+		ProofSet:      state.ValidProofs,
 		PulseHash:     state.PulseHash,
 		PrevCloudHash: prevCloudHash,
 		GlobuleID:     globuleID,
@@ -59,31 +58,31 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase2Packet.")
 	}
-
-	activeNodes := sp.NodeKeeper.GetActiveNodes()
+	bitset, err := generatePhase2Bitset(state.UnsyncList, state.ValidProofs)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Execute ] Failed to generate bitset for Phase2Packet")
+	}
+	packet.SetBitSet(bitset)
 	err = sp.signPhase2Packet(&packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a packet")
 	}
-	proofSet, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, packet)
+	activeNodes := state.UnsyncList.GetActiveNodes()
+	packets, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
 
-	// var deviants []core.Node
-	// deviants = append(deviants, state.TimedOutNodes...)
-	// deviants = append(deviants, state.DeviantNodes...)
-
-	for ref, packet := range proofSet {
+	for ref, packet := range packets {
 		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
 		if err != nil {
 			log.Warn("failed to check a sign: ", err.Error())
 		} else if !signIsCorrect {
 			log.Warn("recieved a bad sign packet: ", err.Error())
 		}
-		node := sp.NodeKeeper.GetActiveNode(ref)
+		node := state.UnsyncList.GetActiveNode(ref)
 		proof := &merkle.GlobuleProof{
 			BaseProof: merkle.BaseProof{
 				Signature: core.SignatureFromBytes(packet.GetGlobuleHashSignature()),
@@ -116,6 +115,22 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}, nil
 }
 
+func generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
+	bitset, err := packets.NewBitSet(list.Length())
+	if err != nil {
+		return nil, err
+	}
+	cells := make([]packets.BitSetCell, 0)
+	for node := range proofs {
+		cells = append(cells, packets.BitSetCell{NodeID: node.ID(), State: packets.Legit})
+	}
+	err = bitset.ApplyChanges(cells, list)
+	if err != nil {
+		return nil, err
+	}
+	return bitset, nil
+}
+
 func (sp *SecondPhase) signPhase2Packet(p *packets.Phase2Packet) error {
 	data, err := p.RawFirstPart()
 	if err != nil {
@@ -132,7 +147,7 @@ func (sp *SecondPhase) signPhase2Packet(p *packets.Phase2Packet) error {
 }
 
 func (sp *SecondPhase) isSignPhase2PacketRight(packet *packets.Phase2Packet, recordRef core.RecordRef) (bool, error) {
-	key := sp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+	key := sp.NodeKeeper.GetActiveNode(recordRef).PublicKey()
 
 	raw, err := packet.RawFirstPart()
 	if err != nil {
@@ -140,13 +155,4 @@ func (sp *SecondPhase) isSignPhase2PacketRight(packet *packets.Phase2Packet, rec
 	}
 
 	return sp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
-}
-
-func (sp *SecondPhase) processTimedOutNodes(timedOutNodes []core.Node) {
-	// TODO: process
-}
-
-func (sp *SecondPhase) calculateListForNextPulse() (uint16, []byte) {
-	// TODO: calculate
-	return 1337, []byte("1337")
 }

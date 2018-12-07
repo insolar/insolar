@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -92,7 +93,7 @@ func (f future) GetRequest() network.Request {
 	return (*packetWrapper)(request)
 }
 
-func (h *hostTransport) processMessage(msg *packet.Packet) {
+func (h *hostTransport) processMessage(ctx context.Context, msg *packet.Packet) {
 	log.Debugf("Got %s request from host %s", msg.Type.String(), msg.Sender.String())
 	handler, exist := h.handlers[msg.Type]
 	if !exist {
@@ -100,7 +101,7 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 			msg.Type.String(), msg.Sender.NodeID.String())
 		return
 	}
-	response, err := handler((*packetWrapper)(msg))
+	response, err := handler(ctx, (*packetWrapper)(msg))
 	if err != nil {
 		log.Errorf("Error handling request %s from node %s: %s",
 			msg.Type.String(), msg.Sender.NodeID.String(), err)
@@ -139,12 +140,12 @@ func (h *hostTransport) BuildResponse(request network.Request, responseData inte
 	return (*packetWrapper)(p)
 }
 
-func NewInternalTransport(conf configuration.Configuration) (network.InternalTransport, error) {
+func NewInternalTransport(conf configuration.Configuration, nodeRef string) (network.InternalTransport, error) {
 	tp, err := transport.NewTransport(conf.Host.Transport, relay.NewProxy())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}
-	origin, err := getOrigin(tp, conf.Node.Node.ID)
+	origin, err := getOrigin(tp, nodeRef)
 	if err != nil {
 		go tp.Stop()
 		<-tp.Stopped()

@@ -90,19 +90,18 @@ func newMockResolver() *MockResolver {
 	}
 }
 
-func mockConfiguration(nodeID string, address string) configuration.Configuration {
+func mockConfiguration(address string) configuration.Configuration {
 	result := configuration.Configuration{}
 	result.Host.Transport = configuration.Transport{Protocol: "UTP", Address: address, BehindNAT: false}
-	result.Node.Node = &configuration.Node{nodeID}
 	return result
 }
 
 func TestNewInternalTransport(t *testing.T) {
 	// broken address
-	_, err := NewInternalTransport(mockConfiguration(ID1, "abirvalg"))
+	_, err := NewInternalTransport(mockConfiguration("abirvalg"), ID1)
 	require.Error(t, err)
 	address := "127.0.0.1:0"
-	tp, err := NewInternalTransport(mockConfiguration(ID1, address))
+	tp, err := NewInternalTransport(mockConfiguration(address), ID1)
 	require.NoError(t, err)
 	defer tp.Stop()
 	// require that new address with correct port has been assigned
@@ -112,7 +111,7 @@ func TestNewInternalTransport(t *testing.T) {
 
 func TestNewInternalTransport2(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	go tp.Start(ctx)
 	// no assertion, check that Stop does not block
@@ -125,12 +124,12 @@ func TestNewInternalTransport2(t *testing.T) {
 func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err error) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	if err != nil {
 		return nil, nil, err
 	}
 	tr1 := NewHostTransport(i1, m)
-	i2, err := NewInternalTransport(mockConfiguration(ID2, "127.0.0.1:0"))
+	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,7 +148,7 @@ func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err err
 }
 
 func TestNewInternalTransport3(t *testing.T) {
-	_, err := NewInternalTransport(mockConfiguration("", "127.0.0.1:0"))
+	_, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "")
 	require.Error(t, err)
 }
 
@@ -165,7 +164,7 @@ func TestNewHostTransport(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(count)
 
-	handler := func(request network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		wg.Done()
 		return t2.BuildResponse(request, nil), nil
@@ -193,7 +192,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	m := newMockResolver()
 	ctx := context.Background()
 
-	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	t1 := NewHostTransport(i1, m)
 	t1.Start(ctx)
@@ -225,7 +224,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		require.Equal(t, core.NewRefFromBase58(ID1), r.GetSender())
 		require.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
@@ -263,7 +262,7 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	}
 	gob.Register(&Data{})
 
-	handler := func(r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		d := r.GetData().(*Data)
 		return t2.BuildResponse(r, &Data{Number: d.Number + 1}), nil
@@ -305,7 +304,7 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 
-	handler := func(r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		time.Sleep(time.Second)
 		return t2.BuildResponse(r, nil), nil
@@ -340,7 +339,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		wg.Done()
 		return t2.BuildResponse(r, nil), nil
@@ -365,7 +364,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 
 func TestDoubleStart(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -383,11 +382,11 @@ func TestDoubleStart(t *testing.T) {
 func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration(ID1, "127.0.0.1:0"))
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
 	require.NoError(t, err)
 	tr1 := NewHostTransport(i1, m)
 	defer tr1.Stop()
-	handler := func(request network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
 		return tr1.BuildResponse(request, nil), nil
 	}
 	f := func() {

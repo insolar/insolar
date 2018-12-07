@@ -3,20 +3,17 @@ versionmanager:
 host:
   transport:
     protocol: TCP
-    address: 127.0.0.1:53835
+    address: 127.0.0.1:53832
     behindnat: false
   bootstraphosts: []
   isrelay: false
   infinitybootstrap: false
   timeout: 4
-node:
-  node:
-    id: "14ohvyCZi8RcLYmwx1iyXdcTXwJL2Ms8YRdKU3bU5FU2Qjhw5Bt83FuPsPiCGBcBrMioM71W2Vh5KyHW1MeSd3K"
 service:
   service: {}
 ledger:
   storage:
-    datadirectory: scripts/insolard/nodes/second/data
+    datadirectory: scripts/insolard/nodes/2/data
     txretriesonconflict: 3
   jetcoordinator:
     rolecounts:
@@ -42,7 +39,7 @@ pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8095
   nodesaddresses: []
-keyspath: "scripts/insolard/nodes/second/keys.json"
-certificatepath: "scripts/insolard/nodes/second/cert.json"
+keyspath: "scripts/insolard/nodes/2/keys.json"
+certificatepath: "scripts/insolard/nodes/2/cert.json"
 metrics:
   listenaddress: 0.0.0.0:8085

@@ -9,22 +9,14 @@ pulsar_public_keys:
   - "pulsar_public_key"
 discovery_nodes:
   -
-    host: "HOST1"
-    role: ""
+    host: "127.0.0.1:53831"
+    role: "virtual"
     keys_file: "../testdata/functional/discovery_node_1.json"
   -
-    host: "HOST2"
-    role: ""
+    host: "127.0.0.1:53832"
+    role: "heavy_material"
     keys_file: "../testdata/functional/discovery_node_2.json"
   -
-    host: "HOST3"
-    role: ""
+    host: "127.0.0.1:53833"
+    role: "light_material"
     keys_file: "../testdata/functional/discovery_node_3.json"
-  -
-    host: "HOST4"
-    role: ""
-    keys_file: "../testdata/functional/discovery_node_4.json"
-  -
-    host: "HOST5"
-    role: ""
-    keys_file: "../testdata/functional/discovery_node_5.json"

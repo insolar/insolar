@@ -39,7 +39,7 @@ import (
 
 // Runner implements Component for API
 type Runner struct {
-	Certificate         core.Certificate         `inject:""`
+	CertificateManager  core.CertificateManager  `inject:""`
 	StorageExporter     core.StorageExporter     `inject:""`
 	ContractRequester   core.ContractRequester   `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator  `inject:""`

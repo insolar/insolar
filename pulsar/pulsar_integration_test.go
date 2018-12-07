@@ -42,16 +42,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func initCrypto(t *testing.T) (*certificate.Certificate, core.CryptographyService) {
+func initCrypto(t *testing.T) (*certificate.CertificateManager, core.CryptographyService) {
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 	cs := cryptography.NewKeyBoundCryptographyService(key)
 	kp := platformpolicy.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
-	cert, err := certificate.NewCertificatesWithKeys(pk, kp)
+	certManager, err := certificate.NewManagerCertificateWithKeys(pk, kp)
 	require.NoError(t, err)
 
-	return cert, cs
+	return certManager, cs
 }
 
 func TestTwoPulsars_Handshake(t *testing.T) {
@@ -117,7 +117,9 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 }
 
 func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) network.NodeKeeper {
-	origin := nodenetwork.NewNode(nodeID, nil, nil, address, "")
+
+	origin := nodenetwork.NewNode(nodeID, core.StaticRoleUnknown, nil, address, "")
+
 	keeper := nodenetwork.NewNodeKeeper(origin)
 	if isBootstrap {
 		keeper.AddActiveNodes([]core.Node{origin})
@@ -139,8 +141,10 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	require.NoError(t, err)
 
 	c := core.Components{LogicRunner: lr}
+
 	c.MessageBus = testmessagebus.NewTestMessageBus(t)
-	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, []core.StaticRole{core.StaticRoleVirtual}, nil, "", ""))
+
+	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleVirtual, nil, "", ""))
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -149,7 +153,6 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	c.Ledger = tempLedger
 
 	nodeConfig := configuration.NewConfiguration()
-	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig, scheme)
 	require.NotNil(t, serviceNetwork)
 
@@ -169,6 +172,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	cm.Register(initCrypto(t))
 	cm.Inject(serviceNetwork, c.NodeNetwork, pulseManagerMock, netCoordinator, amMock, netSwitcher)
 
+	// TODO: We need to use only transport from service Network in pulsar
 	err = serviceNetwork.Init(ctx)
 	require.NoError(t, err)
 
@@ -184,6 +188,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 }
 
 func TestPulsar_SendPulseToNode(t *testing.T) {
+	t.Skip("INS-31")
 	ctx := inslogger.TestContext(t)
 	// Arrange
 	bootstrapLedger, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(ctx, t, nil)
