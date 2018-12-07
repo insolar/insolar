@@ -169,8 +169,8 @@ copy_certs()
     cp $NODES_DATA/certs/discovery_cert_1.json $NODE_1/cert.json
     cp $NODES_DATA/certs/discovery_cert_2.json $NODE_2/cert.json
     cp $NODES_DATA/certs/discovery_cert_3.json $NODE_3/cert.json
-#    cp $NODES_DATA/certs/discovery_cert_4.json $NODE_4/cert.json
-#    cp $NODES_DATA/certs/discovery_cert_5.json $NODE_5/cert.json
+    cp $NODES_DATA/certs/discovery_cert_4.json $NODE_4/cert.json
+    cp $NODES_DATA/certs/discovery_cert_5.json $NODE_5/cert.json
 }
 
 genesis()
@@ -212,9 +212,9 @@ $INSOLARD --config scripts/insolard/insolar_1.yaml &> $NODE_1/output.txt &
 echo "STARTED 1"
 $INSOLARD --config scripts/insolard/insolar_2.yaml &> $NODE_2/output.txt &
 echo "STARTED 2"
-$INSOLARD --config scripts/insolard/insolar_3.yaml &> $NODE_3/output.txt
-#echo "STARTED 3"
-#$INSOLARD --config scripts/insolard/insolar_4.yaml &> $NODE_4/output.txt &
-#echo "STARTED 4"
-#$INSOLARD --config scripts/insolard/insolar_5.yaml &> $NODE_5/output.txt
-#echo "FINISHING ..."
+$INSOLARD --config scripts/insolard/insolar_3.yaml &> $NODE_3/output.txt &
+echo "STARTED 3"
+$INSOLARD --config scripts/insolard/insolar_4.yaml &> $NODE_4/output.txt &
+echo "STARTED 4"
+$INSOLARD --config scripts/insolard/insolar_5.yaml &> $NODE_5/output.txt
+echo "FINISHING ..."
