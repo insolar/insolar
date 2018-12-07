@@ -379,7 +379,7 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, prototype core.RecordRef
 }
 
 //GetObjChildrenIterator ...
-func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.RecordRef, iteratorId string) (*proxyctx.ChildrenTypedIterator, error) {
+func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.RecordRef, iteratorID string) (*proxyctx.ChildrenTypedIterator, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return &proxyctx.ChildrenTypedIterator{}, err
@@ -389,7 +389,7 @@ func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.R
 	req := rpctypes.UpGetObjChildrenIteratorReq{
 		UpBaseReq: MakeUpBaseReq(),
 
-		IteratorId: iteratorId,
+		IteratorID: iteratorID,
 		Obj:        obj,
 		Prototype:  prototype,
 	}
@@ -405,7 +405,7 @@ func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.R
 	return &proxyctx.ChildrenTypedIterator{
 		Parent:         obj,
 		ChildPrototype: prototype,
-		IteratorId:     res.Iterator.Id,
+		IteratorID:     res.Iterator.Id,
 		Buff:           res.Iterator.Buff,
 		CanFetch:       res.Iterator.CanFetch,
 	}, nil

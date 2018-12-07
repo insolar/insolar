@@ -25,7 +25,7 @@ type ProxyHelper interface {
 	RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error)
 	SaveAsChild(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
 	GetObjChildren(head core.RecordRef, prototype core.RecordRef) ([]core.RecordRef, error)
-	GetObjChildrenIterator(head core.RecordRef, prototype core.RecordRef, iteratorId string) (*ChildrenTypedIterator, error)
+	GetObjChildrenIterator(head core.RecordRef, prototype core.RecordRef, iteratorID string) (*ChildrenTypedIterator, error)
 	SaveAsDelegate(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
 	GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error)
 	DeactivateObject(object core.RecordRef) error
@@ -80,12 +80,12 @@ func (oi *ChildrenTypedIterator) fetch() error {
 	oi.buffIndex = 0
 	oi.CanFetch = false
 
-	temp, err := Current.GetObjChildrenIterator(oi.Parent, oi.ChildPrototype, oi.IteratorId)
+	temp, err := Current.GetObjChildrenIterator(oi.Parent, oi.ChildPrototype, oi.IteratorID)
 	if err != nil {
 		return err
 	}
 	oi.Buff = temp.Buff
-	oi.IteratorId = temp.IteratorId
+	oi.IteratorID = temp.IteratorID
 	oi.CanFetch = temp.CanFetch
 
 	return nil

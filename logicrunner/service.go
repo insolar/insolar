@@ -267,8 +267,8 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 		return nil
 	}
 	am := gpr.lr.ArtifactManager
-	iteratorId := req.IteratorId
-	if _, ok := iteratorMap[iteratorId]; !ok {
+	iteratorID := req.IteratorID
+	if _, ok := iteratorMap[iteratorID]; !ok {
 		i, err := am.GetChildren(ctx, req.Obj, nil)
 		if err != nil {
 			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get children")
@@ -279,12 +279,12 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't generate UUID")
 		}
 
-		iteratorId = id.String()
-		iteratorMap[iteratorId] = &i
+		iteratorID = id.String()
+		iteratorMap[iteratorID] = &i
 	}
 
-	i := *iteratorMap[iteratorId]
-	rep.Iterator.Id = iteratorId
+	i := *iteratorMap[iteratorID]
+	rep.Iterator.Id = iteratorID
 	rep.Iterator.CanFetch = i.HasNext()
 
 	for len(rep.Iterator.Buff) < iteratorBuffSize && i.HasNext() {
