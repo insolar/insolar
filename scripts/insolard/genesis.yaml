@@ -9,15 +9,15 @@ pulsar_public_keys:
   - "pulsar_public_key"
 discovery_nodes:
   -
-    host: "127.0.0.1:53831"
+    host: "127.0.0.1:13831"
     role: "virtual"
     keys_file: "scripts/insolard/nodes/1/keys.json"
   -
-    host: "127.0.0.1:53832"
+    host: "127.0.0.1:23832"
     role: "heavy_material"
     keys_file: "scripts/insolard/nodes/2/keys.json"
   -
-    host: "127.0.0.1:53833"
+    host: "127.0.0.1:33833"
     role: "light_material"
     keys_file: "scripts/insolard/nodes/3/keys.json"
 #  -
