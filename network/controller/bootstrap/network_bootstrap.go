@@ -77,7 +77,6 @@ func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
 		return errors.Wrap(err, "Error authorizing on discovery node")
 	}
 
-	// TODO: fix workaround challenge request disable
 	data, err := nb.challengeController.Execute(ctx, discoveryNode, sessionID)
 	if err != nil {
 		return errors.Wrap(err, "Error executing double challenge response")
