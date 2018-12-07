@@ -57,6 +57,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		selected, err := jc.QueryRole(ctx, core.DynamicRoleVirtualExecutor, nil, 0)
 		require.NoError(t, err)
 		assert.Equal(t, 3, len(selected))
+		// Indexes are hard-coded from previously calculated values.
 		assert.Equal(t, []core.RecordRef{nodes[25], nodes[78], nodes[36]}, selected)
 	})
 
@@ -68,6 +69,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		selected, err := jc.QueryRole(ctx, core.DynamicRoleVirtualExecutor, &obj, 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(selected))
+		// Indexes are hard-coded from previously calculated values.
 		assert.Equal(t, []core.RecordRef{nodes[63]}, selected)
 	})
 
@@ -81,6 +83,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		selected, err := jc.QueryRole(ctx, core.DynamicRoleLightExecutor, &obj, 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(selected))
+		// Indexes are hard-coded from previously calculated values.
 		assert.Equal(t, []core.RecordRef{nodes[20]}, selected)
 	})
 }

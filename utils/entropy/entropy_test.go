@@ -114,6 +114,7 @@ func TestSelectByEntropy_SelectsCorrectElement(t *testing.T) {
 		}
 
 		assert.Equal(t, 1, len(out))
+		// Indexes are hard-coded from previously calculated values.
 		assert.Equal(t, []core.RecordRef{values[83]}, selected)
 	})
 
@@ -126,6 +127,7 @@ func TestSelectByEntropy_SelectsCorrectElement(t *testing.T) {
 		}
 
 		assert.Equal(t, 3, len(out))
+		// Indexes are hard-coded from previously calculated values.
 		assert.Equal(t, []core.RecordRef{values[83], values[23], values[58]}, selected)
 	})
 }
