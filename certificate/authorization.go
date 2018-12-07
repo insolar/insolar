@@ -72,7 +72,7 @@ func (authCert *AuthorizationCertificate) SignNodePart(key crypto.PrivateKey) ([
 // Deserialize deserializes data to AuthorizationCertificate interface
 func Deserialize(data []byte, keyProc core.KeyProcessor) (core.AuthorizationCertificate, error) {
 	cert := &AuthorizationCertificate{}
-	err := core.Deserialize(data, &cert)
+	err := core.Deserialize(data, cert)
 
 	key, err := keyProc.ImportPublicKey([]byte(cert.PublicKey))
 
