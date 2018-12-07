@@ -42,7 +42,6 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		db:                         db,
 		NodeNet:                    nodeNet,
 		PlatformCryptographyScheme: testutils.NewPlatformCryptographyScheme(),
-		roleCounts:                 map[core.DynamicRole]int{core.DynamicRoleVirtualExecutor: 3},
 	}
 	err := db.AddPulse(ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
 	require.NoError(t, err)
@@ -52,6 +51,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	}
 
 	t.Run("without object returns correct nodes", func(t *testing.T) {
+		jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleVirtualExecutor: 3}
 		nodeNet.GetActiveNodesByRoleMock.Expect(core.DynamicRoleVirtualExecutor).Return(nodes)
 
 		selected, err := jc.QueryRole(ctx, core.DynamicRoleVirtualExecutor, nil, 0)
@@ -61,6 +61,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	})
 
 	t.Run("virtual returns correct nodes", func(t *testing.T) {
+		jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleVirtualExecutor: 1}
 		obj := core.RecordRef{3, 14, 15, 92}
 		nodeNet.GetActiveNodesByRoleMock.Expect(core.DynamicRoleVirtualExecutor).Return(nodes)
 
@@ -71,6 +72,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	})
 
 	t.Run("material returns correct nodes", func(t *testing.T) {
+		jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleLightExecutor: 1}
 		err := db.SetJetTree(ctx, 0, &jet.Tree{Head: &jet.Jet{}})
 		require.NoError(t, err)
 		obj := core.RecordRef{3, 14, 15, 92}
