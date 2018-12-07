@@ -34,6 +34,7 @@ const (
 	// meta
 	typeGenesis TypeID = 10
 	typeChild   TypeID = 11
+	typeJet     TypeID = 12
 
 	// request
 	typeCallRequest TypeID = 20
@@ -70,6 +71,8 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 		return &GenesisRecord{}
 	case typeResult:
 		return &ResultRecord{}
+	case typeJet:
+		return &JetRecord{}
 	default:
 		panic(fmt.Errorf("unknown record type id %v", id))
 	}

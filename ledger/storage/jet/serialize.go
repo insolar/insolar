@@ -14,21 +14,32 @@
  *    limitations under the License.
  */
 
-package jetdrop
+package jet
 
 import (
-	"github.com/insolar/insolar/core"
+	"bytes"
+
+	"github.com/ugorji/go/codec"
 )
 
-// JetDrop is a blockchain block.
-// It contains hashes of the current block and the previous one.
-type JetDrop struct {
-	// Pulse number (probably we should save it too).
-	Pulse core.PulseNumber
+// Encode serializes jet drop.
+func Encode(drop *JetDrop) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+	err := enc.Encode(drop)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
 
-	// PrevHash is a hash of all record hashes belongs to previous pulse.
-	PrevHash []byte
-
-	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
-	Hash []byte
+// Decode deserializes jet drop.
+func Decode(buf []byte) (*JetDrop, error) {
+	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
+	var drop JetDrop
+	err := dec.Decode(&drop)
+	if err != nil {
+		return nil, err
+	}
+	return &drop, nil
 }

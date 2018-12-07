@@ -17,14 +17,15 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/record"
 )
 
 type keyval struct {
@@ -50,6 +51,14 @@ func prefixkey(prefix byte, key []byte) []byte {
 	k := make([]byte, core.RecordIDSize+1)
 	k[0] = prefix
 	_ = copy(k[1:], key)
+	return k
+}
+
+func prefixkeyany(prefix byte, parts ...[]byte) []byte {
+	tail := bytes.Join(parts, nil)
+	k := make([]byte, len(tail)+1)
+	k[0] = prefix
+	_ = copy(k[1:], tail)
 	return k
 }
 
@@ -96,8 +105,8 @@ func (m *TransactionManager) Discard() {
 // GetRequest returns request record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) (record.Request, error) {
-	rec, err := m.GetRecord(ctx, id)
+func (m *TransactionManager) GetRequest(ctx context.Context, jet core.RecordID, id *core.RecordID) (record.Request, error) {
+	rec, err := m.GetRecord(ctx, jet, id)
 	if err != nil {
 		return nil, err
 	}
@@ -107,15 +116,15 @@ func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) 
 }
 
 // GetBlob returns binary value stored by record ID.
-func (m *TransactionManager) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
-	k := prefixkey(scopeIDBlob, id[:])
+func (m *TransactionManager) GetBlob(ctx context.Context, jet core.RecordID, id *core.RecordID) ([]byte, error) {
+	k := prefixkeyany(scopeIDBlob, jet[:], id[:])
 	return m.get(ctx, k)
 }
 
 // SetBlob saves binary value for provided pulse.
-func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+func (m *TransactionManager) SetBlob(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	id := record.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
-	k := prefixkey(scopeIDBlob, id[:])
+	k := prefixkeyany(scopeIDBlob, jet[:], id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
 		return err
@@ -137,8 +146,8 @@ func (m *TransactionManager) SetBlob(ctx context.Context, pulseNumber core.Pulse
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
-	k := prefixkey(scopeIDRecord, id[:])
+func (m *TransactionManager) GetRecord(ctx context.Context, jet core.RecordID, id *core.RecordID) (record.Record, error) {
+	k := prefixkeyany(scopeIDRecord, jet[:], id[:])
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -150,14 +159,14 @@ func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (m *TransactionManager) SetRecord(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	recHash := m.db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := rec.WriteHashData(recHash)
 	if err != nil {
 		return nil, err
 	}
 	id := core.NewRecordID(pulseNumber, recHash.Sum(nil))
-	k := prefixkey(scopeIDRecord, id[:])
+	k := prefixkeyany(scopeIDRecord, jet[:], id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
 		return err
@@ -179,13 +188,14 @@ func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.Pul
 // GetObjectIndex fetches object lifeline index.
 func (m *TransactionManager) GetObjectIndex(
 	ctx context.Context,
+	jet core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
 ) (*index.ObjectLifeline, error) {
 	if forupdate {
 		m.lockOnID(id)
 	}
-	k := prefixkey(scopeIDLifeline, id[:])
+	k := prefixkeyany(scopeIDLifeline, jet[:], id[:])
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -196,10 +206,11 @@ func (m *TransactionManager) GetObjectIndex(
 // SetObjectIndex stores object lifeline index.
 func (m *TransactionManager) SetObjectIndex(
 	ctx context.Context,
+	jet core.RecordID,
 	id *core.RecordID,
 	idx *index.ObjectLifeline,
 ) error {
-	k := prefixkey(scopeIDLifeline, id[:])
+	k := prefixkeyany(scopeIDLifeline, jet[:], id[:])
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
@@ -211,9 +222,13 @@ func (m *TransactionManager) SetObjectIndex(
 }
 
 // RemoveObjectIndex removes an index of an object
-func (m *TransactionManager) RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error {
+func (m *TransactionManager) RemoveObjectIndex(
+	ctx context.Context,
+	jet core.RecordID,
+	ref *core.RecordID,
+) error {
 	m.lockOnID(ref)
-	k := prefixkey(scopeIDLifeline, ref[:])
+	k := prefixkeyany(scopeIDLifeline, jet[:], ref[:])
 	return m.remove(ctx, k)
 }
 

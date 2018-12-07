@@ -5,19 +5,19 @@ package record
 import "strconv"
 
 const (
-	_TypeID_name_0 = "typeGenesistypeChild"
+	_TypeID_name_0 = "typeGenesistypeChildtypeJet"
 	_TypeID_name_1 = "typeCallRequest"
 	_TypeID_name_2 = "typeResulttypeTypetypeCodetypeActivatetypeAmendtypeDeactivate"
 )
 
 var (
-	_TypeID_index_0 = [...]uint8{0, 11, 20}
+	_TypeID_index_0 = [...]uint8{0, 11, 20, 27}
 	_TypeID_index_2 = [...]uint8{0, 10, 18, 26, 38, 47, 61}
 )
 
 func (i TypeID) String() string {
 	switch {
-	case 10 <= i && i <= 11:
+	case 10 <= i && i <= 12:
 		i -= 10
 		return _TypeID_name_0[_TypeID_index_0[i]:_TypeID_index_0[i+1]]
 	case i == 20:
