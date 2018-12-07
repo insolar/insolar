@@ -118,12 +118,11 @@ func (jc *JetCoordinator) getNodeViaEntropy(
 	if err != nil {
 		return nil, err
 	}
-	_, err = h.Write(obj[:])
+	_, err = h.Write(obj.Record()[:])
 	if err != nil {
 		return nil, err
 	}
-	objEntropy := h.Sum(nil)
-	nodes, err := refsByEntropy(jc.PlatformCryptographyScheme, objEntropy, candidates, 1)
+	nodes, err := refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +148,7 @@ func (jc *JetCoordinator) getNodeViaJet(
 	if err != nil {
 		return nil, err
 	}
-	_, err = h.Write(jet.ID[:])
+	_, err = h.Write(jet.Prefix)
 	if err != nil {
 		return nil, err
 	}

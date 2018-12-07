@@ -68,7 +68,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		selected, err := jc.QueryRole(ctx, core.DynamicRoleVirtualExecutor, &obj, 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(selected))
-		assert.Equal(t, []core.RecordRef{nodes[43]}, selected)
+		assert.Equal(t, []core.RecordRef{nodes[97]}, selected)
 	})
 
 	t.Run("material returns correct nodes", func(t *testing.T) {
@@ -79,8 +79,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 
 		selected, err := jc.QueryRole(ctx, core.DynamicRoleLightExecutor, &obj, 0)
 		require.NoError(t, err)
-
 		assert.Equal(t, 1, len(selected))
-		assert.Equal(t, []core.RecordRef{nodes[22]}, selected)
+		assert.Equal(t, []core.RecordRef{nodes[5]}, selected)
 	})
 }
