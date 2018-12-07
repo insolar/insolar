@@ -18,7 +18,6 @@ package proxyctx
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 )
 
 // ProxyHelper interface with methods that are needed by contract proxies
@@ -49,16 +48,13 @@ type ChildrenTypedIterator struct {
 }
 
 func (oi *ChildrenTypedIterator) HasNext() bool {
-	log.Debugf(">>> HasNext: %+v", oi.hasInBuffer() || oi.CanFetch)
 	return oi.hasInBuffer() || oi.CanFetch
 }
 
 func (oi *ChildrenTypedIterator) Next() (core.RecordRef, error) {
 	if !oi.hasInBuffer() && oi.CanFetch {
-		log.Debugf(">>> Next() try to fetch")
 		err := oi.fetch()
 		if err != nil {
-			log.Debugf(">>> Next() fetch Error")
 			return core.RecordRef{}, err
 		}
 	}
@@ -67,13 +63,11 @@ func (oi *ChildrenTypedIterator) Next() (core.RecordRef, error) {
 }
 
 func (oi *ChildrenTypedIterator) hasInBuffer() bool {
-	log.Debugf(">>> hasInBuffer: %+v", oi.buffIndex < len(oi.Buff))
 	return oi.buffIndex < len(oi.Buff)
 }
 
 func (oi *ChildrenTypedIterator) nextFromBuffer() core.RecordRef {
 	if !oi.hasInBuffer() {
-		log.Debugf(">>> nextFromBuffer missing!")
 		return core.RecordRef{}
 	}
 
@@ -85,8 +79,6 @@ func (oi *ChildrenTypedIterator) nextFromBuffer() core.RecordRef {
 func (oi *ChildrenTypedIterator) fetch() error {
 	oi.buffIndex = 0
 	oi.CanFetch = false
-
-	log.Debugf(">>> oi.IteratorId before fetch: %+v", oi.IteratorId)
 
 	temp, err := Current.GetObjChildrenIterator(oi.Parent, oi.ChildPrototype, oi.IteratorId)
 	if err != nil {
