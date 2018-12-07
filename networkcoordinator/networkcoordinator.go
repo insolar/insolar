@@ -54,7 +54,7 @@ func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 
 // Start implements interface of Component
 func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	nc.MessageBus.MustRegister(core.NetworkCoordinatorNodeSignRequest, nc.SignCertificate)
+	nc.MessageBus.MustRegister(core.NetworkCoordinatorNodeSignRequest, nc.SignCert)
 	return nil
 }
 
@@ -65,7 +65,7 @@ func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
 	return nc.zeroCoordinator
 }
 
-// GetCert method returns node certificate
+// GetCert method returns node certificate by requesting sign from discovery nodes
 func (nc *NetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *core.RecordRef) (core.Certificate, error) {
 	pKey, role, err := nc.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
@@ -73,7 +73,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *co
 	}
 
 	currentNodeCert := nc.CertificateManager.GetCertificate()
-	cert, err := nc.CertificateManager.NewUnsignedCertificate(pKey, role, registeredNodeRef.String())
+	registeredNodeCert, err := nc.CertificateManager.NewUnsignedCertificate(pKey, role, registeredNodeRef.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
 	}
@@ -83,9 +83,9 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *co
 		if err != nil {
 			return nil, errors.Wrap(err, "[ GetCert ] Couldn't request cert sign")
 		}
-		cert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
+		registeredNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
 	}
-	return cert, nil
+	return registeredNodeCert, nil
 }
 
 func (nc *NetworkCoordinator) requestCertSign(ctx context.Context, discoveryNode core.DiscoveryNode, registeredNodeRef *core.RecordRef) ([]byte, error) {
@@ -95,7 +95,7 @@ func (nc *NetworkCoordinator) requestCertSign(ctx context.Context, discoveryNode
 	currentNodeCert := nc.CertificateManager.GetCertificate()
 
 	if discoveryNode.GetNodeRef() == currentNodeCert.GetNodeRef() {
-		sign, err = nc.signNode(ctx, registeredNodeRef)
+		sign, err = nc.signCert(ctx, registeredNodeRef)
 		if err != nil {
 			return nil, err
 		}
@@ -121,28 +121,28 @@ func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core
 	return nc.CertificateManager.VerifyAuthorizationCertificate(certificate)
 }
 
-// SignCertificate signs certificate for some node
-func (nc *NetworkCoordinator) SignCertificate(ctx context.Context, p core.Parcel) (core.Reply, error) {
+// SignCert signs certificate for some node with node own key
+func (nc *NetworkCoordinator) SignCert(ctx context.Context, p core.Parcel) (core.Reply, error) {
 	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
-	sign, err := nc.signNode(ctx, nodeRef)
+	sign, err := nc.signCert(ctx, nodeRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SignCertificate ] Couldn't extract response")
+		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
 	}
 	return &reply.NodeSign{
 		Sign: sign,
 	}, nil
 }
 
-func (nc *NetworkCoordinator) signNode(ctx context.Context, nodeRef *core.RecordRef) ([]byte, error) {
-	pKey, role, err := nc.getNodeInfo(ctx, nodeRef)
+func (nc *NetworkCoordinator) signCert(ctx context.Context, registeredNodeRef *core.RecordRef) ([]byte, error) {
+	pKey, role, err := nc.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SignCertificate ] Couldn't extract response")
+		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
 	}
 
-	data := []byte(pKey + nodeRef.String() + role)
+	data := []byte(pKey + registeredNodeRef.String() + role)
 	sign, err := nc.CS.Sign(data)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SignCertificate ] Couldn't sign")
+		return nil, errors.Wrap(err, "[ SignCert ] Couldn't sign")
 	}
 
 	return sign.Bytes(), nil
