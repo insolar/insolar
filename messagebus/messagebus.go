@@ -38,10 +38,10 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Service                    core.Network                    `inject:""`
-	JetCoordinator             core.JetCoordinator             `inject:""`
-	LocalStorage               core.LocalStorage               `inject:""`
-	PulseManager               core.PulseManager               `inject:""`
+	Service        core.Network        `inject:""`
+	JetCoordinator core.JetCoordinator `inject:""`
+	LocalStorage   core.LocalStorage   `inject:""`
+	//PulseManager               core.PulseManager               `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
