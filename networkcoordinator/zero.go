@@ -34,8 +34,8 @@ func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef *core.Re
 	return nil, errors.New("GetCert is not allowed in Zero Network")
 }
 
-func (znc *zeroNetworkCoordinator) signCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
-	return nil, errors.New("signCert is not allowed in Zero Network")
+func (znc *zeroNetworkCoordinator) signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error) {
+	return nil, errors.New("signCertHandler is not allowed in Zero Network")
 }
 
 func (znc *zeroNetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {

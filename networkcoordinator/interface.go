@@ -34,5 +34,5 @@ type Coordinator interface {
 	SetPulse(ctx context.Context, pulse core.Pulse) error
 
 	// signCert is used by MsgBus handler for
-	signCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error)
+	signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error)
 }

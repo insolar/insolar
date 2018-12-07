@@ -19,12 +19,7 @@ package networkcoordinator
 import (
 	"context"
 
-	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
-	"github.com/pkg/errors"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
@@ -58,7 +53,7 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 	return nil
 }
 
-func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
+func (nc *NetworkCoordinator) getCoordinator() Coordinator {
 	if nc.NetworkSwitcher.GetState() == core.CompleteNetworkState {
 		return nc.realCoordinator
 	}
@@ -67,53 +62,7 @@ func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
 
 // GetCert method returns node certificate by requesting sign from discovery nodes
 func (nc *NetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *core.RecordRef) (core.Certificate, error) {
-	pKey, role, err := nc.getNodeInfo(ctx, registeredNodeRef)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetCert ] Couldn't get node info")
-	}
 
-	currentNodeCert := nc.CertificateManager.GetCertificate()
-	registeredNodeCert, err := nc.CertificateManager.NewUnsignedCertificate(pKey, role, registeredNodeRef.String())
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
-	}
-
-	for i, discoveryNode := range currentNodeCert.GetDiscoveryNodes() {
-		sign, err := nc.requestCertSign(ctx, discoveryNode, registeredNodeRef)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ GetCert ] Couldn't request cert sign")
-		}
-		registeredNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
-	}
-	return registeredNodeCert, nil
-}
-
-func (nc *NetworkCoordinator) requestCertSign(ctx context.Context, discoveryNode core.DiscoveryNode, registeredNodeRef *core.RecordRef) ([]byte, error) {
-	var sign []byte
-	var err error
-
-	currentNodeCert := nc.CertificateManager.GetCertificate()
-
-	if discoveryNode.GetNodeRef() == currentNodeCert.GetNodeRef() {
-		sign, err = nc.signCert(ctx, registeredNodeRef)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		msg := &message.NodeSignPayload{
-			NodeRef: registeredNodeRef,
-		}
-		opts := &core.MessageSendOptions{
-			Receiver: discoveryNode.GetNodeRef(),
-		}
-		r, err := nc.MessageBus.Send(ctx, msg, opts)
-		if err != nil {
-			return nil, err
-		}
-		sign = r.(reply.NodeSignInt).GetSign()
-	}
-
-	return sign, nil
 }
 
 // ValidateCert validates node certificate
@@ -123,53 +72,8 @@ func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core
 
 // signCertHandler is MsgBus handler that signs certificate for some node with node own key
 func (nc *NetworkCoordinator) signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error) {
-	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
-	sign, err := nc.signCert(ctx, nodeRef)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
-	}
-	return &reply.NodeSign{
-		Sign: sign,
-	}, nil
-}
+	return nc.getCoordinator().signCertHandler(ctx, p)
 
-// signCert is MsgBus handler that signs certificate for some node with node own key
-// func (nc *NetworkCoordinator) signCert(ctx context.Context, p core.Parcel) (core.Reply, error) {
-// 	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
-// 	sign, err := nc.signCert(ctx, nodeRef)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
-// 	}
-// 	return &reply.NodeSign{
-// 		Sign: sign,
-// 	}, nil
-// }
-
-func (nc *NetworkCoordinator) signCert(ctx context.Context, registeredNodeRef *core.RecordRef) ([]byte, error) {
-	pKey, role, err := nc.getNodeInfo(ctx, registeredNodeRef)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
-	}
-
-	data := []byte(pKey + registeredNodeRef.String() + role)
-	sign, err := nc.CS.Sign(data)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignCert ] Couldn't sign")
-	}
-
-	return sign.Bytes(), nil
-}
-
-func (nc *NetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *core.RecordRef) (string, string, error) {
-	res, err := nc.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
-	if err != nil {
-		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
-	}
-	pKey, role, err := extractor.NodeInfoResponse(res.(*reply.CallMethod).Result)
-	if err != nil {
-		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't extract response")
-	}
-	return pKey, role, nil
 }
 
 // WriteActiveNodes writes active nodes to ledger
