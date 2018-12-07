@@ -153,7 +153,7 @@ func (es *ExecutionState) ReleaseQueue() {
 	q := es.Queue
 	es.Queue = make([]ExecutionQueueElement, 0)
 
-	for i, qe := range q {
+	for _, qe := range q {
 		qe.result <- ExecutionQueueResult{somebodyElse: true}
 		close(qe.result)
 	}
