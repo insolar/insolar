@@ -21,7 +21,7 @@ import (
 type senderMock struct {
 	t minimock.Tester
 
-	CreateParcelFunc       func(p context.Context, p1 core.Message, p2 core.DelegationToken) (r core.Parcel, r1 error)
+	CreateParcelFunc       func(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) (r core.Parcel, r1 error)
 	CreateParcelCounter    uint64
 	CreateParcelPreCounter uint64
 	CreateParcelMock       msenderMockCreateParcel
@@ -97,6 +97,7 @@ type senderMockCreateParcelInput struct {
 	p  context.Context
 	p1 core.Message
 	p2 core.DelegationToken
+	p3 core.Pulse
 }
 
 type senderMockCreateParcelResult struct {
@@ -105,14 +106,14 @@ type senderMockCreateParcelResult struct {
 }
 
 //Expect specifies that invocation of sender.CreateParcel is expected from 1 to Infinity times
-func (m *msenderMockCreateParcel) Expect(p context.Context, p1 core.Message, p2 core.DelegationToken) *msenderMockCreateParcel {
+func (m *msenderMockCreateParcel) Expect(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) *msenderMockCreateParcel {
 	m.mock.CreateParcelFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &senderMockCreateParcelExpectation{}
 	}
-	m.mainExpectation.input = &senderMockCreateParcelInput{p, p1, p2}
+	m.mainExpectation.input = &senderMockCreateParcelInput{p, p1, p2, p3}
 	return m
 }
 
@@ -129,12 +130,12 @@ func (m *msenderMockCreateParcel) Return(r core.Parcel, r1 error) *senderMock {
 }
 
 //ExpectOnce specifies that invocation of sender.CreateParcel is expected once
-func (m *msenderMockCreateParcel) ExpectOnce(p context.Context, p1 core.Message, p2 core.DelegationToken) *senderMockCreateParcelExpectation {
+func (m *msenderMockCreateParcel) ExpectOnce(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) *senderMockCreateParcelExpectation {
 	m.mock.CreateParcelFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &senderMockCreateParcelExpectation{}
-	expectation.input = &senderMockCreateParcelInput{p, p1, p2}
+	expectation.input = &senderMockCreateParcelInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -144,7 +145,7 @@ func (e *senderMockCreateParcelExpectation) Return(r core.Parcel, r1 error) {
 }
 
 //Set uses given function f as a mock of sender.CreateParcel method
-func (m *msenderMockCreateParcel) Set(f func(p context.Context, p1 core.Message, p2 core.DelegationToken) (r core.Parcel, r1 error)) *senderMock {
+func (m *msenderMockCreateParcel) Set(f func(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) (r core.Parcel, r1 error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -153,18 +154,18 @@ func (m *msenderMockCreateParcel) Set(f func(p context.Context, p1 core.Message,
 }
 
 //CreateParcel implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) CreateParcel(p context.Context, p1 core.Message, p2 core.DelegationToken) (r core.Parcel, r1 error) {
+func (m *senderMock) CreateParcel(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) (r core.Parcel, r1 error) {
 	counter := atomic.AddUint64(&m.CreateParcelPreCounter, 1)
 	defer atomic.AddUint64(&m.CreateParcelCounter, 1)
 
 	if len(m.CreateParcelMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.CreateParcelMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to senderMock.CreateParcel. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to senderMock.CreateParcel. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.CreateParcelMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, senderMockCreateParcelInput{p, p1, p2}, "sender.CreateParcel got unexpected parameters")
+		testify_assert.Equal(m.t, *input, senderMockCreateParcelInput{p, p1, p2, p3}, "sender.CreateParcel got unexpected parameters")
 
 		result := m.CreateParcelMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -182,7 +183,7 @@ func (m *senderMock) CreateParcel(p context.Context, p1 core.Message, p2 core.De
 
 		input := m.CreateParcelMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, senderMockCreateParcelInput{p, p1, p2}, "sender.CreateParcel got unexpected parameters")
+			testify_assert.Equal(m.t, *input, senderMockCreateParcelInput{p, p1, p2, p3}, "sender.CreateParcel got unexpected parameters")
 		}
 
 		result := m.CreateParcelMock.mainExpectation.result
@@ -197,11 +198,11 @@ func (m *senderMock) CreateParcel(p context.Context, p1 core.Message, p2 core.De
 	}
 
 	if m.CreateParcelFunc == nil {
-		m.t.Fatalf("Unexpected call to senderMock.CreateParcel. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to senderMock.CreateParcel. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.CreateParcelFunc(p, p1, p2)
+	return m.CreateParcelFunc(p, p1, p2, p3)
 }
 
 //CreateParcelMinimockCounter returns a count of senderMock.CreateParcelFunc invocations
