@@ -62,16 +62,21 @@ func (m *PulseManager) HeavySync(
 		buserr   error
 	)
 
+	pulse,err  := m.Current(ctx)
+	if err != nil{
+		return err
+	}
+
 	if retry {
 		inslog.Infof("send reset message for pulse %v (retry sync)", pn)
 		resetMsg := &message.HeavyReset{PulseNum: pn}
-		if busreply, buserr := m.Bus.Send(ctx, resetMsg, nil); buserr != nil {
+		if busreply, buserr := m.Bus.Send(ctx, resetMsg, *pulse, nil); buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg := &message.HeavyStartStop{PulseNum: pn}
-	busreply, buserr = m.Bus.Send(ctx, signalMsg, nil)
+	busreply, buserr = m.Bus.Send(ctx, signalMsg, *pulse, nil)
 	// TODO: check if locked
 	if buserr != nil {
 		return HeavyErr{reply: busreply, err: buserr}
