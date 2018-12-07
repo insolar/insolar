@@ -35,6 +35,7 @@ type NetworkCoordinator struct {
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
 	Bus                 core.MessageBus          `inject:""`
 	CS                  core.CryptographyService `inject:""`
+	PM                  core.PulseManager        `inject:""`
 
 	realCoordinator core.NetworkCoordinator
 	zeroCoordinator core.NetworkCoordinator
