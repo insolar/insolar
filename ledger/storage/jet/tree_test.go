@@ -24,51 +24,48 @@ import (
 )
 
 func TestTree_Find(t *testing.T) {
-	// Pulse in ID is equal to depth. Prefix contains unique id.
+	// Pulse in ID is equal to depth.
 	tree := Tree{
 		Head: &Jet{
-			Prefix: []byte{1},
-			ID:     *core.NewRecordID(0, nil),
+			ID: *core.NewRecordID(0, nil),
 			Right: &Jet{
-				Prefix: []byte{2},
-				ID:     *core.NewRecordID(1, nil),
+				ID: *core.NewRecordID(1, nil),
 				Right: &Jet{
-					Prefix: []byte{3},
-					ID:     *core.NewRecordID(2, nil),
+					ID: *core.NewRecordID(2, nil),
 					Left: &Jet{
-						Prefix: []byte{4},
-						ID:     *core.NewRecordID(3, nil),
+						ID: *core.NewRecordID(3, nil),
 						Right: &Jet{
-							Prefix: []byte{5},
-							ID:     *core.NewRecordID(4, nil),
+							ID: *core.NewRecordID(4, nil),
 						},
 						Left: &Jet{
-							Prefix: []byte{6},
-							ID:     *core.NewRecordID(4, nil),
+							ID: *core.NewRecordID(4, nil),
 						},
 					},
 					Right: &Jet{
-						Prefix: []byte{7},
-						ID:     *core.NewRecordID(3, nil),
+						ID: *core.NewRecordID(3, nil),
 					},
 				},
 			},
 			Left: &Jet{
-				Prefix: []byte{8},
-				ID:     *core.NewRecordID(1, nil),
+				ID: *core.NewRecordID(1, nil),
 			},
 		},
 	}
 	val := []byte{0xD5} // 11010101
 
-	jet := tree.Find(val, 0)
+	jet, depth := tree.Find(val, 0)
 	assert.Equal(t, tree.Head, jet)
-	jet = tree.Find(val, 1)
+	assert.Equal(t, depth, 0)
+	jet, depth = tree.Find(val, 1)
 	assert.Equal(t, tree.Head.Right, jet)
-	jet = tree.Find(val, 2)
+	assert.Equal(t, depth, 1)
+	jet, depth = tree.Find(val, 2)
 	assert.Equal(t, tree.Head.Right.Right, jet)
-	jet = tree.Find(val, 3)
+	assert.Equal(t, depth, 2)
+	jet, depth = tree.Find(val, 3)
 	assert.Equal(t, tree.Head.Right.Right.Left, jet)
-	jet = tree.Find(val, 4)
+	assert.Equal(t, depth, 3)
+	jet, depth = tree.Find(val, 4)
 	assert.Equal(t, tree.Head.Right.Right.Left.Right, jet)
+	assert.Equal(t, depth, 4)
 }
