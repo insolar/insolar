@@ -188,6 +188,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 }
 
 func TestPulsar_SendPulseToNode(t *testing.T) {
+	t.Skip("INS-31")
 	ctx := inslogger.TestContext(t)
 	// Arrange
 	bootstrapLedger, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(ctx, t, nil)

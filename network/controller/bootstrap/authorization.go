@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -134,7 +135,7 @@ func (ac *AuthorizationController) Register(ctx context.Context, discoveryNode *
 func (ac *AuthorizationController) checkClaim(sessionID SessionID, claim *packets.NodeJoinClaim) error {
 	session, err := ac.sessionManager.ReleaseSession(sessionID)
 	if err != nil {
-		return errors.Wrapf(err, "Error getting section %d for authorization", sessionID)
+		return errors.Wrapf(err, "Error getting session %d for authorization", sessionID)
 	}
 	if !claim.NodeRef.Equal(session.NodeID) {
 		return errors.New("Claim node ID is not equal to session node ID")
@@ -156,7 +157,7 @@ func (ac *AuthorizationController) processRegisterRequest(request network.Reques
 
 func (ac *AuthorizationController) processAuthorizeRequest(request network.Request) (network.Response, error) {
 	data := request.GetData().(*AuthorizationRequest)
-	cert, err := certificate.Deserialize(data.Certificate)
+	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
 		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
