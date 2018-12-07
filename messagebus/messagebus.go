@@ -67,25 +67,21 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 // stream is exhausted.
 //
 // Player can be created from MessageBus and passed as MessageBus instance.
-func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageBus, error) {
-	tape, err := newMemoryTapeFromReader(ctx, r)
+func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
+	tape, err := newMemoryTapeFromReader(ctx, reader)
 	if err != nil {
 		return nil, err
 	}
-	pl := newPlayer(mb, tape, mb.PulseManager, mb.PlatformCryptographyScheme)
+	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme)
 	return pl, nil
 }
 
 // NewRecorder creates a new recorder with unique tape that can be used to store message replies.
 //
 // Recorder can be created from MessageBus and passed as MessageBus instance.
-func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
-	pulse, err := mb.PulseManager.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-	tape := newMemoryTape(pulse.PulseNumber)
-	rec := newRecorder(mb, tape, mb.PulseManager, mb.PlatformCryptographyScheme)
+func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) (core.MessageBus, error) {
+	tape := newMemoryTape(currentPulse.PulseNumber)
+	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme)
 	return rec, nil
 }
 
