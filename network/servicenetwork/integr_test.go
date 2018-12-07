@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/log"
@@ -56,6 +57,15 @@ func NewTestSuite() *testSuite {
 		networkPort:  10001,
 	}
 }
+
+type PhaseTimeOut uint8
+
+const (
+	Disable = PhaseTimeOut(iota + 1)
+	Partitial
+	Full
+)
+
 func (s *testSuite) InitNodes() {
 	for _, n := range s.bootstrapNodes {
 		err := n.componentManager.Init(s.ctx)
@@ -150,7 +160,7 @@ func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode 
 	return result
 }
 
-func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
+func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networkNode {
 	address := "127.0.0.1:" + strconv.Itoa(s.networkPort)
 	s.networkPort += 2 // coz consensus transport port+=1
 
@@ -179,12 +189,22 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t), origin.ID())
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
+	var phaseManager phases.PhaseManager
+	switch timeOut {
+	case Disable:
+		phaseManager = phases.NewPhaseManager()
+	case Full:
+		phaseManager = &FullTimeoutPhaseManager{}
+	case Partitial:
+		phaseManager = &PartitialTimeoutPhaseManager{}
+	}
+
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 	keeper := &nodeKeeperWrapper{realKeeper}
 
 	cm := &component.Manager{}
 	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
-	cm.Register(certManager, cryptographyService)
+	cm.Register(certManager, cryptographyService, phaseManager)
 	cm.Inject(serviceNetwork, netSwitcher)
 
 	serviceNetwork.NodeKeeper = keeper
@@ -193,20 +213,19 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	s.T().Skip("will be available after fix !")
-
+	s.T().Skip("will be available after phase result fix !")
 	phasesResult := make(chan error)
+	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
+	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
+
+	s.testNode = s.createNetworkNode(s.T(), Disable)
+
 	s.InitNodes()
-	s.testNode.serviceNetwork.PhaseManager = &phaseManagerWrapper{s.testNode.serviceNetwork.PhaseManager, phasesResult}
-
 	s.StartNodes()
-
 	res := <-phasesResult
 	s.NoError(res)
-
 	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(2, len(activeNodes))
-
 	// teardown
 	<-time.After(time.Second * 5)
 	s.StopNodes()
@@ -214,10 +233,47 @@ func (s *testSuite) TestNodeConnect() {
 
 func TestServiceNetworkIntegration(t *testing.T) {
 	s := NewTestSuite()
-	bootstrapNode1 := s.createNetworkNode(t)
+	suite.Run(t, s)
+}
+
+// Full timeout test
+
+type FullTimeoutPhaseManager struct {
+}
+
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	return nil
+}
+
+func (s *testSuite) TestFullTimeOut() {
+	s.T().Skip("will be available after phase result fix !")
+	networkNodesCount := 5
+	phasesResult := make(chan error)
+	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
 	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
 
-	s.testNode = s.createNetworkNode(t)
+	s.testNode = s.createNetworkNode(s.T(), Full)
 
-	suite.Run(t, s)
+	for i := 0; i < networkNodesCount; i++ {
+		s.networkNodes = append(s.networkNodes, s.createNetworkNode(s.T(), Disable))
+	}
+
+	s.InitNodes()
+	s.StartNodes()
+	res := <-phasesResult
+	s.NoError(res)
+	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(2, len(activeNodes))
+	// teardown
+	<-time.After(time.Second * 5)
+	s.StopNodes()
+}
+
+// Partitial timeout
+
+type PartitialTimeoutPhaseManager struct {
+}
+
+func (ftpm *PartitialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	return nil
 }

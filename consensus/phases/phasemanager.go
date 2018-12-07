@@ -45,7 +45,7 @@ func NewPhaseManager() PhaseManager {
 	return &Phases{}
 }
 
-// Start starts calculate args on phases.
+// OnPulse starts calculate args on phases.
 func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	var err error
 
