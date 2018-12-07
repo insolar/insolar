@@ -284,7 +284,7 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 	}
 
 	i := *iteratorMap[iteratorID]
-	rep.Iterator.Id = iteratorID
+	rep.Iterator.ID = iteratorID
 	rep.Iterator.CanFetch = i.HasNext()
 
 	for len(rep.Iterator.Buff) < iteratorBuffSize && i.HasNext() {

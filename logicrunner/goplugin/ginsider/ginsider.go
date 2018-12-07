@@ -405,7 +405,7 @@ func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.R
 	return &proxyctx.ChildrenTypedIterator{
 		Parent:         obj,
 		ChildPrototype: prototype,
-		IteratorID:     res.Iterator.Id,
+		IteratorID:     res.Iterator.ID,
 		Buff:           res.Iterator.Buff,
 		CanFetch:       res.Iterator.CanFetch,
 	}, nil

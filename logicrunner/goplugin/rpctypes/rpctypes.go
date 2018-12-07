@@ -129,7 +129,7 @@ type UpGetObjChildrenIteratorResp struct {
 }
 
 type ChildIterator struct {
-	Id       string
+	ID       string
 	Buff     []core.RecordRef
 	CanFetch bool
 }
