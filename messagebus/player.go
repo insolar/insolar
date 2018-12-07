@@ -29,13 +29,12 @@ import (
 type player struct {
 	sender
 	tape   tape
-	pm     core.PulseManager
 	scheme core.PlatformCryptographyScheme
 }
 
 // newPlayer creates player instance. It will replay replies from provided tape.
-func newPlayer(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *player {
-	return &player{sender: s, tape: tape, pm: pm, scheme: scheme}
+func newPlayer(s sender, tape tape, scheme core.PlatformCryptographyScheme) *player {
+	return &player{sender: s, tape: tape, scheme: scheme}
 }
 
 // WriteTape for player is not available.
