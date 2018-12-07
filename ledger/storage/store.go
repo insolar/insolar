@@ -31,9 +31,9 @@ type Store interface {
 	GetBlob(ctx context.Context, jet core.RecordID, ref *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jet core.RecordID, number core.PulseNumber, blob []byte) (*core.RecordID, error)
 
-	GetObjectIndex(ctx context.Context, ref *core.RecordID, forupdate bool) (*index.ObjectLifeline, error)
-	SetObjectIndex(ctx context.Context, ref *core.RecordID, idx *index.ObjectLifeline) error
-	RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error
+	GetObjectIndex(ctx context.Context, jet core.RecordID, ref *core.RecordID, forupdate bool) (*index.ObjectLifeline, error)
+	SetObjectIndex(ctx context.Context, jet core.RecordID, ref *core.RecordID, idx *index.ObjectLifeline) error
+	RemoveObjectIndex(ctx context.Context, jet core.RecordID, ref *core.RecordID) error
 
 	GetLatestPulse(ctx context.Context) (*Pulse, error)
 	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)

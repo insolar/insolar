@@ -294,7 +294,7 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set index of record
-	err = db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
+	err = db.SetObjectIndex(ctx, jet, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)
@@ -360,7 +360,8 @@ func (b key) pulse() core.PulseNumber {
 	case
 		scopeIDRecord,
 		scopeIDBlob,
-		scopeIDJetDrop:
+		scopeIDJetDrop,
+		scopeIDLifeline:
 
 		pulseStartsAt += core.RecordIDSize
 		pulseEndsAt += core.RecordIDSize

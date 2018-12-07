@@ -177,7 +177,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 			},
 		},
 	)
-	err := db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)
@@ -209,13 +209,13 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		IsDelegate: false,
 	})
 
-	idx, err := db.GetObjectIndex(ctx, parentID, false)
+	idx, err := db.GetObjectIndex(ctx, jetID, parentID, false)
 	assert.NoError(t, err)
 	childRec, err := db.GetRecord(ctx, jetID, idx.ChildPointer)
 	assert.NoError(t, err)
 	assert.Equal(t, objRef, childRec.(*record.ChildRecord).Ref)
 
-	idx, err = db.GetObjectIndex(ctx, objRef.Record(), false)
+	idx, err = db.GetObjectIndex(ctx, jetID, objRef.Record(), false)
 	assert.NoError(t, err)
 	assert.Equal(t, *objDesc.StateID(), *idx.LatestState)
 	assert.Equal(t, *objDesc.Parent(), idx.Parent)
@@ -237,7 +237,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 			},
 		},
 	)
-	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, jetID, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
@@ -280,7 +280,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 			},
 		},
 	)
-	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, jetID, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
@@ -359,7 +359,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		ChildPointer: genRandomID(0),
 		Parent:       *parentRef,
 	}
-	db.SetObjectIndex(ctx, objRef.Record(), &objectIndex)
+	db.SetObjectIndex(ctx, jetID, objRef.Record(), &objectIndex)
 
 	objDesc, err := am.GetObject(ctx, *objRef, nil, false)
 	assert.NoError(t, err)
@@ -395,13 +395,12 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 				Receiver: nodeRef,
 				Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
 			}, nil
-		} else {
-			token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
-			assert.True(t, ok)
-			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-			assert.Equal(t, nodeRef, o.Receiver)
 		}
 
+		token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
+		assert.True(t, ok)
+		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+		assert.Equal(t, nodeRef, o.Receiver)
 		return &reply.Object{}, nil
 	}
 	am.DefaultBus = mb
@@ -460,7 +459,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 		LatestState:  parentID,
 		ChildPointer: childMeta3,
 	}
-	db.SetObjectIndex(ctx, parentID, &parentIndex)
+	db.SetObjectIndex(ctx, jetID, parentID, &parentIndex)
 
 	t.Run("returns correct children without pulse", func(t *testing.T) {
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), nil)
@@ -555,13 +554,12 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 				Receiver: nodeRef,
 				Token:    &delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}},
 			}, nil
-		} else {
-			token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
-			assert.True(t, ok)
-			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-			assert.Equal(t, nodeRef, o.Receiver)
 		}
 
+		token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
+		assert.True(t, ok)
+		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+		assert.Equal(t, nodeRef, o.Receiver)
 		return &reply.Children{}, nil
 	}
 	am.DefaultBus = mb

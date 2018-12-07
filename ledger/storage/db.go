@@ -157,6 +157,7 @@ func (db *DB) Init(ctx context.Context) error {
 		}
 		err = db.SetObjectIndex(
 			ctx,
+			jetID,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
@@ -272,13 +273,14 @@ func (db *DB) SetRecord(ctx context.Context, jet core.RecordID, pulseNumber core
 // GetObjectIndex wraps matching transaction manager method.
 func (db *DB) GetObjectIndex(
 	ctx context.Context,
+	jet core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
 ) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	idx, err := tx.GetObjectIndex(ctx, id, forupdate)
+	idx, err := tx.GetObjectIndex(ctx, jet, id, forupdate)
 	if err != nil {
 		return nil, err
 	}
@@ -288,18 +290,23 @@ func (db *DB) GetObjectIndex(
 // SetObjectIndex wraps matching transaction manager method.
 func (db *DB) SetObjectIndex(
 	ctx context.Context,
+	jet core.RecordID,
 	id *core.RecordID,
 	idx *index.ObjectLifeline,
 ) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.SetObjectIndex(ctx, id, idx)
+		return tx.SetObjectIndex(ctx, jet, id, idx)
 	})
 }
 
 // RemoveObjectIndex removes an index of an object
-func (db *DB) RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error {
+func (db *DB) RemoveObjectIndex(
+	ctx context.Context,
+	jet core.RecordID,
+	ref *core.RecordID,
+) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.RemoveObjectIndex(ctx, ref)
+		return tx.RemoveObjectIndex(ctx, jet, ref)
 	})
 }
 

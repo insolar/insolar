@@ -166,7 +166,7 @@ func (m *PulseManager) processRecentObjects(
 	pendingRequests := map[core.RecordID][]byte{}
 
 	for id, ttl := range recentObjectsIds {
-		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
+		lifeline, err := m.db.GetObjectIndex(ctx, jetID, &id, false)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -182,7 +182,7 @@ func (m *PulseManager) processRecentObjects(
 		}
 
 		if !m.Recent.IsMine(id) {
-			err := m.db.RemoveObjectIndex(ctx, &id)
+			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
 			if err != nil {
 				logger.Error(err)
 				return err

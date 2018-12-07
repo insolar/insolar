@@ -89,7 +89,7 @@ func NewReplicaIter(
 		istates: []*iterstate{
 			newit(scopeIDRecord, &jet, start, end),
 			newit(scopeIDBlob, &jet, start, end),
-			newit(scopeIDLifeline, nil, core.FirstPulseNumber, end),
+			newit(scopeIDLifeline, &jet, core.FirstPulseNumber, end),
 			newit(scopeIDJetDrop, &jet, start, end),
 		},
 	}

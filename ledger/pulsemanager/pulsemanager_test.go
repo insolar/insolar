@@ -74,7 +74,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	firstIndex := index.ObjectLifeline{
 		LatestState: firstID,
 	}
-	_ = db.SetObjectIndex(ctx, firstID, &firstIndex)
+	_ = db.SetObjectIndex(ctx, jetID, firstID, &firstIndex)
 	codeRecord := &record.CodeRecord{}
 	secondID, _ := db.SetRecord(
 		ctx,
@@ -140,7 +140,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	// Act
 	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
 	require.NoError(t, err)
-	savedIndex, err := db.GetObjectIndex(ctx, firstID, false)
+	savedIndex, err := db.GetObjectIndex(ctx, jetID, firstID, false)
 	require.NoError(t, err)
 
 	// Assert

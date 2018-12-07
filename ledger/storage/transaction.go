@@ -188,13 +188,14 @@ func (m *TransactionManager) SetRecord(ctx context.Context, jet core.RecordID, p
 // GetObjectIndex fetches object lifeline index.
 func (m *TransactionManager) GetObjectIndex(
 	ctx context.Context,
+	jet core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
 ) (*index.ObjectLifeline, error) {
 	if forupdate {
 		m.lockOnID(id)
 	}
-	k := prefixkey(scopeIDLifeline, id[:])
+	k := prefixkeyany(scopeIDLifeline, jet[:], id[:])
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -205,10 +206,11 @@ func (m *TransactionManager) GetObjectIndex(
 // SetObjectIndex stores object lifeline index.
 func (m *TransactionManager) SetObjectIndex(
 	ctx context.Context,
+	jet core.RecordID,
 	id *core.RecordID,
 	idx *index.ObjectLifeline,
 ) error {
-	k := prefixkey(scopeIDLifeline, id[:])
+	k := prefixkeyany(scopeIDLifeline, jet[:], id[:])
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
@@ -220,9 +222,13 @@ func (m *TransactionManager) SetObjectIndex(
 }
 
 // RemoveObjectIndex removes an index of an object
-func (m *TransactionManager) RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error {
+func (m *TransactionManager) RemoveObjectIndex(
+	ctx context.Context,
+	jet core.RecordID,
+	ref *core.RecordID,
+) error {
 	m.lockOnID(ref)
-	k := prefixkey(scopeIDLifeline, ref[:])
+	k := prefixkeyany(scopeIDLifeline, jet[:], ref[:])
 	return m.remove(ctx, k)
 }
 
