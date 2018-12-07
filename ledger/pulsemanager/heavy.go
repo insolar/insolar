@@ -94,14 +94,14 @@ func (m *PulseManager) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{Records: recs}
-		busreply, buserr = m.Bus.Send(ctx, msg, nil)
+		busreply, buserr = m.Bus.Send(ctx, msg, *pulse, nil)
 		if buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg.Finished = true
-	busreply, buserr = m.Bus.Send(ctx, signalMsg, nil)
+	busreply, buserr = m.Bus.Send(ctx, signalMsg, *pulse, nil)
 	if buserr != nil {
 		return HeavyErr{reply: busreply, err: buserr}
 	}
