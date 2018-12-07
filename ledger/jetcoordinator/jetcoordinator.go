@@ -31,7 +31,6 @@ import (
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
 	db                         *storage.DB
-	rootJetNode                *JetNode
 	roleCounts                 map[core.DynamicRole]int
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
@@ -39,20 +38,7 @@ type JetCoordinator struct {
 
 // NewJetCoordinator creates new coordinator instance.
 func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) *JetCoordinator {
-	jc := JetCoordinator{
-		db: db,
-		rootJetNode: &JetNode{
-			ref: core.RecordRef{},
-			left: &JetNode{
-				left:  &JetNode{ref: core.RecordRef{}},
-				right: &JetNode{ref: core.RecordRef{}},
-			},
-			right: &JetNode{
-				left:  &JetNode{ref: core.RecordRef{}},
-				right: &JetNode{ref: core.RecordRef{}},
-			},
-		},
-	}
+	jc := JetCoordinator{db: db}
 	jc.loadConfig(conf)
 
 	return &jc
@@ -116,10 +102,6 @@ func (jc *JetCoordinator) QueryRole(
 	}
 
 	return jc.getNodeViaEntropy(ctx, pulseData.Pulse, candidates, obj)
-}
-
-func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
-	return jc.rootJetNode.GetContaining(&objRef)
 }
 
 // GetActiveNodes return active nodes for specified pulse.
