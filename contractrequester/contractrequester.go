@@ -59,7 +59,12 @@ func (cr *ContractRequester) routeCall(ctx context.Context, ref core.RecordRef, 
 		Arguments:        args,
 	}
 
-	res, err := cr.MessageBus.Send(ctx, e, nil)
+	currentPulse, err := cr.PulseManager.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := cr.MessageBus.Send(ctx, e, *currentPulse, nil)
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ ContractRequester::routeCall ] couldn't send message: %s", ref.String())
 	}
