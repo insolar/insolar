@@ -151,8 +151,10 @@ type NodeKeeper interface {
 	SetState(NodeKeeperState)
 	// GetState get state of the NodeKeeper
 	GetState() NodeKeeperState
-	// GetOriginClaim get origin NodeJoinClaim
-	GetOriginClaim() (*consensus.NodeJoinClaim, error)
+	// GetOriginJoinClaim get origin NodeJoinClaim
+	GetOriginJoinClaim() (*consensus.NodeJoinClaim, error)
+	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
+	GetOriginAnnounceClaim() (*consensus.NodeAnnounceClaim, error)
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
 	// AddPendingClaim add pending claim to the internal queue of claims

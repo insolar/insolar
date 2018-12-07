@@ -257,11 +257,15 @@ func (nk *nodekeeper) GetState() network.NodeKeeperState {
 	return nk.state
 }
 
-func (nk *nodekeeper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
+func (nk *nodekeeper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
 	nk.originLock.RLock()
 	defer nk.originLock.RUnlock()
 
 	return nk.nodeToClaim()
+}
+
+func (nk *nodekeeper) GetOriginAnnounceClaim() (*consensus.NodeAnnounceClaim, error) {
+	return nil, errors.New("implement me!")
 }
 
 func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {

@@ -76,7 +76,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 
 	var success bool
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
-		originClaim, err := fp.NodeKeeper.GetOriginClaim()
+		originClaim, err := fp.NodeKeeper.GetOriginAnnounceClaim()
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Execute ] Failed to get origin claim")
 		}
