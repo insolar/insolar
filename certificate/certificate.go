@@ -44,6 +44,15 @@ type BootstrapNode struct {
 	nodePublicKey crypto.PublicKey
 }
 
+func NewBootstrapNode(pubKey crypto.PublicKey, publicKey, host, noderef string) *BootstrapNode {
+	return &BootstrapNode{
+		PublicKey:     publicKey,
+		Host:          host,
+		NodeRef:       noderef,
+		nodePublicKey: pubKey,
+	}
+}
+
 // GetNodeRef returns reference of bootstrap node
 func (bn *BootstrapNode) GetNodeRef() *core.RecordRef {
 	ref := core.NewRefFromBase58(bn.NodeRef)
