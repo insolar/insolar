@@ -856,12 +856,17 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", 10)
-	assert.NoError(t, err, "contract call")
+	// no childs, expect 0
+	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "SumChildsByIterator")
+	assert.NoError(t, err, "empty children")
+	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
+
+	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", 10)
+	assert.NoError(t, err, "add children")
 	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
 	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "SumChildsByIterator")
-	assert.NoError(t, err, "contract call")
+	assert.NoError(t, err, "sum real children")
 	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
 	ValidateAllResults(t, ctx, lr)
@@ -1241,7 +1246,8 @@ func TestRootDomainContract(t *testing.T) {
 	// Transfer 1 coin from Member1 to Member2
 	csMember1 := cryptography.NewKeyBoundCryptographyService(member1Key)
 	member1 := Caller{member1Ref, lr, t, csMember1}
-	member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", []interface{}{1, member2Ref})
+	resTransfer := member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", []interface{}{1, member2Ref})
+	assert.Equal(t, nil, resTransfer)
 
 	// Verify Member1 balance
 	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", []interface{}{member1Ref})
