@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/insolar/insolar/configuration"
@@ -56,7 +57,7 @@ func (tc *transportConsensus) SendRequest(request network.Request, receiver core
 	return tc.transport.SendPacket(p)
 }
 
-func (tc *transportConsensus) processMessage(msg *packet.Packet) {
+func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Packet) {
 	log.Debugf("Got %s request from host, shortID: %d", msg.Type.String(), msg.Sender.ShortID)
 	sender, err := tc.resolver.ResolveS(msg.Sender.ShortID)
 	if err != nil {

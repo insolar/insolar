@@ -3,7 +3,7 @@ versionmanager:
 host:
   transport:
     protocol: TCP
-    address: 127.0.0.1:53837
+    address: 127.0.0.1:13831
     behindnat: false
   bootstraphosts: []
   isrelay: false
@@ -13,7 +13,7 @@ service:
   service: {}
 ledger:
   storage:
-    datadirectory: scripts/insolard/nodes/first/data
+    datadirectory: scripts/insolard/nodes/1/data
     txretriesonconflict: 3
   jetcoordinator:
     rolecounts:
@@ -27,19 +27,19 @@ log:
   level: Debug
   adapter: logrus
 stats:
-  listenaddress: 0.0.0.0:8080
+  listenaddress: 0.0.0.0:8089
 logicrunner:
   rpclisten: 127.0.0.1:18182
   builtin: {}
   goplugin:
     runnerlisten: 127.0.0.1:18181
 apirunner:
-  address: 127.0.0.1:19191
+  address: 127.0.0.1:19199
 pulsar:
   type: tcp
-  listenaddress: 0.0.0.0:8090
+  listenaddress: 0.0.0.0:8099
   nodesaddresses: []
-keyspath: "scripts/insolard/nodes/first/keys.json"
-certificatepath: "scripts/insolard/nodes/first/cert.json"
+keyspath: "scripts/insolard/nodes/1/keys.json"
+certificatepath: "scripts/insolard/nodes/1/cert.json"
 metrics:
-  listenaddress: 0.0.0.0:8080
+  listenaddress: 0.0.0.0:8089

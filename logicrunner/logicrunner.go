@@ -287,6 +287,7 @@ func (lr *LogicRunner) executeOrValidate(
 ) (
 	core.Reply, error,
 ) {
+	inslogger.FromContext(ctx).Debug("LogicRunner.executeOrValidate starts")
 	fuse := true
 	defer func() {
 		if fuse {
@@ -438,6 +439,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 
 func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
 	ctx := es.insContext
+	inslogger.FromContext(ctx).Info("LogicRunner.executeMethodCall starts")
 
 	delayedUnlock := false
 	defer func() {
