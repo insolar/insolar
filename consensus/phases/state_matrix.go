@@ -69,11 +69,7 @@ type Phase2MatrixState struct {
 	// wether any nodes in current consensus need to advance to phase 2.1
 	NeedPhase21 bool
 
-	Active    []core.RecordRef
-	Unknown   []int
-	TimedOut  []core.RecordRef
-	UnknownTO []int
-
+	Active                   []core.RecordRef
 	AdditionalRequestsPhase2 []*AdditionalRequest
 }
 
@@ -81,29 +77,8 @@ func newPhase2MatrixState() *Phase2MatrixState {
 	return &Phase2MatrixState{
 		NeedPhase21:              false,
 		Active:                   make([]core.RecordRef, 0),
-		Unknown:                  make([]int, 0),
-		TimedOut:                 make([]core.RecordRef, 0),
-		UnknownTO:                make([]int, 0),
 		AdditionalRequestsPhase2: make([]*AdditionalRequest, 0),
 	}
-}
-
-func (p2ms *Phase2MatrixState) addUnknownIndex(index int, active bool) error {
-	if active {
-		p2ms.Unknown = append(p2ms.Unknown, index)
-	} else {
-		p2ms.UnknownTO = append(p2ms.UnknownTO, index)
-	}
-	return nil
-}
-
-func (p2ms *Phase2MatrixState) addReference(ref core.RecordRef, active bool) error {
-	if active {
-		p2ms.Active = append(p2ms.Active, ref)
-	} else {
-		p2ms.TimedOut = append(p2ms.TimedOut, ref)
-	}
-	return nil
 }
 
 func (sm *StateMatrix) CalculatePhase2(origin core.RecordRef) (*Phase2MatrixState, error) {
@@ -128,19 +103,19 @@ func (sm *StateMatrix) CalculatePhase2(origin core.RecordRef) (*Phase2MatrixStat
 			}
 		}
 		active := consensusReachedMajority(timedOuts, count)
-		if active {
-			if timedOuts > 0 {
-				result.NeedPhase21 = true
-			}
-			if currentNeedsPhase21 {
-				req, err := sm.calculateAdditionalRequest(j)
-				if err != nil {
-					return nil, errors.Wrapf(err, "Could not generate additional phase 2.1 request for index %d", j)
-				}
-				result.AdditionalRequestsPhase2 = append(result.AdditionalRequestsPhase2, req)
+		if !active {
+			continue
+		}
+		if timedOuts > 0 {
+			result.NeedPhase21 = true
+		}
+		if currentNeedsPhase21 {
+			err := sm.appendAdditionalRequest(result, j)
+			if err != nil {
+				return nil, err
 			}
 		}
-		sm.fillState2Result(result, j, active)
+		sm.fillState2Result(result, j)
 	}
 	return result, nil
 }
@@ -167,16 +142,26 @@ func (sm *StateMatrix) calculateAdditionalRequest(timedOutNodeIndex int) (*Addit
 	return &AdditionalRequest{RequestIndex: timedOutNodeIndex, Candidates: candidates}, nil
 }
 
-func (sm *StateMatrix) fillState2Result(result *Phase2MatrixState, index int, active bool) error {
+func (sm *StateMatrix) fillState2Result(result *Phase2MatrixState, index int) error {
 	nodeID, err := sm.mapper.IndexToRef(index)
 	if err == packets.ErrBitSetIncorrectNode {
 		return errors.Wrapf(err, "Error mapping matrix index %d to node reference ID", index)
 	}
 	if err == packets.ErrBitSetNodeIsMissing {
-		return result.addUnknownIndex(index, active)
+		return sm.appendAdditionalRequest(result, index)
 	}
 	if err != nil {
 		return errors.Wrap(err, "fillState2Result unknown error")
 	}
-	return result.addReference(nodeID, active)
+	result.Active = append(result.Active, nodeID)
+	return nil
+}
+
+func (sm *StateMatrix) appendAdditionalRequest(result *Phase2MatrixState, index int) error {
+	req, err := sm.calculateAdditionalRequest(index)
+	if err != nil {
+		return errors.Wrapf(err, "Could not generate additional phase 2.1 request for index %d", index)
+	}
+	result.AdditionalRequestsPhase2 = append(result.AdditionalRequestsPhase2, req)
+	return nil
 }

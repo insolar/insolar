@@ -75,7 +75,6 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
 	stateMatrix := NewStateMatrix(state.UnsyncList)
-	stateMatrix.ApplyBitSet(sp.Network.GetNodeID(), bitset)
 
 	for ref, packet := range packets {
 		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
@@ -101,6 +100,12 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 			nodeProofs[node] = proof
 		}
 	}
+
+	matrixCalculation, err := stateMatrix.CalculatePhase2(sp.Network.GetNodeID())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Execute ] failed to calculate")
+	}
+	log.Debug(matrixCalculation.NeedPhase21)
 
 	// TODO: check
 	if !consensusReachedBFT(len(nodeProofs), len(activeNodes)) {

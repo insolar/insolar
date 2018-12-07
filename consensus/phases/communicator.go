@@ -277,6 +277,7 @@ func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
 		log.Warn("Wrong handler for request type: ", request.GetType().String())
 		return
 	}
+
 }
 
 func (nc *NaiveCommunicator) phase3DataHandler(request network.Request) {
