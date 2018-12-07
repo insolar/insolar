@@ -353,31 +353,6 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 	return *res.Reference, nil
 }
 
-// GetObjChildren ...
-func (gi *GoInsider) GetObjChildren(obj core.RecordRef, prototype core.RecordRef) ([]core.RecordRef, error) {
-	client, err := gi.Upstream()
-	if err != nil {
-		return nil, err
-	}
-
-	res := rpctypes.UpGetObjChildrenResp{}
-	req := rpctypes.UpGetObjChildrenReq{
-		UpBaseReq: MakeUpBaseReq(),
-		Obj:       obj,
-		Prototype: prototype,
-	}
-	err = client.Call("RPC.GetObjChildren", req, &res)
-	if err != nil {
-		if err == rpc.ErrShutdown {
-			log.Error("Insgorund can't connect to Insolard")
-			os.Exit(0)
-		}
-		return nil, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
-	}
-
-	return res.Children, nil
-}
-
 //GetObjChildrenIterator ...
 func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.RecordRef, iteratorID string) (*proxyctx.ChildrenTypedIterator, error) {
 	client, err := gi.Upstream()

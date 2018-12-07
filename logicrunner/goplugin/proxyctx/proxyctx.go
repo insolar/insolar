@@ -24,7 +24,6 @@ import (
 type ProxyHelper interface {
 	RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error)
 	SaveAsChild(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
-	GetObjChildren(head core.RecordRef, prototype core.RecordRef) ([]core.RecordRef, error)
 	GetObjChildrenIterator(head core.RecordRef, prototype core.RecordRef, iteratorID string) (*ChildrenTypedIterator, error)
 	SaveAsDelegate(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
 	GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error)

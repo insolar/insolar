@@ -191,60 +191,6 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	return nil
 }
 
-// GetObjChildren is an RPC returns set of object children
-func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.UpGetObjChildrenResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
-
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeGetObjChildren != cr.Type {
-			return errors.New("wrong validation type on GetObjChildren")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on GetObjChildren")
-		}
-
-		rep.Children = cr.Resp.([]core.RecordRef)
-		return nil
-	}
-
-	am := gpr.lr.ArtifactManager
-	i, err := am.GetChildren(ctx, req.Obj, nil)
-	if err != nil {
-		return errors.Wrap(err, "[ GetObjChildren ] Can't get children")
-	}
-	for i.HasNext() {
-		r, err := i.Next()
-		if err != nil {
-			return errors.Wrap(err, "[ GetObjChildren ] Can't get Next")
-		}
-		o, err := am.GetObject(ctx, *r, nil, false)
-		if err != nil {
-			if err == core.ErrDeactivated {
-				continue
-			}
-			return errors.Wrap(err, "[ GetObjChildren ] Can't call GetObject on Next")
-		}
-		protoRef, err := o.Prototype()
-		if err != nil {
-			return errors.Wrap(err, "[ GetObjChildren ] Can't get prototype reference")
-		}
-
-		if protoRef.Equal(req.Prototype) {
-			rep.Children = append(rep.Children, *r)
-		}
-	}
-
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{ // bad idea, we can store gadzillion of children
-		Type:   core.CaseRecordTypeGetObjChildren,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Children,
-	})
-	return nil
-}
-
 var iteratorMap = make(map[string]*core.RefIterator)
 var iteratorBuffSize = 1000
 
