@@ -99,7 +99,10 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 				if err != nil {
 					return err
 				}
-				hw.Sum(val)
+				_, err = hw.Write(val)
+				if err != nil {
+					return err
+				}
 			}
 			return nil
 		})
