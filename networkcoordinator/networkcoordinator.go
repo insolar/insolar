@@ -33,7 +33,7 @@ type NetworkCoordinator struct {
 	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
 	ContractRequester   core.ContractRequester   `inject:""`
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
-	Bus                 core.MessageBus          `inject:""`
+	MessageBus          core.MessageBus          `inject:""`
 	CS                  core.CryptographyService `inject:""`
 
 	realCoordinator core.NetworkCoordinator
@@ -54,7 +54,8 @@ func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 
 // Start implements interface of Component
 func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	return nc.Bus.Register(core.NetworkCoordinatorNodeSignRequest, nc.SignNode)
+	nc.MessageBus.MustRegister(core.NetworkCoordinatorNodeSignRequest, nc.SignCertificate)
+	return nil
 }
 
 func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
@@ -95,7 +96,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 			opts := core.MessageSendOptions{
 				Receiver: node.GetNodeRef(),
 			}
-			r, err := nc.Bus.Send(ctx, &msg, &opts)
+			r, err := nc.MessageBus.Send(ctx, &msg, &opts)
 			if err != nil {
 				return nil, err
 			}
@@ -111,6 +112,49 @@ func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core
 	return nc.CertificateManager.VerifyAuthorizationCertificate(certificate)
 }
 
+// SignCertificate signs info about some node
+func (nc *NetworkCoordinator) SignCertificate(ctx context.Context, p core.Parcel) (core.Reply, error) {
+	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
+	sign, err := nc.signNode(ctx, nodeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignCertificate ] Couldn't extract response")
+	}
+	return &reply.NodeSign{
+		Sign: sign,
+	}, nil
+}
+
+func (nc *NetworkCoordinator) signNode(ctx context.Context, nodeRef *core.RecordRef) ([]byte, error) {
+	res, err := nc.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignCertificate ] Couldn't call GetNodeInfo")
+	}
+	pKey, role, err := extractor.NodeInfoResponse(res.(*reply.CallMethod).Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignCertificate ] Couldn't extract response")
+	}
+
+	data := []byte(pKey + nodeRef.String() + role)
+	sign, err := nc.CS.Sign(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignCertificate ] Couldn't sign")
+	}
+
+	return sign.Bytes(), nil
+}
+
+func (nc *NetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *core.RecordRef) (string, string, error) {
+	res, err := nc.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
+	}
+	pKey, role, err := extractor.NodeInfoResponse(res.(*reply.CallMethod).Result)
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't extract response")
+	}
+	return pKey, role, nil
+}
+
 // WriteActiveNodes writes active nodes to ledger
 func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
 	return nc.getCoordinator().WriteActiveNodes(ctx, number, activeNodes)
@@ -119,36 +163,4 @@ func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.
 // SetPulse writes pulse data on local storage
 func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return nc.getCoordinator().SetPulse(ctx, pulse)
-}
-
-// SignNode signs info about some node
-func (nc *NetworkCoordinator) SignNode(ctx context.Context, p core.Parcel) (core.Reply, error) {
-	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
-	sign, err := nc.signNode(ctx, nodeRef)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignNode ] Couldn't extract response")
-	}
-	return &reply.NodeSign{
-		Sign: sign,
-	}, nil
-
-}
-
-func (nc *NetworkCoordinator) signNode(ctx context.Context, nodeRef *core.RecordRef) ([]byte, error) {
-	res, err := nc.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignNode ] Couldn't call GetNodeInfo")
-	}
-	pKey, role, err := extractor.NodeInfoResponse(res.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignNode ] Couldn't extract response")
-	}
-
-	data := []byte(pKey + nodeRef.String() + role)
-	sign, err := nc.CS.Sign(data)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignNode ] Couldn't sign")
-	}
-
-	return sign.Bytes(), nil
 }
