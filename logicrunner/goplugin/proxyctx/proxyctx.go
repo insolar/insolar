@@ -18,13 +18,15 @@ package proxyctx
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 )
 
 // ProxyHelper interface with methods that are needed by contract proxies
 type ProxyHelper interface {
 	RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error)
 	SaveAsChild(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
-	GetObjChildren(head core.RecordRef, class core.RecordRef) ([]core.RecordRef, error)
+	GetObjChildren(head core.RecordRef, prototype core.RecordRef) ([]core.RecordRef, error)
+	GetObjChildrenIterator(head core.RecordRef, prototype core.RecordRef, iteratorId string) (*ChildrenTypedIterator, error)
 	SaveAsDelegate(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
 	GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error)
 	DeactivateObject(object core.RecordRef) error
@@ -35,3 +37,64 @@ type ProxyHelper interface {
 
 // Current - hackish way to give proxies access to the current environment
 var Current ProxyHelper
+
+type ChildrenTypedIterator struct {
+	Parent         core.RecordRef
+	ChildPrototype core.RecordRef // only child of specified prototype, if childPrototype.IsEmpty - ignored
+
+	IteratorId string           // map key to iterators slice in logicrunner service
+	Buff       []core.RecordRef // bucket of objects from previous RPC call to service
+	buffIndex  int              // current element
+	CanFetch   bool             // if true, we can call RPC again and get new objects
+}
+
+func (oi *ChildrenTypedIterator) HasNext() bool {
+	log.Debugf(">>> HasNext: %+v", oi.hasInBuffer() || oi.CanFetch)
+	return oi.hasInBuffer() || oi.CanFetch
+}
+
+func (oi *ChildrenTypedIterator) Next() (core.RecordRef, error) {
+	if !oi.hasInBuffer() && oi.CanFetch {
+		log.Debugf(">>> Next() try to fetch")
+		err := oi.fetch()
+		if err != nil {
+			log.Debugf(">>> Next() fetch Error")
+			return core.RecordRef{}, err
+		}
+	}
+
+	return oi.nextFromBuffer(), nil
+}
+
+func (oi *ChildrenTypedIterator) hasInBuffer() bool {
+	log.Debugf(">>> hasInBuffer: %+v", oi.buffIndex < len(oi.Buff))
+	return oi.buffIndex < len(oi.Buff)
+}
+
+func (oi *ChildrenTypedIterator) nextFromBuffer() core.RecordRef {
+	if !oi.hasInBuffer() {
+		log.Debugf(">>> nextFromBuffer missing!")
+		return core.RecordRef{}
+	}
+
+	result := oi.Buff[oi.buffIndex]
+	oi.buffIndex++
+	return result
+}
+
+func (oi *ChildrenTypedIterator) fetch() error {
+	oi.buffIndex = 0
+	oi.CanFetch = false
+
+	log.Debugf(">>> oi.IteratorId before fetch: %+v", oi.IteratorId)
+
+	temp, err := Current.GetObjChildrenIterator(oi.Parent, oi.ChildPrototype, oi.IteratorId)
+	if err != nil {
+		return err
+	}
+	oi.Buff = temp.Buff
+	oi.IteratorId = temp.IteratorId
+	oi.CanFetch = temp.CanFetch
+
+	return nil
+}
