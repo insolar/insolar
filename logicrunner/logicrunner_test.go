@@ -786,23 +786,6 @@ func (c *Contract) NewChilds(cnt int) (int, error) {
 	return s, nil
 }
 
-func (c *Contract) SumChilds() (int, error) {
-	s := 0
-	childs, err := c.GetChildrenTyped(child.GetPrototype())
-	if err != nil {
-		return 0, err
-	}
-	for _, chref := range childs {
-		o := child.GetObject(chref)
-		n, err := o.GetNum()
-		if err != nil {
-			return 0, err
-		}
-		s += n
-	}
-	return s, nil
-}
-
 func (c *Contract) SumChildsByIterator() (int, error) {
 	s := 0
 	iterator, err := c.NewChildrenTypedIterator(child.GetPrototype())
@@ -874,10 +857,6 @@ func New(n int) (*Child, error) {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", 10)
-	assert.NoError(t, err, "contract call")
-	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
-
-	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "SumChilds")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
