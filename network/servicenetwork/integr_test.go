@@ -221,7 +221,6 @@ func (s *testSuite) TestNodeConnect() {
 	s.testNode = s.createNetworkNode(s.T(), Disable)
 
 	s.InitNodes()
-	s.testNode.serviceNetwork.PhaseManager = &phaseManagerWrapper{s.testNode.serviceNetwork.PhaseManager, phasesResult}
 	s.StartNodes()
 	res := <-phasesResult
 	s.NoError(res)
@@ -248,14 +247,18 @@ func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pu
 
 func (s *testSuite) TestFullTimeOut() {
 	s.T().Skip("will be available after phase result fix !")
+	networkNodesCount := 5
 	phasesResult := make(chan error)
-	bootstrapNode1 := s.createNetworkNode(s.T(), Full)
+	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
 	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
 
 	s.testNode = s.createNetworkNode(s.T(), Full)
 
+	for i := 0; i < networkNodesCount; i++ {
+		s.networkNodes = append(s.networkNodes, s.createNetworkNode(s.T(), Disable))
+	}
+
 	s.InitNodes()
-	s.testNode.serviceNetwork.PhaseManager = &phaseManagerWrapper{s.testNode.serviceNetwork.PhaseManager, phasesResult}
 	s.StartNodes()
 	res := <-phasesResult
 	s.NoError(res)
