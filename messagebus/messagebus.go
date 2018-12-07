@@ -131,13 +131,13 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
 	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token)
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, ops)
+	return mb.SendParcel(ctx, parcel, currentPulse, ops)
 }
 
 // CreateParcel creates signed message from provided message.
@@ -146,15 +146,15 @@ func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token 
 }
 
 // SendParcel sends provided message via network.
-func (mb *MessageBus) SendParcel(ctx context.Context, parcel core.Parcel, options *core.MessageSendOptions) (core.Reply, error) {
+func (mb *MessageBus) SendParcel(
+	ctx context.Context,
+	parcel core.Parcel,
+	currentPulse core.Pulse,
+	options *core.MessageSendOptions,
+) (core.Reply, error) {
 	scope := newReaderScope(&mb.globalLock)
 	scope.Lock()
 	defer scope.Unlock()
-
-	pulse, err := mb.PulseManager.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	var nodes []core.RecordRef
 	if options != nil && options.Receiver != nil {
@@ -162,7 +162,8 @@ func (mb *MessageBus) SendParcel(ctx context.Context, parcel core.Parcel, option
 	} else {
 		// TODO: send to all actors of the role if nil Target
 		target := message.ExtractTarget(parcel)
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, message.ExtractRole(parcel), &target, pulse.PulseNumber)
+		var err error
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, message.ExtractRole(parcel), &target, currentPulse.PulseNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -171,7 +172,7 @@ func (mb *MessageBus) SendParcel(ctx context.Context, parcel core.Parcel, option
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
 			NodeIds:           nodes,
-			Entropy:           pulse.Entropy,
+			Entropy:           currentPulse.Entropy,
 			ReplicationFactor: 2,
 		}
 		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
