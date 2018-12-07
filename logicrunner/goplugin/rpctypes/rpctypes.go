@@ -115,6 +115,25 @@ type UpGetObjChildrenResp struct {
 	Children []core.RecordRef
 }
 
+// UpGetObjChildrenIteratorReq is a set of arguments for GetObjChildrenIterator RPC in goplugin
+type UpGetObjChildrenIteratorReq struct {
+	UpBaseReq
+	IteratorId string
+	Obj        core.RecordRef
+	Prototype  core.RecordRef
+}
+
+// UpGetObjChildrenResp is response from GetObjChildren RPC in goplugin
+type UpGetObjChildrenIteratorResp struct {
+	Iterator ChildIterator
+}
+
+type ChildIterator struct {
+	Id       string
+	Buff     []core.RecordRef
+	CanFetch bool
+}
+
 // UpSaveAsDelegateReq is a set of arguments for SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateReq struct {
 	UpBaseReq
