@@ -133,6 +133,18 @@ func (nc *NetworkCoordinator) signCertHandler(ctx context.Context, p core.Parcel
 	}, nil
 }
 
+// signCert is MsgBus handler that signs certificate for some node with node own key
+// func (nc *NetworkCoordinator) signCert(ctx context.Context, p core.Parcel) (core.Reply, error) {
+// 	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
+// 	sign, err := nc.signCert(ctx, nodeRef)
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
+// 	}
+// 	return &reply.NodeSign{
+// 		Sign: sign,
+// 	}, nil
+// }
+
 func (nc *NetworkCoordinator) signCert(ctx context.Context, registeredNodeRef *core.RecordRef) ([]byte, error) {
 	pKey, role, err := nc.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
