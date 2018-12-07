@@ -44,8 +44,11 @@ type BootstrapNode struct {
 	nodePublicKey crypto.PublicKey
 }
 
-func NewBootstrapNode(pubKey crypto.PublicKey) BootstrapNode {
-	return BootstrapNode{
+func NewBootstrapNode(pubKey crypto.PublicKey, publicKey, host, noderef string) *BootstrapNode {
+	return &BootstrapNode{
+		PublicKey:     publicKey,
+		Host:          host,
+		NodeRef:       noderef,
 		nodePublicKey: pubKey,
 	}
 }
