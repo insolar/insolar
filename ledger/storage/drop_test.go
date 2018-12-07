@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -68,7 +69,7 @@ func TestStore_DropWaitWrites(t *testing.T) {
 		<-txstarted
 		log.Debugln("start CreateDrop")
 		close(dropwaits)
-		_, _, droperr := db.CreateDrop(ctx, 0, []byte{})
+		_, _, droperr := db.CreateDrop(ctx, core.TODOJetID, 0, []byte{})
 		if droperr != nil {
 			panic(droperr)
 		}

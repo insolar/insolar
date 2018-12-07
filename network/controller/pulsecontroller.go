@@ -35,13 +35,13 @@ func (pc *PulseController) Start() {
 	pc.hostNetwork.RegisterRequestHandler(types.GetRandomHosts, pc.processGetRandomHosts)
 }
 
-func (pc *PulseController) processPulse(request network.Request) (network.Response, error) {
+func (pc *PulseController) processPulse(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestPulse)
 	go pc.pulseHandler.HandlePulse(context.Background(), data.Pulse)
 	return pc.hostNetwork.BuildResponse(request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }
 
-func (pc *PulseController) processGetRandomHosts(request network.Request) (network.Response, error) {
+func (pc *PulseController) processGetRandomHosts(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestGetRandomHosts)
 	randomHosts := pc.routingTable.GetRandomNodes(data.HostsNumber)
 	return pc.hostNetwork.BuildResponse(request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil

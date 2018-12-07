@@ -28,6 +28,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
+	jetID := core.TODOJetID
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -81,7 +82,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		assert.Equal(t, lightRef, redirect.GetReceiver())
 		assert.Nil(t, redirect.StateID)
 
-		idx, err := db.GetObjectIndex(ctx, msg.Head.Record(), false)
+		idx, err := db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 		require.NoError(t, err)
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
@@ -89,7 +90,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	t.Run("redirect to light when has index and state later than limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		stateID := genRandomID(0)
-		err := db.SetObjectIndex(ctx, msg.Head.Record(), &index.ObjectLifeline{
+		err := db.SetObjectIndex(ctx, jetID, msg.Head.Record(), &index.ObjectLifeline{
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
@@ -114,7 +115,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		heavyRef := genRandomRef(0)
 		stateID := genRandomID(0)
 
-		err := db.SetObjectIndex(ctx, msg.Head.Record(), &index.ObjectLifeline{
+		err := db.SetObjectIndex(ctx, jetID, msg.Head.Record(), &index.ObjectLifeline{
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
@@ -143,6 +144,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
+	jetID := core.TODOJetID
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}}, nil)
@@ -196,14 +198,14 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 
-		idx, err := db.GetObjectIndex(ctx, msg.Parent.Record(), false)
+		idx, err := db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 		require.NoError(t, err)
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
 
 	t.Run("redirect to light when has index and child later than limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
-		err := db.SetObjectIndex(ctx, msg.Parent.Record(), &index.ObjectLifeline{
+		err := db.SetObjectIndex(ctx, jetID, msg.Parent.Record(), &index.ObjectLifeline{
 			ChildPointer: genRandomID(0),
 		})
 		require.NoError(t, err)
@@ -225,7 +227,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 
 	t.Run("redirect to heavy when has index and child earlier than limit", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
-		err := db.SetObjectIndex(ctx, msg.Parent.Record(), &index.ObjectLifeline{
+		err := db.SetObjectIndex(ctx, jetID, msg.Parent.Record(), &index.ObjectLifeline{
 			ChildPointer: genRandomID(0),
 		})
 		require.NoError(t, err)
@@ -253,6 +255,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
+	jetID := core.TODOJetID
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -300,7 +303,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, delegate, delegateRep.Head)
 
-	idx, err := db.GetObjectIndex(ctx, msg.Head.Record(), false)
+	idx, err := db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	require.NoError(t, err)
 	assert.Equal(t, objIndex.Delegates, idx.Delegates)
 }
@@ -312,6 +315,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
+	jetID := core.TODOJetID
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -366,7 +370,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, *amendID, objRep.State)
 
-	idx, err := db.GetObjectIndex(ctx, msg.Object.Record(), false)
+	idx, err := db.GetObjectIndex(ctx, jetID, msg.Object.Record(), false)
 	require.NoError(t, err)
 	assert.Equal(t, amendID, idx.LatestState)
 }
@@ -378,6 +382,7 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
+	jetID := core.TODOJetID
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -393,7 +398,7 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 		Object: *genRandomRef(0),
 	}
 	objectIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
-	err := db.SetObjectIndex(ctx, msg.Object.Record(), &objectIndex)
+	err := db.SetObjectIndex(ctx, jetID, msg.Object.Record(), &objectIndex)
 	require.NoError(t, err)
 
 	rep, err := h.handleGetObjectIndex(ctx, &message.Parcel{
@@ -481,6 +486,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
+	jetID := core.TODOJetID
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -536,13 +542,14 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	require.True(t, ok)
 	assert.Equal(t, *childID, objRep.ID)
 
-	idx, err := db.GetObjectIndex(ctx, msg.Parent.Record(), false)
+	idx, err := db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	require.NoError(t, err)
 	assert.Equal(t, childID, idx.ChildPointer)
 }
 
 func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	ctx := inslogger.TestContext(t)
+	jetID := core.TODOJetID
 
 	idCreator, idCreatorCleaner := storagetest.TmpDB(ctx, t)
 	defer idCreatorCleaner()
@@ -552,12 +559,12 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.NoError(t, err)
 
 	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
-	secondId, _ := idCreator.SetRecord(ctx, core.FirstPulseNumber, &record.CodeRecord{})
+	secondId, _ := idCreator.SetRecord(ctx, jetID, core.FirstPulseNumber, &record.CodeRecord{})
 
 	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
 		LatestState: firstID,
 	})
-	err = db.SetObjectIndex(ctx, firstID, &index.ObjectLifeline{
+	err = db.SetObjectIndex(ctx, jetID, firstID, &index.ObjectLifeline{
 		LatestState: firstID,
 	})
 	require.NoError(t, err)
@@ -593,7 +600,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, res, &reply.OK{})
 
-	savedDrop, err := h.db.GetDrop(ctx, core.FirstPulseNumber)
+	savedDrop, err := h.db.GetDrop(ctx, jetID, core.FirstPulseNumber)
 	require.NoError(t, err)
 	require.Equal(t, &jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
 
@@ -607,6 +614,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
+	jetID := core.TODOJetID
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -619,7 +627,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 	h.Recent = recentStorageMock
 
 	t.Run("returns not ok when not valid", func(t *testing.T) {
-		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{})
+		validatedStateID, err := db.SetRecord(ctx, jetID, 0, &record.ObjectAmendRecord{})
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -638,7 +646,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 
 	t.Run("returns ok when valid", func(t *testing.T) {
 		approvedStateID := *genRandomID(0)
-		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{
+		validatedStateID, err := db.SetRecord(ctx, jetID, 0, &record.ObjectAmendRecord{
 			PrevState: approvedStateID,
 		})
 		require.NoError(t, err)

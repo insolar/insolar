@@ -62,7 +62,7 @@ func (c *Controller) Bootstrap(ctx context.Context) error {
 func (c *Controller) Inject(cryptographyService core.CryptographyService,
 	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
 
-	c.network.RegisterRequestHandler(types.Ping, func(request network.Request) (network.Response, error) {
+	c.network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Request) (network.Response, error) {
 		return c.network.BuildResponse(request, nil), nil
 	})
 	c.bootstrapper.Start(cryptographyService, networkCoordinator, nodeKeeper)

@@ -224,7 +224,8 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
-func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
+func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte, err error) {
+	inslogger.FromContext(ctx).Debug("MessageBus.deliver starts ...")
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when mb.deliver()")
 	}
@@ -232,6 +233,9 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	parcelCtx := parcel.Context(ctx)
+	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
 	sender := parcel.GetSender()
 
@@ -247,8 +251,6 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		}
 	}
 
-	ctx := parcel.Context(context.Background())
-
 	if parcel.DelegationToken() != nil {
 		valid, err := mb.DelegationTokenFactory.Verify(parcel)
 		if err != nil {
@@ -260,13 +262,13 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	} else {
 		sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
 		if sendingObject != nil {
-			currentPulse, err := mb.PulseManager.Current(ctx)
+			currentPulse, err := mb.PulseManager.Current(parcelCtx)
 			if err != nil {
 				return nil, err
 			}
 
 			validSender, err := mb.JetCoordinator.IsAuthorized(
-				ctx, allowedSenderRole, sendingObject, currentPulse.PulseNumber, sender,
+				parcelCtx, allowedSenderRole, sendingObject, currentPulse.PulseNumber, sender,
 			)
 			if err != nil {
 				return nil, err
@@ -277,7 +279,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		}
 	}
 
-	resp, err := mb.doDeliver(ctx, parcel)
+	resp, err := mb.doDeliver(parcelCtx, parcel)
 	if err != nil {
 		return nil, err
 	}
