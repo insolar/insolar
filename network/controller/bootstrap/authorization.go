@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -156,7 +157,7 @@ func (ac *AuthorizationController) processRegisterRequest(request network.Reques
 
 func (ac *AuthorizationController) processAuthorizeRequest(request network.Request) (network.Response, error) {
 	data := request.GetData().(*AuthorizationRequest)
-	cert, err := certificate.Deserialize(data.Certificate)
+	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
 		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}

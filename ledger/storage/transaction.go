@@ -253,7 +253,7 @@ func (m *TransactionManager) remove(ctx context.Context, key []byte) error {
 	defer txn.Discard()
 
 	err := txn.Delete(key)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 

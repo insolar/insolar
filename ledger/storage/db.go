@@ -146,11 +146,11 @@ func (db *DB) Init(ctx context.Context) error {
 			return nil, err
 		}
 
-		lastPulse, err := db.GetLatestPulseNumber(ctx)
+		lastPulse, err := db.GetLatestPulse(ctx)
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := db.SetRecord(ctx, lastPulse, &record.GenesisRecord{})
+		genesisID, err := db.SetRecord(ctx, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}

@@ -298,7 +298,7 @@ func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) err
 
 func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
 	data := request.GetData().(*GenesisRequest)
-	genesisCert, err := certificate.Deserialize(data.Certificate)
+	genesisCert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
 	}

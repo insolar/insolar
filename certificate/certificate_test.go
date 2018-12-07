@@ -172,6 +172,7 @@ func TestReadCertificateFromReader(t *testing.T) {
 	require.Equal(t, uint(2), cert.MinRoles.HeavyMaterial)
 	require.Equal(t, uint(3), cert.MinRoles.LightMaterial)
 	require.Equal(t, "0987654321", cert.RootDomainReference)
+	require.Equal(t, nodePublicKey, cert.nodePublicKey)
 
 	testPubKey := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n"
 	key, err := kp.ImportPublicKey([]byte(testPubKey))
@@ -199,15 +200,22 @@ func TestReadCertificateFromReader(t *testing.T) {
 }
 
 func TestSerializeDeserialize(t *testing.T) {
-	cert := NewAuthorizationCertificate()
-	cert.PublicKey = "test_public_key"
-	cert.Reference = "test_reference"
-	cert.Role = "test_role"
+	cert := &AuthorizationCertificate{
+		PublicKey: "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n",
+		Reference: "test_reference",
+		Role:      "test_role",
+	}
+
+	keyProc := platformpolicy.NewKeyProcessor()
+	key, err := keyProc.ImportPublicKey([]byte(cert.PublicKey))
+	require.NoError(t, err)
+
+	cert.nodePublicKey = key
 
 	result, err := Serialize(cert)
 	require.NoError(t, err)
 
-	deserializedCert, err := Deserialize(result)
+	deserializedCert, err := Deserialize(result, keyProc)
 	require.NoError(t, err)
 	require.Equal(t, cert, deserializedCert)
 }

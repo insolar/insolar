@@ -565,9 +565,9 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	recHash := am.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := codeRecord.WriteHashData(recHash)
 	assert.NoError(t, err)
-	latestPulse, err := db.GetLatestPulseNumber(ctx)
+	latestPulse, err := db.GetLatestPulse(ctx)
 	assert.NoError(t, err)
-	id := core.NewRecordID(latestPulse, recHash.Sum(nil))
+	id := core.NewRecordID(latestPulse.Pulse.PulseNumber, recHash.Sum(nil))
 
 	setRecordMessage := message.SetRecord{
 		Record: record.SerializeRecord(&codeRecord),

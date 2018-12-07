@@ -198,7 +198,7 @@ func (m *PulseManager) processRecentObjects(
 
 	msg := &message.HotData{
 		Drop:            *drop,
-		PulseNumber:     *latestPulse.Prev,
+		PulseNumber:     latestPulse.Pulse.PulseNumber,
 		RecentObjects:   recentObjects,
 		PendingRequests: pendingRequests,
 	}
@@ -218,22 +218,20 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
-	var latestPulseNumber core.PulseNumber
 	var err error
 	m.GIL.Acquire(ctx)
 
 	// swap pulse
 	m.currentPulse = pulse
 
+	latestPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
+	}
+
 	// swap active nodes
 	m.ActiveListSwapper.MoveSyncToActive()
-
 	if !dry {
-		latestPulseNumber, err = m.db.GetLatestPulseNumber(ctx)
-		if err != nil {
-			return errors.Wrap(err, "call of GetLatestPulseNumber failed")
-		}
-
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
@@ -253,14 +251,10 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
-		if err != nil {
-			return errors.Wrapf(err, "get pulse %v failed", latestPulseNumber)
-		}
 
 		drop, dropSerialized, messages, err := m.createDrop(ctx, latestPulse)
 		if err != nil {
-			return errors.Wrapf(err, "create drop on pulse %v failed", latestPulseNumber)
+			return errors.Wrapf(err, "create drop on pulse %v failed", latestPulse)
 		}
 
 		if hotRecordsError := m.processRecentObjects(ctx, latestPulse, drop, dropSerialized); hotRecordsError != nil {

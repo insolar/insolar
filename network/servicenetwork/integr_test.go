@@ -140,11 +140,12 @@ func initCrypto(t *testing.T, nodes []certificate.BootstrapNode, ref core.Record
 func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode {
 	result := make([]certificate.BootstrapNode, 0)
 	for _, b := range s.bootstrapNodes {
-		node := certificate.NewBootstrapNode(b.serviceNetwork.CertificateManager.GetCertificate().GetPublicKey())
-		node.Host = b.serviceNetwork.cfg.Host.Transport.Address
-		node.PublicKey = b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey
-		node.NodeRef = b.serviceNetwork.NodeNetwork.GetOrigin().ID().String()
-		result = append(result, node)
+		node := certificate.NewBootstrapNode(
+			b.serviceNetwork.CertificateManager.GetCertificate().GetPublicKey(),
+			b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey,
+			b.serviceNetwork.cfg.Host.Transport.Address,
+			b.serviceNetwork.NodeNetwork.GetOrigin().ID().String())
+		result = append(result, *node)
 	}
 	return result
 }
@@ -189,35 +190,4 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	serviceNetwork.NodeKeeper = keeper
 
 	return networkNode{cm, serviceNetwork}
-}
-
-func (s *testSuite) TestNodeConnect() {
-	s.T().Skip("will be available after fix !")
-
-	phasesResult := make(chan error)
-	s.InitNodes()
-	s.testNode.serviceNetwork.PhaseManager = &phaseManagerWrapper{s.testNode.serviceNetwork.PhaseManager, phasesResult}
-
-	s.StartNodes()
-
-	res := <-phasesResult
-	s.NoError(res)
-
-	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(2, len(activeNodes))
-
-	// teardown
-	<-time.After(time.Second * 5)
-	s.StopNodes()
-}
-
-func TestServiceNetworkIntegration(t *testing.T) {
-	s := NewTestSuite()
-	bootstrapNode1 := s.createNetworkNode(t)
-	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
-
-	s.testNode = s.createNetworkNode(t)
-
-	suite.Run(t, s)
-
 }
