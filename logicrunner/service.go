@@ -128,7 +128,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	}
 
 	currentSlotPulse, err := gpr.pm.Current(ctx)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
@@ -180,7 +180,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	}
 
 	currentSlotPulse, err := gpr.pm.Current(ctx)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
@@ -282,7 +282,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	}
 
 	currentSlotPulse, err := gpr.pm.Current(ctx)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 

@@ -375,7 +375,7 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	am := NewArtifactManger(nil)
 	mb := testutils.NewMessageBusMock(mc)
 
-	db, cleaner := storagetest.TmpDB(ctx,t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	objRef := genRandomRef(0)
@@ -535,7 +535,7 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	am := NewArtifactManger(nil)
 	mb := testutils.NewMessageBusMock(mc)
 
-	db, cleaner := storagetest.TmpDB(ctx,t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	am.db = db

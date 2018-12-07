@@ -221,7 +221,7 @@ func (m *LedgerArtifactManager) GetChildren(
 	defer instrument(ctx, "GetChildren").err(&err).end()
 
 	latestPulse, err := m.db.GetLatestPulse(ctx)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 

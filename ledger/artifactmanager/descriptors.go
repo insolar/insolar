@@ -177,12 +177,12 @@ func NewChildIterator(
 	currentPulse core.Pulse,
 ) (*ChildIterator, error) {
 	iter := ChildIterator{
-		ctx:        ctx,
-		messageBus: mb,
-		parent:     parent,
-		fromPulse:  fromPulse,
-		chunkSize:  chunkSize,
-		canFetch:   true,
+		ctx:          ctx,
+		messageBus:   mb,
+		parent:       parent,
+		fromPulse:    fromPulse,
+		chunkSize:    chunkSize,
+		canFetch:     true,
 		currentPulse: currentPulse,
 	}
 	err := iter.fetch()

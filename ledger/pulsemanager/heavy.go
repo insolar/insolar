@@ -62,8 +62,8 @@ func (m *PulseManager) HeavySync(
 		buserr   error
 	)
 
-	pulse,err  := m.Current(ctx)
-	if err != nil{
+	pulse, err := m.Current(ctx)
+	if err != nil {
 		return err
 	}
 

@@ -98,7 +98,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 			}
 
 			currentPulse, err := nc.PM.Current(ctx)
-			if err != nil{
+			if err != nil {
 				return nil, err
 			}
 

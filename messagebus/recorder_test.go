@@ -50,7 +50,7 @@ func TestRecorder_Send(t *testing.T) {
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		s.SendParcelMock.Expect(ctx, &parcel, *core.GenesisPulse,nil)
+		s.SendParcelMock.Expect(ctx, &parcel, *core.GenesisPulse, nil)
 
 		_, err := recorder.Send(ctx, &msg, *core.GenesisPulse, nil)
 		require.NoError(t, err)
