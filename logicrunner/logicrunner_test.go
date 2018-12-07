@@ -803,17 +803,29 @@ func (c *Contract) SumChilds() (int, error) {
 	return s, nil
 }
 
-func (c *Contract) GetChildRefs() (ret []string, err error) {
-	childs, err := c.GetChildrenTyped(child.GetPrototype())
+func (c *Contract) SumChildsByIterator() (int, error) {
+	s := 0
+	iterator, err := c.NewChildrenTypedIterator(child.GetPrototype())
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	for _, chref := range childs {
-		ret = append(ret, chref.String())
+	for iterator.HasNext() {
+		chref, err := iterator.Next()
+		if err != nil {
+			return 0, err
+		}
+
+		o := child.GetObject(chref)
+		n, err := o.GetNum()
+		if err != nil {
+			return 0, err
+		}
+		s += n
 	}
-	return ret, nil
+	return s, nil
 }
+
 `
 	goChild := `
 package main
@@ -866,6 +878,10 @@ func New(n int) (*Child, error) {
 	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
 	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "SumChilds")
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
+
+	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "SumChildsByIterator")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
