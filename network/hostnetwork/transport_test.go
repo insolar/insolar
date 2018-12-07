@@ -164,7 +164,7 @@ func TestNewHostTransport(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(count)
 
-	handler := func(request network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		wg.Done()
 		return t2.BuildResponse(request, nil), nil
@@ -224,7 +224,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		require.Equal(t, core.NewRefFromBase58(ID1), r.GetSender())
 		require.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
@@ -262,7 +262,7 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	}
 	gob.Register(&Data{})
 
-	handler := func(r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		d := r.GetData().(*Data)
 		return t2.BuildResponse(r, &Data{Number: d.Number + 1}), nil
@@ -304,7 +304,7 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 
-	handler := func(r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		time.Sleep(time.Second)
 		return t2.BuildResponse(r, nil), nil
@@ -339,7 +339,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		wg.Done()
 		return t2.BuildResponse(r, nil), nil
@@ -386,7 +386,7 @@ func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	require.NoError(t, err)
 	tr1 := NewHostTransport(i1, m)
 	defer tr1.Stop()
-	handler := func(request network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
 		return tr1.BuildResponse(request, nil), nil
 	}
 	f := func() {
