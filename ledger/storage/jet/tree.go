@@ -38,10 +38,14 @@ func (j *Jet) Find(val []byte, pulse core.PulseNumber, depth uint) *Jet {
 		return nil
 	}
 
-	if getBit(val, depth) && j.Right != nil && j.Right.ID.Pulse() <= pulse {
-		return j.Right.Find(val, pulse, depth+1)
-	} else if j.Left != nil && j.Left.ID.Pulse() <= pulse {
-		return j.Left.Find(val, pulse, depth+1)
+	if getBit(val, depth) {
+		if j.Right != nil && j.Right.ID.Pulse() <= pulse {
+			return j.Right.Find(val, pulse, depth+1)
+		}
+	} else {
+		if j.Left != nil && j.Left.ID.Pulse() <= pulse {
+			return j.Left.Find(val, pulse, depth+1)
+		}
 	}
 	return j
 }
