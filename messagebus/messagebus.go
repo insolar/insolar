@@ -132,7 +132,7 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
-	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token)
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
 	if err != nil {
 		return nil, err
 	}
@@ -141,8 +141,8 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse c
 }
 
 // CreateParcel creates signed message from provided message.
-func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), token)
+func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
+	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), token, currentPulse)
 }
 
 // SendParcel sends provided message via network.
@@ -257,13 +257,8 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	} else {
 		sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
 		if sendingObject != nil {
-			currentPulse, err := mb.PulseManager.Current(ctx)
-			if err != nil {
-				return nil, err
-			}
-
 			validSender, err := mb.JetCoordinator.IsAuthorized(
-				ctx, allowedSenderRole, sendingObject, currentPulse.PulseNumber, sender,
+				ctx, allowedSenderRole, sendingObject, parcel.Pulse(), sender,
 			)
 			if err != nil {
 				return nil, err
