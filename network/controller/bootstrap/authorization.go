@@ -144,7 +144,7 @@ func (ac *AuthorizationController) checkClaim(sessionID SessionID, claim *packet
 	return nil
 }
 
-func (ac *AuthorizationController) processRegisterRequest(request network.Request) (network.Response, error) {
+func (ac *AuthorizationController) processRegisterRequest(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*RegistrationRequest)
 	err := ac.checkClaim(data.SessionID, data.JoinClaim)
 	if err != nil {
@@ -155,7 +155,7 @@ func (ac *AuthorizationController) processRegisterRequest(request network.Reques
 	return ac.transport.BuildResponse(request, &RegistrationResponse{Code: OpConfirmed}), nil
 }
 
-func (ac *AuthorizationController) processAuthorizeRequest(request network.Request) (network.Response, error) {
+func (ac *AuthorizationController) processAuthorizeRequest(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*AuthorizationRequest)
 	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
