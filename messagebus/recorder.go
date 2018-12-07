@@ -29,13 +29,12 @@ import (
 type recorder struct {
 	sender
 	tape   tape
-	pm     core.PulseManager
 	scheme core.PlatformCryptographyScheme
 }
 
 // newRecorder create new recorder instance.
-func newRecorder(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *recorder {
-	return &recorder{sender: s, tape: tape, pm: pm, scheme: scheme}
+func newRecorder(s sender, tape tape, scheme core.PlatformCryptographyScheme) *recorder {
+	return &recorder{sender: s, tape: tape, scheme: scheme}
 }
 
 // WriteTape writes recorder's tape to the provided writer.
