@@ -66,14 +66,10 @@ func (nc *NetworkCoordinator) getCoordinator() core.NetworkCoordinator {
 }
 
 // GetCert method returns node certificate
-func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRef) (core.Certificate, error) {
-	res, err := nc.ContractRequester.SendRequest(ctx, &nodeRef, "GetNodeInfo", []interface{}{})
+func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef *core.RecordRef) (core.Certificate, error) {
+	pKey, role, err := nc.getNodeInfo(ctx, nodeRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
-	}
-	pKey, role, err := extractor.NodeInfoResponse(res.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetCert ] Couldn't extract response")
+		return nil, errors.Wrap(err, "[ GetCert ] Couldn't get node info")
 	}
 
 	currentNodeCert := nc.CertificateManager.GetCertificate()
@@ -91,7 +87,7 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 			currentNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
 		} else {
 			msg := message.NodeSignPayload{
-				NodeRef: &nodeRef,
+				NodeRef: nodeRef,
 			}
 			opts := core.MessageSendOptions{
 				Receiver: node.GetNodeRef(),
@@ -125,11 +121,7 @@ func (nc *NetworkCoordinator) SignCertificate(ctx context.Context, p core.Parcel
 }
 
 func (nc *NetworkCoordinator) signNode(ctx context.Context, nodeRef *core.RecordRef) ([]byte, error) {
-	res, err := nc.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignCertificate ] Couldn't call GetNodeInfo")
-	}
-	pKey, role, err := extractor.NodeInfoResponse(res.(*reply.CallMethod).Result)
+	pKey, role, err := nc.getNodeInfo(ctx, nodeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignCertificate ] Couldn't extract response")
 	}
