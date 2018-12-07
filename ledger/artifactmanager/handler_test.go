@@ -47,7 +47,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	recentStorageMock.RemovePendingRequestMock.Return()
 
 	mb := testutils.NewMessageBusMock(mc)
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Head, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -159,7 +159,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	}
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse,  o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Parent, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -273,7 +273,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 		AsType: delegateType,
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse,  o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Head, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -339,7 +339,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 		Object: *genRandomRef(0),
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse,  o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Object, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -509,7 +509,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 		Parent: *genRandomRef(0),
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse,  o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Parent, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
