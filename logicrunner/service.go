@@ -286,12 +286,13 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 	i := *iteratorMap[iteratorID]
 	rep.Iterator.ID = iteratorID
 	rep.Iterator.CanFetch = i.HasNext()
-
 	for len(rep.Iterator.Buff) < iteratorBuffSize && i.HasNext() {
 		r, err := i.Next()
 		if err != nil {
 			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get Next")
 		}
+		rep.Iterator.CanFetch = i.HasNext()
+
 		o, err := am.GetObject(ctx, *r, nil, false)
 
 		if err != nil {
@@ -308,8 +309,6 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 		if protoRef.Equal(req.Prototype) {
 			rep.Iterator.Buff = append(rep.Iterator.Buff, *r)
 		}
-
-		rep.Iterator.CanFetch = i.HasNext()
 	}
 
 	if !i.HasNext() {
