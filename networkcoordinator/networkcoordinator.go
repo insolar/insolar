@@ -73,7 +73,6 @@ func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core
 // signCertHandler is MsgBus handler that signs certificate for some node with node own key
 func (nc *NetworkCoordinator) signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error) {
 	return nc.getCoordinator().signCertHandler(ctx, p)
-
 }
 
 // WriteActiveNodes writes active nodes to ledger

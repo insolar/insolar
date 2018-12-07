@@ -48,6 +48,7 @@ func newRealNetworkCoordinator(
 	}
 }
 
+// GetCert method generates cert by requesting signs from discovery nodes
 func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *core.RecordRef) (core.Certificate, error) {
 	pKey, role, err := rnc.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
@@ -70,6 +71,7 @@ func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRe
 	return registeredNodeCert, nil
 }
 
+// requestCertSign method requests sign from single discovery node
 func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discoveryNode core.DiscoveryNode, registeredNodeRef *core.RecordRef) ([]byte, error) {
 	var sign []byte
 	var err error
@@ -110,6 +112,7 @@ func (rnc *realNetworkCoordinator) signCertHandler(ctx context.Context, p core.P
 	}, nil
 }
 
+// signCert returns certificate sign fore node
 func (rnc *realNetworkCoordinator) signCert(ctx context.Context, registeredNodeRef *core.RecordRef) ([]byte, error) {
 	pKey, role, err := rnc.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
@@ -125,6 +128,7 @@ func (rnc *realNetworkCoordinator) signCert(ctx context.Context, registeredNodeR
 	return sign.Bytes(), nil
 }
 
+// getNodeInfo request info from ledger
 func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *core.RecordRef) (string, string, error) {
 	res, err := rnc.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
 	if err != nil {
@@ -137,10 +141,12 @@ func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *cor
 	return pKey, role, nil
 }
 
+// TODO: remove and use SetPulse instead
 func (rnc *realNetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
 	return errors.New("not implemented")
 }
 
+// SetPulse uses PulseManager component for saving pulse info
 func (rnc *realNetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return errors.New("not implemented")
 }
