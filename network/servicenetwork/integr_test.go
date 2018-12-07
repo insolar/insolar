@@ -140,11 +140,12 @@ func initCrypto(t *testing.T, nodes []certificate.BootstrapNode, ref core.Record
 func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode {
 	result := make([]certificate.BootstrapNode, 0)
 	for _, b := range s.bootstrapNodes {
-		node := certificate.NewBootstrapNode(b.serviceNetwork.CertificateManager.GetCertificate().GetPublicKey())
-		node.Host = b.serviceNetwork.cfg.Host.Transport.Address
-		node.PublicKey = b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey
-		node.NodeRef = b.serviceNetwork.NodeNetwork.GetOrigin().ID().String()
-		result = append(result, node)
+		node := certificate.NewBootstrapNode(
+			b.serviceNetwork.CertificateManager.GetCertificate().GetPublicKey(),
+			b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey,
+			b.serviceNetwork.cfg.Host.Transport.Address,
+			b.serviceNetwork.NodeNetwork.GetOrigin().ID().String())
+		result = append(result, *node)
 	}
 	return result
 }
