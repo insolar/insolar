@@ -124,11 +124,15 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	gil.AcquireMock.Return()
 	gil.ReleaseMock.Return()
 
+	alsMock := testutils.NewActiveListSwapperMock(t)
+	alsMock.MoveSyncToActiveFunc = func() {}
+
 	pm.LR = lr
 	pm.Recent = recentMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
 	pm.GIL = gil
+	pm.ActiveListSwapper = alsMock
 
 	// Act
 	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)

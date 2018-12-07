@@ -96,7 +96,7 @@ func init() {
 	gob.Register(&ChallengeResponse{})
 }
 
-func (cr *ChallengeResponseController) processChallenge1(request network.Request) (network.Response, error) {
+func (cr *ChallengeResponseController) processChallenge1(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*ChallengeRequest)
 	// CheckSession is performed in SetDiscoveryNonce too, but we want to return early if the request is invalid
 	err := cr.sessionManager.CheckSession(data.SessionID, Authorized)
@@ -142,7 +142,7 @@ func (cr *ChallengeResponseController) buildChallenge1ErrorResponse(request netw
 	})
 }
 
-func (cr *ChallengeResponseController) processChallenge2(request network.Request) (network.Response, error) {
+func (cr *ChallengeResponseController) processChallenge2(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*SignedChallengeRequest)
 	cert, discoveryNonce, err := cr.sessionManager.GetChallengeData(data.SessionID)
 	if err != nil {
