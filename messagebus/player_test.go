@@ -41,7 +41,7 @@ func TestPlayer_Send(t *testing.T) {
 	parcel := message.Parcel{Msg: &msg}
 	msgHash := GetMessageHash(pcs, &parcel)
 	s := NewsenderMock(mc)
-	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 core.DelegationToken) (r core.Parcel, r1 error) {
+	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 core.DelegationToken, p4 core.Pulse) (r core.Parcel, r1 error) {
 		return &parcel, nil
 	}
 	tape := NewtapeMock(mc)

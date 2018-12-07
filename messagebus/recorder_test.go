@@ -41,7 +41,7 @@ func TestRecorder_Send(t *testing.T) {
 	msgHash := GetMessageHash(pcs, &parcel)
 	expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
 	s := NewsenderMock(mc)
-	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 core.DelegationToken) (r core.Parcel, r1 error) {
+	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 core.DelegationToken, p4 core.Pulse) (r core.Parcel, r1 error) {
 		return &message.Parcel{Msg: p2}, nil
 	}
 
