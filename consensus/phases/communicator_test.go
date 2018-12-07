@@ -90,7 +90,7 @@ func (s *communicatorSuite) SetupTest() {
 }
 
 func makeRandomNode() core.Node {
-	return nodenetwork.NewNode(testutils.RandomRef(), nil, nil, "127.0.0.1", "")
+	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1", "")
 }
 
 func (s *communicatorSuite) TestExchangeData() {

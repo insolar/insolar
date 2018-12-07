@@ -206,7 +206,7 @@ func claimToNode(address, version string, claim *consensus.NodeJoinClaim) (core.
 	}
 	node := NewNode(
 		claim.NodeRef,
-		[]core.StaticRole{core.StaticRole(int(claim.NodeRoleRecID))},
+		core.StaticRole(int(claim.NodeRoleRecID)),
 		key,
 		address,
 		version)

@@ -146,11 +146,11 @@ func (db *DB) Init(ctx context.Context) error {
 			return nil, err
 		}
 
-		lastPulse, err := db.GetLatestPulseNumber(ctx)
+		lastPulse, err := db.GetLatestPulse(ctx)
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := db.SetRecord(ctx, lastPulse, &record.GenesisRecord{})
+		genesisID, err := db.SetRecord(ctx, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
@@ -291,6 +291,13 @@ func (db *DB) SetObjectIndex(
 ) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(ctx, id, idx)
+	})
+}
+
+// RemoveObjectIndex removes an index of an object
+func (db *DB) RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error {
+	return db.Update(ctx, func(tx *TransactionManager) error {
+		return tx.RemoveObjectIndex(ctx, ref)
 	})
 }
 

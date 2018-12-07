@@ -77,7 +77,7 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:   &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -172,9 +172,10 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 			},
 		},
 	)
-	db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
+	require.NoError(t, err)
 
 	objRef := *genRandomRef(0)
 	objDesc, err := am.ActivateObject(
@@ -229,10 +230,11 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 			},
 		},
 	)
-	db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
+	require.NoError(t, err)
 	deactivateID, err := am.DeactivateObject(
 		ctx,
 		domainRef,
@@ -269,10 +271,11 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 			},
 		},
 	)
-	db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
+	require.NoError(t, err)
 	memory := []byte{1, 2, 3}
 	prototype := genRandomRef(0)
 	obj, err := am.UpdateObject(
@@ -312,7 +315,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
 	objRef := genRandomRef(0)
-	db.SetRecord(
+	_, err := db.SetRecord(
 		ctx,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{
@@ -325,7 +328,9 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 			Parent: *parentRef,
 		},
 	)
-	db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{3})
+	require.NoError(t, err)
+	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{3})
+	require.NoError(t, err)
 	objectAmendID, _ := db.SetRecord(ctx, core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
@@ -335,7 +340,9 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 			Image:  *prototypeRef,
 		},
 	})
-	db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{4})
+	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{4})
+	require.NoError(t, err)
+
 	objectIndex := index.ObjectLifeline{
 		LatestState:  objectAmendID,
 		ChildPointer: genRandomID(0),
@@ -558,9 +565,9 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	recHash := am.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := codeRecord.WriteHashData(recHash)
 	assert.NoError(t, err)
-	latestPulse, err := db.GetLatestPulseNumber(ctx)
+	latestPulse, err := db.GetLatestPulse(ctx)
 	assert.NoError(t, err)
-	id := core.NewRecordID(latestPulse, recHash.Sum(nil))
+	id := core.NewRecordID(latestPulse.Pulse.PulseNumber, recHash.Sum(nil))
 
 	setRecordMessage := message.SetRecord{
 		Record: record.SerializeRecord(&codeRecord),
@@ -605,7 +612,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:   &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -626,7 +633,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "object"}})
 	require.NoError(t, err)
 	objRef := genRefWithID(objID)
-
 
 	desc, err := am.ActivateObject(
 		ctx,

@@ -9,7 +9,7 @@ Usage
    
 #### Start insolard
 
-    ./scripts/insolard/launch.sh
+    ./scripts/insolard/launchnet.sh -g
    
 #### Send request example (RegisterNode)
 

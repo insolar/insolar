@@ -1,15 +1,12 @@
 host:
   transport:
     protocol: TCP
-    address: 127.0.0.1:0
+    address: 127.0.0.1:53831
     behindnat: false
   bootstraphosts: []
   isrelay: false
   infinitybootstrap: false
   timeout: 4
-node:
-  node:
-    id: "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
 service:
   service: {}
 ledger:
@@ -28,7 +25,7 @@ log:
   level: Debug
   adapter: logrus
 stats:
-  listenaddress: 0.0.0.0:8080
+  listenaddress: 0.0.0.0:8081
 logicrunner:
   rpclisten: 127.0.0.1:18182
   builtin: {}

@@ -70,7 +70,7 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 func (ar *Runner) verifySignature(ctx context.Context, params Request) error {
 	key, err := ar.getMemberPubKey(ctx, params.Reference)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ VerifySignature ] Can't getMemberPubKey")
 	}
 	if key == "" {
 		return errors.New("[ VerifySignature ] Not found public key for this member")
@@ -111,7 +111,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 		ctx,
 		&reference,
 		"Call",
-		[]interface{}{*ar.Certificate.GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
+		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
@@ -131,7 +131,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 
 func processError(err error, extraMsg string, resp *answer, insLog core.Logger) {
 	resp.Error = err.Error()
-	insLog.Error(errors.Wrap(err, "[ CallHandler ] "+extraMsg))
+	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
@@ -143,6 +143,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		traceID := utils.RandTraceID()
 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 		resp.TraceID = traceID
+
+		insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
 
 		defer func() {
 			res, err := json.MarshalIndent(resp, "", "    ")

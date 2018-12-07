@@ -38,7 +38,6 @@ type NodeRecord struct {
 
 // NewNodeRecord creates new NodeRecord
 func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
-
 	if len(publicKey) == 0 {
 		return nil, fmt.Errorf("[ NewNodeRecord ] public key is required")
 	}

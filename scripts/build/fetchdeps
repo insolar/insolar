@@ -1,0 +1,35 @@
+#!/bin/bash
+#
+# fethcdeps - installs go bin tool from package using provided git reference
+#
+# Usage: fethcdeps <package> [<gitref>]
+#
+
+# use bash 'strict mode'
+set -euo pipefail
+IFS=$'\n\t'
+
+# pass arguments
+if [[ "$#" -lt 1 ]]; then
+    echo "Usage: fethcdeps <package> [<gitref>]"
+    exit
+fi
+REPO=$1
+GITREF=${2:-"master"}
+
+# set vars
+# GOPATH may contain multiple paths. We use only the first one.
+export GOPATH=$(go env GOPATH | cut -d':' -f1)
+REPODIR="$GOPATH/src/$REPO"
+
+# fetch and update repo
+if [ ! -d "$REPODIR" ]; then
+    go get -u "$REPO"
+fi
+
+pushd $REPODIR
+git fetch --all -q
+git checkout -q "$GITREF" >/dev/null
+echo "install $1@$GITREF"
+# if mod file available we want to have consitent dependency tree
+GO111MODULE=on go install
