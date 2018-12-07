@@ -113,7 +113,7 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 	return &cert, nil
 }
 
-func (cert *Certificate) serializeNetworkPart() []byte {
+func (cert *Certificate) SerializeNetworkPart() []byte {
 	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
 		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +
 		cert.RootDomainReference
@@ -132,9 +132,9 @@ func (cert *Certificate) serializeNetworkPart() []byte {
 }
 
 // SignNetworkPart signs network part in certificate
-func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) {
+func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey, serialized []byte) ([]byte, error) {
 	signer := scheme.Signer(key)
-	sign, err := signer.Sign(cert.serializeNetworkPart())
+	sign, err := signer.Sign(serialized)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignNetworkPart ] Can't Sign")
 	}
