@@ -25,6 +25,8 @@ import (
 	"net/rpc"
 	"sync/atomic"
 
+	"github.com/satori/go.uuid"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -223,7 +225,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 			if err == core.ErrDeactivated {
 				continue
 			}
-			return errors.Wrap(err, "[ GetObjChildren ] Can't get Next")
+			return errors.Wrap(err, "[ GetObjChildren ] Can't call GetObject on Next")
 		}
 		protoRef, err := o.Prototype()
 		if err != nil {
@@ -234,10 +236,86 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 			rep.Children = append(rep.Children, *r)
 		}
 	}
+
 	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{ // bad idea, we can store gadzillion of children
 		Type:   core.CaseRecordTypeGetObjChildren,
 		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
 		Resp:   rep.Children,
+	})
+	return nil
+}
+
+var iteratorMap = make(map[string]*core.RefIterator)
+var iteratorBuffSize = 1000
+
+// GetObjChildrenIterator is an RPC returns set of object children
+func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq, rep *rpctypes.UpGetObjChildrenIteratorResp) error {
+	es := gpr.lr.UpsertExecution(req.Callee)
+	ctx := es.insContext
+
+	cr, step := gpr.lr.nextValidationStep(req.Callee)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeGetObjChildrenIterator != cr.Type {
+			return errors.New("wrong validation type on GetObjChildrenIterator")
+		}
+		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return errors.New("wrong validation sig on GetObjChildrenIterator")
+		}
+
+		rep.Iterator = cr.Resp.(rpctypes.ChildIterator)
+		return nil
+	}
+	am := gpr.lr.ArtifactManager
+	iteratorId := req.IteratorId
+	if _, ok := iteratorMap[iteratorId]; !ok {
+		i, err := am.GetChildren(ctx, req.Obj, nil)
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get children")
+		}
+
+		id, err := uuid.NewV4()
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't generate UUID")
+		}
+
+		iteratorId = id.String()
+		iteratorMap[iteratorId] = &i
+	}
+
+	i := *iteratorMap[iteratorId]
+	rep.Iterator.Id = iteratorId
+	rep.Iterator.CanFetch = i.HasNext()
+
+	for len(rep.Iterator.Buff) < iteratorBuffSize && i.HasNext() {
+		r, err := i.Next()
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get Next")
+		}
+		o, err := am.GetObject(ctx, *r, nil, false)
+
+		if err != nil {
+			if err == core.ErrDeactivated {
+				continue
+			}
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't call GetObject on Next")
+		}
+		protoRef, err := o.Prototype()
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get prototype reference")
+		}
+
+		if protoRef.Equal(req.Prototype) {
+			rep.Iterator.Buff = append(rep.Iterator.Buff, *r)
+		}
+
+		rep.Iterator.CanFetch = i.HasNext()
+	}
+
+	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{ // bad idea, we can store gadzillion of children
+		Type:   core.CaseRecordTypeGetObjChildrenIterator,
+		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
+		Resp:   rep.Iterator,
 	})
 	return nil
 }
