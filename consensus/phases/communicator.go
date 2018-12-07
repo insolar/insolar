@@ -261,7 +261,7 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 	newPulse := p.GetPulse()
 
 	if newPulse.PulseNumber < nc.getPulseNumber() {
-		log.Warnln("ignore old pulse")
+		log.Warnln("ignore old pulse Phase1Packet")
 		return
 	}
 
@@ -278,6 +278,20 @@ func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
 		return
 	}
 
+	p, ok := request.GetData().(*packets.Phase2Packet)
+	if !ok {
+		log.Errorln("invalid Phase2Packet")
+		return
+	}
+
+	pulseNumber := p.GetPulseNumber()
+
+	if pulseNumber < nc.getPulseNumber() {
+		log.Warnln("ignore old pulse Phase2Packet")
+		return
+	}
+
+	nc.phase2result <- phase2Result{request.GetSender(), p}
 }
 
 func (nc *NaiveCommunicator) phase3DataHandler(request network.Request) {
