@@ -114,10 +114,11 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetRecord)
+	jetID := core.TODOJetID
 
 	rec := record.DeserializeRecord(msg.Record)
 
-	id, err := h.db.SetRecord(ctx, pulseNumber, rec)
+	id, err := h.db.SetRecord(ctx, jetID, pulseNumber, rec)
 	if err != nil {
 		return nil, err
 	}
@@ -319,6 +320,7 @@ func (h *MessageHandler) handleGetChildren(
 	ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel,
 ) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
+	jetID := core.TODOJetID
 
 	idx, err := h.db.GetObjectIndex(ctx, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
@@ -377,7 +379,7 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		counter++
 
-		rec, err := h.db.GetRecord(ctx, currentChild)
+		rec, err := h.db.GetRecord(ctx, jetID, currentChild)
 		// We don't have this child reference. Return what was collected.
 		if err == storage.ErrNotFound {
 			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
@@ -405,6 +407,8 @@ func (h *MessageHandler) handleGetChildren(
 
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.UpdateObject)
+
+	jetID := core.TODOJetID
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ObjectState)
@@ -445,7 +449,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 
 		h.Recent.AddObject(*msg.Object.Record(), true)
 
-		id, err := tx.SetRecord(ctx, pulseNumber, rec)
+		id, err := tx.SetRecord(ctx, jetID, pulseNumber, rec)
 		if err != nil {
 			return err
 		}
@@ -479,6 +483,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.RegisterChild)
 
+	jetID := core.TODOJetID
+
 	rec := record.DeserializeRecord(msg.Record)
 	childRec, ok := rec.(*record.ChildRecord)
 	if !ok {
@@ -507,7 +513,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 			return errors.New("invalid child record")
 		}
 
-		child, err = tx.SetRecord(ctx, pulseNumber, childRec)
+		child, err = tx.SetRecord(ctx, jetID, pulseNumber, childRec)
 		if err != nil {
 			return err
 		}
@@ -650,7 +656,9 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.ValidationCheck)
 
-	rec, err := h.db.GetRecord(ctx, &msg.ValidatedState)
+	jetID := core.TODOJetID
+
+	rec, err := h.db.GetRecord(ctx, jetID, &msg.ValidatedState)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch state record")
 	}
@@ -681,7 +689,9 @@ func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Mes
 }
 
 func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
-	rec, err := s.GetRecord(ctx, id)
+	jetID := core.TODOJetID
+
+	rec, err := s.GetRecord(ctx, jetID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -720,7 +730,9 @@ func getObjectStateRecord(
 	s storage.Store,
 	state *core.RecordID,
 ) (record.ObjectState, error) {
-	rec, err := s.GetRecord(ctx, state)
+	jetID := core.TODOJetID
+
+	rec, err := s.GetRecord(ctx, jetID, state)
 	if err != nil {
 		return nil, err
 	}
@@ -805,7 +817,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 	}
 
 	for id, request := range msg.PendingRequests {
-		newID, err := h.db.SetRecord(ctx, id.Pulse(), record.DeserializeRecord(request))
+		newID, err := h.db.SetRecord(ctx, jetID, id.Pulse(), record.DeserializeRecord(request))
 		if err != nil {
 			inslog.Error(err)
 			continue

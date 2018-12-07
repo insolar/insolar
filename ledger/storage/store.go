@@ -26,8 +26,8 @@ import (
 
 // Store is used by context unaware clients who can work inside transactions as well as outside.
 type Store interface {
-	GetRecord(ctx context.Context, ref *core.RecordID) (record.Record, error)
-	SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
+	GetRecord(ctx context.Context, jet core.RecordID, ref *core.RecordID) (record.Record, error)
+	SetRecord(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
 	GetBlob(ctx context.Context, jet core.RecordID, ref *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jet core.RecordID, number core.PulseNumber, blob []byte) (*core.RecordID, error)
 

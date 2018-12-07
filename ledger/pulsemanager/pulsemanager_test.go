@@ -59,6 +59,7 @@ func TestPulseManager_Current(t *testing.T) {
 func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
+	jetID := core.TODOJetID
 
 	lr := testutils.NewLogicRunnerMock(t)
 	lr.OnPulseMock.Return(nil)
@@ -67,6 +68,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	defer dbcancel()
 	firstID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{})
 	firstIndex := index.ObjectLifeline{
@@ -76,6 +78,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	codeRecord := &record.CodeRecord{}
 	secondID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		codeRecord,
 	)

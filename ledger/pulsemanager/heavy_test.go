@@ -234,6 +234,7 @@ func addRecords(
 	// set record
 	parentID, err := db.SetRecord(
 		ctx,
+		jetID,
 		pn,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -293,8 +294,9 @@ func (b key) pulse() core.PulseNumber {
 	// if jet defined for record type
 	switch b[0] {
 	case
-		scopeIDBlob,
-		scopeIDJetDrop:
+		scopeIDRecord,
+		scopeIDJetDrop,
+		scopeIDBlob:
 
 		pulseStartsAt += core.RecordIDSize
 		pulseEndsAt += core.RecordIDSize

@@ -105,8 +105,8 @@ func (m *TransactionManager) Discard() {
 // GetRequest returns request record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRequest(ctx context.Context, id *core.RecordID) (record.Request, error) {
-	rec, err := m.GetRecord(ctx, id)
+func (m *TransactionManager) GetRequest(ctx context.Context, jet core.RecordID, id *core.RecordID) (record.Request, error) {
+	rec, err := m.GetRecord(ctx, jet, id)
 	if err != nil {
 		return nil, err
 	}
@@ -146,8 +146,8 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jet core.RecordID, pul
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
-	k := prefixkey(scopeIDRecord, id[:])
+func (m *TransactionManager) GetRecord(ctx context.Context, jet core.RecordID, id *core.RecordID) (record.Record, error) {
+	k := prefixkeyany(scopeIDRecord, jet[:], id[:])
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -159,14 +159,14 @@ func (m *TransactionManager) GetRecord(ctx context.Context, id *core.RecordID) (
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (m *TransactionManager) SetRecord(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	recHash := m.db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := rec.WriteHashData(recHash)
 	if err != nil {
 		return nil, err
 	}
 	id := core.NewRecordID(pulseNumber, recHash.Sum(nil))
-	k := prefixkey(scopeIDRecord, id[:])
+	k := prefixkeyany(scopeIDRecord, jet[:], id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
 		return err

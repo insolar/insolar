@@ -41,8 +41,9 @@ func TestDB_GetRecordNotFound(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jet := testutils.RandomID()
 
-	rec, err := db.GetRecord(ctx, &core.RecordID{})
+	rec, err := db.GetRecord(ctx, jet, &core.RecordID{})
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, rec)
 }
@@ -52,16 +53,17 @@ func TestDB_SetRecord(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jet := testutils.RandomID()
 
 	rec := &record.CallRequest{}
-	gotRef, err := db.SetRecord(ctx, core.GenesisPulse.PulseNumber, rec)
+	gotRef, err := db.SetRecord(ctx, jet, core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(t, err)
 
-	gotRec, err := db.GetRecord(ctx, gotRef)
+	gotRec, err := db.GetRecord(ctx, jet, gotRef)
 	assert.Nil(t, err)
 	assert.Equal(t, rec, gotRec)
 
-	_, err = db.SetRecord(ctx, core.GenesisPulse.PulseNumber, rec)
+	_, err = db.SetRecord(ctx, jet, core.GenesisPulse.PulseNumber, rec)
 	assert.Equalf(t, err, storage.ErrOverride, "records override should be forbidden")
 }
 

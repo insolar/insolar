@@ -151,7 +151,7 @@ func (db *DB) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := db.SetRecord(ctx, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
+		genesisID, err := db.SetRecord(ctx, jetID, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
@@ -237,14 +237,14 @@ func (db *DB) SetBlob(ctx context.Context, jet core.RecordID, pulseNumber core.P
 }
 
 // GetRecord wraps matching transaction manager method.
-func (db *DB) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
+func (db *DB) GetRecord(ctx context.Context, jet core.RecordID, id *core.RecordID) (record.Record, error) {
 	var (
 		fetchedRecord record.Record
 		err           error
 	)
 
 	err = db.View(ctx, func(tx *TransactionManager) error {
-		fetchedRecord, err = tx.GetRecord(ctx, id)
+		fetchedRecord, err = tx.GetRecord(ctx, jet, id)
 		return err
 	})
 	if err != nil {
@@ -254,13 +254,13 @@ func (db *DB) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, 
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (db *DB) SetRecord(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
 	)
 	err = db.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(ctx, pulseNumber, rec)
+		id, err = tx.SetRecord(ctx, jet, pulseNumber, rec)
 		return err
 	})
 	if err != nil {
@@ -368,9 +368,7 @@ func (db *DB) CreateDrop(ctx context.Context, jet core.RecordID, pulse core.Puls
 	var jetDropHashError error
 
 	go func() {
-		recordPrefix := make([]byte, core.PulseNumberSize+1)
-		recordPrefix[0] = scopeIDRecord
-		copy(recordPrefix[1:], pulse.Bytes())
+		recordPrefix := prefixkeyany(scopeIDRecord, jet[:], pulse.Bytes())
 
 		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -536,10 +534,11 @@ func (db *DB) IterateLocalData(
 // IterateRecords iterates over records.
 func (db *DB) IterateRecords(
 	ctx context.Context,
+	jet core.RecordID,
 	pulse core.PulseNumber,
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
-	prefix := bytes.Join([][]byte{{scopeIDRecord}, pulse.Bytes()}, nil)
+	prefix := prefixkeyany(scopeIDRecord, jet[:], pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := core.NewRecordID(pulse, k)

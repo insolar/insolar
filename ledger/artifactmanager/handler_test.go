@@ -553,7 +553,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.NoError(t, err)
 
 	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
-	secondId, _ := idCreator.SetRecord(ctx, core.FirstPulseNumber, &record.CodeRecord{})
+	secondId, _ := idCreator.SetRecord(ctx, jetID, core.FirstPulseNumber, &record.CodeRecord{})
 
 	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
 		LatestState: firstID,
@@ -608,6 +608,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
+	jetID := core.TODOJetID
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -620,7 +621,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 	h.Recent = recentStorageMock
 
 	t.Run("returns not ok when not valid", func(t *testing.T) {
-		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{})
+		validatedStateID, err := db.SetRecord(ctx, jetID, 0, &record.ObjectAmendRecord{})
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -639,7 +640,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 
 	t.Run("returns ok when valid", func(t *testing.T) {
 		approvedStateID := *genRandomID(0)
-		validatedStateID, err := db.SetRecord(ctx, 0, &record.ObjectAmendRecord{
+		validatedStateID, err := db.SetRecord(ctx, jetID, 0, &record.ObjectAmendRecord{
 			PrevState: approvedStateID,
 		})
 		require.NoError(t, err)

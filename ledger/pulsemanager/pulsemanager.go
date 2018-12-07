@@ -160,6 +160,8 @@ func (m *PulseManager) processRecentObjects(
 	pendingRequestsIds := m.Recent.GetRequests()
 	defer m.Recent.ClearObjects()
 
+	jetID := core.TODOJetID
+
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID][]byte{}
 
@@ -189,7 +191,7 @@ func (m *PulseManager) processRecentObjects(
 	}
 
 	for _, id := range pendingRequestsIds {
-		pendingRecord, err := m.db.GetRecord(ctx, &id)
+		pendingRecord, err := m.db.GetRecord(ctx, jetID, &id)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 			continue

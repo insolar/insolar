@@ -59,16 +59,16 @@ func TestExporter_Export(t *testing.T) {
 	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
 	blobID, err := db.SetBlob(ctx, jetID, core.FirstPulseNumber+1, mem)
 	require.NoError(t, err)
-	_, err = db.SetRecord(ctx, core.FirstPulseNumber+1, &record.GenesisRecord{})
+	_, err = db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.GenesisRecord{})
 	require.NoError(t, err)
-	objectID, err := db.SetRecord(ctx, core.FirstPulseNumber+1, &record.ObjectActivateRecord{
+	objectID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.ObjectActivateRecord{
 		ObjectStateRecord: record.ObjectStateRecord{
 			Memory: blobID,
 		},
 		IsDelegate: true,
 	})
 	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest"})
-	requestID, err := db.SetRecord(ctx, core.FirstPulseNumber+1, &record.CallRequest{
+	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.CallRequest{
 		Payload: pl,
 	})
 	require.NoError(t, err)
@@ -95,13 +95,17 @@ func TestExporter_Export(t *testing.T) {
 	assert.Equal(t, int64(2), pulse.PulseTimestamp)
 
 	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].(pulseData).Records
-	object := records[base58.Encode(objectID[:])]
-	assert.Equal(t, "TypeActivate", object.Type)
-	assert.Equal(t, true, object.Data.(*record.ObjectActivateRecord).IsDelegate)
-	assert.Equal(t, "objectValue", object.Payload["Memory"].(payload)["Field"])
+	object, ok := records[base58.Encode(objectID[:])]
+	if assert.True(t, ok, "object not found by ID") {
+		assert.Equal(t, "TypeActivate", object.Type)
+		assert.Equal(t, true, object.Data.(*record.ObjectActivateRecord).IsDelegate)
+		assert.Equal(t, "objectValue", object.Payload["Memory"].(payload)["Field"])
+	}
 
-	request := records[base58.Encode(requestID[:])]
-	assert.Equal(t, "TypeCallRequest", request.Type)
-	assert.Equal(t, pl, request.Data.(*record.CallRequest).Payload)
-	assert.Equal(t, "callRequest", request.Payload["Payload"].(*message.Parcel).LogTraceID)
+	request, ok := records[base58.Encode(requestID[:])]
+	if assert.True(t, ok, "request not found by ID") {
+		assert.Equal(t, "TypeCallRequest", request.Type)
+		assert.Equal(t, pl, request.Data.(*record.CallRequest).Payload)
+		assert.Equal(t, "callRequest", request.Payload["Payload"].(*message.Parcel).LogTraceID)
+	}
 }

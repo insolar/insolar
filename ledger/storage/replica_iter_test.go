@@ -100,7 +100,7 @@ func Test_ReplicaIter_FirstPulse(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	jetID := testutils.RandomID()
+	jetID := core.TODOJetID
 	addRecords(ctx, t, db, jetID, core.FirstPulseNumber)
 
 	replicator := storage.NewReplicaIter(ctx, db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
@@ -279,6 +279,7 @@ func addRecords(
 	// set record
 	parentID, err := db.SetRecord(
 		ctx,
+		jet,
 		pulsenum,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -357,6 +358,7 @@ func (b key) pulse() core.PulseNumber {
 	// if jet defined for record type
 	switch b[0] {
 	case
+		scopeIDRecord,
 		scopeIDBlob,
 		scopeIDJetDrop:
 
