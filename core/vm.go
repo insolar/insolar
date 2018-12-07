@@ -78,28 +78,9 @@ type LogicCallContext struct {
 	TraceID         string
 }
 
-// CaseRecordType is a type of caserecord
-type CaseRecordType int
-
-// Types of records
-const (
-	caseRecordTypeUnexistent CaseRecordType = iota
-	CaseRecordTypeStart
-	CaseRecordTypeTraceID
-	CaseRecordTypeResult
-	CaseRecordTypeRequest
-	CaseRecordTypeGetObject
-	CaseRecordTypeSignObject
-	CaseRecordTypeRouteCall
-	CaseRecordTypeSaveAsChild
-	CaseRecordTypeGetObjChildrenIterator
-	CaseRecordTypeSaveAsDelegate
-	CaseRecordTypeGetDelegate
-	CaseRecordTypeDeactivateObject
-)
-
 type CaseRequest struct {
 	Message    Message
+	Request    RecordRef
 	MessageBus MessageBus
 	Reply      Reply
 	Error      error
@@ -114,11 +95,11 @@ func NewCaseBind() *CaseBind {
 	return &CaseBind{Requests: make([]CaseRequest, 0)}
 }
 
-func (cb *CaseBind) NewRequest(req interface{}, mb MessageBus) *CaseRequest {
+func (cb *CaseBind) NewRequest(msg Message, request RecordRef, mb MessageBus) *CaseRequest {
 	res := CaseRequest{
+		Message:    msg,
+		Request:    request,
 		MessageBus: mb,
-		Request:    req,
-		Records:    make([]CaseRecord, 0),
 	}
 	cb.Requests = append(cb.Requests, res)
 	return &cb.Requests[len(cb.Requests)-1]
@@ -149,39 +130,7 @@ func (r *CaseBindReplay) NextRequest() *CaseRequest {
 	return &r.CaseBind.Requests[r.Request]
 }
 
-func (r *CaseBindReplay) NextStep() (*CaseRecord, int) {
-	if r.Request >= len(r.CaseBind.Requests) {
-		return nil, r.Steps
-	}
-
-	request := r.CaseBind.Requests[r.Request]
-
-	if r.Record < 0 {
-		r.Record = 0
-		r.Steps++
-		res := request.Request.(CaseRecord)
-		return &res, r.Steps
-	}
-
-	if r.Record >= len(request.Records) {
-		r.Record = -1
-		r.Request++
-		if r.Request >= len(r.CaseBind.Requests) {
-			return nil, r.Steps
-		}
-		r.Record = 0
-		r.Steps++
-		res := r.CaseBind.Requests[r.Request].Request.(CaseRecord)
-		return &res, r.Steps
-	}
-	res := request.Records[r.Record]
-	r.Record++
-	r.Steps++
-	return &res, r.Steps
-}
-
 func init() {
-	gob.Register(&CaseRecord{})
 	gob.Register(&CaseRequest{})
 	gob.Register(&CaseBind{})
 }

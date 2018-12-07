@@ -68,10 +68,6 @@ func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
 	return res
 }
 
-func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
-	lr.MustObjectState(ref).AddCaseRecord(cr)
-}
-
 func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {
 	pulse, err := lr.PulseManager.Current(ctx)
 	if err != nil {

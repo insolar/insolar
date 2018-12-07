@@ -19,7 +19,6 @@
 package logicrunner
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -57,47 +56,26 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb c
 			break
 		}
 
-		msg := start.Resp.(core.Message)
+		msg := request.Message
 		parcel, err := lr.ParcelFactory.Create(ctx, msg, ref, nil, *core.GenesisPulse)
 		if err != nil {
 			return 0, errors.New("failed to create a parcel")
 		}
 
-		traceID = "TODO" // FIXME
+		traceID := "TODO" // FIXME
 
 		ctx = inslogger.ContextWithTrace(ctx, traceID)
 
 		vs.Current = &CurrentExecution{
 			Context: ctx,
-		}
-		ret, err := lr.executeOrValidate(ctx, vs, parcel)
-		if err != nil {
-			return 0, errors.Wrap(err, "validation step failed")
-		}
-		stop, step := vs.NextStep()
-		if step < 0 {
-			return 0, errors.New("validation container broken")
-		} else if stop.Type != core.CaseRecordTypeResult {
-			return step, errors.New("Validation stoped not on result")
+			Request: &request.Request,
 		}
 
-		switch need := stop.Resp.(type) {
-		case *reply.CallMethod:
-			if got, ok := ret.(*reply.CallMethod); !ok {
-				return step, errors.New("not result type callmethod")
-			} else if !bytes.Equal(got.Data, need.Data) {
-				return step, errors.New("body mismatch")
-			} else if !bytes.Equal(got.Result, need.Result) {
-				return step, errors.New("result mismatch")
-			}
-		case *reply.CallConstructor:
-			if got, ok := ret.(*reply.CallConstructor); !ok {
-				return step, errors.New("not result type callconstructor")
-			} else if !got.Object.Equal(*need.Object) {
-				return step, errors.New("constructed refs mismatch mismatch")
-			}
-		default:
-			return step, errors.New("unknown result type")
+		reply, err := lr.executeOrValidate(ctx, vs, parcel)
+
+		err = vs.Behaviour.Result(reply, err)
+		if err != nil {
+			return 0, errors.Wrap(err, "validation step failed")
 		}
 	}
 	return 1, nil
@@ -164,10 +142,7 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
 type ValidationBehaviour interface {
 	Mode() string
-	Begin(refs Ref, record core.CaseRecord)
-	End(refs Ref, record core.CaseRecord)
-	ModifyContext(ctx *core.LogicCallContext)
-	GetObject(ctx context.Context, ref Ref) (core.ObjectDescriptor, error)
+	Result(reply core.Reply, err error) error
 }
 
 type ValidationSaver struct {
@@ -180,28 +155,14 @@ func (vb ValidationSaver) Mode() string {
 	return "execution"
 }
 
-func (vb ValidationSaver) NewRequest(parcel core.Parcel, mb core.MessageBus) {
-	vb.current = vb.caseBind.NewRequest(parcel, mb)
+func (vb ValidationSaver) NewRequest(msg core.Message, request Ref, mb core.MessageBus) {
+	vb.current = vb.caseBind.NewRequest(msg, request, mb)
 }
 
-func (vb ValidationSaver) GetObject(ctx context.Context, ref Ref) (core.ObjectDescriptor, error) {
-	objDesc, err := vb.lr.ArtifactManager.GetObject(ctx, ref, nil, false)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object")
-	}
-	return objDesc, nil
-}
-
-func (vb ValidationSaver) ModifyContext(ctx *core.LogicCallContext) {
-	// nothing need
-}
-
-func (vb ValidationSaver) Begin(refs Ref, record core.CaseRecord) {
-	vb.lr.addObjectCaseRecord(refs, record)
-}
-
-func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
-	vb.lr.addObjectCaseRecord(refs, record)
+func (vb ValidationSaver) Result(reply core.Reply, err error) error {
+	vb.current.Reply = reply
+	vb.current.Error = err
+	return nil
 }
 
 type ValidationChecker struct {
@@ -215,21 +176,8 @@ func (vb ValidationChecker) Mode() string {
 
 func (vb ValidationChecker) NextRequest() *core.CaseRequest {
 	return vb.cb.NextRequest()
-
 }
 
-func (vb ValidationChecker) GetObject(ctx context.Context, ref Ref) (core.ObjectDescriptor, error) {
-	panic("not implemented")
-}
-
-func (vb ValidationChecker) ModifyContext(ctx *core.LogicCallContext) {
-	ctx.Pulse = vb.cb.Pulse
-}
-
-func (vb ValidationChecker) Begin(refs Ref, record core.CaseRecord) {
-	// do nothing, everything done in lr.Validate
-}
-
-func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
-	// do nothing, everything done in lr.Validate
+func (vb ValidationChecker) Result(reply core.Reply, err error) error {
+	return nil
 }

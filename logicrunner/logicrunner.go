@@ -159,31 +159,6 @@ func (es *ExecutionState) ReleaseQueue() {
 	}
 }
 
-func (es *ObjectState) AddCaseRequest(record core.CaseRecord) {
-	es.ExecutionState.caseBindMutex.Lock()
-	defer es.ExecutionState.caseBindMutex.Unlock()
-
-	es.ExecutionState.caseBind.Requests = append(es.ExecutionState.caseBind.Requests, core.CaseRequest{
-		Request: record,
-		Records: make([]core.CaseRecord, 0),
-	})
-}
-
-func (es *ObjectState) AddCaseRecord(record core.CaseRecord) {
-	es.ExecutionState.caseBindMutex.Lock()
-	defer es.ExecutionState.caseBindMutex.Unlock()
-
-	requests := es.ExecutionState.caseBind.Requests
-	if len(requests) == 0 {
-		panic("attempt to add record into case bind before any requests were added")
-	}
-
-	lastRequest := requests[len(requests)-1]
-	lastRequest.Records = append(lastRequest.Records, record)
-	requests[len(requests)-1] = lastRequest
-	es.ExecutionState.caseBind.Requests = requests
-}
-
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
@@ -302,7 +277,7 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) 
 	// TODO: use proper conversion
 	res := &Ref{}
 	res.SetRecord(*id)
-	return res
+	return res, nil
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
@@ -416,14 +391,16 @@ func (lr *LogicRunner) ProcessExecutionQueue(es *ExecutionState) {
 
 		es.Current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
-		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, recordingBus)
+		es.Behaviour.(*ValidationSaver).NewRequest(
+			qe.parcel.Message(), *qe.request, recordingBus,
+		)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
 		// TODO: check pulse change and do different things
 
-		err := es.Behaviour.RequestResult(res.reply, res.err)
+		err = es.Behaviour.Result(res.reply, res.err)
 		if err != nil {
-
+			res.err = err
 		}
 
 		finish()
@@ -636,10 +613,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		state.RefreshConsensus()
 
 		if es := state.ExecutionState; es != nil {
+			caseBind := es.Behaviour.(*ValidationSaver).caseBind
 			messages = append(
 				messages,
-				&message.ValidateCaseBind{RecordRef: ref, CaseBind: es.caseBind, Pulse: pulse},
-				&message.ExecutorResults{RecordRef: ref, CaseBind: es.caseBind},
+				&message.ValidateCaseBind{RecordRef: ref, CaseBind: *caseBind, Pulse: pulse},
+				&message.ExecutorResults{RecordRef: ref, CaseBind: *caseBind},
 			)
 
 			es.ReleaseQueue()
