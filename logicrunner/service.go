@@ -19,7 +19,6 @@
 package logicrunner
 
 import (
-	"bytes"
 	"context"
 	"net"
 	"net/rpc"
@@ -103,20 +102,6 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeRouteCall != cr.Type {
-			return errors.New("wrong validation type on RouteCall")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on RouteCall")
-		}
-
-		rep.Result = cr.Resp.(core.Arguments)
-		return nil
-	}
-
 	var mode message.MethodReturnMode
 	if req.Wait {
 		mode = message.ReturnResult
@@ -144,11 +129,6 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	}
 
 	rep.Result = res.(*reply.CallMethod).Result
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeRouteCall,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Result,
-	})
 
 	return nil
 }
@@ -161,20 +141,6 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 	if gpr.lr.MessageBus == nil {
 		return errors.New("event bus was not set during initialization")
-	}
-
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeSaveAsChild != cr.Type {
-			return errors.New("wrong validation type on SaveAsChild")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on SaveAsChild")
-		}
-
-		rep.Reference = cr.Resp.(*core.RecordRef)
-		return nil
 	}
 
 	msg := &message.CallConstructor{
@@ -198,12 +164,6 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 	rep.Reference = res.(*reply.CallConstructor).Object
 
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeSaveAsChild,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Reference,
-	})
-
 	return nil
 }
 
@@ -216,19 +176,6 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeGetObjChildrenIterator != cr.Type {
-			return errors.New("wrong validation type on GetObjChildrenIterator")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on GetObjChildrenIterator")
-		}
-
-		rep.Iterator = cr.Resp.(rpctypes.ChildIterator)
-		return nil
-	}
 	am := gpr.lr.ArtifactManager
 	iteratorID := req.IteratorID
 	if _, ok := iteratorMap[iteratorID]; !ok {
@@ -278,11 +225,6 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 		delete(iteratorMap, rep.Iterator.ID)
 	}
 
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{ // bad idea, we can store gadzillion of children
-		Type:   core.CaseRecordTypeGetObjChildrenIterator,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Iterator,
-	})
 	return nil
 }
 
@@ -291,20 +233,6 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
-
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeSaveAsDelegate != cr.Type {
-			return errors.New("wrong validation type on SaveAsDelegate")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on SaveAsDelegate")
-		}
-
-		rep.Reference = cr.Resp.(*core.RecordRef)
-		return nil
-	}
 
 	msg := &message.CallConstructor{
 		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
@@ -321,18 +249,11 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	}
 
 	res, err := gpr.lr.MessageBus.Send(ctx, msg, *currentSlotPulse, nil)
-
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as delegate")
 	}
 
 	rep.Reference = res.(*reply.CallConstructor).Object
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeSaveAsDelegate,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Reference,
-	})
-
 	return nil
 }
 
@@ -342,30 +263,12 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeGetDelegate != cr.Type {
-			return errors.New("wrong validation type on RouteCall")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on RouteCall")
-		}
-
-		rep.Object = cr.Resp.(core.RecordRef)
-		return nil
-	}
 	am := gpr.lr.ArtifactManager
 	ref, err := am.GetDelegate(ctx, req.Object, req.OfType)
 	if err != nil {
 		return err
 	}
 	rep.Object = *ref
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeGetDelegate,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Object,
-	})
 	return nil
 }
 
