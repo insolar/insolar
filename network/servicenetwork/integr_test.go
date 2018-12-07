@@ -194,21 +194,20 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
 	var phaseManager phases.PhaseManager
-	firstPhase := &FirstPhase{}
 	switch timeOut {
 	case Disable:
 		phaseManager = phases.NewPhaseManager()
 	case Full:
 		phaseManager = &FullTimeoutPhaseManager{}
 	case Partitial:
-		phaseManager = &PartitialTimeoutPhaseManager{FirstPhase: firstPhase}
+		phaseManager = &PartitialTimeoutPhaseManager{}
 	}
 
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 	keeper := &nodeKeeperWrapper{realKeeper}
 
 	cm := &component.Manager{}
-	cm.Register(firstPhase, keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
+	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
 	cm.Register(certManager, cryptographyService, phaseManager)
 	cm.Inject(serviceNetwork, netSwitcher)
 
@@ -289,6 +288,14 @@ func (s *testSuite) TestPartitionalTimeOut() {
 	}
 
 	s.InitNodes()
+	phase := &FirstPhase{
+		NodeNetwork:  s.testNode.serviceNetwork.NodeNetwork,
+		Calculator:   s.testNode.serviceNetwork.MerkleCalculator,
+		Communicator: s.testNode.serviceNetwork.Communicator,
+		Cryptography: s.testNode.serviceNetwork.CryptographyService,
+		NodeKeeper:   s.testNode.serviceNetwork.NodeKeeper,
+	}
+	s.testNode.serviceNetwork.PhaseManager.(*PartitialTimeoutPhaseManager).FirstPhase = phase
 	s.StartNodes()
 	res := <-phasesResult
 	s.NoError(res)
