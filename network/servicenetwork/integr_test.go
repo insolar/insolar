@@ -28,13 +28,17 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -190,20 +194,21 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
 	var phaseManager phases.PhaseManager
+	firstPhase := &FirstPhase{}
 	switch timeOut {
 	case Disable:
 		phaseManager = phases.NewPhaseManager()
 	case Full:
 		phaseManager = &FullTimeoutPhaseManager{}
 	case Partitial:
-		phaseManager = &PartitialTimeoutPhaseManager{}
+		phaseManager = &PartitialTimeoutPhaseManager{FirstPhase: firstPhase}
 	}
 
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 	keeper := &nodeKeeperWrapper{realKeeper}
 
 	cm := &component.Manager{}
-	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
+	cm.Register(firstPhase, keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
 	cm.Register(certManager, cryptographyService, phaseManager)
 	cm.Inject(serviceNetwork, netSwitcher)
 
@@ -263,7 +268,7 @@ func (s *testSuite) TestFullTimeOut() {
 	res := <-phasesResult
 	s.NoError(res)
 	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(2, len(activeNodes))
+	s.Equal(1, len(activeNodes))
 	// teardown
 	<-time.After(time.Second * 5)
 	s.StopNodes()
@@ -275,5 +280,103 @@ type PartitialTimeoutPhaseManager struct {
 }
 
 func (ftpm *PartitialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	var err error
+
+	pulseDuration, err := getPulseDuration(pulse)
+	if err != nil {
+		return errors.Wrap(err, "[ OnPulse ] Failed to get pulse duration")
+	}
+
+	var tctx context.Context
+	var cancel context.CancelFunc
+
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
+
+	err = ftpm.FirstPhase.Execute(tctx, pulse)
+
+	if err != nil {
+		return errors.Wrap(err, "[ TestCase.OnPulse ] failed to execute a phase")
+	}
+
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
+
 	return nil
+}
+
+func contextTimeout(ctx context.Context, duration time.Duration, k float64) (context.Context, context.CancelFunc) {
+	timeout := time.Duration(k * float64(duration))
+	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
+	return timedCtx, cancelFund
+}
+
+func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
+	duration := time.Duration(pulse.PulseNumber-pulse.PrevPulseNumber) * time.Second
+	return &duration, nil
+}
+
+func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
+	data, err := packet.RawBytes()
+	if err != nil {
+		return errors.Wrap(err, "failed to get raw bytes")
+	}
+	sign, err := fp.Cryptography.Sign(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a phase 2 packet")
+	}
+	copy(packet.Signature[:], sign.Bytes())
+	return nil
+}
+
+func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
+	key := fp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+	raw, err := packet.RawBytes()
+
+	if err != nil {
+		return false, errors.Wrap(err, "failed to serialize packet")
+	}
+	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+}
+
+func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
+	// TODO: NETD18-47
+	for _, claimList := range claims {
+		for _, claim := range claimList {
+			if claim.Type() == packets.TypeNodeAnnounceClaim {
+				announceClaim, ok := claim.(*packets.NodeAnnounceClaim)
+				if !ok {
+					continue
+				}
+				return int(announceClaim.NodeCount), nil
+			}
+		}
+	}
+	return 0, errors.New("no announce claims were received")
+}
+
+func (fp *FirstPhase) validateProofs(
+	pulseHash merkle.OriginHash,
+	proofs map[core.RecordRef]*merkle.PulseProof,
+) (valid map[core.Node]*merkle.PulseProof, fault map[core.RecordRef]*merkle.PulseProof) {
+
+	validProofs := make(map[core.Node]*merkle.PulseProof)
+	faultProofs := make(map[core.RecordRef]*merkle.PulseProof)
+	for nodeID, proof := range proofs {
+		valid := fp.validateProof(pulseHash, nodeID, proof)
+		if valid {
+			validProofs[fp.UnsyncList.GetActiveNode(nodeID)] = proof
+		} else {
+			faultProofs[nodeID] = proof
+		}
+	}
+	return validProofs, faultProofs
+}
+
+func (fp *FirstPhase) validateProof(pulseHash merkle.OriginHash, nodeID core.RecordRef, proof *merkle.PulseProof) bool {
+	node := fp.UnsyncList.GetActiveNode(nodeID)
+	if node == nil {
+		return false
+	}
+	return fp.Calculator.IsValid(proof, pulseHash, node.PublicKey())
 }
