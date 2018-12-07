@@ -211,6 +211,32 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 
 	return networkNode{cm, serviceNetwork}
 }
+
+func (s *testSuite) TestNodeConnect() {
+	s.T().Skip("will be available after phase result fix !")
+	phasesResult := make(chan error)
+	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
+	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
+
+	s.testNode = s.createNetworkNode(s.T(), Disable)
+
+	s.InitNodes()
+	s.testNode.serviceNetwork.PhaseManager = &phaseManagerWrapper{s.testNode.serviceNetwork.PhaseManager, phasesResult}
+	s.StartNodes()
+	res := <-phasesResult
+	s.NoError(res)
+	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(2, len(activeNodes))
+	// teardown
+	<-time.After(time.Second * 5)
+	s.StopNodes()
+}
+
+func TestServiceNetworkIntegration(t *testing.T) {
+	s := NewTestSuite()
+	suite.Run(t, s)
+}
+
 // Full timeout test
 
 type FullTimeoutPhaseManager struct {
