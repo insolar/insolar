@@ -214,13 +214,9 @@ func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packet
 	for _, claim := range claims {
 		joinClaim, ok := claim.(*packets.NodeJoinClaim)
 		if ok {
-			signConfirmed, err := fp.claimSignIsOk(joinClaim)
+			err := fp.checkJoinClaimSign(joinClaim)
 			if err != nil {
 				log.Error("[ getSignedClaims ] failed to check a claim sign")
-				continue
-			}
-			if !signConfirmed {
-				log.Error("[ getSginedClaims ] sign is unconfirmed")
 				continue
 			}
 		}
@@ -229,15 +225,19 @@ func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packet
 	return result
 }
 
-func (fp *FirstPhase) claimSignIsOk(claim *packets.NodeJoinClaim) (bool, error) {
+func (fp *FirstPhase) checkJoinClaimSign(claim *packets.NodeJoinClaim) error {
 	keyProc := platformpolicy.NewKeyProcessor()
 	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
 	if err != nil {
-		return false, errors.Wrap(err, "[ claimSignIsOk ] failed to import a key")
+		return errors.Wrap(err, "[ checkJoinClaimSign ] failed to import a key")
 	}
 	rawClaim, err := claim.SerializeWithoutSign()
 	if err != nil {
-		return false, errors.Wrap(err, "[ claimSignIsOk ] failed to serialize a claim")
+		return errors.Wrap(err, "[ checkJoinClaimSign ] failed to serialize a claim")
 	}
-	return fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.Signature[:]), rawClaim), nil
+	success := fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.Signature[:]), rawClaim)
+	if !success {
+		return errors.New("Signature verification failed")
+	}
+	return nil
 }
