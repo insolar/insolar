@@ -351,7 +351,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 }
 
 // GetObjChildren ...
-func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([]core.RecordRef, error) {
+func (gi *GoInsider) GetObjChildren(obj core.RecordRef, prototype core.RecordRef) ([]core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
@@ -361,7 +361,7 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([
 	req := rpctypes.UpGetObjChildrenReq{
 		UpBaseReq: MakeUpBaseReq(),
 		Obj:       obj,
-		Prototype: class,
+		Prototype: prototype,
 	}
 	err = client.Call("RPC.GetObjChildren", req, &res)
 	if err != nil {
