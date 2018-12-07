@@ -230,14 +230,15 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref core.RecordRef) (string
 	err = client.Call("RPC.GetCode", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return "", errors.Wrap(err, "on calling main API")
+		return "", errors.Wrap(err, "[ ObtainCode ] on calling main API")
 	}
 
 	err = ioutil.WriteFile(path, res.Code, 0666)
 	if err != nil {
-		return "", errors.Wrap(err, "on writing file down")
+		return "", errors.Wrap(err, "[ ObtainCode ] on writing file down")
 	}
 
 	return path, nil
@@ -315,9 +316,10 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, arg
 	err = client.Call("RPC.RouteCall", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return nil, errors.Wrap(err, "on calling main API")
+		return nil, errors.Wrap(err, "[ RouteCall ] on calling main API")
 	}
 
 	return []byte(res.Result), nil
@@ -342,9 +344,10 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -366,6 +369,7 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([
 	err = client.Call("RPC.GetObjChildren", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
 		return nil, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
@@ -393,9 +397,10 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 	err = client.Call("RPC.SaveAsDelegate", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -418,9 +423,10 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 	err = client.Call("RPC.GetDelegate", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "[ GetDelegate ] on calling main API")
 	}
 
 	return res.Object, nil
@@ -441,9 +447,10 @@ func (gi *GoInsider) DeactivateObject(object core.RecordRef) error {
 	err = client.Call("RPC.DeactivateObject", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
+			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return errors.Wrap(err, "on calling main API")
+		return errors.Wrap(err, "[ DeactivateObject ] on calling main API")
 	}
 
 	return nil
@@ -484,7 +491,7 @@ func (gi *GoInsider) AddPlugin(ref core.RecordRef, path string) error {
 
 	p, err := plugin.Open(path)
 	if err != nil {
-		return errors.Wrap(err, "couldn't open plugin")
+		return errors.Wrap(err, "[ AddPlugin ] couldn't open plugin")
 	}
 
 	inslogger.FromContext(context.TODO()).Debugf("AddPlugin plugins %+v", gi.plugins)

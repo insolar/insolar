@@ -30,11 +30,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 )
@@ -55,7 +55,7 @@ var stderr io.ReadCloser
 var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
 
-var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
+var insolarRootMemberKeysPath = filepath.Join("../scripts/insolard/configs", insolarRootMemberKeys)
 var insolarNodesKeysPath = filepath.Join(testdataPath(), "discovery_node_")
 
 var info infoResponse
@@ -92,15 +92,6 @@ func buildInsolar() error {
 	return errors.Wrapf(err, "[ buildInsolar ] could't build insolar: %s", out)
 }
 
-func buildInsolard() error {
-	out, err := exec.Command(
-		"go", "build",
-		"-o", insolardPath,
-		insolarImportPath+"/cmd/insolard/",
-	).CombinedOutput()
-	return errors.Wrapf(err, "[ buildInsolard ] could't build insolard: %s", out)
-}
-
 func createDirForContracts() error {
 	return os.MkdirAll(filepath.Join(functestPath(), "contractstorage"), 0777)
 }
@@ -111,25 +102,6 @@ func deleteDirForContracts() error {
 
 func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
-}
-
-func generateRootMemberKeys() error {
-	out, err := exec.Command(
-		insolarPath, "-c", "gen_keys",
-		"-o", insolarRootMemberKeysPath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateRootMemberKeys ] could't generate root member keys: %s", out)
-}
-
-func generateDiscoveryNodesKeys() error {
-	for i := 0; i < 5; i++ {
-		out, err := exec.Command(
-			insolarPath, "-c", "gen_keys",
-			"-o", insolarNodesKeysPath+strconv.Itoa(i+1)+".json").CombinedOutput()
-		if err != nil {
-			return errors.Wrapf(err, "[ generateDiscoveryNodesKeys ] could't generate discovery node keys: %s", out)
-		}
-	}
-	return nil
 }
 
 func loadRootKeys() error {
@@ -147,6 +119,7 @@ func loadRootKeys() error {
 	}
 	root.privKey = data["private_key"]
 	root.pubKey = data["public_key"]
+
 	return nil
 }
 
@@ -183,6 +156,116 @@ func buildGinsiderCLI() (err error) {
 	return errors.Wrap(err, "[ buildGinsiderCLI ] could't build ginsider CLI: ")
 }
 
+func stopInsolard() error {
+	if stdin != nil {
+		defer stdin.Close()
+	}
+	if stdout != nil {
+		defer stdout.Close()
+	}
+	if cmd == nil || cmd.Process == nil {
+		return nil
+	}
+	err := cmd.Process.Kill()
+	if err != nil {
+		return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
+	}
+	return nil
+}
+
+var insgorundCleaner func()
+
+func startInsgorund() (err error) {
+	// It starts on ports of "virtual" node
+	insgorundCleaner, err = goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:18181", "tcp", "127.0.0.1:18182")
+	if err != nil {
+		return errors.Wrap(err, "[ startInsgorund ] couldn't wait for insolard to start completely: ")
+	}
+	return nil
+}
+
+func stopInsgorund() error {
+	if insgorundCleaner != nil {
+		insgorundCleaner()
+	}
+	return nil
+}
+
+func waitForNet() error {
+	numAttempts := 90
+	ports := []string{"19191", "19195", "19199"}
+	numNodes := len(ports)
+	currentOk := 0
+	for i := 0; i < numAttempts; i++ {
+		currentOk = 0
+		for _, port := range ports {
+			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s/api", port))
+			if err != nil {
+				fmt.Println("[ startNet ] Problem with port " + port + ". Err: " + err.Error())
+				break
+			} else {
+				fmt.Println("[ startNet ] Good response from port " + port + ". Response: " + resp.NetworkState)
+				currentOk++
+			}
+		}
+		if currentOk == numNodes {
+			fmt.Printf("[ startNet ] All %d nodes have started\n", numNodes)
+			break
+		}
+
+		time.Sleep(time.Second)
+		fmt.Printf("[ startNet ] Waiting for net: attempt %d/%d\n", i, numAttempts)
+	}
+
+	if currentOk != numNodes {
+		return errors.New("[ startNet ] Can't Start net: No attempts left")
+	}
+
+	return nil
+}
+
+func startNet() error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return errors.Wrap(err, "[ startNet ] Can't get current working directory")
+	}
+	defer os.Chdir(cwd)
+
+	err = os.Chdir("../")
+	if err != nil {
+		return errors.Wrap(err, "[ startNet  ] Can't change dir")
+	}
+
+	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-ng")
+	stdout, _ = cmd.StdoutPipe()
+	if err != nil {
+		return errors.Wrap(err, "[ startNet ] could't set stdout: ")
+	}
+
+	stderr, err = cmd.StderrPipe()
+	if err != nil {
+		return errors.Wrap(err, "[ startNet] could't set stderr: ")
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return errors.Wrap(err, "[ startNet ] Can't run cmd")
+	}
+
+	err = waitForLaunch()
+	if err != nil {
+		return errors.Wrap(err, "[ startNet ] couldn't waitForLaunch more")
+	}
+
+	err = waitForNet()
+	if err != nil {
+		return errors.Wrap(err, "[ startNet ] couldn't waitForNet more")
+	}
+
+	return nil
+
+}
+
 func waitForLaunch() error {
 	done := make(chan bool, 1)
 	timeout := 120 * time.Second
@@ -193,7 +276,7 @@ func waitForLaunch() error {
 		for scanner.Scan() {
 			line := scanner.Text()
 			fmt.Println(line)
-			if strings.Contains(line, "All components were started") {
+			if strings.Contains(line, "start nodes ...") {
 				done <- true
 			}
 		}
@@ -216,82 +299,6 @@ func waitForLaunch() error {
 	case <-time.After(timeout):
 		return errors.Errorf("[ waitForLaunch ] could't wait for launch: timeout of %s was exceeded", timeout)
 	}
-}
-
-func startGenesis() error {
-	out, err :=
-		exec.Command(
-			insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
-			"--keyout", testdataPath()).CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "[ startGenesis ] could't run genesis: %s", out)
-	}
-	return nil
-}
-
-func startInsolard() error {
-	cmd = exec.Command(insolardPath)
-	var err error
-
-	stdin, err = cmd.StdinPipe()
-	if err != nil {
-		return errors.Wrap(err, "[ startInsolard ] could't set stdin: ")
-	}
-
-	stdout, err = cmd.StdoutPipe()
-	if err != nil {
-		return errors.Wrap(err, "[ startInsolard ] could't set stdout: ")
-	}
-
-	stderr, err = cmd.StderrPipe()
-	if err != nil {
-		return errors.Wrap(err, "[ startInsolard ] could't set stderr: ")
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		return errors.Wrap(err, "[ startInsolard ] could't start insolard command: ")
-	}
-
-	err = waitForLaunch()
-	if err != nil {
-		return errors.Wrap(err, "[ startInsolard ] could't wait for insolard to start completely: ")
-	}
-	return nil
-}
-
-func stopInsolard() error {
-	if stdin != nil {
-		defer stdin.Close()
-	}
-	if stdout != nil {
-		defer stdout.Close()
-	}
-	if cmd == nil || cmd.Process == nil {
-		return nil
-	}
-	err := cmd.Process.Kill()
-	if err != nil {
-		return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
-	}
-	return nil
-}
-
-var insgorundCleaner func()
-
-func startInsgorund() (err error) {
-	insgorundCleaner, err = goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:18181", "tcp", "127.0.0.1:18182")
-	if err != nil {
-		return errors.Wrap(err, "[ startInsolard ] could't wait for insolard to start completely: ")
-	}
-	return err
-}
-
-func stopInsgorund() error {
-	if insgorundCleaner != nil {
-		insgorundCleaner()
-	}
-	return nil
 }
 
 func setup() error {
@@ -319,47 +326,22 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolar was successfully builded")
 
-	err = generateRootMemberKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate root member keys: ")
-	}
-	fmt.Println("[ setup ] root member keys successfully generated")
-
-	err = loadRootKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't load root keys: ")
-	}
-	fmt.Println("[ setup ] root keys successfully loaded")
-
-	err = generateDiscoveryNodesKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate discovery node keys: ")
-	}
-	fmt.Println("[ setup ] discovery nodes keys successfully generated")
-
-	err = buildInsolard()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't build insolard: ")
-	}
-	fmt.Println("[ setup ] insolard was successfully builded")
-
-	err = startGenesis()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start genesis: ")
-	}
-	fmt.Println("[ setup ] genesis was successfully started")
-
 	err = startInsgorund()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
 	}
 	fmt.Println("[ setup ] insgorund was successfully started")
 
-	err = startInsolard()
+	err = startNet()
 	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start insolard: ")
+		return errors.Wrap(err, "[ setup ] could't startNet")
 	}
-	fmt.Println("[ setup ] insolard was successfully started")
+
+	err = loadRootKeys()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't load root keys: ")
+	}
+	fmt.Println("[ setup ] root keys successfully loaded")
 
 	numAttempts := 60
 	for i := 0; i < numAttempts; i++ {

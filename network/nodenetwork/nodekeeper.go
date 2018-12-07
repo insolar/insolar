@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	coreutils "github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
@@ -53,10 +54,16 @@ func createOrigin(configuration configuration.HostNetwork, certificate core.Cert
 		return nil, errors.Wrap(err, "Failed to resolve public address")
 	}
 
+	role := certificate.GetRole()
+	if role == core.StaticRoleUnknown {
+		log.Info("[ createOrigin ] Use core.StaticRoleLightMaterial, since no role in certificate")
+		role = core.StaticRoleLightMaterial
+	}
+
 	// TODO: get roles from certificate
 	return newMutableNode(
 		*certificate.GetNodeRef(),
-		[]core.StaticRole{core.StaticRoleVirtual, core.StaticRoleHeavyMaterial, core.StaticRoleLightMaterial},
+		role,
 		certificate.GetPublicKey(),
 		publicAddress,
 		version.Version,
@@ -211,22 +218,27 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 		log.Infof("Added origin node %s to active list", nk.origin.ID())
 	}
 	nk.active[node.ID()] = node
-	for _, role := range node.Roles() {
-		list, ok := nk.indexNode[role]
-		if !ok {
-			list = newRecordRefSet()
-		}
-		list.Add(node.ID())
-		nk.indexNode[role] = list
+
+	list, ok := nk.indexNode[node.Role()]
+	if !ok {
+		list = newRecordRefSet()
 	}
+	list.Add(node.ID())
+	nk.indexNode[node.Role()] = list
+
 	nk.indexShortID[node.ShortID()] = node
 }
 
 func (nk *nodekeeper) delActiveNode(ref core.RecordRef) {
 	if ref.Equal(nk.origin.ID()) {
 		// we received acknowledge to leave, can gracefully stop
-		// TODO: graceful stop instead of panic
-		panic("Node leave acknowledged by network. Goodbye!")
+
+		// graceful stop instead of panic
+		err := coreutils.SendGracefulStopSignal()
+		if err != nil {
+			// we tried :(
+			panic("Node leave acknowledged by network. Goodbye!")
+		}
 	}
 	active, ok := nk.active[ref]
 	if !ok {

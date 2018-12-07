@@ -9,9 +9,6 @@ host:
   isrelay: false
   infinitybootstrap: false
   timeout: 4
-node:
-  node:
-    id: "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
 service:
   service: {}
 ledger:

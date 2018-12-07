@@ -43,11 +43,6 @@ type NodeMock struct {
 	RolePreCounter uint64
 	RoleMock       mNodeMockRole
 
-	RolesFunc       func() (r []core.StaticRole)
-	RolesCounter    uint64
-	RolesPreCounter uint64
-	RolesMock       mNodeMockRoles
-
 	ShortIDFunc       func() (r core.ShortNodeID)
 	ShortIDCounter    uint64
 	ShortIDPreCounter uint64
@@ -72,7 +67,6 @@ func NewNodeMock(t minimock.Tester) *NodeMock {
 	m.PublicKeyMock = mNodeMockPublicKey{mock: m}
 	m.PulseMock = mNodeMockPulse{mock: m}
 	m.RoleMock = mNodeMockRole{mock: m}
-	m.RolesMock = mNodeMockRoles{mock: m}
 	m.ShortIDMock = mNodeMockShortID{mock: m}
 	m.VersionMock = mNodeMockVersion{mock: m}
 
@@ -749,140 +743,6 @@ func (m *NodeMock) RoleFinished() bool {
 	return true
 }
 
-type mNodeMockRoles struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockRolesExpectation
-	expectationSeries []*NodeMockRolesExpectation
-}
-
-type NodeMockRolesExpectation struct {
-	result *NodeMockRolesResult
-}
-
-type NodeMockRolesResult struct {
-	r []core.StaticRole
-}
-
-//Expect specifies that invocation of Node.Roles is expected from 1 to Infinity times
-func (m *mNodeMockRoles) Expect() *mNodeMockRoles {
-	m.mock.RolesFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockRolesExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.Roles
-func (m *mNodeMockRoles) Return(r []core.StaticRole) *NodeMock {
-	m.mock.RolesFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockRolesExpectation{}
-	}
-	m.mainExpectation.result = &NodeMockRolesResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.Roles is expected once
-func (m *mNodeMockRoles) ExpectOnce() *NodeMockRolesExpectation {
-	m.mock.RolesFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockRolesExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockRolesExpectation) Return(r []core.StaticRole) {
-	e.result = &NodeMockRolesResult{r}
-}
-
-//Set uses given function f as a mock of Node.Roles method
-func (m *mNodeMockRoles) Set(f func() (r []core.StaticRole)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.RolesFunc = f
-	return m.mock
-}
-
-//Roles implements github.com/insolar/insolar/core.Node interface
-func (m *NodeMock) Roles() (r []core.StaticRole) {
-	counter := atomic.AddUint64(&m.RolesPreCounter, 1)
-	defer atomic.AddUint64(&m.RolesCounter, 1)
-
-	if len(m.RolesMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RolesMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.Roles.")
-			return
-		}
-
-		result := m.RolesMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.Roles")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RolesMock.mainExpectation != nil {
-
-		result := m.RolesMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.Roles")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RolesFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.Roles.")
-		return
-	}
-
-	return m.RolesFunc()
-}
-
-//RolesMinimockCounter returns a count of NodeMock.RolesFunc invocations
-func (m *NodeMock) RolesMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RolesCounter)
-}
-
-//RolesMinimockPreCounter returns the value of NodeMock.Roles invocations
-func (m *NodeMock) RolesMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RolesPreCounter)
-}
-
-//RolesFinished returns true if mock invocations count is ok
-func (m *NodeMock) RolesFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RolesMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RolesCounter) == uint64(len(m.RolesMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.RolesMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RolesCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.RolesFunc != nil {
-		return atomic.LoadUint64(&m.RolesCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeMockShortID struct {
 	mock              *NodeMock
 	mainExpectation   *NodeMockShortIDExpectation
@@ -1175,10 +1035,6 @@ func (m *NodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeMock.Role")
 	}
 
-	if !m.RolesFinished() {
-		m.t.Fatal("Expected call to NodeMock.Roles")
-	}
-
 	if !m.ShortIDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ShortID")
 	}
@@ -1224,10 +1080,6 @@ func (m *NodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeMock.Role")
 	}
 
-	if !m.RolesFinished() {
-		m.t.Fatal("Expected call to NodeMock.Roles")
-	}
-
 	if !m.ShortIDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ShortID")
 	}
@@ -1255,7 +1107,6 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.PublicKeyFinished()
 		ok = ok && m.PulseFinished()
 		ok = ok && m.RoleFinished()
-		ok = ok && m.RolesFinished()
 		ok = ok && m.ShortIDFinished()
 		ok = ok && m.VersionFinished()
 
@@ -1284,10 +1135,6 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 
 			if !m.RoleFinished() {
 				m.t.Error("Expected call to NodeMock.Role")
-			}
-
-			if !m.RolesFinished() {
-				m.t.Error("Expected call to NodeMock.Roles")
 			}
 
 			if !m.ShortIDFinished() {
@@ -1327,10 +1174,6 @@ func (m *NodeMock) AllMocksCalled() bool {
 	}
 
 	if !m.RoleFinished() {
-		return false
-	}
-
-	if !m.RolesFinished() {
 		return false
 	}
 

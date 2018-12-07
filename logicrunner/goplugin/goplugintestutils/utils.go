@@ -442,7 +442,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
 		)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
 		}
 
 		protoRef := core.RecordRef{}
@@ -456,15 +456,15 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		code = re.ReplaceAllString(code, "package main")
 		err := WriteFile(filepath.Join(cb.root, "src/contract", name), "main.go", code)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ Build ] Can't WriteFile")
 		}
 		err = cb.proxy(name)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ Build ] Can't call proxy")
 		}
 		err = cb.wrapper(name)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ Build ] Can't call wrapper")
 		}
 	}
 
@@ -472,13 +472,13 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		log.Debugf("Building plugin for contract %q in %q", name, cb.root)
 		err := cb.plugin(name)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ Build ] Can't call plugin")
 		}
 		log.Debugf("Built plugin for contract %q", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
 
 		log.Debugf("Deploying code for contract %q", name)
@@ -490,7 +490,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		codeRef := &core.RecordRef{}
 		codeRef.SetRecord(*codeID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
@@ -505,7 +505,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			nil,
 		)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ Build ] Can't ActivatePrototype")
 		}
 	}
 
@@ -517,7 +517,7 @@ func (cb *ContractsBuilder) proxy(name string) error {
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ proxy ]")
 	}
 
 	contractPath := filepath.Join(cb.root, "src/contract", name, "main.go")
@@ -551,7 +551,7 @@ func (cb *ContractsBuilder) plugin(name string) error {
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ plugin ]")
 	}
 
 	cmd := exec.Command(

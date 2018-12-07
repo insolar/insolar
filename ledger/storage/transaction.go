@@ -40,12 +40,6 @@ type TransactionManager struct {
 	txupdates map[string]keyval
 }
 
-type byte2hex byte
-
-func (b byte2hex) String() string {
-	return hex.EncodeToString([]byte{byte(b)})
-}
-
 type bytes2hex []byte
 
 func (h bytes2hex) String() string {
@@ -216,6 +210,13 @@ func (m *TransactionManager) SetObjectIndex(
 	return m.set(ctx, k, encoded)
 }
 
+// RemoveObjectIndex removes an index of an object
+func (m *TransactionManager) RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error {
+	m.lockOnID(ref)
+	k := prefixkey(scopeIDLifeline, ref[:])
+	return m.remove(ctx, k)
+}
+
 // set stores value by key.
 func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
 	debugf(ctx, "set key %v", bytes2hex(key))
@@ -242,4 +243,19 @@ func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error
 		return nil, err
 	}
 	return item.ValueCopy(nil)
+}
+
+// removes value by key
+func (m *TransactionManager) remove(ctx context.Context, key []byte) error {
+	debugf(ctx, "get key %v", bytes2hex(key))
+
+	txn := m.db.db.NewTransaction(true)
+	defer txn.Discard()
+
+	err := txn.Delete(key)
+	if err != nil {
+		return err
+	}
+
+	return txn.Commit(nil)
 }

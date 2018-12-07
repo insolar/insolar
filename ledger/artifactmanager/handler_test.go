@@ -557,6 +557,10 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
 		LatestState: firstID,
 	})
+	err = db.SetObjectIndex(ctx, firstID, &index.ObjectLifeline{
+		LatestState: firstID,
+	})
+	require.NoError(t, err)
 	hotIndexes := &message.HotData{
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
@@ -575,9 +579,10 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	recentMock.AddPendingRequestFunc = func(p core.RecordID) {
 		require.Equal(t, p, *secondId)
 	}
-	recentMock.AddObjectWithTTLFunc = func(p core.RecordID, ttl int) {
+	recentMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int, isMine bool) {
 		require.Equal(t, p, *firstID)
 		require.Equal(t, 320, ttl)
+		require.Equal(t, true, isMine)
 	}
 
 	h := NewMessageHandler(db, &configuration.Ledger{})

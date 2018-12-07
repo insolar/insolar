@@ -171,7 +171,7 @@ func ParcelToBytes(msg core.Parcel) []byte {
 
 func init() {
 	// Bootstrap
-	gob.Register(&GenesisRequest{})
+	gob.Register(&NodeSignPayload{})
 
 	// Logicrunner
 	gob.Register(&CallConstructor{})

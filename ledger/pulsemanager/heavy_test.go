@@ -94,6 +94,10 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	gilMock.AcquireFunc = func(context.Context) {}
 	gilMock.ReleaseFunc = func(context.Context) {}
 
+	// Mock N8: Active List Swapper mock
+	alsMock := testutils.NewActiveListSwapperMock(t)
+	alsMock.MoveSyncToActiveFunc = func() {}
+
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var synckeys []key
 	var syncsended int
@@ -154,6 +158,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
 	pm.Recent = recentMock
+	pm.ActiveListSwapper = alsMock
 
 	// Actial test logic
 	// start PulseManager

@@ -71,7 +71,7 @@ type StartSessionResponse struct {
 type NodeStruct struct {
 	ID      core.RecordRef
 	SID     core.ShortNodeID
-	Roles   []core.StaticRole
+	Role    core.StaticRole
 	PK      []byte
 	Address string
 	Version string
@@ -83,7 +83,7 @@ func newNode(n *NodeStruct) (core.Node, error) {
 		return nil, errors.Wrap(err, "error deserializing node public key")
 	}
 
-	result := nodenetwork.NewNode(n.ID, n.Roles, pk, n.Address, n.Version)
+	result := nodenetwork.NewNode(n.ID, n.Role, pk, n.Address, n.Version)
 	mNode := result.(nodenetwork.MutableNode)
 	mNode.SetShortID(n.SID)
 	return mNode, nil
@@ -98,7 +98,7 @@ func newNodeStruct(node core.Node) (*NodeStruct, error) {
 	return &NodeStruct{
 		ID:      node.ID(),
 		SID:     node.ShortID(),
-		Roles:   node.Roles(),
+		Role:    node.Role(),
 		PK:      pk,
 		Address: node.PhysicalAddress(),
 		Version: node.Version(),
@@ -125,7 +125,7 @@ func init() {
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
-	ch := bc.getBootstrapHostsChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
+	ch := bc.getDiscoveryNodesChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
 	host := bc.waitResultFromChannel(ctx, ch)
 	if host == nil {
 		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
@@ -161,7 +161,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 
 	var hosts []*host.Host
 	for {
-		ch := bc.getBootstrapHostsChannel(ctx, discoveryNodes, discoveryCount)
+		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 		hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 		if len(hosts) == discoveryCount {
 			// we connected to all discovery nodes
@@ -216,7 +216,7 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (c
 	return discovery, nil
 }
 
-func (bc *Bootstrapper) getBootstrapHostsChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
+func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
 	// we need only one host to bootstrap
 	bootstrapHosts := make(chan *host.Host, needResponses)
 	for _, discoveryNode := range discoveryNodes {

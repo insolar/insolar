@@ -35,14 +35,20 @@ import (
 	"github.com/insolar/insolar/utils/backoff"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
+type ActiveListSwapper interface {
+	MoveSyncToActive()
+}
+
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR             core.LogicRunner            `inject:""`
-	Bus            core.MessageBus             `inject:""`
-	NodeNet        core.NodeNetwork            `inject:""`
-	JetCoordinator core.JetCoordinator         `inject:""`
-	GIL            core.GlobalInsolarLock      `inject:""`
-	Recent         recentstorage.RecentStorage `inject:""`
+	LR                core.LogicRunner            `inject:""`
+	Bus               core.MessageBus             `inject:""`
+	NodeNet           core.NodeNetwork            `inject:""`
+	JetCoordinator    core.JetCoordinator         `inject:""`
+	GIL               core.GlobalInsolarLock      `inject:""`
+	Recent            recentstorage.RecentStorage `inject:""`
+	ActiveListSwapper ActiveListSwapper           `inject:""`
 
 	currentPulse core.Pulse
 
@@ -147,10 +153,11 @@ func (m *PulseManager) processRecentObjects(
 	drop *jet.JetDrop,
 	dropSerialized []byte,
 ) error {
+	logger := inslogger.FromContext(ctx)
 	m.Recent.ClearZeroTTLObjects()
 	recentObjectsIds := m.Recent.GetObjects()
 	pendingRequestsIds := m.Recent.GetRequests()
-	m.Recent.ClearObjects()
+	defer m.Recent.ClearObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID][]byte{}
@@ -158,17 +165,25 @@ func (m *PulseManager) processRecentObjects(
 	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
 		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
+			logger.Error(err)
 			continue
 		}
 		encoded, err := index.EncodeObjectLifeline(lifeline)
 		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
+			logger.Error(err)
 			continue
 		}
 		recentObjects[id] = &message.HotIndex{
 			TTL:   ttl,
 			Index: encoded,
+		}
+
+		if !m.Recent.IsMine(id) {
+			err := m.db.RemoveObjectIndex(ctx, &id)
+			if err != nil {
+				logger.Error(err)
+				return err
+			}
 		}
 	}
 
@@ -183,7 +198,7 @@ func (m *PulseManager) processRecentObjects(
 
 	msg := &message.HotData{
 		Drop:            *drop,
-		PulseNumber:     *latestPulse.Prev,
+		PulseNumber:     latestPulse.Pulse.PulseNumber,
 		RecentObjects:   recentObjects,
 		PendingRequests: pendingRequests,
 	}
@@ -203,21 +218,20 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
-	var latestPulseNumber core.PulseNumber
 	var err error
 	m.GIL.Acquire(ctx)
 
 	// swap pulse
 	m.currentPulse = pulse
 
-	// TODO: swap active nodes and set prev pulse state to network
+	latestPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
+	}
 
+	// swap active nodes
+	m.ActiveListSwapper.MoveSyncToActive()
 	if !dry {
-		latestPulseNumber, err = m.db.GetLatestPulseNumber(ctx)
-		if err != nil {
-			return errors.Wrap(err, "call of GetLatestPulseNumber failed")
-		}
-
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
@@ -237,14 +251,10 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		latestPulse, err := m.db.GetPulse(ctx, latestPulseNumber)
-		if err != nil {
-			return errors.Wrapf(err, "get pulse %v failed", latestPulseNumber)
-		}
 
 		drop, dropSerialized, messages, err := m.createDrop(ctx, latestPulse)
 		if err != nil {
-			return errors.Wrapf(err, "create drop on pulse %v failed", latestPulseNumber)
+			return errors.Wrapf(err, "create drop on pulse %v failed", latestPulse)
 		}
 
 		if hotRecordsError := m.processRecentObjects(ctx, latestPulse, drop, dropSerialized); hotRecordsError != nil {

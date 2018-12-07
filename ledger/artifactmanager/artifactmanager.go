@@ -75,7 +75,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		},
 		message.ExtractTarget(parcel.Message()),
 	)
-	return id, err
+	return id, errors.Wrap(err, "[ RegisterRequest ] ")
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -236,7 +236,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	var err error
 	defer instrument(ctx, "DeployCode").err(&err).end()
 
-	pulseNumber, err := m.db.GetLatestPulseNumber(ctx)
+	pulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (m *LedgerArtifactManager) DeployCode(
 					Domain:  domain,
 					Request: request,
 				},
-				Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, code),
+				Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulse.Pulse.PulseNumber, code),
 				MachineType: machineType,
 			},
 			request,
@@ -435,7 +435,7 @@ func (m *LedgerArtifactManager) activateObject(
 	if err != nil {
 		return nil, err
 	}
-	pulseNumber, err := m.db.GetLatestPulseNumber(ctx)
+	pulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -448,7 +448,7 @@ func (m *LedgerArtifactManager) activateObject(
 				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulse.Pulse.PulseNumber, memory),
 				Image:       prototype,
 				IsPrototype: isPrototype,
 			},
@@ -522,7 +522,7 @@ func (m *LedgerArtifactManager) updateObject(
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
-	pulseNumber, err := m.db.GetLatestPulseNumber(ctx)
+	pulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +538,7 @@ func (m *LedgerArtifactManager) updateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulse.Pulse.PulseNumber, memory),
 				Image:       *image,
 				IsPrototype: object.IsPrototype(),
 			},

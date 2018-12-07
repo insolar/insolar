@@ -19,6 +19,7 @@ package jetcoordinator
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/insolar/insolar/configuration"
@@ -86,7 +87,7 @@ func (jc *JetCoordinator) QueryRole(
 	}
 	candidates := jc.NodeNet.GetActiveNodesByRole(role)
 	if len(candidates) == 0 {
-		return nil, errors.New("no candidates for this role")
+		return nil, errors.New(fmt.Sprintf("no candidates for role %d", role))
 	}
 
 	if obj == nil {
