@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -201,14 +200,15 @@ func TestReadCertificateFromReader(t *testing.T) {
 }
 
 func TestSerializeDeserialize(t *testing.T) {
-	cert := &AuthorizationCertificate{}
-	cert.PublicKey = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n"
-	cert.Reference = "test_reference"
-	cert.Role = "test_role"
+	cert := &AuthorizationCertificate{
+		PublicKey: "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n",
+		Reference: "test_reference",
+		Role:      "test_role",
+	}
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	key, err := keyProc.ImportPublicKey([]byte(cert.PublicKey))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cert.nodePublicKey = key
 
