@@ -312,6 +312,10 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 		rep.Iterator.CanFetch = i.HasNext()
 	}
 
+	if !i.HasNext() {
+		delete(iteratorMap, rep.Iterator.ID)
+	}
+
 	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{ // bad idea, we can store gadzillion of children
 		Type:   core.CaseRecordTypeGetObjChildrenIterator,
 		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
