@@ -157,7 +157,7 @@ func (db *DB) SetJetTree(ctx context.Context, pulse core.PulseNumber, tree *jet.
 func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
 	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
 	buff, err := db.get(ctx, k)
-	if err == nil {
+	if err != nil {
 		return nil, err
 	}
 
