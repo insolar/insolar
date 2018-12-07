@@ -79,12 +79,12 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef *core.RecordR
 	}
 
 	for i, node := range currentNodeCert.GetDiscoveryNodes() {
+		var sign []byte
 		if node.GetNodeRef() == currentNodeCert.GetNodeRef() {
-			sign, err := nc.signNode(ctx, node.GetNodeRef())
+			sign, err = nc.signNode(ctx, node.GetNodeRef())
 			if err != nil {
 				return nil, err
 			}
-			currentNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
 		} else {
 			msg := message.NodeSignPayload{
 				NodeRef: nodeRef,
@@ -96,11 +96,34 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef *core.RecordR
 			if err != nil {
 				return nil, err
 			}
-			sign := r.(reply.NodeSignInt).GetSign()
-			currentNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
+			sign = r.(reply.NodeSignInt).GetSign()
 		}
+		currentNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
 	}
 	return cert, nil
+}
+
+func (nc *NetworkCoordinator) requestCertSign(ctx context.Context, node core.DiscoveryNode) {
+	currentNodeCert := nc.CertificateManager.GetCertificate()
+
+	if node.GetNodeRef() == currentNodeCert.GetNodeRef() {
+		sign, err := nc.signNode(ctx, node.GetNodeRef())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		msg := message.NodeSignPayload{
+			NodeRef: nodeRef,
+		}
+		opts := core.MessageSendOptions{
+			Receiver: node.GetNodeRef(),
+		}
+		r, err := nc.MessageBus.Send(ctx, &msg, &opts)
+		if err != nil {
+			return nil, err
+		}
+		sign := r.(reply.NodeSignInt).GetSign()
+	}
 }
 
 // ValidateCert validates node certificate
