@@ -76,6 +76,7 @@ func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Error authorizing on discovery node")
 	}
+
 	data, err := nb.challengeController.Execute(ctx, discoveryNode, sessionID)
 	if err != nil {
 		return errors.Wrap(err, "Error executing double challenge response")

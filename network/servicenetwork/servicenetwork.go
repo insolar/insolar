@@ -163,7 +163,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
 
 	cm.Inject(n.NodeKeeper,
-		n.PhaseManager,
 		n.MerkleCalculator,
 		n.ConsensusNetwork,
 		n.Communicator,
@@ -228,7 +227,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			return
 		}
 
-		// TODO: I don't know why I put it here. If you know better place for that, move it there please
 		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
@@ -244,11 +242,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
-			// TODO: make PhaseManager works and uncomment this
-			// err = n.PhaseManager.OnPulse(ctx, &pulse)
-			// if err != nil {
-			// 	logger.Warn("phase manager fail: " + err.Error())
-			// }
+			err = n.PhaseManager.OnPulse(ctx, &pulse)
+			if err != nil {
+				logger.Warn("phase manager fail: " + err.Error())
+			}
 		}(logger, n)
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)

@@ -113,15 +113,16 @@ func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Puls
 	messages [][]byte,
 	err error,
 ) {
-	prevDrop, err := m.db.GetDrop(ctx, *latestPulse.Prev)
+	jetID := core.TODOJetID
+	prevDrop, err := m.db.GetDrop(ctx, jetID, *latestPulse.Prev)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	drop, messages, err = m.db.CreateDrop(ctx, latestPulse.Pulse.PulseNumber, prevDrop.Hash)
+	drop, messages, err = m.db.CreateDrop(ctx, jetID, latestPulse.Pulse.PulseNumber, prevDrop.Hash)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	err = m.db.SetDrop(ctx, drop)
+	err = m.db.SetDrop(ctx, jetID, drop)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -159,11 +160,13 @@ func (m *PulseManager) processRecentObjects(
 	pendingRequestsIds := m.Recent.GetRequests()
 	defer m.Recent.ClearObjects()
 
+	jetID := core.TODOJetID
+
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID][]byte{}
 
 	for id, ttl := range recentObjectsIds {
-		lifeline, err := m.db.GetObjectIndex(ctx, &id, false)
+		lifeline, err := m.db.GetObjectIndex(ctx, jetID, &id, false)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -179,7 +182,7 @@ func (m *PulseManager) processRecentObjects(
 		}
 
 		if !m.Recent.IsMine(id) {
-			err := m.db.RemoveObjectIndex(ctx, &id)
+			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
 			if err != nil {
 				logger.Error(err)
 				return err
@@ -188,7 +191,7 @@ func (m *PulseManager) processRecentObjects(
 	}
 
 	for _, id := range pendingRequestsIds {
-		pendingRecord, err := m.db.GetRecord(ctx, &id)
+		pendingRecord, err := m.db.GetRecord(ctx, jetID, &id)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 			continue

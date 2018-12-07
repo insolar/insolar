@@ -27,9 +27,10 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// GetDrop returns jet drop for a given pulse number.
-func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jet.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
+// GetDrop returns jet drop for a given pulse number and jet id.
+func (db *DB) GetDrop(ctx context.Context, j core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
+	k := prefixkeyany(scopeIDJetDrop, j[:], pulse.Bytes())
+
 	buf, err := db.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -44,7 +45,7 @@ func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jet.JetDrop
 // CreateDrop creates and stores jet drop for given pulse number.
 //
 // Previous JetDrop hash should be provided. On success returns saved drop and slot records.
-func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash []byte) (
+func (db *DB) CreateDrop(ctx context.Context, j core.RecordID, pulse core.PulseNumber, prevHash []byte) (
 	*jet.JetDrop,
 	[][]byte,
 	error,
@@ -65,9 +66,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 	var messagesError error
 
 	go func() {
-		messagesPrefix := make([]byte, core.PulseNumberSize+1)
-		messagesPrefix[0] = scopeIDMessage
-		copy(messagesPrefix[1:], pulse.Bytes())
+		messagesPrefix := prefixkeyany(scopeIDMessage, j[:], pulse.Bytes())
 
 		messagesError = db.db.View(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -89,9 +88,7 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 	var jetDropHashError error
 
 	go func() {
-		recordPrefix := make([]byte, core.PulseNumberSize+1)
-		recordPrefix[0] = scopeIDRecord
-		copy(recordPrefix[1:], pulse.Bytes())
+		recordPrefix := prefixkeyany(scopeIDRecord, j[:], pulse.Bytes())
 
 		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -128,8 +125,9 @@ func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash [
 }
 
 // SetDrop saves provided JetDrop in db.
-func (db *DB) SetDrop(ctx context.Context, drop *jet.JetDrop) error {
-	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
+func (db *DB) SetDrop(ctx context.Context, j core.RecordID, drop *jet.JetDrop) error {
+	k := prefixkeyany(scopeIDJetDrop, j[:], drop.Pulse.Bytes())
+
 	_, err := db.get(ctx, k)
 	if err == nil {
 		return ErrOverride
