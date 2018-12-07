@@ -56,6 +56,15 @@ func NewTestSuite() *testSuite {
 		networkPort:  10001,
 	}
 }
+
+type PhaseTimeOut uint8
+
+const (
+	Disable = PhaseTimeOut(iota + 1)
+	Partitial
+	Full
+)
+
 func (s *testSuite) InitNodes() {
 	for _, n := range s.bootstrapNodes {
 		err := n.componentManager.Init(s.ctx)
