@@ -65,24 +65,24 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to calculate pulse proof.")
+		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to calculate pulse proof.")
 	}
 
 	packet := packets.Phase1Packet{}
 	err = packet.SetPulseProof(pulseProof.StateHash, pulseProof.Signature.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase1Packet.")
+		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to set pulse proof in Phase1Packet.")
 	}
 
 	var success bool
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
 		originClaim, err := fp.NodeKeeper.GetOriginAnnounceClaim()
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Execute ] Failed to get origin claim")
+			return nil, errors.Wrap(err, "[ FirstPhase ] Failed to get origin claim")
 		}
 		success = packet.AddClaim(originClaim)
 		if !success {
-			return nil, errors.Wrap(err, "[ Execute ] Failed to add origin claim in Phase1Packet.")
+			return nil, errors.Wrap(err, "[ FirstPhase ] Failed to add origin claim in Phase1Packet.")
 		}
 	}
 	for {
@@ -96,11 +96,11 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
 	err = fp.signPhase1Packet(&packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign a packet")
+		return nil, errors.Wrap(err, "[ FirstPhase ] failed to sign a packet")
 	}
 	resultPackets, addressMap, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, &packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
+		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results.")
 	}
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
@@ -125,7 +125,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	if fp.NodeKeeper.GetState() == network.Waiting {
 		length, err := detectSparseBitsetLength(claimMap)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to detect bitset length")
+			return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to detect bitset length")
 		}
 		fp.UnsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}

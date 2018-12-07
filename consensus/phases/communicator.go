@@ -188,6 +188,7 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 
 			if val, ok := result[res.id]; !ok || val == nil {
 				// send response
+				// TODO: process referendum votes and send answers
 				err := nc.ConsensusNetwork.SendRequest(request, res.id)
 				if err != nil {
 					log.Errorln(err.Error())

@@ -50,27 +50,27 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	globuleHash, globuleProof, err := sp.Calculator.GetGlobuleProof(entry)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to calculate pulse proof.")
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate pulse proof.")
 	}
 
 	packet := packets.Phase2Packet{}
 	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase2Packet.")
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to set pulse proof in Phase2Packet.")
 	}
 	bitset, err := sp.generatePhase2Bitset(state.UnsyncList, state.ValidProofs)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to generate bitset for Phase2Packet")
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to generate bitset for Phase2Packet")
 	}
 	packet.SetBitSet(bitset)
 	err = sp.signPhase2Packet(&packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign a packet")
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to sign a packet")
 	}
 	activeNodes := state.UnsyncList.GetActiveNodes()
 	packets, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, &packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange results.")
 	}
 
 	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
@@ -103,14 +103,9 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	matrixCalculation, err := stateMatrix.CalculatePhase2(sp.Network.GetNodeID())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Execute ] failed to calculate")
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate bitset matrix consensus result")
 	}
 	log.Debug(matrixCalculation.NeedPhase21)
-
-	// TODO: check
-	if !consensusReachedBFT(len(nodeProofs), len(activeNodes)) {
-		return nil, errors.New("[ Execute ] Consensus not reached")
-	}
 
 	// TODO: timeouts, deviants, etc.
 	sp.NodeKeeper.Sync(state.UnsyncList)
