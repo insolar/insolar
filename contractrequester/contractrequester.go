@@ -28,7 +28,8 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	MessageBus core.MessageBus `inject:""`
+	MessageBus   core.MessageBus   `inject:""`
+	PulseManager core.PulseManager `inject:""`
 }
 
 // New creates new ContractRequester
