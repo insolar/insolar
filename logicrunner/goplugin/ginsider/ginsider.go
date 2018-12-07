@@ -374,6 +374,39 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, prototype core.RecordRef
 	return res.Children, nil
 }
 
+//GetObjChildrenIterator ...
+func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.RecordRef, iteratorId string) (*proxyctx.ChildrenTypedIterator, error) {
+	client, err := gi.Upstream()
+	if err != nil {
+		return &proxyctx.ChildrenTypedIterator{}, err
+	}
+
+	res := rpctypes.UpGetObjChildrenIteratorResp{}
+	req := rpctypes.UpGetObjChildrenIteratorReq{
+		UpBaseReq: MakeUpBaseReq(),
+
+		IteratorId: iteratorId,
+		Obj:        obj,
+		Prototype:  prototype,
+	}
+	err = client.Call("RPC.GetObjChildrenIterator", req, &res)
+	if err != nil {
+		if err == rpc.ErrShutdown {
+			log.Fatal("GetObjChildrenIterator: ginsider can't connect to insgocc, shutdown")
+			os.Exit(0)
+		}
+		return &proxyctx.ChildrenTypedIterator{}, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
+	}
+
+	return &proxyctx.ChildrenTypedIterator{
+		Parent:         obj,
+		ChildPrototype: prototype,
+		IteratorId:     res.Iterator.Id,
+		Buff:           res.Iterator.Buff,
+		CanFetch:       res.Iterator.CanFetch,
+	}, nil
+}
+
 // SaveAsDelegate ...
 func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
