@@ -228,3 +228,12 @@ func (s *testSuite) TestFullTimeOut() {
 	<-time.After(time.Second * 5)
 	s.StopNodes()
 }
+
+// Partitial timeout
+
+type PartitialTimeoutPhaseManager struct {
+}
+
+func (ftpm *PartitialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	return nil
+}
