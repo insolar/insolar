@@ -44,7 +44,7 @@ func (r *player) WriteTape(ctx context.Context, w io.Writer) error {
 
 // Send wraps MessageBus Send to reply replies from the tape. If reply for this message is not on the tape, an error
 // will be returned.
-func (r *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+func (r *player) Send(ctx context.Context, msg core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
 	var (
 		rep core.Reply
 		err error
