@@ -25,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -38,10 +39,9 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Service        core.Network        `inject:""`
-	JetCoordinator core.JetCoordinator `inject:""`
-	LocalStorage   core.LocalStorage   `inject:""`
-	//PulseManager               core.PulseManager               `inject:""`
+	Service                    core.Network                    `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
+	LocalStorage               core.LocalStorage               `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
