@@ -107,17 +107,17 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	return &p, nil
 }
 
-func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Pulse) (
+func (m *PulseManager) createDrop(ctx context.Context, lastSlotPulse *storage.Pulse) (
 	drop *jetdrop.JetDrop,
 	dropSerialized []byte,
 	messages [][]byte,
 	err error,
 ) {
-	prevDrop, err := m.db.GetDrop(ctx, *latestPulse.Prev)
+	prevDrop, err := m.db.GetDrop(ctx, *lastSlotPulse.Prev)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	drop, messages, err = m.db.CreateDrop(ctx, latestPulse.Pulse.PulseNumber, prevDrop.Hash)
+	drop, messages, err = m.db.CreateDrop(ctx, lastSlotPulse.Pulse.PulseNumber, prevDrop.Hash)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -134,13 +134,19 @@ func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Puls
 	return
 }
 
-func (m *PulseManager) processDrop(ctx context.Context, latestPulse *storage.Pulse, dropSerialized []byte, messages [][]byte) error {
+func (m *PulseManager) processDrop(
+	ctx context.Context,
+	lastSlotPulse *storage.Pulse,
+	currentSlotPulse *core.Pulse,
+	dropSerialized []byte,
+	messages [][]byte,
+) error {
 	msg := &message.JetDrop{
 		Drop:        dropSerialized,
 		Messages:    messages,
-		PulseNumber: *latestPulse.Prev,
+		PulseNumber: *lastSlotPulse.Prev,
 	}
-	_, err := m.Bus.Send(ctx, msg, nil)
+	_, err := m.Bus.Send(ctx, msg, *currentSlotPulse, nil)
 	if err != nil {
 		return err
 	}
@@ -149,7 +155,8 @@ func (m *PulseManager) processDrop(ctx context.Context, latestPulse *storage.Pul
 
 func (m *PulseManager) processRecentObjects(
 	ctx context.Context,
-	latestPulse *storage.Pulse,
+	previousSlotPulse *storage.Pulse,
+	currentSlotPulse *core.Pulse,
 	drop *jetdrop.JetDrop,
 	dropSerialized []byte,
 ) error {
@@ -198,11 +205,11 @@ func (m *PulseManager) processRecentObjects(
 
 	msg := &message.HotData{
 		Drop:            *drop,
-		PulseNumber:     latestPulse.Pulse.PulseNumber,
+		PulseNumber:     previousSlotPulse.Pulse.PulseNumber,
 		RecentObjects:   recentObjects,
 		PendingRequests: pendingRequests,
 	}
-	_, err := m.Bus.Send(ctx, msg, nil)
+	_, err := m.Bus.Send(ctx, msg, *currentSlotPulse, nil)
 	if err != nil {
 		return err
 	}
@@ -224,7 +231,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// swap pulse
 	m.currentPulse = pulse
 
-	latestPulse, err := m.db.GetLatestPulse(ctx)
+	lastSlotPulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
@@ -252,16 +259,16 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 
-		drop, dropSerialized, messages, err := m.createDrop(ctx, latestPulse)
+		drop, dropSerialized, messages, err := m.createDrop(ctx, lastSlotPulse)
 		if err != nil {
-			return errors.Wrapf(err, "create drop on pulse %v failed", latestPulse)
+			return errors.Wrapf(err, "create drop on pulse %v failed", lastSlotPulse)
 		}
 
-		if hotRecordsError := m.processRecentObjects(ctx, latestPulse, drop, dropSerialized); hotRecordsError != nil {
+		if hotRecordsError := m.processRecentObjects(ctx, lastSlotPulse, &m.currentPulse, drop, dropSerialized); hotRecordsError != nil {
 			return errors.Wrap(err, "processRecentObjects failed")
 		}
 
-		if err = m.processDrop(ctx, latestPulse, dropSerialized, messages); err != nil {
+		if err = m.processDrop(ctx, lastSlotPulse, &m.currentPulse, dropSerialized, messages); err != nil {
 			return errors.Wrap(err, "processDrop failed")
 		}
 
