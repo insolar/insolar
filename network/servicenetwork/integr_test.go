@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/log"
@@ -159,7 +160,7 @@ func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode 
 	return result
 }
 
-func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
+func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networkNode {
 	address := "127.0.0.1:" + strconv.Itoa(s.networkPort)
 	s.networkPort += 2 // coz consensus transport port+=1
 
@@ -188,12 +189,22 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t), origin.ID())
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
+	var phaseManager phases.PhaseManager
+	switch timeOut {
+	case Disable:
+		phaseManager = phases.NewPhaseManager()
+	case Full:
+		phaseManager = &FullTimeoutPhaseManager{}
+	case Partitial:
+		phaseManager = &PartitialTimeoutPhaseManager{}
+	}
+
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 	keeper := &nodeKeeperWrapper{realKeeper}
 
 	cm := &component.Manager{}
 	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
-	cm.Register(certManager, cryptographyService)
+	cm.Register(certManager, cryptographyService, phaseManager)
 	cm.Inject(serviceNetwork, netSwitcher)
 
 	serviceNetwork.NodeKeeper = keeper
