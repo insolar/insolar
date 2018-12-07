@@ -75,20 +75,17 @@ func Deserialize(data []byte, keyProc core.KeyProcessor) (core.AuthorizationCert
 	err := core.Deserialize(data, cert)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Deserialize ] failed to deserialize a data")
+		return nil, errors.Wrap(err, "[ AuthorizatonCertificate::Deserialize ] failed to deserialize a data")
 	}
 
 	key, err := keyProc.ImportPublicKey([]byte(cert.PublicKey))
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Deserialize ] failed to import a public key")
+		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ] failed to import a public key")
 	}
 
 	cert.nodePublicKey = key
 
-	if err != nil {
-		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ]")
-	}
 	return cert, nil
 }
 
