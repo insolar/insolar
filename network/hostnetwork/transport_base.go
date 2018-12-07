@@ -34,7 +34,7 @@ type transportBase struct {
 	started          uint32
 	transport        transport.Transport
 	origin           *host.Host
-	messageProcessor func(msg *packet.Packet)
+	messageProcessor func(ctx context.Context, msg *packet.Packet)
 }
 
 // Listen start listening to network requests, should be started in goroutine.
@@ -43,7 +43,7 @@ func (h *transportBase) Start(ctx context.Context) {
 		inslogger.FromContext(ctx).Warn("double listen initiated")
 		return
 	}
-	go h.listen()
+	go h.listen(ctx)
 	go func(ctx context.Context) {
 		err := h.transport.Start(ctx)
 		if err != nil {
@@ -52,7 +52,7 @@ func (h *transportBase) Start(ctx context.Context) {
 	}(ctx)
 }
 
-func (h *transportBase) listen() {
+func (h *transportBase) listen(ctx context.Context) {
 	for {
 		select {
 		case msg := <-h.transport.Packets():
@@ -63,7 +63,7 @@ func (h *transportBase) listen() {
 			if msg.Error != nil {
 				log.Warnf("Received error response: %s", msg.Error.Error())
 			}
-			go h.messageProcessor(msg)
+			go h.messageProcessor(ctx, msg)
 		case <-h.transport.Stopped():
 			if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
 				h.transport.Close()
