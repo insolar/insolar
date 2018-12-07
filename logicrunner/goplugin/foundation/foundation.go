@@ -87,6 +87,10 @@ func (bc *BaseContract) GetChildrenTyped(r core.RecordRef) ([]core.RecordRef, er
 	return proxyctx.Current.GetObjChildren(bc.GetReference(), r)
 }
 
+func (bc *BaseContract) NewChildrenTypedIterator(childPrototype core.RecordRef) (*proxyctx.ChildrenTypedIterator, error) {
+	return proxyctx.Current.GetObjChildrenIterator(bc.GetReference(), childPrototype, "")
+}
+
 // GetObject create proxy by address
 // unimplemented
 func GetObject(ref core.RecordRef) ProxyInterface {
