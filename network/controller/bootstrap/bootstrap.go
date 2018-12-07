@@ -286,7 +286,7 @@ func (bc *Bootstrapper) bootstrap(address string) (*host.Host, error) {
 	return response.GetSenderHost(), nil
 }
 
-func (bc *Bootstrapper) processBootstrap(request network.Request) (network.Response, error) {
+func (bc *Bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	// TODO: redirect logic
 	return bc.transport.BuildResponse(request, &NodeBootstrapResponse{Code: Accepted}), nil
 }
@@ -296,7 +296,7 @@ func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) err
 	return nil
 }
 
-func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
+func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*GenesisRequest)
 	genesisCert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
