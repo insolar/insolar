@@ -29,5 +29,5 @@ import (
 type sender interface {
 	core.MessageBus
 	CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken) (core.Parcel, error)
-	SendParcel(ctx context.Context, msg core.Parcel, ops *core.MessageSendOptions) (core.Reply, error)
+	SendParcel(ctx context.Context, msg core.Parcel, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error)
 }
