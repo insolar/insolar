@@ -227,7 +227,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			return
 		}
 
-		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
+		//err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
 			return
@@ -253,5 +253,5 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 }
 
 func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
-	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
+	return (pulse.NextPulseNumber == 2) && (pulse.PulseNumber == 1)
 }

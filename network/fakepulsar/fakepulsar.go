@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
 
@@ -59,15 +60,14 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 		for {
 			select {
 			case <-time.After(time.Millisecond * time.Duration(fp.timeoutMs)):
-				{
-					fp.onPulse(ctx, *fp.GetFakePulse())
-				}
+				fp.onPulse(ctx, *fp.GetFakePulse())
 			case <-fp.stop:
 				return
 			}
 		}
 
 	}(fp)
+	log.Info("fake pulsar started")
 }
 
 // Stop sending a fake pulse.
@@ -82,8 +82,8 @@ func (fp *FakePulsar) Stop(ctx context.Context) {
 func (fp *FakePulsar) newPulse() *core.Pulse {
 	generator := entropygenerator.StandardEntropyGenerator{}
 	return &core.Pulse{
-		PulseNumber:     0,
-		NextPulseNumber: 0,
+		PulseNumber:     1,
+		NextPulseNumber: 2,
 		Entropy:         generator.GenerateEntropy(),
 	}
 }

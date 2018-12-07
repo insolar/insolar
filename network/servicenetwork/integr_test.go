@@ -169,9 +169,19 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	assert.NoError(t, err)
 
 	pulseManagerMock := testutils.NewPulseManagerMock(t)
+	pulseManagerMock.CurrentMock.Set(func(p context.Context) (r *core.Pulse, r1 error) {
+		return &core.Pulse{PulseNumber: 0}, nil
+	})
+	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
+		return nil
+	})
+
 	netCoordinator := testutils.NewNetworkCoordinatorMock(t)
 	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
 		return true, nil
+	})
+	netCoordinator.WriteActiveNodesMock.Set(func(p context.Context, p1 core.PulseNumber, p2 []core.Node) (r error) {
+		return nil
 	})
 
 	amMock := testutils.NewArtifactManagerMock(t)
@@ -193,7 +203,7 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	s.T().Skip("will be available after fix !")
+	//s.T().Skip("will be available after fix !")
 
 	phasesResult := make(chan error)
 	s.InitNodes()
