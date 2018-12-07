@@ -90,19 +90,20 @@ func (jc *JetCoordinator) QueryRole(
 		return nil, errors.New(fmt.Sprintf("no candidates for role %d", role))
 	}
 
+	count, ok := jc.roleCounts[role]
+	if !ok {
+		return nil, errors.New("no candidate count for this role")
+	}
+
 	if obj == nil {
-		count, ok := jc.roleCounts[role]
-		if !ok {
-			return nil, errors.New("no candidate count for this role")
-		}
 		return refsByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy[:], candidates, count)
 	}
 
 	if role == core.DynamicRoleLightExecutor {
-		return jc.getNodeViaJet(ctx, pulseData.Pulse, candidates, obj)
+		return jc.getNodesViaJet(ctx, pulseData.Pulse, candidates, obj, count)
 	}
 
-	return jc.getNodeViaEntropy(ctx, pulseData.Pulse, candidates, obj)
+	return jc.getNodesViaEntropy(ctx, pulseData.Pulse, candidates, obj, count)
 }
 
 // GetActiveNodes return active nodes for specified pulse.
@@ -110,8 +111,8 @@ func (jc *JetCoordinator) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, e
 	return jc.db.GetActiveNodes(pulse)
 }
 
-func (jc *JetCoordinator) getNodeViaEntropy(
-	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef,
+func (jc *JetCoordinator) getNodesViaEntropy(
+	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef, count int,
 ) ([]core.RecordRef, error) {
 	h := jc.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := h.Write(pulse.Entropy[:])
@@ -122,15 +123,15 @@ func (jc *JetCoordinator) getNodeViaEntropy(
 	if err != nil {
 		return nil, err
 	}
-	nodes, err := refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, 1)
+	nodes, err := refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, count)
 	if err != nil {
 		return nil, err
 	}
 	return nodes, nil
 }
 
-func (jc *JetCoordinator) getNodeViaJet(
-	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef,
+func (jc *JetCoordinator) getNodesViaJet(
+	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef, count int,
 ) ([]core.RecordRef, error) {
 	// Find a jet for the object.
 	jetTree, err := jc.db.GetJetTree(ctx, pulse.PulseNumber)
@@ -153,7 +154,7 @@ func (jc *JetCoordinator) getNodeViaJet(
 		return nil, err
 	}
 
-	return refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, 1)
+	return refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, count)
 }
 
 func refsByEntropy(
