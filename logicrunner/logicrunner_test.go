@@ -196,10 +196,12 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 
 	rlr := lr.(*LogicRunner)
 
-	for ref, state := range rlr.execution {
+	for ref, state := range rlr.state {
 		log.Debugf("TEST validating: %s", ref)
 
-		_, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), state.caseBind)
+		cb := state.ExecutionState.Behaviour.(*ValidationSaver).caseBind
+
+		_, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), *cb)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation %s", ref)
 		} else {
