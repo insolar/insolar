@@ -103,12 +103,12 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 			return nil, err
 		}
 
-		lastPulseNumber, err := h.db.GetLatestPulseNumber(ctx)
+		lastPulse, err := h.db.GetLatestPulse(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		return handler(ctx, lastPulseNumber, genericMsg)
+		return handler(ctx, lastPulse.Pulse.PulseNumber, genericMsg)
 	}
 }
 
@@ -664,11 +664,11 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 }
 
 func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Message) error {
-	lastPulse, err := db.GetLatestPulseNumber(ctx)
+	lastPulse, err := db.GetLatestPulse(ctx)
 	if err != nil {
 		return err
 	}
-	err = db.SetMessage(ctx, lastPulse, genericMsg)
+	err = db.SetMessage(ctx, lastPulse.Pulse.PulseNumber, genericMsg)
 	if err != nil {
 		return err
 	}
