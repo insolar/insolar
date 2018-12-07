@@ -24,12 +24,11 @@ import (
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
-	CertificateManager  core.CertificateManager  `inject:""`
-	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
-	ContractRequester   core.ContractRequester   `inject:""`
-	GenesisDataProvider core.GenesisDataProvider `inject:""`
-	MessageBus          core.MessageBus          `inject:""`
-	CS                  core.CryptographyService `inject:""`
+	CertificateManager core.CertificateManager  `inject:""`
+	NetworkSwitcher    core.NetworkSwitcher     `inject:""`
+	ContractRequester  core.ContractRequester   `inject:""`
+	MessageBus         core.MessageBus          `inject:""`
+	CS                 core.CryptographyService `inject:""`
 
 	realCoordinator Coordinator
 	zeroCoordinator Coordinator
@@ -40,16 +39,17 @@ func New() (*NetworkCoordinator, error) {
 	return &NetworkCoordinator{}, nil
 }
 
-// Init implements interface of Component
-func (nc *NetworkCoordinator) Init(ctx context.Context) error {
-	nc.zeroCoordinator = newZeroNetworkCoordinator()
-	nc.realCoordinator = newRealNetworkCoordinator()
-	return nil
-}
-
 // Start implements interface of Component
 func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 	nc.MessageBus.MustRegister(core.NetworkCoordinatorNodeSignRequest, nc.signCertHandler)
+
+	nc.zeroCoordinator = newZeroNetworkCoordinator()
+	nc.realCoordinator = newRealNetworkCoordinator(
+		nc.CertificateManager,
+		nc.ContractRequester,
+		nc.MessageBus,
+		nc.CS,
+	)
 	return nil
 }
 
@@ -62,7 +62,7 @@ func (nc *NetworkCoordinator) getCoordinator() Coordinator {
 
 // GetCert method returns node certificate by requesting sign from discovery nodes
 func (nc *NetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *core.RecordRef) (core.Certificate, error) {
-
+	return nc.getCoordinator().GetCert(ctx, registeredNodeRef)
 }
 
 // ValidateCert validates node certificate

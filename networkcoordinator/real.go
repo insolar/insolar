@@ -28,16 +28,24 @@ import (
 )
 
 type realNetworkCoordinator struct {
-	CertificateManager  core.CertificateManager
-	NetworkSwitcher     core.NetworkSwitcher
-	ContractRequester   core.ContractRequester
-	GenesisDataProvider core.GenesisDataProvider
-	MessageBus          core.MessageBus
-	CS                  core.CryptographyService
+	CertificateManager core.CertificateManager
+	ContractRequester  core.ContractRequester
+	MessageBus         core.MessageBus
+	CS                 core.CryptographyService
 }
 
-func newRealNetworkCoordinator() *realNetworkCoordinator {
-	return &realNetworkCoordinator{}
+func newRealNetworkCoordinator(
+	manager core.CertificateManager,
+	requester core.ContractRequester,
+	msgBus core.MessageBus,
+	cs core.CryptographyService,
+) *realNetworkCoordinator {
+	return &realNetworkCoordinator{
+		CertificateManager: manager,
+		ContractRequester:  requester,
+		MessageBus:         msgBus,
+		CS:                 cs,
+	}
 }
 
 func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *core.RecordRef) (core.Certificate, error) {
@@ -127,10 +135,6 @@ func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *cor
 		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't extract response")
 	}
 	return pKey, role, nil
-}
-
-func (rnc *realNetworkCoordinator) ValidateCert(ctx context.Context, certificate core.AuthorizationCertificate) (bool, error) {
-	return false, errors.New("not implemented")
 }
 
 func (rnc *realNetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
