@@ -55,6 +55,7 @@ func (oi *ChildrenTypedIterator) Next() (core.RecordRef, error) {
 	if !oi.hasInBuffer() && oi.CanFetch {
 		err := oi.fetch()
 		if err != nil {
+			oi.CanFetch = false
 			return core.RecordRef{}, err
 		}
 	}
@@ -79,9 +80,11 @@ func (oi *ChildrenTypedIterator) nextFromBuffer() core.RecordRef {
 func (oi *ChildrenTypedIterator) fetch() error {
 	oi.buffIndex = 0
 	oi.CanFetch = false
+	oi.Buff = nil
 
 	temp, err := Current.GetObjChildrenIterator(oi.Parent, oi.ChildPrototype, oi.IteratorID)
 	if err != nil {
+		oi.IteratorID = ""
 		return err
 	}
 	oi.Buff = temp.Buff
