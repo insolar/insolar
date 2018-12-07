@@ -118,7 +118,7 @@ type UpGetObjChildrenResp struct {
 // UpGetObjChildrenIteratorReq is a set of arguments for GetObjChildrenIterator RPC in goplugin
 type UpGetObjChildrenIteratorReq struct {
 	UpBaseReq
-	IteratorId string
+	IteratorID string
 	Obj        core.RecordRef
 	Prototype  core.RecordRef
 }

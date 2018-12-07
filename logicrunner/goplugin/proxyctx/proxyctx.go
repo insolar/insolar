@@ -41,7 +41,7 @@ type ChildrenTypedIterator struct {
 	Parent         core.RecordRef
 	ChildPrototype core.RecordRef // only child of specified prototype, if childPrototype.IsEmpty - ignored
 
-	IteratorId string           // map key to iterators slice in logicrunner service
+	IteratorID string           // map key to iterators slice in logicrunner service
 	Buff       []core.RecordRef // bucket of objects from previous RPC call to service
 	buffIndex  int              // current element
 	CanFetch   bool             // if true, we can call RPC again and get new objects
