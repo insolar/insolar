@@ -36,8 +36,8 @@ type NetworkCoordinator struct {
 	MessageBus          core.MessageBus          `inject:""`
 	CS                  core.CryptographyService `inject:""`
 
-	realCoordinator core.NetworkCoordinator
-	zeroCoordinator core.NetworkCoordinator
+	realCoordinator Coordinator
+	zeroCoordinator Coordinator
 }
 
 // New creates new NetworkCoordinator
@@ -54,7 +54,7 @@ func (nc *NetworkCoordinator) Init(ctx context.Context) error {
 
 // Start implements interface of Component
 func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	nc.MessageBus.MustRegister(core.NetworkCoordinatorNodeSignRequest, nc.SignCert)
+	nc.MessageBus.MustRegister(core.NetworkCoordinatorNodeSignRequest, nc.signCertHandler)
 	return nil
 }
 
@@ -121,8 +121,8 @@ func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core
 	return nc.CertificateManager.VerifyAuthorizationCertificate(certificate)
 }
 
-// SignCert signs certificate for some node with node own key
-func (nc *NetworkCoordinator) SignCert(ctx context.Context, p core.Parcel) (core.Reply, error) {
+// signCertHandler is MsgBus handler that signs certificate for some node with node own key
+func (nc *NetworkCoordinator) signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error) {
 	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
 	sign, err := nc.signCert(ctx, nodeRef)
 	if err != nil {
