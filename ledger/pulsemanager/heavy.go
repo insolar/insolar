@@ -61,6 +61,7 @@ func (m *PulseManager) HeavySync(
 		busreply core.Reply
 		buserr   error
 	)
+	jetID := core.TODOJetID
 
 	if retry {
 		inslog.Infof("send reset message for pulse %v (retry sync)", pn)
@@ -79,7 +80,7 @@ func (m *PulseManager) HeavySync(
 	inslog.Infof("synchronize, sucessfully send start message for pulse %v", pn)
 
 	replicator := storage.NewReplicaIter(
-		ctx, m.db, pn, pn+1, m.options.syncMessageLimit)
+		ctx, m.db, jetID, pn, pn+1, m.options.syncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
