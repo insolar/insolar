@@ -57,7 +57,7 @@ type ServiceNetwork struct {
 	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
 
 	// subcomponents
-	PhaseManager     phases.PhaseManager      `inject:""`
+	PhaseManager     phases.PhaseManager      // `inject:""`
 	MerkleCalculator merkle.Calculator        // `inject:""`
 	ConsensusNetwork network.ConsensusNetwork // `inject:""`
 	PulseHandler     network.PulseHandler
@@ -122,9 +122,19 @@ func incrementPort(address string) (string, error) {
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 
+	n.PhaseManager = phases.NewPhaseManager()
 	n.MerkleCalculator = merkle.NewCalculator()
 	n.Communicator = phases.NewNaiveCommunicator()
 	n.PulseHandler = n // self
+
+	firstPhase := &phases.FirstPhase{}
+	secondPhase := &phases.SecondPhase{}
+	thirdPhase := &phases.ThirdPhase{}
+
+	// inject workaround
+	n.PhaseManager.(*phases.Phases).FirstPhase = firstPhase
+	n.PhaseManager.(*phases.Phases).SecondPhase = secondPhase
+	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
 
 	n.routingTable = &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
@@ -148,28 +158,26 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
-	firstPhase := &phases.FirstPhase{}
-	secondPhase := &phases.SecondPhase{}
-	thirdPhase := &phases.ThirdPhase{}
-
 	cm := component.Manager{}
 	cm.Register(n.CertificateManager, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
 		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
 
 	cm.Inject(n.NodeKeeper,
-		firstPhase,
-		secondPhase,
-		thirdPhase,
 		n.MerkleCalculator,
 		n.ConsensusNetwork,
 		n.Communicator,
+		firstPhase,
+		secondPhase,
+		thirdPhase,
 	)
 
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
-	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
-	return nil
+	n.fakePulsar = fakepulsar.NewFakePulsar(n, n.cfg.Pulsar.PulseTime)
+
+	err = n.MerkleCalculator.(component.Initer).Init(ctx)
+	return err
 }
 
 // Start implements component.Starter

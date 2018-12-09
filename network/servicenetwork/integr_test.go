@@ -131,8 +131,7 @@ func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto
 	cert.Reference = ref.String()
 	assert.NoError(t, err)
 	cert.BootstrapNodes = nodes
-	mngr := certificate.NewCertificateManager(cert)
-	return mngr
+	return certificate.NewCertificateManager(cert)
 }
 
 func initCrypto(t *testing.T, nodes []certificate.BootstrapNode, ref core.RecordRef) (*certificate.CertificateManager, core.CryptographyService) {
@@ -195,6 +194,9 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 	})
 
 	amMock := testutils.NewArtifactManagerMock(t)
+	amMock.StateMock.Set(func() (r []byte, r1 error) {
+		return make([]byte, 0), nil
+	})
 
 	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t), origin.ID())
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
@@ -223,7 +225,7 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 }
 
 func (s *testSuite) TestNodeConnect() {
-	s.T().Skip("will be available after phase result fix !")
+	//s.T().Skip("will be available after phase result fix !")
 	phasesResult := make(chan error)
 	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
 	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
@@ -238,6 +240,33 @@ func (s *testSuite) TestNodeConnect() {
 	s.Equal(2, len(activeNodes))
 	// teardown
 	<-time.After(time.Second * 5)
+	s.StopNodes()
+}
+
+func (s *testSuite) TestNodeLeave() {
+	phasesResult := make(chan error)
+	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
+	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
+
+	s.testNode = s.createNetworkNode(s.T(), Disable)
+
+	s.InitNodes()
+	s.StartNodes()
+	res := <-phasesResult
+	s.NoError(res)
+	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(2, len(activeNodes))
+
+	// teardown
+	<-time.After(time.Second * 5)
+	res = bootstrapNode1.componentManager.Stop(context.Background())
+	s.NoError(res)
+
+	res = <-phasesResult
+	s.NoError(res)
+	activeNodes = s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(1, len(activeNodes))
+
 	s.StopNodes()
 }
 
