@@ -196,6 +196,10 @@ func init() {
 	gob.Register(&SetBlob{})
 	gob.Register(&ValidateRecord{})
 	gob.Register(&ValidationCheck{})
+	// heavy
+	gob.Register(&HeavyStartStop{})
+	gob.Register(&HeavyPayload{})
+	gob.Register(&HeavyReset{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
