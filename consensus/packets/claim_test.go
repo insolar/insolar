@@ -94,7 +94,7 @@ func makeNodeAnnounceClaim() *NodeAnnounceClaim {
 	nodeAnnounceClaim := &NodeAnnounceClaim{}
 	nodeAnnounceClaim.NodeJoinClaim = *makeNodeJoinClaim()
 	nodeAnnounceClaim.NodeCount = 266
-	nodeAnnounceClaim.NodeIndex = 37
+	nodeAnnounceClaim.NodeAnnouncerIndex = 37
 	return nodeAnnounceClaim
 }
 

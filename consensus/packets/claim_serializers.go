@@ -263,9 +263,9 @@ func (nac *NodeAnnounceClaim) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeJoinClaim part")
 	}
-	err = binary.Write(result, defaultByteOrder, nac.NodeIndex)
+	err = binary.Write(result, defaultByteOrder, nac.NodeAnnouncerIndex)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeIndex")
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeAnnouncerIndex")
 	}
 	err = binary.Write(result, defaultByteOrder, nac.NodeCount)
 	if err != nil {
@@ -280,9 +280,9 @@ func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
 	if err != nil {
 		return err
 	}
-	err = binary.Read(data, defaultByteOrder, &nac.NodeIndex)
+	err = binary.Read(data, defaultByteOrder, &nac.NodeAnnouncerIndex)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeIndex")
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeAnnouncerIndex")
 	}
 	err = binary.Read(data, defaultByteOrder, &nac.NodeCount)
 	if err != nil {

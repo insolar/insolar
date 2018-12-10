@@ -84,7 +84,7 @@ type NodeJoinClaim struct {
 	RelayNodeID             core.ShortNodeID
 	ProtocolVersionAndFlags uint32
 	JoinsAfter              uint32
-	NodeRoleRecID           uint32
+	NodeRoleRecID           core.StaticRole
 	NodeRef                 core.RecordRef
 	NodePK                  [PublicKeyLength]byte
 	Signature               [SignatureLength]byte
@@ -98,8 +98,9 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 type NodeAnnounceClaim struct {
 	NodeJoinClaim
 
-	NodeIndex uint16
-	NodeCount uint16
+	NodeAnnouncerIndex uint16
+	NodeJoinerIndex    uint16
+	NodeCount          uint16
 }
 
 func (nac *NodeAnnounceClaim) Type() ClaimType {
