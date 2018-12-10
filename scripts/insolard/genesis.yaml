@@ -20,11 +20,11 @@ discovery_nodes:
     host: "127.0.0.1:33833"
     role: "light_material"
     keys_file: "scripts/insolard/nodes/3/keys.json"
-  -
-    host: "127.0.0.1:43834"
-    role: "light_material"
-    keys_file: "scripts/insolard/nodes/4/keys.json"
-  -
-    host: "127.0.0.1:53835"
-    role: "virtual"
-    keys_file: "scripts/insolard/nodes/5/keys.json"
+#  -
+#    host: "127.0.0.1:43834"
+#    role: "light_material"
+#    keys_file: "scripts/insolard/nodes/4/keys.json"
+#  -
+#    host: "127.0.0.1:53835"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/5/keys.json"

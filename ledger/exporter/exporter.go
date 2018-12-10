@@ -68,6 +68,7 @@ type pulseData struct {
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
 	result := core.StorageExportResult{Data: map[string]interface{}{}}
 
+	jetID := core.TODOJetID
 	counter := 0
 	currentPN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
 	current := &currentPN
@@ -76,7 +77,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch pulse data 22222")
 		}
-		data, err := e.exportPulse(ctx, &pulse.Pulse)
+		data, err := e.exportPulse(ctx, jetID, &pulse.Pulse)
 		if err != nil {
 			return nil, err
 		}
@@ -92,9 +93,9 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	return &result, nil
 }
 
-func (e *Exporter) exportPulse(ctx context.Context, pulse *core.Pulse) (*pulseData, error) {
+func (e *Exporter) exportPulse(ctx context.Context, jet core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.db.IterateRecords(ctx, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
+	err := e.db.IterateRecords(ctx, jet, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
 		pl, err := e.getPayload(ctx, rec)
 		if err != nil {
 			return err
@@ -119,12 +120,13 @@ func (e *Exporter) exportPulse(ctx context.Context, pulse *core.Pulse) (*pulseDa
 }
 
 func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, error) {
+	jetID := core.TODOJetID
 	switch r := rec.(type) {
 	case record.ObjectState:
 		if r.GetMemory() == nil {
 			break
 		}
-		blob, err := e.db.GetBlob(ctx, r.GetMemory())
+		blob, err := e.db.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
 			return nil, err
 		}
