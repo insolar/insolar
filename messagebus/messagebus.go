@@ -259,7 +259,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 		sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
 		if sendingObject != nil {
 			validSender, err := mb.JetCoordinator.IsAuthorized(
-				parcelCtx, allowedSenderRole, sendingObject, parcel.Pulse(), sender,
+				parcelCtx, allowedSenderRole, sendingObject, parcel.GetPulse(), sender,
 			)
 			if err != nil {
 				return nil, err

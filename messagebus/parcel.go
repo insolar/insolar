@@ -56,7 +56,7 @@ func (pf *parcelFactory) Create(ctx context.Context, msg core.Message, sender co
 		TraceSpanData: instracer.MustSerialize(ctx),
 		Sender:        sender,
 		Token:         token,
-		CurrentPulse:  currentPulse.PulseNumber,
+		PulseNumber:   currentPulse.PulseNumber,
 	}, nil
 }
 

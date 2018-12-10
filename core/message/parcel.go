@@ -39,12 +39,12 @@ type Parcel struct {
 	LogTraceID    string
 	TraceSpanData []byte
 	Token         core.DelegationToken
-	CurrentPulse  core.PulseNumber
+	PulseNumber   core.PulseNumber
 }
 
-// Pulse returns pulse, when parcel was sent
-func (sm *Parcel) Pulse() core.PulseNumber {
-	return sm.CurrentPulse
+// GetPulse returns pulse, when parcel was sent
+func (sm *Parcel) GetPulse() core.PulseNumber {
+	return sm.PulseNumber
 }
 
 // Message returns current instance's message
