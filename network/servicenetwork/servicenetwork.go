@@ -242,10 +242,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
-			err = n.PhaseManager.OnPulse(ctx, &pulse)
-			if err != nil {
-				logger.Warn("phase manager fail: " + err.Error())
-			}
+			// TODO: make PhaseManager works and uncomment this
+			// err = n.PhaseManager.OnPulse(ctx, &pulse)
+			// if err != nil {
+			// 	logger.Warn("phase manager fail: " + err.Error())
+			// }
 		}(logger, n)
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
