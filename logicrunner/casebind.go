@@ -160,6 +160,9 @@ func (vb *ValidationSaver) NewRequest(msg core.Message, request Ref, mb core.Mes
 }
 
 func (vb *ValidationSaver) Result(reply core.Reply, err error) error {
+	if vb.current == nil {
+		panic("result call without request registered")
+	}
 	vb.current.Reply = reply
 	vb.current.Error = err
 	return nil
