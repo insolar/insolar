@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTree_Find(t *testing.T) {
@@ -38,9 +39,31 @@ func TestTree_Find(t *testing.T) {
 			Left: &Jet{},
 		},
 	}
-	val := []byte{0xD5} // 11010101
+	val := make([]byte, 32)
+	val[0] = 0xD5 // 11010101
 
 	jet, depth := tree.Find(val)
 	assert.Equal(t, tree.Head.Right.Right.Left.Right, jet)
 	assert.Equal(t, depth, 4)
+}
+
+func TestTree_Update(t *testing.T) {
+	tree := Tree{Head: &Jet{}}
+
+	val := make([]byte, 32)
+	val[0] = 0xD5 // 11010101
+
+	jet, depth := tree.Find(val)
+	require.Equal(t, tree.Head, jet)
+	assert.Equal(t, 0, depth)
+
+	tree.Update([]byte{1 << 7})
+	jet, depth = tree.Find(val)
+	require.Equal(t, tree.Head.Right, jet)
+	assert.Equal(t, 1, depth)
+
+	tree.Update([]byte{val[0]})
+	jet, depth = tree.Find(val)
+	require.Equal(t, tree.Head.Right.Right.Left.Right.Left.Right.Left.Right, jet)
+	assert.Equal(t, 8, depth)
 }
