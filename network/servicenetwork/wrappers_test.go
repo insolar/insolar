@@ -27,8 +27,6 @@ import (
 
 type nodeKeeperWrapper struct {
 	original network.NodeKeeper
-
-	// network.NodeKeeperMock
 }
 
 type phaseManagerWrapper struct {
