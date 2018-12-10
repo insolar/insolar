@@ -3,7 +3,7 @@ versionmanager:
 host:
   transport:
     protocol: TCP
-    address: 127.0.0.1:53832
+    address: 127.0.0.1:23832
     behindnat: false
   bootstraphosts: []
   isrelay: false
