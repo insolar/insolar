@@ -240,7 +240,8 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	}
 
 	// swap active nodes
-	m.ActiveListSwapper.MoveSyncToActive()
+	// TODO: fix network consensus and uncomment this
+	// m.ActiveListSwapper.MoveSyncToActive()
 	if !dry {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
 			return errors.Wrap(err, "call of AddPulse failed")
