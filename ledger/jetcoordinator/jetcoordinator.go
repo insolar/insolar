@@ -112,8 +112,7 @@ func (jc *JetCoordinator) QueryRole(
 		_, depth := jetTree.Find(objHash, pulseData.Pulse.PulseNumber)
 
 		// Reset everything except prefix.
-		resetBits(objHash, depth+1)
-		circleXOR(ent, objHash)
+		circleXOR(ent, resetBits(objHash, depth+1))
 		return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
 	}
 
@@ -162,21 +161,25 @@ func circleXOR(dst, src []byte) {
 }
 
 // ResetBits resets all bits in 'value', starting from 'start' number of bit.
-func resetBits(value []byte, start int) {
+func resetBits(value []byte, start int) []byte {
 	if start > len(value)*8 {
-		return
+		return value
 	}
 
+	result := make([]byte, len(value))
+	copy(result, value)
 	startByte := start / 8
 	startBit := start % 8
 
 	// Reset bits in starting byte.
 	mask := byte(0xFF)
 	mask <<= 8 - byte(startBit)
-	value[startByte] &= mask
+	result[startByte] &= mask
 
 	// Reset bytes.
 	for i := startByte + 1; i < len(value); i++ {
-		value[i] = 0
+		result[i] = 0
 	}
+
+	return result
 }
