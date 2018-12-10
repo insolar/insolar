@@ -17,7 +17,10 @@
 package packets
 
 import (
+	"crypto"
+
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 type ClaimType uint8
@@ -45,6 +48,17 @@ func (cnc *ChangeNetworkClaim) Type() ClaimType {
 type ReferendumClaim interface {
 	Serializer
 	Type() ClaimType
+}
+
+type SignedClaim interface {
+	GetNodeID() core.RecordRef
+	GetPublicKey() (crypto.PublicKey, error)
+	SerializeRaw() ([]byte, error)
+	GetSignature() []byte
+}
+
+type SupplementaryClaim interface {
+	SetSupplementaryInfo(address string, nodeID core.RecordRef)
 }
 
 // NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
@@ -88,6 +102,22 @@ type NodeJoinClaim struct {
 	NodeRef                 core.RecordRef
 	NodePK                  [PublicKeyLength]byte
 	Signature               [SignatureLength]byte
+
+	// additional field that is not serialized and is set from transport layer on packet receive
+	NodeAddress string
+}
+
+func (njc *NodeJoinClaim) GetNodeID() core.RecordRef {
+	return njc.NodeRef
+}
+
+func (njc *NodeJoinClaim) GetPublicKey() (crypto.PublicKey, error) {
+	keyProc := platformpolicy.NewKeyProcessor()
+	return keyProc.ImportPublicKey(njc.NodePK[:])
+}
+
+func (njc *NodeJoinClaim) GetSignature() []byte {
+	return njc.Signature[:]
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
@@ -110,6 +140,9 @@ func (nac *NodeAnnounceClaim) Type() ClaimType {
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
+
+	// additional field that is not serialized and is set from transport layer on packet receive
+	NodeID core.RecordRef
 }
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {

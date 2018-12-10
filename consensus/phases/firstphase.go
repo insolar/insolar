@@ -231,7 +231,7 @@ func (fp *FirstPhase) checkJoinClaimSign(claim *packets.NodeJoinClaim) error {
 	if err != nil {
 		return errors.Wrap(err, "[ checkJoinClaimSign ] failed to import a key")
 	}
-	rawClaim, err := claim.SerializeWithoutSign()
+	rawClaim, err := claim.SerializeRaw()
 	if err != nil {
 		return errors.Wrap(err, "[ checkJoinClaimSign ] failed to serialize a claim")
 	}

@@ -60,7 +60,6 @@ func createOrigin(configuration configuration.HostNetwork, certificate core.Cert
 		role = core.StaticRoleLightMaterial
 	}
 
-	// TODO: get roles from certificate
 	return newMutableNode(
 		*certificate.GetNodeRef(),
 		role,
@@ -343,7 +342,7 @@ func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
 		Signature:               s,
 	}
 
-	dataToSign, err := claim.SerializeWithoutSign()
+	dataToSign, err := claim.SerializeRaw()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to serialize a claim")
 	}

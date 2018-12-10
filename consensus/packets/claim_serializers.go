@@ -193,7 +193,7 @@ func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
 func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
 	result := allocateBuffer(1024)
 
-	rawData, err := njc.SerializeWithoutSign()
+	rawData, err := njc.SerializeRaw()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeJoinClaim.Serialize ] Failed to serialize a claim without header")
 	}
@@ -211,49 +211,48 @@ func (njc *NodeJoinClaim) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (njc *NodeJoinClaim) SerializeWithoutSign() ([]byte, error) {
+func (njc *NodeJoinClaim) SerializeRaw() ([]byte, error) {
 	result := allocateBuffer(1024)
 
 	err := binary.Write(result, defaultByteOrder, njc.ShortNodeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write NodeID")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeRaw ] Can't write NodeID")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.RelayNodeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write RelayNodeID")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeRaw ] Can't write RelayNodeID")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.ProtocolVersionAndFlags)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write ProtocolVersionAndFlags")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeRaw ] Can't write ProtocolVersionAndFlags")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.JoinsAfter)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write JoinsAfter")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeRaw ] Can't write JoinsAfter")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.NodeRoleRecID)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write NodeRoleRecID")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeRaw ] Can't write NodeRoleRecID")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.NodeRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write NodeRef")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeRaw ] Can't write NodeRef")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.NodePK)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeWithoutSign ] Can't write NodePK")
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeRaw ] Can't write NodePK")
 	}
 
 	return result.Bytes(), nil
 }
 
-// Serialize implements interface method
-func (nac *NodeAnnounceClaim) Serialize() ([]byte, error) {
+func (nac *NodeAnnounceClaim) SerializeRaw() ([]byte, error) {
 	nodeJoinPart, err := nac.NodeJoinClaim.Serialize()
 	if err != nil {
 		return nil, err
@@ -267,11 +266,20 @@ func (nac *NodeAnnounceClaim) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeAnnouncerIndex")
 	}
+	err = binary.Write(result, defaultByteOrder, nac.NodeJoinerIndex)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeJoinerIndex")
+	}
 	err = binary.Write(result, defaultByteOrder, nac.NodeCount)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeCount")
 	}
 	return result.Bytes(), nil
+}
+
+// Serialize implements interface method
+func (nac *NodeAnnounceClaim) Serialize() ([]byte, error) {
+
 }
 
 // Deserialize implements interface method
@@ -283,6 +291,10 @@ func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
 	err = binary.Read(data, defaultByteOrder, &nac.NodeAnnouncerIndex)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeAnnouncerIndex")
+	}
+	err = binary.Read(data, defaultByteOrder, &nac.NodeJoinerIndex)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeJoinerIndex")
 	}
 	err = binary.Read(data, defaultByteOrder, &nac.NodeCount)
 	if err != nil {
@@ -319,7 +331,7 @@ func serializeClaims(claims []ReferendumClaim) ([]byte, error) {
 		_, err = result.Write(rawClaim)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("[ serializeClaims ] "+
-				"Can't append proofNodePulseRaw."+"Type: %d. Length: %d", claim.Type(), getClaimSize(claim)))
+				"Can't append proofNodePulseRaw. Type: %d. Length: %d", claim.Type(), getClaimSize(claim)))
 		}
 	}
 
