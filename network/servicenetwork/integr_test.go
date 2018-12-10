@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -315,32 +316,32 @@ type FirstPhase struct {
 	UnsyncList   network.UnsyncList
 }
 
-func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) error {
+func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*phases.FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
-	_, pulseProof, err := fp.Calculator.GetPulseProof(entry)
+	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
 	if fp.NodeKeeper.GetState() == network.Ready {
 		fp.UnsyncList = fp.NodeKeeper.GetUnsyncList()
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "[ Execute ] Failed to calculate pulse proof.")
+		return nil, errors.Wrap(err, "[ Execute ] Failed to calculate pulse proof.")
 	}
 
 	packet := packets.Phase1Packet{}
 	err = packet.SetPulseProof(pulseProof.StateHash, pulseProof.Signature.Bytes())
 	if err != nil {
-		return errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase1Packet.")
+		return nil, errors.Wrap(err, "[ Execute ] Failed to set pulse proof in Phase1Packet.")
 	}
 
 	var success bool
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
 		originClaim, err := fp.NodeKeeper.GetOriginClaim()
 		if err != nil {
-			return errors.Wrap(err, "[ Execute ] Failed to get origin claim")
+			return nil, errors.Wrap(err, "[ Execute ] Failed to get origin claim")
 		}
 		success = packet.AddClaim(originClaim)
 		if !success {
-			return errors.Wrap(err, "[ Execute ] Failed to add origin claim in Phase1Packet.")
+			return nil, errors.Wrap(err, "[ Execute ] Failed to add origin claim in Phase1Packet.")
 		}
 	}
 	for {
@@ -355,11 +356,11 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) error {
 	activeNodes = activeNodes[:len(activeNodes)-2] // delete 2 nodes
 	err = fp.signPhase1Packet(&packet)
 	if err != nil {
-		return errors.Wrap(err, "failed to sign a packet")
+		return nil, errors.Wrap(err, "failed to sign a packet")
 	}
 	resultPackets, addressMap, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, &packet)
 	if err != nil {
-		return errors.Wrap(err, "[ Execute ] Failed to exchange results.")
+		return nil, errors.Wrap(err, "[ Execute ] Failed to exchange results.")
 	}
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
@@ -384,19 +385,28 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) error {
 	if fp.NodeKeeper.GetState() == network.Waiting {
 		length, err := detectSparseBitsetLength(claimMap)
 		if err != nil {
-			return errors.Wrapf(err, "failed to detect bitset length")
+			return nil, errors.Wrapf(err, "failed to detect bitset length")
 		}
 		fp.UnsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
 	fp.UnsyncList.AddClaims(claimMap, addressMap)
+	valid, fault := fp.validateProofs(pulseHash, proofSet)
 
-	// valid, fault := fp.validateProofs(pulseHash, proofSet)
-	return nil
+	return &phases.FirstPhaseState{
+		PulseEntry:  entry,
+		PulseHash:   pulseHash,
+		PulseProof:  pulseProof,
+		ValidProofs: valid,
+		FaultProofs: fault,
+		UnsyncList:  fp.UnsyncList,
+	}, nil
 }
 
 type PartitialTimeoutPhaseManager struct {
-	FirstPhase *FirstPhase
+	FirstPhase  *FirstPhase
+	SecondPhase *phases.SecondPhase
+	ThirdPhase  *phases.ThirdPhase
 }
 
 func (ftpm *PartitialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
@@ -413,7 +423,7 @@ func (ftpm *PartitialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *co
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
 	defer cancel()
 
-	err = ftpm.FirstPhase.Execute(tctx, pulse)
+	firstPhaseState, err := ftpm.FirstPhase.Execute(tctx, pulse)
 
 	if err != nil {
 		return errors.Wrap(err, "[ TestCase.OnPulse ] failed to execute a phase")
@@ -421,6 +431,12 @@ func (ftpm *PartitialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *co
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
 	defer cancel()
+
+	secondPhaseState, err := ftpm.SecondPhase.Execute(tctx, firstPhaseState)
+	checkError(err)
+
+	fmt.Println(secondPhaseState) // TODO: remove after use
+	checkError(ftpm.ThirdPhase.Execute(ctx, secondPhaseState))
 
 	return nil
 }
@@ -499,4 +515,10 @@ func (fp *FirstPhase) validateProof(pulseHash merkle.OriginHash, nodeID core.Rec
 		return false
 	}
 	return fp.Calculator.IsValid(proof, pulseHash, node.PublicKey())
+}
+
+func checkError(err error) {
+	if err != nil {
+		log.Error(err)
+	}
 }
