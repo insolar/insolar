@@ -37,6 +37,21 @@ type SetRecord struct {
 	TargetRef core.RecordRef
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (sr *SetRecord) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &sr.TargetRef, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*SetRecord) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (sr *SetRecord) ExtractTarget() *core.RecordRef {
+	return &sr.TargetRef
+}
+
 // Type implementation of Message interface.
 func (e *SetRecord) Type() core.MessageType {
 	return core.TypeSetRecord
@@ -46,6 +61,21 @@ func (e *SetRecord) Type() core.MessageType {
 type GetCode struct {
 	ledgerMessage
 	Code core.RecordRef
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (gc *GetCode) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &gc.Code, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*GetCode) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (gc *GetCode) ExtractTarget() *core.RecordRef {
+	return &gc.Code
 }
 
 // Type implementation of Message interface.
@@ -61,6 +91,21 @@ type GetObject struct {
 	Approved bool
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (getObject *GetObject) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &getObject.Head, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*GetObject) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (getObj *GetObject) ExtractTarget() *core.RecordRef {
+	return &getObj.Head
+}
+
 // Type implementation of Message interface.
 func (e *GetObject) Type() core.MessageType {
 	return core.TypeGetObject
@@ -71,6 +116,21 @@ type GetDelegate struct {
 	ledgerMessage
 	Head   core.RecordRef
 	AsType core.RecordRef
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (gd *GetDelegate) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &gd.Head, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*GetDelegate) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (gd *GetDelegate) ExtractTarget() *core.RecordRef {
+	return &gd.Head
 }
 
 // Type implementation of Message interface.
@@ -84,6 +144,21 @@ type UpdateObject struct {
 
 	Record []byte
 	Object core.RecordRef
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (uo *UpdateObject) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &uo.Object, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*UpdateObject) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (uo *UpdateObject) ExtractTarget() *core.RecordRef {
+	return &uo.Object
 }
 
 // Type implementation of Message interface.
@@ -100,6 +175,21 @@ type RegisterChild struct {
 	AsType *core.RecordRef // If not nil, considered as delegate.
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (gc *RegisterChild) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &gc.Child, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*RegisterChild) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (rc *RegisterChild) ExtractTarget() *core.RecordRef {
+	return &rc.Parent
+}
+
 // Type implementation of Message interface.
 func (e *RegisterChild) Type() core.MessageType {
 	return core.TypeRegisterChild
@@ -114,6 +204,21 @@ type GetChildren struct {
 	Amount    int
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (gc *GetChildren) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &gc.Parent, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*GetChildren) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (gc *GetChildren) ExtractTarget() *core.RecordRef {
+	return &gc.Parent
+}
+
 // Type implementation of Message interface.
 func (e *GetChildren) Type() core.MessageType {
 	return core.TypeGetChildren
@@ -126,6 +231,22 @@ type JetDrop struct {
 	Drop        []byte
 	Messages    [][]byte
 	PulseNumber core.PulseNumber
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (jd *JetDrop) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	// This check is not needed, because JetDrop sender is explicitly checked in handler.
+	return nil, core.DynamicRoleUndefined
+}
+
+// ExtractRole returns role for this event
+func (*JetDrop) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (jd *JetDrop) ExtractTarget() *core.RecordRef {
+	return &jd.Jet
 }
 
 // Type implementation of Message interface.
@@ -143,6 +264,21 @@ type ValidateRecord struct {
 	ValidationMessages []core.Message
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (vr *ValidateRecord) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &vr.Object, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*ValidateRecord) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (vr *ValidateRecord) ExtractTarget() *core.RecordRef {
+	return &vr.Object
+}
+
 // Type implementation of Message interface.
 func (*ValidateRecord) Type() core.MessageType {
 	return core.TypeValidateRecord
@@ -156,6 +292,21 @@ type SetBlob struct {
 	Memory    []byte
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (sb *SetBlob) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &sb.TargetRef, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*SetBlob) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (sb *SetBlob) ExtractTarget() *core.RecordRef {
+	return &sb.TargetRef
+}
+
 // Type implementation of Message interface.
 func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
@@ -166,6 +317,21 @@ type GetObjectIndex struct {
 	ledgerMessage
 
 	Object core.RecordRef
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (getObjectIndex *GetObjectIndex) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &getObjectIndex.Object, core.DynamicRoleLightExecutor
+}
+
+// ExtractRole returns role for this event
+func (*GetObjectIndex) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleHeavyExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (goi *GetObjectIndex) ExtractTarget() *core.RecordRef {
+	return &goi.Object
 }
 
 // Type implementation of Message interface.
@@ -182,6 +348,23 @@ type ValidationCheck struct {
 	LatestStateApproved *core.RecordID
 }
 
+// ExtractTarget returns of target of this event.
+func (vc *ValidationCheck) ExtractTarget() *core.RecordRef {
+	// TODO: return smth real
+	return nil
+}
+
+// ExtractRole returns role for this event
+func (vc *ValidationCheck) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleUndefined
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (vc *ValidationCheck) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	// TODO: return smth real
+	return nil, 0
+}
+
 // Type implementation of Message interface.
 func (*ValidationCheck) Type() core.MessageType {
 	return core.TypeValidationCheck
@@ -195,6 +378,21 @@ type HotData struct {
 	RecentObjects   map[core.RecordID]*HotIndex
 	PendingRequests map[core.RecordID][]byte
 	PulseNumber     core.PulseNumber
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (hd *HotData) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &hd.Jet, core.DynamicRoleLightExecutor
+}
+
+// ExtractRole returns role for this event
+func (*HotData) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (hd *HotData) ExtractTarget() *core.RecordRef {
+	return &hd.Jet
 }
 
 // HotIndex contains meat about hot-data

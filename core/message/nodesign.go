@@ -29,6 +29,21 @@ type NodeSignPayload struct {
 	NodeRef *core.RecordRef
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (nsp *NodeSignPayload) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleUndefined
+}
+
+// ExtractRole returns role for this event
+func (nsp *NodeSignPayload) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleUndefined
+}
+
+// ExtractTarget returns of target of this event.
+func (nsp *NodeSignPayload) ExtractTarget() *core.RecordRef {
+	return nsp.NodeRef
+}
+
 // GetCaller implementation of Message interface.
 func (NodeSignPayload) GetCaller() *core.RecordRef {
 	return nil

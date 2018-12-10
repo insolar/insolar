@@ -37,6 +37,18 @@ type Message interface {
 
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
+
+	// ExtractTarget returns of target of this event.
+	ExtractTarget() *RecordRef
+
+	// ExtractRole returns role for this event
+	ExtractRole() DynamicRole
+
+	// ExtractAllowedSenderObjectAndRole extracts information from message
+	// verify sender required to 's "caller" for sender
+	// verification purpose. If nil then check of sender's role is not
+	// provided by the message bus
+	ExtractAllowedSenderObjectAndRole() (*RecordRef, DynamicRole)
 }
 
 type MessageSignature interface {

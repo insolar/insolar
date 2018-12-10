@@ -42,6 +42,22 @@ type Parcel struct {
 	PulseNumber   core.PulseNumber
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (p *Parcel) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return ExtractAllowedSenderObjectAndRole(p.Msg)
+}
+
+// ExtractRole returns role for this event
+func (p *Parcel) ExtractRole() core.DynamicRole {
+	return ExtractRole(p.Msg)
+}
+
+// ExtractTarget returns of target of this event.
+func (p *Parcel) ExtractTarget() *core.RecordRef {
+	ref := ExtractTarget(p.Msg)
+	return ref
+}
+
 // Pulse returns pulse, when parcel was sent
 func (sm *Parcel) Pulse() core.PulseNumber {
 	return sm.PulseNumber

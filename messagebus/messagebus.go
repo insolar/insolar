@@ -162,7 +162,7 @@ func (mb *MessageBus) SendParcel(
 		// TODO: send to all actors of the role if nil Target
 		target := message.ExtractTarget(parcel)
 		var err error
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, message.ExtractRole(parcel), &target, currentPulse.PulseNumber)
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, message.ExtractRole(parcel), target, currentPulse.PulseNumber)
 		if err != nil {
 			return nil, err
 		}

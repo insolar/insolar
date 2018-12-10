@@ -26,6 +26,22 @@ type GenesisRequest struct {
 	Name string
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (*GenesisRequest) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+// ExtractRole returns role for this event
+func (*GenesisRequest) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (gr *GenesisRequest) ExtractTarget() *core.RecordRef {
+	ref := core.NewRefFromBase58(gr.Name)
+	return &ref
+}
+
 // Type implementation for genesis request.
 func (*GenesisRequest) Type() core.MessageType {
 	return core.TypeBootstrapRequest

@@ -70,6 +70,25 @@ type CallMethod struct {
 	Arguments  core.Arguments
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (cm *CallMethod) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	c := cm.GetCaller()
+	if c.IsEmpty() {
+		return nil, 0
+	}
+	return c, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*CallMethod) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (cm *CallMethod) ExtractTarget() *core.RecordRef {
+	return &cm.ObjectRef
+}
+
 func (m *CallMethod) GetReference() core.RecordRef {
 	return m.ObjectRef
 }
@@ -97,6 +116,28 @@ type CallConstructor struct {
 	PulseNum     core.PulseNumber
 }
 
+//
+func (cc *CallConstructor) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	c := cc.GetCaller()
+	if c.IsEmpty() {
+		return nil, 0
+	}
+	return c, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*CallConstructor) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (cc *CallConstructor) ExtractTarget() *core.RecordRef {
+	if cc.SaveAs == Delegate {
+		return &cc.ParentRef
+	}
+	return genRequest(cc.PulseNum, MustSerializeBytes(cc))
+}
+
 func (m *CallConstructor) GetReference() core.RecordRef {
 	return *genRequest(m.PulseNum, MustSerializeBytes(m))
 }
@@ -110,6 +151,21 @@ type ExecutorResults struct {
 	Caller    core.RecordRef
 	RecordRef core.RecordRef
 	CaseBind  core.CaseBind
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (er *ExecutorResults) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+// ExtractRole returns role for this event
+func (er *ExecutorResults) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (er *ExecutorResults) ExtractTarget() *core.RecordRef {
+	return &er.RecordRef
 }
 
 func (m *ExecutorResults) Type() core.MessageType {
@@ -130,6 +186,21 @@ type ValidateCaseBind struct {
 	RecordRef core.RecordRef
 	CaseBind  core.CaseBind
 	Pulse     core.Pulse
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (vcb *ValidateCaseBind) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &vcb.RecordRef, core.DynamicRoleVirtualExecutor
+}
+
+// ExtractRole returns role for this event
+func (*ValidateCaseBind) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleVirtualValidator
+}
+
+// ExtractTarget returns of target of this event.
+func (vcb *ValidateCaseBind) ExtractTarget() *core.RecordRef {
+	return &vcb.RecordRef
 }
 
 func (m *ValidateCaseBind) Type() core.MessageType {
@@ -154,6 +225,21 @@ type ValidationResults struct {
 	RecordRef        core.RecordRef
 	PassedStepsCount int
 	Error            string
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (vr *ValidationResults) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &vr.RecordRef, core.DynamicRoleVirtualValidator
+}
+
+// ExtractRole returns role for this event
+func (*ValidationResults) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (vc *ValidationResults) ExtractTarget() *core.RecordRef {
+	return &vc.RecordRef
 }
 
 func (m *ValidationResults) Type() core.MessageType {

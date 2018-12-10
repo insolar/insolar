@@ -27,6 +27,22 @@ type HeavyPayload struct {
 	Records  []core.KV
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (*HeavyPayload) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	// TODO: return smth real
+	return nil, 0
+}
+
+// ExtractRole returns role for this event
+func (*HeavyPayload) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleHeavyExecutor
+}
+
+// ExtractTarget returns of target of this event.
+func (hp *HeavyPayload) ExtractTarget() *core.RecordRef {
+	return &core.RecordRef{}
+}
+
 // GetCaller implementation of Message interface.
 func (HeavyPayload) GetCaller() *core.RecordRef {
 	return nil
@@ -43,6 +59,22 @@ type HeavyStartStop struct {
 	Finished bool
 }
 
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (*HeavyStartStop) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	// TODO: return smth real
+	return nil, 0
+}
+
+// ExtractTarget returns of target of this event.
+func (*HeavyStartStop) ExtractTarget() *core.RecordRef {
+	return &core.RecordRef{}
+}
+
+// ExtractRole returns role for this event
+func (*HeavyStartStop) ExtractRole() core.DynamicRole {
+	return core.DynamicRoleHeavyExecutor
+}
+
 // GetCaller implementation of Message interface.
 func (HeavyStartStop) GetCaller() *core.RecordRef {
 	return nil
@@ -56,6 +88,24 @@ func (e *HeavyStartStop) Type() core.MessageType {
 // HeavyReset carries heavy replication start/stop signal with pulse number.
 type HeavyReset struct {
 	PulseNum core.PulseNumber
+}
+
+// ExtractAllowedSenderObjectAndRole implements interface method
+func (*HeavyReset) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	// TODO: return smth real
+	return nil, 0
+}
+
+// ExtractTarget returns of target of this event.
+func (*HeavyReset) ExtractTarget() *core.RecordRef {
+	// TODO: return smth real
+	return nil
+}
+
+// ExtractRole returns role for this event
+func (*HeavyReset) ExtractRole() core.DynamicRole {
+	// TODO: return smth real
+	return core.DynamicRoleUndefined
 }
 
 // GetCaller implementation of Message interface.
