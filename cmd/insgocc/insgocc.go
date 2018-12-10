@@ -279,7 +279,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			expr, _ := regexp.Compile("^(.*)\\.go$")
+			expr, _ := regexp.Compile(`^(.*)\.go$`)
 			for _, infile := range files {
 				// If the name of the input file is xyz.go, the name of the output file is xyz.gen.go.
 				matches := expr.FindStringSubmatch(infile)
