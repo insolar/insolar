@@ -384,7 +384,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(es *ExecutionState) {
 			close(qe.result)
 		}
 
-		recordingBus, err := lr.MessageBus.NewRecorder(qe.ctx)
+		recordingBus, err := lr.MessageBus.NewRecorder(qe.ctx, *lr.pulse(qe.ctx))
 		if err != nil {
 			res.err = err
 			finish()
