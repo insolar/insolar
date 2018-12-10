@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2018 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,24 +14,25 @@
  *    limitations under the License.
  */
 
-package core
+package networkcoordinator
 
 import (
 	"context"
+
+	"github.com/insolar/insolar/core"
 )
 
-// NetworkCoordinator encapsulates logic of network configuration
-//go:generate minimock -i github.com/insolar/insolar/core.NetworkCoordinator -o ../testutils -s _mock.go
-type NetworkCoordinator interface {
+// Coordinator interface contains NetworkState dependent methods
+type Coordinator interface {
 	// GetCert returns certificate object by node reference, using discovery nodes for signing
-	GetCert(context.Context, *RecordRef) (Certificate, error)
-
-	// ValidateCert checks certificate signature
-	ValidateCert(context.Context, AuthorizationCertificate) (bool, error)
+	GetCert(context.Context, *core.RecordRef) (core.Certificate, error)
 
 	// TODO: Remove this method, use SetPulse instead
-	WriteActiveNodes(ctx context.Context, number PulseNumber, activeNodes []Node) error
+	WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error
 
 	// SetPulse uses PulseManager component for saving pulse info
-	SetPulse(ctx context.Context, pulse Pulse) error
+	SetPulse(ctx context.Context, pulse core.Pulse) error
+
+	// signCertHandler is used by MsgBus handler for signing certificate
+	signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error)
 }
