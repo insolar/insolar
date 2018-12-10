@@ -160,7 +160,8 @@ func circleXOR(value, src []byte) []byte {
 	return result
 }
 
-// ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit.
+// ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
+// is bigger than len(value), the original slice will be returned.
 func resetBits(value []byte, start int) []byte {
 	if start > len(value)*8 {
 		return value
