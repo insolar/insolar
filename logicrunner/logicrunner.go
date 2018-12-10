@@ -418,6 +418,7 @@ func (lr *LogicRunner) executeOrValidate(
 	ref := msg.GetReference()
 
 	es.Current.LogicContext = &core.LogicCallContext{
+		Mode:            es.Behaviour.Mode(),
 		Caller:          msg.GetCaller(),
 		Callee:          &ref,
 		Request:         es.Current.Request,
