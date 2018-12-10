@@ -115,12 +115,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	nk := nodekeeper.GetTestNodekeeper(mock)
+
 	mb := testmessagebus.NewTestMessageBus(t)
-
-	var pulseNumber core.PulseNumber
-	pulseNumber = 0
-
-	mb.PulseNumber = pulseNumber
+	mb.PulseNumber = 0
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
