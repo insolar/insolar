@@ -79,10 +79,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		err := db.SetJetTree(ctx, 0, &jet.Tree{
 			Head: &jet.Jet{
 				Left: &jet.Jet{
-					ID: *core.NewRecordID(0, nil),
-					Left: &jet.Jet{
-						ID: *core.NewRecordID(0, nil),
-					},
+					Left: &jet.Jet{},
 				},
 			},
 		})
