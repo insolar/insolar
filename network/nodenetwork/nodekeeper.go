@@ -219,6 +219,10 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 	}
 	nk.active[node.ID()] = node
 
+	nk.addToIndex(node)
+}
+
+func (nk *nodekeeper) addToIndex(node core.Node) {
 	list, ok := nk.indexNode[node.Role()]
 	if !ok {
 		list = newRecordRefSet()
@@ -227,26 +231,6 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 	nk.indexNode[node.Role()] = list
 
 	nk.indexShortID[node.ShortID()] = node
-}
-
-func (nk *nodekeeper) delActiveNode(ref core.RecordRef) {
-	if ref.Equal(nk.origin.ID()) {
-		// we received acknowledge to leave, can gracefully stop
-
-		// graceful stop instead of panic
-		err := coreutils.SendGracefulStopSignal()
-		if err != nil {
-			// we tried :(
-			panic("Node leave acknowledged by network. Goodbye!")
-		}
-	}
-	active, ok := nk.active[ref]
-	if !ok {
-		return
-	}
-	delete(nk.active, ref)
-	delete(nk.indexShortID, active.ShortID())
-	nk.indexNode[active.Role()].Remove(ref)
 }
 
 func (nk *nodekeeper) SetState(state network.NodeKeeperState) {
@@ -305,7 +289,33 @@ func (nk *nodekeeper) MoveSyncToActive() {
 	}()
 
 	sync := nk.sync.(*unsyncList)
-	sync.mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
+	nk.active = sync.getMergedNodeMap()
+	nk.reindex()
+}
+
+func (nk *nodekeeper) reindex() {
+	// drop all indexes
+	nk.indexNode = make(map[core.StaticRole]*recordRefSet)
+	nk.indexShortID = make(map[core.ShortNodeID]core.Node)
+
+	foundOrigin := false
+	for _, node := range nk.active {
+		nk.addToIndex(node)
+		if node.ID().Equal(nk.origin.ID()) {
+			foundOrigin = true
+		}
+	}
+
+	if !foundOrigin {
+		// we left active node list, can gracefully stop
+
+		// graceful stop instead of panic
+		err := coreutils.SendGracefulStopSignal()
+		if err != nil {
+			// we tried :(
+			panic("Node leave acknowledged by network. Goodbye!")
+		}
+	}
 }
 
 func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {

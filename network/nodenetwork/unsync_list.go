@@ -73,8 +73,7 @@ func (ul *unsyncList) CalculateHash(scheme core.PlatformCryptographyScheme) ([]b
 	if ul.cache != nil {
 		return ul.cache, nil
 	}
-	m := copyMap(ul.activeNodes)
-	ul.merge(m, ul.claims)
+	m := ul.getMergedNodeMap()
 	sorted := sortedNodeList(m)
 	var err error
 	ul.cache, err = CalculateHash(scheme, sorted)
@@ -89,28 +88,19 @@ func (ul *unsyncList) GetActiveNodes() []core.Node {
 	return sortedNodeList(ul.activeNodes)
 }
 
-type adder func(core.Node)
-type deleter func(core.RecordRef)
+func (ul *unsyncList) getMergedNodeMap() map[core.RecordRef]core.Node {
+	nodes := copyMap(ul.activeNodes)
 
-func (ul *unsyncList) merge(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]consensus.ReferendumClaim) {
-	addNode := func(node core.Node) {
-		nodes[node.ID()] = node
-	}
-	delNode := func(ref core.RecordRef) {
-		delete(nodes, ref)
-	}
-	ul.mergeWith(claims, addNode, delNode)
-}
-
-func (ul *unsyncList) mergeWith(claims map[core.RecordRef][]consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
-	for _, claimList := range claims {
+	for _, claimList := range ul.claims {
 		for _, claim := range claimList {
-			ul.mergeClaim(claim, addFunc, delFunc)
+			ul.mergeClaim(nodes, claim)
 		}
 	}
+
+	return nodes
 }
 
-func (ul *unsyncList) mergeClaim(claim consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
+func (ul *unsyncList) mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) {
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:
 		// TODO: fix version
@@ -118,10 +108,10 @@ func (ul *unsyncList) mergeClaim(claim consensus.ReferendumClaim, addFunc adder,
 		if err != nil {
 			log.Error("[ mergeClaim ] failed to convert Claim -> Node")
 		}
-		addFunc(node)
+		nodes[node.ID()] = node
 	case *consensus.NodeLeaveClaim:
 		// TODO: add node ID to node leave claim (only to struct, not packet)
-		// delFunc()
+		// delete(nodes, ref)
 		break
 	}
 }
