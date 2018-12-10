@@ -18,9 +18,9 @@ package networkcoordinator
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -57,21 +57,25 @@ func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRe
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't get node info")
 	}
+	fmt.Println(pKey, role)
 
 	currentNodeCert := rnc.CertificateManager.GetCertificate()
+	fmt.Println(currentNodeCert)
 	registeredNodeCert, err := rnc.CertificateManager.NewUnsignedCertificate(pKey, role, registeredNodeRef.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
 	}
+	fmt.Println(registeredNodeCert)
 
-	for i, discoveryNode := range currentNodeCert.GetDiscoveryNodes() {
+	/*for i, discoveryNode := range currentNodeCert.GetDiscoveryNodes() {
 		sign, err := rnc.requestCertSign(ctx, discoveryNode, registeredNodeRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ GetCert ] Couldn't request cert sign")
 		}
 		registeredNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
 	}
-	return registeredNodeCert, nil
+	return registeredNodeCert, nil*/
+	return nil, nil
 }
 
 // requestCertSign method requests sign from single discovery node
