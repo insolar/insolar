@@ -43,7 +43,9 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.Object
 	case *ValidationResults:
 		return t.RecordRef
-	case *HeavyPayload:
+	case
+		*HeavyPayload,
+		*HeavyStartStop:
 		return core.RecordRef{}
 	case *HotData:
 		return t.Jet
