@@ -240,7 +240,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	}
 
 	// swap active nodes
-	// TODO: fix network consensus and uncomment this
+	// TODO: fix network consensus and uncomment this (after NETD18-74)
 	// m.ActiveListSwapper.MoveSyncToActive()
 	if !dry {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
