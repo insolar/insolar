@@ -149,14 +149,13 @@ func getRefs(
 	return out, nil
 }
 
-// CircleXOR performs XOR for 'dst' and 'src'. The result is written into 'dst'.
-// If 'src' is smaller than 'dst', XOR starts from the beginning of 'src'.
+// CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.
+// If 'value' is smaller than 'dst', XOR starts from the beginning of 'src'.
 func circleXOR(value, src []byte) []byte {
 	result := make([]byte, len(value))
-	copy(result, value)
 	srcLen := len(src)
 	for i := range result {
-		result[i] ^= src[i%srcLen]
+		result[i] = value[i] ^ src[i%srcLen]
 	}
 	return result
 }
@@ -167,20 +166,16 @@ func resetBits(value []byte, start int) []byte {
 		return value
 	}
 
-	result := make([]byte, len(value))
-	copy(result, value)
 	startByte := start / 8
 	startBit := start % 8
+
+	result := make([]byte, len(value))
+	copy(result, value[:startByte])
 
 	// Reset bits in starting byte.
 	mask := byte(0xFF)
 	mask <<= 8 - byte(startBit)
 	result[startByte] &= mask
-
-	// Reset bytes.
-	for i := startByte + 1; i < len(value); i++ {
-		result[i] = 0
-	}
 
 	return result
 }
