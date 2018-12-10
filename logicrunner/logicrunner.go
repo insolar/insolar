@@ -332,6 +332,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	es.Queue = append(es.Queue, qElement)
 
 	if es.Current == nil {
+		inslogger.FromContext(ctx).Debug("Starting a new queue processor")
 		go lr.ProcessExecutionQueue(es)
 	}
 	es.Unlock()
@@ -393,6 +394,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(es *ExecutionState) {
 
 		es.Current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
+		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
 		es.Behaviour.(*ValidationSaver).NewRequest(
 			qe.parcel.Message(), *qe.request, recordingBus,
 		)
@@ -400,6 +402,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(es *ExecutionState) {
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
 		// TODO: check pulse change and do different things
 
+		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
 		err = es.Behaviour.Result(res.reply, res.err)
 		if err != nil {
 			res.err = err
