@@ -43,7 +43,10 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 		return t.Object
 	case *ValidationResults:
 		return t.RecordRef
-	case *HeavyPayload:
+	case
+		*HeavyPayload,
+		*HeavyStartStop,
+		*HeavyReset:
 		return core.RecordRef{}
 	case *HotData:
 		return t.Jet
@@ -85,6 +88,7 @@ func ExtractRole(msg core.Message) core.DynamicRole {
 	case
 		*HeavyStartStop,
 		*HeavyPayload,
+		*HeavyReset,
 		*GetObjectIndex:
 		return core.DynamicRoleHeavyExecutor
 	case *Parcel:
@@ -151,6 +155,10 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		return ExtractAllowedSenderObjectAndRole(t.Msg)
 	case *NodeSignPayload:
 		return nil, core.DynamicRoleUndefined
+	case *HeavyStartStop,
+		*HeavyPayload,
+		*HeavyReset:
+		return nil, 0
 	default:
 		panic(fmt.Sprintf("unknown message type - %s", t.Type().String()))
 	}
