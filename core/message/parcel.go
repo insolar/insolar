@@ -42,8 +42,8 @@ type Parcel struct {
 	PulseNumber   core.PulseNumber
 }
 
-// GetPulse returns pulse, when parcel was sent
-func (sm *Parcel) GetPulse() core.PulseNumber {
+// Pulse returns pulse, when parcel was sent
+func (sm *Parcel) Pulse() core.PulseNumber {
 	return sm.PulseNumber
 }
 

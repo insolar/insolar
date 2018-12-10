@@ -52,7 +52,7 @@ type Parcel interface {
 	Message() Message
 	Context(context.Context) context.Context
 
-	GetPulse() PulseNumber
+	Pulse() PulseNumber
 
 	DelegationToken() DelegationToken
 }
