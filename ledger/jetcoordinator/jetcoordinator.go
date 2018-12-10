@@ -108,7 +108,7 @@ func (jc *JetCoordinator) QueryRole(
 		_, depth := jetTree.Find(objHash, pulseData.Pulse.PulseNumber)
 
 		// Reset everything except prefix.
-		resetBits(objHash, depth)
+		resetBits(objHash, depth+1)
 		circleXOR(ent, objHash)
 		return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
 	}
