@@ -151,15 +151,15 @@ type ValidationSaver struct {
 	current  *core.CaseRequest
 }
 
-func (vb ValidationSaver) Mode() string {
+func (vb *ValidationSaver) Mode() string {
 	return "execution"
 }
 
-func (vb ValidationSaver) NewRequest(msg core.Message, request Ref, mb core.MessageBus) {
+func (vb *ValidationSaver) NewRequest(msg core.Message, request Ref, mb core.MessageBus) {
 	vb.current = vb.caseBind.NewRequest(msg, request, mb)
 }
 
-func (vb ValidationSaver) Result(reply core.Reply, err error) error {
+func (vb *ValidationSaver) Result(reply core.Reply, err error) error {
 	vb.current.Reply = reply
 	vb.current.Error = err
 	return nil
@@ -170,14 +170,14 @@ type ValidationChecker struct {
 	cb *core.CaseBindReplay
 }
 
-func (vb ValidationChecker) Mode() string {
+func (vb *ValidationChecker) Mode() string {
 	return "validation"
 }
 
-func (vb ValidationChecker) NextRequest() *core.CaseRequest {
+func (vb *ValidationChecker) NextRequest() *core.CaseRequest {
 	return vb.cb.NextRequest()
 }
 
-func (vb ValidationChecker) Result(reply core.Reply, err error) error {
+func (vb *ValidationChecker) Result(reply core.Reply, err error) error {
 	return nil
 }
