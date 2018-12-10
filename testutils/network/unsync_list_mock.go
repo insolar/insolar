@@ -25,7 +25,7 @@ type UnsyncListMock struct {
 	AddClaimsPreCounter uint64
 	AddClaimsMock       mUnsyncListMockAddClaims
 
-	CalculateHashFunc       func() (r []byte, r1 error)
+	CalculateHashFunc       func(p core.PlatformCryptographyScheme) (r []byte, r1 error)
 	CalculateHashCounter    uint64
 	CalculateHashPreCounter uint64
 	CalculateHashMock       mUnsyncListMockCalculateHash
@@ -212,7 +212,12 @@ type mUnsyncListMockCalculateHash struct {
 }
 
 type UnsyncListMockCalculateHashExpectation struct {
+	input  *UnsyncListMockCalculateHashInput
 	result *UnsyncListMockCalculateHashResult
+}
+
+type UnsyncListMockCalculateHashInput struct {
+	p core.PlatformCryptographyScheme
 }
 
 type UnsyncListMockCalculateHashResult struct {
@@ -221,14 +226,14 @@ type UnsyncListMockCalculateHashResult struct {
 }
 
 //Expect specifies that invocation of UnsyncList.CalculateHash is expected from 1 to Infinity times
-func (m *mUnsyncListMockCalculateHash) Expect() *mUnsyncListMockCalculateHash {
+func (m *mUnsyncListMockCalculateHash) Expect(p core.PlatformCryptographyScheme) *mUnsyncListMockCalculateHash {
 	m.mock.CalculateHashFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &UnsyncListMockCalculateHashExpectation{}
 	}
-
+	m.mainExpectation.input = &UnsyncListMockCalculateHashInput{p}
 	return m
 }
 
@@ -245,12 +250,12 @@ func (m *mUnsyncListMockCalculateHash) Return(r []byte, r1 error) *UnsyncListMoc
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.CalculateHash is expected once
-func (m *mUnsyncListMockCalculateHash) ExpectOnce() *UnsyncListMockCalculateHashExpectation {
+func (m *mUnsyncListMockCalculateHash) ExpectOnce(p core.PlatformCryptographyScheme) *UnsyncListMockCalculateHashExpectation {
 	m.mock.CalculateHashFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &UnsyncListMockCalculateHashExpectation{}
-
+	expectation.input = &UnsyncListMockCalculateHashInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -260,7 +265,7 @@ func (e *UnsyncListMockCalculateHashExpectation) Return(r []byte, r1 error) {
 }
 
 //Set uses given function f as a mock of UnsyncList.CalculateHash method
-func (m *mUnsyncListMockCalculateHash) Set(f func() (r []byte, r1 error)) *UnsyncListMock {
+func (m *mUnsyncListMockCalculateHash) Set(f func(p core.PlatformCryptographyScheme) (r []byte, r1 error)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -269,15 +274,18 @@ func (m *mUnsyncListMockCalculateHash) Set(f func() (r []byte, r1 error)) *Unsyn
 }
 
 //CalculateHash implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) CalculateHash() (r []byte, r1 error) {
+func (m *UnsyncListMock) CalculateHash(p core.PlatformCryptographyScheme) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.CalculateHashPreCounter, 1)
 	defer atomic.AddUint64(&m.CalculateHashCounter, 1)
 
 	if len(m.CalculateHashMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.CalculateHashMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to UnsyncListMock.CalculateHash.")
+			m.t.Fatalf("Unexpected call to UnsyncListMock.CalculateHash. %v", p)
 			return
 		}
+
+		input := m.CalculateHashMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, UnsyncListMockCalculateHashInput{p}, "UnsyncList.CalculateHash got unexpected parameters")
 
 		result := m.CalculateHashMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -293,6 +301,11 @@ func (m *UnsyncListMock) CalculateHash() (r []byte, r1 error) {
 
 	if m.CalculateHashMock.mainExpectation != nil {
 
+		input := m.CalculateHashMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, UnsyncListMockCalculateHashInput{p}, "UnsyncList.CalculateHash got unexpected parameters")
+		}
+
 		result := m.CalculateHashMock.mainExpectation.result
 		if result == nil {
 			m.t.Fatal("No results are set for the UnsyncListMock.CalculateHash")
@@ -305,11 +318,11 @@ func (m *UnsyncListMock) CalculateHash() (r []byte, r1 error) {
 	}
 
 	if m.CalculateHashFunc == nil {
-		m.t.Fatalf("Unexpected call to UnsyncListMock.CalculateHash.")
+		m.t.Fatalf("Unexpected call to UnsyncListMock.CalculateHash. %v", p)
 		return
 	}
 
-	return m.CalculateHashFunc()
+	return m.CalculateHashFunc(p)
 }
 
 //CalculateHashMinimockCounter returns a count of UnsyncListMock.CalculateHashFunc invocations

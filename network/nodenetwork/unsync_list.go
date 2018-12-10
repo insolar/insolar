@@ -69,7 +69,7 @@ func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.Referendum
 	ul.cache = nil
 }
 
-func (ul *unsyncList) CalculateHash() ([]byte, error) {
+func (ul *unsyncList) CalculateHash(scheme core.PlatformCryptographyScheme) ([]byte, error) {
 	if ul.cache != nil {
 		return ul.cache, nil
 	}
@@ -77,7 +77,7 @@ func (ul *unsyncList) CalculateHash() ([]byte, error) {
 	ul.merge(m, ul.claims)
 	sorted := sortedNodeList(m)
 	var err error
-	ul.cache, err = CalculateHash(nil, sorted)
+	ul.cache, err = CalculateHash(scheme, sorted)
 	return ul.cache, err
 }
 
