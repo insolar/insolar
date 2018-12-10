@@ -36,8 +36,8 @@ import (
 )
 
 // StartRPC starts RPC server for isolated executors to use
-func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
-	rpcService := &RPC{lr: lr}
+func StartRPC(ctx context.Context, lr *LogicRunner, pm core.PulseManager) *RPC {
+	rpcService := &RPC{lr: lr, pm: pm}
 
 	rpcServer := rpc.NewServer()
 	err := rpcServer.Register(rpcService)
@@ -63,6 +63,7 @@ func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
 // RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
 type RPC struct {
 	lr *LogicRunner
+	pm core.PulseManager
 }
 
 // GetCode is an RPC retrieving a code by its reference
@@ -128,7 +129,12 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		Arguments:        req.Arguments,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg, nil)
+	currentSlotPulse, err := gpr.pm.Current(ctx)
+	if err != nil {
+		return err
+	}
+
+	res, err := gpr.lr.MessageBus.Send(ctx, msg, *currentSlotPulse, nil)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -175,7 +181,12 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 		SaveAs:           message.Child,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg, nil)
+	currentSlotPulse, err := gpr.pm.Current(ctx)
+	if err != nil {
+		return err
+	}
+
+	res, err := gpr.lr.MessageBus.Send(ctx, msg, *currentSlotPulse, nil)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as child")
 	}
@@ -297,7 +308,12 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 		SaveAs:           message.Delegate,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg, nil)
+	currentSlotPulse, err := gpr.pm.Current(ctx)
+	if err != nil {
+		return err
+	}
+
+	res, err := gpr.lr.MessageBus.Send(ctx, msg, *currentSlotPulse, nil)
 
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as delegate")
