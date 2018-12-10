@@ -70,7 +70,6 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	checkError(err)
 
 	fmt.Println(secondPhaseState) // TODO: remove after use
-
 	checkError(pm.ThirdPhase.Execute(ctx, secondPhaseState))
 
 	return nil

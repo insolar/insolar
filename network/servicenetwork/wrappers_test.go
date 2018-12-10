@@ -50,7 +50,9 @@ func (n *nodeKeeperWrapper) GetActiveNode(ref core.RecordRef) core.Node {
 }
 
 func (n *nodeKeeperWrapper) GetActiveNodes() []core.Node {
-	return n.original.GetActiveNodes()
+	tmp := n.original.GetActiveNodes()
+	tmp = tmp[:len(tmp)-2]
+	return tmp
 }
 
 func (n *nodeKeeperWrapper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
@@ -98,8 +100,6 @@ func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (n *nodeKeeperWrapper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
-	// TODO: why panic?
-	// panic("nodeKeeperWrapper.AddPendingClaim")
 	return n.original.AddPendingClaim(claim)
 }
 

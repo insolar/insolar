@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -32,9 +33,11 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -200,6 +203,9 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 
 	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t), origin.ID())
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
+	realKeeper := nodenetwork.NewNodeKeeper(origin)
+	var keeper network.NodeKeeper
+	keeper = &nodeKeeperWrapper{realKeeper}
 
 	var phaseManager phases.PhaseManager
 	switch timeOut {
@@ -208,24 +214,20 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 	case Full:
 		phaseManager = &FullTimeoutPhaseManager{}
 	case Partitial:
-		phaseManager = &PartitialTimeoutPhaseManager{}
+		phaseManager = &PartialTimeoutPhaseManager{}
+		keeper = &nodeKeeperWrapper{realKeeper}
 	}
-
-	realKeeper := nodenetwork.NewNodeKeeper(origin)
-	keeper := &nodeKeeperWrapper{realKeeper}
 
 	cm := &component.Manager{}
 	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
 	cm.Register(certManager, cryptographyService, phaseManager)
 	cm.Inject(serviceNetwork, netSwitcher)
 
-	serviceNetwork.NodeKeeper = keeper
-
 	return networkNode{cm, serviceNetwork}
 }
 
 func (s *testSuite) TestNodeConnect() {
-	//s.T().Skip("will be available after phase result fix !")
+	// s.T().Skip("will be available after phase result fix !")
 	phasesResult := make(chan error)
 	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
 	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
@@ -302,7 +304,7 @@ func (s *testSuite) TestFullTimeOut() {
 	res := <-phasesResult
 	s.NoError(res)
 	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(2, len(activeNodes))
+	s.Equal(1, len(activeNodes))
 	// teardown
 	<-time.After(time.Second * 5)
 	s.StopNodes()
@@ -310,9 +312,81 @@ func (s *testSuite) TestFullTimeOut() {
 
 // Partitial timeout
 
-type PartitialTimeoutPhaseManager struct {
+func (s *testSuite) TestPartialTimeOut() {
+	networkNodesCount := 5
+	phasesResult := make(chan error)
+	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
+	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
+
+	s.testNode = s.createNetworkNode(s.T(), Partitial)
+
+	for i := 0; i < networkNodesCount; i++ {
+		s.networkNodes = append(s.networkNodes, s.createNetworkNode(s.T(), Disable))
+	}
+
+	s.InitNodes()
+	s.StartNodes()
+	res := <-phasesResult
+	s.NoError(res)
+	// activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	// s.Equal(1, len(activeNodes))	// TODO: do test check
+	// teardown
+	<-time.After(time.Second * 5)
+	s.StopNodes()
 }
 
-func (ftpm *PartitialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+type PartialTimeoutPhaseManager struct {
+	FirstPhase  *phases.FirstPhase
+	SecondPhase *phases.SecondPhase
+	ThirdPhase  *phases.ThirdPhase
+	Keeper      network.NodeKeeper `inject:""`
+}
+
+func (ftpm *PartialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	var err error
+
+	pulseDuration, err := getPulseDuration(pulse)
+	if err != nil {
+		return errors.Wrap(err, "[ OnPulse ] Failed to get pulse duration")
+	}
+
+	var tctx context.Context
+	var cancel context.CancelFunc
+
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
+
+	firstPhaseState, err := ftpm.FirstPhase.Execute(tctx, pulse)
+
+	if err != nil {
+		return errors.Wrap(err, "[ TestCase.OnPulse ] failed to execute a phase")
+	}
+
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
+
+	secondPhaseState, err := ftpm.SecondPhase.Execute(tctx, firstPhaseState)
+	checkError(err)
+
+	fmt.Println(secondPhaseState) // TODO: remove after use
+	checkError(ftpm.ThirdPhase.Execute(ctx, secondPhaseState))
+
 	return nil
+}
+
+func contextTimeout(ctx context.Context, duration time.Duration, k float64) (context.Context, context.CancelFunc) {
+	timeout := time.Duration(k * float64(duration))
+	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
+	return timedCtx, cancelFund
+}
+
+func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
+	duration := time.Duration(pulse.PulseNumber-pulse.PrevPulseNumber) * time.Second
+	return &duration, nil
+}
+
+func checkError(err error) {
+	if err != nil {
+		log.Error(err)
+	}
 }
