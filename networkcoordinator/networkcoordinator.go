@@ -35,6 +35,7 @@ type NetworkCoordinator struct {
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
 	Bus                 core.MessageBus          `inject:""`
 	CS                  core.CryptographyService `inject:""`
+	PM                  core.PulseManager        `inject:""`
 
 	realCoordinator core.NetworkCoordinator
 	zeroCoordinator core.NetworkCoordinator
@@ -95,7 +96,13 @@ func (nc *NetworkCoordinator) GetCert(ctx context.Context, nodeRef core.RecordRe
 			opts := core.MessageSendOptions{
 				Receiver: node.GetNodeRef(),
 			}
-			r, err := nc.Bus.Send(ctx, &msg, &opts)
+
+			currentPulse, err := nc.PM.Current(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			r, err := nc.Bus.Send(ctx, &msg, *currentPulse, &opts)
 			if err != nil {
 				return nil, err
 			}
