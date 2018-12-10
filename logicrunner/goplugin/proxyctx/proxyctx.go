@@ -36,6 +36,8 @@ type ProxyHelper interface {
 // Current - hackish way to give proxies access to the current environment
 var Current ProxyHelper
 
+// ChildrenTypedIterator iterator over children of object with specified type
+// it uses cache on insolard service side, provided by IteratorID
 type ChildrenTypedIterator struct {
 	Parent         core.RecordRef
 	ChildPrototype core.RecordRef // only child of specified prototype, if childPrototype.IsEmpty - ignored
@@ -46,10 +48,12 @@ type ChildrenTypedIterator struct {
 	CanFetch   bool             // if true, we can call RPC again and get new objects
 }
 
+// HasNext return true if iterator has element in cache or can fetch data again
 func (oi *ChildrenTypedIterator) HasNext() bool {
 	return oi.hasInBuffer() || oi.CanFetch
 }
 
+// Next return next element from iterator cache or fetching new from service
 func (oi *ChildrenTypedIterator) Next() (core.RecordRef, error) {
 	if !oi.hasInBuffer() && oi.CanFetch {
 		err := oi.fetch()
