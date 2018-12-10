@@ -241,7 +241,26 @@ func main() {
 				os.Exit(1)
 			}
 
-			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, outdir, name+".so")).CombinedOutput()
+			// TODO: comments regarding two renames
+
+			var out []byte
+			allgo := filepath.Join(tmpDir, "*.go")
+			out, err = exec.Command("sh", "-c", "sed -i.bak 's/package main/package xmain/' " + allgo).CombinedOutput()
+			if err != nil {
+				fmt.Printf("Error during renaming package main to xmain: %s (%v)\n", string(out), err)
+				os.Exit(1)
+			}
+
+			// TODO: execute codecgen HERE!
+
+			out, err = exec.Command("sh", "-c", "sed -i.bak 's/package xmain/package main/' " + allgo).CombinedOutput()
+			if err != nil {
+				fmt.Printf("Error during renaming package xmain to main: %s (%v)\n", string(out), err)
+				os.Exit(1)
+			}
+
+			// Finally, build the plugin
+			out, err = exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, outdir, name+".so")).CombinedOutput()
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
 				os.Exit(1)
