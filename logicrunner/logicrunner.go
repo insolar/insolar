@@ -296,25 +296,24 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	os := lr.UpsertObjectState(ref)
 
 	os.Lock()
-	defer os.Unlock()
-
 	if os.ExecutionState == nil {
 		os.ExecutionState = &ExecutionState{
 			Queue:     make([]ExecutionQueueElement, 0),
 			Behaviour: &ValidationSaver{lr: lr, caseBind: core.NewCaseBind()},
 		}
 	}
-
 	es := os.ExecutionState
-	es.Lock()
-	defer es.Unlock()
+	os.Unlock()
 
+	es.Lock()
 	if es.Current != nil {
 		// TODO: check no wait call
 		if inslogger.TraceID(es.Current.Context) == inslogger.TraceID(ctx) {
+			es.Unlock()
 			return nil, os.WrapError(nil, "loop detected")
 		}
 	}
+	es.Unlock()
 
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
@@ -328,11 +327,14 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		pulse:   lr.pulse(ctx).PulseNumber,
 		result:  make(chan ExecutionQueueResult),
 	}
+
+	es.Lock()
 	es.Queue = append(es.Queue, qElement)
 
-	if os.ExecutionState.Current == nil {
+	if es.Current == nil {
 		go lr.ProcessExecutionQueue(es)
 	}
+	es.Unlock()
 
 	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
 		return &reply.CallMethod{}, nil
@@ -353,8 +355,8 @@ func (lr *LogicRunner) ProcessExecutionQueue(es *ExecutionState) {
 	// and one should be started
 	defer func() {
 		es.Lock()
-		defer es.Unlock()
 		es.Current = nil
+		es.Unlock()
 	}()
 
 	for {
