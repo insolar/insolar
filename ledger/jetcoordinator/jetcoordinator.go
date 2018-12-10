@@ -58,7 +58,7 @@ func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
 func (jc *JetCoordinator) IsAuthorized(
 	ctx context.Context,
 	role core.DynamicRole,
-	obj *core.RecordRef,
+	obj *core.RecordID,
 	pulse core.PulseNumber,
 	node core.RecordRef,
 ) (bool, error) {
@@ -74,11 +74,21 @@ func (jc *JetCoordinator) IsAuthorized(
 	return false, nil
 }
 
+// AmI checks for role on concrete pulse for current node.
+func (jc *JetCoordinator) AmI(
+	ctx context.Context,
+	role core.DynamicRole,
+	obj *core.RecordID,
+	pulse core.PulseNumber,
+) (bool, error) {
+	return jc.IsAuthorized(ctx, role, obj, pulse, jc.NodeNet.GetOrigin().ID())
+}
+
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
 func (jc *JetCoordinator) QueryRole(
 	ctx context.Context,
 	role core.DynamicRole,
-	obj *core.RecordRef,
+	obj *core.RecordID,
 	pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
 	pulseData, err := jc.db.GetPulse(ctx, pulse)
@@ -99,7 +109,7 @@ func (jc *JetCoordinator) QueryRole(
 		return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
 	}
 
-	objHash := obj.Record().Hash()
+	objHash := obj.Hash()
 	if role == core.DynamicRoleLightExecutor {
 		jetTree, err := jc.db.GetJetTree(ctx, pulseData.Pulse.PulseNumber)
 		if err == storage.ErrNotFound {
