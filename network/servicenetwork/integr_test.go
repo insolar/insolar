@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -44,6 +43,90 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
+
+type nodeKeeperWrapperPartial struct {
+	realKeeper network.NodeKeeper
+}
+
+func (nkw *nodeKeeperWrapperPartial) SetCloudHash(hash []byte) {
+	nkw.realKeeper.SetCloudHash(hash)
+}
+func (nkw *nodeKeeperWrapperPartial) AddActiveNodes(nodes []core.Node) {
+	nkw.realKeeper.AddActiveNodes(nodes)
+}
+func (nkw *nodeKeeperWrapperPartial) GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node {
+	return nkw.realKeeper.GetActiveNodeByShortID(shortID)
+}
+
+func (nkw *nodeKeeperWrapperPartial) SetState(state network.NodeKeeperState) {
+	nkw.realKeeper.SetState(state)
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetState() network.NodeKeeperState {
+	return nkw.realKeeper.GetState()
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetOriginClaim() (*packets.NodeJoinClaim, error) {
+	return nkw.realKeeper.GetOriginClaim()
+}
+
+func (nkw *nodeKeeperWrapperPartial) NodesJoinedDuringPreviousPulse() bool {
+	return nkw.realKeeper.NodesJoinedDuringPreviousPulse()
+}
+
+func (nkw *nodeKeeperWrapperPartial) AddPendingClaim(claim packets.ReferendumClaim) bool {
+	return nkw.realKeeper.AddPendingClaim(claim)
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetClaimQueue() network.ClaimQueue {
+	return nkw.realKeeper.GetClaimQueue()
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetUnsyncList() network.UnsyncList {
+	return nkw.realKeeper.GetUnsyncList()
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetSparseUnsyncList(length int) network.UnsyncList {
+	return nkw.realKeeper.GetSparseUnsyncList(length)
+}
+
+func (nkw *nodeKeeperWrapperPartial) Sync(list network.UnsyncList) {
+	nkw.realKeeper.Sync(list)
+}
+
+func (nkw *nodeKeeperWrapperPartial) MoveSyncToActive() {
+	nkw.realKeeper.MoveSyncToActive()
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetActiveNodes() []core.Node {
+	tmp := nkw.realKeeper.GetActiveNodes()
+	tmp = tmp[:len(tmp)-2]
+	return tmp
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetOrigin() core.Node {
+	return nkw.realKeeper.GetOrigin()
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetActiveNode(ref core.RecordRef) core.Node {
+	return nkw.realKeeper.GetActiveNode(ref)
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
+	return nkw.realKeeper.GetActiveNodesByRole(role)
+}
+
+func (nkw *nodeKeeperWrapperPartial) GetCloudHash() []byte {
+	return nkw.realKeeper.GetCloudHash()
+}
+
+func (nkw *nodeKeeperWrapperPartial) IsBootstrapped() bool {
+	return nkw.realKeeper.IsBootstrapped()
+}
+
+func (nkw *nodeKeeperWrapperPartial) SetIsBootstrapped(isBootstrap bool) {
+	nkw.realKeeper.SetIsBootstrapped(isBootstrap)
+}
 
 type testSuite struct {
 	suite.Suite
@@ -193,6 +276,9 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 
 	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t), origin.ID())
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
+	realKeeper := nodenetwork.NewNodeKeeper(origin)
+	var keeper network.NodeKeeper
+	keeper = &nodeKeeperWrapper{realKeeper}
 
 	var phaseManager phases.PhaseManager
 	switch timeOut {
@@ -201,18 +287,14 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 	case Full:
 		phaseManager = &FullTimeoutPhaseManager{}
 	case Partitial:
-		phaseManager = &PartitialTimeoutPhaseManager{}
+		phaseManager = &PartialTimeoutPhaseManager{}
+		keeper = &nodeKeeperWrapperPartial{realKeeper}
 	}
-
-	realKeeper := nodenetwork.NewNodeKeeper(origin)
-	keeper := &nodeKeeperWrapper{realKeeper}
 
 	cm := &component.Manager{}
 	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
 	cm.Register(certManager, cryptographyService, phaseManager)
 	cm.Inject(serviceNetwork, netSwitcher)
-
-	serviceNetwork.NodeKeeper = keeper
 
 	return networkNode{cm, serviceNetwork}
 }
@@ -276,7 +358,7 @@ func (s *testSuite) TestFullTimeOut() {
 
 // Partitial timeout
 
-func (s *testSuite) TestPartitionalTimeOut() {
+func (s *testSuite) TestPartialTimeOut() {
 	networkNodesCount := 5
 	phasesResult := make(chan error)
 	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
