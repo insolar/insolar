@@ -205,7 +205,7 @@ func main() {
 			// is that `codecgen` refuses to generate serialization and deserialization
 			// code otherwise. Even on trivial benchmarks serialization based on generated code
 			// is about 30% faster then default serialization based on reflaction. On the flip
-			// side resulting binaries become larger (17 Mb vs 14 Mb). However at th time of writing
+			// side resulting binaries become larger (17 Mb vs 14 Mb). However at the time of writing
 			// we are OK with that.
 			tmpDir, err := ioutil.TempDir(filepath.Join(getGOPATH(), "src"), "insgocc-temp-")
 			if err != nil {
