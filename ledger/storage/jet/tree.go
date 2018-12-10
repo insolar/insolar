@@ -25,17 +25,16 @@ import (
 
 // Jet contain jet record.
 type Jet struct {
-	ID     core.RecordID
-	Prefix []byte
+	ID core.RecordID
 
 	Left  *Jet
 	Right *Jet
 }
 
 // Find returns jet for provided reference.
-func (j *Jet) Find(val []byte, pulse core.PulseNumber, depth uint) *Jet {
+func (j *Jet) Find(val []byte, pulse core.PulseNumber, depth int) (*Jet, int) {
 	if j == nil || val == nil {
-		return nil
+		return nil, 0
 	}
 
 	if getBit(val, depth) {
@@ -47,7 +46,7 @@ func (j *Jet) Find(val []byte, pulse core.PulseNumber, depth uint) *Jet {
 			return j.Left.Find(val, pulse, depth+1)
 		}
 	}
-	return j
+	return j, depth
 }
 
 // Tree stores jet in a binary tree.
@@ -56,7 +55,7 @@ type Tree struct {
 }
 
 // Find returns jet for provided reference.
-func (t *Tree) Find(val []byte, pulse core.PulseNumber) *Jet {
+func (t *Tree) Find(val []byte, pulse core.PulseNumber) (*Jet, int) {
 	return t.Head.Find(val, pulse, 0)
 }
 
@@ -68,12 +67,12 @@ func (t *Tree) Bytes() []byte {
 	return buf.Bytes()
 }
 
-func getBit(value []byte, index uint) bool {
-	if index > uint(len(value)*8) {
+func getBit(value []byte, index int) bool {
+	if uint(index) > uint(len(value)*8) {
 		panic("index overflow")
 	}
 	byteIndex := uint(index / 8)
-	bitIndex := 7 - index%8
+	bitIndex := uint(7 - index%8)
 	mask := byte(1 << bitIndex)
 	return value[byteIndex]&mask != 0
 }
