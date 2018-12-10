@@ -194,7 +194,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 var iteratorMap = make(map[string]*core.RefIterator)
 var iteratorBuffSize = 1000
 
-// GetObjChildrenIterator is an RPC returns set of object children
+// GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
 func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq, rep *rpctypes.UpGetObjChildrenIteratorResp) error {
 	es := gpr.lr.UpsertExecution(req.Callee)
 	ctx := es.insContext
