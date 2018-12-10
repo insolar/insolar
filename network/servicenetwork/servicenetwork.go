@@ -242,7 +242,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
-			// TODO: make PhaseManager works and uncomment this
+			// TODO: make PhaseManager works and uncomment this (after NETD18-75)
 			// err = n.PhaseManager.OnPulse(ctx, &pulse)
 			// if err != nil {
 			// 	logger.Warn("phase manager fail: " + err.Error())
