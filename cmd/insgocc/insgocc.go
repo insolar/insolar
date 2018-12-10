@@ -64,6 +64,7 @@ func (r *outputFlag) Type() string {
 	return "file"
 }
 
+// Returns $GOPATH or the default value (usually $HOME/go) if the environment variable is not set.
 func getGOPATH() string {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
