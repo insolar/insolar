@@ -1,0 +1,53 @@
+
+resource_types:
+- name: maven-resource
+  type: docker-image
+  source:
+    repository: nulldriver/maven-resource
+    tag: latest
+
+resources:
+- name: nexus
+  type: maven-resource
+  source:
+    url: https://nexus.ins.world/repository/maven-releases/
+    artifact: io.insolar:insolar-sdk-java:jar
+    username: ((meta.nexus.username))
+    password: ((meta.nexus.password))
+
+- name: insolar-sdk-java
+  type: git
+  source:
+    uri: git@github.com:insolar/insolar-sdk-java.git
+    branch: master
+    private_key: ((meta.github.sdk_key))
+
+
+jobs:
+- name: build
+  plan:
+  - get: insolar-sdk-java
+    trigger: true
+  - task: build-sdk
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: maven
+      inputs:
+      - name: insolar-sdk-java
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cd insolar-sdk-java
+            mvn clean install
+            mvn clean package
+            ls -alh
+  - put: nexus
+    params:
+      file: task-output/example-webapp-*.jar
+      pom_file: source-code/pom.xml
+
