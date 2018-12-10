@@ -93,11 +93,11 @@ func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discover
 		opts := &core.MessageSendOptions{
 			Receiver: discoveryNode.GetNodeRef(),
 		}
-		currentPulse, err := nc.PM.Current(ctx)
+		currentPulse, err := rnc.PM.Current(ctx)
 		if err != nil {
 			return nil, err
 		}
-		r, err := rnc.MessageBus.Send(ctx, msg, currentPulse, opts)
+		r, err := rnc.MessageBus.Send(ctx, msg, *currentPulse, opts)
 		if err != nil {
 			return nil, err
 		}
