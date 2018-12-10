@@ -27,3 +27,22 @@ func TestRecordID_String(t *testing.T) {
 
 	assert.Equal(t, idStr, id.String())
 }
+
+func TestNewRefFromBase58(t *testing.T) {
+	recordID := testutils.RandomID()
+	domainID := testutils.RandomID()
+	refStr := recordID.String() + core.RecordRefIDSeparator + domainID.String()
+
+	expectedRef := core.NewRecordRef(domainID, recordID)
+	actualRef, err := core.NewRefFromBase58(refStr)
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedRef, actualRef)
+}
+
+func TestRecordRef_String(t *testing.T) {
+	ref := testutils.RandomRef()
+	expectedRefStr := ref.Record().String() + core.RecordRefIDSeparator + ref.Domain().String()
+
+	assert.Equal(t, expectedRefStr, ref.String())
+}
