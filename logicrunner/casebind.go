@@ -86,9 +86,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb c
 		}
 
 		msg := start.Resp.(core.Message)
-		parcel, err := lr.ParcelFactory.Create(
-			ctx, msg, ref, nil,
-		)
+		parcel, err := lr.ParcelFactory.Create(ctx, msg, ref, nil, *core.GenesisPulse)
 		if err != nil {
 			return 0, errors.New("failed to create a parcel message")
 		}
@@ -153,6 +151,11 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 	if validationError != nil {
 		errstr = validationError.Error()
 	}
+
+	currentSlotPulse, err := lr.PulseManager.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
 	_, err = lr.MessageBus.Send(
 		ctx,
 		&message.ValidationResults{
@@ -160,6 +163,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 			PassedStepsCount: passedStepsCount,
 			Error:            errstr,
 		},
+		*currentSlotPulse,
 		nil,
 	)
 

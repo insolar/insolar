@@ -29,13 +29,12 @@ import (
 type player struct {
 	sender
 	tape   tape
-	pm     core.PulseManager
 	scheme core.PlatformCryptographyScheme
 }
 
 // newPlayer creates player instance. It will replay replies from provided tape.
-func newPlayer(s sender, tape tape, pm core.PulseManager, scheme core.PlatformCryptographyScheme) *player {
-	return &player{sender: s, tape: tape, pm: pm, scheme: scheme}
+func newPlayer(s sender, tape tape, scheme core.PlatformCryptographyScheme) *player {
+	return &player{sender: s, tape: tape, scheme: scheme}
 }
 
 // WriteTape for player is not available.
@@ -45,12 +44,12 @@ func (r *player) WriteTape(ctx context.Context, w io.Writer) error {
 
 // Send wraps MessageBus Send to reply replies from the tape. If reply for this message is not on the tape, an error
 // will be returned.
-func (r *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+func (r *player) Send(ctx context.Context, msg core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
 	var (
 		rep core.Reply
 		err error
 	)
-	parcel, err := r.CreateParcel(ctx, msg, ops.Safe().Token)
+	parcel, err := r.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
 	if err != nil {
 		return nil, err
 	}

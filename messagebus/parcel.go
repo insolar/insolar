@@ -33,16 +33,12 @@ type parcelFactory struct {
 	Cryptography               core.CryptographyService        `inject:""`
 }
 
+// NewParcelFactory returns new instance of parcelFactory
 func NewParcelFactory() message.ParcelFactory {
 	return &parcelFactory{}
 }
 
-func (pf *parcelFactory) Create(
-	ctx context.Context,
-	msg core.Message,
-	sender core.RecordRef,
-	token core.DelegationToken,
-) (core.Parcel, error) {
+func (pf *parcelFactory) Create(ctx context.Context, msg core.Message, sender core.RecordRef, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
 	if msg == nil {
 		return nil, errors.New("failed to signature a nil message")
 	}
@@ -60,6 +56,7 @@ func (pf *parcelFactory) Create(
 		TraceSpanData: instracer.MustSerialize(ctx),
 		Sender:        sender,
 		Token:         token,
+		PulseNumber:   currentPulse.PulseNumber,
 	}, nil
 }
 
