@@ -128,6 +128,7 @@ type UpGetObjChildrenIteratorResp struct {
 	Iterator ChildIterator
 }
 
+// ChildIterator hold an iterator data of GetObjChildrenIterator method
 type ChildIterator struct {
 	ID       string
 	Buff     []core.RecordRef
