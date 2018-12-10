@@ -102,6 +102,10 @@ func (jc *JetCoordinator) QueryRole(
 	objHash := obj.Record().Hash()
 	if role == core.DynamicRoleLightExecutor {
 		jetTree, err := jc.db.GetJetTree(ctx, pulseData.Pulse.PulseNumber)
+		if err == storage.ErrNotFound {
+			return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
+		}
+
 		if err != nil {
 			return nil, err
 		}
