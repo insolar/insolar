@@ -83,8 +83,8 @@ func (fp *FakePulsar) Stop(ctx context.Context) {
 func (fp *FakePulsar) newPulse() *core.Pulse {
 	generator := entropygenerator.StandardEntropyGenerator{}
 	return &core.Pulse{
-		PulseNumber:     1,
-		NextPulseNumber: 2,
+		PulseNumber:     0,
+		NextPulseNumber: 0,
 		Entropy:         generator.GenerateEntropy(),
 	}
 }

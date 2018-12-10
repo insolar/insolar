@@ -255,5 +255,5 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 }
 
 func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
-	return (pulse.NextPulseNumber == 2) && (pulse.PulseNumber == 1)
+	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
 }
