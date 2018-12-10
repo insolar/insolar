@@ -28,6 +28,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 )
 
 type outputFlag struct {
@@ -248,6 +249,7 @@ func main() {
 				os.Exit(1)
 			}
 
+			// Change current directory to tmpDir
 			err = os.Chdir(tmpDir)
 			if err != nil {
 				fmt.Println(err)
@@ -263,21 +265,39 @@ func main() {
 
 			// 1. Rename package from 'main' to 'xmain' in all .go files
 			var out []byte
-			allgo := filepath.Join(tmpDir, "*.go")
-			out, err = exec.Command("sh", "-c", "sed -i.bak 's/package main/package xmain/' " + allgo).CombinedOutput()
+			out, err = exec.Command("sh", "-c", "sed -i.bak 's/package main/package xmain/' *.go").CombinedOutput()
 			if err != nil {
 				fmt.Printf("Error during renaming package main to xmain: %s (%v)\n", string(out), err)
 				os.Exit(1)
 			}
 
-			// TODO: execute codecgen HERE!
-			// the algorithm is following:
-			// 1. cd to the temp directory
-			// 2. enumirate files *.go files
-			// 3. for each file execute `codecgen -o xxx.gen.go xxx.go`
+			// 2. Execute `codecgen` for all .go files in the directory
+			files, err := filepath.Glob("./*.go")
+			if err != nil {
+				fmt.Printf("Unable to enumerate files in directory %s: %v\n", tmpDir, err)
+				os.Exit(1)
+			}
+
+			expr, _ := regexp.Compile("^(.*)\\.go$")
+			for _, infile := range files {
+				// If the name of the input file is xyz.go, the name of the output file is xyz.gen.go.
+				matches := expr.FindStringSubmatch(infile)
+				if len(matches) <= 1 {
+					fmt.Printf("Warning: file name %s doesn't match regular expressing %s - skipping\n",
+						infile, expr.String())
+					continue
+				}
+				outfile := matches[1] + ".gen.go"
+
+				out, err = exec.Command("codecgen", "-o", outfile, infile).CombinedOutput()
+				if err != nil {
+					fmt.Printf("Error during execution of `codecgen`: %s (%v)\n", string(out), err)
+					os.Exit(1)
+				}
+			}
 
 			// 3. Rename all packages back from 'xmain' to 'main' ...
-			out, err = exec.Command("sh", "-c", "sed -i.bak 's/package xmain/package main/' " + allgo).CombinedOutput()
+			out, err = exec.Command("sh", "-c", "sed -i.bak 's/package xmain/package main/' *.go").CombinedOutput()
 			if err != nil {
 				fmt.Printf("Error during renaming package xmain to main: %s (%v)\n", string(out), err)
 				os.Exit(1)
