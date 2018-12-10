@@ -54,6 +54,7 @@ func (oi *ChildrenTypedIterator) HasNext() bool {
 }
 
 // Next return next element from iterator cache or fetching new from service
+// return error only if fetch() fails
 func (oi *ChildrenTypedIterator) Next() (core.RecordRef, error) {
 	if !oi.hasInBuffer() && oi.CanFetch {
 		err := oi.fetch()
