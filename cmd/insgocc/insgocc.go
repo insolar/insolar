@@ -18,16 +18,16 @@ package main
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"go/build"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-
-	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 )
 
 type outputFlag struct {
@@ -63,8 +63,15 @@ func (r *outputFlag) Type() string {
 	return "file"
 }
 
-func main() {
+func getGOPATH() string {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = build.Default.GOPATH
+	}
+	return gopath
+}
 
+func main() {
 	var reference, outdir string
 	output := newOutputFlag("-")
 	proxyOut := newOutputFlag("")
@@ -191,8 +198,14 @@ func main() {
 				os.Exit(1)
 			}
 
-			// make temporary dir
-			tmpDir, err := ioutil.TempDir("", "temp-")
+			// Make temporary directory in $GOPATH/src.
+			// The reason why we need a directory somewhere in $GOPATH
+			// is that `codecgen` refuses to generate serialization and deserialization
+			// code otherwise. Even on trivial benchmarks serialization based on generated code
+			// is about 30% faster then default serialization based on reflaction. On the flip
+			// side resulting binaries become larger (17 Mb vs 14 Mb). However at th time of writing
+			// we are OK with that.
+			tmpDir, err := ioutil.TempDir(filepath.Join(getGOPATH(), "src"), "insgocc-temp-")
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -241,8 +254,14 @@ func main() {
 				os.Exit(1)
 			}
 
-			// TODO: comments regarding two renames
+			// Here we about to do a tricky thing.
+			// 1. First we rename package from 'main' to 'xmain' in all .go files
+			// The reason why we do it is that `codecgen` refuses to generate code
+			// for packages named 'main' - see comments in it's source code.
+			// 2. Then we run `codecgen` for all .go files in the temp directory
+			// 3. Finally, we rename all packages back from 'xmain' to 'main' and compile the plugin
 
+			// 1. Rename package from 'main' to 'xmain' in all .go files
 			var out []byte
 			allgo := filepath.Join(tmpDir, "*.go")
 			out, err = exec.Command("sh", "-c", "sed -i.bak 's/package main/package xmain/' " + allgo).CombinedOutput()
@@ -252,14 +271,19 @@ func main() {
 			}
 
 			// TODO: execute codecgen HERE!
+			// the algorithm is following:
+			// 1. cd to the temp directory
+			// 2. enumirate files *.go files
+			// 3. for each file execute `codecgen -o xxx.gen.go xxx.go`
 
+			// 3. Rename all packages back from 'xmain' to 'main' ...
 			out, err = exec.Command("sh", "-c", "sed -i.bak 's/package xmain/package main/' " + allgo).CombinedOutput()
 			if err != nil {
 				fmt.Printf("Error during renaming package xmain to main: %s (%v)\n", string(out), err)
 				os.Exit(1)
 			}
 
-			// Finally, build the plugin
+			// ... and finally, we build the plugin
 			out, err = exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, outdir, name+".so")).CombinedOutput()
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
