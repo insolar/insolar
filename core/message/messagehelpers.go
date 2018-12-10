@@ -155,6 +155,10 @@ func ExtractAllowedSenderObjectAndRole(msg core.Message) (*core.RecordRef, core.
 		return ExtractAllowedSenderObjectAndRole(t.Msg)
 	case *NodeSignPayload:
 		return nil, core.DynamicRoleUndefined
+	case *HeavyStartStop,
+		*HeavyPayload,
+		*HeavyReset:
+		return nil, 0
 	default:
 		panic(fmt.Sprintf("unknown message type - %s", t.Type().String()))
 	}
