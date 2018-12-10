@@ -353,7 +353,9 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 	return *res.Reference, nil
 }
 
-//GetObjChildrenIterator ...
+// GetObjChildrenIterator rpc call to insolard service, returns iterator over children of object with specified prototype
+// at first time call it without iteratorID
+// iteratorID is a cache key on service side, use it in all calls, except first
 func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.RecordRef, iteratorID string) (*proxyctx.ChildrenTypedIterator, error) {
 	client, err := gi.Upstream()
 	if err != nil {
