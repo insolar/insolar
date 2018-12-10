@@ -159,22 +159,17 @@ func circleXOR(dst, src []byte) {
 
 // ResetBits resets all bits in 'value', starting from 'start' number of bit.
 func resetBits(value []byte, start int) {
-	startByte := start / 8
-	startBit := start % 8
-
 	if start > len(value)*8 {
 		return
 	}
 
-	// Reset bits in starting byte.
-	for i := startBit; i < 8; i++ {
-		mask := byte(^(1 << byte(i)))
-		value[startByte] &= mask
-	}
+	startByte := start / 8
+	startBit := start % 8
 
-	if startByte >= len(value)-1 {
-		return
-	}
+	// Reset bits in starting byte.
+	mask := byte(0xFF)
+	mask <<= 8 - byte(startBit)
+	value[startByte] &= mask
 
 	// Reset bytes.
 	for i := startByte + 1; i < len(value); i++ {

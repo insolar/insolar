@@ -95,6 +95,6 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(selected))
 		// Indexes are hard-coded from previously calculated values.
-		assert.Equal(t, []core.RecordRef{nodes[1]}, selected)
+		assert.Equal(t, []core.RecordRef{nodes[25]}, selected)
 	})
 }
