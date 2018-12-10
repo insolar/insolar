@@ -112,12 +112,10 @@ func (jc *JetCoordinator) QueryRole(
 		_, depth := jetTree.Find(objHash, pulseData.Pulse.PulseNumber)
 
 		// Reset everything except prefix.
-		circleXOR(ent, resetBits(objHash, depth+1))
-		return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
+		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, resetBits(objHash, depth+1)), candidates, count)
 	}
 
-	circleXOR(ent, objHash)
-	return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
+	return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, objHash), candidates, count)
 }
 
 // GetActiveNodes return active nodes for specified pulse.
@@ -153,14 +151,17 @@ func getRefs(
 
 // CircleXOR performs XOR for 'dst' and 'src'. The result is written into 'dst'.
 // If 'src' is smaller than 'dst', XOR starts from the beginning of 'src'.
-func circleXOR(dst, src []byte) {
+func circleXOR(value, src []byte) []byte {
+	result := make([]byte, len(value))
+	copy(result, value)
 	srcLen := len(src)
-	for i := range dst {
-		dst[i] ^= src[i%srcLen]
+	for i := range result {
+		result[i] ^= src[i%srcLen]
 	}
+	return result
 }
 
-// ResetBits resets all bits in 'value', starting from 'start' number of bit.
+// ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit.
 func resetBits(value []byte, start int) []byte {
 	if start > len(value)*8 {
 		return value
