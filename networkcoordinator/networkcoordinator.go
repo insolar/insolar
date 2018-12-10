@@ -29,6 +29,7 @@ type NetworkCoordinator struct {
 	ContractRequester  core.ContractRequester   `inject:""`
 	MessageBus         core.MessageBus          `inject:""`
 	CS                 core.CryptographyService `inject:""`
+	PM                 core.PulseManager        `inject:""`
 
 	realCoordinator Coordinator
 	zeroCoordinator Coordinator
@@ -49,6 +50,7 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 		nc.ContractRequester,
 		nc.MessageBus,
 		nc.CS,
+		nc.PM,
 	)
 	return nil
 }

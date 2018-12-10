@@ -32,6 +32,7 @@ type realNetworkCoordinator struct {
 	ContractRequester  core.ContractRequester
 	MessageBus         core.MessageBus
 	CS                 core.CryptographyService
+	PM                 core.PulseManager
 }
 
 func newRealNetworkCoordinator(
@@ -39,12 +40,14 @@ func newRealNetworkCoordinator(
 	requester core.ContractRequester,
 	msgBus core.MessageBus,
 	cs core.CryptographyService,
+	pm core.PulseManager,
 ) *realNetworkCoordinator {
 	return &realNetworkCoordinator{
 		CertificateManager: manager,
 		ContractRequester:  requester,
 		MessageBus:         msgBus,
 		CS:                 cs,
+		PM:                 pm,
 	}
 }
 
@@ -90,7 +93,11 @@ func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discover
 		opts := &core.MessageSendOptions{
 			Receiver: discoveryNode.GetNodeRef(),
 		}
-		r, err := rnc.MessageBus.Send(ctx, msg, opts)
+		currentPulse, err := nc.PM.Current(ctx)
+		if err != nil {
+			return nil, err
+		}
+		r, err := rnc.MessageBus.Send(ctx, msg, currentPulse, opts)
 		if err != nil {
 			return nil, err
 		}
