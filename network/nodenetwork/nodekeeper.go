@@ -330,15 +330,18 @@ func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
 	}
 
 	dataToSign, err := claim.SerializeWithoutSign()
+	log.Infof("dataToSign len: %d", len(dataToSign))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to serialize a claim")
 	}
 	sign, err := nk.sign(dataToSign)
+	log.Infof("sign len: %d", len(sign))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to sign a claim")
 	}
 
-	copy(claim.Signature[:], sign[:consensus.SignatureLength])
+	// TODO: bugfix needed NET-51
+	//copy(claim.Signature[:], sign[:consensus.SignatureLength])
 	return &claim, nil
 }
 
