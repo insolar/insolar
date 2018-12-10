@@ -31,7 +31,7 @@ import (
 
 func mockMessageBus(t *testing.T, result core.Reply) *testutils.MessageBusMock {
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mbMock.SendFunc = func(c context.Context, m core.Message, _ core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		return result, nil
 	}
 	return mbMock
@@ -39,19 +39,20 @@ func mockMessageBus(t *testing.T, result core.Reply) *testutils.MessageBusMock {
 
 func mockMessageBusError(t *testing.T) *testutils.MessageBusMock {
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mbMock.SendFunc = func(c context.Context, m core.Message, _ core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		return nil, errors.New("test error message")
 	}
 	return mbMock
 }
 
 func TestNew(t *testing.T) {
+	pm := testutils.NewPulseManagerMock(t)
 	messageBus := mockMessageBus(t, nil)
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(messageBus, contractRequester)
+	cm.Inject(pm, messageBus, contractRequester)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
@@ -61,8 +62,12 @@ func TestContractRequester_routeCall(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	testResult := &reply.CallMethod{}
 
+	pm := testutils.NewPulseManagerMock(t)
+	pm.CurrentMock.Return(core.GenesisPulse, nil)
+
 	cReq := &ContractRequester{
-		MessageBus: mockMessageBus(t, testResult),
+		PulseManager: pm,
+		MessageBus:   mockMessageBus(t, testResult),
 	}
 
 	routResult, err := cReq.routeCall(ctx, testutils.RandomRef(), "TestMethod", core.Arguments{})
@@ -74,8 +79,12 @@ func TestContractRequester_routeCall(t *testing.T) {
 func TestContractRequester_routeCall_SendError(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
+	pm := testutils.NewPulseManagerMock(t)
+	pm.CurrentMock.Return(core.GenesisPulse, nil)
+
 	cReq := &ContractRequester{
-		MessageBus: mockMessageBusError(t),
+		PulseManager: pm,
+		MessageBus:   mockMessageBusError(t),
 	}
 
 	routResult, err := cReq.routeCall(ctx, testutils.RandomRef(), "TestMethod", core.Arguments{})
@@ -101,8 +110,12 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	ref := testutils.RandomRef()
 	testResult := &reply.CallMethod{}
 
+	pm := testutils.NewPulseManagerMock(t)
+	pm.CurrentMock.Return(core.GenesisPulse, nil)
+
 	cReq := &ContractRequester{
-		MessageBus: mockMessageBus(t, testResult),
+		PulseManager: pm,
+		MessageBus:   mockMessageBus(t, testResult),
 	}
 
 	result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
@@ -115,8 +128,12 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ref := testutils.RandomRef()
 
+	pm := testutils.NewPulseManagerMock(t)
+	pm.CurrentMock.Return(core.GenesisPulse, nil)
+
 	cReq := &ContractRequester{
-		MessageBus: mockMessageBusError(t),
+		PulseManager: pm,
+		MessageBus:   mockMessageBusError(t),
 	}
 
 	result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})

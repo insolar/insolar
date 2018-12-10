@@ -170,7 +170,6 @@ func main() {
 	}
 	cmdImports.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
 
-
 	keepTemp := false
 	var cmdCompile = &cobra.Command{
 		Use:   "compile [flags] <file name to compile>",

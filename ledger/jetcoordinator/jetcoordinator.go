@@ -89,21 +89,33 @@ func (jc *JetCoordinator) QueryRole(
 	if len(candidates) == 0 {
 		return nil, errors.New(fmt.Sprintf("no candidates for role %d", role))
 	}
-
 	count, ok := jc.roleCounts[role]
 	if !ok {
 		return nil, errors.New("no candidate count for this role")
 	}
+	ent := pulseData.Pulse.Entropy[:]
 
 	if obj == nil {
-		return refsByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy[:], candidates, count)
+		return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
 	}
 
+	objHash := obj.Record().Hash()
 	if role == core.DynamicRoleLightExecutor {
-		return jc.getNodesViaJet(ctx, pulseData.Pulse, candidates, obj, count)
+		jetTree, err := jc.db.GetJetTree(ctx, pulseData.Pulse.PulseNumber)
+		if err == storage.ErrNotFound {
+			return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		_, depth := jetTree.Find(objHash, pulseData.Pulse.PulseNumber)
+
+		// Reset everything except prefix.
+		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, resetBits(objHash, depth+1)), candidates, count)
 	}
 
-	return jc.getNodesViaEntropy(ctx, pulseData.Pulse, candidates, obj, count)
+	return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, objHash), candidates, count)
 }
 
 // GetActiveNodes return active nodes for specified pulse.
@@ -111,53 +123,7 @@ func (jc *JetCoordinator) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, e
 	return jc.db.GetActiveNodes(pulse)
 }
 
-func (jc *JetCoordinator) getNodesViaEntropy(
-	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef, count int,
-) ([]core.RecordRef, error) {
-	h := jc.PlatformCryptographyScheme.ReferenceHasher()
-	_, err := h.Write(pulse.Entropy[:])
-	if err != nil {
-		return nil, err
-	}
-	_, err = h.Write(obj.Record()[:])
-	if err != nil {
-		return nil, err
-	}
-	nodes, err := refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, count)
-	if err != nil {
-		return nil, err
-	}
-	return nodes, nil
-}
-
-func (jc *JetCoordinator) getNodesViaJet(
-	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef, count int,
-) ([]core.RecordRef, error) {
-	// Find a jet for the object.
-	jetTree, err := jc.db.GetJetTree(ctx, pulse.PulseNumber)
-	if err != nil {
-		return nil, err
-	}
-	jet := jetTree.Find(obj.Record().Hash(), pulse.PulseNumber)
-	if jet == nil {
-		return nil, errors.New("failed to find jet")
-	}
-
-	// Find a node for the jet.
-	h := jc.PlatformCryptographyScheme.ReferenceHasher()
-	_, err = h.Write(pulse.Entropy[:])
-	if err != nil {
-		return nil, err
-	}
-	_, err = h.Write(jet.Prefix)
-	if err != nil {
-		return nil, err
-	}
-
-	return refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, count)
-}
-
-func refsByEntropy(
+func getRefs(
 	scheme core.PlatformCryptographyScheme,
 	e []byte,
 	values []core.RecordRef,
@@ -181,4 +147,36 @@ func refsByEntropy(
 		out = append(out, value.(core.RecordRef))
 	}
 	return out, nil
+}
+
+// CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.
+// If 'value' is smaller than 'dst', XOR starts from the beginning of 'src'.
+func circleXOR(value, src []byte) []byte {
+	result := make([]byte, len(value))
+	srcLen := len(src)
+	for i := range result {
+		result[i] = value[i] ^ src[i%srcLen]
+	}
+	return result
+}
+
+// ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
+// is bigger than len(value), the original slice will be returned.
+func resetBits(value []byte, start int) []byte {
+	if start > len(value)*8 {
+		return value
+	}
+
+	startByte := start / 8
+	startBit := start % 8
+
+	result := make([]byte, len(value))
+	copy(result, value[:startByte])
+
+	// Reset bits in starting byte.
+	mask := byte(0xFF)
+	mask <<= 8 - byte(startBit)
+	result[startByte] &= mask
+
+	return result
 }

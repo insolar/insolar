@@ -175,7 +175,7 @@ func (m *TransactionManager) SetRecord(ctx context.Context, jet core.RecordID, p
 		return id, ErrOverride
 	}
 	if geterr != badger.ErrKeyNotFound {
-		return nil, ErrNotFound
+		return nil, err
 	}
 
 	err = m.set(ctx, k, record.SerializeRecord(rec))

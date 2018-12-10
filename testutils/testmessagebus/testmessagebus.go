@@ -48,7 +48,7 @@ func (mb *TestMessageBus) WriteTape(ctx context.Context, writer io.Writer) error
 	panic("implement me")
 }
 
-func (mb *TestMessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
+func (mb *TestMessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) (core.MessageBus, error) {
 	panic("implement me")
 }
 
@@ -88,8 +88,8 @@ func (mb *TestMessageBus) MustRegister(p core.MessageType, handler core.MessageH
 	}
 }
 
-func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
-	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil)
+func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
+	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil, currentPulse)
 	if err != nil {
 		return nil, err
 	}
