@@ -34,4 +34,7 @@ type NetworkCoordinator interface {
 
 	// SetPulse uses PulseManager component for saving pulse info
 	SetPulse(ctx context.Context, pulse Pulse) error
+
+	// IsStarted returns true if component was started and false in other way
+	IsStarted() bool
 }
