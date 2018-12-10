@@ -49,7 +49,7 @@ func (mb *TestMessageBus) WriteTape(ctx context.Context, writer io.Writer) error
 }
 
 func (mb *TestMessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) (core.MessageBus, error) {
-	panic("implement me")
+	return mb, nil
 }
 
 func NewTestMessageBus(t *testing.T) *TestMessageBus {
