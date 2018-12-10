@@ -57,7 +57,8 @@ func newUnsyncList(activeNodesSorted []core.Node) *unsyncList {
 	return &unsyncList{activeNodes: activeNodes, claims: claims, refToIndex: refToIndex, indexToRef: indexToRef}
 }
 
-func (ul *unsyncList) RemoveClaims(from core.RecordRef) {
+func (ul *unsyncList) RemoveNodeAndClaims(from core.RecordRef) {
+	delete(ul.activeNodes, from)
 	delete(ul.claims, from)
 	ul.cache = nil
 }

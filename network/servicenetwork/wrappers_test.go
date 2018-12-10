@@ -91,8 +91,12 @@ func (n *nodeKeeperWrapper) GetState() network.NodeKeeperState {
 	return n.original.GetState()
 }
 
-func (n *nodeKeeperWrapper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
-	return n.original.GetOriginClaim()
+func (n *nodeKeeperWrapper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
+	return n.original.GetOriginJoinClaim()
+}
+
+func (n *nodeKeeperWrapper) GetOriginAnnounceClaim() (*consensus.NodeAnnounceClaim, error) {
+	return n.original.GetOriginAnnounceClaim()
 }
 
 func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {
@@ -100,8 +104,6 @@ func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (n *nodeKeeperWrapper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
-	// TODO: why panic?
-	// panic("nodeKeeperWrapper.AddPendingClaim")
 	return n.original.AddPendingClaim(claim)
 }
 

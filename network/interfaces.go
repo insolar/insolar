@@ -178,8 +178,8 @@ type NodeKeeper interface {
 //go:generate minimock -i github.com/insolar/insolar/network.UnsyncList -o ../testutils/network -s _mock.go
 type UnsyncList interface {
 	consensus.BitSetMapper
-	// RemoveClaims
-	RemoveClaims(core.RecordRef)
+	// RemoveNodeAndClaims
+	RemoveNodeAndClaims(core.RecordRef)
 	// AddClaims
 	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim, map[core.RecordRef]string)
 	// CalculateHash calculate node list hash based on active node list and claims

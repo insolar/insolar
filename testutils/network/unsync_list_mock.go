@@ -55,10 +55,10 @@ type UnsyncListMock struct {
 	RefToIndexPreCounter uint64
 	RefToIndexMock       mUnsyncListMockRefToIndex
 
-	RemoveClaimsFunc       func(p core.RecordRef)
-	RemoveClaimsCounter    uint64
-	RemoveClaimsPreCounter uint64
-	RemoveClaimsMock       mUnsyncListMockRemoveClaims
+	RemoveNodeAndClaimsFunc       func(p core.RecordRef)
+	RemoveNodeAndClaimsCounter    uint64
+	RemoveNodeAndClaimsPreCounter uint64
+	RemoveNodeAndClaimsMock       mUnsyncListMockRemoveNodeAndClaims
 }
 
 //NewUnsyncListMock returns a mock for github.com/insolar/insolar/network.UnsyncList
@@ -76,7 +76,7 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 	m.IndexToRefMock = mUnsyncListMockIndexToRef{mock: m}
 	m.LengthMock = mUnsyncListMockLength{mock: m}
 	m.RefToIndexMock = mUnsyncListMockRefToIndex{mock: m}
-	m.RemoveClaimsMock = mUnsyncListMockRemoveClaims{mock: m}
+	m.RemoveNodeAndClaimsMock = mUnsyncListMockRemoveNodeAndClaims{mock: m}
 
 	return m
 }
@@ -1057,124 +1057,124 @@ func (m *UnsyncListMock) RefToIndexFinished() bool {
 	return true
 }
 
-type mUnsyncListMockRemoveClaims struct {
+type mUnsyncListMockRemoveNodeAndClaims struct {
 	mock              *UnsyncListMock
-	mainExpectation   *UnsyncListMockRemoveClaimsExpectation
-	expectationSeries []*UnsyncListMockRemoveClaimsExpectation
+	mainExpectation   *UnsyncListMockRemoveNodeAndClaimsExpectation
+	expectationSeries []*UnsyncListMockRemoveNodeAndClaimsExpectation
 }
 
-type UnsyncListMockRemoveClaimsExpectation struct {
-	input *UnsyncListMockRemoveClaimsInput
+type UnsyncListMockRemoveNodeAndClaimsExpectation struct {
+	input *UnsyncListMockRemoveNodeAndClaimsInput
 }
 
-type UnsyncListMockRemoveClaimsInput struct {
+type UnsyncListMockRemoveNodeAndClaimsInput struct {
 	p core.RecordRef
 }
 
-//Expect specifies that invocation of UnsyncList.RemoveClaims is expected from 1 to Infinity times
-func (m *mUnsyncListMockRemoveClaims) Expect(p core.RecordRef) *mUnsyncListMockRemoveClaims {
-	m.mock.RemoveClaimsFunc = nil
+//Expect specifies that invocation of UnsyncList.RemoveNodeAndClaims is expected from 1 to Infinity times
+func (m *mUnsyncListMockRemoveNodeAndClaims) Expect(p core.RecordRef) *mUnsyncListMockRemoveNodeAndClaims {
+	m.mock.RemoveNodeAndClaimsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockRemoveClaimsExpectation{}
+		m.mainExpectation = &UnsyncListMockRemoveNodeAndClaimsExpectation{}
 	}
-	m.mainExpectation.input = &UnsyncListMockRemoveClaimsInput{p}
+	m.mainExpectation.input = &UnsyncListMockRemoveNodeAndClaimsInput{p}
 	return m
 }
 
-//Return specifies results of invocation of UnsyncList.RemoveClaims
-func (m *mUnsyncListMockRemoveClaims) Return() *UnsyncListMock {
-	m.mock.RemoveClaimsFunc = nil
+//Return specifies results of invocation of UnsyncList.RemoveNodeAndClaims
+func (m *mUnsyncListMockRemoveNodeAndClaims) Return() *UnsyncListMock {
+	m.mock.RemoveNodeAndClaimsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockRemoveClaimsExpectation{}
+		m.mainExpectation = &UnsyncListMockRemoveNodeAndClaimsExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of UnsyncList.RemoveClaims is expected once
-func (m *mUnsyncListMockRemoveClaims) ExpectOnce(p core.RecordRef) *UnsyncListMockRemoveClaimsExpectation {
-	m.mock.RemoveClaimsFunc = nil
+//ExpectOnce specifies that invocation of UnsyncList.RemoveNodeAndClaims is expected once
+func (m *mUnsyncListMockRemoveNodeAndClaims) ExpectOnce(p core.RecordRef) *UnsyncListMockRemoveNodeAndClaimsExpectation {
+	m.mock.RemoveNodeAndClaimsFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &UnsyncListMockRemoveClaimsExpectation{}
-	expectation.input = &UnsyncListMockRemoveClaimsInput{p}
+	expectation := &UnsyncListMockRemoveNodeAndClaimsExpectation{}
+	expectation.input = &UnsyncListMockRemoveNodeAndClaimsInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of UnsyncList.RemoveClaims method
-func (m *mUnsyncListMockRemoveClaims) Set(f func(p core.RecordRef)) *UnsyncListMock {
+//Set uses given function f as a mock of UnsyncList.RemoveNodeAndClaims method
+func (m *mUnsyncListMockRemoveNodeAndClaims) Set(f func(p core.RecordRef)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.RemoveClaimsFunc = f
+	m.mock.RemoveNodeAndClaimsFunc = f
 	return m.mock
 }
 
-//RemoveClaims implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) RemoveClaims(p core.RecordRef) {
-	counter := atomic.AddUint64(&m.RemoveClaimsPreCounter, 1)
-	defer atomic.AddUint64(&m.RemoveClaimsCounter, 1)
+//RemoveNodeAndClaims implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) RemoveNodeAndClaims(p core.RecordRef) {
+	counter := atomic.AddUint64(&m.RemoveNodeAndClaimsPreCounter, 1)
+	defer atomic.AddUint64(&m.RemoveNodeAndClaimsCounter, 1)
 
-	if len(m.RemoveClaimsMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RemoveClaimsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to UnsyncListMock.RemoveClaims. %v", p)
+	if len(m.RemoveNodeAndClaimsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RemoveNodeAndClaimsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to UnsyncListMock.RemoveNodeAndClaims. %v", p)
 			return
 		}
 
-		input := m.RemoveClaimsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, UnsyncListMockRemoveClaimsInput{p}, "UnsyncList.RemoveClaims got unexpected parameters")
+		input := m.RemoveNodeAndClaimsMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, UnsyncListMockRemoveNodeAndClaimsInput{p}, "UnsyncList.RemoveNodeAndClaims got unexpected parameters")
 
 		return
 	}
 
-	if m.RemoveClaimsMock.mainExpectation != nil {
+	if m.RemoveNodeAndClaimsMock.mainExpectation != nil {
 
-		input := m.RemoveClaimsMock.mainExpectation.input
+		input := m.RemoveNodeAndClaimsMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, UnsyncListMockRemoveClaimsInput{p}, "UnsyncList.RemoveClaims got unexpected parameters")
+			testify_assert.Equal(m.t, *input, UnsyncListMockRemoveNodeAndClaimsInput{p}, "UnsyncList.RemoveNodeAndClaims got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.RemoveClaimsFunc == nil {
-		m.t.Fatalf("Unexpected call to UnsyncListMock.RemoveClaims. %v", p)
+	if m.RemoveNodeAndClaimsFunc == nil {
+		m.t.Fatalf("Unexpected call to UnsyncListMock.RemoveNodeAndClaims. %v", p)
 		return
 	}
 
-	m.RemoveClaimsFunc(p)
+	m.RemoveNodeAndClaimsFunc(p)
 }
 
-//RemoveClaimsMinimockCounter returns a count of UnsyncListMock.RemoveClaimsFunc invocations
-func (m *UnsyncListMock) RemoveClaimsMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveClaimsCounter)
+//RemoveNodeAndClaimsMinimockCounter returns a count of UnsyncListMock.RemoveNodeAndClaimsFunc invocations
+func (m *UnsyncListMock) RemoveNodeAndClaimsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RemoveNodeAndClaimsCounter)
 }
 
-//RemoveClaimsMinimockPreCounter returns the value of UnsyncListMock.RemoveClaims invocations
-func (m *UnsyncListMock) RemoveClaimsMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveClaimsPreCounter)
+//RemoveNodeAndClaimsMinimockPreCounter returns the value of UnsyncListMock.RemoveNodeAndClaims invocations
+func (m *UnsyncListMock) RemoveNodeAndClaimsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RemoveNodeAndClaimsPreCounter)
 }
 
-//RemoveClaimsFinished returns true if mock invocations count is ok
-func (m *UnsyncListMock) RemoveClaimsFinished() bool {
+//RemoveNodeAndClaimsFinished returns true if mock invocations count is ok
+func (m *UnsyncListMock) RemoveNodeAndClaimsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RemoveClaimsMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RemoveClaimsCounter) == uint64(len(m.RemoveClaimsMock.expectationSeries))
+	if len(m.RemoveNodeAndClaimsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RemoveNodeAndClaimsCounter) == uint64(len(m.RemoveNodeAndClaimsMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.RemoveClaimsMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RemoveClaimsCounter) > 0
+	if m.RemoveNodeAndClaimsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RemoveNodeAndClaimsCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.RemoveClaimsFunc != nil {
-		return atomic.LoadUint64(&m.RemoveClaimsCounter) > 0
+	if m.RemoveNodeAndClaimsFunc != nil {
+		return atomic.LoadUint64(&m.RemoveNodeAndClaimsCounter) > 0
 	}
 
 	return true
@@ -1212,8 +1212,8 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to UnsyncListMock.RefToIndex")
 	}
 
-	if !m.RemoveClaimsFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.RemoveClaims")
+	if !m.RemoveNodeAndClaimsFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.RemoveNodeAndClaims")
 	}
 
 }
@@ -1261,8 +1261,8 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.RefToIndex")
 	}
 
-	if !m.RemoveClaimsFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.RemoveClaims")
+	if !m.RemoveNodeAndClaimsFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.RemoveNodeAndClaims")
 	}
 
 }
@@ -1286,7 +1286,7 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.IndexToRefFinished()
 		ok = ok && m.LengthFinished()
 		ok = ok && m.RefToIndexFinished()
-		ok = ok && m.RemoveClaimsFinished()
+		ok = ok && m.RemoveNodeAndClaimsFinished()
 
 		if ok {
 			return
@@ -1323,8 +1323,8 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to UnsyncListMock.RefToIndex")
 			}
 
-			if !m.RemoveClaimsFinished() {
-				m.t.Error("Expected call to UnsyncListMock.RemoveClaims")
+			if !m.RemoveNodeAndClaimsFinished() {
+				m.t.Error("Expected call to UnsyncListMock.RemoveNodeAndClaims")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1367,7 +1367,7 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.RemoveClaimsFinished() {
+	if !m.RemoveNodeAndClaimsFinished() {
 		return false
 	}
 

@@ -95,6 +95,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 			NodeCount:     globuleProof.NodeCount,
 			NodeRoot:      globuleProof.NodeRoot,
 		}
+		packet.SetGlobuleHashSignature(nil)
 
 		if !sp.Calculator.IsValid(proof, globuleHash, node.PublicKey()) {
 			nodeProofs[node] = proof
