@@ -202,4 +202,6 @@ func init() {
 	gob.Register(&Parcel{})
 	gob.Register(core.RecordRef{})
 	gob.Register(&GetChildren{})
+
+	gob.Register(&core.Arguments{})
 }
