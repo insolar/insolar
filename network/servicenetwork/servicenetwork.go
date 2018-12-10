@@ -238,6 +238,9 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			if network.NetworkCoordinator == nil {
 				return
 			}
+			if !network.NetworkCoordinator.IsStarted() {
+				return
+			}
 			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
