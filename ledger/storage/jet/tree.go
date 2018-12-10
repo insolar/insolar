@@ -46,6 +46,25 @@ func (j *Jet) Find(val []byte, depth int) (*Jet, int) {
 	return j, depth
 }
 
+// Update add missing tree branches for provided prefix.
+func (j *Jet) Update(prefix []byte, depth int) {
+	if depth >= len(prefix)*8 {
+		return
+	}
+
+	if getBit(prefix, depth) {
+		if j.Right == nil {
+			j.Right = &Jet{}
+		}
+		j.Right.Update(prefix, depth+1)
+	} else {
+		if j.Left == nil {
+			j.Left = &Jet{}
+		}
+		j.Left.Update(prefix, depth+1)
+	}
+}
+
 // Tree stores jet in a binary tree.
 type Tree struct {
 	Head *Jet
@@ -54,6 +73,11 @@ type Tree struct {
 // Find returns jet for provided reference.
 func (t *Tree) Find(val []byte) (*Jet, int) {
 	return t.Head.Find(val, 0)
+}
+
+// Update add missing tree branches for provided prefix.
+func (t *Tree) Update(prefix []byte) {
+	t.Head.Update(prefix, 0)
 }
 
 // Bytes serializes pulse.
@@ -65,7 +89,7 @@ func (t *Tree) Bytes() []byte {
 }
 
 func getBit(value []byte, index int) bool {
-	if uint(index) > uint(len(value)*8) {
+	if uint(index) >= uint(len(value)*8) {
 		panic("index overflow")
 	}
 	byteIndex := uint(index / 8)
