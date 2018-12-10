@@ -14,30 +14,19 @@
  *    limitations under the License.
  */
 
-package jetcoordinator
+package index
 
 import (
-	"bytes"
-
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage/record"
 )
 
-// JetNode represents node in Jet tree.
-type JetNode struct {
-	ref   core.RecordRef
-	left  *JetNode
-	right *JetNode
-}
-
-// GetContaining returns leaf node reference. Leaf node is a jet host for provided objRef.
-func (jn *JetNode) GetContaining(objRef *core.RecordRef) *core.RecordRef {
-	if jn.left == nil || jn.right == nil {
-		return &jn.ref
-	}
-
-	// Ignore record ID when selecting jet affinity. Object reference jet calculated only by its affinity part.
-	if bytes.Compare(objRef[core.RecordIDSize:], jn.ref[core.RecordIDSize:]) < 0 {
-		return jn.left.GetContaining(objRef)
-	}
-	return jn.right.GetContaining(objRef)
+// ObjectLifeline represents meta information for record object.
+type ObjectLifeline struct {
+	LatestState         *core.RecordID // Amend or activate record.
+	LatestStateApproved *core.RecordID // State approved by VM.
+	ChildPointer        *core.RecordID // Meta record about child activation.
+	Parent              core.RecordRef
+	Delegates           map[core.RecordRef]core.RecordRef
+	State               record.State
 }
