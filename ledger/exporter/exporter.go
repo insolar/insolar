@@ -25,8 +25,8 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"

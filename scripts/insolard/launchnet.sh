@@ -27,7 +27,7 @@ DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 stop_listening()
 {
     stop_insgorund=$1
-    ports="53831 53832 53833 53834 53835"
+    ports="13831 13832 23832 23833 33833 33834"
     if [ "$stop_insgorund" == "true" ]
     then
         ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
@@ -37,11 +37,11 @@ stop_listening()
     for port in $ports
     do
         echo "port: $port"
-        pids=$(lsof -i :$port | grep LISTEN | awk '{print $2}')
+        pids=$(lsof -i :$port | grep "LISTEN\|UDP" | awk '{print $2}')
         for pid in $pids
         do
             echo "killing pid $pid"
-            kill $pid
+            kill -9 $pid
         done
     done
 }
