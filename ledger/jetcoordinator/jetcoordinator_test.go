@@ -67,7 +67,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		obj.SetRecord(*core.NewRecordID(0, []byte{3, 14, 15, 92}))
 		nodeNet.GetActiveNodesByRoleMock.Expect(core.DynamicRoleVirtualExecutor).Return(nodes)
 
-		selected, err := jc.QueryRole(ctx, core.DynamicRoleVirtualExecutor, &obj, 0)
+		selected, err := jc.QueryRole(ctx, core.DynamicRoleVirtualExecutor, obj.Record(), 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(selected))
 		// Indexes are hard-coded from previously calculated values.
@@ -88,7 +88,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		obj.SetRecord(*core.NewRecordID(0, []byte{1, 42, 123}))
 		nodeNet.GetActiveNodesByRoleMock.Expect(core.DynamicRoleLightExecutor).Return(nodes)
 
-		selected, err := jc.QueryRole(ctx, core.DynamicRoleLightExecutor, &obj, 0)
+		selected, err := jc.QueryRole(ctx, core.DynamicRoleLightExecutor, obj.Record(), 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(selected))
 		// Indexes are hard-coded from previously calculated values.
