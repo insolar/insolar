@@ -19,7 +19,6 @@ package jet
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,45 +26,21 @@ func TestTree_Find(t *testing.T) {
 	// Pulse in ID is equal to depth.
 	tree := Tree{
 		Head: &Jet{
-			ID: *core.NewRecordID(0, nil),
 			Right: &Jet{
-				ID: *core.NewRecordID(1, nil),
 				Right: &Jet{
-					ID: *core.NewRecordID(2, nil),
 					Left: &Jet{
-						ID: *core.NewRecordID(3, nil),
-						Right: &Jet{
-							ID: *core.NewRecordID(4, nil),
-						},
-						Left: &Jet{
-							ID: *core.NewRecordID(4, nil),
-						},
+						Right: &Jet{},
+						Left:  &Jet{},
 					},
-					Right: &Jet{
-						ID: *core.NewRecordID(3, nil),
-					},
+					Right: &Jet{},
 				},
 			},
-			Left: &Jet{
-				ID: *core.NewRecordID(1, nil),
-			},
+			Left: &Jet{},
 		},
 	}
 	val := []byte{0xD5} // 11010101
 
-	jet, depth := tree.Find(val, 0)
-	assert.Equal(t, tree.Head, jet)
-	assert.Equal(t, depth, 0)
-	jet, depth = tree.Find(val, 1)
-	assert.Equal(t, tree.Head.Right, jet)
-	assert.Equal(t, depth, 1)
-	jet, depth = tree.Find(val, 2)
-	assert.Equal(t, tree.Head.Right.Right, jet)
-	assert.Equal(t, depth, 2)
-	jet, depth = tree.Find(val, 3)
-	assert.Equal(t, tree.Head.Right.Right.Left, jet)
-	assert.Equal(t, depth, 3)
-	jet, depth = tree.Find(val, 4)
+	jet, depth := tree.Find(val)
 	assert.Equal(t, tree.Head.Right.Right.Left.Right, jet)
 	assert.Equal(t, depth, 4)
 }

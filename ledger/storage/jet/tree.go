@@ -19,31 +19,28 @@ package jet
 import (
 	"bytes"
 
-	"github.com/insolar/insolar/core"
 	"github.com/ugorji/go/codec"
 )
 
 // Jet contain jet record.
 type Jet struct {
-	ID core.RecordID
-
 	Left  *Jet
 	Right *Jet
 }
 
 // Find returns jet for provided reference.
-func (j *Jet) Find(val []byte, pulse core.PulseNumber, depth int) (*Jet, int) {
+func (j *Jet) Find(val []byte, depth int) (*Jet, int) {
 	if j == nil || val == nil {
 		return nil, 0
 	}
 
 	if getBit(val, depth) {
-		if j.Right != nil && j.Right.ID.Pulse() <= pulse {
-			return j.Right.Find(val, pulse, depth+1)
+		if j.Right != nil {
+			return j.Right.Find(val, depth+1)
 		}
 	} else {
-		if j.Left != nil && j.Left.ID.Pulse() <= pulse {
-			return j.Left.Find(val, pulse, depth+1)
+		if j.Left != nil {
+			return j.Left.Find(val, depth+1)
 		}
 	}
 	return j, depth
@@ -55,8 +52,8 @@ type Tree struct {
 }
 
 // Find returns jet for provided reference.
-func (t *Tree) Find(val []byte, pulse core.PulseNumber) (*Jet, int) {
-	return t.Head.Find(val, pulse, 0)
+func (t *Tree) Find(val []byte) (*Jet, int) {
+	return t.Head.Find(val, 0)
 }
 
 // Bytes serializes pulse.
