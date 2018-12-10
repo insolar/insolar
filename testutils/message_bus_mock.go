@@ -31,7 +31,7 @@ type MessageBusMock struct {
 	NewPlayerPreCounter uint64
 	NewPlayerMock       mMessageBusMockNewPlayer
 
-	NewRecorderFunc       func(p context.Context) (r core.MessageBus, r1 error)
+	NewRecorderFunc       func(p context.Context, p1 core.Pulse) (r core.MessageBus, r1 error)
 	NewRecorderCounter    uint64
 	NewRecorderPreCounter uint64
 	NewRecorderMock       mMessageBusMockNewRecorder
@@ -41,7 +41,7 @@ type MessageBusMock struct {
 	RegisterPreCounter uint64
 	RegisterMock       mMessageBusMockRegister
 
-	SendFunc       func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)
+	SendFunc       func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)
 	SendCounter    uint64
 	SendPreCounter uint64
 	SendMock       mMessageBusMockSend
@@ -357,7 +357,8 @@ type MessageBusMockNewRecorderExpectation struct {
 }
 
 type MessageBusMockNewRecorderInput struct {
-	p context.Context
+	p  context.Context
+	p1 core.Pulse
 }
 
 type MessageBusMockNewRecorderResult struct {
@@ -366,14 +367,14 @@ type MessageBusMockNewRecorderResult struct {
 }
 
 //Expect specifies that invocation of MessageBus.NewRecorder is expected from 1 to Infinity times
-func (m *mMessageBusMockNewRecorder) Expect(p context.Context) *mMessageBusMockNewRecorder {
+func (m *mMessageBusMockNewRecorder) Expect(p context.Context, p1 core.Pulse) *mMessageBusMockNewRecorder {
 	m.mock.NewRecorderFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &MessageBusMockNewRecorderExpectation{}
 	}
-	m.mainExpectation.input = &MessageBusMockNewRecorderInput{p}
+	m.mainExpectation.input = &MessageBusMockNewRecorderInput{p, p1}
 	return m
 }
 
@@ -390,12 +391,12 @@ func (m *mMessageBusMockNewRecorder) Return(r core.MessageBus, r1 error) *Messag
 }
 
 //ExpectOnce specifies that invocation of MessageBus.NewRecorder is expected once
-func (m *mMessageBusMockNewRecorder) ExpectOnce(p context.Context) *MessageBusMockNewRecorderExpectation {
+func (m *mMessageBusMockNewRecorder) ExpectOnce(p context.Context, p1 core.Pulse) *MessageBusMockNewRecorderExpectation {
 	m.mock.NewRecorderFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &MessageBusMockNewRecorderExpectation{}
-	expectation.input = &MessageBusMockNewRecorderInput{p}
+	expectation.input = &MessageBusMockNewRecorderInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -405,7 +406,7 @@ func (e *MessageBusMockNewRecorderExpectation) Return(r core.MessageBus, r1 erro
 }
 
 //Set uses given function f as a mock of MessageBus.NewRecorder method
-func (m *mMessageBusMockNewRecorder) Set(f func(p context.Context) (r core.MessageBus, r1 error)) *MessageBusMock {
+func (m *mMessageBusMockNewRecorder) Set(f func(p context.Context, p1 core.Pulse) (r core.MessageBus, r1 error)) *MessageBusMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -414,18 +415,18 @@ func (m *mMessageBusMockNewRecorder) Set(f func(p context.Context) (r core.Messa
 }
 
 //NewRecorder implements github.com/insolar/insolar/core.MessageBus interface
-func (m *MessageBusMock) NewRecorder(p context.Context) (r core.MessageBus, r1 error) {
+func (m *MessageBusMock) NewRecorder(p context.Context, p1 core.Pulse) (r core.MessageBus, r1 error) {
 	counter := atomic.AddUint64(&m.NewRecorderPreCounter, 1)
 	defer atomic.AddUint64(&m.NewRecorderCounter, 1)
 
 	if len(m.NewRecorderMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.NewRecorderMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to MessageBusMock.NewRecorder. %v", p)
+			m.t.Fatalf("Unexpected call to MessageBusMock.NewRecorder. %v %v", p, p1)
 			return
 		}
 
 		input := m.NewRecorderMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, MessageBusMockNewRecorderInput{p}, "MessageBus.NewRecorder got unexpected parameters")
+		testify_assert.Equal(m.t, *input, MessageBusMockNewRecorderInput{p, p1}, "MessageBus.NewRecorder got unexpected parameters")
 
 		result := m.NewRecorderMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -443,7 +444,7 @@ func (m *MessageBusMock) NewRecorder(p context.Context) (r core.MessageBus, r1 e
 
 		input := m.NewRecorderMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, MessageBusMockNewRecorderInput{p}, "MessageBus.NewRecorder got unexpected parameters")
+			testify_assert.Equal(m.t, *input, MessageBusMockNewRecorderInput{p, p1}, "MessageBus.NewRecorder got unexpected parameters")
 		}
 
 		result := m.NewRecorderMock.mainExpectation.result
@@ -458,11 +459,11 @@ func (m *MessageBusMock) NewRecorder(p context.Context) (r core.MessageBus, r1 e
 	}
 
 	if m.NewRecorderFunc == nil {
-		m.t.Fatalf("Unexpected call to MessageBusMock.NewRecorder. %v", p)
+		m.t.Fatalf("Unexpected call to MessageBusMock.NewRecorder. %v %v", p, p1)
 		return
 	}
 
-	return m.NewRecorderFunc(p)
+	return m.NewRecorderFunc(p, p1)
 }
 
 //NewRecorderMinimockCounter returns a count of MessageBusMock.NewRecorderFunc invocations
@@ -657,7 +658,8 @@ type MessageBusMockSendExpectation struct {
 type MessageBusMockSendInput struct {
 	p  context.Context
 	p1 core.Message
-	p2 *core.MessageSendOptions
+	p2 core.Pulse
+	p3 *core.MessageSendOptions
 }
 
 type MessageBusMockSendResult struct {
@@ -666,14 +668,14 @@ type MessageBusMockSendResult struct {
 }
 
 //Expect specifies that invocation of MessageBus.Send is expected from 1 to Infinity times
-func (m *mMessageBusMockSend) Expect(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *mMessageBusMockSend {
+func (m *mMessageBusMockSend) Expect(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) *mMessageBusMockSend {
 	m.mock.SendFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &MessageBusMockSendExpectation{}
 	}
-	m.mainExpectation.input = &MessageBusMockSendInput{p, p1, p2}
+	m.mainExpectation.input = &MessageBusMockSendInput{p, p1, p2, p3}
 	return m
 }
 
@@ -690,12 +692,12 @@ func (m *mMessageBusMockSend) Return(r core.Reply, r1 error) *MessageBusMock {
 }
 
 //ExpectOnce specifies that invocation of MessageBus.Send is expected once
-func (m *mMessageBusMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *MessageBusMockSendExpectation {
+func (m *mMessageBusMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) *MessageBusMockSendExpectation {
 	m.mock.SendFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &MessageBusMockSendExpectation{}
-	expectation.input = &MessageBusMockSendInput{p, p1, p2}
+	expectation.input = &MessageBusMockSendInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -705,7 +707,7 @@ func (e *MessageBusMockSendExpectation) Return(r core.Reply, r1 error) {
 }
 
 //Set uses given function f as a mock of MessageBus.Send method
-func (m *mMessageBusMockSend) Set(f func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)) *MessageBusMock {
+func (m *mMessageBusMockSend) Set(f func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)) *MessageBusMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -714,18 +716,18 @@ func (m *mMessageBusMockSend) Set(f func(p context.Context, p1 core.Message, p2 
 }
 
 //Send implements github.com/insolar/insolar/core.MessageBus interface
-func (m *MessageBusMock) Send(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+func (m *MessageBusMock) Send(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.SendPreCounter, 1)
 	defer atomic.AddUint64(&m.SendCounter, 1)
 
 	if len(m.SendMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SendMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to MessageBusMock.Send. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to MessageBusMock.Send. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.SendMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, MessageBusMockSendInput{p, p1, p2}, "MessageBus.Send got unexpected parameters")
+		testify_assert.Equal(m.t, *input, MessageBusMockSendInput{p, p1, p2, p3}, "MessageBus.Send got unexpected parameters")
 
 		result := m.SendMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -743,7 +745,7 @@ func (m *MessageBusMock) Send(p context.Context, p1 core.Message, p2 *core.Messa
 
 		input := m.SendMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, MessageBusMockSendInput{p, p1, p2}, "MessageBus.Send got unexpected parameters")
+			testify_assert.Equal(m.t, *input, MessageBusMockSendInput{p, p1, p2, p3}, "MessageBus.Send got unexpected parameters")
 		}
 
 		result := m.SendMock.mainExpectation.result
@@ -758,11 +760,11 @@ func (m *MessageBusMock) Send(p context.Context, p1 core.Message, p2 *core.Messa
 	}
 
 	if m.SendFunc == nil {
-		m.t.Fatalf("Unexpected call to MessageBusMock.Send. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to MessageBusMock.Send. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.SendFunc(p, p1, p2)
+	return m.SendFunc(p, p1, p2, p3)
 }
 
 //SendMinimockCounter returns a count of MessageBusMock.SendFunc invocations
