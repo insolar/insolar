@@ -149,7 +149,7 @@ func getRefs(
 }
 
 // CircleXOR performs XOR for 'dst' and 'src'. The result is written into 'dst'.
-// If 'src' is smaller than 'dst', it starts from the beginning of 'src'.
+// If 'src' is smaller than 'dst', XOR starts from the beginning of 'src'.
 func circleXOR(dst, src []byte) {
 	srcLen := len(src)
 	for i := range dst {
