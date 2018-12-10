@@ -92,8 +92,8 @@ type GetObject struct {
 }
 
 // ExtractAllowedSenderObjectAndRole implements interface method
-func (getObject *GetObject) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &getObject.Head, core.DynamicRoleVirtualExecutor
+func (getObj *GetObject) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &getObj.Head, core.DynamicRoleVirtualExecutor
 }
 
 // ExtractRole returns role for this event
@@ -107,7 +107,7 @@ func (getObj *GetObject) ExtractTarget() *core.RecordRef {
 }
 
 // Type implementation of Message interface.
-func (e *GetObject) Type() core.MessageType {
+func (getObj *GetObject) Type() core.MessageType {
 	return core.TypeGetObject
 }
 
@@ -176,8 +176,8 @@ type RegisterChild struct {
 }
 
 // ExtractAllowedSenderObjectAndRole implements interface method
-func (gc *RegisterChild) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &gc.Child, core.DynamicRoleVirtualExecutor
+func (rc *RegisterChild) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &rc.Child, core.DynamicRoleVirtualExecutor
 }
 
 // ExtractRole returns role for this event
@@ -191,7 +191,7 @@ func (rc *RegisterChild) ExtractTarget() *core.RecordRef {
 }
 
 // Type implementation of Message interface.
-func (e *RegisterChild) Type() core.MessageType {
+func (rc *RegisterChild) Type() core.MessageType {
 	return core.TypeRegisterChild
 }
 
@@ -330,8 +330,8 @@ func (*GetObjectIndex) ExtractRole() core.DynamicRole {
 }
 
 // ExtractTarget returns of target of this event.
-func (goi *GetObjectIndex) ExtractTarget() *core.RecordRef {
-	return &goi.Object
+func (getObjectIndex *GetObjectIndex) ExtractTarget() *core.RecordRef {
+	return &getObjectIndex.Object
 }
 
 // Type implementation of Message interface.

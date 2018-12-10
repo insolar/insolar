@@ -238,21 +238,21 @@ func (*ValidationResults) ExtractRole() core.DynamicRole {
 }
 
 // ExtractTarget returns of target of this event.
-func (vc *ValidationResults) ExtractTarget() *core.RecordRef {
-	return &vc.RecordRef
+func (vr *ValidationResults) ExtractTarget() *core.RecordRef {
+	return &vr.RecordRef
 }
 
-func (m *ValidationResults) Type() core.MessageType {
+func (vr *ValidationResults) Type() core.MessageType {
 	return core.TypeValidationResults
 }
 
 // TODO change after changing pulsar
-func (m *ValidationResults) GetCaller() *core.RecordRef {
-	return &m.Caller // TODO actually it's not right. There is no caller.
+func (vr *ValidationResults) GetCaller() *core.RecordRef {
+	return &vr.Caller // TODO actually it's not right. There is no caller.
 }
 
-func (m *ValidationResults) GetReference() core.RecordRef {
-	return m.RecordRef
+func (vr *ValidationResults) GetReference() core.RecordRef {
+	return vr.RecordRef
 }
 
 var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
