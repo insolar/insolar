@@ -33,6 +33,6 @@ type Coordinator interface {
 	// SetPulse uses PulseManager component for saving pulse info
 	SetPulse(ctx context.Context, pulse core.Pulse) error
 
-	// signCert is used by MsgBus handler for signing certificate
+	// signCertHandler is used by MsgBus handler for signing certificate
 	signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error)
 }
