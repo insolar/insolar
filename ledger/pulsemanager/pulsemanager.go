@@ -21,16 +21,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/utils/backoff"
 )
@@ -108,7 +108,7 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 }
 
 func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Pulse) (
-	drop *jetdrop.JetDrop,
+	drop *jet.JetDrop,
 	dropSerialized []byte,
 	messages [][]byte,
 	err error,
@@ -127,7 +127,7 @@ func (m *PulseManager) createDrop(ctx context.Context, latestPulse *storage.Puls
 		return nil, nil, nil, err
 	}
 
-	dropSerialized, err = jetdrop.Encode(drop)
+	dropSerialized, err = jet.Encode(drop)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -151,7 +151,7 @@ func (m *PulseManager) processDrop(ctx context.Context, latestPulse *storage.Pul
 func (m *PulseManager) processRecentObjects(
 	ctx context.Context,
 	latestPulse *storage.Pulse,
-	drop *jetdrop.JetDrop,
+	drop *jet.JetDrop,
 	dropSerialized []byte,
 ) error {
 	logger := inslogger.FromContext(ctx)

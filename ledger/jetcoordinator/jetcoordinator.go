@@ -17,19 +17,21 @@
 package jetcoordinator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
 	db                         *storage.DB
-	rootJetNode                *JetNode
 	roleCounts                 map[core.DynamicRole]int
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
@@ -37,20 +39,7 @@ type JetCoordinator struct {
 
 // NewJetCoordinator creates new coordinator instance.
 func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) *JetCoordinator {
-	jc := JetCoordinator{
-		db: db,
-		rootJetNode: &JetNode{
-			ref: core.RecordRef{},
-			left: &JetNode{
-				left:  &JetNode{ref: core.RecordRef{}},
-				right: &JetNode{ref: core.RecordRef{}},
-			},
-			right: &JetNode{
-				left:  &JetNode{ref: core.RecordRef{}},
-				right: &JetNode{ref: core.RecordRef{}},
-			},
-		},
-	}
+	jc := JetCoordinator{db: db}
 	jc.loadConfig(conf)
 
 	return &jc
@@ -100,24 +89,96 @@ func (jc *JetCoordinator) QueryRole(
 	if len(candidates) == 0 {
 		return nil, errors.New(fmt.Sprintf("no candidates for role %d", role))
 	}
+
 	count, ok := jc.roleCounts[role]
 	if !ok {
 		return nil, errors.New("no candidate count for this role")
 	}
 
-	selected, err := selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, candidates, count)
-	if err != nil {
-		return nil, err
+	if obj == nil {
+		return refsByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy[:], candidates, count)
 	}
 
-	return selected, nil
-}
+	if role == core.DynamicRoleLightExecutor {
+		return jc.getNodesViaJet(ctx, pulseData.Pulse, candidates, obj, count)
+	}
 
-func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
-	return jc.rootJetNode.GetContaining(&objRef)
+	return jc.getNodesViaEntropy(ctx, pulseData.Pulse, candidates, obj, count)
 }
 
 // GetActiveNodes return active nodes for specified pulse.
 func (jc *JetCoordinator) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
 	return jc.db.GetActiveNodes(pulse)
+}
+
+func (jc *JetCoordinator) getNodesViaEntropy(
+	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef, count int,
+) ([]core.RecordRef, error) {
+	h := jc.PlatformCryptographyScheme.ReferenceHasher()
+	_, err := h.Write(pulse.Entropy[:])
+	if err != nil {
+		return nil, err
+	}
+	_, err = h.Write(obj.Record()[:])
+	if err != nil {
+		return nil, err
+	}
+	nodes, err := refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, count)
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
+func (jc *JetCoordinator) getNodesViaJet(
+	ctx context.Context, pulse core.Pulse, candidates []core.RecordRef, obj *core.RecordRef, count int,
+) ([]core.RecordRef, error) {
+	// Find a jet for the object.
+	jetTree, err := jc.db.GetJetTree(ctx, pulse.PulseNumber)
+	if err != nil {
+		return nil, err
+	}
+	jet := jetTree.Find(obj.Record().Hash(), pulse.PulseNumber)
+	if jet == nil {
+		return nil, errors.New("failed to find jet")
+	}
+
+	// Find a node for the jet.
+	h := jc.PlatformCryptographyScheme.ReferenceHasher()
+	_, err = h.Write(pulse.Entropy[:])
+	if err != nil {
+		return nil, err
+	}
+	_, err = h.Write(jet.Prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	return refsByEntropy(jc.PlatformCryptographyScheme, h.Sum(nil), candidates, count)
+}
+
+func refsByEntropy(
+	scheme core.PlatformCryptographyScheme,
+	e []byte,
+	values []core.RecordRef,
+	count int,
+) ([]core.RecordRef, error) {
+	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
+	sort.SliceStable(values, func(i, j int) bool {
+		return bytes.Compare(values[i][:], values[j][:]) < 0
+	})
+	in := make([]interface{}, 0, len(values))
+	for _, value := range values {
+		in = append(in, interface{}(value))
+	}
+
+	res, err := entropy.SelectByEntropy(scheme, e, in, count)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]core.RecordRef, 0, len(res))
+	for _, value := range res {
+		out = append(out, value.(core.RecordRef))
+	}
+	return out, nil
 }
