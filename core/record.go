@@ -75,12 +75,23 @@ func (id *RecordID) Equal(other *RecordID) bool {
 	return *id == *other
 }
 
+// NewIDFromBase58 deserializes RecordID from base58 encoded string.
+func NewIDFromBase58(str string) (*RecordID, error) {
+	decoded := base58.Decode(str)
+	if len(decoded) != RecordIDSize {
+		return nil, errors.New("bad RecordID size")
+	}
+	var id RecordID
+	copy(id[:], decoded)
+	return &id, nil
+}
+
 // MarshalJSON serializes ID into JSON.
 func (id *RecordID) MarshalJSON() ([]byte, error) {
 	if id == nil {
 		return json.Marshal(nil)
 	}
-	return json.Marshal(base58.Encode(id[:]))
+	return json.Marshal(id.String())
 }
 
 // RecordRef is a unified record reference.
