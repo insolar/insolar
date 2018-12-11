@@ -31,7 +31,6 @@ type distributor struct {
 	bootstrapHosts []*host.Host
 }
 
-func NewDistributor(conf configuration.PulseDistributor, transport transport.Transport) (core.PulseDistributor, error) {
 func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor, error) {
 	return &distributor{
 	}, nil
