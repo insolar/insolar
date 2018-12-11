@@ -31,7 +31,7 @@ func mockNodeNetwork(t *testing.T) *network.NodeNetworkMock {
 
 func mockSwitcherWorkAround(t *testing.T, isBootstrapped bool) *network.SwitcherWorkAroundMock {
 	swaMock := network.NewSwitcherWorkAroundMock(t)
-	swaMock.IsBootstrapped = func() bool {
+	swaMock.IsBootstrappedFunc = func() bool {
 		return isBootstrapped
 	}
 	return swaMock
