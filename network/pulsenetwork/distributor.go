@@ -48,6 +48,17 @@ func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor,
 		bootstrapHosts: bootstrapHosts,
 	}, nil
 }
+
+func (d *distributor) Start(ctx context.Context) error {
+	pulsarHost, err := host.NewHost(d.Transport.PublicAddress())
+	if err != nil {
+		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
+	}
+	pulsarHost.NodeID = core.RecordRef{}
+
+	return nil
+}
+
 func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 	panic("not implemented")
 func (d *distributor) pause(ctx context.Context) {
