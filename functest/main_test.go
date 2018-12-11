@@ -53,7 +53,6 @@ var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 var insolarPath = filepath.Join(testdataPath(), "insolar")
-var insolardPath = filepath.Join(testdataPath(), "insolard")
 
 var insolarRootMemberKeysPath = filepath.Join("../scripts/insolard/configs", insolarRootMemberKeys)
 
