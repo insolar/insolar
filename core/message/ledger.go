@@ -227,7 +227,9 @@ func (e *GetChildren) Type() core.MessageType {
 // JetDrop spreads jet drop
 type JetDrop struct {
 	ledgerMessage
-	Jet         core.RecordRef
+
+	Jet core.RecordID
+
 	Drop        []byte
 	Messages    [][]byte
 	PulseNumber core.PulseNumber
@@ -246,7 +248,7 @@ func (*JetDrop) DefaultRole() core.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (jd *JetDrop) DefaultTarget() *core.RecordRef {
-	return &jd.Jet
+	return core.NewRecordRef(core.RecordID{}, jd.Jet)
 }
 
 // Type implementation of Message interface.
