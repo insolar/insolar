@@ -75,20 +75,15 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	})
 
 	t.Run("material returns correct nodes", func(t *testing.T) {
+		objID := core.NewRecordID(0, []byte{1, 42, 123})
 		jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleLightExecutor: 1}
-		err := db.SetJetTree(ctx, 0, &jet.Tree{
-			Head: &jet.Jet{
-				Left: &jet.Jet{
-					Left: &jet.Jet{},
-				},
-			},
-		})
+		tree := jet.NewTree()
+		tree.Update(*objID)
+		err := db.SetJetTree(ctx, 0, tree)
 		require.NoError(t, err)
-		obj := core.RecordRef{}
-		obj.SetRecord(*core.NewRecordID(0, []byte{1, 42, 123}))
 		nodeNet.GetActiveNodesByRoleMock.Expect(core.DynamicRoleLightExecutor).Return(nodes)
 
-		selected, err := jc.QueryRole(ctx, core.DynamicRoleLightExecutor, obj.Record(), 0)
+		selected, err := jc.QueryRole(ctx, core.DynamicRoleLightExecutor, objID, 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(selected))
 		// Indexes are hard-coded from previously calculated values.
