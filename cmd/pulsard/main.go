@@ -110,7 +110,6 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
-		panic(err)
 	}
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 	cryptographyService := cryptography.NewCryptographyService()
