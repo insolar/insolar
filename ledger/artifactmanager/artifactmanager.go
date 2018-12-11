@@ -20,6 +20,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -65,6 +66,7 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 func (m *LedgerArtifactManager) RegisterRequest(
 	ctx context.Context, parcel core.Parcel,
 ) (*core.RecordID, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.RegisterRequest starts ...")
 	var err error
 	defer instrument(ctx, "RegisterRequest").err(&err).end()
 
@@ -78,7 +80,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		&record.CallRequest{
 			Payload: message.ParcelToBytes(parcel),
 		},
-		message.ExtractTarget(parcel.Message()),
+		*parcel.Message().DefaultTarget(),
 		currentPulse.Pulse,
 	)
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
@@ -90,6 +92,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 func (m *LedgerArtifactManager) GetCode(
 	ctx context.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetCode starts ...")
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
 
@@ -133,6 +136,7 @@ func (m *LedgerArtifactManager) GetObject(
 	state *core.RecordID,
 	approved bool,
 ) (core.ObjectDescriptor, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetObject starts ...")
 	var (
 		desc *ObjectDescriptor
 		err  error
@@ -182,6 +186,7 @@ func (m *LedgerArtifactManager) GetObject(
 func (m *LedgerArtifactManager) GetDelegate(
 	ctx context.Context, head, asType core.RecordRef,
 ) (*core.RecordRef, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetDelegate starts ...")
 	var err error
 	defer instrument(ctx, "GetDelegate").err(&err).end()
 
@@ -429,6 +434,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 	isValid bool,
 	validationMessages []core.Message,
 ) error {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.RegisterValidation starts ...")
 	var err error
 	defer instrument(ctx, "RegisterValidation").err(&err).end()
 
@@ -558,6 +564,7 @@ func (m *LedgerArtifactManager) updateObject(
 	code *core.RecordRef,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.updateObject starts ...")
 	var (
 		image *core.RecordRef
 		err   error
@@ -623,6 +630,7 @@ func (m *LedgerArtifactManager) setRecord(
 	target core.RecordRef,
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setRecord starts ...")
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.SetRecord{
@@ -651,6 +659,7 @@ func (m *LedgerArtifactManager) setBlob(
 	target core.RecordRef,
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setBlob starts ...")
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.SetBlob{
@@ -680,6 +689,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	memory []byte,
 	currentPulse core.Pulse,
 ) (*reply.Object, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendUpdateObject starts ...")
 	_, err := m.bus(ctx).Send(
 		ctx,
 		&message.SetBlob{
@@ -722,6 +732,7 @@ func (m *LedgerArtifactManager) registerChild(
 	asType *core.RecordRef,
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.registerChild starts ...")
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.RegisterChild{
@@ -751,6 +762,7 @@ func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
 }
 
 func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg core.Message, currentPulse core.Pulse) (core.Reply, error) {
+	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
 	rep, err := m.bus(ctx).Send(ctx, msg, currentPulse, nil)
 	if err != nil {
 		return nil, err
