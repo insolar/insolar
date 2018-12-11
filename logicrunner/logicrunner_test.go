@@ -837,16 +837,21 @@ func New(n int) (*Child, error) {
 	err = cb.Build(map[string]string{"contract": goContract})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
+
+	ref1, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+	require.NoError(t, err)
+
 	contractID, err := am.RegisterRequest(
 		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")}},
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: *ref1}},
 	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*contract,
 		*am.GenesisRef(),
 		*cb.Prototypes["contract"],
@@ -901,16 +906,19 @@ func (c *Contract) Rand() (int, error) {
 	err := cb.Build(map[string]string{"contract": goContract})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
+	ref1, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(
 		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")}},
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: *ref1}},
 	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*contract,
 		*am.GenesisRef(),
 		*cb.Prototypes["contract"],
@@ -997,13 +1005,14 @@ func (r *Two) NoError() error {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*contract,
 		*am.GenesisRef(),
 		*cb.Prototypes["one"],
@@ -1083,13 +1092,14 @@ func (r *Two) Hello() (*string, error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*contract,
 		*am.GenesisRef(),
 		*cb.Prototypes["one"],
@@ -1120,8 +1130,11 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 
 	buf := goplugintestutils.CBORMarshal(s.t, params)
 
+	memberRef, err := core.NewRefFromBase58(s.member)
+	require.NoError(s.t, err)
+
 	args, err := core.MarshalArgs(
-		core.NewRefFromBase58(s.member),
+		*memberRef,
 		method,
 		buf,
 		seed)
@@ -1132,7 +1145,7 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 	assert.NoError(s.t, err)
 
 	res, err := executeMethod(
-		ctx, s.lr, pm, core.NewRefFromBase58(s.member), 0,
+		ctx, s.lr, pm, *memberRef, 0,
 		"Call", rootDomain, method, buf, seed, signature.Bytes(),
 	)
 	assert.NoError(s.t, err, "contract call")
@@ -1338,16 +1351,19 @@ func New(n int) (*Child, error) {
 	err := cb.Build(map[string]string{"child": goChild, "contract": goContract})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
+	ref1, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(
 		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")}},
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: *ref1}},
 	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*contract,
 		*am.GenesisRef(),
 		*cb.Prototypes["contract"],
@@ -1449,13 +1465,14 @@ func New() (*Two, error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*contract,
 		*am.GenesisRef(),
 		*cb.Prototypes["one"],
@@ -1514,15 +1531,18 @@ func (r *One) Recursive() (error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
+	ref1, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(
 		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("recursive")}},
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: *ref1}},
 	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
-		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["recursive"], false,
+		ctx, *domain, *contract, *am.GenesisRef(), *cb.Prototypes["recursive"], false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
@@ -1649,13 +1669,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	assert.NotEqual(t, "", memberRef)
 
 	// Call CreateAllowance method in custom contract
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*contract,
 		*am.GenesisRef(),
 		*cb.Prototypes["one"],
@@ -1786,15 +1807,18 @@ func (r *One) ShortSleep() (error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
+	ref1, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(
 		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("one")}},
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: *ref1}},
 	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
-		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
+		ctx, *domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
@@ -1885,16 +1909,18 @@ func (r *One) EmptyMethod() (error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	protoRef := core.NewRefFromBase58("one")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
+	protoRef, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(
 		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: protoRef}},
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: *protoRef}},
 	)
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	object, err := am.ActivateObject(
-		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
+		ctx, *domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
 	assert.NoError(t, err, "create contract")
