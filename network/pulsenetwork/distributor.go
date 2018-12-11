@@ -15,10 +15,15 @@
  */
 
 package pulsenetwork
+
+import (
 type distributor struct {
 }
 
 func NewDistributor(conf configuration.PulseDistributor, transport transport.Transport) (core.PulseDistributor, error) {
 	return &distributor{
 	}, nil
+}
+func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
+	panic("not implemented")
 }
