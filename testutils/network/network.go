@@ -24,7 +24,8 @@ type testNetwork struct {
 }
 
 func (n *testNetwork) GetNodeID() core.RecordRef {
-	return core.NewRefFromBase58("v1")
+	ref, _ := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+	return *ref
 }
 
 func (n *testNetwork) GetGlobuleID() core.GlobuleID {
