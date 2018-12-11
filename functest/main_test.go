@@ -56,7 +56,6 @@ var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
 
 var insolarRootMemberKeysPath = filepath.Join("../scripts/insolard/configs", insolarRootMemberKeys)
-var insolarNodesKeysPath = filepath.Join(testdataPath(), "discovery_node_")
 
 var info infoResponse
 var root user
