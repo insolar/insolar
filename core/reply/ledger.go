@@ -90,7 +90,7 @@ func (e *ObjectIndex) Type() core.ReplyType {
 
 // JetMiss is returned for miscalculated jets due to incomplete jet tree.
 type JetMiss struct {
-	Depth int
+	JetID core.RecordID
 }
 
 // Type implementation of Reply interface.
