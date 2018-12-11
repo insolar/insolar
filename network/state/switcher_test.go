@@ -17,9 +17,11 @@
 package state
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/require"
 )
@@ -49,4 +51,14 @@ func TestNewNetworkSwitcher(t *testing.T) {
 
 	require.Equal(t, nodeNet, switcher.NodeNetwork)
 	require.Equal(t, switcherWorkAround, switcher.SwitcherWorkAround)
+	require.Equal(t, core.NoNetworkState, switcher.state)
+	require.Equal(t, sync.RWMutex{}, switcher.stateLock)
+}
+
+func TestGetState(t *testing.T) {
+	switcher, err := NewNetworkSwitcher()
+	require.NoError(t, err)
+
+	state := switcher.GetState()
+	require.Equal(t, core.NoNetworkState, state)
 }
