@@ -139,6 +139,8 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cm.Inject(nk, recentMock, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	err = cm.Init(ctx)
+	assert.NoError(t, err)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
