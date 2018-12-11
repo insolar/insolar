@@ -884,18 +884,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		h.Recent.AddObjectWithTLL(id, meta.TTL, isMine)
 	}
 
-	err = h.db.SetJetTree(ctx, msg.PulseNumber, &jet.Tree{
-		Head: &jet.Jet{
-			Left: &jet.Jet{
-				Left:  &jet.Jet{},
-				Right: &jet.Jet{},
-			},
-			Right: &jet.Jet{
-				Left:  &jet.Jet{},
-				Right: &jet.Jet{},
-			},
-		},
-	})
+	err = h.db.SetJetTree(ctx, msg.PulseNumber, &jet.PredefinedTree)
 	if err != nil {
 		return nil, err
 	}
