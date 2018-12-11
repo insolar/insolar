@@ -173,7 +173,7 @@ func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 }
 
 // SaveJets stores a list of jets of the current node
-func (db *DB) SaveJet(ctx context.Context, newJet jet.JetID) error {
+func (db *DB) SaveJet(ctx context.Context, newJet jet.ID) error {
 	db.addJetLock.Lock()
 	defer db.addJetLock.Unlock()
 
@@ -184,9 +184,9 @@ func (db *DB) SaveJet(ctx context.Context, newJet jet.JetID) error {
 		return err
 	}
 
-	var jets jet.JetIDSet
+	var jets jet.IDSet
 	if err == ErrNotFound {
-		jets = map[jet.JetID]struct{}{}
+		jets = map[jet.ID]struct{}{}
 	} else {
 		dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
 		err = dec.Decode(jets)
@@ -200,7 +200,7 @@ func (db *DB) SaveJet(ctx context.Context, newJet jet.JetID) error {
 }
 
 // GetJets returns jets of the current node
-func (db *DB) GetJets(ctx context.Context) (jet.JetIDSet, error) {
+func (db *DB) GetJets(ctx context.Context) (jet.IDSet, error) {
 	db.addJetLock.RLock()
 	defer db.addJetLock.RUnlock()
 
@@ -211,8 +211,8 @@ func (db *DB) GetJets(ctx context.Context) (jet.JetIDSet, error) {
 	}
 
 	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
-	var jets jet.JetIDSet
-	err = dec.Decode(jets)
+	var jets jet.IDSet
+	err = dec.Decode(&jets)
 	if err != nil {
 		return nil, err
 	}
