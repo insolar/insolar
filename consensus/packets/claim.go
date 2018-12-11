@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 type ClaimType uint8
@@ -178,4 +179,27 @@ func getClaimSize(claim ReferendumClaim) uint16 {
 
 func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
 	return getClaimSize(claim) + claimHeaderSize
+}
+
+func NodeToClaim(node core.Node) (*NodeJoinClaim, error) {
+	keyProc := platformpolicy.NewKeyProcessor()
+	exportedKey, err := keyProc.ExportPublicKey(node.PublicKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to export a public key")
+	}
+	var keyData [PublicKeyLength]byte
+	copy(keyData[:], exportedKey[:PublicKeyLength])
+
+	var s [SignatureLength]byte
+	return &NodeJoinClaim{
+		ShortNodeID:             node.ShortID(),
+		RelayNodeID:             node.ShortID(),
+		ProtocolVersionAndFlags: 0,
+		JoinsAfter:              0,
+		NodeRoleRecID:           node.Role(),
+		NodeRef:                 node.ID(),
+		NodePK:                  keyData,
+		NodeAddress:             NewNodeAddress(node.PhysicalAddress()),
+		Signature:               s,
+	}, nil
 }

@@ -29,8 +29,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/insolar/insolar/platformpolicy"
-
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )
@@ -320,35 +318,8 @@ func (nk *nodekeeper) reindex() {
 	}
 }
 
-func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
-	key, err := nk.Cryptography.GetPublicKey()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to get a public key")
-	}
-	keyProc := platformpolicy.NewKeyProcessor()
-	exportedKey, err := keyProc.ExportPublicKey(key)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to export a public key")
-	}
-	var keyData [consensus.PublicKeyLength]byte
-	copy(keyData[:], exportedKey[:consensus.PublicKeyLength])
-
-	var s [consensus.SignatureLength]byte
-	return &consensus.NodeJoinClaim{
-		ShortNodeID:             nk.origin.ShortID(),
-		RelayNodeID:             nk.origin.ShortID(),
-		ProtocolVersionAndFlags: 0,
-		JoinsAfter:              0,
-		NodeRoleRecID:           nk.origin.Role(),
-		NodeRef:                 nk.origin.ID(),
-		NodePK:                  keyData,
-		NodeAddress:             consensus.NewNodeAddress(nk.origin.PhysicalAddress()),
-		Signature:               s,
-	}, nil
-}
-
 func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
-	claim, err := nk.nodeToClaim()
+	claim, err := consensus.NodeToClaim(nk.origin)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +338,7 @@ func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
 
 func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
 	claim := consensus.NodeAnnounceClaim{}
-	joinClaim, err := nk.nodeToClaim()
+	joinClaim, err := consensus.NodeToClaim(nk.origin)
 	if err != nil {
 		return nil, err
 	}
