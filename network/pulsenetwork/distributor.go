@@ -41,4 +41,14 @@ func (d *distributor) pause(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Pause ] Pause distribution, stopping transport")
 	d.transport.Stop()
 }
+
+func (d *distributor) resume(ctx context.Context) {
+	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
+
+	go func(ctx context.Context, t transport.Transport) {
+		err := t.Start(ctx)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+		}
+	}(ctx, d.transport)
 }
