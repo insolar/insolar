@@ -19,7 +19,9 @@ package state
 import (
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/require"
 )
 
 func mockNodeNetwork(t *testing.T) *network.NodeNetworkMock {
@@ -36,5 +38,15 @@ func mockSwitcherWorkAround(t *testing.T, isBootstrapped bool) *network.Switcher
 }
 
 func TestNewNetworkSwitcher(t *testing.T) {
+	nodeNet := network.NewNodeNetworkMock(t)
+	switcherWorkAround := mockSwitcherWorkAround(t, false)
 
+	switcher, err := NewNetworkSwitcher()
+	require.NoError(t, err)
+
+	cm := &component.Manager{}
+	cm.Inject(nodeNet, switcherWorkAround, switcher)
+
+	require.Equal(t, nodeNet, switcher.NodeNetwork)
+	require.Equal(t, switcherWorkAround, switcher.SwitcherWorkAround)
 }
