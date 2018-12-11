@@ -52,13 +52,73 @@ type testSuite struct {
 	networkPort    int
 }
 
-func NewTestSuite() *testSuite {
+func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 	return &testSuite{
-		Suite:        suite.Suite{},
-		ctx:          context.Background(),
-		networkNodes: make([]networkNode, 0),
-		networkPort:  10001,
+		Suite:          suite.Suite{},
+		ctx:            context.Background(),
+		networkPort:    10001,
+		bootstrapNodes: make([]networkNode, bootstrapCount),
+		networkNodes:   make([]networkNode, nodesCount),
 	}
+}
+
+// SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
+func (s *testSuite) SetupSuite() {
+	log.Infoln("SetupSuite")
+	for i := 0; i < cap(s.bootstrapNodes); i++ {
+		// TODO: make valid certs for bootstrap
+		s.bootstrapNodes = append(s.bootstrapNodes, s.createNetworkNode(s.T(), Disable))
+	}
+
+	for i := 0; i < cap(s.networkNodes); i++ {
+		s.networkNodes = append(s.networkNodes, s.createNetworkNode(s.T(), Disable))
+	}
+	log.Infoln("Init bootstrap nodes")
+	for _, n := range s.bootstrapNodes {
+		err := n.componentManager.Init(s.ctx)
+		s.NoError(err)
+	}
+	log.Infoln("Init network nodes")
+	for _, n := range s.networkNodes {
+		err := n.componentManager.Init(s.ctx)
+		s.NoError(err)
+	}
+
+	log.Infoln("Start bootstrap nodes")
+	for _, n := range s.bootstrapNodes {
+		err := n.componentManager.Start(s.ctx)
+		s.NoError(err)
+	}
+	log.Infoln("Start network nodes")
+	for _, n := range s.networkNodes {
+		err := n.componentManager.Start(s.ctx)
+		s.NoError(err)
+	}
+
+	//TODO: wait for first consensus
+	// active nodes count verification
+	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount(), len(activeNodes))
+}
+
+// TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
+func (s *testSuite) TearDownSuite() {
+	log.Infoln("TearDownSuite")
+	log.Infoln("Stop network nodes")
+	for _, n := range s.networkNodes {
+		err := n.componentManager.Stop(s.ctx)
+		s.NoError(err)
+	}
+	log.Infoln("Stop bootstrap nodes")
+	for _, n := range s.bootstrapNodes {
+		err := n.componentManager.Stop(s.ctx)
+		s.NoError(err)
+	}
+}
+
+// nodesCount returns count of nodes in network withouf testNode
+func (s *testSuite) nodesCount() int {
+	return len(s.bootstrapNodes) + len(s.networkNodes)
 }
 
 type PhaseTimeOut uint8
@@ -69,43 +129,23 @@ const (
 	Full
 )
 
-func (s *testSuite) InitNodes() {
-	for _, n := range s.bootstrapNodes {
-		err := n.componentManager.Init(s.ctx)
-		s.NoError(err)
-	}
-	log.Info("========== Bootstrap nodes inited")
-	<-time.After(time.Second * 1)
-
+func (s *testSuite) InitTestNode() {
 	if s.testNode.componentManager != nil {
 		err := s.testNode.componentManager.Init(s.ctx)
 		s.NoError(err)
 	}
 }
 
-func (s *testSuite) StartNodes() {
-	for _, n := range s.bootstrapNodes {
-		err := n.componentManager.Start(s.ctx)
-		s.NoError(err)
-	}
-	log.Info("========== Bootstrap nodes started")
-	<-time.After(time.Second * 1)
-
+func (s *testSuite) StartTestNode() {
 	if s.testNode.componentManager != nil {
 		err := s.testNode.componentManager.Init(s.ctx)
 		s.NoError(err)
 		err = s.testNode.componentManager.Start(s.ctx)
 		s.NoError(err)
 	}
-
 }
 
-func (s *testSuite) StopNodes() {
-	for _, n := range s.networkNodes {
-		err := n.componentManager.Stop(s.ctx)
-		s.NoError(err)
-	}
-
+func (s *testSuite) StopTestNode() {
 	if s.testNode.componentManager != nil {
 		err := s.testNode.componentManager.Stop(s.ctx)
 		s.NoError(err)
@@ -227,33 +267,27 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 }
 
 func (s *testSuite) TestNodeConnect() {
-	// s.T().Skip("will be available after phase result fix !")
 	phasesResult := make(chan error)
-	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
-	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
-
 	s.testNode = s.createNetworkNode(s.T(), Disable)
+	s.InitTestNode()
+	s.StartTestNode()
 
-	s.InitNodes()
-	s.StartNodes()
 	res := <-phasesResult
 	s.NoError(res)
 	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(2, len(activeNodes))
+	s.Equal(s.nodesCount()+1, len(activeNodes))
 	// teardown
 	<-time.After(time.Second * 5)
-	s.StopNodes()
+	s.StopTestNode()
 }
 
 func (s *testSuite) TestNodeLeave() {
-	phasesResult := make(chan error)
-	bootstrapNode1 := s.createNetworkNode(s.T(), Disable)
-	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
 
 	s.testNode = s.createNetworkNode(s.T(), Disable)
 
-	s.InitNodes()
-	s.StartNodes()
+	phasesResult := make(chan error)
+	s.InitTestNode()
+	s.StartTestNode()
 	res := <-phasesResult
 	s.NoError(res)
 	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
@@ -261,19 +295,17 @@ func (s *testSuite) TestNodeLeave() {
 
 	// teardown
 	<-time.After(time.Second * 5)
-	res = bootstrapNode1.componentManager.Stop(context.Background())
-	s.NoError(res)
 
 	res = <-phasesResult
 	s.NoError(res)
 	activeNodes = s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(1, len(activeNodes))
+	s.Equal(s.nodesCount(), len(activeNodes))
 
-	s.StopNodes()
+	s.StopTestNode()
 }
 
 func TestServiceNetworkIntegration(t *testing.T) {
-	s := NewTestSuite()
+	s := NewTestSuite(1, 0)
 	suite.Run(t, s)
 }
 
@@ -299,15 +331,15 @@ func (s *testSuite) TestFullTimeOut() {
 		s.networkNodes = append(s.networkNodes, s.createNetworkNode(s.T(), Disable))
 	}
 
-	s.InitNodes()
-	s.StartNodes()
+	s.InitTestNode()
+	s.StartTestNode()
 	res := <-phasesResult
 	s.NoError(res)
 	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(1, len(activeNodes))
 	// teardown
 	<-time.After(time.Second * 5)
-	s.StopNodes()
+	s.StopTestNode()
 }
 
 // Partitial timeout
@@ -324,15 +356,15 @@ func (s *testSuite) TestPartialTimeOut() {
 		s.networkNodes = append(s.networkNodes, s.createNetworkNode(s.T(), Disable))
 	}
 
-	s.InitNodes()
-	s.StartNodes()
+	s.InitTestNode()
+	s.StartTestNode()
 	res := <-phasesResult
 	s.NoError(res)
 	// activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
 	// s.Equal(1, len(activeNodes))	// TODO: do test check
 	// teardown
 	<-time.After(time.Second * 5)
-	s.StopNodes()
+	s.StopTestNode()
 }
 
 type PartialTimeoutPhaseManager struct {
