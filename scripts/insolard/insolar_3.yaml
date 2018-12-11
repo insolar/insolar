@@ -26,19 +26,17 @@ ledger:
 log:
   level: Debug
   adapter: logrus
-stats:
-  listenaddress: 0.0.0.0:8080
 logicrunner:
   rpclisten: 127.0.0.1:38182
   builtin: {}
   goplugin:
     runnerlisten: 127.0.0.1:38181
 apirunner:
-  address: 127.0.0.1:19191
+  address: 127.0.0.1:19193
 pulsar:
   type: tcp
-  listenaddress: 0.0.0.0:8090
+  listenaddress: 0.0.0.0:8093
 keyspath: "scripts/insolard/nodes/3/keys.json"
 certificatepath: "scripts/insolard/nodes/3/cert.json"
 metrics:
-  listenaddress: 0.0.0.0:8080
+  listenaddress: 0.0.0.0:8083
