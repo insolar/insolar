@@ -22,9 +22,23 @@ resources:
     branch: master
     private_key: ((meta.github.sdk_key))
 
+- name: db-unloader
+  type: git
+  source:
+    uri: git@github.com:insolar/block-explorer-db-unloader.git
+    branch: master
+    private_key: ((meta.github.unloader_key))
+
+- name: db-loader
+  type: git
+  source:
+    uri: git@github.com:insolar/block-explorer-db-loader.git
+    branch: master
+    private_key: ((meta.github.loader_key))
+
 
 jobs:
-- name: build
+- name: build-sdk
   plan:
   - get: insolar-sdk-java
     trigger: true
@@ -35,19 +49,91 @@ jobs:
         type: docker-image
         source:
           repository: maven
+          tag: 3-jdk-12
       inputs:
       - name: insolar-sdk-java
+      outputs:
+      - name: artifacts
       run:
         path: sh
         args:
           - -exc
           - |
             cd insolar-sdk-java
-            mvn clean install
-            mvn clean package
+            #MAVEN_OPTS=-Djdk.net.URLClassPath.disableClassPathURLCheck=true
+            mvn -X install -DskipTests
             ls -alh
+            ls -alhR /root/.m2/repository/io/insolar/insolar-sdk-java/
+            cp /root/.m2/repository/io/insolar/insolar-sdk-java/*/*.jar ../artifacts/
+            cp /root/.m2/repository/io/insolar/insolar-sdk-java/*/*.pom ../artifacts/
   - put: nexus
     params:
-      file: task-output/example-webapp-*.jar
-      pom_file: source-code/pom.xml
+      file: artifacts/*.jar
+      pom_file: artifacts/*.pom
 
+- name: build-loader
+  plan:
+  - get: db-loader
+    trigger: true
+  - task: build-loader
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: maven
+          tag: 3-jdk-12
+      inputs:
+      - name: db-loader
+      outputs:
+      - name: artifacts
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cd db-loader
+            cat << EOF > /root/.m2/settings.xml
+            <servers>
+              <server>
+                  <id>Nexus</id>
+                  <username>((meta.nexus.username))</username>
+                  <password>((meta.nexus.password))</password>
+              </server>
+            </servers> 
+            EOF
+            mvn clean package
+            ls -alh
+            #  - put: nexus
+            #    params:
+            #      file: artifacts/*.jar
+            #      pom_file: artifacts/*.pom
+            #
+- name: build-unloader
+  plan:
+  - get: db-unloader
+    trigger: true
+  - task: build-unloader
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: maven
+          tag: 3-jdk-12
+      inputs:
+      - name: db-unloader
+      outputs:
+      - name: artifacts
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cd db-unloader
+            mvn clean package
+            ls -alh
+            #  - put: nexus
+            #    params:
+            #      file: artifacts/*.jar
+            #      pom_file: artifacts/*.pom

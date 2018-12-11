@@ -96,8 +96,9 @@ jobs:
              rm -Rf $GOPATH/src/github.com/insolar/insolar/vendor/* && mv /go/vendor $GOPATH/src/github.com/insolar/insolar/
              make pre-build
              make build
-             #make test_with_coverage
-             CGO_ENABLED=1 go test -count 1 --coverprofile=coverage.txt --covermode=atomic ./...
+             make test_with_coverage
+             #CGO_ENABLED=1 go test -count 1 --coverprofile=coverage.txt --covermode=atomic ./...
+             make functest
     on_success:
       aggregate:
       - put: pull-request-{{ pull.number }}
