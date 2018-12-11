@@ -22,8 +22,11 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
 
@@ -73,6 +76,31 @@ func (d *distributor) Start(ctx context.Context) error {
 
 func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 	panic("not implemented")
+func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
+	logger := inslogger.FromContext(ctx)
+	defer func() {
+		if x := recover(); x != nil {
+			logger.Errorf("sendPulseToHost failed with panic: %v", x)
+		}
+	}()
+
+	pb := packet.NewBuilder(d.pulsarHost)
+	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.Pulse).Build()
+	call, err := d.Transport.SendRequest(pulseRequest)
+	if err != nil {
+		return err
+	}
+	result, err := call.GetResult(d.pulseTimeout)
+	if err != nil {
+		return err
+	}
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
 func (d *distributor) pause(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Pause ] Pause distribution, stopping transport")
 	d.Transport.Stop()
