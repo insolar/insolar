@@ -119,10 +119,9 @@ func (jc *JetCoordinator) QueryRole(
 		if err != nil {
 			return nil, err
 		}
-		_, depth := jetTree.Find(objHash)
-
-		// Reset everything except prefix.
-		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, resetBits(objHash, depth+1)), candidates, count)
+		id := jetTree.Find(objHash)
+		_, prefix := id.Jet()
+		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, prefix), candidates, count)
 	}
 
 	return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, objHash), candidates, count)
