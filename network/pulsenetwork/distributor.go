@@ -17,7 +17,18 @@
 package pulsenetwork
 
 import (
+	"context"
+	"time"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/host"
+)
 type distributor struct {
+	transport transport.Transport
+
+	pulsarHost     *host.Host
+	bootstrapHosts []*host.Host
 }
 
 func NewDistributor(conf configuration.PulseDistributor, transport transport.Transport) (core.PulseDistributor, error) {
