@@ -351,7 +351,7 @@ func (lr *LogicRunner) executeOrValidate(
 type ObjectBody struct {
 	objDescriptor   core.ObjectDescriptor
 	Object          []byte
-	ClassHeadRef    *Ref
+	Prototype       *Ref
 	CodeMachineType core.MachineType
 	CodeRef         *Ref
 	Parent          *Ref
@@ -422,7 +422,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	es.objectbody = &ObjectBody{
 		objDescriptor:   objDesc,
 		Object:          objDesc.Memory(),
-		ClassHeadRef:    protoDesc.HeadRef(),
+		Prototype:       protoDesc.HeadRef(),
 		CodeMachineType: codeDesc.MachineType(),
 		CodeRef:         codeDesc.Ref(),
 		Parent:          objDesc.Parent(),
