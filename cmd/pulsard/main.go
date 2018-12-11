@@ -31,6 +31,8 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -115,9 +117,14 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	cryptographyService := cryptography.NewCryptographyService()
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
+	tp, err := transport.NewTransport(cfg.Pulsar.DistributionTransport, relay.NewProxy())
+	if err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
 	cm := &component.Manager{}
-	cm.Register(cryptographyScheme, keyStore, keyProcessor)
 	cm.Inject(cryptographyService)
+	cm.Register(cryptographyScheme, keyStore, keyProcessor, tp)
 
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
