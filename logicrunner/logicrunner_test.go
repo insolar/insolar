@@ -2096,3 +2096,96 @@ package main
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{uint64(100), nil}, r)
 }
+
+func TestPrototypeMismatch(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	testContract := `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/application/proxy/first"
+	"github.com/insolar/insolar/core"
+)
+
+type Contract struct {
+	foundation.BaseContract
+}
+
+func (c *Contract) Test(firstRef *core.RecordRef) (string, error) {
+	return first.GetObject(*firstRef).GetName()
+}
+`
+
+	// right contract
+	firstContract := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type First struct {
+	foundation.BaseContract
+}
+
+func (c *First) GetName() (string, error) {
+	return "first", nil
+}
+`
+
+	// malicious contract with same method signature and another behaviour
+	secondContract := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type First struct {
+	foundation.BaseContract
+}
+
+func (c *First) GetName() (string, error) {
+	return "YOU ARE ROBBED!", nil
+}
+`
+	ctx := context.TODO()
+	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{"test": testContract, "first": firstContract, "second": secondContract})
+	assert.NoError(t, err)
+
+	testObj := getObjectInstance(t, ctx, am, cb, "test")
+	secondObj := getObjectInstance(t, ctx, am, cb, "second")
+
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, secondObj, nil, "contract created")
+
+	resp, err := executeMethod(ctx, lr, pm, *testObj, 0, "Test", *secondObj)
+	assert.Error(t, err, "contract call") // TODO Require ERROR
+	assert.Contains(t, err.Error(), "try to call method of prototype as method of another prototype")
+	assert.Equal(t, nil, resp) // TODO remove
+
+	ValidateAllResults(t, ctx, lr, *testObj)
+}
+
+func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) *core.RecordRef {
+	domain := core.NewRefFromBase58("c1")
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}},
+	)
+	assert.NoError(t, err)
+	contract := getRefFromID(contractID)
+	_, err = am.ActivateObject(
+		ctx,
+		domain,
+		*contract,
+		*am.GenesisRef(),
+		*cb.Prototypes[contractName],
+		false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	return contract
+}
