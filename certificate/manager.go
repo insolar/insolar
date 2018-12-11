@@ -102,7 +102,7 @@ func NewManagerReadCertificateFromReader(publicKey crypto.PublicKey, keyProcesso
 }
 
 // NewManagerCertificateWithKeys generate manager with certificate from given keys
-// DEPRECATED, this method generates invalid certificate
+// DEPRECATED, this method generates invalid certificate, remove it after pulsar tests refactor
 func NewManagerCertificateWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*CertificateManager, error) {
 	cert, err := NewCertificatesWithKeys(publicKey, keyProcessor)
 	if err != nil {
