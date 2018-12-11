@@ -277,13 +277,7 @@ func waitForLaunch() error {
 }
 
 func setup() error {
-
-	err := deleteDirForData()
-	if err != nil {
-		fmt.Println("[ setup ] failed to remove data directory for func tests: ", err)
-	}
-
-	err = createDirForContracts()
+	err := createDirForContracts()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't create dirs for test: ")
 	}
