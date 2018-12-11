@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
-func TestHeavy_Sync(t *testing.T) {
+func TestHeavy_SyncBasic(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
@@ -114,4 +114,56 @@ func TestHeavy_Sync(t *testing.T) {
 	require.NoError(t, err, "store next+1 pulse")
 	err = sync.Stop(ctx, jetID, pnumNextPlus)
 	require.NoError(t, err, "stop next+1 range on new sync instance")
+}
+
+func TestHeavy_SyncByJet(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	var err error
+	var pnum core.PulseNumber
+	kvalues1 := []core.KV{
+		{K: []byte("1_11"), V: []byte("1_12")},
+	}
+	kvalues2 := []core.KV{
+		{K: []byte("2_21"), V: []byte("2_22")},
+	}
+
+	// TODO: call every case in subtest
+	jetID1 := testutils.RandomID()
+	jetID2 := jetID1
+	jetID2[0] ^= jetID2[0]
+
+	// prepare pulse helper
+	preparepulse := func(pn core.PulseNumber) {
+		pulse := core.Pulse{PulseNumber: pn}
+		// fmt.Printf("Store pulse: %v\n", pulse.PulseNumber)
+		err = db.AddPulse(ctx, pulse)
+		require.NoError(t, err)
+	}
+
+	sync := NewSync(db)
+
+	pnum = core.FirstPulseNumber
+	pnumNext := pnum + 1
+	preparepulse(pnum)
+	preparepulse(pnumNext) // should set correct next for previous pulse
+
+	err = sync.Start(ctx, jetID1, pnum)
+	require.NoError(t, err, "start from first pulse on empty storage, jet1")
+
+	err = sync.Start(ctx, jetID2, pnum)
+	require.NoError(t, err, "start from first pulse on empty storage, jet2")
+
+	err = sync.Store(ctx, jetID2, pnum, kvalues2)
+	require.NoError(t, err, "store jet2 pulse")
+
+	err = sync.Store(ctx, jetID1, pnum, kvalues1)
+	require.NoError(t, err, "store jet1 pulse")
+
+	// stop previous
+	err = sync.Stop(ctx, jetID1, pnum)
+	err = sync.Stop(ctx, jetID2, pnum)
+	require.NoError(t, err)
 }
