@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
 
@@ -337,6 +338,25 @@ func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read Signature")
 	}
+	return nil
+}
+
+func (nac *NodeAnnounceClaim) Update(nodeJoinerID core.RecordRef, crypto core.CryptographyService) error {
+	index, err := nac.BitSetMapper.RefToIndex(nodeJoinerID)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Update ] failed to map joiner node ID to bitset index")
+	}
+	nac.NodeJoinerIndex = uint16(index)
+	data, err := nac.SerializeRaw()
+	if err != nil {
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Update ] failed to serialize raw announce claim")
+	}
+	signature, err := crypto.Sign(data)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Update ] failed to sign announce claim")
+	}
+	sign := signature.Bytes()
+	copy(nac.Signature[:], sign[:SignatureLength])
 	return nil
 }
 

@@ -148,6 +148,9 @@ type NodeAnnounceClaim struct {
 	NodeAnnouncerIndex uint16
 	NodeJoinerIndex    uint16
 	NodeCount          uint16
+
+	// mapper is used to fill three fields above, is not serialized
+	BitSetMapper BitSetMapper
 }
 
 func (nac *NodeAnnounceClaim) Type() ClaimType {

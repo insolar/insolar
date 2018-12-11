@@ -74,8 +74,9 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	var success bool
+	var originClaim *packets.NodeAnnounceClaim
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
-		originClaim, err := fp.NodeKeeper.GetOriginAnnounceClaim()
+		originClaim, err = fp.NodeKeeper.GetOriginAnnounceClaim(fp.UnsyncList)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ FirstPhase ] Failed to get origin claim")
 		}
@@ -97,7 +98,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] failed to sign a packet")
 	}
-	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, &packet)
+	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results.")
 	}

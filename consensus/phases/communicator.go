@@ -36,6 +36,7 @@ type Communicator interface {
 	// ExchangePhase1 used in first consensus step to exchange data between participants
 	ExchangePhase1(
 		ctx context.Context,
+		originClaim *packets.NodeAnnounceClaim,
 		participants []core.Node,
 		packet *packets.Phase1Packet,
 	) (map[core.RecordRef]*packets.Phase1Packet, error)
@@ -112,9 +113,39 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, reques
 	}
 }
 
+func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.NodeAnnounceClaim,
+	participants []core.Node, packet *packets.Phase1Packet) error {
+
+	data := make(map[core.RecordRef][]byte)
+	for _, participant := range participants {
+		err := originClaim.Update(participant.ID(), nc.Cryptography)
+		if err != nil {
+			return errors.Wrap(err, "Failed to update claims before sending in phase1")
+		}
+		packetBuffer, err := packet.Serialize()
+		if err != nil {
+			return errors.Wrap(err, "Failed to serialize phase1 packet before sending")
+		}
+		data[participant.ID()] = packetBuffer
+	}
+
+	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
+	for node, buffer := range data {
+		request := requestBuilder.Type(types.Phase1).Data(buffer).Build()
+		go func(node core.RecordRef, request network.Request) {
+			err := nc.ConsensusNetwork.SendRequest(request, node)
+			if err != nil {
+				log.Errorln(err.Error())
+			}
+		}(node, request)
+	}
+	return nil
+}
+
 // ExchangePhase1 used in first consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangePhase1(
 	ctx context.Context,
+	originClaim *packets.NodeAnnounceClaim,
 	participants []core.Node,
 	packet *packets.Phase1Packet,
 ) (map[core.RecordRef]*packets.Phase1Packet, error) {
@@ -124,15 +155,32 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 
-	packetBuffer, err := packet.Serialize()
+	var responsePacket *packets.Phase1Packet
+
+	// awful, need rework
+	if originClaim == nil {
+		responsePacket = packet
+	} else {
+		responsePacket = &packets.Phase1Packet{}
+		*responsePacket = *packet
+		responsePacket.RemoveAnnounceClaim()
+	}
+
+	packetBuffer, err := responsePacket.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ExchangePhase1] Failed to serialize Phase1Packet.")
 	}
-
 	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
 	request := requestBuilder.Type(types.Phase1).Data(packetBuffer).Build()
 
-	nc.sendRequestToNodes(participants, request)
+	if originClaim == nil {
+		nc.sendRequestToNodes(participants, request)
+	} else {
+		err := nc.sendRequestToNodesWithOrigin(originClaim, participants, packet)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ExchangePhase1] Failed to send requests")
+		}
+	}
 
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	for {

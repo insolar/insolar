@@ -244,11 +244,14 @@ func (nk *nodekeeper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
 	nk.originLock.RLock()
 	defer nk.originLock.RUnlock()
 
-	return nk.nodeToClaim()
+	return nk.nodeToSignedClaim()
 }
 
-func (nk *nodekeeper) GetOriginAnnounceClaim() (*consensus.NodeAnnounceClaim, error) {
-	return nil, errors.New("implement me!")
+func (nk *nodekeeper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
+	nk.originLock.RLock()
+	defer nk.originLock.RUnlock()
+
+	return nk.nodeToAnnounceClaim(mapper)
 }
 
 func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
@@ -331,7 +334,7 @@ func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
 	copy(keyData[:], exportedKey[:consensus.PublicKeyLength])
 
 	var s [consensus.SignatureLength]byte
-	claim := consensus.NodeJoinClaim{
+	return &consensus.NodeJoinClaim{
 		ShortNodeID:             nk.origin.ShortID(),
 		RelayNodeID:             nk.origin.ShortID(),
 		ProtocolVersionAndFlags: 0,
@@ -341,18 +344,41 @@ func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
 		NodePK:                  keyData,
 		NodeAddress:             consensus.NewNodeAddress(nk.origin.PhysicalAddress()),
 		Signature:               s,
+	}, nil
+}
+
+func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
+	claim, err := nk.nodeToClaim()
+	if err != nil {
+		return nil, err
 	}
 
 	dataToSign, err := claim.SerializeRaw()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to serialize a claim")
+		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to serialize a claim")
 	}
 	sign, err := nk.sign(dataToSign)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to sign a claim")
+		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to sign a claim")
 	}
-
 	copy(claim.Signature[:], sign[:consensus.SignatureLength])
+	return claim, nil
+}
+
+func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
+	claim := consensus.NodeAnnounceClaim{}
+	joinClaim, err := nk.nodeToClaim()
+	if err != nil {
+		return nil, err
+	}
+	claim.NodeJoinClaim = *joinClaim
+	claim.NodeCount = uint16(mapper.Length())
+	announcerIndex, err := mapper.RefToIndex(nk.origin.ID())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToAnnounceClaim ] failed to map origin node ID to bitset index")
+	}
+	claim.NodeAnnouncerIndex = uint16(announcerIndex)
+	claim.BitSetMapper = mapper
 	return &claim, nil
 }
 
