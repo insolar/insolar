@@ -86,6 +86,18 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 		}
 	}()
 
+	for _, bootstrapHost := range d.bootstrapHosts {
+		if bootstrapHost.NodeID.IsEmpty() {
+			err := d.pingHost(ctx, bootstrapHost)
+			if err != nil {
+				logger.Error("[ Distribute ] failed to ping and fill node id", err)
+				continue
+			}
+		}
+
+	}
+}
+
 func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 
