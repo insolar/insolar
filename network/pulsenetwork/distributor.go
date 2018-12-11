@@ -95,6 +95,14 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 			}
 		}
 
+		hosts, err := d.getRandomHosts(ctx, bootstrapHost)
+		if err != nil {
+			logger.Error("[ Distribute ] failed to get random hosts", err)
+		}
+
+		if hosts == nil || len(hosts) == 0 {
+			continue
+		}
 	}
 }
 
