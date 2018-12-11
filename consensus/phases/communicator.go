@@ -67,7 +67,6 @@ type NaiveCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
 	PulseHandler     network.PulseHandler     `inject:""`
 	Cryptography     core.CryptographyService `inject:""`
-	NodeNetwork      core.NodeNetwork         `inject:""`
 
 	phase1result chan phase1Result
 	phase2result chan phase2Result
@@ -182,6 +181,10 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 		}
 	}
 
+	resultReceived := func(ref core.RecordRef) bool {
+		val, ok := result[ref]
+		return ok && val != nil
+	}
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	for {
 		select {
@@ -190,7 +193,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 				continue
 			}
 
-			if val, ok := result[res.id]; !ok || val == nil {
+			if !resultReceived(res.id) {
 				// send response
 				err := nc.ConsensusNetwork.SendRequest(request, res.id)
 				if err != nil {
@@ -199,9 +202,10 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 			}
 			result[res.id] = res.packet
 
-			if len(result) == len(participants) {
-				return result, nil
-			}
+			// FIXME: early return is commented to have synchronized length of phases on all nodes
+			// if len(result) == len(participants) {
+			// 	return result, nil
+			// }
 		case <-ctx.Done():
 			return result, nil
 		}
@@ -225,6 +229,12 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 	nc.sendRequestToNodes(participants, request)
 
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
+
+	resultReceived := func(ref core.RecordRef) bool {
+		val, ok := result[ref]
+		return ok && val != nil
+	}
+
 	for {
 		select {
 		case res := <-nc.phase2result:
@@ -232,9 +242,8 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 				continue
 			}
 
-			if val, ok := result[res.id]; !ok || val == nil {
+			if !resultReceived(res.id) || res.packet.ContainsRequests() {
 				// send response
-				// TODO: process referendum votes and send answers
 				err := nc.ConsensusNetwork.SendRequest(request, res.id)
 				if err != nil {
 					log.Errorln(err.Error())
@@ -242,10 +251,10 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 			}
 			result[res.id] = res.packet
 
-			if len(result) == len(participants) {
-				return result, nil
-			}
-
+			// FIXME: early return is commented to have synchronized length of phases on all nodes
+			// if len(result) == len(participants) {
+			// 	return result, nil
+			// }
 		case <-ctx.Done():
 			return result, nil
 		}
@@ -283,10 +292,10 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 			}
 			result[res.id] = res.packet
 
-			if len(result) == len(participants) {
-				return result, nil
-			}
-
+			// FIXME: early return is commented to have synchronized length of phases on all nodes
+			// if len(result) == len(participants) {
+			// 	return result, nil
+			// }
 		case <-ctx.Done():
 			return result, nil
 		}
