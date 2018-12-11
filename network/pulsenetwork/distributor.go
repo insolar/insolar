@@ -37,4 +37,8 @@ func NewDistributor(conf configuration.PulseDistributor, transport transport.Tra
 }
 func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 	panic("not implemented")
+func (d *distributor) pause(ctx context.Context) {
+	inslogger.FromContext(ctx).Info("[ Pause ] Pause distribution, stopping transport")
+	d.transport.Stop()
+}
 }
