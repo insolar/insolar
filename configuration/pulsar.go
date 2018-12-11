@@ -48,6 +48,10 @@ type Pulsar struct {
 }
 
 type PulseDistributor struct {
+	PingTimeout        int32 // ms
+	RandomNodesTimeout int32 // ms
+	PulseTimeout       int32 // ms
+	RandomNodesCount   int
 }
 
 type PulsarNodeAddress struct {
