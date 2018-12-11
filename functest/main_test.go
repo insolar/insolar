@@ -43,7 +43,6 @@ const HOST = "http://localhost:19191"
 const TestAPIURL = HOST + "/api"
 const TestRPCUrl = TestAPIURL + "/rpc"
 const TestCallUrl = TestAPIURL + "/call"
-const insolarImportPath = "github.com/insolar/insolar"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 
