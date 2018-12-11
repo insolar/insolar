@@ -15,3 +15,5 @@
  */
 
 package pulsenetwork
+type distributor struct {
+}
