@@ -48,6 +48,7 @@ type Pulsar struct {
 }
 
 type PulseDistributor struct {
+	BootstrapHosts     []string
 	PingTimeout        int32 // ms
 	RandomNodesTimeout int32 // ms
 	PulseTimeout       int32 // ms
