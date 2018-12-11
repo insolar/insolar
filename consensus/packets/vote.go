@@ -29,8 +29,7 @@ const NodeListHashLength = 32
 type VoteType uint8
 
 const (
-	TypeNodeJoinSupplementaryVote = VoteType(iota + 1)
-	TypeStateFraudNodeSupplementaryVote
+	TypeStateFraudNodeSupplementaryVote = VoteType(iota + 1)
 	TypeNodeListSupplementaryVote
 	TypeMissingNodeSupplementaryVote
 	TypeMissingNode
@@ -39,9 +38,6 @@ const (
 type ReferendumVote interface {
 	Serializer
 	Type() VoteType
-}
-
-type NodeJoinSupplementaryVote struct {
 }
 
 type StateFraudNodeSupplementaryVote struct {
@@ -57,6 +53,8 @@ type NodeListSupplementaryVote struct {
 
 type MissingNodeSupplementaryVote struct {
 	NodePulseProof NodePulseProof
+	// TODO: make it signed
+	NodeClaimUnsigned NodeJoinClaim
 }
 
 type MissingNode struct {
@@ -117,20 +115,6 @@ func (v *NodeListSupplementaryVote) Serialize() ([]byte, error) {
 	}
 
 	return result.Bytes(), nil
-}
-
-func (v *NodeJoinSupplementaryVote) Type() VoteType {
-	return TypeNodeJoinSupplementaryVote
-}
-
-// Deserialize implements interface method
-func (v *NodeJoinSupplementaryVote) Deserialize(data io.Reader) error {
-	return nil
-}
-
-// Serialize implements interface method
-func (v *NodeJoinSupplementaryVote) Serialize() ([]byte, error) {
-	return nil, nil
 }
 
 func (v *StateFraudNodeSupplementaryVote) Type() VoteType {
@@ -204,6 +188,10 @@ func (v *MissingNodeSupplementaryVote) Deserialize(data io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodePulseProof")
 	}
+	err = v.NodeClaimUnsigned.deserializeRaw(data)
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodeClaimUnsigned")
+	}
 
 	return nil
 }
@@ -220,6 +208,16 @@ func (v *MissingNodeSupplementaryVote) Serialize() ([]byte, error) {
 	_, err = result.Write(nodePulseProofRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't append NodePulseProof")
+	}
+
+	joinClaim, err := v.NodeClaimUnsigned.SerializeRaw()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Failed to serialize join claim")
+	}
+
+	_, err = result.Write(joinClaim)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Failed to write join claim")
 	}
 
 	return result.Bytes(), nil

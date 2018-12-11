@@ -58,7 +58,7 @@ func TestNodeViolationBlame(t *testing.T) {
 	checkSerializationDeserialization(t, makeNodeViolationBlame())
 }
 
-func makeNodeJoinClaim() *NodeJoinClaim {
+func makeNodeJoinClaim(withSignature bool) *NodeJoinClaim {
 	nodeJoinClaim := &NodeJoinClaim{}
 	nodeJoinClaim.ShortNodeID = core.ShortNodeID(77)
 	nodeJoinClaim.RelayNodeID = core.ShortNodeID(26)
@@ -67,18 +67,20 @@ func makeNodeJoinClaim() *NodeJoinClaim {
 	nodeJoinClaim.NodeRoleRecID = 32
 	nodeJoinClaim.NodeRef = testutils.RandomRef()
 	nodeJoinClaim.NodePK = randomArray64()
-	nodeJoinClaim.Signature = randomArray71()
+	if withSignature {
+		nodeJoinClaim.Signature = randomArray71()
+	}
 	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")
 
 	return nodeJoinClaim
 }
 
 func TestNodeJoinClaim(t *testing.T) {
-	checkSerializationDeserialization(t, makeNodeJoinClaim())
+	checkSerializationDeserialization(t, makeNodeJoinClaim(true))
 }
 
 func TestNodeJoinClaim_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeNodeJoinClaim(),
+	checkBadDataSerializationDeserialization(t, makeNodeJoinClaim(true),
 		"[ NodeJoinClaim.Deserialize ] Can't read Signature: unexpected EOF")
 }
 
@@ -93,7 +95,7 @@ func TestMakeClaimHeader(t *testing.T) {
 
 func makeNodeAnnounceClaim() *NodeAnnounceClaim {
 	nodeAnnounceClaim := &NodeAnnounceClaim{}
-	nodeAnnounceClaim.NodeJoinClaim = *makeNodeJoinClaim()
+	nodeAnnounceClaim.NodeJoinClaim = *makeNodeJoinClaim(true)
 	nodeAnnounceClaim.NodeCount = 266
 	nodeAnnounceClaim.NodeAnnouncerIndex = 37
 	nodeAnnounceClaim.NodeJoinerIndex = 38

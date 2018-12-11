@@ -31,12 +31,7 @@ func makeNodeListSupplementaryVote() *NodeListSupplementaryVote {
 func TestNodeListSupplementaryVote(t *testing.T) {
 	checkSerializationDeserialization(t, makeNodeListSupplementaryVote())
 
-	checkBadDataSerializationDeserialization(t, makeNodeListSupplementaryVote(),
-		"[ NodeListSupplementaryVote.Deserialize ] Can't read NodeListHash: unexpected EOF")
-}
-
-func TestNodeJoinSupplementaryVote(t *testing.T) {
-	checkSerializationDeserialization(t, &NodeJoinSupplementaryVote{})
+	checkBadDataSerializationDeserialization(t, makeNodeListSupplementaryVote(), "unexpected EOF")
 }
 
 func makeStateFraudNodeSupplementaryVote() *StateFraudNodeSupplementaryVote {
@@ -51,13 +46,14 @@ func makeStateFraudNodeSupplementaryVote() *StateFraudNodeSupplementaryVote {
 func TestStateFraudNodeSupplementaryVote(t *testing.T) {
 	checkSerializationDeserialization(t, makeStateFraudNodeSupplementaryVote())
 
-	checkBadDataSerializationDeserialization(t, makeStateFraudNodeSupplementaryVote(),
-		"[ StateFraudNodeSupplementaryVote.Deserialize ] Can't read PulseData: [ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makeStateFraudNodeSupplementaryVote(), "unexpected EOF")
 }
 
 func TestMissingNodeSupplementaryVote(t *testing.T) {
-	checkSerializationDeserialization(t, &MissingNodeSupplementaryVote{*makeNodePulseProof()})
+	checkSerializationDeserialization(t,
+		&MissingNodeSupplementaryVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)})
 
-	checkBadDataSerializationDeserialization(t, &MissingNodeSupplementaryVote{*makeNodePulseProof()},
-		"[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodePulseProof: [ NodePulseProof.Deserialize ] Can't read NodeSignature: unexpected EOF")
+	checkBadDataSerializationDeserialization(t,
+		&MissingNodeSupplementaryVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)},
+		"unexpected EOF")
 }

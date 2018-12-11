@@ -145,52 +145,52 @@ func (nvb *NodeViolationBlame) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (njc *NodeJoinClaim) deserialize(data io.Reader) error {
+func (njc *NodeJoinClaim) deserializeRaw(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &njc.ShortNodeID)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeID")
+		return errors.Wrap(err, "[ NodeJoinClaim.deserializeRaw ] Can't read NodeID")
 	}
 
 	err = binary.Read(data, defaultByteOrder, &njc.RelayNodeID)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read RelayNodeID")
+		return errors.Wrap(err, "[ NodeJoinClaim.deserializeRaw ] Can't read RelayNodeID")
 	}
 
 	err = binary.Read(data, defaultByteOrder, &njc.ProtocolVersionAndFlags)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read ProtocolVersionAndFlags")
+		return errors.Wrap(err, "[ NodeJoinClaim.deserializeRaw ] Can't read ProtocolVersionAndFlags")
 	}
 
 	err = binary.Read(data, defaultByteOrder, &njc.JoinsAfter)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read JoinsAfter")
+		return errors.Wrap(err, "[ NodeJoinClaim.deserializeRaw ] Can't read JoinsAfter")
 	}
 
 	err = binary.Read(data, defaultByteOrder, &njc.NodeRoleRecID)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRoleRecID")
+		return errors.Wrap(err, "[ NodeJoinClaim.deserializeRaw ] Can't read NodeRoleRecID")
 	}
 
 	err = binary.Read(data, defaultByteOrder, &njc.NodeAddress)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeAddress")
+		return errors.Wrap(err, "[ NodeJoinClaim.deserializeRaw ] Can't read NodeAddress")
 	}
 
 	err = binary.Read(data, defaultByteOrder, &njc.NodeRef)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRef")
+		return errors.Wrap(err, "[ NodeJoinClaim.deserializeRaw ] Can't read NodeRef")
 	}
 
 	err = binary.Read(data, defaultByteOrder, &njc.NodePK)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodePK")
+		return errors.Wrap(err, "[ NodeJoinClaim.deserializeRaw ] Can't read NodePK")
 	}
 	return nil
 }
 
 // Deserialize implements interface method
 func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
-	err := njc.deserialize(data)
+	err := njc.deserializeRaw(data)
 	if err != nil {
 		return err
 	}
@@ -318,7 +318,7 @@ func (nac *NodeAnnounceClaim) Serialize() ([]byte, error) {
 
 // Deserialize implements interface method
 func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
-	err := nac.deserialize(data)
+	err := nac.deserializeRaw(data)
 	if err != nil {
 		return err
 	}
