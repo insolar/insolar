@@ -169,7 +169,7 @@ type NodeKeeper interface {
 	// Sync move unsync -> sync
 	Sync(list UnsyncList)
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive()
+	MoveSyncToActive() error
 }
 
 // UnsyncList is interface to manage unsync list
@@ -179,7 +179,7 @@ type UnsyncList interface {
 	// RemoveClaims
 	RemoveClaims(core.RecordRef)
 	// AddClaims
-	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim, map[core.RecordRef]string)
+	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim, map[core.RecordRef]string) error
 	// CalculateHash calculate node list hash based on active node list and claims
 	CalculateHash() ([]byte, error)
 	// GetActiveNode get active node by reference ID for current consensus
