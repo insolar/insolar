@@ -420,6 +420,7 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 			if err != nil {
 				return errors.Wrap(err, "[ makeCertificates ]")
 			}
+
 			certs[i].BootstrapNodes[j].NodeSign, err = certs[i].SignNodePart(node.privKey)
 			if err != nil {
 				return errors.Wrap(err, "[ makeCertificates ]")
