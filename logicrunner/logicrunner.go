@@ -454,7 +454,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	if !m.CorrectPrototype.Equal(*es.objectbody.Prototype) {
+	if !m.CorrectPrototype.IsEmpty() && !m.CorrectPrototype.Equal(*es.objectbody.Prototype) {
 		return nil, errors.New("try to call method of prototype as method of another prototype")
 	}
 
