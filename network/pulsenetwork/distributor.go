@@ -177,6 +177,18 @@ func (d *distributor) getRandomHosts(ctx context.Context, host *host.Host) ([]ho
 
 	return body.Hosts, nil
 }
+
+func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, hosts []host.Host) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("Before sending pulse to nodes - %v", hosts)
+	for _, pulseReceiver := range hosts {
+		err := d.sendPulseToHost(ctx, pulse, &pulseReceiver)
+		if err != nil {
+			logger.Error(err)
+		}
+	}
+}
+
 func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
