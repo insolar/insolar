@@ -83,15 +83,6 @@ func functestPath() string {
 	return filepath.Join(p.Dir, "functest")
 }
 
-func buildInsolar() error {
-	out, err := exec.Command(
-		"go", "build",
-		"-o", insolarPath,
-		insolarImportPath+"/cmd/insolar/",
-	).CombinedOutput()
-	return errors.Wrapf(err, "[ buildInsolar ] could't build insolar: %s", out)
-}
-
 func createDirForContracts() error {
 	return os.MkdirAll(filepath.Join(functestPath(), "contractstorage"), 0777)
 }
