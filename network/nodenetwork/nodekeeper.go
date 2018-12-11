@@ -339,6 +339,7 @@ func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
 		NodeRoleRecID:           nk.origin.Role(),
 		NodeRef:                 nk.origin.ID(),
 		NodePK:                  keyData,
+		NodeAddress:             consensus.NewNodeAddress(nk.origin.PhysicalAddress()),
 		Signature:               s,
 	}
 

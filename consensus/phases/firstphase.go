@@ -97,7 +97,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] failed to sign a packet")
 	}
-	resultPackets, addressMap, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, &packet)
+	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results.")
 	}
@@ -129,7 +129,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		fp.UnsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
-	fp.UnsyncList.AddClaims(claimMap, addressMap)
+	fp.UnsyncList.AddClaims(claimMap)
 
 	valid, fault := fp.validateProofs(pulseHash, proofSet)
 

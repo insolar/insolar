@@ -98,7 +98,7 @@ func (s *communicatorSuite) TestExchangeData() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	result, _, err := s.communicator.ExchangePhase1(ctx, s.participants, &packets.Phase1Packet{})
+	result, err := s.communicator.ExchangePhase1(ctx, s.participants, &packets.Phase1Packet{})
 	s.Assert().NoError(err)
 	s.NotEqual(0, len(result))
 }

@@ -20,7 +20,7 @@ import (
 type UnsyncListMock struct {
 	t minimock.Tester
 
-	AddClaimsFunc       func(p map[core.RecordRef][]packets.ReferendumClaim, p1 map[core.RecordRef]string)
+	AddClaimsFunc       func(p map[core.RecordRef][]packets.ReferendumClaim)
 	AddClaimsCounter    uint64
 	AddClaimsPreCounter uint64
 	AddClaimsMock       mUnsyncListMockAddClaims
@@ -92,19 +92,18 @@ type UnsyncListMockAddClaimsExpectation struct {
 }
 
 type UnsyncListMockAddClaimsInput struct {
-	p  map[core.RecordRef][]packets.ReferendumClaim
-	p1 map[core.RecordRef]string
+	p map[core.RecordRef][]packets.ReferendumClaim
 }
 
 //Expect specifies that invocation of UnsyncList.AddClaims is expected from 1 to Infinity times
-func (m *mUnsyncListMockAddClaims) Expect(p map[core.RecordRef][]packets.ReferendumClaim, p1 map[core.RecordRef]string) *mUnsyncListMockAddClaims {
+func (m *mUnsyncListMockAddClaims) Expect(p map[core.RecordRef][]packets.ReferendumClaim) *mUnsyncListMockAddClaims {
 	m.mock.AddClaimsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &UnsyncListMockAddClaimsExpectation{}
 	}
-	m.mainExpectation.input = &UnsyncListMockAddClaimsInput{p, p1}
+	m.mainExpectation.input = &UnsyncListMockAddClaimsInput{p}
 	return m
 }
 
@@ -121,18 +120,18 @@ func (m *mUnsyncListMockAddClaims) Return() *UnsyncListMock {
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.AddClaims is expected once
-func (m *mUnsyncListMockAddClaims) ExpectOnce(p map[core.RecordRef][]packets.ReferendumClaim, p1 map[core.RecordRef]string) *UnsyncListMockAddClaimsExpectation {
+func (m *mUnsyncListMockAddClaims) ExpectOnce(p map[core.RecordRef][]packets.ReferendumClaim) *UnsyncListMockAddClaimsExpectation {
 	m.mock.AddClaimsFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &UnsyncListMockAddClaimsExpectation{}
-	expectation.input = &UnsyncListMockAddClaimsInput{p, p1}
+	expectation.input = &UnsyncListMockAddClaimsInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of UnsyncList.AddClaims method
-func (m *mUnsyncListMockAddClaims) Set(f func(p map[core.RecordRef][]packets.ReferendumClaim, p1 map[core.RecordRef]string)) *UnsyncListMock {
+func (m *mUnsyncListMockAddClaims) Set(f func(p map[core.RecordRef][]packets.ReferendumClaim)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -141,18 +140,18 @@ func (m *mUnsyncListMockAddClaims) Set(f func(p map[core.RecordRef][]packets.Ref
 }
 
 //AddClaims implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) AddClaims(p map[core.RecordRef][]packets.ReferendumClaim, p1 map[core.RecordRef]string) {
+func (m *UnsyncListMock) AddClaims(p map[core.RecordRef][]packets.ReferendumClaim) {
 	counter := atomic.AddUint64(&m.AddClaimsPreCounter, 1)
 	defer atomic.AddUint64(&m.AddClaimsCounter, 1)
 
 	if len(m.AddClaimsMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.AddClaimsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to UnsyncListMock.AddClaims. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to UnsyncListMock.AddClaims. %v", p)
 			return
 		}
 
 		input := m.AddClaimsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, UnsyncListMockAddClaimsInput{p, p1}, "UnsyncList.AddClaims got unexpected parameters")
+		testify_assert.Equal(m.t, *input, UnsyncListMockAddClaimsInput{p}, "UnsyncList.AddClaims got unexpected parameters")
 
 		return
 	}
@@ -161,18 +160,18 @@ func (m *UnsyncListMock) AddClaims(p map[core.RecordRef][]packets.ReferendumClai
 
 		input := m.AddClaimsMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, UnsyncListMockAddClaimsInput{p, p1}, "UnsyncList.AddClaims got unexpected parameters")
+			testify_assert.Equal(m.t, *input, UnsyncListMockAddClaimsInput{p}, "UnsyncList.AddClaims got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.AddClaimsFunc == nil {
-		m.t.Fatalf("Unexpected call to UnsyncListMock.AddClaims. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to UnsyncListMock.AddClaims. %v", p)
 		return
 	}
 
-	m.AddClaimsFunc(p, p1)
+	m.AddClaimsFunc(p)
 }
 
 //AddClaimsMinimockCounter returns a count of UnsyncListMock.AddClaimsFunc invocations

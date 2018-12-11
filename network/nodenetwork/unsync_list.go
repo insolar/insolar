@@ -36,7 +36,6 @@ func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
 
 type unsyncList struct {
 	activeNodes map[core.RecordRef]core.Node
-	addressMap  map[core.RecordRef]string
 	claims      map[core.RecordRef][]consensus.ReferendumClaim
 	refToIndex  map[core.RecordRef]int
 	indexToRef  map[int]core.RecordRef
@@ -63,8 +62,7 @@ func (ul *unsyncList) RemoveNodeAndClaims(from core.RecordRef) {
 	ul.cache = nil
 }
 
-func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
-	ul.addressMap = addressMap
+func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) {
 	ul.claims = claims
 	ul.cache = nil
 }
@@ -104,7 +102,7 @@ func (ul *unsyncList) mergeClaim(nodes map[core.RecordRef]core.Node, claim conse
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:
 		// TODO: fix version
-		node, err := claimToNode(ul.addressMap[t.NodeRef], "", t)
+		node, err := claimToNode("", t)
 		if err != nil {
 			log.Error("[ mergeClaim ] failed to convert Claim -> Node")
 		}
@@ -165,8 +163,8 @@ func (ul *sparseUnsyncList) Length() int {
 	return ul.capacity
 }
 
-func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
-	ul.unsyncList.AddClaims(claims, addressMap)
+func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) {
+	ul.unsyncList.AddClaims(claims)
 
 	for _, claimList := range claims {
 		for _, claim := range claimList {
@@ -180,7 +178,7 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 			}
 
 			// TODO: fix version
-			node, err := claimToNode(ul.addressMap[c.NodeRef], "", &c.NodeJoinClaim)
+			node, err := claimToNode("", &c.NodeJoinClaim)
 			if err != nil {
 				log.Error("[ AddClaims ] failed to convert Claim -> Node")
 			}
@@ -189,7 +187,7 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 	}
 }
 
-func claimToNode(address, version string, claim *consensus.NodeJoinClaim) (core.Node, error) {
+func claimToNode(version string, claim *consensus.NodeJoinClaim) (core.Node, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
 	if err != nil {
@@ -199,7 +197,7 @@ func claimToNode(address, version string, claim *consensus.NodeJoinClaim) (core.
 		claim.NodeRef,
 		claim.NodeRoleRecID,
 		key,
-		address,
+		claim.NodeAddress.Get(),
 		version)
 	return node, nil
 }

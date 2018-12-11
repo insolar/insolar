@@ -170,6 +170,11 @@ func (njc *NodeJoinClaim) deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRoleRecID")
 	}
 
+	err = binary.Read(data, defaultByteOrder, &njc.NodeAddress)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeAddress")
+	}
+
 	err = binary.Read(data, defaultByteOrder, &njc.NodeRef)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeRef")
@@ -243,6 +248,11 @@ func (njc *NodeJoinClaim) SerializeRaw() ([]byte, error) {
 	err = binary.Write(result, defaultByteOrder, njc.NodeRoleRecID)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeRaw ] Can't write NodeRoleRecID")
+	}
+
+	err = binary.Write(result, defaultByteOrder, njc.NodeAddress)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeJoinClaim.SerializeRaw ] Can't write NodeAddress")
 	}
 
 	err = binary.Write(result, defaultByteOrder, njc.NodeRef)

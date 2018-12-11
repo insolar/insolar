@@ -38,7 +38,7 @@ type Communicator interface {
 		ctx context.Context,
 		participants []core.Node,
 		packet *packets.Phase1Packet,
-	) (map[core.RecordRef]*packets.Phase1Packet, map[core.RecordRef]string, error)
+	) (map[core.RecordRef]*packets.Phase1Packet, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
 	ExchangePhase2(ctx context.Context, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
@@ -117,9 +117,8 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 	ctx context.Context,
 	participants []core.Node,
 	packet *packets.Phase1Packet,
-) (map[core.RecordRef]*packets.Phase1Packet, map[core.RecordRef]string, error) {
+) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
-	addresses := make(map[core.RecordRef]string, len(participants))
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
@@ -127,7 +126,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 
 	packetBuffer, err := packet.Serialize()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ExchangePhase1] Failed to serialize Phase1Packet.")
+		return nil, errors.Wrap(err, "[ExchangePhase1] Failed to serialize Phase1Packet.")
 	}
 
 	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
@@ -151,13 +150,12 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 				}
 			}
 			result[res.id] = res.packet
-			addresses[res.id] = res.address.String()
 
 			if len(result) == len(participants) {
-				return result, addresses, nil
+				return result, nil
 			}
 		case <-ctx.Done():
-			return result, addresses, nil
+			return result, nil
 		}
 	}
 }

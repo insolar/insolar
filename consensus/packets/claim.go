@@ -88,6 +88,25 @@ func (nvb *NodeViolationBlame) Type() ClaimType {
 	return TypeNodeViolationBlame
 }
 
+const NodeAddressSize = 20
+
+// TODO: create heterogeneous structure for variuos types of adresses (IPv4, IPv6, etc.)
+type NodeAddress [NodeAddressSize]byte
+
+func NewNodeAddress(address string) NodeAddress {
+	var result NodeAddress
+	result.Set(address)
+	return result
+}
+
+func (address *NodeAddress) Set(s string) {
+	copy(address[:], []byte(s)[:NodeAddressSize])
+}
+
+func (address NodeAddress) Get() string {
+	return string(address[:])
+}
+
 // NodeJoinClaim is a type 1, len == 272.
 type NodeJoinClaim struct {
 	ShortNodeID             core.ShortNodeID
@@ -96,11 +115,9 @@ type NodeJoinClaim struct {
 	JoinsAfter              uint32
 	NodeRoleRecID           core.StaticRole
 	NodeRef                 core.RecordRef
+	NodeAddress             NodeAddress
 	NodePK                  [PublicKeyLength]byte
 	Signature               [SignatureLength]byte
-
-	// additional field that is not serialized and is set from transport layer on packet receive
-	NodeAddress string
 }
 
 func (njc *NodeJoinClaim) GetNodeID() core.RecordRef {
@@ -136,7 +153,6 @@ func (nac *NodeAnnounceClaim) Type() ClaimType {
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
-
 	// additional field that is not serialized and is set from transport layer on packet receive
 	NodeID core.RecordRef
 }
