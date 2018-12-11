@@ -48,8 +48,9 @@ func TestHealthCheck(t *testing.T) {
 	gi := NewGoInsider(tmpDir, protocol, socket)
 
 	refString := "1111111111111111111111111111111111111111111111111111111111111112"
-	ref := core.NewRefFromBase58(refString)
-	err = gi.AddPlugin(ref, tmpDir+"/main.so")
+	ref, err := core.NewRefFromBase58(refString)
+	require.NoError(t, err)
+	err = gi.AddPlugin(*ref, tmpDir+"/main.so")
 	require.NoError(t, err, "failed to add plugin")
 
 	startGoInsider(t, gi, protocol, socket)
