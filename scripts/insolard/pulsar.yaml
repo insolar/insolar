@@ -12,7 +12,7 @@ pulsar:
   neighbours: []
   numberofrandomhosts: 1
   numberdelta: 10
-  bootstraplistener:
+  distributiontransport:
     protocol: UTP
     address: 0.0.0.0:58091
     behindnat: false

@@ -38,7 +38,6 @@ apirunner:
 pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
-  nodesaddresses: []
 keyspath: "scripts/insolard/nodes/3/keys.json"
 certificatepath: "scripts/insolard/nodes/3/cert.json"
 metrics:

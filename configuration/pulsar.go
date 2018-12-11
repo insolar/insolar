@@ -40,11 +40,13 @@ type Pulsar struct {
 
 	Neighbours []PulsarNodeAddress
 
-	NumberOfRandomHosts int
-	NumberDelta         uint32
-	BootstrapListener   Transport
 	BootstrapNodes      []string
+	NumberDelta uint32
+
+	DistributionTransport Transport
 	PulseDistributor      PulseDistributor
+}
+
 type PulseDistributor struct {
 }
 
@@ -69,9 +71,14 @@ func NewPulsar() Pulsar {
 		Neighbours: []PulsarNodeAddress{},
 		Storage:    Storage{DataDirectory: "./data/pulsar"},
 
-		NumberOfRandomHosts: 1,
-		NumberDelta:         10,
-		BootstrapListener:   Transport{Protocol: "UTP", Address: "0.0.0.0:18091", BehindNAT: false},
 		BootstrapNodes:      []string{"localhost:53837"},
+		NumberDelta: 10,
+		DistributionTransport: Transport{
+			Protocol:  "UTP",
+			Address:   "0.0.0.0:18091",
+			BehindNAT: false,
+		},
+		PulseDistributor: PulseDistributor{
+		},
 	}
 }
