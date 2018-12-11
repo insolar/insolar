@@ -1021,7 +1021,6 @@ func (r *Two) NoError() error {
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
-	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 
 	resp, err = executeMethod(ctx, lr, pm, *contract, *cb.Prototypes["one"], 0, "NoError")
@@ -2101,7 +2100,6 @@ package main
 }
 
 func TestPrototypeMismatch(t *testing.T) {
-	t.Skip()
 	if parallel {
 		t.Parallel()
 	}
@@ -2163,13 +2161,13 @@ func (c *First) GetName() (string, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, secondObj, nil, "contract created")
 
-	res, err := executeMethod(ctx, lr, pm, *testObj, *cb.Prototypes["test"], 0, "Test", *secondObj)
-	assert.Error(t, err, "contract call")
-	//assert.Contains(t, err.Error(), "try to call method of prototype as method of another prototype")
+	resp, err := executeMethod(ctx, lr, pm, *testObj, *cb.Prototypes["test"], 0, "Test", *secondObj)
+	assert.NoError(t, err, "contract call")
 
-	assert.Equal(t, nil, res)
-
-	//ValidateAllResults(t, ctx, lr, *testObj)
+	ch := new(codec.CborHandle)
+	res := []interface{}{&foundation.Error{}}
+	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
+	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: couldn't dispatch event: try to call method of prototype as method of another prototype"}), res[1])
 }
 
 func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) *core.RecordRef {
