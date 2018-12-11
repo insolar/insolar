@@ -113,7 +113,7 @@ func TestNewInternalTransport(t *testing.T) {
 	require.NotEqual(t, address, tp.PublicAddress())
 	ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
-	require.Equal(t, ref, tp.GetNodeID())
+	require.Equal(t, *ref, tp.GetNodeID())
 }
 
 func TestNewInternalTransport2(t *testing.T) {
@@ -167,7 +167,7 @@ func TestNewHostTransport(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, *ref1, t1.GetNodeID())
 	ref2, err := core.NewRefFromBase58(ID2 + DOMAIN)
-	require.Equal(t, ref2, t2.GetNodeID())
+	require.Equal(t, *ref2, t2.GetNodeID())
 	require.NoError(t, err)
 
 	count := 10
@@ -204,7 +204,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	m := newMockResolver()
 	ctx := context.Background()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	t1 := NewHostTransport(i1, m)
 	t1.Start(ctx)
@@ -231,7 +231,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 }
 
 func TestHostTransport_SendRequestPacket2(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1, ID2)
+	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	require.NoError(t, err)
 	ctx := context.Background()
 	ctx2 := context.Background()
@@ -243,7 +243,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 		log.Info("handler triggered")
 		ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
-		require.Equal(t, ref, r.GetSender())
+		require.Equal(t, *ref, r.GetSender())
 		require.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
 		wg.Done()
 		return t2.BuildResponse(r, nil), nil
@@ -273,7 +273,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 }
 
 func TestHostTransport_SendRequestPacket3(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1, ID2)
+	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	require.NoError(t, err)
 	ctx := context.Background()
 	ctx2 := context.Background()
@@ -322,7 +322,7 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 }
 
 func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1, ID2)
+	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	require.NoError(t, err)
 	ctx := context.Background()
 	ctx2 := context.Background()
@@ -356,7 +356,7 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 }
 
 func TestHostTransport_WrongHandler(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1, ID2)
+	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	require.NoError(t, err)
 	ctx := context.Background()
 	ctx2 := context.Background()
@@ -391,7 +391,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 
 func TestDoubleStart(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -409,7 +409,7 @@ func TestDoubleStart(t *testing.T) {
 func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	tr1 := NewHostTransport(i1, m)
 	defer tr1.Stop()
