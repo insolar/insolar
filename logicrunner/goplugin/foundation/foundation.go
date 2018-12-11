@@ -82,9 +82,9 @@ func GetImplementationFor(object, ofType core.RecordRef) (core.RecordRef, error)
 	return proxyctx.Current.GetDelegate(object, ofType)
 }
 
-// GetChildrenTyped returns set of children objects with corresponding type
-func (bc *BaseContract) GetChildrenTyped(r core.RecordRef) ([]core.RecordRef, error) {
-	return proxyctx.Current.GetObjChildren(bc.GetReference(), r)
+// NewChildrenTypedIterator returns children with corresponding type iterator
+func (bc *BaseContract) NewChildrenTypedIterator(childPrototype core.RecordRef) (*proxyctx.ChildrenTypedIterator, error) {
+	return proxyctx.Current.GetObjChildrenIterator(bc.GetReference(), childPrototype, "")
 }
 
 // GetObject create proxy by address
