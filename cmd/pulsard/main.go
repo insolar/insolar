@@ -132,6 +132,10 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	cm.Register(cryptographyScheme, keyStore, keyProcessor, tp)
 	cm.Inject(cryptographyService)
 
+	if err = cm.Init(ctx); err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
