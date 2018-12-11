@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -115,24 +114,19 @@ func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetRecord)
-	jetID := core.TODOJetID
 
 	rec := record.DeserializeRecord(msg.Record)
-	// id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, pulseNumber, rec)
-	// ok, err := h.JetCoordinator.AmI(ctx, core.DynamicRoleLightExecutor, id, pulseNumber)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if !ok {
-	// 	tree, err := h.db.GetJetTree(ctx, pulseNumber)
-	// 	if err != nil {
-	// 		return nil, errors.Wrap(err, "failed to fetch jet tree")
-	// 	}
-	// 	_, depth := tree.Find(id.Hash())
-	// 	return &reply.JetMiss{Depth: depth}, nil
-	// }
 
-	id, err := h.db.SetRecord(ctx, jetID, pulseNumber, rec)
+	jetID, isMine, err := h.checkMyJet(
+		ctx,
+		*record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, pulseNumber, rec),
+		pulseNumber,
+	)
+	if !isMine {
+		return &reply.JetMiss{JetID: *jetID}, nil
+	}
+
+	id, err := h.db.SetRecord(ctx, *jetID, pulseNumber, rec)
 	if err != nil {
 		return nil, err
 	}
@@ -884,10 +878,32 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		h.Recent.AddObjectWithTLL(id, meta.TTL, isMine)
 	}
 
-	err = h.db.SetJetTree(ctx, msg.PulseNumber, &jet.PredefinedTree)
+	// TODO: temporary hardcoded tree. Remove after split is functional.
+	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *core.NewJetID(2, []byte{})) // 00
+	if err != nil {
+		return nil, err
+	}
+	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *core.NewJetID(2, []byte{1 << 6})) // 01
+	if err != nil {
+		return nil, err
+	}
+	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *core.NewJetID(2, []byte{1 << 7})) // 10
 	if err != nil {
 		return nil, err
 	}
 
 	return &reply.OK{}, nil
+}
+
+func (h *MessageHandler) checkMyJet(ctx context.Context, obj core.RecordID, pulse core.PulseNumber) (*core.RecordID, bool, error) {
+	isMine, err := h.JetCoordinator.AmI(ctx, core.DynamicRoleLightExecutor, &obj, pulse)
+	if err != nil {
+		return nil, false, err
+	}
+	tree, err := h.db.GetJetTree(ctx, pulse)
+	if err != nil {
+		return nil, false, errors.Wrap(err, "failed to fetch jet tree")
+	}
+	jetID := tree.Find(obj.Hash())
+	return jetID, isMine, nil
 }
