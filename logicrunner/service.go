@@ -70,7 +70,7 @@ type RPC struct {
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	es := gpr.lr.UpsertExecution(req.Callee)
 	ctx := es.insContext
-	//inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
+	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
 	codeDescriptor, err := am.GetCode(ctx, req.Code)
