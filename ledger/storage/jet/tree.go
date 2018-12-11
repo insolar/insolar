@@ -97,3 +97,17 @@ func getBit(value []byte, index int) bool {
 	mask := byte(1 << bitIndex)
 	return value[byteIndex]&mask != 0
 }
+// PredefinedTree is used to test multi-jet functionality.
+// TODO: remove me after functional split.
+var PredefinedTree = Tree{
+	Head: &jet{
+		Left: &jet{
+			Left:  &jet{},
+			Right: &jet{},
+		},
+		Right: &jet{
+			Left:  &jet{},
+			Right: &jet{},
+		},
+	},
+}
