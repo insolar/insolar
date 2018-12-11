@@ -52,6 +52,7 @@ type Network interface {
 	GetGlobuleID() GlobuleID
 }
 
+// PulseDistributor is interface for pulse distribution.
 type PulseDistributor interface {
 	Distribute(context.Context, *Pulse)
 }
