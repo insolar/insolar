@@ -397,7 +397,6 @@ func (g *Genesis) Start(ctx context.Context) error {
 }
 
 func (g *Genesis) makeCertificates(nodes []genesisNode) error {
-	var serialized []byte
 	certs := make([]certificate.Certificate, len(nodes))
 	for i, node := range nodes {
 		certs[i].Role = node.role
@@ -412,17 +411,12 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 		for j, node := range nodes {
 			certs[i].BootstrapNodes[j] = node.node
 		}
-
-		if serialized == nil {
-			serialized = certs[i].SerializeNetworkPart()
-		}
 	}
 
 	var err error
 	for i := range nodes {
 		for j, node := range nodes {
-			certs[i].BootstrapNodes[j] = node.node
-			certs[i].BootstrapNodes[j].NetworkSign, err = certs[i].SignNetworkPart(node.privKey, serialized)
+			certs[i].BootstrapNodes[j].NetworkSign, err = certs[i].SignNetworkPart(node.privKey)
 			if err != nil {
 				return errors.Wrap(err, "[ makeCertificates ]")
 			}

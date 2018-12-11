@@ -24,13 +24,12 @@ import (
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
-	CertificateManager  core.CertificateManager  `inject:""`
-	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
-	ContractRequester   core.ContractRequester   `inject:""`
-	GenesisDataProvider core.GenesisDataProvider `inject:""`
-	MessageBus          core.MessageBus          `inject:""`
-	CS                  core.CryptographyService `inject:""`
-	PM                  core.PulseManager        `inject:""`
+	CertificateManager core.CertificateManager  `inject:""`
+	NetworkSwitcher    core.NetworkSwitcher     `inject:""`
+	ContractRequester  core.ContractRequester   `inject:""`
+	MessageBus         core.MessageBus          `inject:""`
+	CS                 core.CryptographyService `inject:""`
+	PM                 core.PulseManager        `inject:""`
 
 	realCoordinator Coordinator
 	zeroCoordinator Coordinator
