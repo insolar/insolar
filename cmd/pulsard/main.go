@@ -136,6 +136,10 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 		inslogger.FromContext(ctx).Fatal(err)
 	}
 
+	if err = cm.Start(ctx); err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
