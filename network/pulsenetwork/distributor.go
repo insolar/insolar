@@ -35,7 +35,7 @@ type distributor struct {
 
 	pingRequestTimeout        time.Duration
 	randomHostsRequestTimeout time.Duration
-	pulseTimeout              time.Duration
+	pulseRequestTimeout       time.Duration
 	randomNodesCount          int
 
 	pulsarHost     *host.Host
@@ -56,7 +56,7 @@ func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor,
 	return &distributor{
 		pingRequestTimeout:        time.Duration(conf.PingRequestTimeout) * time.Millisecond,
 		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
-		pulseTimeout:              time.Duration(conf.PulseTimeout) * time.Millisecond,
+		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
 		randomNodesCount:          conf.RandomNodesCount,
 
 		bootstrapHosts: bootstrapHosts,
@@ -205,7 +205,7 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, ho
 	if err != nil {
 		return err
 	}
-	result, err := call.GetResult(d.pulseTimeout)
+	result, err := call.GetResult(d.pulseRequestTimeout)
 	if err != nil {
 		return err
 	}
