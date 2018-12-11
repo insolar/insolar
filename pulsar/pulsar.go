@@ -86,6 +86,7 @@ type Pulsar struct {
 	CryptographyService        core.CryptographyService
 	PlatformCryptographyScheme core.PlatformCryptographyScheme
 	KeyProcessor               core.KeyProcessor
+	PulseDistributor           core.PulseDistributor
 }
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
