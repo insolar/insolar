@@ -712,7 +712,7 @@ func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Mes
 }
 
 func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
-	jetID := core.TODOJetID
+	jetID := *core.NewJetID(0, nil)
 
 	rec, err := s.GetRecord(ctx, jetID, id)
 	if err != nil {
