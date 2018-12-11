@@ -51,3 +51,7 @@ type Network interface {
 	// GetGlobuleID returns current globule id.
 	GetGlobuleID() GlobuleID
 }
+
+type PulseDistributor interface {
+	Distribute(context.Context, *Pulse)
+}
