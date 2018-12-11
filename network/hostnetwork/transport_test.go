@@ -37,9 +37,10 @@ import (
 const (
 	InvalidPacket types.PacketType = 1024
 
-	ID1 string = "123"
-	ID2 string = "234"
-	ID3 string = "345"
+	ID1    = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
+	ID2    = "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
+	ID3    = "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
+	DOMAIN = ".4F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
 )
 
 type MockResolver struct {
@@ -69,12 +70,15 @@ func (m *MockResolver) Rebalance(network.PartitionPolicy)    {}
 func (m *MockResolver) GetRandomNodes(int) []host.Host       { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
-	k := core.NewRefFromBase58(key)
-	h, err := host.NewHostN(value, k)
+	k, err := core.NewRefFromBase58(key)
 	if err != nil {
 		return err
 	}
-	m.mapping[k] = h
+	h, err := host.NewHostN(value, *k)
+	if err != nil {
+		return err
+	}
+	m.mapping[*k] = h
 	return nil
 }
 
@@ -98,20 +102,22 @@ func mockConfiguration(address string) configuration.Configuration {
 
 func TestNewInternalTransport(t *testing.T) {
 	// broken address
-	_, err := NewInternalTransport(mockConfiguration("abirvalg"), ID1)
+	_, err := NewInternalTransport(mockConfiguration("abirvalg"), ID1+DOMAIN)
 	require.Error(t, err)
 	address := "127.0.0.1:0"
-	tp, err := NewInternalTransport(mockConfiguration(address), ID1)
+	tp, err := NewInternalTransport(mockConfiguration(address), ID1+DOMAIN)
 	require.NoError(t, err)
 	defer tp.Stop()
 	// require that new address with correct port has been assigned
 	require.NotEqual(t, address, tp.PublicAddress())
-	require.Equal(t, core.NewRefFromBase58(ID1), tp.GetNodeID())
+	ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
+	require.NoError(t, err)
+	require.Equal(t, ref, tp.GetNodeID())
 }
 
 func TestNewInternalTransport2(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	go tp.Start(ctx)
 	// no assertion, check that Stop does not block
@@ -124,12 +130,12 @@ func TestNewInternalTransport2(t *testing.T) {
 func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err error) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1)
+	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
 	tr1 := NewHostTransport(i1, m)
-	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2)
+	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -155,9 +161,12 @@ func TestNewInternalTransport3(t *testing.T) {
 func TestNewHostTransport(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
-	t1, t2, err := createTwoHostNetworks(ID1, ID2)
-	require.Equal(t, core.NewRefFromBase58(ID1), t1.GetNodeID())
-	require.Equal(t, core.NewRefFromBase58(ID2), t2.GetNodeID())
+	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+	ref1, err := core.NewRefFromBase58(ID1 + DOMAIN)
+	require.NoError(t, err)
+	require.Equal(t, *ref1, t1.GetNodeID())
+	ref2, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	require.Equal(t, ref2, t2.GetNodeID())
 	require.NoError(t, err)
 
 	count := 10
