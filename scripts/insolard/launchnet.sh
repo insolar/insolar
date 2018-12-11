@@ -185,7 +185,7 @@ copy_certs()
     i=0
     for node in "${NODES[@]}"
     do
-        ((i++))
+        i=$((i + 1))
         cp -v $NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
     done
     echo "copy_certs() end."
@@ -229,7 +229,7 @@ printf "start nodes ... \n"
 i=0
 for node in "${NODES[@]}"
 do
-    ((i++))
+    i=$((i + 1))
     if [ "$i" -eq "$NUM_NODES" ]
     then
         $INSOLARD --config scripts/insolard/insolar_$i.yaml &> $node/output.txt
