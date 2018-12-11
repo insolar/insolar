@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -55,8 +56,12 @@ func NewBootstrapNode(pubKey crypto.PublicKey, publicKey, host, noderef string) 
 
 // GetNodeRef returns reference of bootstrap node
 func (bn *BootstrapNode) GetNodeRef() *core.RecordRef {
-	ref := core.NewRefFromBase58(bn.NodeRef)
-	return &ref
+	ref, err := core.NewRefFromBase58(bn.NodeRef)
+	if err != nil {
+		log.Errorf("Invalid bootstrap node reference: %s\n", bn.NodeRef)
+		return nil
+	}
+	return ref
 }
 
 // GetPublicKey returns public key reference of bootstrap node
@@ -179,8 +184,12 @@ func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 
 // GetRootDomainReference returns RootDomain reference
 func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
-	ref := core.NewRefFromBase58(cert.RootDomainReference)
-	return &ref
+	ref, err := core.NewRefFromBase58(cert.RootDomainReference)
+	if err != nil {
+		log.Errorf("Invalid domain reference in cert: %s\n", cert.Reference)
+		return nil
+	}
+	return ref
 }
 
 // GetDiscoveryNodes return bootstrap nodes array
