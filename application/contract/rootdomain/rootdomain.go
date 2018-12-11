@@ -105,11 +105,17 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Only root can call this method")
 	}
 	res := []map[string]interface{}{}
-	crefs, err := rd.GetChildrenTyped(*member.PrototypeReference)
+	iterator, err := rd.NewChildrenTypedIterator(member.GetPrototype())
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get children: %s", err.Error())
 	}
-	for _, cref := range crefs {
+
+	for iterator.HasNext() {
+		cref, err := iterator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("[ DumpUserInfo ] Can't get next child: %s", err.Error())
+		}
+
 		if cref == rd.RootMember {
 			continue
 		}

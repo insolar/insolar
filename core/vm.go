@@ -91,7 +91,7 @@ const (
 	CaseRecordTypeSignObject
 	CaseRecordTypeRouteCall
 	CaseRecordTypeSaveAsChild
-	CaseRecordTypeGetObjChildren
+	CaseRecordTypeGetObjChildrenIterator
 	CaseRecordTypeSaveAsDelegate
 	CaseRecordTypeGetDelegate
 	CaseRecordTypeDeactivateObject
