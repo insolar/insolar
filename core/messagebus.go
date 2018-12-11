@@ -37,6 +37,18 @@ type Message interface {
 
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
+
+	// DefaultTarget returns of target of this event.
+	DefaultTarget() *RecordRef
+
+	// DefaultRole returns role for this event
+	DefaultRole() DynamicRole
+
+	// AllowedSenderObjectAndRole extracts information from message
+	// verify sender required to 's "caller" for sender
+	// verification purpose. If nil then check of sender's role is not
+	// provided by the message bus
+	AllowedSenderObjectAndRole() (*RecordRef, DynamicRole)
 }
 
 type MessageSignature interface {

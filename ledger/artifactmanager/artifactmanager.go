@@ -78,7 +78,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		&record.CallRequest{
 			Payload: message.ParcelToBytes(parcel),
 		},
-		message.ExtractTarget(parcel.Message()),
+		*parcel.Message().DefaultTarget(),
 		currentPulse.Pulse,
 	)
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
