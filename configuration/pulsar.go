@@ -48,7 +48,7 @@ type Pulsar struct {
 
 type PulseDistributor struct {
 	BootstrapHosts     []string
-	PingTimeout        int32 // ms
+	PingRequestTimeout int32 // ms
 	RandomNodesTimeout int32 // ms
 	PulseTimeout       int32 // ms
 	RandomNodesCount   int
@@ -83,7 +83,7 @@ func NewPulsar() Pulsar {
 		},
 		PulseDistributor: PulseDistributor{
 			BootstrapHosts:     []string{"localhost:53837"},
-			PingTimeout:        1000,
+			PingRequestTimeout: 1000,
 			RandomNodesTimeout: 1000,
 			PulseTimeout:       1000,
 			RandomNodesCount:   5,

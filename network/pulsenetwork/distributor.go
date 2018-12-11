@@ -33,7 +33,7 @@ import (
 type distributor struct {
 	Transport transport.Transport `inject:""`
 
-	pingTimeout        time.Duration
+	pingRequestTimeout time.Duration
 	randomNodesTimeout time.Duration
 	pulseTimeout       time.Duration
 	randomNodesCount   int
@@ -54,7 +54,7 @@ func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor,
 	}
 
 	return &distributor{
-		pingTimeout:        time.Duration(conf.PingTimeout) * time.Millisecond,
+		pingRequestTimeout: time.Duration(conf.PingRequestTimeout) * time.Millisecond,
 		randomNodesTimeout: time.Duration(conf.RandomNodesTimeout) * time.Millisecond,
 		pulseTimeout:       time.Duration(conf.PulseTimeout) * time.Millisecond,
 		randomNodesCount:   conf.RandomNodesCount,
@@ -124,7 +124,7 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	}
 
 	logger.Debugf("before ping request")
-	result, err := pingCall.GetResult(d.pingTimeout)
+	result, err := pingCall.GetResult(d.pingRequestTimeout)
 	if err != nil {
 		logger.Error(err)
 		return errors.Wrap(err, "[ pingHost ] failed to get ping result")
