@@ -70,8 +70,8 @@ type CallMethod struct {
 	Arguments  core.Arguments
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (cm *CallMethod) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (cm *CallMethod) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	c := cm.GetCaller()
 	if c.IsEmpty() {
 		return nil, 0
@@ -79,13 +79,13 @@ func (cm *CallMethod) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core
 	return c, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*CallMethod) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*CallMethod) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleVirtualExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (cm *CallMethod) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (cm *CallMethod) DefaultTarget() *core.RecordRef {
 	return &cm.ObjectRef
 }
 
@@ -117,7 +117,7 @@ type CallConstructor struct {
 }
 
 //
-func (cc *CallConstructor) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+func (cc *CallConstructor) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	c := cc.GetCaller()
 	if c.IsEmpty() {
 		return nil, 0
@@ -125,13 +125,13 @@ func (cc *CallConstructor) ExtractAllowedSenderObjectAndRole() (*core.RecordRef,
 	return c, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*CallConstructor) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*CallConstructor) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleVirtualExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (cc *CallConstructor) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (cc *CallConstructor) DefaultTarget() *core.RecordRef {
 	if cc.SaveAs == Delegate {
 		return &cc.ParentRef
 	}
@@ -153,18 +153,18 @@ type ExecutorResults struct {
 	CaseBind  core.CaseBind
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (er *ExecutorResults) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (er *ExecutorResults) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return nil, 0
 }
 
-// ExtractRole returns role for this event
-func (er *ExecutorResults) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (er *ExecutorResults) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleVirtualExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (er *ExecutorResults) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (er *ExecutorResults) DefaultTarget() *core.RecordRef {
 	return &er.RecordRef
 }
 
@@ -188,18 +188,18 @@ type ValidateCaseBind struct {
 	Pulse     core.Pulse
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (vcb *ValidateCaseBind) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (vcb *ValidateCaseBind) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &vcb.RecordRef, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*ValidateCaseBind) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*ValidateCaseBind) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleVirtualValidator
 }
 
-// ExtractTarget returns of target of this event.
-func (vcb *ValidateCaseBind) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (vcb *ValidateCaseBind) DefaultTarget() *core.RecordRef {
 	return &vcb.RecordRef
 }
 
@@ -227,18 +227,18 @@ type ValidationResults struct {
 	Error            string
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (vr *ValidationResults) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (vr *ValidationResults) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &vr.RecordRef, core.DynamicRoleVirtualValidator
 }
 
-// ExtractRole returns role for this event
-func (*ValidationResults) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*ValidationResults) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleVirtualExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (vr *ValidationResults) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (vr *ValidationResults) DefaultTarget() *core.RecordRef {
 	return &vr.RecordRef
 }
 

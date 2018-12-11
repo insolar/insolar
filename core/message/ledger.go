@@ -37,18 +37,18 @@ type SetRecord struct {
 	TargetRef core.RecordRef
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (sr *SetRecord) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (sr *SetRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &sr.TargetRef, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*SetRecord) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*SetRecord) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (sr *SetRecord) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (sr *SetRecord) DefaultTarget() *core.RecordRef {
 	return &sr.TargetRef
 }
 
@@ -63,18 +63,18 @@ type GetCode struct {
 	Code core.RecordRef
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (gc *GetCode) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (gc *GetCode) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &gc.Code, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*GetCode) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*GetCode) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (gc *GetCode) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (gc *GetCode) DefaultTarget() *core.RecordRef {
 	return &gc.Code
 }
 
@@ -91,18 +91,18 @@ type GetObject struct {
 	Approved bool
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (getObj *GetObject) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (getObj *GetObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &getObj.Head, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*GetObject) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*GetObject) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (getObj *GetObject) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (getObj *GetObject) DefaultTarget() *core.RecordRef {
 	return &getObj.Head
 }
 
@@ -118,18 +118,18 @@ type GetDelegate struct {
 	AsType core.RecordRef
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (gd *GetDelegate) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (gd *GetDelegate) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &gd.Head, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*GetDelegate) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*GetDelegate) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (gd *GetDelegate) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (gd *GetDelegate) DefaultTarget() *core.RecordRef {
 	return &gd.Head
 }
 
@@ -146,18 +146,18 @@ type UpdateObject struct {
 	Object core.RecordRef
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (uo *UpdateObject) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (uo *UpdateObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &uo.Object, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*UpdateObject) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*UpdateObject) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (uo *UpdateObject) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (uo *UpdateObject) DefaultTarget() *core.RecordRef {
 	return &uo.Object
 }
 
@@ -175,18 +175,18 @@ type RegisterChild struct {
 	AsType *core.RecordRef // If not nil, considered as delegate.
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (rc *RegisterChild) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (rc *RegisterChild) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &rc.Child, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*RegisterChild) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*RegisterChild) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (rc *RegisterChild) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (rc *RegisterChild) DefaultTarget() *core.RecordRef {
 	return &rc.Parent
 }
 
@@ -204,18 +204,18 @@ type GetChildren struct {
 	Amount    int
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (gc *GetChildren) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (gc *GetChildren) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &gc.Parent, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*GetChildren) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*GetChildren) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (gc *GetChildren) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (gc *GetChildren) DefaultTarget() *core.RecordRef {
 	return &gc.Parent
 }
 
@@ -233,19 +233,19 @@ type JetDrop struct {
 	PulseNumber core.PulseNumber
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (jd *JetDrop) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (jd *JetDrop) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	// This check is not needed, because JetDrop sender is explicitly checked in handler.
 	return nil, core.DynamicRoleUndefined
 }
 
-// ExtractRole returns role for this event
-func (*JetDrop) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*JetDrop) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (jd *JetDrop) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (jd *JetDrop) DefaultTarget() *core.RecordRef {
 	return &jd.Jet
 }
 
@@ -264,18 +264,18 @@ type ValidateRecord struct {
 	ValidationMessages []core.Message
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (vr *ValidateRecord) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (vr *ValidateRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &vr.Object, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*ValidateRecord) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*ValidateRecord) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (vr *ValidateRecord) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (vr *ValidateRecord) DefaultTarget() *core.RecordRef {
 	return &vr.Object
 }
 
@@ -292,18 +292,18 @@ type SetBlob struct {
 	Memory    []byte
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (sb *SetBlob) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (sb *SetBlob) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &sb.TargetRef, core.DynamicRoleVirtualExecutor
 }
 
-// ExtractRole returns role for this event
-func (*SetBlob) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*SetBlob) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (sb *SetBlob) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (sb *SetBlob) DefaultTarget() *core.RecordRef {
 	return &sb.TargetRef
 }
 
@@ -319,18 +319,18 @@ type GetObjectIndex struct {
 	Object core.RecordRef
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (getObjectIndex *GetObjectIndex) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (getObjectIndex *GetObjectIndex) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &getObjectIndex.Object, core.DynamicRoleLightExecutor
 }
 
-// ExtractRole returns role for this event
-func (*GetObjectIndex) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*GetObjectIndex) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleHeavyExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (getObjectIndex *GetObjectIndex) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (getObjectIndex *GetObjectIndex) DefaultTarget() *core.RecordRef {
 	return &getObjectIndex.Object
 }
 
@@ -348,20 +348,20 @@ type ValidationCheck struct {
 	LatestStateApproved *core.RecordID
 }
 
-// ExtractTarget returns of target of this event.
-func (vc *ValidationCheck) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (vc *ValidationCheck) DefaultTarget() *core.RecordRef {
 	// TODO: return smth real
 	return nil
 }
 
-// ExtractRole returns role for this event
-func (vc *ValidationCheck) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (vc *ValidationCheck) DefaultRole() core.DynamicRole {
 	// TODO: return smth real
 	return core.DynamicRoleUndefined
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (vc *ValidationCheck) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (vc *ValidationCheck) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	// TODO: return smth real
 	return nil, 0
 }
@@ -381,18 +381,18 @@ type HotData struct {
 	PulseNumber     core.PulseNumber
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (hd *HotData) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+// AllowedSenderObjectAndRole implements interface method
+func (hd *HotData) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return &hd.Jet, core.DynamicRoleLightExecutor
 }
 
-// ExtractRole returns role for this event
-func (*HotData) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*HotData) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (hd *HotData) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (hd *HotData) DefaultTarget() *core.RecordRef {
 	return &hd.Jet
 }
 

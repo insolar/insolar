@@ -27,19 +27,18 @@ type HeavyPayload struct {
 	Records  []core.KV
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (*HeavyPayload) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	// TODO: return smth real
+// AllowedSenderObjectAndRole implements interface method
+func (*HeavyPayload) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return nil, 0
 }
 
-// ExtractRole returns role for this event
-func (*HeavyPayload) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*HeavyPayload) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleHeavyExecutor
 }
 
-// ExtractTarget returns of target of this event.
-func (hp *HeavyPayload) ExtractTarget() *core.RecordRef {
+// DefaultTarget returns of target of this event.
+func (hp *HeavyPayload) DefaultTarget() *core.RecordRef {
 	return &core.RecordRef{}
 }
 
@@ -59,20 +58,18 @@ type HeavyStartStop struct {
 	Finished bool
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (*HeavyStartStop) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	// TODO: return smth real
+// AllowedSenderObjectAndRole implements interface method
+func (*HeavyStartStop) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return nil, 0
 }
 
-// ExtractTarget returns of target of this event.
-func (*HeavyStartStop) ExtractTarget() *core.RecordRef {
-	// TODO: return smth real
-	return nil
+// DefaultTarget returns of target of this event.
+func (*HeavyStartStop) DefaultTarget() *core.RecordRef {
+	return &core.RecordRef{}
 }
 
-// ExtractRole returns role for this event
-func (*HeavyStartStop) ExtractRole() core.DynamicRole {
+// DefaultRole returns role for this event
+func (*HeavyStartStop) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleHeavyExecutor
 }
 
@@ -91,21 +88,18 @@ type HeavyReset struct {
 	PulseNum core.PulseNumber
 }
 
-// ExtractAllowedSenderObjectAndRole implements interface method
-func (*HeavyReset) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	// TODO: return smth real
+// AllowedSenderObjectAndRole implements interface method
+func (*HeavyReset) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return nil, 0
 }
 
-// ExtractTarget returns of target of this event.
-func (*HeavyReset) ExtractTarget() *core.RecordRef {
-	// TODO: return smth real
-	return nil
+// DefaultTarget returns of target of this event.
+func (*HeavyReset) DefaultTarget() *core.RecordRef {
+	return &core.RecordRef{}
 }
 
-// ExtractRole returns role for this event
-func (*HeavyReset) ExtractRole() core.DynamicRole {
-	// TODO: return smth real
+// DefaultRole returns role for this event
+func (*HeavyReset) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleHeavyExecutor
 }
 
