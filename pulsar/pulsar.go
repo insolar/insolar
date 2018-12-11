@@ -91,6 +91,7 @@ type Pulsar struct {
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
+	// TODO: refactor constructor; inject components. INS-939 - @dmitry-panchenko 11.Dec.2018
 	configuration configuration.Pulsar,
 	cryptographyService core.CryptographyService,
 	scheme core.PlatformCryptographyScheme,
