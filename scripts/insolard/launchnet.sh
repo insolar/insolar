@@ -60,7 +60,6 @@ clear_dirs()
 create_required_dirs()
 {
     echo "create_required_dirs() starts ..."
-    mkdir -vp $TEST_DATA/functional
     mkdir -vp $CONTRACT_STORAGE
     mkdir -vp $LEDGER_DIR
     mkdir -vp $NODES_DATA/certs
