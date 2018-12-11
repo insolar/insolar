@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/pkg/errors"
 )
 
 type Member struct {
@@ -124,7 +125,11 @@ func (m *Member) getBalance(params []byte) (interface{}, error) {
 	if err := signer.UnmarshalParams(params, &member); err != nil {
 		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
-	w, err := wallet.GetImplementationFrom(core.NewRefFromBase58(member))
+	memberRef, err := core.NewRefFromBase58(member)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getBalance ] :")
+	}
+	w, err := wallet.GetImplementationFrom(*memberRef)
 	if err != nil {
 		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
@@ -141,8 +146,11 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 	if amount <= 0 {
 		return nil, fmt.Errorf("[ transferCall ] Amount must be positive")
 	}
-	to := core.NewRefFromBase58(toStr)
-	if m.GetReference() == to {
+	to, err := core.NewRefFromBase58(toStr)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ transferCall ] Failed to parse 'to' param")
+	}
+	if m.GetReference() == *to {
 		return nil, fmt.Errorf("[ transferCall ] Recipient must be different from the sender")
 	}
 	w, err := wallet.GetImplementationFrom(m.GetReference())
@@ -150,7 +158,7 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ transferCall ] Can't get implementation: %s", err.Error())
 	}
 
-	return nil, w.Transfer(uint(amount), &to)
+	return nil, w.Transfer(uint(amount), to)
 }
 
 func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{}, error) {
