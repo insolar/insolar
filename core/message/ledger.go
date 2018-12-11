@@ -356,6 +356,7 @@ func (vc *ValidationCheck) ExtractTarget() *core.RecordRef {
 
 // ExtractRole returns role for this event
 func (vc *ValidationCheck) ExtractRole() core.DynamicRole {
+	// TODO: return smth real
 	return core.DynamicRoleUndefined
 }
 

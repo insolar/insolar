@@ -67,7 +67,8 @@ func (*HeavyStartStop) ExtractAllowedSenderObjectAndRole() (*core.RecordRef, cor
 
 // ExtractTarget returns of target of this event.
 func (*HeavyStartStop) ExtractTarget() *core.RecordRef {
-	return &core.RecordRef{}
+	// TODO: return smth real
+	return nil
 }
 
 // ExtractRole returns role for this event
@@ -105,7 +106,7 @@ func (*HeavyReset) ExtractTarget() *core.RecordRef {
 // ExtractRole returns role for this event
 func (*HeavyReset) ExtractRole() core.DynamicRole {
 	// TODO: return smth real
-	return core.DynamicRoleUndefined
+	return core.DynamicRoleHeavyExecutor
 }
 
 // GetCaller implementation of Message interface.
