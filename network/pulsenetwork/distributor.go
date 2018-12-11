@@ -20,9 +20,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
+	"github.com/pkg/errors"
 )
 type distributor struct {
 	Transport transport.Transport `inject:""`
@@ -32,7 +34,18 @@ type distributor struct {
 }
 
 func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor, error) {
+	bootstrapHosts := make([]*host.Host, len(conf.BootstrapHosts))
+
+	for _, node := range conf.BootstrapHosts {
+		bootstrapHost, err := host.NewHost(node)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ NewDistributor ] failed to create bootstrap node host")
+		}
+		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
+	}
+
 	return &distributor{
+		bootstrapHosts: bootstrapHosts,
 	}, nil
 }
 func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
