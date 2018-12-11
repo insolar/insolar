@@ -47,11 +47,11 @@ type Pulsar struct {
 }
 
 type PulseDistributor struct {
-	BootstrapHosts     []string
-	PingRequestTimeout int32 // ms
-	RandomNodesTimeout int32 // ms
-	PulseTimeout       int32 // ms
-	RandomNodesCount   int
+	BootstrapHosts            []string
+	PingRequestTimeout        int32 // ms
+	RandomNodesRequestTimeout int32 // ms
+	PulseTimeout              int32 // ms
+	RandomNodesCount          int
 }
 
 type PulsarNodeAddress struct {
@@ -82,11 +82,11 @@ func NewPulsar() Pulsar {
 			BehindNAT: false,
 		},
 		PulseDistributor: PulseDistributor{
-			BootstrapHosts:     []string{"localhost:53837"},
-			PingRequestTimeout: 1000,
-			RandomNodesTimeout: 1000,
-			PulseTimeout:       1000,
-			RandomNodesCount:   5,
+			BootstrapHosts:            []string{"localhost:53837"},
+			PingRequestTimeout:        1000,
+			RandomNodesRequestTimeout: 1000,
+			PulseTimeout:              1000,
+			RandomNodesCount:          5,
 		},
 	}
 }
