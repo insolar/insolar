@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/platformpolicy"
@@ -122,9 +123,14 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 		inslogger.FromContext(ctx).Fatal(err)
 	}
 
+	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor)
+	if err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
 	cm := &component.Manager{}
-	cm.Inject(cryptographyService)
 	cm.Register(cryptographyScheme, keyStore, keyProcessor, tp)
+	cm.Inject(cryptographyService)
 
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
