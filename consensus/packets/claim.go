@@ -57,10 +57,6 @@ type SignedClaim interface {
 	GetSignature() []byte
 }
 
-type SupplementaryClaim interface {
-	SetSupplementaryInfo(address string, nodeID core.RecordRef)
-}
-
 // NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
 // Type 4.
 type NodeBroadcast struct {

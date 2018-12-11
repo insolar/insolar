@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -119,7 +118,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 			},
 			StateHash: rawProof.StateHash(),
 		}
-		claimMap[ref] = fp.getSignedClaims(packet.GetClaims())
+		claimMap[ref] = fp.filterClaims(packet.GetClaims())
 	}
 
 	if fp.NodeKeeper.GetState() == network.Waiting {
@@ -209,33 +208,33 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 	return 0, errors.New("no announce claims were received")
 }
 
-func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+func (fp *FirstPhase) filterClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
-		joinClaim, ok := claim.(*packets.NodeJoinClaim)
+		signedClaim, ok := claim.(packets.SignedClaim)
 		if ok {
-			err := fp.checkJoinClaimSign(joinClaim)
+			err := fp.checkClaimSignature(signedClaim)
 			if err != nil {
-				log.Error("[ getSignedClaims ] failed to check a claim sign")
+				log.Error("[ filterClaims ] failed to check a claim sign")
 				continue
 			}
 		}
+
 		result = append(result, claim)
 	}
 	return result
 }
 
-func (fp *FirstPhase) checkJoinClaimSign(claim *packets.NodeJoinClaim) error {
-	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
+func (fp *FirstPhase) checkClaimSignature(claim packets.SignedClaim) error {
+	key, err := claim.GetPublicKey()
 	if err != nil {
-		return errors.Wrap(err, "[ checkJoinClaimSign ] failed to import a key")
+		return errors.Wrap(err, "[ checkClaimSignature ] failed to import a key")
 	}
 	rawClaim, err := claim.SerializeRaw()
 	if err != nil {
-		return errors.Wrap(err, "[ checkJoinClaimSign ] failed to serialize a claim")
+		return errors.Wrap(err, "[ checkClaimSignature ] failed to serialize a claim")
 	}
-	success := fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.Signature[:]), rawClaim)
+	success := fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.GetSignature()), rawClaim)
 	if !success {
 		return errors.New("Signature verification failed")
 	}
