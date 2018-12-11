@@ -101,6 +101,10 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 		}
 
 		if hosts == nil || len(hosts) == 0 {
+			err := d.sendPulseToHost(ctx, pulse, bootstrapHost)
+			if err != nil {
+				logger.Error(err)
+			}
 			continue
 		}
 	}
