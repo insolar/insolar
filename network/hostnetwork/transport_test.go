@@ -37,10 +37,11 @@ import (
 const (
 	InvalidPacket types.PacketType = 1024
 
-	ID1    = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
-	ID2    = "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
-	ID3    = "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
-	DOMAIN = ".4F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
+	ID1       = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
+	ID2       = "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
+	ID3       = "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
+	IDUNKNOWN = "4K3Mi2hyZ6QKgynGv33sR5n3zWmSzdo8zv5Em7X26r1w"
+	DOMAIN    = ".4F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
 )
 
 type MockResolver struct {
@@ -190,7 +191,9 @@ func TestNewHostTransport(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-		_, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
+		ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+		require.NoError(t, err)
+		_, err = t1.SendRequest(request, *ref)
 		require.NoError(t, err)
 	}
 	success := utils.WaitTimeout(&wg, time.Second)
@@ -207,20 +210,23 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	t1.Start(ctx)
 	defer t1.Stop()
 
-	unknownID := core.NewRefFromBase58("unknown")
+	unknownID, err := core.NewRefFromBase58(IDUNKNOWN + DOMAIN)
+	require.NoError(t, err)
 
 	// should return error because cannot resolve NodeID -> Address
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	_, err = t1.SendRequest(request, unknownID)
+	_, err = t1.SendRequest(request, *unknownID)
 	require.Error(t, err)
 
-	err = m.addMapping(ID2, "abirvalg")
+	err = m.addMapping(ID2+DOMAIN, "abirvalg")
 	require.Error(t, err)
-	err = m.addMapping(ID3, "127.0.0.1:7654")
+	err = m.addMapping(ID3+DOMAIN, "127.0.0.1:7654")
 	require.NoError(t, err)
 
+	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	require.NoError(t, err)
 	// should return error because resolved address is invalid
-	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	_, err = t1.SendRequest(request, *ref)
 	require.Error(t, err)
 }
 
@@ -235,7 +241,9 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
-		require.Equal(t, core.NewRefFromBase58(ID1), r.GetSender())
+		ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
+		require.NoError(t, err)
+		require.Equal(t, ref, r.GetSender())
 		require.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
 		wg.Done()
 		return t2.BuildResponse(r, nil), nil
@@ -251,10 +259,14 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	require.Equal(t, core.NewRefFromBase58(ID1), request.GetSender())
+	ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
+	require.NoError(t, err)
+	require.Equal(t, *ref, request.GetSender())
 	require.Equal(t, t1.PublicAddress(), request.GetSenderHost().Address.String())
 
-	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	ref, err = core.NewRefFromBase58(ID2 + DOMAIN)
+	require.NoError(t, err)
+	_, err = t1.SendRequest(request, *ref)
 	require.NoError(t, err)
 	success := utils.WaitTimeout(&wg, time.Second)
 	require.True(t, success)
@@ -287,7 +299,9 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 
 	magicNumber := 42
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
-	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	require.NoError(t, err)
+	f, err := t1.SendRequest(request, *ref)
 	require.NoError(t, err)
 	require.Equal(t, f.GetRequest().GetSender(), request.GetSender())
 
@@ -299,7 +313,7 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 
 	magicNumber = 666
 	request = t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
-	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	f, err = t1.SendRequest(request, *ref)
 	require.NoError(t, err)
 
 	r = <-f.Response()
@@ -325,13 +339,15 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	t1.Start(ctx2)
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	f, err := t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	require.NoError(t, err)
+	f, err := t1.SendRequest(request, *ref)
 	require.NoError(t, err)
 
 	_, err = f.GetResponse(time.Millisecond)
 	require.Error(t, err)
 
-	f, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	f, err = t1.SendRequest(request, *ref)
 	require.NoError(t, err)
 	t1.Stop()
 
@@ -363,7 +379,9 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Build()
-	_, err = t1.SendRequest(request, core.NewRefFromBase58(ID2))
+	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	require.NoError(t, err)
+	_, err = t1.SendRequest(request, *ref)
 	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
