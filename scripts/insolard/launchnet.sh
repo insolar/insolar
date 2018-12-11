@@ -26,6 +26,7 @@ DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
 stop_listening()
 {
+    echo "stop_listening() starts ..."
     stop_insgorund=$1
     ports="13831 13832 23832 23833 33833 33834"
     if [ "$stop_insgorund" == "true" ]
@@ -44,36 +45,43 @@ stop_listening()
             kill -9 $pid
         done
     done
+    echo "stop_listening() end."
 }
 
 clear_dirs()
 {
-    echo "Cleaning directories ... "
+    echo "clear_dirs() starts ..."
     rm -rfv $CONTRACT_STORAGE/*
     rm -rfv $LEDGER_DIR/*
     rm -rfv $NODES_DATA/*
+    echo "clear_dirs() end."
 }
 
 create_required_dirs()
 {
-    mkdir -p $TEST_DATA/functional
-    mkdir -p $CONTRACT_STORAGE
-    mkdir -p $LEDGER_DIR
-    mkdir -p $NODES_DATA/certs
+    echo "create_required_dirs() starts ..."
+    mkdir -vp $TEST_DATA/functional
+    mkdir -vp $CONTRACT_STORAGE
+    mkdir -vp $LEDGER_DIR
+    mkdir -vp $NODES_DATA/certs
 
     for node in "${NODES[@]}"
     do
-        mkdir -p $node/data
+        mkdir -vp $node/data
     done
 
     mkdir -p scripts/insolard/$CONFIGS_DIR
+
+    echo "create_required_dirs() end."
 }
 
 prepare()
 {
+    echo "prepare() starts ..."
     stop_listening $run_insgorund
     clear_dirs
     create_required_dirs
+    echo "prepare() end."
 }
 
 build_binaries()
@@ -89,29 +97,37 @@ rebuild_binaries()
 
 generate_bootstrap_keys()
 {
+    echo "generate_bootstrap_keys() starts ..."
 	bin/insolar -c gen_keys > $KEYS_FILE
+	echo "generate_bootstrap_keys() end."
 }
 
 generate_root_member_keys()
 {
+    echo "generate_root_member_keys() starts ..."
 	bin/insolar -c gen_keys > $ROOT_MEMBER_KEYS_FILE
+	echo "generate_root_member_keys() end."
 }
 
 generate_discovery_nodes_keys()
 {
+    echo "generate_discovery_nodes_keys() starts ..."
     for node in "${NODES[@]}"
     do
         bin/insolar -c gen_keys > $node/keys.json
     done
+    echo "generate_discovery_nodes_keys() end."
 }
 
 check_working_dir()
 {
+    echo "check_working_dir() starts ..."
     if ! pwd | grep -q "src/github.com/insolar/insolar$"
     then
         echo "Run me from insolar root"
         exit 1
     fi
+    echo "check_working_dir() end."
 }
 
 usage()
