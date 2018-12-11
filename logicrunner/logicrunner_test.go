@@ -2160,10 +2160,9 @@ func (c *First) GetName() (string, error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, secondObj, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *testObj, 0, "Test", *secondObj)
-	assert.Error(t, err, "contract call") // TODO Require ERROR
+	_, err = executeMethod(ctx, lr, pm, *testObj, 0, "Test", *secondObj)
+	assert.Error(t, err, "contract call")
 	assert.Contains(t, err.Error(), "try to call method of prototype as method of another prototype")
-	assert.Equal(t, nil, resp) // TODO remove
 
 	ValidateAllResults(t, ctx, lr, *testObj)
 }
