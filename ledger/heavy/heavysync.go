@@ -97,7 +97,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, pn core.PulseNumber) error 
 }
 
 // Start try to start heavy sync for provided pulse.
-func (s *Sync) Start(ctx context.Context, pn core.PulseNumber) error {
+func (s *Sync) Start(ctx context.Context, jet core.RecordID, pn core.PulseNumber) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -116,7 +116,7 @@ func (s *Sync) Start(ctx context.Context, pn core.PulseNumber) error {
 // Store stores recieved key/value pairs at heavy storage.
 //
 // TODO: check actual pulse in keys
-func (s *Sync) Store(ctx context.Context, pn core.PulseNumber, kvs []core.KV) error {
+func (s *Sync) Store(ctx context.Context, jet core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
 	err := func() error {
 		s.Lock()
 		defer s.Unlock()
@@ -140,13 +140,14 @@ func (s *Sync) Store(ctx context.Context, pn core.PulseNumber, kvs []core.KV) er
 	}()
 	// could be retryable error only on low level storage issues
 	// TODO: check error value and wrap to repeatable if it is not integrity errors
+	// TODO: check jet in keys?
 	return s.db.StoreKeyValues(ctx, kvs)
 }
 
 // Stop successfully stops replication for specified pulse.
 //
 // TODO: call Stop if range sync too long
-func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
+func (s *Sync) Stop(ctx context.Context, jet core.RecordID, pn core.PulseNumber) error {
 	s.Lock()
 	defer s.Unlock()
 	if s.syncpulse == nil {
@@ -169,7 +170,7 @@ func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
 }
 
 // Reset resets sync for provided pulse.
-func (s *Sync) Reset(ctx context.Context, pn core.PulseNumber) error {
+func (s *Sync) Reset(ctx context.Context, jet core.RecordID, pn core.PulseNumber) error {
 	s.Lock()
 	defer s.Unlock()
 
