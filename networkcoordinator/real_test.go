@@ -37,7 +37,7 @@ func TestRealNetworkCoordinator_GetCert(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.NetworkCoordinatorNodeSignRequest)
+		require.Equal(t, p, core.TypeNodeSignRequest)
 	}
 
 	cm := testutils.NewCertificateManagerMock(t)
@@ -167,7 +167,7 @@ func TestRealNetworkCoordinator_GetCert_UnsignedCertificateError(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.NetworkCoordinatorNodeSignRequest)
+		require.Equal(t, p, core.TypeNodeSignRequest)
 	}
 
 	cm := testutils.NewCertificateManagerMock(t)
@@ -220,7 +220,7 @@ func TestRealNetworkCoordinator_GetCert_SignCertError(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.NetworkCoordinatorNodeSignRequest)
+		require.Equal(t, p, core.TypeNodeSignRequest)
 	}
 
 	cm := testutils.NewCertificateManagerMock(t)
@@ -278,7 +278,7 @@ func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.NetworkCoordinatorNodeSignRequest)
+		require.Equal(t, p, core.TypeNodeSignRequest)
 	}
 	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (core.Reply, error) {
 		return &reply.NodeSign{
@@ -367,7 +367,7 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode(t *testing.T) 
 
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.NetworkCoordinatorNodeSignRequest)
+		require.Equal(t, p, core.TypeNodeSignRequest)
 	}
 	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (core.Reply, error) {
 		return &reply.NodeSign{
@@ -504,7 +504,7 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_CurrentPulseEr
 
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.NetworkCoordinatorNodeSignRequest)
+		require.Equal(t, p, core.TypeNodeSignRequest)
 	}
 
 	cm := testutils.NewCertificateManagerMock(t)
@@ -587,7 +587,7 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_SendError(t *t
 
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.NetworkCoordinatorNodeSignRequest)
+		require.Equal(t, p, core.TypeNodeSignRequest)
 	}
 	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (core.Reply, error) {
 		return nil, errors.New("test_error")

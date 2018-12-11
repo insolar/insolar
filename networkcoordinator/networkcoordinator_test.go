@@ -38,7 +38,7 @@ func TestNetworkCoordinator_Start(t *testing.T) {
 	require.NoError(t, err)
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.NetworkCoordinatorNodeSignRequest)
+		require.Equal(t, p, core.TypeNodeSignRequest)
 	}
 	nc.MessageBus = mb
 	ctx := context.Background()
