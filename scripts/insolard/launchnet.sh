@@ -56,7 +56,6 @@ clear_dirs()
 
 create_required_dirs()
 {
-    mkdir -p $TEST_DATA/functional
     mkdir -p $CONTRACT_STORAGE
     mkdir -p $LEDGER_DIR
     mkdir -p $NODES_DATA/certs
