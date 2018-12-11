@@ -143,6 +143,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 		cryptographyService,
 		cryptographyScheme,
 		keyProcessor,
+		pulseDistributor,
 		storage,
 		&pulsar.RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
