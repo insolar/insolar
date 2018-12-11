@@ -66,7 +66,8 @@ func checkBadDataSerializationDeserialization(t *testing.T, orig Serializer, msg
 	data := serializeData(t, orig)
 	r := bytes.NewReader(data[:len(data)-1])
 	err := newObj.(Serializer).Deserialize(r)
-	require.EqualError(t, err, msg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), msg)
 }
 
 func TestPacketHeaderReadWrite(t *testing.T) {
@@ -74,8 +75,7 @@ func TestPacketHeaderReadWrite(t *testing.T) {
 }
 
 func TestPacketHeaderReadWrite_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(Phase1),
-		"[ PacketHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(Phase1), "unexpected EOF")
 }
 
 func makeDefaultPulseDataExt() PulseDataExt {
@@ -98,8 +98,7 @@ func TestPulseDataExtReadWrite(t *testing.T) {
 
 func TestPulseDataExtReadWrite_BadData(t *testing.T) {
 	pulseDataExt := makeDefaultPulseDataExt()
-	checkBadDataSerializationDeserialization(t, &pulseDataExt,
-		"[ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, &pulseDataExt, "unexpected EOF")
 }
 
 func TestPulseDataReadWrite(t *testing.T) {
@@ -114,8 +113,7 @@ func TestPulseDataReadWrite_BadData(t *testing.T) {
 	pulseData := &PulseData{}
 	pulseData.PulseNumber = uint32(32)
 	pulseData.Data = makeDefaultPulseDataExt()
-	checkBadDataSerializationDeserialization(t, pulseData,
-		"[ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, pulseData, "unexpected EOF")
 }
 
 func genRandomSlice(n int) []byte {
@@ -160,8 +158,7 @@ func TestNodePulseProofReadWrite(t *testing.T) {
 }
 
 func TestNodePulseProofReadWrite_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeNodePulseProof(),
-		"[ NodePulseProof.Deserialize ] Can't read NodeSignature: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makeNodePulseProof(), "unexpected EOF")
 }
 
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
@@ -292,9 +289,7 @@ func TestPhase2Packet_Deserialize(t *testing.T) {
 }
 
 func TestPhase2Packet_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makePhase2Packet(),
-		"[ Phase2Packet.Deserialize ] Can't deserialize body: [ Phase2Packet.Deserialize ] "+
-			"Can't read SignatureHeaderSection2: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makePhase2Packet(), "unexpected EOF")
 
 }
 
