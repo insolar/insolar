@@ -238,9 +238,9 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 
 func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.DynamicRole) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	target := message.ExtractTarget(msg)
+	target := msg.DefaultTarget()
 	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, role, &target, lr.pulse(ctx).PulseNumber, lr.Network.GetNodeID(),
+		ctx, role, target, lr.pulse(ctx).PulseNumber, lr.Network.GetNodeID(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
@@ -363,6 +363,7 @@ func init() {
 
 func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	ctx := es.insContext
+	inslogger.FromContext(ctx).Debug("LogicRunner.getObjectMessage starts ...")
 	cr, step := lr.nextValidationStep(objref)
 	// TODO: move this to vb, when vb become a part of es
 	if es.objectbody != nil { // already have something

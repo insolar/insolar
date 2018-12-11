@@ -57,8 +57,8 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	w.Balance = newBalance
 
 	r := a.GetReference()
-	toWallet.Accept(&r)
-	return nil
+	err = toWallet.Accept(&r)
+	return err
 }
 
 // Accept transforms allowance to balance
@@ -76,21 +76,30 @@ func (w *Wallet) Accept(aRef *core.RecordRef) error {
 
 // GetBalance gets total balance
 func (w *Wallet) GetBalance() (uint, error) {
-	crefs, err := w.GetChildrenTyped(allowance.GetPrototype())
+	iterator, err := w.NewChildrenTypedIterator(allowance.GetPrototype())
 	if err != nil {
 		return 0, fmt.Errorf("[ GetBalance ] Can't get children: %s", err.Error())
 	}
-	for _, cref := range crefs {
-		a := allowance.GetObject(cref)
-		balance, err := a.GetExpiredBalance()
+
+	for iterator.HasNext() {
+		cref, err := iterator.Next()
 		if err != nil {
-			balance = 0
-			//return 0, fmt.Errorf("[ GetBalance ] Can't get balance for owner: %s", err.Error())
+			return 0, fmt.Errorf("[ GetBalance ] Can't get next child: %s", err.Error())
 		}
 
-		w.Balance, err = safemath.Add(w.Balance, balance)
-		if err != nil {
-			return 0, fmt.Errorf("[ GetTotalBalance ] Couldn't add expired allowance to balance: %s", err.Error())
+		if !cref.IsEmpty() {
+			a := allowance.GetObject(cref)
+			balance, err := a.GetExpiredBalance()
+
+			if err != nil {
+				balance = 0
+				//return 0, fmt.Errorf("[ GetBalance ] Can't get balance for owner: %s", err.Error())
+			}
+
+			w.Balance, err = safemath.Add(w.Balance, balance)
+			if err != nil {
+				return 0, fmt.Errorf("[ GetTotalBalance ] Couldn't add expired allowance to balance: %s", err.Error())
+			}
 		}
 	}
 	return w.Balance, nil
