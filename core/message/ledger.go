@@ -123,8 +123,7 @@ func (e *GetChildren) Type() core.MessageType {
 type JetDrop struct {
 	ledgerMessage
 
-	Jet      core.RecordID
-	JetDepth int8
+	Jet core.RecordID
 
 	Drop        []byte
 	Messages    [][]byte

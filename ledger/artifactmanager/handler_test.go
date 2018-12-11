@@ -678,11 +678,10 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 
 	jetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{2})
 	msg := message.JetDrop{
-		JetDepth: 88,
-		Jet:      *jetID,
+		Jet: *jetID,
 	}
 	expectedSetId := jet.IDSet{
-		jet.ID{ID: *jetID, Depth: 88}: struct{}{},
+		*jetID: struct{}{},
 	}
 
 	h := NewMessageHandler(db, &configuration.Ledger{

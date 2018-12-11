@@ -8,13 +8,7 @@ import (
 )
 
 // IDSet is an alias for map[ID]struct{}
-type IDSet map[ID]struct{}
-
-// ID contains meta-params for jet
-type ID struct {
-	ID    core.RecordID
-	Depth int8
-}
+type IDSet map[core.RecordID]struct{}
 
 // Bytes serializes pulse.
 func (j IDSet) Bytes() []byte {
