@@ -95,8 +95,8 @@ func (n *nodeKeeperWrapper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, erro
 	return n.original.GetOriginJoinClaim()
 }
 
-func (n *nodeKeeperWrapper) GetOriginAnnounceClaim() (*consensus.NodeAnnounceClaim, error) {
-	return n.original.GetOriginAnnounceClaim()
+func (n *nodeKeeperWrapper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
+	return n.original.GetOriginAnnounceClaim(mapper)
 }
 
 func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {
