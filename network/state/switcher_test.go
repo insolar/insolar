@@ -17,6 +17,7 @@
 package state
 
 import (
+	"context"
 	"sync"
 	"testing"
 
@@ -71,7 +72,9 @@ func TestOnPulseNoChange(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Inject(switcherWorkAround, switcher)
 
-	switcher.OnPulse()
+	err = switcher.OnPulse(context.Background(), core.Pulse{})
+	require.NoError(t, err)
+	require.Equal(t, core.NoNetworkState, switcher.state)
 }
 
 func TestOnPulseStateChanged(t *testing.T) {
