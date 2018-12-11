@@ -56,6 +56,7 @@ func (d *distributor) Start(ctx context.Context) error {
 	}
 	pulsarHost.NodeID = core.RecordRef{}
 
+	d.pause(ctx)
 	return nil
 }
 
