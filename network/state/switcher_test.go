@@ -18,7 +18,22 @@ package state
 
 import (
 	"testing"
+
+	"github.com/insolar/insolar/testutils/network"
 )
+
+func mockNodeNetwork(t *testing.T) *network.NodeNetworkMock {
+	nnMock := network.NewNodeNetworkMock(t)
+	return nnMock
+}
+
+func mockSwitcherWorkAround(t *testing.T, isBootstrapped bool) *network.SwitcherWorkAroundMock {
+	swaMock := network.NewSwitcherWorkAroundMock(t)
+	swaMock.IsBootstrapped = func() bool {
+		return isBootstrapped
+	}
+	return swaMock
+}
 
 func TestNewNetworkSwitcher(t *testing.T) {
 
