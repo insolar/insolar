@@ -34,7 +34,6 @@ logicrunner:
 pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
-  nodesaddresses: []
 genesis:
   rootkeys: "../testdata/functional/root_member_keys.json"
   rootbalance: 10000
