@@ -346,7 +346,6 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, res.err
 	} else if res.somebodyElse {
 		panic("not implemented, should be implemented as part of async contract calls")
-		return nil, nil
 	}
 	return res.reply, nil
 }
