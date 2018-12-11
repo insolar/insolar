@@ -64,14 +64,6 @@ type user struct {
 	pubKey  string
 }
 
-func testdataPath() string {
-	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Join(p.Dir, "testdata", "functional")
-}
-
 func functestPath() string {
 	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
 	if err != nil {
