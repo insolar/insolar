@@ -53,6 +53,9 @@ pulsar:
     protocol: UTP
     address: 0.0.0.0:18091
     behindnat: false
+  pulsedistributor:
+    bootstraphosts:
+    - 127.0.0.1:64278
 bootstrap:
   rootkeys: ""
   rootbalance: 0
