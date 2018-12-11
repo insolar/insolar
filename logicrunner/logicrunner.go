@@ -377,9 +377,6 @@ func (lr *LogicRunner) ProcessExecutionQueue(es *ExecutionState) {
 		res := ExecutionQueueResult{}
 
 		finish := func() {
-			es.Lock()
-			defer es.Unlock()
-
 			qe.result <- res
 			close(qe.result)
 		}
