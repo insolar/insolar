@@ -329,7 +329,7 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, arg
 func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return core.NewRefFromBase58(""), err
+		return core.RecordRef{}, err
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
@@ -347,7 +347,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsChild ] on calling main API")
+		return core.RecordRef{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -392,7 +392,7 @@ func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.R
 func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return core.NewRefFromBase58(""), err
+		return core.RecordRef{}, err
 	}
 
 	req := rpctypes.UpSaveAsDelegateReq{
@@ -410,7 +410,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
+		return core.RecordRef{}, errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -420,7 +420,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return core.NewRefFromBase58(""), err
+		return core.RecordRef{}, err
 	}
 
 	req := rpctypes.UpGetDelegateReq{
@@ -436,7 +436,7 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "[ GetDelegate ] on calling main API")
+		return core.RecordRef{}, errors.Wrap(err, "[ GetDelegate ] on calling main API")
 	}
 
 	return res.Object, nil
