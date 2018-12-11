@@ -343,7 +343,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	res := <-qElement.result
 	if res.err != nil {
-		return nil, err
+		return nil, res.err
 	} else if res.somebodyElse {
 		panic("not implemented, should be implemented as part of async contract calls")
 		return nil, nil
