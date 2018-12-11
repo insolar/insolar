@@ -453,7 +453,11 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	es.callContext.Prototype = es.objectbody.ClassHeadRef
+	if !m.CorrectPrototype.Equal(*es.objectbody.Prototype) {
+		return nil, errors.New("try to call method of prototype as method of another prototype")
+	}
+
+	es.callContext.Prototype = es.objectbody.Prototype
 	es.callContext.Code = es.objectbody.CodeRef
 	es.callContext.Parent = es.objectbody.Parent
 
