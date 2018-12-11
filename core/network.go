@@ -54,5 +54,6 @@ type Network interface {
 
 // PulseDistributor is interface for pulse distribution.
 type PulseDistributor interface {
+	// Distribute distributes a pulse across the network.
 	Distribute(context.Context, *Pulse)
 }
