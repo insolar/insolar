@@ -25,11 +25,13 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/testutils"
 )
 
 func Test_ReplicatedPulse(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
+	jetID := testutils.RandomID()
 
 	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer cleaner()
@@ -48,15 +50,15 @@ func Test_ReplicatedPulse(t *testing.T) {
 	assert.Equal(t, expect, got)
 
 	// test {Set/Get}HeavySyncedPulse methods pair
-	heavyGot0, err := db.GetHeavySyncedPulse(ctx)
+	heavyGot0, err := db.GetHeavySyncedPulse(ctx, jetID)
 	require.NoError(t, err)
 	assert.Equal(t, core.PulseNumber(0), heavyGot0)
 
 	expectHeavy := core.PulseNumber(100500)
-	err = db.SetHeavySyncedPulse(ctx, expectHeavy)
+	err = db.SetHeavySyncedPulse(ctx, jetID, expectHeavy)
 	require.NoError(t, err)
 
-	gotHeavy, err := db.GetHeavySyncedPulse(ctx)
+	gotHeavy, err := db.GetHeavySyncedPulse(ctx, jetID)
 	require.NoError(t, err)
 	assert.Equal(t, expectHeavy, gotHeavy)
 }
