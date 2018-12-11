@@ -320,12 +320,6 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] ginsider CLI was successfully builded")
 
-	err = buildInsolar()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't build insolar: ")
-	}
-	fmt.Println("[ setup ] insolar was successfully builded")
-
 	err = startInsgorund()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
