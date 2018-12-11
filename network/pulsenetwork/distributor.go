@@ -34,7 +34,7 @@ type distributor struct {
 	Transport transport.Transport `inject:""`
 
 	pingRequestTimeout        time.Duration
-	randomNodesRequestTimeout time.Duration
+	randomHostsRequestTimeout time.Duration
 	pulseTimeout              time.Duration
 	randomNodesCount          int
 
@@ -55,7 +55,7 @@ func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor,
 
 	return &distributor{
 		pingRequestTimeout:        time.Duration(conf.PingRequestTimeout) * time.Millisecond,
-		randomNodesRequestTimeout: time.Duration(conf.RandomNodesRequestTimeout) * time.Millisecond,
+		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
 		pulseTimeout:              time.Duration(conf.PulseTimeout) * time.Millisecond,
 		randomNodesCount:          conf.RandomNodesCount,
 
@@ -158,7 +158,7 @@ func (d *distributor) getRandomHosts(ctx context.Context, host *host.Host) ([]ho
 		return nil, errors.Wrap(err, "[ getRandomHosts ] failed to send getRandomHosts request")
 	}
 
-	result, err := call.GetResult(d.randomNodesRequestTimeout)
+	result, err := call.GetResult(d.randomHostsRequestTimeout)
 	if err != nil {
 		logger.Error(err)
 		return nil, errors.Wrap(err, "[ getRandomHosts ] failed to get getRandomHosts result")
