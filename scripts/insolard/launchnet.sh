@@ -171,20 +171,24 @@ launch_insgorund()
 
 copy_data()
 {
+    echo "copy_data() starts ..."
     for node in "${NODES[@]}"
     do
-        cp $LEDGER_DIR/* $node/data
+        cp -v $LEDGER_DIR/* $node/data
     done
+    echo "copy_data() end."
 }
 
 copy_certs()
 {
+    echo "copy_certs() starts ..."
     i=0
     for node in "${NODES[@]}"
     do
         ((i++))
-        cp $NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
+        cp -v $NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
     done
+    echo "copy_certs() end."
 }
 
 genesis()
