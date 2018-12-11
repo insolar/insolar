@@ -17,3 +17,8 @@
 package pulsenetwork
 type distributor struct {
 }
+
+func NewDistributor(conf configuration.PulseDistributor, transport transport.Transport) (core.PulseDistributor, error) {
+	return &distributor{
+	}, nil
+}
