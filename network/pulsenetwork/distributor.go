@@ -107,6 +107,8 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 			}
 			continue
 		}
+
+		d.sendPulseToHosts(ctx, pulse, hosts)
 	}
 }
 
