@@ -160,9 +160,9 @@ func (mb *MessageBus) SendParcel(
 		nodes = []core.RecordRef{*options.Receiver}
 	} else {
 		// TODO: send to all actors of the role if nil Target
-		target := message.ExtractTarget(parcel)
+		target := parcel.DefaultTarget()
 		var err error
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, message.ExtractRole(parcel), target.Record(), currentPulse.PulseNumber)
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), target.Record(), currentPulse.PulseNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -202,6 +202,7 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
 		return nil, errors.New("no handler for received message type")
@@ -256,7 +257,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 			return nil, errors.New("delegation token is not valid")
 		}
 	} else {
-		sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
+		sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
 		if sendingObject != nil {
 			validSender, err := mb.JetCoordinator.IsAuthorized(
 				parcelCtx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,

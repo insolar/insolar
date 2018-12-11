@@ -665,3 +665,38 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 		assert.True(t, ok)
 	})
 }
+
+func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer func() {
+		cleaner()
+		mc.Finish()
+	}()
+
+	jetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{2})
+	msg := message.JetDrop{
+		Jet: *jetID,
+	}
+	expectedSetId := jet.IDSet{
+		*jetID: struct{}{},
+	}
+
+	h := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 3,
+	})
+
+	// Act
+	response, err := h.handleJetDrop(ctx, &message.Parcel{Msg: &msg})
+	require.NoError(t, err)
+
+	idSet, err := db.GetJets(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	require.Equal(t, &reply.OK{}, response)
+	require.Equal(t, expectedSetId, idSet)
+
+}

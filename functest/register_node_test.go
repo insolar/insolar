@@ -19,10 +19,17 @@
 package functest
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
+
+var scheme = platformpolicy.NewPlatformCryptographyScheme()
+var keyProcessor = platformpolicy.NewKeyProcessor()
 
 const TESTPUBLICKEY = "some_fancy_public_key"
 
@@ -36,26 +43,26 @@ func registerNodeSignedCall(params ...interface{}) (string, error) {
 
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
-	cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
 	require.NoError(t, err)
 
-	require.NotNil(t, cert)
+	require.NotNil(t, ref)
 }
 
 func TestRegisterNodeHeavyMaterial(t *testing.T) {
 	const testRole = "heavy_material"
-	cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
 	require.NoError(t, err)
 
-	require.NotNil(t, cert)
+	require.NotNil(t, ref)
 }
 
 func TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
-	cert, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
 	require.NoError(t, err)
 
-	require.NotNil(t, cert)
+	require.NotNil(t, ref)
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
@@ -69,4 +76,43 @@ func TestRegisterNodeByNoRoot(t *testing.T) {
 	const testRole = "virtual"
 	_, err := signedRequest(member, "RegisterNode", TESTPUBLICKEY, testRole)
 	require.Contains(t, err.Error(), "[ RegisterNode ] Only Root member can register node")
+}
+
+func TestReceiveNodeCert(t *testing.T) {
+	const testRole = "virtual"
+	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	require.NoError(t, err)
+
+	body := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "cert.Get",
+		"id":      "",
+		"params":  map[string]string{"ref": ref},
+	})
+
+	res := struct {
+		Result struct {
+			Cert certificate.Certificate
+		}
+	}{}
+
+	err = json.Unmarshal(body, &res)
+	require.NoError(t, err)
+
+	networkPart := res.Result.Cert.SerializeNetworkPart()
+	nodePart := res.Result.Cert.SerializeNodePart()
+
+	for _, discoveryNode := range res.Result.Cert.BootstrapNodes {
+		pKey, err := keyProcessor.ImportPublicKey([]byte(discoveryNode.PublicKey))
+		require.NoError(t, err)
+
+		t.Run("Verify network sign for "+discoveryNode.Host, func(t *testing.T) {
+			verified := scheme.Verifier(pKey).Verify(core.SignatureFromBytes(discoveryNode.NetworkSign), networkPart)
+			require.True(t, verified)
+		})
+		t.Run("Verify node sign for "+discoveryNode.Host, func(t *testing.T) {
+			verified := scheme.Verifier(pKey).Verify(core.SignatureFromBytes(discoveryNode.NodeSign), nodePart)
+			require.True(t, verified)
+		})
+	}
 }

@@ -112,6 +112,10 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &GetChildrenRedirect{}, nil
 	case TypeJetMiss:
 		return &JetMiss{}, nil
+
+	case TypeNodeSign:
+		return &NodeSign{}, nil
+
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -176,4 +180,5 @@ func init() {
 	gob.Register(&GetChildrenRedirect{})
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
+	gob.Register(&NodeSign{})
 }

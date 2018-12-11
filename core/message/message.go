@@ -77,6 +77,10 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	// Bootstrap
 	case core.TypeBootstrapRequest:
 		return &GenesisRequest{}, nil
+
+	// NodeCert
+	case core.TypeNodeSignRequest:
+		return &NodeSignPayload{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented message type %d", mt)
 	}
@@ -192,10 +196,17 @@ func init() {
 	gob.Register(&SetBlob{})
 	gob.Register(&ValidateRecord{})
 	gob.Register(&ValidationCheck{})
+	// heavy
+	gob.Register(&HeavyStartStop{})
+	gob.Register(&HeavyPayload{})
+	gob.Register(&HeavyReset{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
 	gob.Register(&Parcel{})
 	gob.Register(core.RecordRef{})
 	gob.Register(&GetChildren{})
+
+	// NodeCert
+	gob.Register(&NodeSignPayload{})
 }

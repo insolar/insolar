@@ -570,6 +570,11 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 		}
 	}
 
+	err := h.db.SaveJet(ctx, msg.Jet)
+	if err != nil {
+		return nil, err
+	}
+
 	return &reply.OK{}, nil
 }
 
