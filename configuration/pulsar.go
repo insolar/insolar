@@ -44,6 +44,7 @@ type Pulsar struct {
 	NumberDelta         uint32
 	BootstrapListener   Transport
 	BootstrapNodes      []string
+type PulseDistributor struct {
 }
 
 type PulsarNodeAddress struct {
