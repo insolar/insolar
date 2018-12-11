@@ -103,6 +103,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		cryptographyServiceMock,
 		scheme,
 		keyProcessor,
+		newPulseDistributor(t),
 		storage,
 		factoryMock,
 		pulsartestutils.MockEntropyGenerator{},
@@ -151,6 +152,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 		cryptographyServiceMock,
 		scheme,
 		keyProcessormock,
+		newPulseDistributor(t),
 		storage,
 		factoryMock,
 		pulsartestutils.MockEntropyGenerator{},
@@ -814,13 +816,13 @@ func TestPulsar_verify_Success(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	pulsar := &Pulsar{
-		KeyProcessor:                   processor,
-		StateSwitcher:                  mockSwitcher,
-		CryptographyService:            cryptographyServiceMock,
-		PlatformCryptographyScheme:     scheme,
-		PublicKeyRaw:                   currentPulsarPublicKey,
-		OwnedBftRow:                    map[string]*BftCell{},
-		bftGrid:                        map[string]map[string]*BftCell{},
+		KeyProcessor:               processor,
+		StateSwitcher:              mockSwitcher,
+		CryptographyService:        cryptographyServiceMock,
+		PlatformCryptographyScheme: scheme,
+		PublicKeyRaw:               currentPulsarPublicKey,
+		OwnedBftRow:                map[string]*BftCell{},
+		bftGrid:                    map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: pub2, OutgoingClient: &clientMock},

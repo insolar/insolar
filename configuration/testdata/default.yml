@@ -48,14 +48,14 @@ pulsar:
   receivingvectortimeout: 1000
   receivingsignsforchosentimeout: 0
   neighbours: []
-  numberofrandomhosts: 1
   numberdelta: 10
-  bootstraplistener:
+  distributiontransport:
     protocol: UTP
     address: 0.0.0.0:18091
     behindnat: false
-  bootstrapnodes:
-  - 127.0.0.1:64278
+  pulsedistributor:
+    bootstraphosts:
+    - 127.0.0.1:64278
 bootstrap:
   rootkeys: ""
   rootbalance: 0

@@ -23,12 +23,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/packet/types"
-
-	"github.com/insolar/insolar/network/transport/relay"
 )
 
 func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
@@ -202,7 +196,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	call := currentPulsar.Neighbours[currentPulsar.CurrentSlotPulseSender].OutgoingClient.Go(ReceiveChosenSignature.String(), payload, nil, nil)
 	reply := <-call.Done
 	if reply.Error != nil {
-		//Here should be retry
+		// Here should be retry
 		log.Error(reply.Error)
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, log.Error)
 	}
@@ -232,24 +226,13 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
 	logger.Debug("Start a process of sending pulse")
-	pulsarHost, t, err := currentPulsar.prepareForSendingPulse(ctx)
-	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
-		return
-	}
-
 	go func() {
 		logger.Debug("Before sending to network")
-		currentPulsar.sendPulseToNetwork(ctx, pulsarHost, t, pulseForSending)
-		defer func() {
-			go t.Stop()
-			<-t.Stopped()
-			t.Close()
-		}()
+		currentPulsar.PulseDistributor.Distribute(ctx, &pulseForSending)
 	}()
 	go currentPulsar.sendPulseToPulsars(ctx, pulseForSending)
 
-	err = currentPulsar.Storage.SavePulse(&pulseForSending)
+	err := currentPulsar.Storage.SavePulse(&pulseForSending)
 	if err != nil {
 		log.Error(err)
 	}
@@ -261,142 +244,4 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	logger.Infof("Latest pulse is %v", pulseForSending.PulseNumber)
 
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
-}
-
-func (currentPulsar *Pulsar) prepareForSendingPulse(ctx context.Context) (pulsarHost *host.Host, t transport.Transport, err error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("New transport creation")
-	t, err = transport.NewTransport(currentPulsar.Config.BootstrapListener, relay.NewProxy())
-	if err != nil {
-		return
-	}
-
-	go func(ctx context.Context) {
-		err = t.Start(ctx)
-		if err != nil {
-			logger.Error(err)
-		}
-	}(ctx)
-
-	if err != nil {
-		return
-	}
-
-	logger.Debug("Init output port")
-	pulsarHost, err = host.NewHost(currentPulsar.Config.BootstrapListener.Address)
-	if err != nil {
-		return
-	}
-	pulsarHost.NodeID = core.RecordRef{}
-	logger.Debug("Network is ready")
-
-	return
-}
-
-func (currentPulsar *Pulsar) sendPulseToNetwork(ctx context.Context, pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
-	logger := inslogger.FromContext(ctx)
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Errorf("sendPulseToNetwork failed with panic: %v", r)
-		}
-	}()
-
-	logger.Infof("Before sending pulse to bootstraps - %v", currentPulsar.Config.BootstrapNodes)
-	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
-		receiverHost, err := host.NewHost(bootstrapNode)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-
-		b := packet.NewBuilder(pulsarHost)
-		pingPacket := b.Receiver(receiverHost).Type(types.Ping).Build()
-		pingCall, err := t.SendRequest(pingPacket)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-		logger.Debugf("before ping request")
-		pingResult, err := pingCall.GetResult(2 * time.Second)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-		if pingResult.Error != nil {
-			logger.Error(pingResult.Error)
-			continue
-		}
-		receiverHost.NodeID = pingResult.Sender.NodeID
-		logger.Debugf("ping request is done")
-
-		b = packet.NewBuilder(pulsarHost)
-		request := b.Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(types.GetRandomHosts).Build()
-
-		call, err := t.SendRequest(request)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-		result, err := call.GetResult(2 * time.Second)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-		if result.Error != nil {
-			logger.Error(result.Error)
-			continue
-		}
-		logger.Debugf("request get random hosts is done")
-		body := result.Data.(*packet.ResponseGetRandomHosts)
-		if len(body.Error) != 0 {
-			logger.Error(body.Error)
-			continue
-		}
-
-		if body.Hosts == nil || len(body.Hosts) == 0 {
-			err := sendPulseToHost(ctx, pulsarHost, t, receiverHost, &pulse)
-			if err != nil {
-				logger.Error(err)
-			}
-			continue
-		}
-
-		sendPulseToHosts(ctx, pulsarHost, t, body.Hosts, &pulse)
-	}
-}
-
-func sendPulseToHost(ctx context.Context, sender *host.Host, t transport.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
-	logger := inslogger.FromContext(ctx)
-	defer func() {
-		if x := recover(); x != nil {
-			logger.Errorf("sendPulseToHost failed with panic: %v", x)
-		}
-	}()
-
-	pb := packet.NewBuilder(sender)
-	pulseRequest := pb.Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.Pulse).Build()
-	call, err := t.SendRequest(pulseRequest)
-	if err != nil {
-		return err
-	}
-	result, err := call.GetResult(2 * time.Second)
-	if err != nil {
-		return err
-	}
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
-}
-
-func sendPulseToHosts(ctx context.Context, sender *host.Host, t transport.Transport, hosts []host.Host, pulse *core.Pulse) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("Before sending pulse to nodes - %v", hosts)
-	for _, pulseReceiver := range hosts {
-		err := sendPulseToHost(ctx, sender, t, &pulseReceiver, pulse)
-		if err != nil {
-			logger.Error(err)
-		}
-	}
 }
