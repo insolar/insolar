@@ -65,10 +65,7 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *testSuite) SetupSuite() {
 	log.Infoln("SetupSuite")
-	for i := 0; i < cap(s.bootstrapNodes); i++ {
-		// TODO: make valid certs for bootstrap
-		s.bootstrapNodes = append(s.bootstrapNodes, s.createNetworkNode(s.T(), Disable))
-	}
+	s.createBootstrapNodes()
 
 	for i := 0; i < cap(s.networkNodes); i++ {
 		s.networkNodes = append(s.networkNodes, s.createNetworkNode(s.T(), Disable))
@@ -116,7 +113,7 @@ func (s *testSuite) TearDownSuite() {
 	}
 }
 
-// nodesCount returns count of nodes in network withouf testNode
+// nodesCount returns count of nodes in network without testNode
 func (s *testSuite) nodesCount() int {
 	return len(s.bootstrapNodes) + len(s.networkNodes)
 }
@@ -153,8 +150,25 @@ func (s *testSuite) StopTestNode() {
 }
 
 type networkNode struct {
+	id                  core.RecordRef
+	privateKey          crypto.PrivateKey
+	cryptographyService core.CryptographyService
+
 	componentManager *component.Manager
 	serviceNetwork   *ServiceNetwork
+}
+
+// newNetworkNode returns networkNode initialized only with id and key pair
+func newNetworkNode() networkNode {
+	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	if err != nil {
+		panic(err.Error())
+	}
+	return networkNode{
+		id:                  testutils.RandomRef(),
+		privateKey:          key,
+		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
+	}
 }
 
 func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey, ref core.RecordRef) *certificate.CertificateManager {
@@ -200,6 +214,22 @@ func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode 
 		result = append(result, *node)
 	}
 	return result
+}
+
+func (s *testSuite) createBootstrapNodes() {
+	for i := 0; i < cap(s.bootstrapNodes); i++ {
+		s.bootstrapNodes = append(s.bootstrapNodes, newNetworkNode())
+	}
+
+	//initCertificate()
+	// genesis makeCertificates
+
+	// VerifyAuthorizationCertificate()
+
+	// generate node ids and key pairs
+	// create each node with createNetworkNode
+
+	s.bootstrapNodes = append(s.bootstrapNodes, s.createNetworkNode(s.T(), Disable))
 }
 
 func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networkNode {
@@ -263,7 +293,7 @@ func (s *testSuite) createNetworkNode(t *testing.T, timeOut PhaseTimeOut) networ
 	cm.Register(certManager, cryptographyService, phaseManager)
 	cm.Inject(serviceNetwork, netSwitcher)
 
-	return networkNode{cm, serviceNetwork}
+	return networkNode{componentManager: cm, serviceNetwork: serviceNetwork}
 }
 
 func (s *testSuite) TestNodeConnect() {
