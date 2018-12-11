@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,20 +40,19 @@ func TestRecorder_Send(t *testing.T) {
 	parcel := message.Parcel{Msg: &msg}
 	msgHash := GetMessageHash(pcs, &parcel)
 	expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
-	pm := testutils.NewPulseManagerMock(mc)
 	s := NewsenderMock(mc)
-	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 core.DelegationToken) (r core.Parcel, r1 error) {
+	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 core.DelegationToken, p4 core.Pulse) (r core.Parcel, r1 error) {
 		return &message.Parcel{Msg: p2}, nil
 	}
 
 	tape := NewtapeMock(mc)
-	recorder := newRecorder(s, tape, pm, pcs)
+	recorder := newRecorder(s, tape, pcs)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		s.SendParcelMock.Expect(ctx, &parcel, nil)
+		s.SendParcelMock.Expect(ctx, &parcel, *core.GenesisPulse, nil)
 
-		_, err := recorder.Send(ctx, &msg, nil)
+		_, err := recorder.Send(ctx, &msg, *core.GenesisPulse, nil)
 		require.NoError(t, err)
 	})
 
@@ -62,7 +60,7 @@ func TestRecorder_Send(t *testing.T) {
 		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
 		s.SendParcelMock.Set(nil)
 
-		_, err := recorder.Send(ctx, &msg, nil)
+		_, err := recorder.Send(ctx, &msg, *core.GenesisPulse, nil)
 		require.NoError(t, err)
 	})
 }

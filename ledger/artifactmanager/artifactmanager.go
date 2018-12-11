@@ -26,8 +26,8 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/record"
 )
 
 const (
@@ -70,12 +70,18 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	var err error
 	defer instrument(ctx, "RegisterRequest").err(&err).end()
 
+	currentPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	id, err := m.setRecord(
 		ctx,
 		&record.CallRequest{
 			Payload: message.ParcelToBytes(parcel),
 		},
 		message.ExtractTarget(parcel.Message()),
+		currentPulse.Pulse,
 	)
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
 }
@@ -90,9 +96,15 @@ func (m *LedgerArtifactManager) GetCode(
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
 
+	latestPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetCode{Code: code},
+		latestPulse.Pulse,
 		nil,
 	)
 	if err != nil {
@@ -131,12 +143,17 @@ func (m *LedgerArtifactManager) GetObject(
 	)
 	defer instrument(ctx, "GetObject").err(&err).end()
 
+	currentPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	getObjectMsg := &message.GetObject{
 		Head:     head,
 		State:    state,
 		Approved: approved,
 	}
-	genericReact, err := m.sendAndFollowRedirect(ctx, getObjectMsg)
+	genericReact, err := m.sendAndFollowRedirect(ctx, getObjectMsg, currentPulse.Pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -173,12 +190,18 @@ func (m *LedgerArtifactManager) GetDelegate(
 	var err error
 	defer instrument(ctx, "GetDelegate").err(&err).end()
 
+	latestPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
 		&message.GetDelegate{
 			Head:   head,
 			AsType: asType,
 		},
+		latestPulse.Pulse,
 		nil,
 	)
 	if err != nil {
@@ -201,7 +224,13 @@ func (m *LedgerArtifactManager) GetChildren(
 ) (core.RefIterator, error) {
 	var err error
 	defer instrument(ctx, "GetChildren").err(&err).end()
-	iter, err := NewChildIterator(ctx, m.bus(ctx), parent, pulse, m.getChildrenChunkSize)
+
+	latestPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	iter, err := NewChildIterator(ctx, m.bus(ctx), parent, pulse, m.getChildrenChunkSize, latestPulse.Pulse)
 	return iter, err
 }
 
@@ -214,6 +243,11 @@ func (m *LedgerArtifactManager) DeclareType(
 	var err error
 	defer instrument(ctx, "DeclareType").err(&err).end()
 
+	currentPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	recid, err := m.setRecord(
 		ctx,
 		&record.TypeRecord{
@@ -224,6 +258,7 @@ func (m *LedgerArtifactManager) DeclareType(
 			TypeDeclaration: typeDec,
 		},
 		request,
+		currentPulse.Pulse,
 	)
 	return recid, err
 }
@@ -262,13 +297,14 @@ func (m *LedgerArtifactManager) DeployCode(
 				MachineType: machineType,
 			},
 			request,
+			pulse.Pulse,
 		)
 		wg.Done()
 	}()
 
 	var setBlobErr error
 	go func() {
-		_, setBlobErr = m.setBlob(ctx, code, request)
+		_, setBlobErr = m.setBlob(ctx, code, request, pulse.Pulse)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -326,6 +362,8 @@ func (m *LedgerArtifactManager) DeactivateObject(
 	var err error
 	defer instrument(ctx, "DeactivateObject").err(&err).end()
 
+	currentPulse, err := m.db.GetLatestPulse(ctx)
+
 	desc, err := m.sendUpdateObject(
 		ctx,
 		&record.DeactivationRecord{
@@ -337,6 +375,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 		},
 		*object.HeadRef(),
 		nil,
+		currentPulse.Pulse,
 	)
 	if err != nil {
 		return nil, err
@@ -405,7 +444,13 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		IsValid:            isValid,
 		ValidationMessages: validationMessages,
 	}
-	_, err = m.bus(ctx).Send(ctx, &msg, nil)
+
+	latestPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = m.bus(ctx).Send(ctx, &msg, latestPulse.Pulse, nil)
 	return err
 }
 
@@ -416,6 +461,11 @@ func (m *LedgerArtifactManager) RegisterResult(
 	var err error
 	defer instrument(ctx, "RegisterResult").err(&err).end()
 
+	pulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	recid, err := m.setRecord(
 		ctx,
 		&record.ResultRecord{
@@ -423,6 +473,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 			Payload: payload,
 		},
 		request,
+		pulse.Pulse,
 	)
 	return recid, err
 }
@@ -463,6 +514,7 @@ func (m *LedgerArtifactManager) activateObject(
 		},
 		object,
 		memory,
+		pulse.Pulse,
 	)
 	if err != nil {
 		return nil, err
@@ -487,6 +539,7 @@ func (m *LedgerArtifactManager) activateObject(
 		parent,
 		object,
 		asType,
+		pulse.Pulse,
 	)
 	if err != nil {
 		return nil, err
@@ -553,6 +606,7 @@ func (m *LedgerArtifactManager) updateObject(
 		},
 		*object.HeadRef(),
 		memory,
+		pulse.Pulse,
 	)
 	if err != nil {
 		return nil, err
@@ -570,7 +624,12 @@ func (m *LedgerArtifactManager) updateObject(
 	}, nil
 }
 
-func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record, target core.RecordRef) (*core.RecordID, error) {
+func (m *LedgerArtifactManager) setRecord(
+	ctx context.Context,
+	rec record.Record,
+	target core.RecordRef,
+	currentPulse core.Pulse,
+) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setRecord starts ...")
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
@@ -578,6 +637,7 @@ func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record
 			Record:    record.SerializeRecord(rec),
 			TargetRef: target,
 		},
+		currentPulse,
 		nil,
 	)
 
@@ -593,7 +653,12 @@ func (m *LedgerArtifactManager) setRecord(ctx context.Context, rec record.Record
 	return &react.ID, nil
 }
 
-func (m *LedgerArtifactManager) setBlob(ctx context.Context, blob []byte, target core.RecordRef) (*core.RecordID, error) {
+func (m *LedgerArtifactManager) setBlob(
+	ctx context.Context,
+	blob []byte,
+	target core.RecordRef,
+	currentPulse core.Pulse,
+) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setBlob starts ...")
 	genericReact, err := m.bus(ctx).Send(
 		ctx,
@@ -601,6 +666,7 @@ func (m *LedgerArtifactManager) setBlob(ctx context.Context, blob []byte, target
 			Memory:    blob,
 			TargetRef: target,
 		},
+		currentPulse,
 		nil,
 	)
 
@@ -621,6 +687,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	rec record.Record,
 	object core.RecordRef,
 	memory []byte,
+	currentPulse core.Pulse,
 ) (*reply.Object, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendUpdateObject starts ...")
 	_, err := m.bus(ctx).Send(
@@ -629,6 +696,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 			TargetRef: object,
 			Memory:    memory,
 		},
+		currentPulse,
 		nil,
 	)
 	if err != nil {
@@ -641,6 +709,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 			Record: record.SerializeRecord(rec),
 			Object: object,
 		},
+		currentPulse,
 		nil,
 	)
 	if err != nil {
@@ -661,6 +730,7 @@ func (m *LedgerArtifactManager) registerChild(
 	parent core.RecordRef,
 	child core.RecordRef,
 	asType *core.RecordRef,
+	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.registerChild starts ...")
 	genericReact, err := m.bus(ctx).Send(
@@ -671,6 +741,7 @@ func (m *LedgerArtifactManager) registerChild(
 			Child:  child,
 			AsType: asType,
 		},
+		currentPulse,
 		nil,
 	)
 
@@ -690,9 +761,9 @@ func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
 	return core.MessageBusFromContext(ctx, m.DefaultBus)
 }
 
-func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg core.Message) (core.Reply, error) {
+func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg core.Message, currentPulse core.Pulse) (core.Reply, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
-	rep, err := m.bus(ctx).Send(ctx, msg, nil)
+	rep, err := m.bus(ctx).Send(ctx, msg, currentPulse, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -702,6 +773,7 @@ func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg c
 		rep, err = m.bus(ctx).Send(
 			ctx,
 			redirected,
+			currentPulse,
 			&core.MessageSendOptions{
 				Token:    redirect.GetToken(),
 				Receiver: redirect.GetReceiver(),

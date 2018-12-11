@@ -17,19 +17,21 @@
 package jetcoordinator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
 	db                         *storage.DB
-	rootJetNode                *JetNode
 	roleCounts                 map[core.DynamicRole]int
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
@@ -37,20 +39,7 @@ type JetCoordinator struct {
 
 // NewJetCoordinator creates new coordinator instance.
 func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) *JetCoordinator {
-	jc := JetCoordinator{
-		db: db,
-		rootJetNode: &JetNode{
-			ref: core.RecordRef{},
-			left: &JetNode{
-				left:  &JetNode{ref: core.RecordRef{}},
-				right: &JetNode{ref: core.RecordRef{}},
-			},
-			right: &JetNode{
-				left:  &JetNode{ref: core.RecordRef{}},
-				right: &JetNode{ref: core.RecordRef{}},
-			},
-		},
-	}
+	jc := JetCoordinator{db: db}
 	jc.loadConfig(conf)
 
 	return &jc
@@ -104,20 +93,90 @@ func (jc *JetCoordinator) QueryRole(
 	if !ok {
 		return nil, errors.New("no candidate count for this role")
 	}
+	ent := pulseData.Pulse.Entropy[:]
 
-	selected, err := selectByEntropy(jc.PlatformCryptographyScheme, pulseData.Pulse.Entropy, candidates, count)
-	if err != nil {
-		return nil, err
+	if obj == nil {
+		return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
 	}
 
-	return selected, nil
-}
+	objHash := obj.Record().Hash()
+	if role == core.DynamicRoleLightExecutor {
+		jetTree, err := jc.db.GetJetTree(ctx, pulseData.Pulse.PulseNumber)
+		if err == storage.ErrNotFound {
+			return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
+		}
 
-func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
-	return jc.rootJetNode.GetContaining(&objRef)
+		if err != nil {
+			return nil, err
+		}
+		_, depth := jetTree.Find(objHash)
+
+		// Reset everything except prefix.
+		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, resetBits(objHash, depth+1)), candidates, count)
+	}
+
+	return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, objHash), candidates, count)
 }
 
 // GetActiveNodes return active nodes for specified pulse.
 func (jc *JetCoordinator) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
 	return jc.db.GetActiveNodes(pulse)
+}
+
+func getRefs(
+	scheme core.PlatformCryptographyScheme,
+	e []byte,
+	values []core.RecordRef,
+	count int,
+) ([]core.RecordRef, error) {
+	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
+	sort.SliceStable(values, func(i, j int) bool {
+		return bytes.Compare(values[i][:], values[j][:]) < 0
+	})
+	in := make([]interface{}, 0, len(values))
+	for _, value := range values {
+		in = append(in, interface{}(value))
+	}
+
+	res, err := entropy.SelectByEntropy(scheme, e, in, count)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]core.RecordRef, 0, len(res))
+	for _, value := range res {
+		out = append(out, value.(core.RecordRef))
+	}
+	return out, nil
+}
+
+// CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.
+// If 'value' is smaller than 'dst', XOR starts from the beginning of 'src'.
+func circleXOR(value, src []byte) []byte {
+	result := make([]byte, len(value))
+	srcLen := len(src)
+	for i := range result {
+		result[i] = value[i] ^ src[i%srcLen]
+	}
+	return result
+}
+
+// ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
+// is bigger than len(value), the original slice will be returned.
+func resetBits(value []byte, start int) []byte {
+	if start > len(value)*8 {
+		return value
+	}
+
+	startByte := start / 8
+	startBit := start % 8
+
+	result := make([]byte, len(value))
+	copy(result, value[:startByte])
+
+	// Reset bits in starting byte.
+	mask := byte(0xFF)
+	mask <<= 8 - byte(startBit)
+	result[startByte] &= mask
+
+	return result
 }

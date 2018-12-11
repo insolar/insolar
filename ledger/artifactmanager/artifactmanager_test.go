@@ -28,10 +28,10 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -386,9 +386,12 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	am := NewArtifactManger(nil)
 	mb := testutils.NewMessageBusMock(mc)
 
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, m core.Message, _ core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
 			return &reply.GetObjectRedirect{
@@ -404,8 +407,10 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 		return &reply.Object{}, nil
 	}
 	am.DefaultBus = mb
+	am.db = db
 
 	_, err := am.GetObject(ctx, *objRef, nil, false)
+
 	require.NoError(t, err)
 }
 
@@ -545,9 +550,14 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	am := NewArtifactManger(nil)
 	mb := testutils.NewMessageBusMock(mc)
 
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	am.db = db
+
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, m core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
 			return &reply.GetChildrenRedirect{
@@ -596,6 +606,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 			},
 			PulseNumber: core.GenesisPulse.PulseNumber,
 		},
+		*core.GenesisPulse,
 		nil,
 	)
 	assert.NoError(t, err)

@@ -14,19 +14,33 @@
  *    limitations under the License.
  */
 
-package index
+package jet
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// ObjectLifeline represents meta information for record object.
-type ObjectLifeline struct {
-	LatestState         *core.RecordID // Amend or activate record.
-	LatestStateApproved *core.RecordID // State approved by VM.
-	ChildPointer        *core.RecordID // Meta record about child activation.
-	Parent              core.RecordRef
-	Delegates           map[core.RecordRef]core.RecordRef
-	State               record.State
+func TestTree_Find(t *testing.T) {
+	// Pulse in ID is equal to depth.
+	tree := Tree{
+		Head: &Jet{
+			Right: &Jet{
+				Right: &Jet{
+					Left: &Jet{
+						Right: &Jet{},
+						Left:  &Jet{},
+					},
+					Right: &Jet{},
+				},
+			},
+			Left: &Jet{},
+		},
+	}
+	val := []byte{0xD5} // 11010101
+
+	jet, depth := tree.Find(val)
+	assert.Equal(t, tree.Head.Right.Right.Left.Right, jet)
+	assert.Equal(t, depth, 4)
 }

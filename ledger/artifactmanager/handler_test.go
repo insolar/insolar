@@ -11,10 +11,10 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +48,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	recentStorageMock.RemovePendingRequestMock.Return()
 
 	mb := testutils.NewMessageBusMock(mc)
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Head, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -161,7 +161,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	}
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Parent, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -276,7 +276,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 		AsType: delegateType,
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Head, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -343,7 +343,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 		Object: *genRandomRef(0),
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Object, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -515,7 +515,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 		Parent: *genRandomRef(0),
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Parent, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -579,7 +579,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		PendingRequests: map[core.RecordID][]byte{
 			*secondId: record.SerializeRecord(&record.CodeRecord{}),
 		},
-		Drop: jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+		Drop: jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
 	}
 
 	recentMock := recentstorage.NewRecentStorageMock(t)
@@ -602,7 +602,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 
 	savedDrop, err := h.db.GetDrop(ctx, jetID, core.FirstPulseNumber)
 	require.NoError(t, err)
-	require.Equal(t, &jetdrop.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+	require.Equal(t, &jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
 
 	recentMock.MinimockFinish()
 }

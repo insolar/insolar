@@ -188,7 +188,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 
 	if lr.Cfg.GoPlugin != nil {
 		if lr.Cfg.RPCListen != "" {
-			StartRPC(ctx, lr)
+			StartRPC(ctx, lr, lr.PulseManager)
 		}
 
 		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
@@ -600,7 +600,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	lr.execution = make(map[Ref]*ExecutionState)
 
 	for _, msg := range messages {
-		_, err := lr.MessageBus.Send(ctx, msg, nil)
+		_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}

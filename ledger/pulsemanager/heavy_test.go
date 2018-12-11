@@ -37,10 +37,10 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
@@ -108,7 +108,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	}
 	syncmessagesPerMessage := map[int]*messageStat{}
 	var bussendfailed int32
-	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	busMock.SendFunc = func(ctx context.Context, msg core.Message, _ core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
