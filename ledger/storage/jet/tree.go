@@ -75,9 +75,9 @@ func NewTree() *Tree {
 }
 
 // Find returns jet for provided reference.
-func (t *Tree) Find(val []byte) core.RecordID {
+func (t *Tree) Find(val []byte) *core.RecordID {
 	depth := t.Head.Find(val, 0)
-	return *core.NewJetID(uint8(depth), resetBits(val, depth))
+	return core.NewJetID(uint8(depth), resetBits(val, depth))
 }
 
 // Update add missing tree branches for provided prefix.
