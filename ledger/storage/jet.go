@@ -143,13 +143,17 @@ func (db *DB) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDro
 	return db.set(ctx, k, encoded)
 }
 
-// SetJetTree stores jet tree for specified pulse.
-func (db *DB) SetJetTree(ctx context.Context, pulse core.PulseNumber, tree *jet.Tree) error {
+// UpdateJetTree updates jet tree for specified pulse.
+func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, id core.RecordID) error {
+	db.jetTreeLock.Lock()
+	defer db.jetTreeLock.Unlock()
+
 	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
-	_, err := db.get(ctx, k)
-	if err == nil {
-		return ErrOverride
+	tree, err := db.GetJetTree(ctx, pulse)
+	if err != nil {
+		return err
 	}
+	tree.Update(id)
 
 	return db.set(ctx, k, tree.Bytes())
 }
@@ -158,6 +162,9 @@ func (db *DB) SetJetTree(ctx context.Context, pulse core.PulseNumber, tree *jet.
 func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
 	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
 	buff, err := db.get(ctx, k)
+	if err == ErrNotFound {
+		return jet.NewTree(), nil
+	}
 	if err != nil {
 		return nil, err
 	}
