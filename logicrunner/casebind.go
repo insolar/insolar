@@ -20,6 +20,7 @@ package logicrunner
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
@@ -161,7 +162,7 @@ func (vb *ValidationSaver) NewRequest(msg core.Message, request Ref, mb core.Mes
 
 func (vb *ValidationSaver) Result(reply core.Reply, err error) error {
 	if vb.current == nil {
-		panic("result call without request registered")
+		return errors.New("result call without request registered")
 	}
 	vb.current.Reply = reply
 	vb.current.Error = err
@@ -169,8 +170,9 @@ func (vb *ValidationSaver) Result(reply core.Reply, err error) error {
 }
 
 type ValidationChecker struct {
-	lr *LogicRunner
-	cb *core.CaseBindReplay
+	lr      *LogicRunner
+	cb      *core.CaseBindReplay
+	current *core.CaseRequest
 }
 
 func (vb *ValidationChecker) Mode() string {
@@ -178,9 +180,21 @@ func (vb *ValidationChecker) Mode() string {
 }
 
 func (vb *ValidationChecker) NextRequest() *core.CaseRequest {
-	return vb.cb.NextRequest()
+	vb.current = vb.cb.NextRequest()
+	return vb.current
 }
 
 func (vb *ValidationChecker) Result(reply core.Reply, err error) error {
+	if vb.current == nil {
+		return errors.New("result call without request registered")
+	}
+	// TODO: reflect.DeepEqual is not what we want to go with, we should
+	// go with HASH comparision
+	if !reflect.DeepEqual(vb.current.Reply, reply) {
+		return errors.New("replies arn't equal")
+	}
+	if !reflect.DeepEqual(vb.current.Error, err) {
+		return errors.New("errors arn't equal")
+	}
 	return nil
 }
