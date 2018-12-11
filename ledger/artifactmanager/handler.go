@@ -122,6 +122,9 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 		*record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, pulseNumber, rec),
 		pulseNumber,
 	)
+	if err != nil {
+		return nil, err
+	}
 	if !isMine {
 		return &reply.JetMiss{JetID: *jetID}, nil
 	}
