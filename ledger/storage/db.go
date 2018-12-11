@@ -73,6 +73,8 @@ type DB struct {
 	// It should only contain previous N pulses. It should be stored on disk.
 	nodeHistory     map[core.PulseNumber][]core.Node
 	nodeHistoryLock sync.Mutex
+
+	jetTreeLock sync.Mutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
