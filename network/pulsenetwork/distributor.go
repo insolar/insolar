@@ -86,6 +86,34 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 		}
 	}()
 
+func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
+	logger := inslogger.FromContext(ctx)
+
+	builder := packet.NewBuilder(d.pulsarHost)
+	pingPacket := builder.Receiver(host).Type(types.Ping).Build()
+	pingCall, err := d.Transport.SendRequest(pingPacket)
+	if err != nil {
+		logger.Error(err)
+		return errors.Wrap(err, "[ pingHost ] failed to send ping request")
+	}
+
+	logger.Debugf("before ping request")
+	result, err := pingCall.GetResult(d.pingTimeout)
+	if err != nil {
+		logger.Error(err)
+		return errors.Wrap(err, "[ pingHost ] failed to get ping result")
+	}
+
+	if result.Error != nil {
+		logger.Error(result.Error)
+		return errors.Wrap(err, "[ pingHost ] ping result returned error")
+	}
+
+	host.NodeID = result.Sender.NodeID
+	logger.Debugf("ping request is done")
+
+	return nil
+}
 func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
