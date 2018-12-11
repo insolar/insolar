@@ -2155,13 +2155,13 @@ func (c *First) GetName() (string, error) {
 	err := cb.Build(map[string]string{"test": testContract, "first": firstContract, "second": secondContract})
 	assert.NoError(t, err)
 
-	testObj := getObjectInstance(t, ctx, am, cb, "test")
-	secondObj := getObjectInstance(t, ctx, am, cb, "second")
+	testObj, testPrototype := getObjectInstance(t, ctx, am, cb, "test")
+	secondObj, _ := getObjectInstance(t, ctx, am, cb, "second")
 
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, secondObj, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *testObj, *cb.Prototypes["test"], 0, "Test", *secondObj)
+	resp, err := executeMethod(ctx, lr, pm, *testObj, *testPrototype, 0, "Test", *secondObj)
 	assert.NoError(t, err, "contract call")
 
 	ch := new(codec.CborHandle)
@@ -2170,7 +2170,7 @@ func (c *First) GetName() (string, error) {
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: couldn't dispatch event: try to call method of prototype as method of another prototype"}), res[1])
 }
 
-func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) *core.RecordRef {
+func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*core.RecordRef, *core.RecordRef) {
 	domain := core.NewRefFromBase58("c1")
 	contractID, err := am.RegisterRequest(
 		ctx,
@@ -2190,5 +2190,5 @@ func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManage
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	return contract
+	return contract, cb.Prototypes[contractName]
 }
