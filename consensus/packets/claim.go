@@ -50,6 +50,10 @@ type ReferendumClaim interface {
 	Type() ClaimType
 }
 
+type ClaimSupplementary interface {
+	AddSupplementaryInfo(nodeID core.RecordRef)
+}
+
 type SignedClaim interface {
 	GetNodeID() core.RecordRef
 	GetPublicKey() (crypto.PublicKey, error)
@@ -155,6 +159,10 @@ func (nac *NodeAnnounceClaim) Type() ClaimType {
 type NodeLeaveClaim struct {
 	// additional field that is not serialized and is set from transport layer on packet receive
 	NodeID core.RecordRef
+}
+
+func (nlc *NodeLeaveClaim) AddSupplementaryInfo(nodeID core.RecordRef) {
+	nlc.NodeID = nodeID
 }
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {

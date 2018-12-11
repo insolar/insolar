@@ -118,7 +118,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 			},
 			StateHash: rawProof.StateHash(),
 		}
-		claimMap[ref] = fp.filterClaims(packet.GetClaims())
+		claimMap[ref] = fp.filterClaims(ref, packet.GetClaims())
 	}
 
 	if fp.NodeKeeper.GetState() == network.Waiting {
@@ -208,7 +208,7 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 	return 0, errors.New("no announce claims were received")
 }
 
-func (fp *FirstPhase) filterClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+func (fp *FirstPhase) filterClaims(nodeID core.RecordRef, claims []packets.ReferendumClaim) []packets.ReferendumClaim {
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
 		signedClaim, ok := claim.(packets.SignedClaim)
@@ -219,7 +219,10 @@ func (fp *FirstPhase) filterClaims(claims []packets.ReferendumClaim) []packets.R
 				continue
 			}
 		}
-
+		supClaim, ok := claim.(packets.ClaimSupplementary)
+		if ok {
+			supClaim.AddSupplementaryInfo(nodeID)
+		}
 		result = append(result, claim)
 	}
 	return result
