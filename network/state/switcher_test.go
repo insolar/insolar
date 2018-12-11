@@ -78,9 +78,30 @@ func TestOnPulseNoChange(t *testing.T) {
 }
 
 func TestOnPulseStateChanged(t *testing.T) {
+	switcher, err := NewNetworkSwitcher()
+	require.NoError(t, err)
+	switcherWorkAround := mockSwitcherWorkAround(t, true)
 
+	cm := &component.Manager{}
+	cm.Inject(switcherWorkAround, switcher)
+
+	err = switcher.OnPulse(context.Background(), core.Pulse{})
+	require.NoError(t, err)
+	require.Equal(t, core.CompleteNetworkState, switcher.state)
 }
 
 func TestGetStateAfterStateChanged(t *testing.T) {
+	switcher, err := NewNetworkSwitcher()
+	require.NoError(t, err)
+	switcherWorkAround := mockSwitcherWorkAround(t, true)
 
+	cm := &component.Manager{}
+	cm.Inject(switcherWorkAround, switcher)
+
+	err = switcher.OnPulse(context.Background(), core.Pulse{})
+	require.NoError(t, err)
+	require.Equal(t, core.CompleteNetworkState, switcher.state)
+
+	state := switcher.GetState()
+	require.Equal(t, core.CompleteNetworkState, state)
 }
