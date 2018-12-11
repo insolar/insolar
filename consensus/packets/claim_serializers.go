@@ -144,8 +144,7 @@ func (nvb *NodeViolationBlame) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-// Deserialize implements interface method
-func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
+func (njc *NodeJoinClaim) deserialize(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &njc.ShortNodeID)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodeID")
@@ -180,12 +179,19 @@ func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read NodePK")
 	}
+	return nil
+}
 
+// Deserialize implements interface method
+func (njc *NodeJoinClaim) Deserialize(data io.Reader) error {
+	err := njc.deserialize(data)
+	if err != nil {
+		return err
+	}
 	err = binary.Read(data, defaultByteOrder, &njc.Signature)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeJoinClaim.Deserialize ] Can't read Signature")
 	}
-
 	return nil
 }
 
@@ -253,7 +259,7 @@ func (njc *NodeJoinClaim) SerializeRaw() ([]byte, error) {
 }
 
 func (nac *NodeAnnounceClaim) SerializeRaw() ([]byte, error) {
-	nodeJoinPart, err := nac.NodeJoinClaim.Serialize()
+	nodeJoinPart, err := nac.NodeJoinClaim.SerializeRaw()
 	if err != nil {
 		return nil, err
 	}
@@ -279,12 +285,29 @@ func (nac *NodeAnnounceClaim) SerializeRaw() ([]byte, error) {
 
 // Serialize implements interface method
 func (nac *NodeAnnounceClaim) Serialize() ([]byte, error) {
+	result := allocateBuffer(1024)
 
+	rawData, err := nac.SerializeRaw()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Failed to serialize a claim without header")
+	}
+
+	err = binary.Write(result, defaultByteOrder, rawData)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Failed to write a data without header")
+	}
+
+	err = binary.Write(result, defaultByteOrder, nac.Signature[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write Signature")
+	}
+
+	return result.Bytes(), nil
 }
 
 // Deserialize implements interface method
 func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
-	err := nac.NodeJoinClaim.Deserialize(data)
+	err := nac.deserialize(data)
 	if err != nil {
 		return err
 	}
@@ -299,6 +322,10 @@ func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
 	err = binary.Read(data, defaultByteOrder, &nac.NodeCount)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeCount")
+	}
+	err = binary.Read(data, defaultByteOrder, &nac.Signature)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read Signature")
 	}
 	return nil
 }
