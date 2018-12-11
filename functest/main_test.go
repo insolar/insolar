@@ -79,10 +79,6 @@ func deleteDirForContracts() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "contractstorage"))
 }
 
-func deleteDirForData() error {
-	return os.RemoveAll(filepath.Join(functestPath(), "data"))
-}
-
 func loadRootKeys() error {
 	text, err := ioutil.ReadFile(insolarRootMemberKeysPath)
 	if err != nil {
