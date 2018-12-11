@@ -75,7 +75,17 @@ func (d *distributor) Start(ctx context.Context) error {
 }
 
 func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
-	panic("not implemented")
+	logger := inslogger.FromContext(ctx)
+
+	d.resume(ctx)
+	defer d.pause(ctx)
+
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("sendPulseToNetwork failed with panic: %v", r)
+		}
+	}()
+
 func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
