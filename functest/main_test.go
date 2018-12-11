@@ -345,12 +345,6 @@ func teardown() {
 	}
 	fmt.Println("[ teardown ] insgorund was successfully stoped")
 
-	err = deleteDirForData()
-	if err != nil {
-		fmt.Println("[ teardown ] failed to remove data directory for func tests: ", err)
-	}
-	fmt.Println("[ teardown ] data directory was successfully deleted")
-
 	err = deleteDirForContracts()
 	if err != nil {
 		fmt.Println("[ teardown ] failed to remove directory for contracts cache for func tests: ", err)
