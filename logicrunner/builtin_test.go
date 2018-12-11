@@ -122,9 +122,10 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	msg := &message.CallMethod{
-		ObjectRef: reqref,
-		Method:    "Greet",
-		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
+		ObjectRef:        reqref,
+		Method:           "Greet",
+		Arguments:        goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
+		CorrectPrototype: *protoRef,
 	}
 	parcel, err := parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil, *core.GenesisPulse)
 	assert.NoError(t, err)
@@ -142,9 +143,10 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	msg = &message.CallMethod{
-		ObjectRef: reqref,
-		Method:    "Greet",
-		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
+		ObjectRef:        reqref,
+		Method:           "Greet",
+		Arguments:        goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
+		CorrectPrototype: *protoRef,
 	}
 	parcel, err = parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil, *core.GenesisPulse)
 	assert.NoError(t, err)
