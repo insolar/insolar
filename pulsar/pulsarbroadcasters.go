@@ -202,7 +202,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	call := currentPulsar.Neighbours[currentPulsar.CurrentSlotPulseSender].OutgoingClient.Go(ReceiveChosenSignature.String(), payload, nil, nil)
 	reply := <-call.Done
 	if reply.Error != nil {
-		//Here should be retry
+		// Here should be retry
 		log.Error(reply.Error)
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, log.Error)
 	}
