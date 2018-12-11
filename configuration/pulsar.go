@@ -82,6 +82,11 @@ func NewPulsar() Pulsar {
 			BehindNAT: false,
 		},
 		PulseDistributor: PulseDistributor{
+			BootstrapHosts:     []string{"localhost:53837"},
+			PingTimeout:        1000,
+			RandomNodesTimeout: 1000,
+			PulseTimeout:       1000,
+			RandomNodesCount:   5,
 		},
 	}
 }
