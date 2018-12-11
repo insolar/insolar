@@ -26,8 +26,14 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/pkg/errors"
 )
+
 type distributor struct {
 	Transport transport.Transport `inject:""`
+
+	pingTimeout        time.Duration
+	randomNodesTimeout time.Duration
+	pulseTimeout       time.Duration
+	randomNodesCount   int
 
 	pulsarHost     *host.Host
 	bootstrapHosts []*host.Host
@@ -45,6 +51,11 @@ func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor,
 	}
 
 	return &distributor{
+		pingTimeout:        time.Duration(conf.PingTimeout) * time.Millisecond,
+		randomNodesTimeout: time.Duration(conf.RandomNodesTimeout) * time.Millisecond,
+		pulseTimeout:       time.Duration(conf.PulseTimeout) * time.Millisecond,
+		randomNodesCount:   conf.RandomNodesCount,
+
 		bootstrapHosts: bootstrapHosts,
 	}, nil
 }
