@@ -248,7 +248,7 @@ func (*JetDrop) DefaultRole() core.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (jd *JetDrop) DefaultTarget() *core.RecordRef {
-	return &jd.Jet
+	return core.NewRecordRef(core.RecordID{}, jd.Jet)
 }
 
 // Type implementation of Message interface.
