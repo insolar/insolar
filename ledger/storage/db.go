@@ -48,7 +48,8 @@ const (
 	sysLatestPulse            byte = 2
 	sysReplicatedPulse        byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
-	sysJetTree                byte = 4
+	sysJetTree                byte = 5
+	sysJetList                byte = 6
 )
 
 // DB represents BadgerDB storage implementation.
@@ -73,6 +74,8 @@ type DB struct {
 	// It should only contain previous N pulses. It should be stored on disk.
 	nodeHistory     map[core.PulseNumber][]core.Node
 	nodeHistoryLock sync.Mutex
+
+	addJetLock sync.RWMutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update

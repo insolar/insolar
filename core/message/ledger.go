@@ -122,7 +122,10 @@ func (e *GetChildren) Type() core.MessageType {
 // JetDrop spreads jet drop
 type JetDrop struct {
 	ledgerMessage
-	Jet         core.RecordRef
+
+	Jet      core.RecordID
+	JetDepth int8
+
 	Drop        []byte
 	Messages    [][]byte
 	PulseNumber core.PulseNumber

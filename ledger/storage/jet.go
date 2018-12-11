@@ -171,3 +171,51 @@ func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 
 	return &tree, nil
 }
+
+// SaveJets stores a list of jets of the current node
+func (db *DB) SaveJet(ctx context.Context, newJet jet.JetID) error {
+	db.addJetLock.Lock()
+	defer db.addJetLock.Unlock()
+
+	k := prefixkey(scopeIDSystem, []byte{sysJetList})
+
+	buff, err := db.get(ctx, k)
+	if err != ErrNotFound {
+		return err
+	}
+
+	var jets jet.JetIDSet
+	if err == ErrNotFound {
+		jets = map[jet.JetID]struct{}{}
+	} else {
+		dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
+		err = dec.Decode(jets)
+		if err != nil {
+			return err
+		}
+	}
+
+	jets[newJet] = struct{}{}
+	return db.set(ctx, k, jets.Bytes())
+}
+
+// GetJets returns jets of the current node
+func (db *DB) GetJets(ctx context.Context) (jet.JetIDSet, error) {
+	db.addJetLock.RLock()
+	defer db.addJetLock.RUnlock()
+
+	k := prefixkey(scopeIDSystem, []byte{sysJetList})
+	buff, err := db.get(ctx, k)
+	if err != nil {
+		return nil, err
+	}
+
+	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
+	var jets jet.JetIDSet
+	err = dec.Decode(jets)
+	if err != nil {
+		return nil, err
+	}
+
+	return jets, nil
+}

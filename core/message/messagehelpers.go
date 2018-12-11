@@ -28,7 +28,7 @@ func ExtractTarget(msg core.Message) core.RecordRef {
 	case *GetObject:
 		return t.Head
 	case *JetDrop:
-		return t.Jet
+		return core.RecordRef{} // t.Jet
 	case *RegisterChild:
 		return t.Parent
 	case *SetBlob:

@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -560,6 +561,11 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	err := h.db.SaveJet(ctx, jet.JetID{Depth: msg.JetDepth, ID: msg.Jet})
+	if err != nil {
+		return nil, err
 	}
 
 	return &reply.OK{}, nil
