@@ -49,6 +49,15 @@ func NewRecordID(pulse PulseNumber, hash []byte) *RecordID {
 	return &id
 }
 
+// NewJetID generates RecordID for jet.
+func NewJetID(depth uint8, prefix []byte) *RecordID {
+	var id RecordID
+	copy(id[:PulseNumberSize], PulseNumberJet.Bytes())
+	id[PulseNumberSize] = depth
+	copy(id[PulseNumberSize+1:], prefix)
+	return &id
+}
+
 // Bytes returns byte slice of RecordID.
 func (id *RecordID) Bytes() []byte {
 	return id[:]
@@ -81,6 +90,11 @@ func (id *RecordID) MarshalJSON() ([]byte, error) {
 		return json.Marshal(nil)
 	}
 	return json.Marshal(base58.Encode(id[:]))
+}
+
+// Jet returns jet depth and prefix.
+func (id *RecordID) Jet() (uint8, []byte) {
+	return id[PulseNumberSize], id[PulseNumberSize+1:]
 }
 
 // RecordRef is a unified record reference.
