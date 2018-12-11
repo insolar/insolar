@@ -25,13 +25,14 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 )
 type distributor struct {
-	transport transport.Transport
+	Transport transport.Transport `inject:""`
 
 	pulsarHost     *host.Host
 	bootstrapHosts []*host.Host
 }
 
 func NewDistributor(conf configuration.PulseDistributor, transport transport.Transport) (core.PulseDistributor, error) {
+func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor, error) {
 	return &distributor{
 	}, nil
 }
@@ -39,7 +40,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 	panic("not implemented")
 func (d *distributor) pause(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Pause ] Pause distribution, stopping transport")
-	d.transport.Stop()
+	d.Transport.Stop()
 }
 
 func (d *distributor) resume(ctx context.Context) {
@@ -50,5 +51,5 @@ func (d *distributor) resume(ctx context.Context) {
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 		}
-	}(ctx, d.transport)
+	}(ctx, d.Transport)
 }
