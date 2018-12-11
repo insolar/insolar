@@ -126,6 +126,45 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 
 	return nil
 }
+
+func (d *distributor) getRandomHosts(ctx context.Context, host *host.Host) ([]host.Host, error) {
+	logger := inslogger.FromContext(ctx)
+
+	builder := packet.NewBuilder(d.pulsarHost)
+	request := builder.
+		Receiver(host).
+		Request(&packet.RequestGetRandomHosts{HostsNumber: d.randomNodesCount}).
+		Type(types.GetRandomHosts).
+		Build()
+
+	logger.Debugf("before get random hosts request")
+	call, err := d.Transport.SendRequest(request)
+	if err != nil {
+		logger.Error(err)
+		return nil, errors.Wrap(err, "[ getRandomHosts ] failed to send getRandomHosts request")
+	}
+
+	result, err := call.GetResult(d.randomNodesTimeout)
+	if err != nil {
+		logger.Error(err)
+		return nil, errors.Wrap(err, "[ getRandomHosts ] failed to get getRandomHosts result")
+	}
+
+	if result.Error != nil {
+		logger.Error(result.Error)
+		return nil, errors.Wrap(err, "[ getRandomHosts ] getRandomHosts result returned error")
+	}
+
+	logger.Debugf("getRandomHosts request is done")
+
+	body := result.Data.(*packet.ResponseGetRandomHosts)
+	if len(body.Error) != 0 {
+		logger.Error(body.Error)
+		return nil, errors.Wrap(err, "[ getRandomHosts ] getRandomHosts data returned error")
+	}
+
+	return body.Hosts, nil
+}
 func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
