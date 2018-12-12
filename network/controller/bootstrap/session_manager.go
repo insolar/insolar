@@ -164,5 +164,9 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 
 func (sm *SessionManager) cleanupExpiredSessions() {
 	for {
+		select {
+		case <-sm.stopCleanupNotify:
+			return
+		}
 	}
 }
