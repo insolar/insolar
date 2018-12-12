@@ -47,7 +47,7 @@ type PulseManager struct {
 	NodeNet           core.NodeNetwork            `inject:""`
 	JetCoordinator    core.JetCoordinator         `inject:""`
 	GIL               core.GlobalInsolarLock      `inject:""`
-	Recent            recentstorage.RecentStorage `inject:""`
+	Recent            recentstorage.Provider `inject:""`
 	ActiveListSwapper ActiveListSwapper           `inject:""`
 
 	currentPulse core.Pulse
@@ -162,10 +162,11 @@ func (m *PulseManager) processRecentObjects(
 	dropSerialized []byte,
 ) error {
 	logger := inslogger.FromContext(ctx)
-	m.Recent.ClearZeroTTLObjects()
-	recentObjectsIds := m.Recent.GetObjects()
-	pendingRequestsIds := m.Recent.GetRequests()
-	defer m.Recent.ClearObjects()
+	recentStorage := m.Recent.GetStorage(core.TODOJetID)
+	recentStorage.ClearZeroTTLObjects()
+	recentObjectsIds := recentStorage.GetObjects()
+	pendingRequestsIds := recentStorage.GetRequests()
+	defer recentStorage.ClearObjects()
 
 	jetID := core.TODOJetID
 
@@ -188,7 +189,7 @@ func (m *PulseManager) processRecentObjects(
 			Index: encoded,
 		}
 
-		if !m.Recent.IsMine(id) {
+		if !recentStorage.IsMine(id) {
 			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
 			if err != nil {
 				logger.Error(err)
