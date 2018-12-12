@@ -479,7 +479,6 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 
 	h.RecentStorageProvider = provideMock
 
-
 	t.Run("redirects to light when created after limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
@@ -755,4 +754,47 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 	require.Equal(t, &reply.OK{}, response)
 	require.Equal(t, expectedSetId, idSet)
 
+}
+
+func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer func() {
+		cleaner()
+		mc.Finish()
+	}()
+
+	jetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{2})
+	secondJetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{3})
+	msg := message.JetDrop{
+		Jet: *jetID,
+	}
+	secondMsg := message.JetDrop{
+		Jet: *secondJetID,
+	}
+	expectedSetId := jet.IDSet{
+		*jetID:       struct{}{},
+		*secondJetID: struct{}{},
+	}
+
+	h := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 3,
+	})
+
+	// Act
+	response, err := h.handleJetDrop(ctx, &message.Parcel{Msg: &msg})
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, response)
+
+	secondResponse, err := h.handleJetDrop(ctx, &message.Parcel{Msg: &secondMsg})
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, secondResponse)
+
+	idSet, err := db.GetJets(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	require.Equal(t, expectedSetId, idSet)
 }
