@@ -40,6 +40,8 @@ func newTestNodeWithShortID(id core.ShortNodeID) core.Node {
 func TestCorrectShortIDCollision(t *testing.T) {
 	keeper := nodenetwork.NewNodeKeeper(newTestNode())
 	keeper.AddActiveNodes([]core.Node{
+		newTestNodeWithShortID(0),
+		newTestNodeWithShortID(1),
 		newTestNodeWithShortID(30),
 		newTestNodeWithShortID(32),
 		newTestNodeWithShortID(33),
@@ -49,7 +51,7 @@ func TestCorrectShortIDCollision(t *testing.T) {
 		newTestNodeWithShortID(1<<32 - 1),
 	})
 
-	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(0)))
+	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(2)))
 	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(31)))
 	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(35)))
 	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(65)))
@@ -64,7 +66,7 @@ func TestCorrectShortIDCollision(t *testing.T) {
 	require.Equal(t, core.ShortNodeID(65), regenerateShortID(keeper, core.ShortNodeID(64)))
 
 	require.True(t, checkShortIDCollision(keeper, core.ShortNodeID(1<<32-2)))
-	require.Equal(t, core.ShortNodeID(1), regenerateShortID(keeper, core.ShortNodeID(1<<32-2)))
+	require.Equal(t, core.ShortNodeID(2), regenerateShortID(keeper, core.ShortNodeID(1<<32-2)))
 }
 
 type testNode struct {

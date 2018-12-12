@@ -63,18 +63,19 @@ func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core
 	result := conflictingID
 	repeated := false
 	for {
-		index++
-		result++
-		if (index >= len(sortedSlice)) || (result != sortedSlice[index]) {
-			return result
-		}
 		if result == math.MaxUint32 {
 			if !repeated {
 				repeated = true
 				result = 0
+				index = 0
 			} else {
 				panic("[ generateNonConflictingID ] shortID overflow twice")
 			}
+		}
+		index++
+		result++
+		if index >= len(sortedSlice) || result != sortedSlice[index] {
+			return result
 		}
 	}
 }
