@@ -455,7 +455,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	}
 
 	if !m.CorrectPrototype.IsEmpty() && !m.CorrectPrototype.Equal(*es.objectbody.Prototype) {
-		return nil, errors.New("try to call method of prototype as method of another prototype")
+		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
 	}
 
 	es.callContext.Prototype = es.objectbody.Prototype
