@@ -227,9 +227,13 @@ func (sm *SessionManager) sortSessionsByExpirationTime() []*sessionWithID {
 }
 
 func (sm *SessionManager) expireSessions(sessionsByExpirationTime []*sessionWithID) []*sessionWithID {
+	var shift int
+
 	sm.lock.Lock()
 
-	for _, session := range sessionsByExpirationTime {
+	for i, session := range sessionsByExpirationTime {
+		shift = i + 1
+
 		// Check when we have to stop expire
 		if session.expirationTime().After(time.Now()) {
 			break
@@ -237,9 +241,8 @@ func (sm *SessionManager) expireSessions(sessionsByExpirationTime []*sessionWith
 
 		delete(sm.sessions, session.SessionID)
 	}
-	sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
 
 	sm.lock.Unlock()
 
-	return sessionsByExpirationTime
+	return sessionsByExpirationTime[shift:]
 }
