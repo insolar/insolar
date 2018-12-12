@@ -60,13 +60,15 @@ type sessionWithID struct {
 	SessionID
 }
 
+type notification struct{}
+
 type SessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
 	sessions map[SessionID]*Session
 
-	newSessionNotification  chan struct{}
-	stopCleanupNotification chan struct{}
+	newSessionNotification  chan notification
+	stopCleanupNotification chan notification
 }
 
 func NewSessionManager() *SessionManager {
@@ -84,7 +86,7 @@ func (sm *SessionManager) Start(ctx context.Context) error {
 func (sm *SessionManager) Stop(ctx context.Context) error {
 	inslogger.FromContext(ctx).Debug("[ SessionManager::Stop ] stop cleaning up sessions")
 
-	sm.stopCleanupNotification <- struct{}{}
+	sm.stopCleanupNotification <- notification{}
 
 	return nil
 }
@@ -103,6 +105,9 @@ func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.Authorization
 	sm.lock.Lock()
 	sm.sessions[sessionID] = session
 	sm.lock.Unlock()
+
+	sm.newSessionNotification <- notification{}
+
 	return sessionID
 }
 
