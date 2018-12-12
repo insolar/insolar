@@ -299,7 +299,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	if os.ExecutionState == nil {
 		os.ExecutionState = &ExecutionState{
 			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: core.NewCaseBind()},
+			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 		}
 	}
 	es := os.ExecutionState
@@ -470,7 +470,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 			CodeRef:         codeDesc.Ref(),
 			Parent:          objDesc.Parent(),
 		}
-	inslogger.FromContext(ctx).Info("LogicRunner.executeMethodCall starts")
+		inslogger.FromContext(ctx).Info("LogicRunner.executeMethodCall starts")
 	}
 
 	es.Current.LogicContext.Prototype = es.objectbody.Prototype
@@ -618,8 +618,8 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
 			messages = append(
 				messages,
-				&message.ValidateCaseBind{RecordRef: ref, CaseBind: *caseBind, Pulse: pulse},
-				&message.ExecutorResults{RecordRef: ref, CaseBind: *caseBind},
+				caseBind.ToValidateMessage(ctx, ref, pulse),
+				caseBind.ToExecutorResultsMessage(ref),
 			)
 
 			es.ReleaseQueue()

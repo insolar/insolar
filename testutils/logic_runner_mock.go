@@ -40,11 +40,6 @@ type LogicRunnerMock struct {
 	ProcessValidationResultsPreCounter uint64
 	ProcessValidationResultsMock       mLogicRunnerMockProcessValidationResults
 
-	ValidateFunc       func(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) (r int, r1 error)
-	ValidateCounter    uint64
-	ValidatePreCounter uint64
-	ValidateMock       mLogicRunnerMockValidate
-
 	ValidateCaseBindFunc       func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)
 	ValidateCaseBindCounter    uint64
 	ValidateCaseBindPreCounter uint64
@@ -63,7 +58,6 @@ func NewLogicRunnerMock(t minimock.Tester) *LogicRunnerMock {
 	m.ExecutorResultsMock = mLogicRunnerMockExecutorResults{mock: m}
 	m.OnPulseMock = mLogicRunnerMockOnPulse{mock: m}
 	m.ProcessValidationResultsMock = mLogicRunnerMockProcessValidationResults{mock: m}
-	m.ValidateMock = mLogicRunnerMockValidate{mock: m}
 	m.ValidateCaseBindMock = mLogicRunnerMockValidateCaseBind{mock: m}
 
 	return m
@@ -670,159 +664,6 @@ func (m *LogicRunnerMock) ProcessValidationResultsFinished() bool {
 	return true
 }
 
-type mLogicRunnerMockValidate struct {
-	mock              *LogicRunnerMock
-	mainExpectation   *LogicRunnerMockValidateExpectation
-	expectationSeries []*LogicRunnerMockValidateExpectation
-}
-
-type LogicRunnerMockValidateExpectation struct {
-	input  *LogicRunnerMockValidateInput
-	result *LogicRunnerMockValidateResult
-}
-
-type LogicRunnerMockValidateInput struct {
-	p  context.Context
-	p1 core.RecordRef
-	p2 core.Pulse
-	p3 core.CaseBind
-}
-
-type LogicRunnerMockValidateResult struct {
-	r  int
-	r1 error
-}
-
-//Expect specifies that invocation of LogicRunner.Validate is expected from 1 to Infinity times
-func (m *mLogicRunnerMockValidate) Expect(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) *mLogicRunnerMockValidate {
-	m.mock.ValidateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockValidateExpectation{}
-	}
-	m.mainExpectation.input = &LogicRunnerMockValidateInput{p, p1, p2, p3}
-	return m
-}
-
-//Return specifies results of invocation of LogicRunner.Validate
-func (m *mLogicRunnerMockValidate) Return(r int, r1 error) *LogicRunnerMock {
-	m.mock.ValidateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockValidateExpectation{}
-	}
-	m.mainExpectation.result = &LogicRunnerMockValidateResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of LogicRunner.Validate is expected once
-func (m *mLogicRunnerMockValidate) ExpectOnce(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) *LogicRunnerMockValidateExpectation {
-	m.mock.ValidateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &LogicRunnerMockValidateExpectation{}
-	expectation.input = &LogicRunnerMockValidateInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *LogicRunnerMockValidateExpectation) Return(r int, r1 error) {
-	e.result = &LogicRunnerMockValidateResult{r, r1}
-}
-
-//Set uses given function f as a mock of LogicRunner.Validate method
-func (m *mLogicRunnerMockValidate) Set(f func(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) (r int, r1 error)) *LogicRunnerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.ValidateFunc = f
-	return m.mock
-}
-
-//Validate implements github.com/insolar/insolar/core.LogicRunner interface
-func (m *LogicRunnerMock) Validate(p context.Context, p1 core.RecordRef, p2 core.Pulse, p3 core.CaseBind) (r int, r1 error) {
-	counter := atomic.AddUint64(&m.ValidatePreCounter, 1)
-	defer atomic.AddUint64(&m.ValidateCounter, 1)
-
-	if len(m.ValidateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ValidateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LogicRunnerMock.Validate. %v %v %v %v", p, p1, p2, p3)
-			return
-		}
-
-		input := m.ValidateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, LogicRunnerMockValidateInput{p, p1, p2, p3}, "LogicRunner.Validate got unexpected parameters")
-
-		result := m.ValidateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.Validate")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ValidateMock.mainExpectation != nil {
-
-		input := m.ValidateMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, LogicRunnerMockValidateInput{p, p1, p2, p3}, "LogicRunner.Validate got unexpected parameters")
-		}
-
-		result := m.ValidateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.Validate")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ValidateFunc == nil {
-		m.t.Fatalf("Unexpected call to LogicRunnerMock.Validate. %v %v %v %v", p, p1, p2, p3)
-		return
-	}
-
-	return m.ValidateFunc(p, p1, p2, p3)
-}
-
-//ValidateMinimockCounter returns a count of LogicRunnerMock.ValidateFunc invocations
-func (m *LogicRunnerMock) ValidateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ValidateCounter)
-}
-
-//ValidateMinimockPreCounter returns the value of LogicRunnerMock.Validate invocations
-func (m *LogicRunnerMock) ValidateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ValidatePreCounter)
-}
-
-//ValidateFinished returns true if mock invocations count is ok
-func (m *LogicRunnerMock) ValidateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ValidateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ValidateCounter) == uint64(len(m.ValidateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ValidateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ValidateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ValidateFunc != nil {
-		return atomic.LoadUint64(&m.ValidateCounter) > 0
-	}
-
-	return true
-}
-
 type mLogicRunnerMockValidateCaseBind struct {
 	mock              *LogicRunnerMock
 	mainExpectation   *LogicRunnerMockValidateCaseBindExpectation
@@ -994,10 +835,6 @@ func (m *LogicRunnerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to LogicRunnerMock.ProcessValidationResults")
 	}
 
-	if !m.ValidateFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.Validate")
-	}
-
 	if !m.ValidateCaseBindFinished() {
 		m.t.Fatal("Expected call to LogicRunnerMock.ValidateCaseBind")
 	}
@@ -1035,10 +872,6 @@ func (m *LogicRunnerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to LogicRunnerMock.ProcessValidationResults")
 	}
 
-	if !m.ValidateFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.Validate")
-	}
-
 	if !m.ValidateCaseBindFinished() {
 		m.t.Fatal("Expected call to LogicRunnerMock.ValidateCaseBind")
 	}
@@ -1061,7 +894,6 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ExecutorResultsFinished()
 		ok = ok && m.OnPulseFinished()
 		ok = ok && m.ProcessValidationResultsFinished()
-		ok = ok && m.ValidateFinished()
 		ok = ok && m.ValidateCaseBindFinished()
 
 		if ok {
@@ -1085,10 +917,6 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ProcessValidationResultsFinished() {
 				m.t.Error("Expected call to LogicRunnerMock.ProcessValidationResults")
-			}
-
-			if !m.ValidateFinished() {
-				m.t.Error("Expected call to LogicRunnerMock.Validate")
 			}
 
 			if !m.ValidateCaseBindFinished() {
@@ -1120,10 +948,6 @@ func (m *LogicRunnerMock) AllMocksCalled() bool {
 	}
 
 	if !m.ProcessValidationResultsFinished() {
-		return false
-	}
-
-	if !m.ValidateFinished() {
 		return false
 	}
 

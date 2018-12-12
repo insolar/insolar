@@ -18,7 +18,6 @@ package core
 
 import (
 	"context"
-	"encoding/gob"
 	"time"
 )
 
@@ -59,7 +58,6 @@ type LogicRunner interface {
 	ValidateCaseBind(context.Context, Parcel) (res Reply, err error)
 	ProcessValidationResults(context.Context, Parcel) (res Reply, err error)
 	ExecutorResults(context.Context, Parcel) (res Reply, err error)
-	Validate(ctx context.Context, ref RecordRef, p Pulse, cb CaseBind) (int, error) // TODO hide?
 	OnPulse(context.Context, Pulse) error
 }
 
@@ -76,61 +74,4 @@ type LogicCallContext struct {
 	Time            time.Time  // Time when call was made
 	Pulse           Pulse      // Number of the pulse
 	TraceID         string
-}
-
-type CaseRequest struct {
-	Message    Message
-	Request    RecordRef
-	MessageBus MessageBus
-	Reply      Reply
-	Error      error
-}
-
-// CaseBinder is a whole result of executor efforts on every object it seen on this pulse
-type CaseBind struct {
-	Requests []CaseRequest
-}
-
-func NewCaseBind() *CaseBind {
-	return &CaseBind{Requests: make([]CaseRequest, 0)}
-}
-
-func (cb *CaseBind) NewRequest(msg Message, request RecordRef, mb MessageBus) *CaseRequest {
-	res := CaseRequest{
-		Message:    msg,
-		Request:    request,
-		MessageBus: mb,
-	}
-	cb.Requests = append(cb.Requests, res)
-	return &cb.Requests[len(cb.Requests)-1]
-}
-
-type CaseBindReplay struct {
-	Pulse    Pulse
-	CaseBind CaseBind
-	Request  int
-	Record   int
-	Steps    int
-	Fail     int
-}
-
-func NewCaseBindReplay(cb CaseBind) *CaseBindReplay {
-	return &CaseBindReplay{
-		CaseBind: cb,
-		Request:  -1,
-		Record:   -1,
-	}
-}
-
-func (r *CaseBindReplay) NextRequest() *CaseRequest {
-	if r.Request+1 >= len(r.CaseBind.Requests) {
-		return nil
-	}
-	r.Request++
-	return &r.CaseBind.Requests[r.Request]
-}
-
-func init() {
-	gob.Register(&CaseRequest{})
-	gob.Register(&CaseBind{})
 }
