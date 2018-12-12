@@ -185,7 +185,7 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 
 		// Get expiration time for next session and wait for it
 		nextSessionToExpire := sessionsByExpirationTime[0]
-		waitTime := nextSessionToExpire.expirationTime().Sub(time.Now())
+		waitTime := time.Until(nextSessionToExpire.expirationTime())
 
 		select {
 		case <-sm.newSessionNotification:
