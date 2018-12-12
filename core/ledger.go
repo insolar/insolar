@@ -69,10 +69,13 @@ type PulseManager interface {
 //go:generate minimock -i github.com/insolar/insolar/core.JetCoordinator -o ../testutils -s _mock.go
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
+	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber, node RecordRef) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
+	QueryRole(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) ([]RecordRef, error)
+
+	// AmI checks for role on concrete pulse for current node.
+	AmI(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) (bool, error)
 
 	// GetActiveNodes return active nodes for specified pulse.
 	GetActiveNodes(pulse PulseNumber) ([]Node, error)
