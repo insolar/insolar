@@ -129,8 +129,9 @@ func (m *PulseManager) dropAllJets(ctx context.Context, pulse *storage.Pulse) er
 				return errors.Wrap(err, "processRecentObjects failed")
 			}
 
-			if err = m.processDrop(ctx, pulse, &m.currentPulse, dropSerialized, messages); err != nil {
-				return errors.Wrap(err, "processDrop failed")
+			dropErr := m.processDrop(ctx, jetID, pulse, &m.currentPulse, dropSerialized, messages)
+			if dropErr != nil {
+				return errors.Wrap(dropErr, "processDrop failed")
 			}
 			return nil
 		})
@@ -171,12 +172,14 @@ func (m *PulseManager) createDrop(
 
 func (m *PulseManager) processDrop(
 	ctx context.Context,
+	jetID core.RecordID,
 	lastSlotPulse *storage.Pulse,
 	currentSlotPulse *core.Pulse,
 	dropSerialized []byte,
 	messages [][]byte,
 ) error {
 	msg := &message.JetDrop{
+		JetID:       jetID,
 		Drop:        dropSerialized,
 		Messages:    messages,
 		PulseNumber: *lastSlotPulse.Prev,
