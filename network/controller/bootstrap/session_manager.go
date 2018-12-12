@@ -181,7 +181,11 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 func (sm *SessionManager) cleanupExpiredSessions() {
 	var sessionsByExpirationTime []*sessionWithID
 	for {
-		if len(sm.sessions) == 0 {
+		sm.lock.RLock()
+		sessionsCount := len(sm.sessions)
+		sm.lock.RUnlock()
+
+		if sessionsCount == 0 {
 			// Have no active sessions. Block till sessions will be added.
 			<-sm.newSessionNotification
 
