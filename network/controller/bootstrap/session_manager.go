@@ -189,7 +189,7 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 		sessionsCount := len(sm.sessions)
 		sm.lock.RUnlock()
 
-		if sessionsCount == 0 {
+		if sessionsCount == 0 || len(sessionsByExpirationTime) == 0 {
 			// Have no active sessions. Block till sessions will be added.
 			<-sm.newSessionNotification
 
