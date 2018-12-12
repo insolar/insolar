@@ -84,7 +84,13 @@ func getTestData(t *testing.T) (
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
-	handler.Recent = recentStorageMock
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	handler.RecentProvider = provideMock
 
 	handler.Bus = mb
 	err := handler.Init(ctx)
@@ -643,7 +649,13 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
-	handler.Recent = recentStorageMock
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	handler.RecentProvider = provideMock
 
 	err := handler.Init(ctx)
 	require.NoError(t, err)
