@@ -240,7 +240,7 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := msg.DefaultTarget()
 	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, role, target, lr.pulse(ctx).PulseNumber, lr.NodeNetwork.GetOrigin().ID(),
+		ctx, role, target.Record(), lr.pulse(ctx).PulseNumber, lr.NodeNetwork.GetOrigin().ID(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")

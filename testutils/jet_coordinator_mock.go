@@ -20,17 +20,22 @@ import (
 type JetCoordinatorMock struct {
 	t minimock.Tester
 
+	AmIFunc       func(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) (r bool, r1 error)
+	AmICounter    uint64
+	AmIPreCounter uint64
+	AmIMock       mJetCoordinatorMockAmI
+
 	GetActiveNodesFunc       func(p core.PulseNumber) (r []core.Node, r1 error)
 	GetActiveNodesCounter    uint64
 	GetActiveNodesPreCounter uint64
 	GetActiveNodesMock       mJetCoordinatorMockGetActiveNodes
 
-	IsAuthorizedFunc       func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error)
+	IsAuthorizedFunc       func(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error)
 	IsAuthorizedCounter    uint64
 	IsAuthorizedPreCounter uint64
 	IsAuthorizedMock       mJetCoordinatorMockIsAuthorized
 
-	QueryRoleFunc       func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) (r []core.RecordRef, r1 error)
+	QueryRoleFunc       func(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) (r []core.RecordRef, r1 error)
 	QueryRoleCounter    uint64
 	QueryRolePreCounter uint64
 	QueryRoleMock       mJetCoordinatorMockQueryRole
@@ -44,11 +49,165 @@ func NewJetCoordinatorMock(t minimock.Tester) *JetCoordinatorMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.AmIMock = mJetCoordinatorMockAmI{mock: m}
 	m.GetActiveNodesMock = mJetCoordinatorMockGetActiveNodes{mock: m}
 	m.IsAuthorizedMock = mJetCoordinatorMockIsAuthorized{mock: m}
 	m.QueryRoleMock = mJetCoordinatorMockQueryRole{mock: m}
 
 	return m
+}
+
+type mJetCoordinatorMockAmI struct {
+	mock              *JetCoordinatorMock
+	mainExpectation   *JetCoordinatorMockAmIExpectation
+	expectationSeries []*JetCoordinatorMockAmIExpectation
+}
+
+type JetCoordinatorMockAmIExpectation struct {
+	input  *JetCoordinatorMockAmIInput
+	result *JetCoordinatorMockAmIResult
+}
+
+type JetCoordinatorMockAmIInput struct {
+	p  context.Context
+	p1 core.DynamicRole
+	p2 *core.RecordID
+	p3 core.PulseNumber
+}
+
+type JetCoordinatorMockAmIResult struct {
+	r  bool
+	r1 error
+}
+
+//Expect specifies that invocation of JetCoordinator.AmI is expected from 1 to Infinity times
+func (m *mJetCoordinatorMockAmI) Expect(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) *mJetCoordinatorMockAmI {
+	m.mock.AmIFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetCoordinatorMockAmIExpectation{}
+	}
+	m.mainExpectation.input = &JetCoordinatorMockAmIInput{p, p1, p2, p3}
+	return m
+}
+
+//Return specifies results of invocation of JetCoordinator.AmI
+func (m *mJetCoordinatorMockAmI) Return(r bool, r1 error) *JetCoordinatorMock {
+	m.mock.AmIFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetCoordinatorMockAmIExpectation{}
+	}
+	m.mainExpectation.result = &JetCoordinatorMockAmIResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of JetCoordinator.AmI is expected once
+func (m *mJetCoordinatorMockAmI) ExpectOnce(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) *JetCoordinatorMockAmIExpectation {
+	m.mock.AmIFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &JetCoordinatorMockAmIExpectation{}
+	expectation.input = &JetCoordinatorMockAmIInput{p, p1, p2, p3}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *JetCoordinatorMockAmIExpectation) Return(r bool, r1 error) {
+	e.result = &JetCoordinatorMockAmIResult{r, r1}
+}
+
+//Set uses given function f as a mock of JetCoordinator.AmI method
+func (m *mJetCoordinatorMockAmI) Set(f func(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) (r bool, r1 error)) *JetCoordinatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.AmIFunc = f
+	return m.mock
+}
+
+//AmI implements github.com/insolar/insolar/core.JetCoordinator interface
+func (m *JetCoordinatorMock) AmI(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) (r bool, r1 error) {
+	counter := atomic.AddUint64(&m.AmIPreCounter, 1)
+	defer atomic.AddUint64(&m.AmICounter, 1)
+
+	if len(m.AmIMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.AmIMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to JetCoordinatorMock.AmI. %v %v %v %v", p, p1, p2, p3)
+			return
+		}
+
+		input := m.AmIMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, JetCoordinatorMockAmIInput{p, p1, p2, p3}, "JetCoordinator.AmI got unexpected parameters")
+
+		result := m.AmIMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetCoordinatorMock.AmI")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.AmIMock.mainExpectation != nil {
+
+		input := m.AmIMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, JetCoordinatorMockAmIInput{p, p1, p2, p3}, "JetCoordinator.AmI got unexpected parameters")
+		}
+
+		result := m.AmIMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetCoordinatorMock.AmI")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.AmIFunc == nil {
+		m.t.Fatalf("Unexpected call to JetCoordinatorMock.AmI. %v %v %v %v", p, p1, p2, p3)
+		return
+	}
+
+	return m.AmIFunc(p, p1, p2, p3)
+}
+
+//AmIMinimockCounter returns a count of JetCoordinatorMock.AmIFunc invocations
+func (m *JetCoordinatorMock) AmIMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AmICounter)
+}
+
+//AmIMinimockPreCounter returns the value of JetCoordinatorMock.AmI invocations
+func (m *JetCoordinatorMock) AmIMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AmIPreCounter)
+}
+
+//AmIFinished returns true if mock invocations count is ok
+func (m *JetCoordinatorMock) AmIFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.AmIMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.AmICounter) == uint64(len(m.AmIMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.AmIMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.AmICounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.AmIFunc != nil {
+		return atomic.LoadUint64(&m.AmICounter) > 0
+	}
+
+	return true
 }
 
 type mJetCoordinatorMockGetActiveNodes struct {
@@ -215,7 +374,7 @@ type JetCoordinatorMockIsAuthorizedExpectation struct {
 type JetCoordinatorMockIsAuthorizedInput struct {
 	p  context.Context
 	p1 core.DynamicRole
-	p2 *core.RecordRef
+	p2 *core.RecordID
 	p3 core.PulseNumber
 	p4 core.RecordRef
 }
@@ -226,7 +385,7 @@ type JetCoordinatorMockIsAuthorizedResult struct {
 }
 
 //Expect specifies that invocation of JetCoordinator.IsAuthorized is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockIsAuthorized) Expect(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) *mJetCoordinatorMockIsAuthorized {
+func (m *mJetCoordinatorMockIsAuthorized) Expect(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) *mJetCoordinatorMockIsAuthorized {
 	m.mock.IsAuthorizedFunc = nil
 	m.expectationSeries = nil
 
@@ -250,7 +409,7 @@ func (m *mJetCoordinatorMockIsAuthorized) Return(r bool, r1 error) *JetCoordinat
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.IsAuthorized is expected once
-func (m *mJetCoordinatorMockIsAuthorized) ExpectOnce(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) *JetCoordinatorMockIsAuthorizedExpectation {
+func (m *mJetCoordinatorMockIsAuthorized) ExpectOnce(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) *JetCoordinatorMockIsAuthorizedExpectation {
 	m.mock.IsAuthorizedFunc = nil
 	m.mainExpectation = nil
 
@@ -265,7 +424,7 @@ func (e *JetCoordinatorMockIsAuthorizedExpectation) Return(r bool, r1 error) {
 }
 
 //Set uses given function f as a mock of JetCoordinator.IsAuthorized method
-func (m *mJetCoordinatorMockIsAuthorized) Set(f func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockIsAuthorized) Set(f func(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -274,7 +433,7 @@ func (m *mJetCoordinatorMockIsAuthorized) Set(f func(p context.Context, p1 core.
 }
 
 //IsAuthorized implements github.com/insolar/insolar/core.JetCoordinator interface
-func (m *JetCoordinatorMock) IsAuthorized(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error) {
+func (m *JetCoordinatorMock) IsAuthorized(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error) {
 	counter := atomic.AddUint64(&m.IsAuthorizedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsAuthorizedCounter, 1)
 
@@ -369,7 +528,7 @@ type JetCoordinatorMockQueryRoleExpectation struct {
 type JetCoordinatorMockQueryRoleInput struct {
 	p  context.Context
 	p1 core.DynamicRole
-	p2 *core.RecordRef
+	p2 *core.RecordID
 	p3 core.PulseNumber
 }
 
@@ -379,7 +538,7 @@ type JetCoordinatorMockQueryRoleResult struct {
 }
 
 //Expect specifies that invocation of JetCoordinator.QueryRole is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockQueryRole) Expect(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) *mJetCoordinatorMockQueryRole {
+func (m *mJetCoordinatorMockQueryRole) Expect(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) *mJetCoordinatorMockQueryRole {
 	m.mock.QueryRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -403,7 +562,7 @@ func (m *mJetCoordinatorMockQueryRole) Return(r []core.RecordRef, r1 error) *Jet
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.QueryRole is expected once
-func (m *mJetCoordinatorMockQueryRole) ExpectOnce(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) *JetCoordinatorMockQueryRoleExpectation {
+func (m *mJetCoordinatorMockQueryRole) ExpectOnce(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) *JetCoordinatorMockQueryRoleExpectation {
 	m.mock.QueryRoleFunc = nil
 	m.mainExpectation = nil
 
@@ -418,7 +577,7 @@ func (e *JetCoordinatorMockQueryRoleExpectation) Return(r []core.RecordRef, r1 e
 }
 
 //Set uses given function f as a mock of JetCoordinator.QueryRole method
-func (m *mJetCoordinatorMockQueryRole) Set(f func(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) (r []core.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockQueryRole) Set(f func(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) (r []core.RecordRef, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -427,7 +586,7 @@ func (m *mJetCoordinatorMockQueryRole) Set(f func(p context.Context, p1 core.Dyn
 }
 
 //QueryRole implements github.com/insolar/insolar/core.JetCoordinator interface
-func (m *JetCoordinatorMock) QueryRole(p context.Context, p1 core.DynamicRole, p2 *core.RecordRef, p3 core.PulseNumber) (r []core.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) QueryRole(p context.Context, p1 core.DynamicRole, p2 *core.RecordID, p3 core.PulseNumber) (r []core.RecordRef, r1 error) {
 	counter := atomic.AddUint64(&m.QueryRolePreCounter, 1)
 	defer atomic.AddUint64(&m.QueryRoleCounter, 1)
 
@@ -512,6 +671,10 @@ func (m *JetCoordinatorMock) QueryRoleFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *JetCoordinatorMock) ValidateCallCounters() {
 
+	if !m.AmIFinished() {
+		m.t.Fatal("Expected call to JetCoordinatorMock.AmI")
+	}
+
 	if !m.GetActiveNodesFinished() {
 		m.t.Fatal("Expected call to JetCoordinatorMock.GetActiveNodes")
 	}
@@ -541,6 +704,10 @@ func (m *JetCoordinatorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *JetCoordinatorMock) MinimockFinish() {
 
+	if !m.AmIFinished() {
+		m.t.Fatal("Expected call to JetCoordinatorMock.AmI")
+	}
+
 	if !m.GetActiveNodesFinished() {
 		m.t.Fatal("Expected call to JetCoordinatorMock.GetActiveNodes")
 	}
@@ -567,6 +734,7 @@ func (m *JetCoordinatorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.AmIFinished()
 		ok = ok && m.GetActiveNodesFinished()
 		ok = ok && m.IsAuthorizedFinished()
 		ok = ok && m.QueryRoleFinished()
@@ -577,6 +745,10 @@ func (m *JetCoordinatorMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.AmIFinished() {
+				m.t.Error("Expected call to JetCoordinatorMock.AmI")
+			}
 
 			if !m.GetActiveNodesFinished() {
 				m.t.Error("Expected call to JetCoordinatorMock.GetActiveNodes")
@@ -601,6 +773,10 @@ func (m *JetCoordinatorMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *JetCoordinatorMock) AllMocksCalled() bool {
+
+	if !m.AmIFinished() {
+		return false
+	}
 
 	if !m.GetActiveNodesFinished() {
 		return false
