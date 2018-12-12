@@ -131,6 +131,18 @@ func (q *quicTransport) closeConnections() error {
 	}
 	return nil
 }
+
+func createConnection(addr string) (quic.Session, quic.Stream, error) {
+	session, err := quic.DialAddr(addr, &tls.Config{InsecureSkipVerify: true}, nil)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ createConnection ] failed to create a session")
+	}
+	stream, err := session.OpenStreamSync()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ createConnection ] failed to open a stream")
+	}
+	log.Infof("connected to: %s", session.RemoteAddr().String())
+	return session, stream, nil
 }
 
 // Setup a bare-bones TLS config for the server
