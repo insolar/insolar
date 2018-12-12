@@ -77,11 +77,6 @@ func (n *ServiceNetwork) GetAddress() string {
 	return n.hostNetwork.PublicAddress()
 }
 
-// GetNodeID returns current node id.
-func (n *ServiceNetwork) GetNodeID() core.RecordRef {
-	return n.NodeNetwork.GetOrigin().ID()
-}
-
 // GetGlobuleID returns current globule id.
 func (n *ServiceNetwork) GetGlobuleID() core.GlobuleID {
 	return 0

@@ -143,7 +143,7 @@ type LogicRunner struct {
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	MessageBus                 core.MessageBus                 `inject:""`
 	Ledger                     core.Ledger                     `inject:""`
-	Network                    core.Network                    `inject:""`
+	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
 	PulseManager               core.PulseManager               `inject:""`
@@ -240,7 +240,7 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := msg.DefaultTarget()
 	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, role, target, lr.pulse(ctx).PulseNumber, lr.Network.GetNodeID(),
+		ctx, role, target, lr.pulse(ctx).PulseNumber, lr.NodeNetwork.GetOrigin().ID(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")

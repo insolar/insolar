@@ -46,8 +46,6 @@ type Network interface {
 	GetAddress() string
 	// RemoteProcedureRegister is remote procedure register func.
 	RemoteProcedureRegister(name string, method RemoteProcedure)
-	// GetNodeID returns current node id.
-	GetNodeID() RecordRef
 	// GetGlobuleID returns current globule id.
 	GetGlobuleID() GlobuleID
 }

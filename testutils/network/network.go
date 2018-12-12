@@ -23,10 +23,6 @@ import (
 type testNetwork struct {
 }
 
-func (n *testNetwork) GetNodeID() core.RecordRef {
-	return core.NewRefFromBase58("v1")
-}
-
 func (n *testNetwork) GetGlobuleID() core.GlobuleID {
 	return 0
 }
