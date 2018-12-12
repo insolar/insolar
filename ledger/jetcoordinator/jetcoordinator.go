@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
@@ -120,7 +121,7 @@ func (jc *JetCoordinator) QueryRole(
 			return nil, err
 		}
 		id := jetTree.Find(objHash)
-		_, prefix := id.Jet()
+		_, prefix := jet.Jet(*id)
 		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, prefix), candidates, count)
 	}
 

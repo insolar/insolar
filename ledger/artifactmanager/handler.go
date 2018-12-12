@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -712,7 +713,7 @@ func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Mes
 }
 
 func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
-	jetID := *core.NewJetID(0, nil)
+	jetID := *jet.NewID(0, nil)
 
 	rec, err := s.GetRecord(ctx, jetID, id)
 	if err != nil {
@@ -887,15 +888,15 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 	}
 
 	// TODO: temporary hardcoded tree. Remove after split is functional.
-	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *core.NewJetID(2, []byte{})) // 00
+	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *jet.NewID(2, []byte{})) // 00
 	if err != nil {
 		return nil, err
 	}
-	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *core.NewJetID(2, []byte{1 << 6})) // 01
+	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *jet.NewID(2, []byte{1 << 6})) // 01
 	if err != nil {
 		return nil, err
 	}
-	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *core.NewJetID(2, []byte{1 << 7})) // 10
+	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *jet.NewID(2, []byte{1 << 7})) // 10
 	if err != nil {
 		return nil, err
 	}

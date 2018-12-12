@@ -74,7 +74,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	})
 
 	t.Run("material returns correct nodes", func(t *testing.T) {
-		objID := core.NewRecordID(0, []byte{1, 42, 123})
+		objID := core.NewRecordID(core.PulseNumberJet, []byte{1, 42, 123})
 		jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleLightExecutor: 1}
 		err := db.UpdateJetTree(ctx, 0, *objID)
 		require.NoError(t, err)
