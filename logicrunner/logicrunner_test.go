@@ -1629,13 +1629,19 @@ func (r *One) CreateAllowance(member string) (error) {
 	ctx := context.TODO()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{"one": contractOneCode, "member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
+	err = cb.Build(map[string]string{
+		"one":        contractOneCode,
+		"member":     string(memberCode),
+		"allowance":  string(allowanceCode),
+		"wallet":     string(walletCode),
+		"rootdomain": string(rootDomainCode),
+	})
 	assert.NoError(t, err)
 
 	kp := platformpolicy.NewKeyProcessor()
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c1"}})
+	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
