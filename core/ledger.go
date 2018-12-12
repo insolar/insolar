@@ -69,10 +69,13 @@ type PulseManager interface {
 //go:generate minimock -i github.com/insolar/insolar/core.JetCoordinator -o ../testutils -s _mock.go
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
+	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber, node RecordRef) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
+	QueryRole(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) ([]RecordRef, error)
+
+	// AmI checks for role on concrete pulse for current node.
+	AmI(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) (bool, error)
 
 	// GetActiveNodes return active nodes for specified pulse.
 	GetActiveNodes(pulse PulseNumber) ([]Node, error)
@@ -262,3 +265,12 @@ type StorageExporter interface {
 	// Export returns data view from storage.
 	Export(ctx context.Context, fromPulse PulseNumber, size int) (*StorageExportResult, error)
 }
+
+var (
+	// TODOJetID temporary stub for passing jet ID in ledger functions
+	// on period Jet ID full implementation
+	// TODO: remove it after jets support readyness - @nordicdyno 5.Dec.2018
+	TODOJetID RecordID
+	// ZeroJetID zero 'empty' jet ID
+	ZeroJetID RecordID
+)

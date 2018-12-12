@@ -14,19 +14,15 @@
  *    limitations under the License.
  */
 
-package index
+package record
 
-import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
-)
+import "github.com/insolar/insolar/core"
 
-// ObjectLifeline represents meta information for record object.
-type ObjectLifeline struct {
-	LatestState         *core.RecordID // Amend or activate record.
-	LatestStateApproved *core.RecordID // State approved by VM.
-	ChildPointer        *core.RecordID // Meta record about child activation.
-	Parent              core.RecordRef
-	Delegates           map[core.RecordRef]core.RecordRef
-	State               record.State
+func NewRecordIDFromRecord(scheme core.PlatformCryptographyScheme, pulse core.PulseNumber, rec Record) *core.RecordID {
+	hasher := scheme.ReferenceHasher()
+	_, err := rec.WriteHashData(hasher)
+	if err != nil {
+		panic(err)
+	}
+	return core.NewRecordID(pulse, hasher.Sum(nil))
 }

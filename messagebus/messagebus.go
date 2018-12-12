@@ -41,7 +41,6 @@ type MessageBus struct {
 	Service                    core.Network                    `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 	LocalStorage               core.LocalStorage               `inject:""`
-	PulseManager               core.PulseManager               `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
@@ -67,25 +66,21 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 // stream is exhausted.
 //
 // Player can be created from MessageBus and passed as MessageBus instance.
-func (mb *MessageBus) NewPlayer(ctx context.Context, r io.Reader) (core.MessageBus, error) {
-	tape, err := newMemoryTapeFromReader(ctx, r)
+func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
+	tape, err := newMemoryTapeFromReader(ctx, reader)
 	if err != nil {
 		return nil, err
 	}
-	pl := newPlayer(mb, tape, mb.PulseManager, mb.PlatformCryptographyScheme)
+	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme)
 	return pl, nil
 }
 
 // NewRecorder creates a new recorder with unique tape that can be used to store message replies.
 //
 // Recorder can be created from MessageBus and passed as MessageBus instance.
-func (mb *MessageBus) NewRecorder(ctx context.Context) (core.MessageBus, error) {
-	pulse, err := mb.PulseManager.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-	tape := newMemoryTape(pulse.PulseNumber)
-	rec := newRecorder(mb, tape, mb.PulseManager, mb.PlatformCryptographyScheme)
+func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) (core.MessageBus, error) {
+	tape := newMemoryTape(currentPulse.PulseNumber)
+	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme)
 	return rec, nil
 }
 
@@ -135,38 +130,39 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
-	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token)
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, ops)
+	return mb.SendParcel(ctx, parcel, currentPulse, ops)
 }
 
 // CreateParcel creates signed message from provided message.
-func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), token)
+func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
+	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), token, currentPulse)
 }
 
 // SendParcel sends provided message via network.
-func (mb *MessageBus) SendParcel(ctx context.Context, parcel core.Parcel, options *core.MessageSendOptions) (core.Reply, error) {
+func (mb *MessageBus) SendParcel(
+	ctx context.Context,
+	parcel core.Parcel,
+	currentPulse core.Pulse,
+	options *core.MessageSendOptions,
+) (core.Reply, error) {
 	scope := newReaderScope(&mb.globalLock)
 	scope.Lock()
 	defer scope.Unlock()
-
-	pulse, err := mb.PulseManager.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	var nodes []core.RecordRef
 	if options != nil && options.Receiver != nil {
 		nodes = []core.RecordRef{*options.Receiver}
 	} else {
 		// TODO: send to all actors of the role if nil Target
-		target := message.ExtractTarget(parcel)
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, message.ExtractRole(parcel), &target, pulse.PulseNumber)
+		target := parcel.DefaultTarget()
+		var err error
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), target.Record(), currentPulse.PulseNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -175,7 +171,7 @@ func (mb *MessageBus) SendParcel(ctx context.Context, parcel core.Parcel, option
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
 			NodeIds:           nodes,
-			Entropy:           pulse.Entropy,
+			Entropy:           currentPulse.Entropy,
 			ReplicationFactor: 2,
 		}
 		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
@@ -206,6 +202,7 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
 		return nil, errors.New("no handler for received message type")
@@ -224,7 +221,8 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
-func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
+func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte, err error) {
+	inslogger.FromContext(ctx).Debug("MessageBus.deliver starts ...")
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when mb.deliver()")
 	}
@@ -232,6 +230,9 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	parcelCtx := parcel.Context(ctx)
+	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
 	sender := parcel.GetSender()
 
@@ -247,8 +248,6 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		}
 	}
 
-	ctx := parcel.Context(context.Background())
-
 	if parcel.DelegationToken() != nil {
 		valid, err := mb.DelegationTokenFactory.Verify(parcel)
 		if err != nil {
@@ -258,15 +257,10 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 			return nil, errors.New("delegation token is not valid")
 		}
 	} else {
-		sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
+		sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
 		if sendingObject != nil {
-			currentPulse, err := mb.PulseManager.Current(ctx)
-			if err != nil {
-				return nil, err
-			}
-
 			validSender, err := mb.JetCoordinator.IsAuthorized(
-				ctx, allowedSenderRole, sendingObject, currentPulse.PulseNumber, sender,
+				parcelCtx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,
 			)
 			if err != nil {
 				return nil, err
@@ -277,7 +271,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		}
 	}
 
-	resp, err := mb.doDeliver(ctx, parcel)
+	resp, err := mb.doDeliver(parcelCtx, parcel)
 	if err != nil {
 		return nil, err
 	}

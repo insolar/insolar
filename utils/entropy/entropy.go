@@ -48,24 +48,18 @@ func SelectByEntropy(
 		indexes[i] = i
 	}
 
-	countVarintBuf := make([]byte, binary.MaxVarintLen64)
-	hashUint64Buf := make([]byte, 8)
-
 	entopylen := len(entropy)
-	hashbytes := make([]byte, 0, entopylen+len(countVarintBuf))
-	hashbytes = append(hashbytes, entropy...)
+	hashbytes := make([]byte, entopylen+8)
+	copy(hashbytes[:entopylen], entropy)
+	hashUint64Buf := make([]byte, 8)
 
 	ucount := uint64(count)
 	for i := uint64(0); i < ucount; i++ {
-		// reset state
-		hashbytes = hashbytes[:entopylen]
 		h.Reset()
 
 		// put i-step as hash input (convert to variadic uint)
-		binary.PutUvarint(countVarintBuf, i)
-		hashbytes = append(hashbytes, countVarintBuf...)
-		_, err := h.Write(hashbytes)
-		if err != nil {
+		binary.LittleEndian.PutUint64(hashbytes[entopylen:], i)
+		if _, err := h.Write(hashbytes); err != nil {
 			return nil, err
 		}
 		hsum := h.Sum(nil)

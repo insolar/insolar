@@ -37,10 +37,10 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
@@ -58,6 +58,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jetID := core.TODOJetID
 
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(t)
@@ -94,6 +95,10 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	gilMock.AcquireFunc = func(context.Context) {}
 	gilMock.ReleaseFunc = func(context.Context) {}
 
+	// Mock N8: Active List Swapper mock
+	alsMock := testutils.NewActiveListSwapperMock(t)
+	alsMock.MoveSyncToActiveFunc = func() {}
+
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var synckeys []key
 	var syncsended int
@@ -103,7 +108,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	}
 	syncmessagesPerMessage := map[int]*messageStat{}
 	var bussendfailed int32
-	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	busMock.SendFunc = func(ctx context.Context, msg core.Message, _ core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
@@ -154,6 +159,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
 	pm.Recent = recentMock
+	pm.ActiveListSwapper = alsMock
 
 	// Actial test logic
 	// start PulseManager
@@ -167,7 +173,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(ctx, t, db, core.PulseNumber(lastpulse+i))
+		addRecords(ctx, t, db, jetID, core.PulseNumber(lastpulse+i))
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
@@ -180,7 +186,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		addRecords(ctx, t, db, core.PulseNumber(lastpulse))
+		addRecords(ctx, t, db, jetID, core.PulseNumber(lastpulse))
 
 		lastpulse++
 		err = setpulse(ctx, pm, lastpulse)
@@ -221,12 +227,14 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	db *storage.DB,
+	jetID core.RecordID,
 	pn core.PulseNumber,
 ) {
 	// fmt.Printf("CALL addRecords for pulse %v\n", pn)
 	// set record
 	parentID, err := db.SetRecord(
 		ctx,
+		jetID,
 		pn,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -236,11 +244,11 @@ func addRecords(
 	)
 	require.NoError(t, err)
 
-	_, err = db.SetBlob(ctx, pn, []byte("100500"))
+	_, err = db.SetBlob(ctx, jetID, pn, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
-	err = db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
+	err = db.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)
@@ -281,7 +289,20 @@ func getallkeys(db *badger.DB) (records []key) {
 }
 
 func (b key) pulse() core.PulseNumber {
-	return core.NewPulseNumber(b[1 : 1+core.PulseNumberSize])
+	pulseStartsAt := 1
+	pulseEndsAt := 1 + core.PulseNumberSize
+	// if jet defined for record type
+	switch b[0] {
+	case
+		scopeIDRecord,
+		scopeIDJetDrop,
+		scopeIDLifeline,
+		scopeIDBlob:
+
+		pulseStartsAt += core.RecordIDSize
+		pulseEndsAt += core.RecordIDSize
+	}
+	return core.NewPulseNumber(b[pulseStartsAt:pulseEndsAt])
 }
 
 func (b key) String() string {

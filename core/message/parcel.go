@@ -25,8 +25,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
+// ParcelFactory is used for creating parcels
 type ParcelFactory interface {
-	Create(context.Context, core.Message, core.RecordRef, core.DelegationToken) (core.Parcel, error)
+	Create(context.Context, core.Message, core.RecordRef, core.DelegationToken, core.Pulse) (core.Parcel, error)
 	Validate(crypto.PublicKey, core.Parcel) error
 }
 
@@ -38,6 +39,27 @@ type Parcel struct {
 	LogTraceID    string
 	TraceSpanData []byte
 	Token         core.DelegationToken
+	PulseNumber   core.PulseNumber
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (p *Parcel) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return p.Msg.AllowedSenderObjectAndRole()
+}
+
+// DefaultRole returns role for this event
+func (p *Parcel) DefaultRole() core.DynamicRole {
+	return p.Msg.DefaultRole()
+}
+
+// DefaultTarget returns of target of this event.
+func (p *Parcel) DefaultTarget() *core.RecordRef {
+	return p.Msg.DefaultTarget()
+}
+
+// Pulse returns pulse, when parcel was sent
+func (sm *Parcel) Pulse() core.PulseNumber {
+	return sm.PulseNumber
 }
 
 // Message returns current instance's message

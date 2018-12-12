@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -107,11 +106,12 @@ func (gp *GoPlugin) CloseDownstream() {
 }
 
 func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, req interface{}, res interface{}) error {
+	inslogger.FromContext(ctx).Debug("GoPlugin.callClientWithReconnect starts")
 	var err error
 	var client *rpc.Client
 
 	for {
-		log.Infof(("Connect to insgorund"))
+		inslogger.FromContext(ctx).Info("Connect to insgorund")
 		client, err = gp.Downstream(ctx)
 		if err == nil {
 			call := <-client.Go(method, req, res, nil).Done
@@ -122,11 +122,11 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 			} else {
 				inslogger.FromContext(ctx).Debug("Connection to insgorund is closed, need to reconnect")
 				gp.CloseDownstream()
-				inslogger.FromContext(ctx).Debugf(("Reconnecting..."))
+				inslogger.FromContext(ctx).Debugf("Reconnecting...")
 			}
 		} else {
-			inslogger.FromContext(ctx).Debugf(("Can't connect to to insgorund, err: $+v"), err)
-			inslogger.FromContext(ctx).Debugf(("Reconnecting..."))
+			inslogger.FromContext(ctx).Debugf("Can't connect to to insgorund, err: %s", err.Error())
+			inslogger.FromContext(ctx).Debugf("Reconnecting...")
 		}
 	}
 
@@ -139,6 +139,7 @@ type CallMethodResult struct {
 }
 
 func (gp *GoPlugin) CallMethodRPC(ctx context.Context, req rpctypes.DownCallMethodReq, res rpctypes.DownCallMethodResp, resultChan chan CallMethodResult) {
+	inslogger.FromContext(ctx).Debug("GoPlugin.CallMethodRPC starts ...")
 	method := "RPC.CallMethod"
 	callClientError := gp.callClientWithReconnect(ctx, method, req, &res)
 	resultChan <- CallMethodResult{Response: res, Error: callClientError}
@@ -152,6 +153,7 @@ func (gp *GoPlugin) CallMethod(
 ) (
 	[]byte, core.Arguments, error,
 ) {
+	inslogger.FromContext(ctx).Debug("GoPlugin.CallMethod starts")
 	start := time.Now()
 
 	res := rpctypes.DownCallMethodResp{}

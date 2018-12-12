@@ -61,17 +61,23 @@ func (m *PulseManager) HeavySync(
 		busreply core.Reply
 		buserr   error
 	)
+	jetID := core.TODOJetID
+
+	pulse, err := m.Current(ctx)
+	if err != nil {
+		return err
+	}
 
 	if retry {
 		inslog.Infof("send reset message for pulse %v (retry sync)", pn)
 		resetMsg := &message.HeavyReset{PulseNum: pn}
-		if busreply, buserr := m.Bus.Send(ctx, resetMsg, nil); buserr != nil {
+		if busreply, buserr := m.Bus.Send(ctx, resetMsg, *pulse, nil); buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg := &message.HeavyStartStop{PulseNum: pn}
-	busreply, buserr = m.Bus.Send(ctx, signalMsg, nil)
+	busreply, buserr = m.Bus.Send(ctx, signalMsg, *pulse, nil)
 	// TODO: check if locked
 	if buserr != nil {
 		return HeavyErr{reply: busreply, err: buserr}
@@ -79,7 +85,7 @@ func (m *PulseManager) HeavySync(
 	inslog.Infof("synchronize, sucessfully send start message for pulse %v", pn)
 
 	replicator := storage.NewReplicaIter(
-		ctx, m.db, pn, pn+1, m.options.syncMessageLimit)
+		ctx, m.db, jetID, pn, pn+1, m.options.syncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
@@ -89,14 +95,14 @@ func (m *PulseManager) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{Records: recs}
-		busreply, buserr = m.Bus.Send(ctx, msg, nil)
+		busreply, buserr = m.Bus.Send(ctx, msg, *pulse, nil)
 		if buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg.Finished = true
-	busreply, buserr = m.Bus.Send(ctx, signalMsg, nil)
+	busreply, buserr = m.Bus.Send(ctx, signalMsg, *pulse, nil)
 	if buserr != nil {
 		return HeavyErr{reply: busreply, err: buserr}
 	}

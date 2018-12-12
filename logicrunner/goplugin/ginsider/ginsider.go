@@ -353,29 +353,39 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 	return *res.Reference, nil
 }
 
-// GetObjChildren ...
-func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([]core.RecordRef, error) {
+// GetObjChildrenIterator rpc call to insolard service, returns iterator over children of object with specified prototype
+// at first time call it without iteratorID
+// iteratorID is a cache key on service side, use it in all calls, except first
+func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.RecordRef, iteratorID string) (*proxyctx.ChildrenTypedIterator, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return nil, err
+		return &proxyctx.ChildrenTypedIterator{}, err
 	}
 
-	res := rpctypes.UpGetObjChildrenResp{}
-	req := rpctypes.UpGetObjChildrenReq{
+	res := rpctypes.UpGetObjChildrenIteratorResp{}
+	req := rpctypes.UpGetObjChildrenIteratorReq{
 		UpBaseReq: MakeUpBaseReq(),
-		Obj:       obj,
-		Prototype: class,
+
+		IteratorID: iteratorID,
+		Obj:        obj,
+		Prototype:  prototype,
 	}
-	err = client.Call("RPC.GetObjChildren", req, &res)
+	err = client.Call("RPC.GetObjChildrenIterator", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
-			log.Error("Insgorund can't connect to Insolard")
+			log.Fatal("GetObjChildrenIterator: ginsider can't connect to insgocc, shutdown")
 			os.Exit(0)
 		}
-		return nil, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
+		return &proxyctx.ChildrenTypedIterator{}, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
 	}
 
-	return res.Children, nil
+	return &proxyctx.ChildrenTypedIterator{
+		Parent:         obj,
+		ChildPrototype: prototype,
+		IteratorID:     res.Iterator.ID,
+		Buff:           res.Iterator.Buff,
+		CanFetch:       res.Iterator.CanFetch,
+	}, nil
 }
 
 // SaveAsDelegate ...

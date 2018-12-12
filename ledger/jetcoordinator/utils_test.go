@@ -102,7 +102,7 @@ func benchSelectByEntropyWrapped(b *testing.B, valuescount int, count int) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		refresults, _ = selectByEntropy(scheme, e, values, count)
+		refresults, _ = getRefs(scheme, e[:], values, count)
 	}
 }
 

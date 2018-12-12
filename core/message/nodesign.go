@@ -29,6 +29,21 @@ type NodeSignPayload struct {
 	NodeRef *core.RecordRef
 }
 
+// AllowedSenderObjectAndRole implements interface method
+func (nsp *NodeSignPayload) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleUndefined
+}
+
+// DefaultRole returns role for this event
+func (nsp *NodeSignPayload) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleUndefined
+}
+
+// DefaultTarget returns of target of this event.
+func (nsp *NodeSignPayload) DefaultTarget() *core.RecordRef {
+	return nsp.NodeRef
+}
+
 // GetCaller implementation of Message interface.
 func (NodeSignPayload) GetCaller() *core.RecordRef {
 	return nil
@@ -36,7 +51,7 @@ func (NodeSignPayload) GetCaller() *core.RecordRef {
 
 // Type implementation of Message interface.
 func (e *NodeSignPayload) Type() core.MessageType {
-	return core.NetworkCoordinatorNodeSignRequest
+	return core.TypeNodeSignRequest
 }
 
 func (e *NodeSignPayload) GetNodeRef() *core.RecordRef {

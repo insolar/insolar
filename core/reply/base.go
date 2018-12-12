@@ -62,6 +62,8 @@ const (
 	TypeChildren
 	// TypeObjectIndex contains serialized object index. It can be stored in DB without processing.
 	TypeObjectIndex
+	// TypeJetMiss is returned for miscalculated jets due to incomplete jet tree.
+	TypeJetMiss
 
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
@@ -108,6 +110,12 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &GetObjectRedirect{}, nil
 	case TypeGetChildrenRedirect:
 		return &GetChildrenRedirect{}, nil
+	case TypeJetMiss:
+		return &JetMiss{}, nil
+
+	case TypeNodeSign:
+		return &NodeSign{}, nil
+
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -171,4 +179,6 @@ func init() {
 	gob.Register(&GetObjectRedirect{})
 	gob.Register(&GetChildrenRedirect{})
 	gob.Register(&HeavyError{})
+	gob.Register(&JetMiss{})
+	gob.Register(&NodeSign{})
 }

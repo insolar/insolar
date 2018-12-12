@@ -16,6 +16,10 @@
 
 package core
 
+import (
+	"context"
+)
+
 // Cascade contains routing data for cascade sending
 type Cascade struct {
 	// NodeIds contains the slice of node identifiers that will receive the message
@@ -27,7 +31,7 @@ type Cascade struct {
 }
 
 // RemoteProcedure is remote procedure call function.
-type RemoteProcedure func(args [][]byte) ([]byte, error)
+type RemoteProcedure func(ctx context.Context, args [][]byte) ([]byte, error)
 
 // GlobuleID is the ID of the globe
 type GlobuleID uint32
@@ -46,4 +50,11 @@ type Network interface {
 	GetNodeID() RecordRef
 	// GetGlobuleID returns current globule id.
 	GetGlobuleID() GlobuleID
+}
+
+// PulseDistributor is interface for pulse distribution.
+//go:generate minimock -i github.com/insolar/insolar/core.PulseDistributor -o ../testutils -s _mock.go
+type PulseDistributor interface {
+	// Distribute distributes a pulse across the network.
+	Distribute(context.Context, *Pulse)
 }

@@ -25,11 +25,11 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/testutils"
@@ -59,6 +59,7 @@ func TestPulseManager_Current(t *testing.T) {
 func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
+	jetID := core.TODOJetID
 
 	lr := testutils.NewLogicRunnerMock(t)
 	lr.OnPulseMock.Return(nil)
@@ -67,15 +68,17 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	defer dbcancel()
 	firstID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{})
 	firstIndex := index.ObjectLifeline{
 		LatestState: firstID,
 	}
-	_ = db.SetObjectIndex(ctx, firstID, &firstIndex)
+	_ = db.SetObjectIndex(ctx, jetID, firstID, &firstIndex)
 	codeRecord := &record.CodeRecord{}
 	secondID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		codeRecord,
 	)
@@ -92,7 +95,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	}
 
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mbMock.SendFunc = func(p context.Context, p1 core.Message, _ core.Pulse, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		val, ok := p1.(*message.HotData)
 		if !ok {
 			return nil, nil
@@ -124,16 +127,20 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	gil.AcquireMock.Return()
 	gil.ReleaseMock.Return()
 
+	alsMock := testutils.NewActiveListSwapperMock(t)
+	alsMock.MoveSyncToActiveFunc = func() {}
+
 	pm.LR = lr
 	pm.Recent = recentMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
 	pm.GIL = gil
+	pm.ActiveListSwapper = alsMock
 
 	// Act
 	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
 	require.NoError(t, err)
-	savedIndex, err := db.GetObjectIndex(ctx, firstID, false)
+	savedIndex, err := db.GetObjectIndex(ctx, jetID, firstID, false)
 	require.NoError(t, err)
 
 	// Assert

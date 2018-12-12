@@ -20,19 +20,20 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/jetdrop"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDB_GetRecordNotFound(t *testing.T) {
@@ -40,8 +41,9 @@ func TestDB_GetRecordNotFound(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jet := testutils.RandomID()
 
-	rec, err := db.GetRecord(ctx, &core.RecordID{})
+	rec, err := db.GetRecord(ctx, jet, &core.RecordID{})
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, rec)
 }
@@ -51,16 +53,17 @@ func TestDB_SetRecord(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jet := testutils.RandomID()
 
 	rec := &record.CallRequest{}
-	gotRef, err := db.SetRecord(ctx, core.GenesisPulse.PulseNumber, rec)
+	gotRef, err := db.SetRecord(ctx, jet, core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(t, err)
 
-	gotRec, err := db.GetRecord(ctx, gotRef)
+	gotRec, err := db.GetRecord(ctx, jet, gotRef)
 	assert.Nil(t, err)
 	assert.Equal(t, rec, gotRec)
 
-	_, err = db.SetRecord(ctx, core.GenesisPulse.PulseNumber, rec)
+	_, err = db.SetRecord(ctx, jet, core.GenesisPulse.PulseNumber, rec)
 	assert.Equalf(t, err, storage.ErrOverride, "records override should be forbidden")
 }
 
@@ -69,8 +72,9 @@ func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jetID := testutils.RandomID()
 
-	idx, err := db.GetObjectIndex(ctx, core.NewRecordID(0, hexhash("5000")), false)
+	idx, err := db.GetObjectIndex(ctx, jetID, core.NewRecordID(0, hexhash("5000")), false)
 	assert.Equal(t, storage.ErrNotFound, err)
 	assert.Nil(t, idx)
 }
@@ -80,15 +84,16 @@ func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jetID := testutils.RandomID()
 
 	idx := index.ObjectLifeline{
 		LatestState: core.NewRecordID(0, hexhash("20")),
 	}
 	zeroid := core.NewRecordID(0, hexhash(""))
-	err := db.SetObjectIndex(ctx, zeroid, &idx)
+	err := db.SetObjectIndex(ctx, jetID, zeroid, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, err := db.GetObjectIndex(ctx, zeroid, false)
+	storedIndex, err := db.GetObjectIndex(ctx, jetID, zeroid, false)
 	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }
@@ -99,7 +104,7 @@ func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	drop, err := db.GetDrop(ctx, 1)
+	drop, err := db.GetDrop(ctx, testutils.RandomID(), 1)
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, drop)
 }
@@ -109,6 +114,7 @@ func TestDB_CreateDrop(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	jetID := testutils.RandomID()
 
 	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
 	err := db.AddPulse(
@@ -126,11 +132,11 @@ func TestDB_CreateDrop(t *testing.T) {
 				Code: record.CalculateIDForBlob(cs, pulse, []byte{byte(i)}),
 			}),
 		}
-		db.SetMessage(ctx, pulse, &setRecordMessage)
-		db.SetBlob(ctx, pulse, []byte{byte(i)})
+		db.SetMessage(ctx, jetID, pulse, &setRecordMessage)
+		db.SetBlob(ctx, jetID, pulse, []byte{byte(i)})
 	}
 
-	drop, messages, err := db.CreateDrop(ctx, pulse, []byte{4, 5, 6})
+	drop, messages, err := db.CreateDrop(ctx, jetID, pulse, []byte{4, 5, 6})
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(messages))
 	assert.Equal(t, pulse, drop.Pulse)
@@ -149,14 +155,15 @@ func TestDB_SetDrop(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	drop42 := jetdrop.JetDrop{
+	drop42 := jet.JetDrop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
 	}
-	err := db.SetDrop(ctx, &drop42)
+	jetID := testutils.RandomID()
+	err := db.SetDrop(ctx, jetID, &drop42)
 	assert.NoError(t, err)
 
-	got, err := db.GetDrop(ctx, 42)
+	got, err := db.GetDrop(ctx, jetID, 42)
 	assert.NoError(t, err)
 	assert.Equal(t, *got, drop42)
 }
@@ -172,9 +179,9 @@ func TestDB_AddPulse(t *testing.T) {
 		core.Pulse{PulseNumber: 42, Entropy: core.Entropy{1, 2, 3}},
 	)
 	assert.NoError(t, err)
-	latestPulse, err := db.GetLatestPulseNumber(ctx)
-	assert.Equal(t, core.PulseNumber(42), latestPulse)
-	pulse, err := db.GetPulse(ctx, latestPulse)
+	latestPulse, err := db.GetLatestPulse(ctx)
+	assert.Equal(t, core.PulseNumber(42), latestPulse.Pulse.PulseNumber)
+	pulse, err := db.GetPulse(ctx, latestPulse.Pulse.PulseNumber)
 	assert.NoError(t, err)
 	prev := core.PulseNumber(core.FirstPulseNumber)
 	assert.Equal(t, storage.Pulse{Prev: &prev, Pulse: core.Pulse{Entropy: core.Entropy{1, 2, 3}, PulseNumber: 42}}, *pulse)

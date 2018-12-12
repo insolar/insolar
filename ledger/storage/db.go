@@ -29,9 +29,9 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/jetdrop"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/record"
 )
 
 const (
@@ -48,6 +48,8 @@ const (
 	sysLatestPulse            byte = 2
 	sysReplicatedPulse        byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
+	sysJetTree                byte = 5
+	sysJetList                byte = 6
 )
 
 // DB represents BadgerDB storage implementation.
@@ -72,6 +74,9 @@ type DB struct {
 	// It should only contain previous N pulses. It should be stored on disk.
 	nodeHistory     map[core.PulseNumber][]core.Node
 	nodeHistoryLock sync.Mutex
+
+	addJetLock  sync.RWMutex
+	jetTreeLock sync.Mutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
@@ -119,6 +124,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 func (db *DB) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
+	jetID := core.TODOJetID
 	getGenesisRef := func() (*core.RecordRef, error) {
 		buff, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
@@ -141,21 +147,22 @@ func (db *DB) Init(ctx context.Context) error {
 			return nil, err
 		}
 		// It should be 0. Becase pulse after 65537 will try to use a hash of drop between 0 - 65537
-		err = db.SetDrop(ctx, &jetdrop.JetDrop{})
+		err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
 		if err != nil {
 			return nil, err
 		}
 
-		lastPulse, err := db.GetLatestPulseNumber(ctx)
+		lastPulse, err := db.GetLatestPulse(ctx)
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := db.SetRecord(ctx, lastPulse, &record.GenesisRecord{})
+		genesisID, err := db.SetRecord(ctx, jetID, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
 		err = db.SetObjectIndex(
 			ctx,
+			jetID,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
@@ -202,14 +209,15 @@ func (db *DB) Stop(ctx context.Context) error {
 }
 
 // GetBlob returns binary value stored by record ID.
-func (db *DB) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
+// TODO: switch from reference to passing blob id for consistency - @nordicdyno 6.Dec.2018
+func (db *DB) GetBlob(ctx context.Context, jet core.RecordID, id *core.RecordID) ([]byte, error) {
 	var (
 		blob []byte
 		err  error
 	)
 
 	err = db.View(ctx, func(tx *TransactionManager) error {
-		blob, err = tx.GetBlob(ctx, id)
+		blob, err = tx.GetBlob(ctx, jet, id)
 		return err
 	})
 	if err != nil {
@@ -219,13 +227,13 @@ func (db *DB) GetBlob(ctx context.Context, id *core.RecordID) ([]byte, error) {
 }
 
 // SetBlob saves binary value for provided pulse.
-func (db *DB) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+func (db *DB) SetBlob(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
 	)
 	err = db.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetBlob(ctx, pulseNumber, blob)
+		id, err = tx.SetBlob(ctx, jet, pulseNumber, blob)
 		return err
 	})
 	if err != nil {
@@ -235,14 +243,14 @@ func (db *DB) SetBlob(ctx context.Context, pulseNumber core.PulseNumber, blob []
 }
 
 // GetRecord wraps matching transaction manager method.
-func (db *DB) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, error) {
+func (db *DB) GetRecord(ctx context.Context, jet core.RecordID, id *core.RecordID) (record.Record, error) {
 	var (
 		fetchedRecord record.Record
 		err           error
 	)
 
 	err = db.View(ctx, func(tx *TransactionManager) error {
-		fetchedRecord, err = tx.GetRecord(ctx, id)
+		fetchedRecord, err = tx.GetRecord(ctx, jet, id)
 		return err
 	})
 	if err != nil {
@@ -252,13 +260,13 @@ func (db *DB) GetRecord(ctx context.Context, id *core.RecordID) (record.Record, 
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (db *DB) SetRecord(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
 	)
 	err = db.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(ctx, pulseNumber, rec)
+		id, err = tx.SetRecord(ctx, jet, pulseNumber, rec)
 		return err
 	})
 	if err != nil {
@@ -270,13 +278,14 @@ func (db *DB) SetRecord(ctx context.Context, pulseNumber core.PulseNumber, rec r
 // GetObjectIndex wraps matching transaction manager method.
 func (db *DB) GetObjectIndex(
 	ctx context.Context,
+	jet core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
 ) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	idx, err := tx.GetObjectIndex(ctx, id, forupdate)
+	idx, err := tx.GetObjectIndex(ctx, jet, id, forupdate)
 	if err != nil {
 		return nil, err
 	}
@@ -286,138 +295,28 @@ func (db *DB) GetObjectIndex(
 // SetObjectIndex wraps matching transaction manager method.
 func (db *DB) SetObjectIndex(
 	ctx context.Context,
+	jet core.RecordID,
 	id *core.RecordID,
 	idx *index.ObjectLifeline,
 ) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.SetObjectIndex(ctx, id, idx)
+		return tx.SetObjectIndex(ctx, jet, id, idx)
 	})
 }
 
 // RemoveObjectIndex removes an index of an object
-func (db *DB) RemoveObjectIndex(ctx context.Context, ref *core.RecordID) error {
+func (db *DB) RemoveObjectIndex(
+	ctx context.Context,
+	jet core.RecordID,
+	ref *core.RecordID,
+) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.RemoveObjectIndex(ctx, ref)
+		return tx.RemoveObjectIndex(ctx, jet, ref)
 	})
-}
-
-// GetDrop returns jet drop for a given pulse number.
-func (db *DB) GetDrop(ctx context.Context, pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
-	buf, err := db.get(ctx, k)
-	if err != nil {
-		return nil, err
-	}
-	drop, err := jetdrop.Decode(buf)
-	if err != nil {
-		return nil, err
-	}
-	return drop, nil
 }
 
 func (db *DB) waitinflight() {
 	db.dropWG.Wait()
-}
-
-// CreateDrop creates and stores jet drop for given pulse number.
-//
-// Previous JetDrop hash should be provided. On success returns saved drop and slot records.
-func (db *DB) CreateDrop(ctx context.Context, pulse core.PulseNumber, prevHash []byte) (
-	*jetdrop.JetDrop,
-	[][]byte,
-	error,
-) {
-	var err error
-	db.waitinflight()
-
-	hw := db.PlatformCryptographyScheme.ReferenceHasher()
-	_, err = hw.Write(prevHash)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
-	var messages [][]byte
-	var messagesError error
-
-	go func() {
-		messagesPrefix := make([]byte, core.PulseNumberSize+1)
-		messagesPrefix[0] = scopeIDMessage
-		copy(messagesPrefix[1:], pulse.Bytes())
-
-		messagesError = db.db.View(func(txn *badger.Txn) error {
-			it := txn.NewIterator(badger.DefaultIteratorOptions)
-			defer it.Close()
-
-			for it.Seek(messagesPrefix); it.ValidForPrefix(messagesPrefix); it.Next() {
-				val, err := it.Item().ValueCopy(nil)
-				if err != nil {
-					return err
-				}
-				messages = append(messages, val)
-			}
-			return nil
-		})
-
-		wg.Done()
-	}()
-
-	var jetDropHashError error
-
-	go func() {
-		recordPrefix := make([]byte, core.PulseNumberSize+1)
-		recordPrefix[0] = scopeIDRecord
-		copy(recordPrefix[1:], pulse.Bytes())
-
-		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
-			it := txn.NewIterator(badger.DefaultIteratorOptions)
-			defer it.Close()
-
-			for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
-				val, err := it.Item().ValueCopy(nil)
-				if err != nil {
-					return err
-				}
-				hw.Sum(val)
-			}
-			return nil
-		})
-
-		wg.Done()
-	}()
-
-	wg.Wait()
-
-	if messagesError != nil {
-		return nil, nil, messagesError
-	}
-	if jetDropHashError != nil {
-		return nil, nil, jetDropHashError
-	}
-
-	drop := jetdrop.JetDrop{
-		Pulse:    pulse,
-		PrevHash: prevHash,
-		Hash:     hw.Sum(nil),
-	}
-	return &drop, messages, nil
-}
-
-// SetDrop saves provided JetDrop in db.
-func (db *DB) SetDrop(ctx context.Context, drop *jetdrop.JetDrop) error {
-	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
-	_, err := db.get(ctx, k)
-	if err == nil {
-		return ErrOverride
-	}
-
-	encoded, err := jetdrop.Encode(drop)
-	if err != nil {
-		return err
-	}
-	return db.set(ctx, k, encoded)
 }
 
 // BeginTransaction opens a new transaction.
@@ -485,7 +384,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 }
 
 // SetMessage persists message to the database
-func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, genericMessage core.Message) error {
+func (db *DB) SetMessage(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
 	messageBytes := message.ToBytes(genericMessage)
 	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
@@ -496,7 +395,7 @@ func (db *DB) SetMessage(ctx context.Context, pulseNumber core.PulseNumber, gene
 
 	return db.set(
 		ctx,
-		prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
+		prefixkeyany(scopeIDMessage, jet[:], pulseNumber.Bytes(), hw.Sum(nil)),
 		messageBytes,
 	)
 }
@@ -534,10 +433,11 @@ func (db *DB) IterateLocalData(
 // IterateRecords iterates over records.
 func (db *DB) IterateRecords(
 	ctx context.Context,
+	jet core.RecordID,
 	pulse core.PulseNumber,
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
-	prefix := bytes.Join([][]byte{{scopeIDRecord}, pulse.Bytes()}, nil)
+	prefix := prefixkeyany(scopeIDRecord, jet[:], pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := core.NewRecordID(pulse, k)
