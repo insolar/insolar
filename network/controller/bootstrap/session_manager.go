@@ -61,6 +61,14 @@ func NewSessionManager() *SessionManager {
 	return &SessionManager{sessions: make(map[SessionID]*Session)}
 }
 
+func (sm *SessionManager) Start(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("[ SessionManager::Start ] start cleaning up sessions")
+
+	go sm.cleanupExpiredSessions()
+
+	return nil
+}
+
 func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
 	session := &Session{
