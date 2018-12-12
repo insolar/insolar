@@ -52,6 +52,7 @@ type ExecutionState struct {
 	sync.Mutex
 	objectbody *ObjectBody
 	deactivate bool
+	nonce      uint64
 
 	Behaviour ValidationBehaviour
 	Current   *CurrentExecution

@@ -86,15 +86,14 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	return nil
 }
 
-var serial uint64 = 1
-
 // MakeBaseMessage makes base of logicrunner event from base of up request
-func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
+func MakeBaseMessage(req rpctypes.UpBaseReq, es *ExecutionState) message.BaseLogicMessage {
+	es.nonce++
 	return message.BaseLogicMessage{
 		Caller:          req.Callee,
 		CallerPrototype: req.Prototype,
 		Request:         req.Request,
-		Nonce:           atomicLoadAndIncrementUint64(&serial),
+		Nonce:           es.nonce,
 	}
 }
 
@@ -117,7 +116,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	}
 
 	msg := &message.CallMethod{
-		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
+		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq, es),
 		ReturnMode:       mode,
 		ObjectRef:        req.Object,
 		Method:           req.Method,
@@ -152,7 +151,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	}
 
 	msg := &message.CallConstructor{
-		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
+		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq, es),
 		PrototypeRef:     req.Prototype,
 		ParentRef:        req.Parent,
 		Name:             req.ConstructorName,
@@ -248,7 +247,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	}
 
 	msg := &message.CallConstructor{
-		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
+		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq, es),
 		PrototypeRef:     req.Prototype,
 		ParentRef:        req.Into,
 		Name:             req.ConstructorName,
