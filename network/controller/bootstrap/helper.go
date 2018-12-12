@@ -65,7 +65,7 @@ func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core
 	for {
 		index++
 		result++
-		if result != sortedSlice[index] {
+		if (index >= len(sortedSlice)) || (result != sortedSlice[index]) {
 			return result
 		}
 		if result == math.MaxUint32 {
