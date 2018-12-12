@@ -837,7 +837,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 
 	err := h.db.SetDrop(ctx, jetID, &msg.Drop)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDrop")
 	}
 
 	for id, request := range msg.PendingRequests {
@@ -862,7 +862,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 
 		savedIndex, err := h.db.GetObjectIndex(ctx, jetID, &id, false)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "[ handleHotRecords ] Can't GetObjectIndex")
 		}
 		isMine := savedIndex != nil
 
@@ -889,7 +889,12 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetJetTree")
+	}
+
+	err = h.db.ResetDropSizeList(ctx, msg.JetDropSizeList)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't ResetDropSizeList")
 	}
 
 	return &reply.OK{}, nil

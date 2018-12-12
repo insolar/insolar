@@ -12,6 +12,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
@@ -547,6 +548,32 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	assert.Equal(t, childID, idx.ChildPointer)
 }
 
+const testDropSize uint64 = 100
+
+func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID core.RecordID) {
+	dropSizeData := jet.DropSizeData{
+		JetID:    jetID,
+		PulseNo:  core.FirstPulseNumber,
+		DropSize: testDropSize,
+	}
+
+	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
+	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	signature, err := cryptoServiceMock.Sign(dropSizeData.Bytes(ctx))
+	jetDropSize := &jet.JetDropSize{
+		SizeData:  dropSizeData,
+		Signature: signature.Bytes(),
+	}
+
+	require.NoError(t, err)
+
+	err = db.AddDropSize(ctx, jetDropSize)
+	require.NoError(t, err)
+}
+
 func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	jetID := core.TODOJetID
@@ -567,7 +594,15 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	err = db.SetObjectIndex(ctx, jetID, firstID, &index.ObjectLifeline{
 		LatestState: firstID,
 	})
+
+	dropSizeList, err := db.GetDropSizeList(ctx)
+	require.Contains(t, err.Error(), "storage object not found")
+	require.Equal(t, jet.JetDropSizeList(nil), dropSizeList)
+	addDropSizeToDB(ctx, t, db, jetID)
+
+	dropSizeList, err = db.GetDropSizeList(ctx)
 	require.NoError(t, err)
+
 	hotIndexes := &message.HotData{
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
@@ -579,7 +614,8 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		PendingRequests: map[core.RecordID][]byte{
 			*secondId: record.SerializeRecord(&record.CodeRecord{}),
 		},
-		Drop: jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+		Drop:            jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+		JetDropSizeList: dropSizeList,
 	}
 
 	recentMock := recentstorage.NewRecentStorageMock(t)
@@ -603,6 +639,13 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	savedDrop, err := h.db.GetDrop(ctx, jetID, core.FirstPulseNumber)
 	require.NoError(t, err)
 	require.Equal(t, &jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+
+	// check drop size list
+	dropSizeList, err = db.GetDropSizeList(ctx)
+	require.NoError(t, err)
+	require.Equal(t, testDropSize, dropSizeList[0].SizeData.DropSize)
+	require.Equal(t, jetID, dropSizeList[0].SizeData.JetID)
+	require.Equal(t, core.FirstPulseNumber, int(dropSizeList[0].SizeData.PulseNo))
 
 	recentMock.MinimockFinish()
 }
