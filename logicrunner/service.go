@@ -104,6 +104,11 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+	mb := core.MessageBusFromContext(ctx, gpr.lr.MessageBus)
+	if mb == nil {
+		return errors.New("No access to message bus")
+	}
+
 	var mode message.MethodReturnMode
 	if req.Wait {
 		mode = message.ReturnResult
@@ -125,7 +130,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		return err
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg, *currentSlotPulse, nil)
+	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -141,8 +146,9 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	if gpr.lr.MessageBus == nil {
-		return errors.New("event bus was not set during initialization")
+	mb := core.MessageBusFromContext(ctx, gpr.lr.MessageBus)
+	if mb == nil {
+		return errors.New("No access to message bus")
 	}
 
 	msg := &message.CallConstructor{
@@ -159,7 +165,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 		return err
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg, *currentSlotPulse, nil)
+	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as child")
 	}
@@ -236,6 +242,11 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+	mb := core.MessageBusFromContext(ctx, gpr.lr.MessageBus)
+	if mb == nil {
+		return errors.New("No access to message bus")
+	}
+
 	msg := &message.CallConstructor{
 		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
 		PrototypeRef:     req.Prototype,
@@ -250,7 +261,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 		return err
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg, *currentSlotPulse, nil)
+	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as delegate")
 	}
