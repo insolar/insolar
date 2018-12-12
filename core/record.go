@@ -128,6 +128,9 @@ func (ref RecordRef) Domain() *RecordID {
 
 // Record returns record's RecordID.
 func (ref *RecordRef) Record() *RecordID {
+	if ref == nil {
+		return nil
+	}
 	var id RecordID
 	copy(id[:], ref[:RecordIDSize])
 	return &id

@@ -160,12 +160,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, jet core.RecordID, i
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
-	recHash := m.db.PlatformCryptographyScheme.ReferenceHasher()
-	_, err := rec.WriteHashData(recHash)
-	if err != nil {
-		return nil, err
-	}
-	id := core.NewRecordID(pulseNumber, recHash.Sum(nil))
+	id := record.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
 	k := prefixkeyany(scopeIDRecord, jet[:], id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
@@ -175,10 +170,10 @@ func (m *TransactionManager) SetRecord(ctx context.Context, jet core.RecordID, p
 		return id, ErrOverride
 	}
 	if geterr != badger.ErrKeyNotFound {
-		return nil, err
+		return nil, geterr
 	}
 
-	err = m.set(ctx, k, record.SerializeRecord(rec))
+	err := m.set(ctx, k, record.SerializeRecord(rec))
 	if err != nil {
 		return nil, err
 	}

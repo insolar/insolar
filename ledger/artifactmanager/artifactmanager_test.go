@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -71,13 +72,15 @@ func getTestData(t *testing.T) (
 ) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
+	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testmessagebus.NewTestMessageBus(t)
 	handler := MessageHandler{
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -86,7 +89,10 @@ func getTestData(t *testing.T) (
 	recentStorageMock.RemovePendingRequestMock.Return()
 	handler.Recent = recentStorageMock
 
+	jc.AmIMock.Return(true, nil)
+
 	handler.Bus = mb
+	handler.JetCoordinator = jc
 	err := handler.Init(ctx)
 	require.NoError(t, err)
 	am := LedgerArtifactManager{
@@ -103,12 +109,11 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
 
 	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"}}
 	id, err := am.RegisterRequest(ctx, &parcel)
 	assert.NoError(t, err)
-	rec, err := db.GetRecord(ctx, jetID, id)
+	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
 	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.CallRequest).Payload)
 }
@@ -117,12 +122,11 @@ func TestLedgerArtifactManager_DeclareType(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
 
 	typeDec := []byte{1, 2, 3}
 	id, err := am.DeclareType(ctx, domainRef, requestRef, typeDec)
 	assert.NoError(t, err)
-	typeRec, err := db.GetRecord(ctx, jetID, id)
+	typeRec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
 	assert.Equal(t, &record.TypeRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -137,7 +141,6 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
 
 	id, err := am.DeployCode(
 		ctx,
@@ -147,7 +150,7 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 		core.MachineTypeBuiltin,
 	)
 	assert.NoError(t, err)
-	codeRec, err := db.GetRecord(ctx, jetID, id)
+	codeRec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
 	assert.Equal(t, codeRec, &record.CodeRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -588,7 +591,6 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
 
 	codeRecord := record.CodeRecord{
 		Code: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
@@ -618,7 +620,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
 
-	rec, err := db.GetRecord(ctx, jetID, id)
+	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
 	assert.Equal(t, codeRecord, *rec.(*record.CodeRecord))
 }
@@ -644,7 +646,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		db:                         db,
 		jetDropHandlers:            map[core.MessageType]internalHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -661,6 +663,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	}
 
 	jc.QueryRoleMock.Return([]core.RecordRef{*genRandomRef(0)}, nil)
+	jc.AmIMock.Return(true, nil)
 
 	objID, err := am.RegisterRequest(
 		ctx,
@@ -718,13 +721,12 @@ func TestLedgerArtifactManager_RegisterResult(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
 
 	request := genRandomRef(0)
 	requestID, err := am.RegisterResult(ctx, *request, []byte{1, 2, 3})
 	assert.NoError(t, err)
 
-	rec, err := db.GetRecord(ctx, jetID, requestID)
+	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), requestID)
 	assert.NoError(t, err)
 	assert.Equal(t, record.ResultRecord{Request: *request, Payload: []byte{1, 2, 3}}, *rec.(*record.ResultRecord))
 }

@@ -20,6 +20,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -28,9 +34,22 @@ import (
 )
 
 func TestLedgerArtifactManager_Metrics(t *testing.T) {
-	// BEWARE: this test should not be the parallel!
-	ctx, db, am, cleaner := getTestData(t)
+	// BEWARE: this test should not be run in parallel!
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	defer mc.Finish()
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
+	mb := testutils.NewMessageBusMock(mc)
+	mb.SendMock.Return(&reply.ID{}, nil)
+	am := NewArtifactManger(db)
+	am.DefaultBus = mb
 
 	tmetrics := testmetrics.Start(ctx)
 	defer tmetrics.Stop()
