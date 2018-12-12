@@ -64,10 +64,11 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 // CallMethod - Simply call method and return result
 type CallMethod struct {
 	BaseLogicMessage
-	ReturnMode MethodReturnMode
-	ObjectRef  core.RecordRef
-	Method     string
-	Arguments  core.Arguments
+	ReturnMode     MethodReturnMode
+	ObjectRef      core.RecordRef
+	Method         string
+	Arguments      core.Arguments
+	ProxyPrototype core.RecordRef
 }
 
 // AllowedSenderObjectAndRole implements interface method
