@@ -38,7 +38,7 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Service                    core.Network                    `inject:""`
+	Network                    core.Network                    `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 	LocalStorage               core.LocalStorage               `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
@@ -86,7 +86,7 @@ func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) 
 
 // Start initializes message bus.
 func (mb *MessageBus) Start(ctx context.Context) error {
-	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
+	mb.Network.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 
 	return nil
 }
@@ -174,7 +174,7 @@ func (mb *MessageBus) SendParcel(
 			Entropy:           currentPulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
+		err := mb.Network.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
 		return nil, err
 	}
 
@@ -184,7 +184,7 @@ func (mb *MessageBus) SendParcel(
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
-	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, parcel)
+	res, err := mb.Network.SendMessage(nodes[0], deliverRPCMethodName, parcel)
 	if err != nil {
 		return nil, err
 	}
