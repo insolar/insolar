@@ -42,7 +42,8 @@ func (p *RecentStorageProvider) GetStorage(jet core.RecordID) recentstorage.Rece
 	storage, ok := p.storage[jet]
 	if !ok {
 		if storage, ok = p.storage[jet]; !ok {
-			p.storage[jet] = NewRecentStorage(p.DefaultTTL)
+			storage = NewRecentStorage(p.DefaultTTL)
+			p.storage[jet] = storage
 		}
 	}
 	return storage

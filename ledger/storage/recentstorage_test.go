@@ -174,7 +174,8 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 		i := i
 		go func() {
 			id := core.NewRecordID(core.FirstPulseNumber, []byte{byte(i)})
-			provider.GetStorage(*id)
+			storage := provider.GetStorage(*id)
+			require.NotNil(t, storage)
 			wg.Done()
 		}()
 	}
