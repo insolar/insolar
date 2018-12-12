@@ -64,7 +64,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		return recentStorageMock
 	}
 
-	h.RecentProvider = provideMock
+	h.RecentStorageProvider = provideMock
 
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
@@ -191,7 +191,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		return recentStorageMock
 	}
 
-	h.RecentProvider = provideMock
+	h.RecentStorageProvider = provideMock
 
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
@@ -285,7 +285,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 		return recentStorageMock
 	}
 
-	h.RecentProvider = provideMock
+	h.RecentStorageProvider = provideMock
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
@@ -352,7 +352,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 		return recentStorageMock
 	}
 
-	h.RecentProvider = provideMock
+	h.RecentStorageProvider = provideMock
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
 	amendRecord := record.ObjectAmendRecord{
@@ -423,7 +423,7 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 		return recentStorageMock
 	}
 
-	h.RecentProvider = provideMock
+	h.RecentStorageProvider = provideMock
 
 	msg := message.GetObjectIndex{
 		Object: *genRandomRef(0),
@@ -477,7 +477,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 		return recentStorageMock
 	}
 
-	h.RecentProvider = provideMock
+	h.RecentStorageProvider = provideMock
 
 
 	t.Run("redirects to light when created after limit", func(t *testing.T) {
@@ -542,7 +542,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 		return recentStorageMock
 	}
 
-	h.RecentProvider = provideMock
+	h.RecentStorageProvider = provideMock
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
 	childRecord := record.ChildRecord{
@@ -643,7 +643,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		return recentStorageMock
 	}
 
-	h.RecentProvider = provideMock
+	h.RecentStorageProvider = provideMock
 
 	res, err := h.handleHotRecords(ctx, &message.Parcel{Msg: hotIndexes})
 
@@ -680,7 +680,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 		return recentStorageMock
 	}
 
-	h.RecentProvider = provideMock
+	h.RecentStorageProvider = provideMock
 
 	t.Run("returns not ok when not valid", func(t *testing.T) {
 		validatedStateID, err := db.SetRecord(ctx, jetID, 0, &record.ObjectAmendRecord{})

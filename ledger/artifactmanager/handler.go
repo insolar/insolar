@@ -39,7 +39,7 @@ type internalHandler func(ctx context.Context, pulseNumber core.PulseNumber, par
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	RecentProvider             recentstorage.Provider          `inject:""`
+	RecentStorageProvider      recentstorage.Provider          `inject:""`
 	Bus                        core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
@@ -124,7 +124,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 		return nil, err
 	}
 
-	recentStorage := h.RecentProvider.GetStorage(jetID)
+	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	if _, ok := rec.(record.Request); ok {
 		recentStorage.AddPendingRequest(*id)
 	}
@@ -230,7 +230,7 @@ func (h *MessageHandler) handleGetObject(
 		}
 		return nil, err
 	}
-	h.RecentProvider.GetStorage(jetID).AddObject(*msg.Head.Record(), false)
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record(), false)
 
 	state, err := getObjectStateRecord(ctx, h.db, stateID)
 	if err != nil {
@@ -305,7 +305,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	h.RecentProvider.GetStorage(jetID).AddObject(*msg.Head.Record(), false)
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record(), false)
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -340,7 +340,7 @@ func (h *MessageHandler) handleGetChildren(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.RecentProvider.GetStorage(jetID).AddObject(*msg.Parent.Record(), false)
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record(), false)
 
 	var (
 		refs         []core.RecordRef
@@ -419,7 +419,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		return nil, errors.New("wrong object state record")
 	}
 
-	recentStorage := 	h.RecentProvider.GetStorage(jetID)
+	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var idx *index.ObjectLifeline
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
@@ -495,7 +495,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		return nil, errors.New("wrong child record")
 	}
 
-	recentStorage := h.RecentProvider.GetStorage(jetID)
+	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var child *core.RecordID
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
@@ -843,7 +843,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		return nil, err
 	}
 
-	recentStorage := h.RecentProvider.GetStorage(jetID)
+	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	for id, request := range msg.PendingRequests {
 		newID, err := h.db.SetRecord(ctx, jetID, id.Pulse(), record.DeserializeRecord(request))
 		if err != nil {

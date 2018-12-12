@@ -90,7 +90,7 @@ func getTestData(t *testing.T) (
 		return recentStorageMock
 	}
 
-	handler.RecentProvider = provideMock
+	handler.RecentStorageProvider = provideMock
 
 	handler.Bus = mb
 	err := handler.Init(ctx)
@@ -655,7 +655,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		return recentStorageMock
 	}
 
-	handler.RecentProvider = provideMock
+	handler.RecentStorageProvider = provideMock
 
 	err := handler.Init(ctx)
 	require.NoError(t, err)

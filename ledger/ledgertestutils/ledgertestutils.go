@@ -95,7 +95,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		return recentStorageMock
 	}
 
-	handler.RecentProvider = provideMock
+	handler.RecentStorageProvider = provideMock
 
 	err := handler.Init(ctx)
 	if err != nil {

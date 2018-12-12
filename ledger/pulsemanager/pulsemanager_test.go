@@ -135,7 +135,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 	pm.LR = lr
 
-	pm.Recent = providerMock
+	pm.RecentStorageProvider = providerMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
 	pm.GIL = gil

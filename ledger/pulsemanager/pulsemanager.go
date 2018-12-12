@@ -42,13 +42,13 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                core.LogicRunner            `inject:""`
-	Bus               core.MessageBus             `inject:""`
-	NodeNet           core.NodeNetwork            `inject:""`
-	JetCoordinator    core.JetCoordinator         `inject:""`
-	GIL               core.GlobalInsolarLock      `inject:""`
-	Recent            recentstorage.Provider `inject:""`
-	ActiveListSwapper ActiveListSwapper           `inject:""`
+	LR                    core.LogicRunner       `inject:""`
+	Bus                   core.MessageBus        `inject:""`
+	NodeNet               core.NodeNetwork       `inject:""`
+	JetCoordinator        core.JetCoordinator    `inject:""`
+	GIL                   core.GlobalInsolarLock `inject:""`
+	RecentStorageProvider recentstorage.Provider `inject:""`
+	ActiveListSwapper     ActiveListSwapper      `inject:""`
 
 	currentPulse core.Pulse
 
@@ -162,7 +162,7 @@ func (m *PulseManager) processRecentObjects(
 	dropSerialized []byte,
 ) error {
 	logger := inslogger.FromContext(ctx)
-	recentStorage := m.Recent.GetStorage(core.TODOJetID)
+	recentStorage := m.RecentStorageProvider.GetStorage(core.TODOJetID)
 	recentStorage.ClearZeroTTLObjects()
 	recentObjectsIds := recentStorage.GetObjects()
 	pendingRequestsIds := recentStorage.GetRequests()

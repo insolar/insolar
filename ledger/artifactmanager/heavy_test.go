@@ -56,7 +56,7 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 		return recentStorageMock
 	}
 
-	mh.RecentProvider = provideMock
+	mh.RecentStorageProvider = provideMock
 
 	mh.HeavySync = heavysync
 

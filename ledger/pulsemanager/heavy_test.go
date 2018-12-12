@@ -163,7 +163,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentMock
 	}
-	pm.Recent = provideMock
+	pm.RecentStorageProvider = provideMock
 
 	pm.ActiveListSwapper = alsMock
 
