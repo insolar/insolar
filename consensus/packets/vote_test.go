@@ -31,8 +31,7 @@ func makeNodeListSupplementaryVote() *NodeListSupplementaryVote {
 func TestNodeListSupplementaryVote(t *testing.T) {
 	checkSerializationDeserialization(t, makeNodeListSupplementaryVote())
 
-	checkBadDataSerializationDeserialization(t, makeNodeListSupplementaryVote(),
-		"[ NodeListSupplementaryVote.Deserialize ] Can't read NodeListHash: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makeNodeListSupplementaryVote(), "unexpected EOF")
 }
 
 func TestNodeJoinSupplementaryVote(t *testing.T) {
@@ -43,7 +42,7 @@ func makeStateFraudNodeSupplementaryVote() *StateFraudNodeSupplementaryVote {
 	result := &StateFraudNodeSupplementaryVote{}
 	result.Node1PulseProof = *makeNodePulseProof()
 	result.Node2PulseProof = *makeNodePulseProof()
-	result.PulseData = PulseData{1, makeDefaultPulseDataExt()}
+	result.PulseData = PulseData{PulseNumber: 1, Data: makeDefaultPulseDataExt()}
 
 	return result
 }
@@ -51,13 +50,13 @@ func makeStateFraudNodeSupplementaryVote() *StateFraudNodeSupplementaryVote {
 func TestStateFraudNodeSupplementaryVote(t *testing.T) {
 	checkSerializationDeserialization(t, makeStateFraudNodeSupplementaryVote())
 
-	checkBadDataSerializationDeserialization(t, makeStateFraudNodeSupplementaryVote(),
-		"[ StateFraudNodeSupplementaryVote.Deserialize ] Can't read PulseData: [ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makeStateFraudNodeSupplementaryVote(), "unexpected EOF")
 }
 
 func TestMissingNodeSupplementaryVote(t *testing.T) {
 	checkSerializationDeserialization(t, &MissingNodeSupplementaryVote{*makeNodePulseProof()})
 
-	checkBadDataSerializationDeserialization(t, &MissingNodeSupplementaryVote{*makeNodePulseProof()},
-		"[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodePulseProof: [ NodePulseProof.Deserialize ] Can't read NodeSignature: unexpected EOF")
+	checkBadDataSerializationDeserialization(t,
+		&MissingNodeSupplementaryVote{*makeNodePulseProof()},
+		"unexpected EOF")
 }

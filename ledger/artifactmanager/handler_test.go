@@ -73,7 +73,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	t.Run("fetches index from heavy when no index", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, &msg.Head, 0,
+			ctx, core.DynamicRoleHeavyExecutor, msg.Head.Record(), 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -101,7 +101,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleLightExecutor, &msg.Head, 0,
+			ctx, core.DynamicRoleLightExecutor, msg.Head.Record(), 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -126,7 +126,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, &msg.Head, 5,
+			ctx, core.DynamicRoleHeavyExecutor, msg.Head.Record(), 5,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -196,7 +196,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, 0,
+			ctx, core.DynamicRoleHeavyExecutor, msg.Parent.Record(), 0,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -222,7 +222,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleLightExecutor, &msg.Parent, 0,
+			ctx, core.DynamicRoleLightExecutor, msg.Parent.Record(), 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -244,7 +244,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		})
 		require.NoError(t, err)
 		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, 5,
+			ctx, core.DynamicRoleHeavyExecutor, msg.Parent.Record(), 5,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -310,7 +310,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	h.Bus = mb
 	heavyRef := genRandomRef(0)
 	jc.QueryRoleMock.Expect(
-		ctx, core.DynamicRoleHeavyExecutor, &msg.Head, 0,
+		ctx, core.DynamicRoleHeavyExecutor, msg.Head.Record(), 0,
 	).Return(
 		[]core.RecordRef{*heavyRef}, nil,
 	)
@@ -383,7 +383,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	h.Bus = mb
 	heavyRef := genRandomRef(0)
 	jc.QueryRoleMock.Expect(
-		ctx, core.DynamicRoleHeavyExecutor, &msg.Object, 0,
+		ctx, core.DynamicRoleHeavyExecutor, msg.Object.Record(), 0,
 	).Return(
 		[]core.RecordRef{*heavyRef}, nil,
 	)
@@ -483,7 +483,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	t.Run("redirects to light when created after limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleLightExecutor, &msg.Code, 0,
+			ctx, core.DynamicRoleLightExecutor, msg.Code.Record(), 0,
 		).Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
@@ -501,7 +501,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	t.Run("redirects to heavy when created before limit", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, &msg.Code, 5,
+			ctx, core.DynamicRoleHeavyExecutor, msg.Code.Record(), 5,
 		).Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
@@ -574,7 +574,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	h.Bus = mb
 	heavyRef := genRandomRef(0)
 	jc.QueryRoleMock.Expect(
-		ctx, core.DynamicRoleHeavyExecutor, &msg.Parent, 0,
+		ctx, core.DynamicRoleHeavyExecutor, msg.Parent.Record(), 0,
 	).Return(
 		[]core.RecordRef{*heavyRef}, nil,
 	)

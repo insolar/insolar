@@ -27,7 +27,6 @@ import (
 // NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher struct {
 	NodeNetwork        core.NodeNetwork        `inject:""`
-	CertificateManager core.CertificateManager `inject:""`
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
 
 	state     core.NetworkState

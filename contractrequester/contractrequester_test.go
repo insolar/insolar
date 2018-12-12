@@ -56,6 +56,7 @@ func TestNew(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
+	require.Equal(t, pm, contractRequester.PulseManager)
 }
 
 func TestContractRequester_routeCall(t *testing.T) {

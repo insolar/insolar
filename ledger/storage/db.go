@@ -75,7 +75,8 @@ type DB struct {
 	nodeHistory     map[core.PulseNumber][]core.Node
 	nodeHistoryLock sync.Mutex
 
-	addJetLock sync.RWMutex
+	addJetLock  sync.RWMutex
+	jetTreeLock sync.Mutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update

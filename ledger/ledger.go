@@ -71,7 +71,7 @@ func NewTestLedger(
 	db *storage.DB,
 	am *artifactmanager.LedgerArtifactManager,
 	pm *pulsemanager.PulseManager,
-	jc *jetcoordinator.JetCoordinator,
+	jc core.JetCoordinator,
 	ls *localstorage.LocalStorage,
 ) *Ledger {
 	return &Ledger{
