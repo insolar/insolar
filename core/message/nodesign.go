@@ -51,7 +51,7 @@ func (NodeSignPayload) GetCaller() *core.RecordRef {
 
 // Type implementation of Message interface.
 func (e *NodeSignPayload) Type() core.MessageType {
-	return core.NetworkCoordinatorNodeSignRequest
+	return core.TypeNodeSignRequest
 }
 
 func (e *NodeSignPayload) GetNodeRef() *core.RecordRef {

@@ -12,10 +12,11 @@ pulsar:
   neighbours: []
   numberofrandomhosts: 1
   numberdelta: 10
-  bootstraplistener:
+  distributiontransport:
     protocol: UTP
     address: 0.0.0.0:58091
     behindnat: false
-  bootstrapnodes:
-  - localhost:53837
+  pulsedistributor:
+    bootstraphosts:
+    - localhost:53837
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"

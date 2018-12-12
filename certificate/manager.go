@@ -58,7 +58,7 @@ func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.Author
 }
 
 // NewUnsignedCertificate returns new certificate
-func (m *CertificateManager) NewUnsignedCertificate(pKey string, ref string, role string) (core.Certificate, error) {
+func (m *CertificateManager) NewUnsignedCertificate(pKey string, role string, ref string) (core.Certificate, error) {
 	cert := m.certificate.(*Certificate)
 	newCert := Certificate{
 		MajorityRule: cert.MajorityRule,
@@ -74,6 +74,7 @@ func (m *CertificateManager) NewUnsignedCertificate(pKey string, ref string, rol
 	}
 	for i, node := range cert.BootstrapNodes {
 		newCert.BootstrapNodes[i].Host = node.Host
+		newCert.BootstrapNodes[i].NodeRef = node.NodeRef
 		newCert.BootstrapNodes[i].PublicKey = node.PublicKey
 		newCert.BootstrapNodes[i].NetworkSign = node.NetworkSign
 	}

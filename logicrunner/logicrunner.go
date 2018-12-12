@@ -363,6 +363,7 @@ func init() {
 
 func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	ctx := es.insContext
+	inslogger.FromContext(ctx).Debug("LogicRunner.getObjectMessage starts ...")
 	cr, step := lr.nextValidationStep(objref)
 	// TODO: move this to vb, when vb become a part of es
 	if es.objectbody != nil { // already have something

@@ -35,8 +35,6 @@ const (
 	TypeChangeNetworkClaim
 )
 
-const claimHeaderSize = 2
-
 // ChangeNetworkClaim uses to change network state.
 type ChangeNetworkClaim struct {
 }
@@ -170,12 +168,4 @@ func (nlc *NodeLeaveClaim) AddSupplementaryInfo(nodeID core.RecordRef) {
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {
 	return TypeNodeLeaveClaim
-}
-
-func getClaimSize(claim ReferendumClaim) uint16 {
-	return claimSizeMap[claim.Type()]
-}
-
-func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
-	return getClaimSize(claim) + claimHeaderSize
 }

@@ -122,20 +122,19 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 	return &cert, nil
 }
 
-func (cert *Certificate) serializeNetworkPart() []byte {
+func (cert *Certificate) SerializeNetworkPart() []byte {
 	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
 		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +
 		cert.RootDomainReference
 
 	sort.Strings(cert.PulsarPublicKeys)
 	out += strings.Join(cert.PulsarPublicKeys, "")
-	sort.Slice(cert.BootstrapNodes, func(i, j int) bool {
-		return strings.Compare(cert.BootstrapNodes[i].PublicKey, cert.BootstrapNodes[j].PublicKey) == -1
-	})
-
-	for _, node := range cert.BootstrapNodes {
-		out += node.PublicKey + node.Host
+	nodes := make([]string, len(cert.BootstrapNodes))
+	for i, node := range cert.BootstrapNodes {
+		nodes[i] = node.PublicKey + node.NodeRef + node.Host
 	}
+	sort.Strings(nodes)
+	out += strings.Join(nodes, "")
 
 	return []byte(out)
 }
@@ -143,7 +142,7 @@ func (cert *Certificate) serializeNetworkPart() []byte {
 // SignNetworkPart signs network part in certificate
 func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) {
 	signer := scheme.Signer(key)
-	sign, err := signer.Sign(cert.serializeNetworkPart())
+	sign, err := signer.Sign(cert.SerializeNetworkPart())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignNetworkPart ] Can't Sign")
 	}

@@ -51,3 +51,10 @@ type Network interface {
 	// GetGlobuleID returns current globule id.
 	GetGlobuleID() GlobuleID
 }
+
+// PulseDistributor is interface for pulse distribution.
+//go:generate minimock -i github.com/insolar/insolar/core.PulseDistributor -o ../testutils -s _mock.go
+type PulseDistributor interface {
+	// Distribute distributes a pulse across the network.
+	Distribute(context.Context, *Pulse)
+}
