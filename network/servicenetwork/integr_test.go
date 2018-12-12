@@ -211,7 +211,7 @@ func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certific
 	s.NoError(err)
 	log.Infof("cert: %s", jsonCert)
 
-	cert, err = certificate.ReadCertificateFromReader(publicKey, proc, strings.NewReader(jsonCert))
+	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
 	s.NoError(err)
 	return certificate.NewCertificateManager(cert), node.cryptographyService
 }
