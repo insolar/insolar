@@ -60,10 +60,16 @@ func NewSessionManager() *SessionManager {
 
 func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
-	result := &Session{NodeID: ref, State: Authorized, Cert: cert}
+	session := &Session{
+		NodeID: ref,
+		State:  Authorized,
+		Cert:   cert,
+		Time:   time.Now(),
+	}
 	sessionID := SessionID(id)
+
 	sm.lock.Lock()
-	sm.sessions[sessionID] = result
+	sm.sessions[sessionID] = session
 	sm.lock.Unlock()
 	return sessionID
 }
