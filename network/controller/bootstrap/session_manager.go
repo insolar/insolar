@@ -57,6 +57,8 @@ type SessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
 	sessions map[SessionID]*Session
+
+	newSessionNotification  chan struct{}
 	stopCleanupNotification chan struct{}
 }
 
@@ -167,6 +169,8 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 func (sm *SessionManager) cleanupExpiredSessions() {
 	for {
 		select {
+		case <-sm.newSessionNotification:
+			// Handle new session. reorder expiration short list
 		case <-sm.stopCleanupNotification:
 			return
 		}
