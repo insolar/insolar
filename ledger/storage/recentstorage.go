@@ -32,7 +32,7 @@ type RecentStorageProvider struct {
 
 // NewRecentStorageProvider creates new provider
 func NewRecentStorageProvider(defaultTTL int) *RecentStorageProvider {
-	return &RecentStorageProvider{DefaultTTL: defaultTTL}
+	return &RecentStorageProvider{DefaultTTL: defaultTTL, storage: map[core.RecordID]*RecentStorage{}}
 }
 
 // GetStorage returns a recent storage for jet
@@ -42,7 +42,7 @@ func (p *RecentStorageProvider) GetStorage(jet core.RecordID) recentstorage.Rece
 	storage, ok := p.storage[jet]
 	if !ok {
 		if storage, ok = p.storage[jet]; !ok {
-			storage = NewRecentStorage(p.DefaultTTL)
+			p.storage[jet] = NewRecentStorage(p.DefaultTTL)
 		}
 	}
 	return storage
