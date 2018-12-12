@@ -49,6 +49,7 @@ type PulseManager struct {
 	GIL                   core.GlobalInsolarLock `inject:""`
 	RecentStorageProvider recentstorage.Provider `inject:""`
 	ActiveListSwapper     ActiveListSwapper      `inject:""`
+	NetworkSwitcher       core.NetworkSwitcher   `inject:""`
 
 	currentPulse core.Pulse
 
@@ -230,7 +231,9 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	}
 
 	var err error
-	m.GIL.Acquire(ctx)
+	if m.NetworkSwitcher.GetState() == core.CompleteNetworkState {
+		m.GIL.Acquire(ctx)
+	}
 
 	// swap pulse
 	m.currentPulse = pulse
@@ -252,7 +255,9 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 		}
 	}
 
-	m.GIL.Release(ctx)
+	if m.NetworkSwitcher.GetState() == core.CompleteNetworkState {
+		m.GIL.Release(ctx)
+	}
 
 	if dry {
 		return nil
@@ -261,7 +266,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// Run only on material executor.
 	// execute only on material executor
 	// TODO: do as much as possible async.
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial && m.NetworkSwitcher.GetState() == core.CompleteNetworkState {
 
 		drop, dropSerialized, messages, err := m.createDrop(ctx, lastSlotPulse)
 		if err != nil {
