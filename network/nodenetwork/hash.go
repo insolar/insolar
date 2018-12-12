@@ -42,8 +42,6 @@ func calculateNodeHash(scheme core.PlatformCryptographyScheme, processor core.Ke
 	b := [8]byte{}
 	binary.LittleEndian.PutUint32(b[:4], uint32(node.ShortID()))
 	hashWriteChecked(h, b[:4])
-	binary.LittleEndian.PutUint32(b[:4], uint32(node.Pulse()))
-	hashWriteChecked(h, b[:4])
 	binary.LittleEndian.PutUint32(b[:4], uint32(node.Role()))
 
 	hashWriteChecked(h, b[:4])

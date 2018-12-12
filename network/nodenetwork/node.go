@@ -76,10 +76,6 @@ func (n *node) ShortID() core.ShortNodeID {
 	return n.NodeShortID
 }
 
-func (n *node) Pulse() core.PulseNumber {
-	return n.NodePulseNum
-}
-
 func (n *node) Role() core.StaticRole {
 	return n.NodeRole
 }
