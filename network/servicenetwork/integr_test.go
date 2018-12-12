@@ -48,14 +48,12 @@ type testSuite struct {
 	bootstrapNodes []*networkNode
 	networkNodes   []*networkNode
 	testNode       *networkNode
-	//networkPort    int
 }
 
 func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 	s := &testSuite{
-		Suite: suite.Suite{},
-		ctx:   context.Background(),
-		//networkPort:    10001,
+		Suite:          suite.Suite{},
+		ctx:            context.Background(),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
 	}
@@ -198,13 +196,26 @@ func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certific
 	proc := platformpolicy.NewKeyProcessor()
 	publicKey, err := proc.ExportPublicKey(pubKey)
 	s.NoError(err)
-	//bytes.NewReader(publicKey)
 
 	cert := &certificate.Certificate{}
 	cert.PublicKey = string(publicKey[:])
 	cert.Reference = ref.String()
 	cert.Role = "virtual"
-	//cert.BootstrapNodes = nodes
+	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
+
+	for _, b := range s.bootstrapNodes {
+		pubKey, _ := b.cryptographyService.GetPublicKey()
+		pubKeyBuf, err := proc.ExportPublicKey(pubKey)
+		s.NoError(err)
+
+		bootstrapNode := certificate.NewBootstrapNode(
+			pubKey,
+			string(pubKeyBuf[:]),
+			b.host,
+			b.id.String())
+
+		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
+	}
 
 	// dump cert and read it again from json for correct private files initialization
 	jsonCert, err := cert.Dump()
@@ -214,22 +225,6 @@ func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certific
 	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
 	s.NoError(err)
 	return certificate.NewCertificateManager(cert), node.cryptographyService
-}
-
-func (s *testSuite) getBootstrapNodes() []certificate.BootstrapNode {
-	result := make([]certificate.BootstrapNode, 0)
-
-	for _, b := range s.bootstrapNodes {
-		pubKey, _ := b.cryptographyService.GetPublicKey()
-
-		node := certificate.NewBootstrapNode(
-			pubKey,
-			b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey,
-			b.serviceNetwork.cfg.Host.Transport.Address,
-			b.serviceNetwork.NodeNetwork.GetOrigin().ID().String())
-		result = append(result, *node)
-	}
-	return result
 }
 
 // initNode inits previously created node
