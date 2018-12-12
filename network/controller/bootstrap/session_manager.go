@@ -220,11 +220,13 @@ func (sm *SessionManager) sortSessionsByExpirationTime() []*sessionWithID {
 
 	// Read active session with their ids. We have to store them as a slice to keep ordering by expiration time.
 	sessionsByExpirationTime := make([]*sessionWithID, len(sm.sessions))
+	idx := 0
 	for sessionID, session := range sm.sessions {
-		sessionsByExpirationTime = append(sessionsByExpirationTime, &sessionWithID{
+		sessionsByExpirationTime[idx] = &sessionWithID{
 			SessionID: sessionID,
 			Session:   session,
-		})
+		}
+		idx++
 	}
 
 	sm.lock.RUnlock()
