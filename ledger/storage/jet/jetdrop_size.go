@@ -44,29 +44,29 @@ func (dsd *DropSizeData) Bytes(ctx context.Context) []byte {
 	return encode(dsd)
 }
 
-type JetDropSize struct {
+type DropSize struct {
 	SizeData  DropSizeData
 	Signature []byte
 }
 
 const MaxLenJetDropSizeList = 10
 
-type JetDropSizeList []JetDropSize
+type DropSizeList []DropSize
 
-func DeserializeJetDropSizeList(ctx context.Context, buff []byte) (JetDropSizeList, error) {
+func DeserializeJetDropSizeList(ctx context.Context, buff []byte) (DropSizeList, error) {
 	inslogger.FromContext(ctx).Debugf("DeserializeJetDropSizeList starts ... ( buff len: %d)", len(buff))
 	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
-	var dropSizes = JetDropSizeList{}
+	var dropSizes = DropSizeList{}
 
 	err := dec.Decode(&dropSizes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[ DeserializeJetDropSizeList ] Can't decode JetDropSizeList")
+		return nil, errors.Wrapf(err, "[ DeserializeJetDropSizeList ] Can't decode DropSizeList")
 	}
 
 	return dropSizes, nil
 }
 
-func (dropSizeList JetDropSizeList) Bytes(ctx context.Context) []byte {
-	inslogger.FromContext(ctx).Debug("JetDropSizeList.Bytes starts ...")
+func (dropSizeList DropSizeList) Bytes(ctx context.Context) []byte {
+	inslogger.FromContext(ctx).Debug("DropSizeList.Bytes starts ...")
 	return encode(dropSizeList)
 }

@@ -89,7 +89,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 	}()
 
 	var jetDropHashError error
-	var dropSize uint64 = 0
+	var dropSize uint64
 	go func() {
 		recordPrefix := prefixkeyany(scopeIDRecord, jetID[:], pulse.Bytes())
 
@@ -233,7 +233,7 @@ func dropSizesPrefixKey() []byte {
 	return prefixkey(scopeIDSystem, []byte{sysDropSizeList})
 }
 
-func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.JetDropSize) error {
+func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 	inslogger.FromContext(ctx).Debug("DB.AddDropSize starts ...")
 	db.addBlockSizeLock.Lock()
 	defer db.addBlockSizeLock.Unlock()
@@ -244,14 +244,14 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.JetDropSize) error 
 		return errors.Wrapf(err, "[ AddDropSize ] Can't get object: %s", string(k))
 	}
 
-	var dropSizes = jet.JetDropSizeList{}
+	var dropSizes = jet.DropSizeList{}
 	if err != ErrNotFound {
 		dropSizes, err = jet.DeserializeJetDropSizeList(ctx, buff)
 		if err != nil {
 			return errors.Wrapf(err, "[ AddDropSize ] Can't decode dropSizes")
 		}
 
-		if len([]jet.JetDropSize(dropSizes)) >= jet.MaxLenJetDropSizeList {
+		if len([]jet.DropSize(dropSizes)) >= jet.MaxLenJetDropSizeList {
 			dropSizes = dropSizes[1:]
 		}
 	}
@@ -262,7 +262,7 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.JetDropSize) error 
 
 }
 
-func (db *DB) ResetDropSizeList(ctx context.Context, dropSizeList jet.JetDropSizeList) error {
+func (db *DB) ResetDropSizeList(ctx context.Context, dropSizeList jet.DropSizeList) error {
 	inslogger.FromContext(ctx).Debug("DB.ResetDropSizeList starts ...")
 	db.addBlockSizeLock.Lock()
 	defer db.addBlockSizeLock.Unlock()
@@ -272,7 +272,7 @@ func (db *DB) ResetDropSizeList(ctx context.Context, dropSizeList jet.JetDropSiz
 	return errors.Wrap(err, "[ ResetDropSizeList ] Can't db.set")
 }
 
-func (db *DB) GetDropSizeList(ctx context.Context) (jet.JetDropSizeList, error) {
+func (db *DB) GetDropSizeList(ctx context.Context) (jet.DropSizeList, error) {
 	inslogger.FromContext(ctx).Debug("DB.GetDropSizeList starts ...")
 	db.addBlockSizeLock.RLock()
 	defer db.addBlockSizeLock.RUnlock()

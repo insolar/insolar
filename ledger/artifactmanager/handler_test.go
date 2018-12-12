@@ -606,7 +606,7 @@ func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID co
 		return &signature, nil
 	}
 	signature, err := cryptoServiceMock.Sign(dropSizeData.Bytes(ctx))
-	jetDropSize := &jet.JetDropSize{
+	jetDropSize := &jet.DropSize{
 		SizeData:  dropSizeData,
 		Signature: signature.Bytes(),
 	}
@@ -640,7 +640,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 
 	dropSizeList, err := db.GetDropSizeList(ctx)
 	require.Contains(t, err.Error(), "storage object not found")
-	require.Equal(t, jet.JetDropSizeList(nil), dropSizeList)
+	require.Equal(t, jet.DropSizeList(nil), dropSizeList)
 	addDropSizeToDB(ctx, t, db, jetID)
 
 	dropSizeList, err = db.GetDropSizeList(ctx)

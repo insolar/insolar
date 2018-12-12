@@ -139,9 +139,13 @@ func (m *PulseManager) createDrop(ctx context.Context, lastSlotPulse *storage.Pu
 		DropSize: dropSize,
 	}
 	signature, err := m.CryptographyService.Sign(dropSizeData.Bytes(ctx))
-	jetDropSize := &jet.JetDropSize{
+	jetDropSize := &jet.DropSize{
 		SizeData:  dropSizeData,
 		Signature: signature.Bytes(),
+	}
+
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Sign")
 	}
 
 	err = m.db.AddDropSize(ctx, jetDropSize)

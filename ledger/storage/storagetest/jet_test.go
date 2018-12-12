@@ -41,7 +41,7 @@ func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID co
 		return &signature, nil
 	}
 	signature, err := cryptoServiceMock.Sign(dropSizeData.Bytes(ctx))
-	jetDropSize := &jet.JetDropSize{
+	jetDropSize := &jet.DropSize{
 		SizeData:  dropSizeData,
 		Signature: signature.Bytes(),
 	}
@@ -52,7 +52,7 @@ func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID co
 	require.NoError(t, err)
 }
 
-func findElement(testSize uint64, dropSizes []jet.JetDropSize) bool {
+func findElement(testSize uint64, dropSizes []jet.DropSize) bool {
 	for _, ds := range dropSizes {
 		if ds.SizeData.DropSize == testSize {
 			return true
@@ -78,7 +78,7 @@ func TestAddAndGetDropSize(t *testing.T) {
 	dropSizeList, err := db.GetDropSizeList(ctx)
 	require.NoError(t, err)
 
-	dropSizeArray := []jet.JetDropSize(dropSizeList)
+	dropSizeArray := []jet.DropSize(dropSizeList)
 
 	require.Equal(t, len(dropSizes), len(dropSizeArray))
 
@@ -103,7 +103,7 @@ func TestAddDropSizeAndIncreaseLimit(t *testing.T) {
 	dropSizeList, err := db.GetDropSizeList(ctx)
 	require.NoError(t, err)
 
-	dropSizeArray := []jet.JetDropSize(dropSizeList)
+	dropSizeArray := []jet.DropSize(dropSizeList)
 	require.Equal(t, jet.MaxLenJetDropSizeList, len(dropSizeArray))
 
 	for i := numElements; i > (numElements - jet.MaxLenJetDropSizeList); i-- {

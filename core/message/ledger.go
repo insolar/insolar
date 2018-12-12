@@ -381,7 +381,7 @@ type HotData struct {
 	RecentObjects   map[core.RecordID]*HotIndex
 	PendingRequests map[core.RecordID][]byte
 	PulseNumber     core.PulseNumber
-	JetDropSizeList jet.JetDropSizeList
+	JetDropSizeList jet.DropSizeList
 }
 
 // AllowedSenderObjectAndRole implements interface method
