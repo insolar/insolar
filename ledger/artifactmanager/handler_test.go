@@ -2,6 +2,7 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -733,7 +734,7 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 
 	jetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{2})
 	msg := message.JetDrop{
-		Jet: *jetID,
+		JetID: *jetID,
 	}
 	expectedSetId := jet.IDSet{
 		*jetID: struct{}{},
@@ -752,6 +753,7 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 
 	// Assert
 	require.Equal(t, &reply.OK{}, response)
+	fmt.Printf("%+v\n", idSet)
 	require.Equal(t, expectedSetId, idSet)
 
 }
