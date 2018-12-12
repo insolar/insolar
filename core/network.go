@@ -42,8 +42,6 @@ type Network interface {
 	SendMessage(nodeID RecordRef, method string, msg Parcel) ([]byte, error)
 	// SendCascadeMessage sends a message.
 	SendCascadeMessage(data Cascade, method string, msg Parcel) error
-	// GetAddress returns an origin address.
-	GetAddress() string
 	// RemoteProcedureRegister is remote procedure register func.
 	RemoteProcedureRegister(name string, method RemoteProcedure)
 	// GetGlobuleID returns current globule id.

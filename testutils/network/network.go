@@ -33,9 +33,6 @@ func (n *testNetwork) SendMessage(nodeID core.RecordRef, method string, msg core
 func (n *testNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
 	return nil
 }
-func (n *testNetwork) GetAddress() string {
-	return ""
-}
 func (n *testNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 
 }

@@ -141,7 +141,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse c
 
 // CreateParcel creates signed message from provided message.
 func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), token, currentPulse)
+	return mb.ParcelFactory.Create(ctx, msg, mb.ActiveNodes.GetOrigin().ID(), token, currentPulse)
 }
 
 // SendParcel sends provided message via network.
@@ -179,7 +179,8 @@ func (mb *MessageBus) SendParcel(
 	}
 
 	// Short path when sending to self node. Skip serialization
-	if nodes[0].Equal(mb.Service.GetNodeID()) {
+	origin := mb.ActiveNodes.GetOrigin()
+	if nodes[0].Equal(origin.ID()) {
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 

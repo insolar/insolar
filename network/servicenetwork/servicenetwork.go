@@ -72,11 +72,6 @@ func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCry
 	return serviceNetwork, nil
 }
 
-// GetAddress returns host public address.
-func (n *ServiceNetwork) GetAddress() string {
-	return n.hostNetwork.PublicAddress()
-}
-
 // GetGlobuleID returns current globule id.
 func (n *ServiceNetwork) GetGlobuleID() core.GlobuleID {
 	return 0
