@@ -144,6 +144,8 @@ func (mb *TestMessageBus) Send(
 		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
+	ctx = parcel.Context(context.Background())
+
 	reply, err := handler(ctx, parcel)
 	if mb.WritingTape != nil {
 		mb.WritingTape = append(mb.WritingTape, TapeRecord{Message: m, Reply: reply, Error: err})
