@@ -56,10 +56,12 @@ type MessageBus struct {
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
 // wrap it, providing additional functionality.
 func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
-	return &MessageBus{
+	mb := &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
 		signmessages: config.Host.SignMessages,
-	}, nil
+	}
+	mb.globalLock.Lock()
+	return mb, nil
 }
 
 // NewPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
@@ -152,8 +154,8 @@ func (mb *MessageBus) SendParcel(
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
 	scope := newReaderScope(&mb.globalLock)
-	scope.Lock()
-	defer scope.Unlock()
+	scope.Lock(ctx, "Sending parcel ...")
+	defer scope.Unlock(ctx, "Sending parcel done")
 
 	var nodes []core.RecordRef
 	if options != nil && options.Receiver != nil {
@@ -189,7 +191,7 @@ func (mb *MessageBus) SendParcel(
 		return nil, err
 	}
 
-	scope.Unlock()
+	scope.Unlock(ctx, "Sending parcel done")
 
 	return reply.Deserialize(bytes.NewBuffer(res))
 }
@@ -238,8 +240,8 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	sender := parcel.GetSender()
 
 	scope := newReaderScope(&mb.globalLock)
-	scope.Lock()
-	defer scope.Unlock()
+	scope.Lock(ctx, "Delivering ...")
+	defer scope.Unlock(ctx, "Delivering done")
 
 	senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
 	if mb.signmessages {
@@ -277,7 +279,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 		return nil, err
 	}
 
-	scope.Unlock()
+	scope.Unlock(ctx, "Delivering done")
 
 	rd, err := reply.Serialize(resp)
 	if err != nil {
@@ -306,14 +308,16 @@ func newReaderScope(mutex *sync.RWMutex) *readerScope {
 	}
 }
 
-func (rs *readerScope) Lock() {
+func (rs *readerScope) Lock(ctx context.Context, info string) {
+	inslogger.FromContext(ctx).Info(info)
 	rs.mutex.RLock()
 	rs.locked = true
 }
 
-func (rs *readerScope) Unlock() {
+func (rs *readerScope) Unlock(ctx context.Context, info string) {
 	if rs.locked {
 		rs.locked = false
+		inslogger.FromContext(ctx).Info(info)
 		rs.mutex.RUnlock()
 	}
 }
