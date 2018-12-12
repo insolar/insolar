@@ -50,7 +50,14 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 
 	// message hanler with mok
 	mh := NewMessageHandler(db, nil)
-	mh.Recent = recentStorageMock
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	mh.RecentProvider = provideMock
+
 	mh.HeavySync = heavysync
 
 	payload := []core.KV{
