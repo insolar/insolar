@@ -28,6 +28,7 @@ import (
 type NetworkSwitcher struct {
 	NodeNetwork        core.NodeNetwork        `inject:""`
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
+	GIL                core.GlobalInsolarLock  `inject:""`
 
 	state     core.NetworkState
 	stateLock sync.RWMutex
@@ -56,8 +57,9 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 
 	inslogger.FromContext(ctx).Info("Current NetworkSwitcher state is: %s", ns.state)
 
-	if ns.SwitcherWorkAround.IsBootstrapped() {
+	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
 		ns.state = core.CompleteNetworkState
+		ns.GIL.Release(ctx)
 		inslogger.FromContext(ctx).Info("Current NetworkSwitcher state switched to: %s", ns.state)
 	}
 
