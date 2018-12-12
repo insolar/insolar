@@ -70,6 +70,8 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
+	// we don't want to record GetCode messages because of cache
+	ctx = core.ContextWithMessageBus(ctx, gpr.lr.MessageBus)
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
