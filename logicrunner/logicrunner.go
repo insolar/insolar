@@ -351,7 +351,7 @@ func (lr *LogicRunner) executeOrValidate(
 type ObjectBody struct {
 	objDescriptor   core.ObjectDescriptor
 	Object          []byte
-	ClassHeadRef    *Ref
+	Prototype       *Ref
 	CodeMachineType core.MachineType
 	CodeRef         *Ref
 	Parent          *Ref
@@ -423,7 +423,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	es.objectbody = &ObjectBody{
 		objDescriptor:   objDesc,
 		Object:          objDesc.Memory(),
-		ClassHeadRef:    protoDesc.HeadRef(),
+		Prototype:       protoDesc.HeadRef(),
 		CodeMachineType: codeDesc.MachineType(),
 		CodeRef:         codeDesc.Ref(),
 		Parent:          objDesc.Parent(),
@@ -454,7 +454,13 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	es.callContext.Prototype = es.objectbody.ClassHeadRef
+	// ProxyPrototype may come only from proxy method call
+	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
+	if !m.ProxyPrototype.IsEmpty() && !m.ProxyPrototype.Equal(*es.objectbody.Prototype) {
+		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
+	}
+
+	es.callContext.Prototype = es.objectbody.Prototype
 	es.callContext.Code = es.objectbody.CodeRef
 	es.callContext.Parent = es.objectbody.Parent
 
