@@ -223,3 +223,21 @@ func (sm *SessionManager) sortSessionsByExpirationTime() []*sessionWithID {
 
 	return sessionsByExpirationTime
 }
+
+func (sm *SessionManager) expireSessions(sessionsByExpirationTime []*sessionWithID) []*sessionWithID {
+	sm.lock.Lock()
+
+	for _, session := range sessionsByExpirationTime {
+		// Check when we have to stop expire
+		if session.expirationTime().After(time.Now()) {
+			break
+		}
+
+		delete(sm.sessions, session.SessionID)
+	}
+	sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+
+	sm.lock.Unlock()
+
+	return sessionsByExpirationTime
+}
