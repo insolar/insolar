@@ -71,7 +71,7 @@ func NewTestLedger(
 	db *storage.DB,
 	am *artifactmanager.LedgerArtifactManager,
 	pm *pulsemanager.PulseManager,
-	jc *jetcoordinator.JetCoordinator,
+	jc core.JetCoordinator,
 	ls *localstorage.LocalStorage,
 ) *Ledger {
 	return &Ledger{
@@ -91,7 +91,7 @@ func GetLedgerComponents(conf configuration.Ledger) []interface{} {
 	}
 	return []interface{}{
 		db,
-		storage.NewRecentStorage(conf.RecentStorage.DefaultTTL),
+		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewArtifactManger(db),
 		jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator),
 		pulsemanager.NewPulseManager(db, conf),

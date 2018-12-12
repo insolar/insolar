@@ -23,20 +23,23 @@ import (
 // ShortNodeID is the shortened ID of node that is unique inside the globe
 type ShortNodeID uint32
 
+// GlobuleID is the ID of the globe
+type GlobuleID uint32
+
 //go:generate minimock -i github.com/insolar/insolar/core.Node -o ../testutils/network -s _mock.go
 type Node interface {
 	// ID is the unique identifier of the node
 	ID() RecordRef
 	// ShortID get short ID of node
 	ShortID() ShortNodeID
-	// Pulse is the pulse number after which the new state is assigned to the node
-	Pulse() PulseNumber
 	// Role is the candidate Role for the node
 	Role() StaticRole
 	// PublicKey is the public key of the node
 	PublicKey() crypto.PublicKey
 	// PhysicalAddress is the network address of the node
 	PhysicalAddress() string
+	// GetGlobuleID returns node current globule id
+	GetGlobuleID() GlobuleID
 	// Version of node software
 	Version() string
 }
@@ -57,6 +60,7 @@ type NodeNetwork interface {
 
 // TODO: remove this interface when bootstrap mechanism completed
 // SwitcherWorkAround temp interface for NetworkSwitcher interaction
+//go:generate minimock -i github.com/insolar/insolar/core.SwitcherWorkAround -o ../testutils/network -s _mock.go
 type SwitcherWorkAround interface {
 	// IsBootstrapped method shows that all DiscoveryNodes finds each other
 	IsBootstrapped() bool

@@ -81,7 +81,7 @@ func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discover
 
 	currentNodeCert := rnc.CertificateManager.GetCertificate()
 
-	if discoveryNode.GetNodeRef() == currentNodeCert.GetNodeRef() {
+	if *discoveryNode.GetNodeRef() == *currentNodeCert.GetNodeRef() {
 		sign, err = rnc.signCert(ctx, registeredNodeRef)
 		if err != nil {
 			return nil, err
