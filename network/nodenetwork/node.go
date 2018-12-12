@@ -95,16 +95,6 @@ func (n *node) SetShortID(id core.ShortNodeID) {
 	n.NodeShortID = id
 }
 
-type mutableNodes []MutableNode
-
-func (mn mutableNodes) Export() []core.Node {
-	nodes := make([]core.Node, len(mn))
-	for i := range mn {
-		nodes[i] = mn[i]
-	}
-	return nodes
-}
-
 func init() {
 	gob.Register(&node{})
 }
