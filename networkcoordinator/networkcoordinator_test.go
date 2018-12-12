@@ -59,6 +59,8 @@ func TestNetworkCoordinator_Start(t *testing.T) {
 	ctx := context.Background()
 	err = nc.Start(ctx)
 	require.NoError(t, err)
+	require.NotNil(t, nc.realCoordinator)
+	require.NotNil(t, nc.zeroCoordinator)
 }
 
 func TestNetworkCoordinator_GetCoordinator_Zero(t *testing.T) {
