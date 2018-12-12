@@ -42,6 +42,7 @@ func getResponse(body []byte) *response {
 	return res
 }
 
+// TODO FIXME cache requester?
 func sendRequest(ctx context.Context, method string, params []interface{}, member memberInfo) []byte {
 	reqCfg := &requester.RequestConfigJSON{
 		Params: params,
