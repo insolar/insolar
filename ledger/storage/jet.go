@@ -23,7 +23,9 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
 
@@ -48,6 +50,7 @@ func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.Pulse
 func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (
 	*jet.JetDrop,
 	[][]byte,
+	uint64,
 	error,
 ) {
 	var err error
@@ -56,7 +59,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err = hw.Write(prevHash)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 
 	wg := sync.WaitGroup{}
@@ -86,7 +89,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 	}()
 
 	var jetDropHashError error
-
+	var dropSize uint64 = 0
 	go func() {
 		recordPrefix := prefixkeyany(scopeIDRecord, jetID[:], pulse.Bytes())
 
@@ -103,6 +106,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 				if err != nil {
 					return err
 				}
+				dropSize += uint64(len(val))
 			}
 			return nil
 		})
@@ -113,10 +117,10 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 	wg.Wait()
 
 	if messagesError != nil {
-		return nil, nil, messagesError
+		return nil, nil, 0, messagesError
 	}
 	if jetDropHashError != nil {
-		return nil, nil, jetDropHashError
+		return nil, nil, 0, jetDropHashError
 	}
 
 	drop := jet.JetDrop{
@@ -124,7 +128,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 		PrevHash: prevHash,
 		Hash:     hw.Sum(nil),
 	}
-	return &drop, messages, nil
+	return &drop, messages, dropSize, nil
 }
 
 // SetDrop saves provided JetDrop in db.
@@ -180,14 +184,12 @@ func (db *DB) SaveJet(ctx context.Context, id core.RecordID) error {
 	k := prefixkey(scopeIDSystem, []byte{sysJetList})
 
 	buff, err := db.get(ctx, k)
-	if err != ErrNotFound {
+	if err != nil && err != ErrNotFound {
 		return err
 	}
 
-	var jets jet.IDSet
-	if err == ErrNotFound {
-		jets = jet.IDSet{}
-	} else {
+	var jets = jet.IDSet{}
+	if err != ErrNotFound {
 		dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
 		err = dec.Decode(jets)
 		if err != nil {
@@ -218,4 +220,66 @@ func (db *DB) GetJets(ctx context.Context) (jet.IDSet, error) {
 	}
 
 	return jets, nil
+}
+
+func dropSizesPrefixKey() []byte {
+	return prefixkey(scopeIDSystem, []byte{sysDropSizeList})
+}
+
+func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.JetDropSize) error {
+	inslogger.FromContext(ctx).Debug("DB.AddDropSize starts ...")
+	db.addBlockSizeLock.Lock()
+	defer db.addBlockSizeLock.Unlock()
+
+	k := dropSizesPrefixKey()
+	buff, err := db.get(ctx, k)
+	if err != nil && err != ErrNotFound {
+		return errors.Wrapf(err, "[ AddDropSize ] Can't get object: %s", string(k))
+	}
+
+	var dropSizes = jet.JetDropSizeList{}
+	if err != ErrNotFound {
+		dropSizes, err = jet.DeserializeJetDropSizeList(ctx, buff)
+		if err != nil {
+			return errors.Wrapf(err, "[ AddDropSize ] Can't decode dropSizes")
+		}
+
+		if len([]jet.JetDropSize(dropSizes)) >= jet.MaxLenJetDropSizeList {
+			dropSizes = dropSizes[1:]
+		}
+	}
+
+	dropSizes = append(dropSizes, *dropSize)
+
+	return db.set(ctx, k, dropSizes.Bytes(ctx))
+
+}
+
+func (db *DB) ResetDropSizeList(ctx context.Context, dropSizeList jet.JetDropSizeList) error {
+	inslogger.FromContext(ctx).Debug("DB.ResetDropSizeList starts ...")
+	db.addBlockSizeLock.Lock()
+	defer db.addBlockSizeLock.Unlock()
+
+	k := dropSizesPrefixKey()
+	err := db.set(ctx, k, dropSizeList.Bytes(ctx))
+	return errors.Wrap(err, "[ ResetDropSizeList ] Can't db.set")
+}
+
+func (db *DB) GetDropSizeList(ctx context.Context) (jet.JetDropSizeList, error) {
+	inslogger.FromContext(ctx).Debug("DB.GetDropSizeList starts ...")
+	db.addBlockSizeLock.RLock()
+	defer db.addBlockSizeLock.RUnlock()
+
+	k := dropSizesPrefixKey()
+	buff, err := db.get(ctx, k)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetDropSizeList ] Can't db.set")
+	}
+
+	dropSizes, err := jet.DeserializeJetDropSizeList(ctx, buff)
+	if err != nil {
+		return nil, errors.Wrapf(err, "[ GetDropSizeList ] Can't decode dropSizes")
+	}
+
+	return dropSizes, nil
 }
