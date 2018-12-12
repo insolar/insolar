@@ -25,32 +25,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// claims auxiliar constants
-const (
-	claimTypeShift      = 10
-	claimHeaderTypeMask = 0xfc00
-
-	//	claimHeaderLengthMask = 0x3ff
-)
-
-func extractClaimTypeFromHeader(claimHeader uint16) uint8 {
-	return uint8((claimHeader & claimHeaderTypeMask) >> claimTypeShift)
-}
-
-// func extractClaimLengthFromHeader(claimHeader uint16) uint16 {
-// 	return claimHeader & claimHeaderLengthMask
-// }
-
-func makeClaimHeader(claim ReferendumClaim) uint16 {
-	if claim == nil {
-		panic("invalid claim")
-	}
-	var result = getClaimSize(claim)
-	result |= uint16(claim.Type()) << claimTypeShift
-
-	return result
-}
-
 // Deserialize implements interface method
 func (nb *NodeBroadcast) Deserialize(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &nb.EmergencyLevel)
@@ -302,7 +276,7 @@ func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
 }
 
 func serializeClaims(claims []ReferendumClaim) ([]byte, error) {
-	result := allocateBuffer(2048)
+	result := allocateBuffer(packetMaxSize)
 	for _, claim := range claims {
 		claimHeader := makeClaimHeader(claim)
 		err := binary.Write(result, defaultByteOrder, claimHeader)
@@ -319,7 +293,7 @@ func serializeClaims(claims []ReferendumClaim) ([]byte, error) {
 		_, err = result.Write(rawClaim)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("[ serializeClaims ] "+
-				"Can't append proofNodePulseRaw."+"Type: %d. Length: %d", claim.Type(), getClaimSize(claim)))
+				"Can't write claim. Type: %d. Length: %d", claim.Type(), getClaimSize(claim)))
 		}
 	}
 
@@ -340,9 +314,9 @@ func parseReferendumClaim(data []byte) ([]ReferendumClaim, error) {
 			return nil, errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Can't read claimHeader")
 		}
 
-		claimType := ClaimType(extractClaimTypeFromHeader(claimHeader))
+		claimType := ClaimType(extractTypeFromHeader(claimHeader))
 		// TODO: Do we need claimLength?
-		// claimLength := extractClaimLengthFromHeader(claimHeader)
+		// claimLength := extractLengthFromHeader(claimHeader)
 		var refClaim ReferendumClaim
 
 		switch claimType {
