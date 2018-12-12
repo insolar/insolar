@@ -182,6 +182,11 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 		}
 	}
 
+	shouldSendResponse := func(ref core.RecordRef) bool {
+		val, ok := result[ref]
+		return !ok || val == nil
+	}
+
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	for {
 		select {
@@ -190,7 +195,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 				continue
 			}
 
-			if val, ok := result[res.id]; !ok || val == nil {
+			if shouldSendResponse(res.id) {
 				// send response
 				err := nc.ConsensusNetwork.SendRequest(request, res.id)
 				if err != nil {
@@ -199,13 +204,18 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 			}
 			result[res.id] = res.packet
 
-			if len(result) == len(participants) {
-				return result, nil
-			}
+			// FIXME: currently we remove early return to have synchronized times of phases on all nodes
+			// if len(result) == len(participants) {
+			// 	return result, nil
+			// }
 		case <-ctx.Done():
 			return result, nil
 		}
 	}
+}
+
+func (nc *NaiveCommunicator) generatePhase2Response(req *packets.Phase2Packet) (network.Request, error) {
+	return nil, errors.New("not implemented")
 }
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants
@@ -224,6 +234,13 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 
 	nc.sendRequestToNodes(participants, request)
 
+	shouldSendResponse := func(p *phase2Result) bool {
+		val, ok := result[p.id]
+		firstResultReceive := !ok || val == nil
+		packetContainsVoteRequests := p.packet.ContainsRequests()
+		return firstResultReceive || packetContainsVoteRequests
+	}
+
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	for {
 		select {
@@ -232,20 +249,24 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 				continue
 			}
 
-			if val, ok := result[res.id]; !ok || val == nil {
+			if shouldSendResponse(&res) {
 				// send response
+				response := request
+				if res.packet.ContainsRequests() {
+					response, err = nc.generatePhase2Response(res.packet)
+				}
 				// TODO: process referendum votes and send answers
-				err := nc.ConsensusNetwork.SendRequest(request, res.id)
+				err := nc.ConsensusNetwork.SendRequest(response, res.id)
 				if err != nil {
 					log.Errorln(err.Error())
 				}
 			}
 			result[res.id] = res.packet
 
-			if len(result) == len(participants) {
-				return result, nil
-			}
-
+			// FIXME: currently we remove early return to have synchronized times of phases on all nodes
+			// if len(result) == len(participants) {
+			// 	return result, nil
+			// }
 		case <-ctx.Done():
 			return result, nil
 		}
@@ -283,10 +304,10 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 			}
 			result[res.id] = res.packet
 
-			if len(result) == len(participants) {
-				return result, nil
-			}
-
+			// FIXME: currently we remove early return to have synchronized times of phases on all nodes
+			// if len(result) == len(participants) {
+			// 	return result, nil
+			// }
 		case <-ctx.Done():
 			return result, nil
 		}

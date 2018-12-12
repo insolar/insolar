@@ -159,7 +159,7 @@ func (v *StateFraudNodeSupplementaryVote) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (v *StateFraudNodeSupplementaryVote) Serialize() ([]byte, error) {
-	result := allocateBuffer(packetMaxSize)
+	result := allocateBuffer(1024)
 
 	node1PulseProofRaw, err := v.Node1PulseProof.Serialize()
 	if err != nil {
