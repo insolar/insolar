@@ -55,6 +55,7 @@ type SessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
 	sessions map[SessionID]*Session
+	stopCleanupNotify chan struct{}
 }
 
 func NewSessionManager() *SessionManager {
