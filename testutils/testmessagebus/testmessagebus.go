@@ -133,7 +133,7 @@ func (mb *TestMessageBus) Send(
 		inslogger.FromContext(ctx).Debugf("Reading message %+v off the tape", head.Message)
 
 		if !reflect.DeepEqual(head.Message, m) {
-			return nil, errors.Errorf("Message in the tape and sended arn't equal; got: %+v, expected: ", m, head.Message)
+			return nil, errors.Errorf("Message in the tape and sended arn't equal; got: %+v, expected: %+v", m, head.Message)
 		}
 		return head.Reply, head.Error
 	}
