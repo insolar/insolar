@@ -86,14 +86,17 @@ type Pulsar struct {
 	CryptographyService        core.CryptographyService
 	PlatformCryptographyScheme core.PlatformCryptographyScheme
 	KeyProcessor               core.KeyProcessor
+	PulseDistributor           core.PulseDistributor
 }
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
+	// TODO: refactor constructor; inject components. INS-939 - @dmitry-panchenko 11.Dec.2018
 	configuration configuration.Pulsar,
 	cryptographyService core.CryptographyService,
 	scheme core.PlatformCryptographyScheme,
 	keyProcessor core.KeyProcessor,
+	pulseDistributor core.PulseDistributor,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator entropygenerator.EntropyGenerator,
@@ -114,6 +117,7 @@ func NewPulsar(
 		CryptographyService:        cryptographyService,
 		PlatformCryptographyScheme: scheme,
 		KeyProcessor:               keyProcessor,
+		PulseDistributor:           pulseDistributor,
 		Config:                     configuration,
 		Storage:                    storage,
 		EntropyGenerator:           entropyGenerator,

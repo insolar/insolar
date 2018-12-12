@@ -202,6 +202,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 // Stop implements core.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	n.hostNetwork.Stop()
+	n.ConsensusNetwork.Stop()
 	return nil
 }
 

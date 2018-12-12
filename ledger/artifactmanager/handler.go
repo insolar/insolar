@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -562,6 +563,11 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 		}
 	}
 
+	err := h.db.SaveJet(ctx, msg.Jet)
+	if err != nil {
+		return nil, err
+	}
+
 	return &reply.OK{}, nil
 }
 
@@ -868,6 +874,22 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 
 		meta.TTL--
 		h.Recent.AddObjectWithTLL(id, meta.TTL, isMine)
+	}
+
+	err = h.db.SetJetTree(ctx, msg.PulseNumber, &jet.Tree{
+		Head: &jet.Jet{
+			Left: &jet.Jet{
+				Left:  &jet.Jet{},
+				Right: &jet.Jet{},
+			},
+			Right: &jet.Jet{
+				Left:  &jet.Jet{},
+				Right: &jet.Jet{},
+			},
+		},
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return &reply.OK{}, nil
