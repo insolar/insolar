@@ -54,3 +54,18 @@ func TestSessionManager_CleanupConcurrent(t *testing.T) {
 	time.Sleep(1500 * time.Millisecond)
 	assert.Len(t, sm.sessions, 0)
 }
+
+func TestSessionManager_CleanupOrder(t *testing.T) {
+	sm := NewSessionManager()
+
+	err := sm.Start(context.Background())
+	require.NoError(t, err)
+
+	sm.NewSession(core.RecordRef{}, nil, 2*time.Second)
+	sm.NewSession(core.RecordRef{}, nil, 2*time.Second)
+	sm.NewSession(core.RecordRef{}, nil, time.Second)
+	require.Len(t, sm.sessions, 3)
+
+	time.Sleep(1500 * time.Millisecond)
+	assert.Len(t, sm.sessions, 2)
+}
