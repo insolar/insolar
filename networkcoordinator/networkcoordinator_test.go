@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -30,9 +31,25 @@ import (
 )
 
 func TestNewNetworkCoordinator(t *testing.T) {
+	certificateManager := testutils.NewCertificateManagerMock(t)
+	networkSwitcher := testutils.NewNetworkSwitcherMock(t)
+	contractRequester := testutils.NewContractRequesterMock(t)
+	messageBus := testutils.NewMessageBusMock(t)
+	cs := testutils.NewCryptographyServiceMock(t)
+	pm := testutils.NewPulseManagerMock(t)
+
 	nc, err := New()
 	require.NoError(t, err)
 	require.Equal(t, &NetworkCoordinator{}, nc)
+
+	cm := &component.Manager{}
+	cm.Inject(certificateManager, networkSwitcher, contractRequester, messageBus, cs, pm, nc)
+	require.Equal(t, certificateManager, nc.CertificateManager)
+	require.Equal(t, networkSwitcher, nc.NetworkSwitcher)
+	require.Equal(t, contractRequester, nc.ContractRequester)
+	require.Equal(t, messageBus, nc.MessageBus)
+	require.Equal(t, cs, nc.CS)
+	require.Equal(t, pm, nc.PM)
 }
 
 func TestNetworkCoordinator_Start(t *testing.T) {
@@ -84,9 +101,6 @@ func mockReply(t *testing.T) []byte {
 	}, nil)
 	require.NoError(t, err)
 	return []byte(node)
-	//return &reply.CallMethod{
-	//	Result: []byte(node),
-	//}
 }
 
 func mockMessageBus(t *testing.T, ok bool, ref *core.RecordRef, discovery *core.RecordRef) *testutils.MessageBusMock {
