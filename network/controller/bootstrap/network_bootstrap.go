@@ -60,6 +60,9 @@ func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyServic
 	nb.bootstrapper.Start(nodeKeeper)
 	nb.authController.Start(networkCoordinator, nodeKeeper)
 	nb.challengeController.Start(cryptographyService, nodeKeeper)
+
+	// TODO: we also have to call Stop method somewhere
+	nb.sessionManager.Start(context.TODO())
 }
 
 type DiscoveryNode struct {
