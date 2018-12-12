@@ -334,6 +334,11 @@ func TestServiceNetworkIntegration(t *testing.T) {
 	suite.Run(t, s)
 }
 
+func TestServiceNetwork3BootsrtapNodes(t *testing.T) {
+	s := NewTestSuite(3, 0)
+	suite.Run(t, s)
+}
+
 // Full timeout test
 
 type FullTimeoutPhaseManager struct {
