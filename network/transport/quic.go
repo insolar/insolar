@@ -137,7 +137,7 @@ func (q *quicTransport) handleAcceptedConnection(session quic.Session) {
 		log.Error(err, "[ handleAcceptedConnection ] failed to deserialize a packet")
 	}
 
-	q.handlePacket(msg)
+	go q.handlePacket(msg)
 
 	err = stream.Close()
 	if err != nil {
