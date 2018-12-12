@@ -70,6 +70,7 @@ func transfer(ctx context.Context, amount float64, from memberInfo, to memberInf
 	return "success"
 }
 
+// TODO: rewrite this, we don't need so many members
 func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 	var members []memberInfo
 	for i := 0; i < concurrent*repetitions*2; i++ {

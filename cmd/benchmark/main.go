@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -157,23 +158,28 @@ func startScenario(s scenario) {
 }
 
 func main() {
+	log.Printf("Starting benchmark. Calling parseInputParams()...\n")
 	parseInputParams()
 
+	log.Printf("Calling chooseOutput()...\n")
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
 	var members []memberInfo
 
+	log.Printf("Calling getRootMemberInfo()...\n")
 	rootMember = getRootMemberInfo(rootmemberkeys)
 
 	if input != "" {
+		log.Printf("Calling getMembersInfo()...\n")
 		members, err = getMembersInfo(input)
 		check("Problems with parsing input:", err)
 	} else {
+		log.Printf("Calling createMembers(), this may take some time...\n") // TODO: THIS DOES TAKE TIME
 		members, err = createMembers(concurrent, repetitions)
 		check("Problems with create members. One of creating request ended with error: ", err)
 	}
 
-	// TODO FIXME out is not hread safe!
+	log.Printf("Calling runScenarios()...\n")
 	runScenarios(out, members, concurrent, repetitions)
 }
