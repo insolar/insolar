@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"context"
 	"encoding/gob"
+	"time"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/consensus/packets"
@@ -46,6 +47,8 @@ const (
 	OpConfirmed OperationCode = iota + 1
 	OpRejected
 )
+
+const sessionTTL = 5 * time.Second
 
 // AuthorizationRequest
 type AuthorizationRequest struct {
@@ -168,7 +171,7 @@ func (ac *AuthorizationController) processAuthorizeRequest(ctx context.Context, 
 		}
 		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
-	session := ac.sessionManager.NewSession(request.GetSender(), cert)
+	session := ac.sessionManager.NewSession(request.GetSender(), cert, sessionTTL)
 	return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 

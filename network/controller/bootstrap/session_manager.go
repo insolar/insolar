@@ -58,13 +58,14 @@ func NewSessionManager() *SessionManager {
 	return &SessionManager{sessions: make(map[SessionID]*Session)}
 }
 
-func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate) SessionID {
+func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
 	session := &Session{
 		NodeID: ref,
 		State:  Authorized,
 		Cert:   cert,
 		Time:   time.Now(),
+		TTL:    ttl,
 	}
 	sessionID := SessionID(id)
 
