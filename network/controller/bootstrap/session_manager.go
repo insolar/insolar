@@ -144,3 +144,8 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	delete(sm.sessions, id)
 	return session, nil
 }
+
+func (sm *SessionManager) cleanupExpiredSessions() {
+	for {
+	}
+}
