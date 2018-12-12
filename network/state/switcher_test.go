@@ -27,11 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func mockNodeNetwork(t *testing.T) *network.NodeNetworkMock {
-	nnMock := network.NewNodeNetworkMock(t)
-	return nnMock
-}
-
 func mockSwitcherWorkAround(t *testing.T, isBootstrapped bool) *network.SwitcherWorkAroundMock {
 	swaMock := network.NewSwitcherWorkAroundMock(t)
 	swaMock.IsBootstrappedFunc = func() bool {
