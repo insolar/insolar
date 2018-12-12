@@ -29,11 +29,19 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/lucas-clemente/quic-go"
+	"github.com/pkg/errors"
 )
+
+type quicConnection struct {
+	session quic.Session
+	stream  quic.Stream
+}
 
 type quicTransport struct {
 	baseTransport
-	l quic.Listener
+	l           quic.Listener
+	conn        net.PacketConn
+	connections map[string]quicConnection
 }
 
 func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*quicTransport, error) {
@@ -45,6 +53,8 @@ func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress stri
 	transport := &quicTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
 		l:             listener,
+		conn:          conn,
+		connections:   make(map[string]quicConnection, 0),
 	}
 
 	transport.sendFunc = transport.send
@@ -52,27 +62,31 @@ func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress stri
 }
 
 func (q *quicTransport) send(recvAddress string, data []byte) error {
-	ctx := context.Background()
-	session, err := quic.DialAddrContext(ctx, recvAddress, &tls.Config{InsecureSkipVerify: true}, nil)
-	if err != nil {
-		return err
-	}
-	//defer session.Close()
-
-	log.Infof("connected to: %s", session.RemoteAddr().String())
-
-	stream, err := session.OpenStreamSync()
-	if err != nil {
-		return err
-	}
-	//defer stream.Close()
-
-	_, err = stream.Write(data)
-	if err != nil {
-		return err
+	conn, ok := q.connections[recvAddress]
+	var stream quic.Stream
+	var session quic.Session
+	var err error
+	if !ok {
+		session, stream, err = createConnection(recvAddress)
+		if err != nil {
+			return errors.Wrap(err, "[ send ] failed to create a connection")
+		}
+		q.connections[recvAddress] = quicConnection{session, stream}
+	} else {
+		session = conn.session
+		stream = conn.stream
 	}
 
-	return err
+	n, err := stream.Write(data)
+	if err != nil {
+		return errors.Wrap(err, "[ send ] failed to write to a stream")
+	}
+
+	if n != len(data) {
+		return errors.New("[ send ] sent a part of data")
+	}
+
+	return nil
 }
 
 // Start starts networking.
