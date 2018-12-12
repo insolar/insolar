@@ -45,9 +45,9 @@ var testNetworkPort = 10001
 type testSuite struct {
 	suite.Suite
 	ctx            context.Context
-	bootstrapNodes []networkNode
-	networkNodes   []networkNode
-	testNode       networkNode
+	bootstrapNodes []*networkNode
+	networkNodes   []*networkNode
+	testNode       *networkNode
 	//networkPort    int
 }
 
@@ -56,8 +56,8 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 		Suite: suite.Suite{},
 		ctx:   context.Background(),
 		//networkPort:    10001,
-		bootstrapNodes: make([]networkNode, 0),
-		networkNodes:   make([]networkNode, 0),
+		bootstrapNodes: make([]*networkNode, 0),
+		networkNodes:   make([]*networkNode, 0),
 	}
 
 	for i := 0; i < bootstrapCount; i++ {
@@ -76,11 +76,11 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 func (s *testSuite) SetupSuite() {
 	log.Infoln("SetupSuite")
 	for _, node := range s.bootstrapNodes {
-		s.initNode(&node, Disable)
+		s.initNode(node, Disable)
 	}
 
 	for _, node := range s.networkNodes {
-		s.initNode(&node, Disable)
+		s.initNode(node, Disable)
 	}
 
 	log.Infoln("Init bootstrap nodes")
@@ -173,7 +173,7 @@ type networkNode struct {
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
-func newNetworkNode() networkNode {
+func newNetworkNode() *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	if err != nil {
 		panic(err.Error())
@@ -181,7 +181,7 @@ func newNetworkNode() networkNode {
 	address := "127.0.0.1:" + strconv.Itoa(testNetworkPort)
 	testNetworkPort += 2 // coz consensus transport port+=1
 
-	return networkNode{
+	return &networkNode{
 		id:                  testutils.RandomRef(),
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
@@ -292,7 +292,7 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 func (s *testSuite) TestNodeConnect() {
 	phasesResult := make(chan error)
 
-	s.initNode(&s.testNode, Disable)
+	s.initNode(s.testNode, Disable)
 
 	s.InitTestNode()
 	s.StartTestNode()
@@ -308,7 +308,7 @@ func (s *testSuite) TestNodeConnect() {
 
 func (s *testSuite) TestNodeLeave() {
 
-	s.initNode(&s.testNode, Disable)
+	s.initNode(s.testNode, Disable)
 
 	phasesResult := make(chan error)
 	s.InitTestNode()
@@ -352,7 +352,7 @@ func (s *testSuite) TestFullTimeOut() {
 	s.T().Skip("will be available after phase result fix !")
 	phasesResult := make(chan error)
 
-	s.initNode(&s.testNode, Full)
+	s.initNode(s.testNode, Full)
 
 	s.InitTestNode()
 	s.StartTestNode()
@@ -370,7 +370,7 @@ func (s *testSuite) TestFullTimeOut() {
 func (s *testSuite) TestPartialTimeOut() {
 	phasesResult := make(chan error)
 
-	s.initNode(&s.testNode, Partial)
+	s.initNode(s.testNode, Partial)
 
 	s.InitTestNode()
 	s.StartTestNode()
