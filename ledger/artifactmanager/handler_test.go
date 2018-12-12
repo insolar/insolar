@@ -28,10 +28,11 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.AmIMock.Return(true, nil)
 
 	msg := message.GetObject{
 		Head: *genRandomRef(0),
@@ -48,6 +49,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	recentStorageMock.RemovePendingRequestMock.Return()
 
 	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
 	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Head, m.Object)
@@ -69,15 +71,15 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	err := h.Init(ctx)
+	require.NoError(t, err)
 
 	t.Run("fetches index from heavy when no index", func(t *testing.T) {
 		lightRef := genRandomRef(0)
-		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, msg.Head.Record(), 0,
-		).Return(
+		jc.QueryRoleMock.Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
-		rep, err := h.handleGetObject(ctx, 0, &message.Parcel{
+		rep, err := h.replayHandlers[core.TypeGetObject](ctx, &message.Parcel{
 			Msg: &msg,
 		})
 		require.NoError(t, err)
@@ -100,13 +102,12 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
-		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleLightExecutor, msg.Head.Record(), 0,
-		).Return(
+		jc.QueryRoleMock.Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
-		rep, err := h.handleGetObject(ctx, 1, &message.Parcel{
-			Msg: &msg,
+		rep, err := h.replayHandlers[core.TypeGetObject](ctx, &message.Parcel{
+			Msg:         &msg,
+			PulseNumber: 1,
 		})
 		require.NoError(t, err)
 		redirect, ok := rep.(*reply.GetObjectRedirect)
@@ -125,13 +126,12 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
-		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, msg.Head.Record(), 5,
-		).Return(
+		jc.QueryRoleMock.Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
-		rep, err := h.handleGetObject(ctx, 5, &message.Parcel{
-			Msg: &msg,
+		rep, err := h.replayHandlers[core.TypeGetObject](ctx, &message.Parcel{
+			Msg:         &msg,
+			PulseNumber: 5,
 		})
 		require.NoError(t, err)
 		redirect, ok := rep.(*reply.GetObjectRedirect)
@@ -150,11 +150,12 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}}, nil)
 	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -178,14 +179,15 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		panic("unexpected call")
 	}
 
+	jc.AmIMock.Return(true, nil)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
-
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
-
+	err := h.Init(ctx)
+	require.NoError(t, err)
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
@@ -195,12 +197,10 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
-		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, msg.Parent.Record(), 0,
-		).Return(
+		jc.QueryRoleMock.Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
-		rep, err := h.handleGetChildren(ctx, 0, &message.Parcel{
+		rep, err := h.replayHandlers[core.TypeGetChildren](ctx, &message.Parcel{
 			Msg: &msg,
 		})
 		require.NoError(t, err)
@@ -221,13 +221,12 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 			ChildPointer: genRandomID(0),
 		})
 		require.NoError(t, err)
-		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleLightExecutor, msg.Parent.Record(), 0,
-		).Return(
+		jc.QueryRoleMock.Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
-		rep, err := h.handleGetChildren(ctx, 1, &message.Parcel{
-			Msg: &msg,
+		rep, err := h.replayHandlers[core.TypeGetChildren](ctx, &message.Parcel{
+			Msg:         &msg,
+			PulseNumber: 1,
 		})
 		require.NoError(t, err)
 		redirect, ok := rep.(*reply.GetChildrenRedirect)
@@ -243,13 +242,12 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 			ChildPointer: genRandomID(0),
 		})
 		require.NoError(t, err)
-		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, msg.Parent.Record(), 5,
-		).Return(
+		jc.QueryRoleMock.Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
-		rep, err := h.handleGetChildren(ctx, 5, &message.Parcel{
-			Msg: &msg,
+		rep, err := h.replayHandlers[core.TypeGetChildren](ctx, &message.Parcel{
+			Msg:         &msg,
+			PulseNumber: 5,
 		})
 		require.NoError(t, err)
 		redirect, ok := rep.(*reply.GetChildrenRedirect)
@@ -267,7 +265,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -275,7 +273,9 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	recentStorageMock.RemovePendingRequestMock.Return()
 
 	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.AmIMock.Return(true, nil)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
@@ -308,13 +308,14 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 
 	h.JetCoordinator = jc
 	h.Bus = mb
+	err := h.Init(ctx)
+	require.NoError(t, err)
+
 	heavyRef := genRandomRef(0)
-	jc.QueryRoleMock.Expect(
-		ctx, core.DynamicRoleHeavyExecutor, msg.Head.Record(), 0,
-	).Return(
+	jc.QueryRoleMock.Return(
 		[]core.RecordRef{*heavyRef}, nil,
 	)
-	rep, err := h.handleGetDelegate(ctx, 0, &message.Parcel{
+	rep, err := h.replayHandlers[core.TypeGetDelegate](ctx, &message.Parcel{
 		Msg: &msg,
 	})
 	require.NoError(t, err)
@@ -334,7 +335,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -342,7 +343,9 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	recentStorageMock.RemovePendingRequestMock.Return()
 
 	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.AmIMock.Return(true, nil)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
@@ -381,13 +384,13 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 
 	h.JetCoordinator = jc
 	h.Bus = mb
+	err = h.Init(ctx)
+	require.NoError(t, err)
 	heavyRef := genRandomRef(0)
-	jc.QueryRoleMock.Expect(
-		ctx, core.DynamicRoleHeavyExecutor, msg.Object.Record(), 0,
-	).Return(
+	jc.QueryRoleMock.Return(
 		[]core.RecordRef{*heavyRef}, nil,
 	)
-	rep, err := h.handleUpdateObject(ctx, 0, &message.Parcel{
+	rep, err := h.replayHandlers[core.TypeUpdateObject](ctx, &message.Parcel{
 		Msg: &msg,
 	})
 	require.NoError(t, err)
@@ -407,16 +410,24 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	jc := testutils.NewJetCoordinatorMock(mc)
+	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
+	jc.AmIMock.Return(true, nil)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
+	h.JetCoordinator = jc
+	h.Bus = mb
+	err := h.Init(ctx)
+	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -429,10 +440,10 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 		Object: *genRandomRef(0),
 	}
 	objectIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
-	err := db.SetObjectIndex(ctx, jetID, msg.Object.Record(), &objectIndex)
+	err = db.SetObjectIndex(ctx, jetID, msg.Object.Record(), &objectIndex)
 	require.NoError(t, err)
 
-	rep, err := h.handleGetObjectIndex(ctx, &message.Parcel{
+	rep, err := h.replayHandlers[core.TypeGetObjectIndex](ctx, &message.Parcel{
 		Msg: &msg,
 	})
 	require.NoError(t, err)
@@ -454,6 +465,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
 
 	msg := message.GetCode{
 		Code: *genRandomRef(0),
@@ -464,13 +476,16 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	recentStorageMock.RemovePendingRequestMock.Return()
 
 	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirect{Signature: []byte{1, 2, 3}}, nil)
+
+	jc.AmIMock.Return(true, nil)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
-
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	err := h.Init(ctx)
+	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -481,12 +496,10 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 
 	t.Run("redirects to light when created after limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
-		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleLightExecutor, msg.Code.Record(), 0,
-		).Return(
+		jc.QueryRoleMock.Return(
 			[]core.RecordRef{*lightRef}, nil,
 		)
-		rep, err := h.handleGetCode(ctx, 0, &message.Parcel{
+		rep, err := h.replayHandlers[core.TypeGetCode](ctx, &message.Parcel{
 			Msg: &msg,
 		})
 		require.NoError(t, err)
@@ -499,13 +512,12 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 
 	t.Run("redirects to heavy when created before limit", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
-		jc.QueryRoleMock.Expect(
-			ctx, core.DynamicRoleHeavyExecutor, msg.Code.Record(), 5,
-		).Return(
+		jc.QueryRoleMock.Return(
 			[]core.RecordRef{*heavyRef}, nil,
 		)
-		rep, err := h.handleGetCode(ctx, 5, &message.Parcel{
-			Msg: &msg,
+		rep, err := h.replayHandlers[core.TypeGetCode](ctx, &message.Parcel{
+			Msg:         &msg,
+			PulseNumber: 5,
 		})
 		require.NoError(t, err)
 		redirect, ok := rep.(*reply.GetCodeRedirect)
@@ -523,7 +535,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -531,7 +543,9 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	recentStorageMock.RemovePendingRequestMock.Return()
 
 	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.AmIMock.Return(true, nil)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
@@ -571,13 +585,13 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 
 	h.JetCoordinator = jc
 	h.Bus = mb
+	err = h.Init(ctx)
+	require.NoError(t, err)
 	heavyRef := genRandomRef(0)
-	jc.QueryRoleMock.Expect(
-		ctx, core.DynamicRoleHeavyExecutor, msg.Parent.Record(), 0,
-	).Return(
+	jc.QueryRoleMock.Return(
 		[]core.RecordRef{*heavyRef}, nil,
 	)
-	rep, err := h.handleRegisterChild(ctx, 0, &message.Parcel{
+	rep, err := h.replayHandlers[core.TypeRegisterChild](ctx, &message.Parcel{
 		Msg: &msg,
 	})
 	require.NoError(t, err)
@@ -592,17 +606,23 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 
 func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	jetID := core.TODOJetID
+	mc := minimock.NewController(t)
+	jetID := *jet.NewID(0, nil)
 
-	idCreator, idCreatorCleaner := storagetest.TmpDB(ctx, t)
-	defer idCreatorCleaner()
+	cs := testutils.NewPlatformCryptographyScheme()
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+	db.PlatformCryptographyScheme = cs
 	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
 	require.NoError(t, err)
 
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.AmIMock.Return(true, nil)
+	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
+
 	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
-	secondId, _ := idCreator.SetRecord(ctx, jetID, core.FirstPulseNumber, &record.CodeRecord{})
+	secondId := record.NewRecordIDFromRecord(cs, core.FirstPulseNumber, &record.CodeRecord{})
 
 	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
 		LatestState: firstID,
@@ -634,17 +654,19 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		require.Equal(t, 320, ttl)
 		require.Equal(t, true, isMine)
 	}
-
-	h := NewMessageHandler(db, &configuration.Ledger{})
-
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
+	h := NewMessageHandler(db, &configuration.Ledger{})
+	h.JetCoordinator = jc
 	h.RecentStorageProvider = provideMock
+	h.Bus = mb
+	err = h.Init(ctx)
+	require.NoError(t, err)
 
-	res, err := h.handleHotRecords(ctx, &message.Parcel{Msg: hotIndexes})
+	res, err := h.replayHandlers[core.TypeHotRecords](ctx, &message.Parcel{Msg: hotIndexes})
 
 	require.NoError(t, err)
 	require.Equal(t, res, &reply.OK{})
@@ -663,16 +685,24 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	defer mc.Finish()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.AmIMock.Return(true, nil)
+	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
+	h.JetCoordinator = jc
+	h.Bus = mb
+	err := h.Init(ctx)
+	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -691,7 +721,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 			LatestStateApproved: genRandomID(0),
 		}
 
-		rep, err := h.handleValidationCheck(ctx, &message.Parcel{
+		rep, err := h.replayHandlers[core.TypeValidationCheck](ctx, &message.Parcel{
 			Msg: &msg,
 		})
 		require.NoError(t, err)
@@ -712,7 +742,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 			LatestStateApproved: &approvedStateID,
 		}
 
-		rep, err := h.handleValidationCheck(ctx, &message.Parcel{
+		rep, err := h.replayHandlers[core.TypeValidationCheck](ctx, &message.Parcel{
 			Msg: &msg,
 		})
 		require.NoError(t, err)
@@ -808,6 +838,8 @@ func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
+	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
 	cs := testutils.NewPlatformCryptographyScheme()
 	db.PlatformCryptographyScheme = cs
 	rs := recentstorage.NewRecentStorageMock(mc)
@@ -819,21 +851,24 @@ func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
 	h.PlatformCryptographyScheme = cs
 	h.JetCoordinator = jc
 	h.RecentStorageProvider = pr
+	h.Bus = mb
+	err := h.Init(ctx)
+	require.NoError(t, err)
 	rec := record.CodeRecord{
-
 		MachineType: core.MachineTypeBuiltin,
 		Code:        core.NewRecordID(0, nil),
-	}
-	parcel := message.Parcel{
-		Msg: &message.SetRecord{
-			Record: record.SerializeRecord(&rec),
-		},
 	}
 	recID := record.NewRecordIDFromRecord(cs, 0, &rec)
 
 	t.Run("returns jet miss when miss with empty tree", func(t *testing.T) {
+		msg := message.SetRecord{
+			Record:    record.SerializeRecord(&rec),
+			TargetRef: *core.NewRecordRef(core.RecordID{}, *record.NewRecordIDFromRecord(cs, 0, &rec)),
+		}
 		jc.AmIMock.Return(false, nil)
-		rep, err := h.handleSetRecord(ctx, 0, &parcel)
+		rep, err := h.replayHandlers[core.TypeSetRecord](ctx, &message.Parcel{
+			Msg: &msg,
+		})
 		require.NoError(t, err)
 
 		jetMiss, ok := rep.(*reply.JetMiss)
@@ -842,10 +877,17 @@ func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
 	})
 
 	t.Run("returns jet miss when miss with filled tree", func(t *testing.T) {
+		msg := message.SetRecord{
+			Record:    record.SerializeRecord(&rec),
+			TargetRef: *core.NewRecordRef(core.RecordID{}, *record.NewRecordIDFromRecord(cs, 2, &rec)),
+		}
 		err := db.UpdateJetTree(ctx, 2, *jet.NewID(4, recID.Hash()))
 		require.NoError(t, err)
 		jc.AmIMock.Return(false, nil)
-		rep, err := h.handleSetRecord(ctx, 2, &parcel)
+		rep, err := h.replayHandlers[core.TypeSetRecord](ctx, &message.Parcel{
+			Msg:         &msg,
+			PulseNumber: 2,
+		})
 		require.NoError(t, err)
 
 		jetMiss, ok := rep.(*reply.JetMiss)
@@ -854,12 +896,19 @@ func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
 	})
 
 	t.Run("returns id when hit", func(t *testing.T) {
+		msg := message.SetRecord{
+			Record:    record.SerializeRecord(&rec),
+			TargetRef: *core.NewRecordRef(core.RecordID{}, *record.NewRecordIDFromRecord(cs, 0, &rec)),
+		}
 		jc.AmIMock.Return(true, nil)
-		rep, err := h.handleSetRecord(ctx, 0, &parcel)
+		rep, err := h.replayHandlers[core.TypeSetRecord](ctx, &message.Parcel{
+			Msg:         &msg,
+			PulseNumber: 2,
+		})
 		require.NoError(t, err)
 
 		id, ok := rep.(*reply.ID)
 		require.True(t, ok)
-		assert.Equal(t, *recID, id.ID)
+		assert.Equal(t, *record.NewRecordIDFromRecord(cs, 2, &rec), id.ID)
 	})
 }

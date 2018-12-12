@@ -124,7 +124,6 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 func (db *DB) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
-	jetID := core.TODOJetID
 	getGenesisRef := func() (*core.RecordRef, error) {
 		buff, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
@@ -136,6 +135,7 @@ func (db *DB) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*core.RecordRef, error) {
+		jetID := *jet.NewID(0, nil)
 		err := db.AddPulse(
 			ctx,
 			core.Pulse{

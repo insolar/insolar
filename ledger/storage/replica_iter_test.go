@@ -144,7 +144,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	var lastPulse core.PulseNumber
 	pulsescount := 2
-	jetID := core.ZeroJetID
+	jetID := core.TODOJetID
 
 	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
 	require.Nil(t, recsBefore)

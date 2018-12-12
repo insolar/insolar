@@ -480,11 +480,18 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
+		nonce := testutils.RandomRef()
+		codeReq, err := cb.ArtifactManager.RegisterRequest(
+			ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+		)
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+		}
 
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
-			core.RecordRef{}, core.RecordRef{},
+			core.RecordRef{}, *core.NewRecordRef(core.RecordID{}, *codeReq),
 			pluginBinary, core.MachineTypeGoPlugin,
 		)
 		codeRef := &core.RecordRef{}
