@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -205,6 +206,13 @@ func (sm *SessionManager) sortSessionsByExpirationTime() []*sessionWithID {
 	}
 
 	sm.lock.RUnlock()
+
+	sort.SliceStable(sessionsByExpirationTime, func(i, j int) bool {
+		expirationTime1 := sessionsByExpirationTime[i].expirationTime()
+		expirationTime2 := sessionsByExpirationTime[j].expirationTime()
+
+		return expirationTime1.Before(expirationTime2)
+	})
 
 	return sessionsByExpirationTime
 }
