@@ -32,4 +32,7 @@ type Options struct {
 
 	// Bootstrap reconnect timeout
 	BootstrapTimeout time.Duration
+
+	// HandshakeSession TTL
+	HandshakeSessionTTL time.Duration
 }
