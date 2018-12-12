@@ -72,7 +72,11 @@ type SessionManager struct {
 }
 
 func NewSessionManager() *SessionManager {
-	return &SessionManager{sessions: make(map[SessionID]*Session)}
+	return &SessionManager{
+		sessions:                make(map[SessionID]*Session),
+		newSessionNotification:  make(chan notification),
+		stopCleanupNotification: make(chan notification),
+	}
 }
 
 func (sm *SessionManager) Start(ctx context.Context) error {
