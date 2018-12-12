@@ -133,6 +133,7 @@ func TestHeavy_SyncByJet(t *testing.T) {
 	// TODO: call every case in subtest
 	jetID1 := testutils.RandomID()
 	jetID2 := jetID1
+	// flip first bit of jetID2 for different prefix
 	jetID2[0] ^= jetID2[0]
 
 	// prepare pulse helper

@@ -113,7 +113,6 @@ func (m *PulseManager) dropAllJets(ctx context.Context, pulse *storage.Pulse) er
 	if err != nil {
 		return errors.Wrap(err, "can't get jets from storage")
 	}
-	// g, ctx := errgroup.WithContext(ctx)
 	var g errgroup.Group
 	for jetID := range jetIDs {
 		jetID := jetID
