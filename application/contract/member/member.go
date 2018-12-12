@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/pkg/errors"
 )
 
 type Member struct {
@@ -127,7 +126,7 @@ func (m *Member) getBalance(params []byte) (interface{}, error) {
 	}
 	memberRef, err := core.NewRefFromBase58(member)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getBalance ] :")
+		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
 	w, err := wallet.GetImplementationFrom(*memberRef)
 	if err != nil {
@@ -148,7 +147,7 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 	}
 	to, err := core.NewRefFromBase58(toStr)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ transferCall ] Failed to parse 'to' param")
+		return nil, fmt.Errorf("[ transferCall ] Failed to parse 'to' param: %s", err.Error())
 	}
 	if m.GetReference() == *to {
 		return nil, fmt.Errorf("[ transferCall ] Recipient must be different from the sender")

@@ -1184,11 +1184,23 @@ func TestRootDomainContract(t *testing.T) {
 	// TODO need use pulseManager to sync all refs
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
+	err = cb.Build(map[string]string{
+		"member":     string(memberCode),
+		"allowance":  string(allowanceCode),
+		"wallet":     string(walletCode),
+		"rootdomain": string(rootDomainCode),
+	})
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c1"}})
+	rootDomainID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
+			},
+		},
+	)
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1211,7 +1223,14 @@ func TestRootDomainContract(t *testing.T) {
 	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c2"}})
+	rootMemberID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
+			},
+		},
+	)
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
@@ -1575,7 +1594,11 @@ type One struct {
 	foundation.BaseContract
 }
 func (r *One) CreateAllowance(member string) (error) {
-	w, _ := wallet.GetImplementationFrom(core.NewRefFromBase58(member))
+	memberRef, refErr := core.NewRefFromBase58(member)
+	if refErr != nil {
+		return refErr
+	}
+	w, _ := wallet.GetImplementationFrom(*memberRef)
 	walletRef := w.GetReference()
 	ah := allowance.New(&walletRef, 111, r.GetContext().Time.Unix()+10)
 	_, err := ah.AsChild(walletRef)
@@ -1633,7 +1656,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c2"}})
+	rootMemberID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
+			},
+		},
+	)
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
