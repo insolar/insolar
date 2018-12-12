@@ -95,27 +95,39 @@ func (q *quicTransport) Stop() {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
-	log.Info("Stop QUIC transport")
+	log.Info("[ Stop ] Stop QUIC transport")
 	q.prepareDisconnect()
 
 	err := q.l.Close()
 	if err != nil {
-		log.Errorln("Failed to close socket:", err.Error())
+		log.Errorln("[ Stop ] Failed to close socket:", err.Error())
+	}
+
+	err = q.closeConnections()
+	if err != nil {
+		log.Error(err, "[ Stop ] failed to close sessions")
+	}
+	err = q.conn.Close()
+	if err != nil {
+		log.Error(err, "[ Stop ] failed to close a connection")
 	}
 }
 
 func (q *quicTransport) handleAcceptedConnection(session quic.Session) {
-	defer session.Close()
-
 	stream, err := session.AcceptStream()
 
 	msg, err := q.serializer.DeserializePacket(stream)
 	if err != nil {
-		log.Error("[ handleAcceptedConnection ] ", err)
-		return
+		log.Error(err, "[ handleAcceptedConnection ] failed to deserialize a packet")
 	}
 
 	q.handlePacket(msg)
+
+	err = stream.Close()
+	if err != nil {
+		log.Error(err, "[ handleAcceptedConnection ] failed to close a stream")
+	}
+}
 
 func (q *quicTransport) closeConnections() error {
 	var err error
