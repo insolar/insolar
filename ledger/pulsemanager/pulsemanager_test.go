@@ -94,6 +94,9 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		return bytes.Equal(firstID.Bytes(), inputID.Bytes())
 	}
 
+	providerMock := recentstorage.NewProviderMock(t)
+	providerMock.GetStorageMock.Return(recentMock)
+
 	mbMock := testutils.NewMessageBusMock(t)
 	mbMock.SendFunc = func(p context.Context, p1 core.Message, _ core.Pulse, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		val, ok := p1.(*message.HotData)
@@ -131,7 +134,8 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	alsMock.MoveSyncToActiveFunc = func() {}
 
 	pm.LR = lr
-	pm.Recent = recentMock
+
+	pm.Recent = providerMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
 	pm.GIL = gil
