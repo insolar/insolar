@@ -59,10 +59,11 @@ type Genesis struct {
 	isGenesis       bool
 	config          *genesisConfig
 	keyOut          string
-	ArtifactManager core.ArtifactManager `inject:""`
-	PulseManager    core.PulseManager    `inject:""`
-	JetCoordinator  core.JetCoordinator  `inject:""`
-	Network         core.Network         `inject:""`
+	ArtifactManager core.ArtifactManager   `inject:""`
+	PulseManager    core.PulseManager      `inject:""`
+	JetCoordinator  core.JetCoordinator    `inject:""`
+	Network         core.Network           `inject:""`
+	GIL             core.GlobalInsolarLock `inject:""`
 }
 
 // NewGenesis creates new Genesis
@@ -355,6 +356,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
 
+	g.GIL.Release(ctx)
 	_, insgocc, err := goplugintestutils.Build()
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
