@@ -128,7 +128,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		ObjectRef:        req.Object,
 		Method:           req.Method,
 		Arguments:        req.Arguments,
-		CorrectPrototype: req.CorrectPrototype,
+		ProxyPrototype:   req.ProxyPrototype,
 	}
 
 	currentSlotPulse, err := gpr.pm.Current(ctx)

@@ -454,7 +454,9 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	if !m.CorrectPrototype.IsEmpty() && !m.CorrectPrototype.Equal(*es.objectbody.Prototype) {
+	// ProxyPrototype may come only from proxy method call
+	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
+	if !m.ProxyPrototype.IsEmpty() && !m.ProxyPrototype.Equal(*es.objectbody.Prototype) {
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
 	}
 

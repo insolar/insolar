@@ -210,7 +210,7 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 
 func executeMethod(
 	ctx context.Context, lr core.LogicRunner, pm core.PulseManager,
-	objRef core.RecordRef, correctPrototype core.RecordRef,
+	objRef core.RecordRef, proxyPrototype core.RecordRef,
 	nonce uint64,
 	method string, arguments ...interface{},
 ) (
@@ -222,10 +222,10 @@ func executeMethod(
 	}
 
 	msg := &message.CallMethod{
-		ObjectRef:        objRef,
-		Method:           method,
-		Arguments:        argsSerialized,
-		CorrectPrototype: correctPrototype,
+		ObjectRef:      objRef,
+		Method:         method,
+		Arguments:      argsSerialized,
+		ProxyPrototype: proxyPrototype,
 	}
 	msg.Caller = testutils.RandomRef()
 	if nonce != 0 {
@@ -969,7 +969,7 @@ type Caller struct {
 	cs     core.CryptographyService
 }
 
-func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomain core.RecordRef, method string, correctPrototype core.RecordRef, params []interface{}) interface{} {
+func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomain core.RecordRef, method string, proxyPrototype core.RecordRef, params []interface{}) interface{} {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	assert.NoError(s.t, err)
@@ -988,7 +988,7 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 	assert.NoError(s.t, err)
 
 	res, err := executeMethod(
-		ctx, s.lr, pm, core.NewRefFromBase58(s.member), correctPrototype, 0,
+		ctx, s.lr, pm, core.NewRefFromBase58(s.member), proxyPrototype, 0,
 		"Call", rootDomain, method, buf, seed, signature.Bytes(),
 	)
 	assert.NoError(s.t, err, "contract call")
@@ -1919,7 +1919,7 @@ func (c *First) GetName() (string, error) {
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
-	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: couldn't dispatch event: try to call method of prototype as method of another prototype"}), res[1])
+	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: couldn't dispatch event: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
 }
 
 func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*core.RecordRef, *core.RecordRef) {
