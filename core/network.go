@@ -33,9 +33,6 @@ type Cascade struct {
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(ctx context.Context, args [][]byte) ([]byte, error)
 
-// GlobuleID is the ID of the globe
-type GlobuleID uint32
-
 // Network is interface for network modules facade.
 type Network interface {
 	// SendParcel sends a message.

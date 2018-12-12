@@ -23,6 +23,9 @@ import (
 // ShortNodeID is the shortened ID of node that is unique inside the globe
 type ShortNodeID uint32
 
+// GlobuleID is the ID of the globe
+type GlobuleID uint32
+
 //go:generate minimock -i github.com/insolar/insolar/core.Node -o ../testutils/network -s _mock.go
 type Node interface {
 	// ID is the unique identifier of the node
