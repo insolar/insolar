@@ -27,7 +27,6 @@ import (
 type MutableNode interface {
 	core.Node
 
-	SetPulse(core.PulseNumber)
 	SetShortID(shortID core.ShortNodeID)
 }
 
@@ -90,10 +89,6 @@ func (n *node) PhysicalAddress() string {
 
 func (n *node) Version() string {
 	return n.NodeVersion
-}
-
-func (n *node) SetPulse(pulseNum core.PulseNumber) {
-	n.NodePulseNum = pulseNum
 }
 
 func (n *node) SetShortID(id core.ShortNodeID) {
