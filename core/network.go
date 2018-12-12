@@ -41,8 +41,6 @@ type Network interface {
 	SendCascadeMessage(data Cascade, method string, msg Parcel) error
 	// RemoteProcedureRegister is remote procedure register func.
 	RemoteProcedureRegister(name string, method RemoteProcedure)
-	// GetGlobuleID returns current globule id.
-	GetGlobuleID() GlobuleID
 }
 
 // PulseDistributor is interface for pulse distribution.

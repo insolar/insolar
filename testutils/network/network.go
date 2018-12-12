@@ -23,10 +23,6 @@ import (
 type testNetwork struct {
 }
 
-func (n *testNetwork) GetGlobuleID() core.GlobuleID {
-	return 0
-}
-
 func (n *testNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
 	return make([]byte, 0), nil
 }

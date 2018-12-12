@@ -87,6 +87,10 @@ func (n *node) PhysicalAddress() string {
 	return n.NodePhysicalAddress
 }
 
+func (n *node) GetGlobuleID() core.GlobuleID {
+	return 0
+}
+
 func (n *node) Version() string {
 	return n.NodeVersion
 }

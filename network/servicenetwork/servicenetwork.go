@@ -72,11 +72,6 @@ func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCry
 	return serviceNetwork, nil
 }
 
-// GetGlobuleID returns current globule id.
-func (n *ServiceNetwork) GetGlobuleID() core.GlobuleID {
-	return 0
-}
-
 // SendMessage sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
 	return n.controller.SendMessage(nodeID, method, msg)

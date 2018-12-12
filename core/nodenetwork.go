@@ -38,6 +38,8 @@ type Node interface {
 	PublicKey() crypto.PublicKey
 	// PhysicalAddress is the network address of the node
 	PhysicalAddress() string
+	// GetGlobuleID returns node current globule id
+	GetGlobuleID() GlobuleID
 	// Version of node software
 	Version() string
 }
