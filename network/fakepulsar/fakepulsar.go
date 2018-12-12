@@ -44,7 +44,7 @@ func NewFakePulsar(callback network.PulseHandler, timeoutMs int32) *FakePulsar {
 	return &FakePulsar{
 		onPulse:   callback,
 		timeoutMs: timeoutMs,
-		stop:      make(chan bool),
+		stop:      make(chan bool, 1),
 		running:   false,
 	}
 }
@@ -73,18 +73,21 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 
 // Stop sending a fake pulse.
 func (fp *FakePulsar) Stop(ctx context.Context) {
+	log.Info("Fake pulsar going to stop")
+
 	if fp.running {
 		fp.stop <- true
 		close(fp.stop)
 		fp.running = false
 	}
+	log.Info("Fake pulsar stopped")
 }
 
 func (fp *FakePulsar) newPulse() *core.Pulse {
 	generator := entropygenerator.StandardEntropyGenerator{}
 	return &core.Pulse{
-		PulseNumber:     0,
-		NextPulseNumber: 0,
+		PulseNumber:     1,
+		NextPulseNumber: 2,
 		Entropy:         generator.GenerateEntropy(),
 	}
 }
