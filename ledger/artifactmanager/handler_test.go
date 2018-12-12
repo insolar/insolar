@@ -754,7 +754,7 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 	// Assert
 	require.Equal(t, &reply.OK{}, response)
 	for id := range expectedSetId {
-		assert.True(t, idSet.Has(id))
+		require.True(t, idSet.Has(id))
 	}
 }
 
@@ -800,7 +800,7 @@ func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
 
 	// Assert
 	for id := range expectedSetId {
-		assert.True(t, idSet.Has(id))
+		require.True(t, idSet.Has(id))
 	}
 }
 

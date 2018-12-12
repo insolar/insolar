@@ -559,7 +559,6 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 		return &reply.OK{}, nil
 	}
 	msg := genericMsg.Message().(*message.JetDrop)
-	jetID := msg.JetID
 
 	for _, rawMessage := range msg.Messages {
 		parsedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
@@ -578,7 +577,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 		}
 	}
 
-	err := h.db.SaveJet(ctx, jetID)
+	err := h.db.SaveJet(ctx, msg.JetID)
 	if err != nil {
 		return nil, err
 	}
