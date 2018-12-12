@@ -135,7 +135,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 		return nil, err
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
+	recentStorage := h.RecentStorageProvider.GetStorage(*jetID)
 	if _, ok := rec.(record.Request); ok {
 		recentStorage.AddPendingRequest(*id)
 	}
