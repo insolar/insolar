@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -129,6 +130,8 @@ func (mb *TestMessageBus) Send(
 		head, tail := mb.ReadingTape[0], mb.ReadingTape[1:]
 		mb.ReadingTape = tail
 
+		inslogger.FromContext(ctx).Debugf("Reading message %+v off the tape", head.Message)
+
 		if !reflect.DeepEqual(head.Message, m) {
 			return nil, errors.Errorf("Message in the tape and sended arn't equal; got: %+v, expected: ", m, head.Message)
 		}
@@ -148,6 +151,7 @@ func (mb *TestMessageBus) Send(
 
 	reply, err := handler(ctx, parcel)
 	if mb.WritingTape != nil {
+		inslogger.FromContext(ctx).Debugf("Writing message %+v on the tape", m)
 		mb.WritingTape = append(mb.WritingTape, TapeRecord{Message: m, Reply: reply, Error: err})
 	}
 
