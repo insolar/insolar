@@ -41,7 +41,7 @@ type MessageBus struct {
 	Service                    core.Network                    `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 	LocalStorage               core.LocalStorage               `inject:""`
-	ActiveNodes                core.NodeNetwork                `inject:""`
+	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
@@ -141,7 +141,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse c
 
 // CreateParcel creates signed message from provided message.
 func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.ActiveNodes.GetOrigin().ID(), token, currentPulse)
+	return mb.ParcelFactory.Create(ctx, msg, mb.NodeNetwork.GetOrigin().ID(), token, currentPulse)
 }
 
 // SendParcel sends provided message via network.
@@ -179,7 +179,7 @@ func (mb *MessageBus) SendParcel(
 	}
 
 	// Short path when sending to self node. Skip serialization
-	origin := mb.ActiveNodes.GetOrigin()
+	origin := mb.NodeNetwork.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
@@ -241,7 +241,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	scope.Lock()
 	defer scope.Unlock()
 
-	senderKey := mb.ActiveNodes.GetActiveNode(sender).PublicKey()
+	senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
 	if mb.signmessages {
 		err := mb.ParcelFactory.Validate(senderKey, parcel)
 		if err != nil {
