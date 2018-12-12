@@ -61,7 +61,7 @@ jobs:
   - get: pull-request-{{ pull.number }}
     trigger: true
   - task: unit
-    timeout: 15m
+    timeout: 20m
     config:
       platform: linux
       image_resource:

@@ -1,7 +1,8 @@
 groups:
 - name: master
   jobs:
-    - unit
+    - insolard
+    - builder
 
 resources:
 - name: master
@@ -25,7 +26,7 @@ resources:
     password: ((meta.registry.password))
 
 jobs:
-- name: unit
+- name: insolard
   public: true
   plan:
   - get: master
@@ -33,40 +34,18 @@ jobs:
   - get: builder
     params: 
       save: true
-  - task: unit
-    timeout: 10m
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source: {repository: golang}
-      inputs:
-      - name: master
-        path: /go/src/github.com/insolar/insolar
-      run:
-        path: sh
-        args:
-          - -exc
-          - |
-             echo tests
-             #pwd
-             #ls -alh go
-             #export CGO_ENABLED=0
-             #export GORACE="halt_on_error=1"
-             #export GOMAXPROCS=2
-             #export INSOLAR_LOG_LEVEL=debug
-             #export GOPATH=$(pwd)/go
-
-             #mkdir $GOPATH/bin
-             #export PATH=$PATH:$GOPATH/bin
-             #ls -alh
-             #env
-             #cd $GOPATH/src/github.com/insolar/insolar
-             #make install-deps
-             #make pre-build
-             #make build
   - put: insolard
     params:
       build: master
       target: insolard
       load_base: builder
+
+- name: builder
+  public: true
+  plan:
+  - get: master
+    trigger: false
+  - put: builder
+    params:
+      build: master
+      dockerfile: master/docker/Dockerfile.builder
