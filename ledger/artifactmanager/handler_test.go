@@ -479,7 +479,6 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 
 	h.RecentStorageProvider = provideMock
 
-
 	t.Run("redirects to light when created after limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		jc.QueryRoleMock.Expect(
@@ -755,4 +754,112 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 	require.Equal(t, &reply.OK{}, response)
 	require.Equal(t, expectedSetId, idSet)
 
+}
+
+func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer func() {
+		cleaner()
+		mc.Finish()
+	}()
+
+	jetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{2})
+	secondJetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{3})
+	msg := message.JetDrop{
+		Jet: *jetID,
+	}
+	secondMsg := message.JetDrop{
+		Jet: *secondJetID,
+	}
+	expectedSetId := jet.IDSet{
+		*jetID:       struct{}{},
+		*secondJetID: struct{}{},
+	}
+
+	h := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 3,
+	})
+
+	// Act
+	response, err := h.handleJetDrop(ctx, &message.Parcel{Msg: &msg})
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, response)
+
+	secondResponse, err := h.handleJetDrop(ctx, &message.Parcel{Msg: &secondMsg})
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, secondResponse)
+
+	idSet, err := db.GetJets(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	require.Equal(t, expectedSetId, idSet)
+}
+
+func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	cs := testutils.NewPlatformCryptographyScheme()
+	db.PlatformCryptographyScheme = cs
+	rs := recentstorage.NewRecentStorageMock(mc)
+	pr := recentstorage.NewProviderMock(mc)
+	pr.GetStorageMock.Return(rs)
+	h := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 3,
+	})
+	h.PlatformCryptographyScheme = cs
+	h.JetCoordinator = jc
+	h.RecentStorageProvider = pr
+	rec := record.CodeRecord{
+
+		MachineType: core.MachineTypeBuiltin,
+		Code:        core.NewRecordID(0, nil),
+	}
+	parcel := message.Parcel{
+		Msg: &message.SetRecord{
+			Record: record.SerializeRecord(&rec),
+		},
+	}
+	recID := record.NewRecordIDFromRecord(cs, 0, &rec)
+
+	t.Run("returns jet miss when miss with empty tree", func(t *testing.T) {
+		jc.AmIMock.Return(false, nil)
+		rep, err := h.handleSetRecord(ctx, 0, &parcel)
+		require.NoError(t, err)
+
+		jetMiss, ok := rep.(*reply.JetMiss)
+		require.True(t, ok)
+		assert.Equal(t, *jet.NewID(0, nil), jetMiss.JetID)
+	})
+
+	t.Run("returns jet miss when miss with filled tree", func(t *testing.T) {
+		err := db.UpdateJetTree(ctx, 2, *jet.NewID(4, recID.Hash()))
+		require.NoError(t, err)
+		jc.AmIMock.Return(false, nil)
+		rep, err := h.handleSetRecord(ctx, 2, &parcel)
+		require.NoError(t, err)
+
+		jetMiss, ok := rep.(*reply.JetMiss)
+		require.True(t, ok)
+		assert.Equal(t, *jet.NewID(4, []byte{0xe0}), jetMiss.JetID)
+	})
+
+	t.Run("returns id when hit", func(t *testing.T) {
+		jc.AmIMock.Return(true, nil)
+		rep, err := h.handleSetRecord(ctx, 0, &parcel)
+		require.NoError(t, err)
+
+		id, ok := rep.(*reply.ID)
+		require.True(t, ok)
+		assert.Equal(t, *recID, id.ID)
+	})
 }

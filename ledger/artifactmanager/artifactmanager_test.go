@@ -729,3 +729,42 @@ func TestLedgerArtifactManager_RegisterResult(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, record.ResultRecord{Request: *request, Payload: []byte{1, 2, 3}}, *rec.(*record.ResultRecord))
 }
+
+func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	am := NewArtifactManger(db)
+
+	t.Run("returns error on exceeding retry limit", func(t *testing.T) {
+		mb := testutils.NewMessageBusMock(mc)
+		am.DefaultBus = mb
+		mb.SendMock.Return(&reply.JetMiss{JetID: *jet.NewID(5, []byte{1, 2, 3})}, nil)
+		_, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallMethod{}})
+		require.Error(t, err)
+	})
+
+	t.Run("returns no error and updates tree when jet miss", func(t *testing.T) {
+		mb := testutils.NewMessageBusMock(mc)
+		am.DefaultBus = mb
+		retries := 3
+		mb.SendFunc = func(c context.Context, m core.Message, p core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+			if retries == 0 {
+				return &reply.ID{}, nil
+			}
+			retries--
+			return &reply.JetMiss{JetID: *jet.NewID(4, []byte{0xD5})}, nil
+		}
+		_, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallMethod{}})
+		require.NoError(t, err)
+
+		tree, err := db.GetJetTree(ctx, core.FirstPulseNumber)
+		require.NoError(t, err)
+		jetID := tree.Find([]byte{0xD5})
+		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
+	})
+}
