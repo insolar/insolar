@@ -194,6 +194,8 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 
 		case <-time.After(waitTime):
 			// Move forward through sessions and check whether we should delete the session
+			sessionsByExpirationTime = sm.expireSessions(sessionsByExpirationTime)
+
 		case <-sm.stopCleanupNotification:
 			return
 		}
