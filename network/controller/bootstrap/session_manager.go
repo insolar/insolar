@@ -70,6 +70,14 @@ func (sm *SessionManager) Start(ctx context.Context) error {
 	return nil
 }
 
+func (sm *SessionManager) Stop(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("[ SessionManager::Stop ] stop cleaning up sessions")
+
+	sm.stopCleanupNotify <- struct{}{}
+
+	return nil
+}
+
 func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
 	session := &Session{
