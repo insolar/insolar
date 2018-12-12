@@ -89,7 +89,7 @@ func (r *Allowance) GetPrototype() (core.RecordRef, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -119,7 +119,7 @@ func (r *Allowance) GetCode() (core.RecordRef, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -156,7 +156,7 @@ func (r *Allowance) TakeAmount() (uint, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "TakeAmount", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "TakeAmount", argsSerialized, PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -183,7 +183,7 @@ func (r *Allowance) TakeAmountNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "TakeAmount", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "TakeAmount", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (r *Allowance) GetBalanceForOwner() (uint, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalanceForOwner", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalanceForOwner", argsSerialized, PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -235,7 +235,7 @@ func (r *Allowance) GetBalanceForOwnerNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetBalanceForOwner", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetBalanceForOwner", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func (r *Allowance) GetExpiredBalance() (uint, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetExpiredBalance", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetExpiredBalance", argsSerialized, PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -287,7 +287,7 @@ func (r *Allowance) GetExpiredBalanceNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetExpiredBalance", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetExpiredBalance", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}
