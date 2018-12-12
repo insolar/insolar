@@ -51,6 +51,7 @@ func parseInputParams() {
 	pflag.Parse()
 }
 
+// TODO FIXME use buffered output
 func chooseOutput(path string) (io.Writer, error) {
 	var res io.Writer
 	if path == defaultStdoutPath {
@@ -65,6 +66,7 @@ func chooseOutput(path string) (io.Writer, error) {
 	return res, nil
 }
 
+// TODO FIXME out is not thread safe! Also it should be flushed.
 func writeToOutput(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
 	check("Can't write data to output", err)
@@ -172,5 +174,6 @@ func main() {
 		check("Problems with create members. One of creating request ended with error: ", err)
 	}
 
+	// TODO FIXME out is not hread safe!
 	runScenarios(out, members, concurrent, repetitions)
 }
