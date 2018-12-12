@@ -92,3 +92,23 @@ func (p2p *Phase2Packet) GetBitSet() BitSet {
 func (p2p *Phase2Packet) SetBitSet(bitset BitSet) {
 	p2p.bitSet = bitset
 }
+
+func (p2p *Phase2Packet) ContainsRequests() bool {
+	for _, vote := range p2p.votesAndAnswers {
+		if vote.Type() == TypeMissingNode {
+			return true
+		}
+	}
+	return false
+}
+
+func (p2p *Phase2Packet) AddVote(vote ReferendumVote) {
+	// TODO: check size
+
+	p2p.votesAndAnswers = append(p2p.votesAndAnswers, vote)
+	p2p.packetHeader.f01 = true
+}
+
+func (p2p *Phase2Packet) GetVotes() []ReferendumVote {
+	return p2p.votesAndAnswers
+}
