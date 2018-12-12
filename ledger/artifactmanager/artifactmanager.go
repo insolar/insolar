@@ -32,6 +32,7 @@ import (
 
 const (
 	getChildrenChunkSize = 10 * 1000
+	jetMissRetryCount    = 10
 )
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
@@ -153,7 +154,7 @@ func (m *LedgerArtifactManager) GetObject(
 		State:    state,
 		Approved: approved,
 	}
-	genericReact, err := m.sendAndFollowRedirect(ctx, getObjectMsg, currentPulse.Pulse)
+	genericReact, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, currentPulse.Pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -761,32 +762,67 @@ func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
 	return core.MessageBusFromContext(ctx, m.DefaultBus)
 }
 
-func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg core.Message, currentPulse core.Pulse) (core.Reply, error) {
+func sendAndFollowRedirect(
+	ctx context.Context,
+	bus core.MessageBus,
+	db *storage.DB,
+	msg core.Message,
+	pulse core.Pulse,
+) (core.Reply, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
-	rep, err := m.bus(ctx).Send(ctx, msg, currentPulse, nil)
+	rep, err := bus.Send(ctx, msg, pulse, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if redirect, ok := rep.(core.RedirectReply); ok {
-		redirected := redirect.Redirected(msg)
-		rep, err = m.bus(ctx).Send(
+	switch r := rep.(type) {
+	case core.RedirectReply:
+		redirected := r.Redirected(msg)
+		rep, err = bus.Send(
 			ctx,
 			redirected,
-			currentPulse,
+			pulse,
 			&core.MessageSendOptions{
-				Token:    redirect.GetToken(),
-				Receiver: redirect.GetReceiver(),
+				Token:    r.GetToken(),
+				Receiver: r.GetReceiver(),
 			},
 		)
 		if err != nil {
 			return nil, err
 		}
-		if _, ok = rep.(core.RedirectReply); ok {
+		if _, ok := rep.(core.RedirectReply); ok {
 			return nil, errors.New("double redirects are forbidden")
 		}
 		return rep, nil
+	case *reply.JetMiss:
+		return sendAndRetryJet(ctx, bus, db, msg, pulse, jetMissRetryCount)
 	}
 
 	return rep, err
+}
+
+func sendAndRetryJet(
+	ctx context.Context,
+	bus core.MessageBus,
+	db *storage.DB,
+	msg core.Message,
+	pulse core.Pulse,
+	retries int,
+) (core.Reply, error) {
+	if retries <= 0 {
+		return nil, errors.New("failed to find jet (retry limit exceeded)")
+	}
+	rep, err := bus.Send(ctx, msg, pulse, nil)
+	if err != nil {
+		return nil, err
+	}
+	if r, ok := rep.(*reply.JetMiss); ok {
+		err := db.UpdateJetTree(ctx, pulse.PulseNumber, r.JetID)
+		if err != nil {
+			return nil, err
+		}
+		return sendAndRetryJet(ctx, bus, db, msg, pulse, retries-1)
+	}
+
+	return rep, nil
 }

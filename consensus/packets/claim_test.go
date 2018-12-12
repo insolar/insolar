@@ -77,8 +77,7 @@ func TestNodeJoinClaim(t *testing.T) {
 }
 
 func TestNodeJoinClaim_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeNodeJoinClaim(),
-		"[ NodeJoinClaim.Deserialize ] Can't read Signature: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makeNodeJoinClaim(), "unexpected EOF")
 }
 
 func TestNodeLeaveClaim(t *testing.T) {

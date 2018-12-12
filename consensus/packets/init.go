@@ -20,13 +20,15 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-// phase1PacketMaxSize should be less then MTU
-const phase1PacketMaxSize = 1400
+// packetMaxSize should be less then MTU
+const packetMaxSize = 1400
 
 var (
 	phase1PacketSizeForClaims int
 	// claimSizeMap contains serialized size of each claim type without header(2 bytes)
 	claimSizeMap map[ClaimType]uint16
+	// claimSizeMap contains sizes of serialized votes for each type without header (2 bytes)
+	voteSizeMap map[VoteType]uint16
 )
 
 // init packets and claims size variables
@@ -39,9 +41,9 @@ func init() {
 		return uint16(len(data))
 	}
 
-	phase1PacketSizeForClaims = phase1PacketMaxSize - int(sizeOf(&Phase1Packet{}))
+	phase1PacketSizeForClaims = packetMaxSize - int(sizeOf(&Phase1Packet{}))
 
-	claimSizeMap = make(map[ClaimType]uint16, 5)
+	claimSizeMap = make(map[ClaimType]uint16)
 	claimSizeMap[TypeNodeJoinClaim] = sizeOf(&NodeJoinClaim{})
 	claimSizeMap[TypeNodeAnnounceClaim] = sizeOf(&NodeJoinClaim{})
 	claimSizeMap[TypeCapabilityPollingAndActivation] = sizeOf(&CapabilityPoolingAndActivation{})
@@ -49,4 +51,11 @@ func init() {
 	claimSizeMap[TypeNodeBroadcast] = sizeOf(&NodeBroadcast{})
 	claimSizeMap[TypeNodeLeaveClaim] = sizeOf(&NodeLeaveClaim{})
 	claimSizeMap[TypeChangeNetworkClaim] = sizeOf(&NodeLeaveClaim{})
+
+	voteSizeMap = make(map[VoteType]uint16)
+	voteSizeMap[TypeNodeJoinSupplementaryVote] = sizeOf(&NodeJoinSupplementaryVote{})
+	voteSizeMap[TypeStateFraudNodeSupplementaryVote] = sizeOf(&StateFraudNodeSupplementaryVote{})
+	voteSizeMap[TypeNodeListSupplementaryVote] = sizeOf(&NodeListSupplementaryVote{})
+	voteSizeMap[TypeMissingNodeSupplementaryVote] = sizeOf(&MissingNodeSupplementaryVote{})
+	voteSizeMap[TypeMissingNode] = sizeOf(&MissingNode{})
 }
