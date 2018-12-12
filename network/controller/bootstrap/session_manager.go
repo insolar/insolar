@@ -173,14 +173,19 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 }
 
 func (sm *SessionManager) cleanupExpiredSessions() {
+	var sessionsByExpirationTime []*sessionWithID
 	for {
 		if len(sm.sessions) == 0 {
 			// Have no active sessions. Block till sessions will be added.
 			<-sm.newSessionNotification
+
+			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
 		}
 		select {
 		case <-sm.newSessionNotification:
 			// Handle new session. reorder expiration short list
+			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+
 		case <-sm.stopCleanupNotification:
 			return
 		}
