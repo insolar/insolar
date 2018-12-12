@@ -207,7 +207,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = n.PulseManager.Set(ctx, pulse, false)
+		err = n.PulseManager.Set(ctx, pulse, n.isFakePulse(&pulse))
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to set pulse"))
 			return
