@@ -117,6 +117,20 @@ func (q *quicTransport) handleAcceptedConnection(session quic.Session) {
 
 	q.handlePacket(msg)
 
+func (q *quicTransport) closeConnections() error {
+	var err error
+	for _, conn := range q.connections {
+		err = conn.stream.Close()
+		if err != nil {
+			return errors.Wrap(err, "[ closeConnections ] failed to close a stream")
+		}
+		err = conn.session.Close()
+		if err != nil {
+			return errors.Wrap(err, "[ closeConnections ] failed to close a session")
+		}
+	}
+	return nil
+}
 }
 
 // Setup a bare-bones TLS config for the server
