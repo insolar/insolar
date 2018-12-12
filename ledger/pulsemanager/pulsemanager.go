@@ -42,13 +42,14 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                core.LogicRunner            `inject:""`
-	Bus               core.MessageBus             `inject:""`
-	NodeNet           core.NodeNetwork            `inject:""`
-	JetCoordinator    core.JetCoordinator         `inject:""`
-	GIL               core.GlobalInsolarLock      `inject:""`
-	Recent            recentstorage.RecentStorage `inject:""`
-	ActiveListSwapper ActiveListSwapper           `inject:""`
+	LR                  core.LogicRunner            `inject:""`
+	Bus                 core.MessageBus             `inject:""`
+	NodeNet             core.NodeNetwork            `inject:""`
+	JetCoordinator      core.JetCoordinator         `inject:""`
+	GIL                 core.GlobalInsolarLock      `inject:""`
+	Recent              recentstorage.RecentStorage `inject:""`
+	ActiveListSwapper   ActiveListSwapper           `inject:""`
+	CryptographyService core.CryptographyService    `inject:""`
 
 	currentPulse core.Pulse
 
@@ -116,20 +117,36 @@ func (m *PulseManager) createDrop(ctx context.Context, lastSlotPulse *storage.Pu
 	jetID := core.TODOJetID
 	prevDrop, err := m.db.GetDrop(ctx, jetID, *lastSlotPulse.Prev)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
-	drop, messages, err = m.db.CreateDrop(ctx, jetID, lastSlotPulse.Pulse.PulseNumber, prevDrop.Hash)
+	drop, messages, dropSize, err := m.db.CreateDrop(ctx, jetID, lastSlotPulse.Pulse.PulseNumber, prevDrop.Hash)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
 	err = m.db.SetDrop(ctx, jetID, drop)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
 
 	dropSerialized, err = jet.Encode(drop)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
+	}
+
+	dropSizeData := jet.DropSizeData{
+		JetID:    jetID,
+		PulseNo:  lastSlotPulse.Pulse.PulseNumber, // TODO: is pulse correct ?
+		DropSize: dropSize,
+	}
+	signature, err := m.CryptographyService.Sign(dropSizeData.Bytes(ctx))
+	jetDropSize := &jet.JetDropSize{
+		SizeData:  dropSizeData,
+		Signature: signature.Bytes(),
+	}
+
+	err = m.db.AddDropSize(ctx, jetDropSize)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't AddDropSize")
 	}
 
 	return
@@ -192,7 +209,7 @@ func (m *PulseManager) processRecentObjects(
 			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
 			if err != nil {
 				logger.Error(err)
-				return err
+				return errors.Wrap(err, "[ processRecentObjects ] Can't RemoveObjectIndex")
 			}
 		}
 	}
@@ -206,15 +223,21 @@ func (m *PulseManager) processRecentObjects(
 		pendingRequests[id] = record.SerializeRecord(pendingRecord)
 	}
 
+	dropSizeList, err := m.db.GetDropSizeList(ctx)
+	if err != nil {
+		return errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeList")
+	}
+
 	msg := &message.HotData{
 		Drop:            *drop,
 		PulseNumber:     previousSlotPulse.Pulse.PulseNumber,
 		RecentObjects:   recentObjects,
 		PendingRequests: pendingRequests,
+		JetDropSizeList: dropSizeList,
 	}
-	_, err := m.Bus.Send(ctx, msg, *currentSlotPulse, nil)
+	_, err = m.Bus.Send(ctx, msg, *currentSlotPulse, nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ processRecentObjects ] Can't send msg to bus")
 	}
 	return nil
 }
