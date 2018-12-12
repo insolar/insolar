@@ -66,7 +66,8 @@ func (q *quicTransport) send(recvAddress string, data []byte) error {
 	var stream quic.Stream
 	var err error
 	if !ok {
-		session, stream, err := createConnection(recvAddress)
+		var session quic.Session
+		session, stream, err = createConnection(recvAddress)
 		if err != nil {
 			return errors.Wrap(err, "[ send ] failed to create a connection")
 		}
