@@ -263,6 +263,27 @@ func (bc *Bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *h
 
 func (bc *Bootstrapper) bootstrap(address string) (*host.Host, error) {
 	// TODO: add infinite bootstrap option
+	seconds := bc.options.MinTimeout
+	if bc.options.InfinityBootstrap {
+		for {
+			result, err := bc.startBootstrap(address)
+			if err != nil {
+				time.Sleep(time.Second * time.Duration(seconds))
+				err = nil
+				seconds *= bc.options.TimeoutMult
+				if seconds > bc.options.MaxTimeout {
+					seconds = bc.options.MaxTimeout
+				}
+			} else {
+				return result, nil
+			}
+		}
+	} else {
+		return bc.startBootstrap(address)
+	}
+}
+
+func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
 	bootstrapHost, err := bc.pinger.Ping(address, bc.options.PingTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
