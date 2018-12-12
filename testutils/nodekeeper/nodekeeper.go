@@ -4,7 +4,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
-	testNetwork "github.com/insolar/insolar/testutils/network"
 )
 
 func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
@@ -13,7 +12,6 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 		panic(err)
 	}
 
-	nw := testNetwork.GetTestNetwork()
 	keeper := nodenetwork.NewNodeKeeper(
 		nodenetwork.NewNode(
 			core.NewRefFromBase58("v1"),
