@@ -105,7 +105,7 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	defer cleaner()
 	jetID := core.TODOJetID
 
-	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "my little message"}}
+	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"}}
 	id, err := am.RegisterRequest(ctx, &parcel)
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, jetID, id)
@@ -359,7 +359,10 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		ChildPointer: genRandomID(0),
 		Parent:       *parentRef,
 	}
-	db.SetObjectIndex(ctx, jetID, objRef.Record(), &objectIndex)
+	require.NoError(
+		t,
+		db.SetObjectIndex(ctx, jetID, objRef.Record(), &objectIndex),
+	)
 
 	objDesc, err := am.GetObject(ctx, *objRef, nil, false)
 	assert.NoError(t, err)
@@ -464,7 +467,10 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 		LatestState:  parentID,
 		ChildPointer: childMeta3,
 	}
-	db.SetObjectIndex(ctx, jetID, parentID, &parentIndex)
+	require.NoError(
+		t,
+		db.SetObjectIndex(ctx, jetID, parentID, &parentIndex),
+	)
 
 	t.Run("returns correct children without pulse", func(t *testing.T) {
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), nil)
@@ -656,7 +662,14 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	jc.QueryRoleMock.Return([]core.RecordRef{*genRandomRef(0)}, nil)
 
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "object"}})
+	objID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
+			},
+		},
+	)
 	require.NoError(t, err)
 	objRef := genRefWithID(objID)
 
