@@ -700,3 +700,64 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 	require.Equal(t, expectedSetId, idSet)
 
 }
+
+func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	cs := testutils.NewPlatformCryptographyScheme()
+	db.PlatformCryptographyScheme = cs
+	h := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 3,
+	})
+	h.PlatformCryptographyScheme = cs
+	h.JetCoordinator = jc
+	rec := record.CodeRecord{
+
+		MachineType: core.MachineTypeBuiltin,
+		Code:        core.NewRecordID(0, nil),
+	}
+	parcel := message.Parcel{
+		Msg: &message.SetRecord{
+			Record: record.SerializeRecord(&rec),
+		},
+	}
+	recID := record.NewRecordIDFromRecord(cs, 0, &rec)
+
+	t.Run("returns jet miss when miss with empty tree", func(t *testing.T) {
+		jc.AmIMock.Return(false, nil)
+		rep, err := h.handleSetRecord(ctx, 0, &parcel)
+		require.NoError(t, err)
+
+		jetMiss, ok := rep.(*reply.JetMiss)
+		require.True(t, ok)
+		assert.Equal(t, *jet.NewID(0, nil), jetMiss.JetID)
+	})
+
+	t.Run("returns jet miss when miss with filled tree", func(t *testing.T) {
+		err := db.UpdateJetTree(ctx, 2, *jet.NewID(4, recID.Hash()))
+		require.NoError(t, err)
+		jc.AmIMock.Return(false, nil)
+		rep, err := h.handleSetRecord(ctx, 2, &parcel)
+		require.NoError(t, err)
+
+		jetMiss, ok := rep.(*reply.JetMiss)
+		require.True(t, ok)
+		assert.Equal(t, *jet.NewID(4, []byte{0xe0}), jetMiss.JetID)
+	})
+
+	t.Run("returns id when hit", func(t *testing.T) {
+		jc.AmIMock.Return(true, nil)
+		rep, err := h.handleSetRecord(ctx, 0, &parcel)
+		require.NoError(t, err)
+
+		id, ok := rep.(*reply.ID)
+		require.True(t, ok)
+		assert.Equal(t, *recID, id.ID)
+	})
+}
