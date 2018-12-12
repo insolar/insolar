@@ -54,7 +54,7 @@ func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress stri
 		baseTransport: newBaseTransport(proxy, publicAddress),
 		l:             listener,
 		conn:          conn,
-		connections:   make(map[string]quicConnection, 0),
+		connections:   make(map[string]quicConnection),
 	}
 
 	transport.sendFunc = transport.send
@@ -64,16 +64,14 @@ func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress stri
 func (q *quicTransport) send(recvAddress string, data []byte) error {
 	conn, ok := q.connections[recvAddress]
 	var stream quic.Stream
-	var session quic.Session
 	var err error
 	if !ok {
-		session, stream, err = createConnection(recvAddress)
+		session, stream, err := createConnection(recvAddress)
 		if err != nil {
 			return errors.Wrap(err, "[ send ] failed to create a connection")
 		}
 		q.connections[recvAddress] = quicConnection{session, stream}
 	} else {
-		session = conn.session
 		stream = conn.stream
 	}
 
@@ -129,6 +127,9 @@ func (q *quicTransport) Stop() {
 
 func (q *quicTransport) handleAcceptedConnection(session quic.Session) {
 	stream, err := session.AcceptStream()
+	if err != nil {
+		log.Error(err, "[ handleAcceptedConnection ] failed to get a stream")
+	}
 
 	msg, err := q.serializer.DeserializePacket(stream)
 	if err != nil {
@@ -173,7 +174,7 @@ func createConnection(addr string) (quic.Session, quic.Stream, error) {
 
 // Setup a bare-bones TLS config for the server
 func generateTLSConfig() *tls.Config {
-	key, err := rsa.GenerateKey(rand.Reader, 1024)
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		panic(err)
 	}
