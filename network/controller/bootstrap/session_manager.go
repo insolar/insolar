@@ -182,11 +182,18 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 
 			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
 		}
+
+		// Get expiration time for next session and wait for it
+		nextSessionToExpire := sessionsByExpirationTime[0]
+		waitTime := nextSessionToExpire.expirationTime().Sub(time.Now())
+
 		select {
 		case <-sm.newSessionNotification:
 			// Handle new session. reorder expiration short list
 			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
 
+		case <-time.After(waitTime):
+			// Move forward through sessions and check whether we should delete the session
 		case <-sm.stopCleanupNotification:
 			return
 		}
