@@ -41,7 +41,6 @@ func (p *RecentStorageProvider) GetStorage(jet core.RecordID) recentstorage.Rece
 	defer p.lock.Unlock()
 	storage, ok := p.storage[jet]
 	if !ok {
-
 		if storage, ok = p.storage[jet]; !ok {
 			storage = NewRecentStorage(p.DefaultTTL)
 		}
