@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/utils"
@@ -43,7 +44,8 @@ type Session struct {
 
 	DiscoveryNonce Nonce
 
-	// TODO: expiry time
+	Time time.Time
+	TTL  time.Duration
 }
 
 type SessionManager struct {
