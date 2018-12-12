@@ -186,20 +186,18 @@ func (db *DB) SaveJet(ctx context.Context, id core.RecordID) error {
 
 	k := prefixkey(scopeIDSystem, []byte{sysJetList})
 
-	buff, err := db.get(ctx, k)
-	if err != ErrNotFound {
-		return err
-	}
-
 	var jets jet.IDSet
-	if err == ErrNotFound {
-		jets = jet.IDSet{}
-	} else {
+	buff, err := db.get(ctx, k)
+	if err == nil {
 		dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
-		err = dec.Decode(jets)
+		err = dec.Decode(&jets)
 		if err != nil {
 			return err
 		}
+	} else if err == ErrNotFound {
+		jets = jet.IDSet{}
+	} else {
+		return err
 	}
 
 	jets[id] = struct{}{}

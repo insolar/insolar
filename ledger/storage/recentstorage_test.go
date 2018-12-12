@@ -152,3 +152,36 @@ func TestRecentObjectsIndex_ClearObjects(t *testing.T) {
 
 	require.Equal(t, 0, len(index.GetObjects()))
 }
+
+func TestNewRecentStorageProvider(t *testing.T) {
+	// Act
+	provider := NewRecentStorageProvider(888)
+
+	// Assert
+	require.Equal(t, 888, provider.DefaultTTL)
+	require.NotNil(t, provider.storage)
+}
+
+func TestRecentStorageProvider_GetStorage(t *testing.T) {
+	// Arrange
+	provider := NewRecentStorageProvider(8)
+
+	// Act
+	wg := sync.WaitGroup{}
+	wg.Add(8)
+
+	for i := 0; i < 8; i++ {
+		i := i
+		go func() {
+			id := core.NewRecordID(core.FirstPulseNumber, []byte{byte(i)})
+			storage := provider.GetStorage(*id)
+			require.NotNil(t, storage)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+
+	// Assert
+	require.Equal(t, 8, len(provider.storage))
+}

@@ -632,21 +632,17 @@ func (m *LedgerArtifactManager) setRecord(
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setRecord starts ...")
-	genericReact, err := m.bus(ctx).Send(
-		ctx,
-		&message.SetRecord{
-			Record:    record.SerializeRecord(rec),
-			TargetRef: target,
-		},
-		currentPulse,
-		nil,
-	)
+
+	genericReply, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetRecord{
+		Record:    record.SerializeRecord(rec),
+		TargetRef: target,
+	}, currentPulse, jetMissRetryCount)
 
 	if err != nil {
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.ID)
+	react, ok := genericReply.(*reply.ID)
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}
