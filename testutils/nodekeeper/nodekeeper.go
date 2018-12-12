@@ -4,7 +4,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
-	testNetwork "github.com/insolar/insolar/testutils/network"
 )
 
 func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
@@ -13,10 +12,9 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 		panic(err)
 	}
 
-	nw := testNetwork.GetTestNetwork()
 	keeper := nodenetwork.NewNodeKeeper(
 		nodenetwork.NewNode(
-			nw.GetNodeID(),
+			core.NewRefFromBase58("v1"),
 			core.StaticRoleVirtual,
 			pk,
 			// TODO implement later
@@ -27,7 +25,7 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 	// dirty hack - we need 3 nodes as validators, pass one node 3 times
 	getValidator := func() core.Node {
 		return nodenetwork.NewNode(
-			nw.GetNodeID(),
+			core.NewRefFromBase58("v1"),
 			core.StaticRoleVirtual,
 			pk,
 			// TODO implement later

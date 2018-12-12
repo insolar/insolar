@@ -107,7 +107,7 @@ func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) bool {
 		result := 0
 		for _, cl := range claims {
 			result += int(getClaimWithHeaderSize(cl))
-			result += claimHeaderSize
+			result += HeaderSize
 		}
 		return result
 	}

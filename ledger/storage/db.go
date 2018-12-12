@@ -78,6 +78,7 @@ type DB struct {
 
 	addJetLock       sync.RWMutex
 	addBlockSizeLock sync.RWMutex
+	jetTreeLock      sync.Mutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update

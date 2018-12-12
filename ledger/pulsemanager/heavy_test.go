@@ -165,7 +165,13 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
-	pm.Recent = recentMock
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentMock
+	}
+	pm.RecentStorageProvider = provideMock
+
 	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock
 

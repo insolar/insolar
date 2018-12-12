@@ -14,25 +14,15 @@
  *    limitations under the License.
  */
 
-package network
+package record
 
-import (
-	"github.com/insolar/insolar/core"
-)
+import "github.com/insolar/insolar/core"
 
-type testNetwork struct {
-}
-
-func (n *testNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
-	return make([]byte, 0), nil
-}
-func (n *testNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
-	return nil
-}
-func (n *testNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
-
-}
-
-func GetTestNetwork() core.Network {
-	return &testNetwork{}
+func NewRecordIDFromRecord(scheme core.PlatformCryptographyScheme, pulse core.PulseNumber, rec Record) *core.RecordID {
+	hasher := scheme.ReferenceHasher()
+	_, err := rec.WriteHashData(hasher)
+	if err != nil {
+		panic(err)
+	}
+	return core.NewRecordID(pulse, hasher.Sum(nil))
 }
