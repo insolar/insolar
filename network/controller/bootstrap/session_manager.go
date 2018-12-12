@@ -48,6 +48,9 @@ type Session struct {
 	TTL  time.Duration
 }
 
+func (s *Session) expirationTime() time.Time {
+	return s.Time.Add(s.TTL)
+}
 type SessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
