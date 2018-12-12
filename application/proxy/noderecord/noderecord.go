@@ -12,7 +12,8 @@ type RecordInfo struct {
 }
 
 // PrototypeReference to prototype of this contract
-var PrototypeReference, _ = core.NewRefFromBase58("")
+//var PrototypeReference, _ = core.NewRefFromBase58("")
+var PrototypeReference = core.RecordRef{}
 
 // NodeRecord holds proxy type
 type NodeRecord struct {
@@ -29,7 +30,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeRecord, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +39,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeRecord,
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeRecord, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -52,12 +53,12 @@ func GetObject(ref core.RecordRef) (r *NodeRecord) {
 
 // GetPrototype returns reference to the prototype
 func GetPrototype() core.RecordRef {
-	return *PrototypeReference
+	return PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*NodeRecord, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
+	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
