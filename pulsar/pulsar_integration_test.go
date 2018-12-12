@@ -187,13 +187,14 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	nodeId := "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"
 	nodeRef, err := core.NewRefFromBase58(nodeId)
 	require.NoError(t, err)
-	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, *nodeRef, serviceNetwork.GetAddress(), true)
+	addr := c.NodeNetwork.GetOrigin().PhysicalAddress()
+	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, *nodeRef, addr, true)
 
 	serviceNetwork.PulseManager = tempLedger.GetPulseManager()
 	require.NoError(t, err)
 	err = serviceNetwork.Start(ctx)
 	require.NoError(t, err)
-	address := serviceNetwork.GetAddress()
+	address := addr
 	return tempLedger, cleaner, serviceNetwork, address
 }
 

@@ -86,7 +86,7 @@ func (r *NodeDomain) GetPrototype() (core.RecordRef, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -116,7 +116,7 @@ func (r *NodeDomain) GetCode() (core.RecordRef, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -155,7 +155,7 @@ func (r *NodeDomain) RegisterNode(publicKey string, role string) (string, error)
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized, PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -184,7 +184,7 @@ func (r *NodeDomain) RegisterNodeNoWait(publicKey string, role string) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RemoveNode", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RemoveNode", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RemoveNode", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RemoveNode", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}

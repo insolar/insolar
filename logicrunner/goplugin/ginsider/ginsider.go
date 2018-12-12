@@ -299,17 +299,18 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 }
 
 // RouteCall ...
-func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error) {
+func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, args []byte, proxyPrototype core.RecordRef) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
 	}
 	req := rpctypes.UpRouteReq{
-		UpBaseReq: MakeUpBaseReq(),
-		Wait:      wait,
-		Object:    ref,
-		Method:    method,
-		Arguments: args,
+		UpBaseReq:      MakeUpBaseReq(),
+		Wait:           wait,
+		Object:         ref,
+		Method:         method,
+		Arguments:      args,
+		ProxyPrototype: proxyPrototype,
 	}
 
 	res := rpctypes.UpRouteResp{}

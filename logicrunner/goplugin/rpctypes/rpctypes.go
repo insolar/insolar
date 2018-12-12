@@ -78,10 +78,11 @@ type UpGetCodeResp struct {
 // UpRouteReq is a set of arguments for Send RPC in goplugin
 type UpRouteReq struct {
 	UpBaseReq
-	Wait      bool
-	Object    core.RecordRef
-	Method    string
-	Arguments core.Arguments
+	Wait           bool
+	Object         core.RecordRef
+	Method         string
+	Arguments      core.Arguments
+	ProxyPrototype core.RecordRef
 }
 
 // UpRouteResp is response from Send RPC in goplugin

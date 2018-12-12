@@ -143,7 +143,7 @@ type LogicRunner struct {
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	MessageBus                 core.MessageBus                 `inject:""`
 	Ledger                     core.Ledger                     `inject:""`
-	Network                    core.Network                    `inject:""`
+	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
 	PulseManager               core.PulseManager               `inject:""`
@@ -240,7 +240,7 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := msg.DefaultTarget()
 	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, role, target.Record(), lr.pulse(ctx).PulseNumber, lr.Network.GetNodeID(),
+		ctx, role, target.Record(), lr.pulse(ctx).PulseNumber, lr.NodeNetwork.GetOrigin().ID(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
@@ -351,7 +351,7 @@ func (lr *LogicRunner) executeOrValidate(
 type ObjectBody struct {
 	objDescriptor   core.ObjectDescriptor
 	Object          []byte
-	ClassHeadRef    *Ref
+	Prototype       *Ref
 	CodeMachineType core.MachineType
 	CodeRef         *Ref
 	Parent          *Ref
@@ -423,7 +423,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	es.objectbody = &ObjectBody{
 		objDescriptor:   objDesc,
 		Object:          objDesc.Memory(),
-		ClassHeadRef:    protoDesc.HeadRef(),
+		Prototype:       protoDesc.HeadRef(),
 		CodeMachineType: codeDesc.MachineType(),
 		CodeRef:         codeDesc.Ref(),
 		Parent:          objDesc.Parent(),
@@ -454,7 +454,13 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	es.callContext.Prototype = es.objectbody.ClassHeadRef
+	// ProxyPrototype may come only from proxy method call
+	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
+	if !m.ProxyPrototype.IsEmpty() && !m.ProxyPrototype.Equal(*es.objectbody.Prototype) {
+		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
+	}
+
+	es.callContext.Prototype = es.objectbody.Prototype
 	es.callContext.Code = es.objectbody.CodeRef
 	es.callContext.Parent = es.objectbody.Parent
 

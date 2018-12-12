@@ -88,7 +88,7 @@ func (r *Member) GetPrototype() (core.RecordRef, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -118,7 +118,7 @@ func (r *Member) GetCode() (core.RecordRef, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -155,7 +155,7 @@ func (r *Member) GetName() (string, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetName", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetName", argsSerialized, PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -182,7 +182,7 @@ func (r *Member) GetNameNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetName", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetName", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func (r *Member) GetPublicKey() (string, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized, PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -234,7 +234,7 @@ func (r *Member) GetPublicKeyNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func (r *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Call", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Call", argsSerialized, PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -296,7 +296,7 @@ func (r *Member) CallNoWait(rootDomain core.RecordRef, method string, params []b
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Call", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Call", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -323,7 +323,7 @@ func (r *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNodeCall", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNodeCall", argsSerialized, PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -352,7 +352,7 @@ func (r *Member) RegisterNodeCallNoWait(ref core.RecordRef, params []byte) error
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNodeCall", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNodeCall", argsSerialized, PrototypeReference)
 	if err != nil {
 		return err
 	}
