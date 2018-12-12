@@ -17,11 +17,13 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
@@ -55,7 +57,7 @@ type SessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
 	sessions map[SessionID]*Session
-	stopCleanupNotify chan struct{}
+	stopCleanupNotification chan struct{}
 }
 
 func NewSessionManager() *SessionManager {
@@ -73,7 +75,7 @@ func (sm *SessionManager) Start(ctx context.Context) error {
 func (sm *SessionManager) Stop(ctx context.Context) error {
 	inslogger.FromContext(ctx).Debug("[ SessionManager::Stop ] stop cleaning up sessions")
 
-	sm.stopCleanupNotify <- struct{}{}
+	sm.stopCleanupNotification <- struct{}{}
 
 	return nil
 }
@@ -165,7 +167,7 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 func (sm *SessionManager) cleanupExpiredSessions() {
 	for {
 		select {
-		case <-sm.stopCleanupNotify:
+		case <-sm.stopCleanupNotification:
 			return
 		}
 	}
