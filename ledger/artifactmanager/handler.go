@@ -578,7 +578,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 		}
 	}
 
-	err := h.db.SaveJet(ctx, msg.JetID)
+	err := h.db.SaveJet(ctx, jetID)
 	if err != nil {
 		return nil, err
 	}
