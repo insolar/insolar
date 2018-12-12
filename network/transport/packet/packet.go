@@ -74,7 +74,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 		return nil, err
 	}
 
-	log.Infof("--read %d bytes", n)
+	log.Debugf("--read %d bytes", n)
 
 	lengthReader := bytes.NewBuffer(lengthBytes)
 	length, err := binary.ReadUvarint(lengthReader)
@@ -85,7 +85,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 	var reader bytes.Buffer
 	for uint64(reader.Len()) < length {
 		n, err := reader.ReadFrom(conn)
-		log.Infof("read %d bytes", n)
+		log.Debugf("read %d bytes", n)
 		if err != nil && n == 0 {
 			log.Debugln(err.Error())
 		}

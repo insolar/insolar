@@ -89,7 +89,7 @@ func (q *quicTransport) send(recvAddress string, data []byte) error {
 
 // Start starts networking.
 func (q *quicTransport) Start(ctx context.Context) error {
-	log.Info("Start QUIC transport")
+	log.Debug("Start QUIC transport")
 	for {
 		session, err := q.l.Accept()
 		if err != nil {
@@ -97,7 +97,7 @@ func (q *quicTransport) Start(ctx context.Context) error {
 			return err
 		}
 
-		log.Infof("accept from: %s", session.RemoteAddr().String())
+		log.Debugf("accept from: %s", session.RemoteAddr().String())
 		go q.handleAcceptedConnection(session)
 	}
 }
@@ -107,7 +107,7 @@ func (q *quicTransport) Stop() {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
-	log.Info("[ Stop ] Stop QUIC transport")
+	log.Debug("[ Stop ] Stop QUIC transport")
 	q.prepareDisconnect()
 
 	err := q.l.Close()
@@ -168,7 +168,7 @@ func createConnection(addr string) (quic.Session, quic.Stream, error) {
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ createConnection ] failed to open a stream")
 	}
-	log.Infof("connected to: %s", session.RemoteAddr().String())
+	log.Debug("connected to: %s", session.RemoteAddr().String())
 	return session, stream, nil
 }
 
