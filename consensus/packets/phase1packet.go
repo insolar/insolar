@@ -18,6 +18,7 @@ package packets
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
@@ -102,6 +103,10 @@ func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) er
 
 // AddClaim adds claim if phase1Packet has space for it and returns true, otherwise returns false
 func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) bool {
+	if claim == nil {
+		log.Warn("claim is nil")
+		return false
+	}
 
 	getClaimSize := func(claims ...ReferendumClaim) int {
 		result := 0
