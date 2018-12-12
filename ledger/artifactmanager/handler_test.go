@@ -810,11 +810,15 @@ func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
 	jc := testutils.NewJetCoordinatorMock(mc)
 	cs := testutils.NewPlatformCryptographyScheme()
 	db.PlatformCryptographyScheme = cs
+	rs := recentstorage.NewRecentStorageMock(mc)
+	pr := recentstorage.NewProviderMock(mc)
+	pr.GetStorageMock.Return(rs)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 	h.PlatformCryptographyScheme = cs
 	h.JetCoordinator = jc
+	h.RecentStorageProvider = pr
 	rec := record.CodeRecord{
 
 		MachineType: core.MachineTypeBuiltin,
