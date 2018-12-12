@@ -123,7 +123,9 @@ func (m *PulseManager) dropAllJets(ctx context.Context, pulse *storage.Pulse) er
 				return errors.Wrapf(err, "create drop on pulse %v failed", pulse)
 			}
 
-			if hotRecordsError := m.processRecentObjects(ctx, pulse, &m.currentPulse, drop, dropSerialized); hotRecordsError != nil {
+			hotRecordsError := m.processRecentObjects(
+				ctx, jetID, pulse, &m.currentPulse, drop, dropSerialized)
+			if hotRecordsError != nil {
 				return errors.Wrap(err, "processRecentObjects failed")
 			}
 
@@ -188,6 +190,7 @@ func (m *PulseManager) processDrop(
 
 func (m *PulseManager) processRecentObjects(
 	ctx context.Context,
+	jetID core.RecordID,
 	previousSlotPulse *storage.Pulse,
 	currentSlotPulse *core.Pulse,
 	drop *jet.JetDrop,
@@ -199,8 +202,6 @@ func (m *PulseManager) processRecentObjects(
 	recentObjectsIds := recentStorage.GetObjects()
 	pendingRequestsIds := recentStorage.GetRequests()
 	defer recentStorage.ClearObjects()
-
-	jetID := core.TODOJetID
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID][]byte{}
