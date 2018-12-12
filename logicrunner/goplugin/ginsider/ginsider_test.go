@@ -10,9 +10,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/testutils"
-
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/testutils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,7 +46,7 @@ func TestHealthCheck(t *testing.T) {
 	// start GoInsider
 	gi := NewGoInsider(tmpDir, protocol, socket)
 
-	refString := "1111111111111111111111111111111111111111111111111111111111111112"
+	refString := "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"
 	ref, err := core.NewRefFromBase58(refString)
 	require.NoError(t, err)
 	err = gi.AddPlugin(*ref, tmpDir+"/main.so")
