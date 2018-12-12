@@ -13,6 +13,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func mockContractRequester(t *testing.T, nodeRef core.RecordRef, ok bool, r []byte) core.ContractRequester {
+	cr := testutils.NewContractRequesterMock(t)
+	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
+		require.Equal(t, nodeRef, *ref)
+		require.Equal(t, "GetNodeInfo", method)
+		require.Equal(t, 0, len(args))
+		if ok {
+			return &reply.CallMethod{
+				Result: r,
+			}, nil
+		}
+		return nil, errors.New("test_error")
+	}
+	return cr
+}
+
 func TestRealNetworkCoordinator_New(t *testing.T) {
 	coord := newRealNetworkCoordinator(nil, nil, nil, nil, nil)
 	require.Equal(t, &realNetworkCoordinator{}, coord)
@@ -20,74 +36,18 @@ func TestRealNetworkCoordinator_New(t *testing.T) {
 
 func TestRealNetworkCoordinator_GetCert(t *testing.T) {
 	nodeRef := testutils.RandomRef()
-	certNodeRef := testutils.RandomRef().String()
+	certNodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
 	ns.GetStateFunc = func() core.NetworkState {
 		return core.CompleteNetworkState
 	}
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.TypeNodeSignRequest)
-	}
-
-	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() core.Certificate {
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: "test_public_key",
-				Reference: certNodeRef,
-				Role:      "virtual",
-			},
-			MajorityRule: 0,
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					NodeRef:     certNodeRef,
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-				},
-			},
-		}
-	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (core.Certificate, error) {
-		require.Equal(t, "test_node_public_key", key)
-		require.Equal(t, "virtual", role)
-
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: key,
-				Reference: nodeRef,
-				Role:      role,
-			},
-			RootDomainReference: "test_root_domain_ref",
-			MajorityRule:        0,
-			PulsarPublicKeys:    []string{},
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-					NodeRef:     certNodeRef,
-				},
-			},
-		}, nil
-	}
-
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*core.Signature, error) {
-		sig := core.SignatureFromBytes([]byte("test_sig"))
-		return &sig, nil
-	}
+	mb := mockMessageBus(t, true, &nodeRef, &certNodeRef)
+	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
+	cs := mockCryptographyService(t, true)
 
 	coord := newRealNetworkCoordinator(cm, cr, mb, cs, nil)
 	ctx := context.Background()
@@ -109,19 +69,13 @@ func TestRealNetworkCoordinator_GetCert(t *testing.T) {
 	require.Equal(t, []byte("test_network_sign"), cert.BootstrapNodes[0].NetworkSign)
 	require.Equal(t, "test_discovery_host", cert.BootstrapNodes[0].Host)
 	require.Equal(t, []byte("test_sig"), cert.BootstrapNodes[0].NodeSign)
-	require.Equal(t, certNodeRef, cert.BootstrapNodes[0].NodeRef)
+	require.Equal(t, certNodeRef.String(), cert.BootstrapNodes[0].NodeRef)
 }
 
 func TestRealNetworkCoordinator_GetCert_getNodeInfoError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return nil, errors.New("test_error")
-	}
+	cr := mockContractRequester(t, nodeRef, false, nil)
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
 	ctx := context.Background()
@@ -132,15 +86,7 @@ func TestRealNetworkCoordinator_GetCert_getNodeInfoError(t *testing.T) {
 func TestRealNetworkCoordinator_GetCert_DeserializeError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return &reply.CallMethod{
-			Result: []byte(""),
-		}, nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, []byte(""))
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
 	ctx := context.Background()
@@ -150,51 +96,16 @@ func TestRealNetworkCoordinator_GetCert_DeserializeError(t *testing.T) {
 
 func TestRealNetworkCoordinator_GetCert_UnsignedCertificateError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
-	certNodeRef := testutils.RandomRef().String()
+	certNodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
 	ns.GetStateFunc = func() core.NetworkState {
 		return core.CompleteNetworkState
 	}
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.TypeNodeSignRequest)
-	}
-
-	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() core.Certificate {
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: "test_public_key",
-				Reference: certNodeRef,
-				Role:      "virtual",
-			},
-			MajorityRule: 0,
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					NodeRef:     certNodeRef,
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-				},
-			},
-		}
-	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (core.Certificate, error) {
-		require.Equal(t, "test_node_public_key", key)
-		require.Equal(t, "virtual", role)
-
-		return nil, errors.New("test_error")
-	}
+	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, false)
 	coord := newRealNetworkCoordinator(cm, cr, nil, nil, nil)
 	ctx := context.Background()
 	_, err := coord.GetCert(ctx, &nodeRef)
@@ -203,56 +114,17 @@ func TestRealNetworkCoordinator_GetCert_UnsignedCertificateError(t *testing.T) {
 
 func TestRealNetworkCoordinator_GetCert_SignCertError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
-	certNodeRef := testutils.RandomRef().String()
+	certNodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
 	ns.GetStateFunc = func() core.NetworkState {
 		return core.CompleteNetworkState
 	}
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.TypeNodeSignRequest)
-	}
-
-	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() core.Certificate {
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: "test_public_key",
-				Reference: certNodeRef,
-				Role:      "virtual",
-			},
-			MajorityRule: 0,
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					NodeRef:     certNodeRef,
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-				},
-			},
-		}
-	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (core.Certificate, error) {
-		require.Equal(t, "test_node_public_key", key)
-		require.Equal(t, "virtual", role)
-
-		return nil, nil
-	}
-
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*core.Signature, error) {
-		return nil, errors.New("test_error")
-	}
+	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
+	cs := mockCryptographyService(t, false)
 
 	coord := newRealNetworkCoordinator(cm, cr, nil, cs, nil)
 	ctx := context.Background()
@@ -262,79 +134,19 @@ func TestRealNetworkCoordinator_GetCert_SignCertError(t *testing.T) {
 
 func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode(t *testing.T) {
 	nodeRef := testutils.RandomRef()
+	certNodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
 	ns.GetStateFunc = func() core.NetworkState {
 		return core.CompleteNetworkState
 	}
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.TypeNodeSignRequest)
-	}
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (core.Reply, error) {
-		return &reply.NodeSign{
-			Sign: []byte("test_sig"),
-		}, nil
-	}
+	mb := mockMessageBus(t, true, &nodeRef, &certNodeRef)
 
-	cm := testutils.NewCertificateManagerMock(t)
-	certNodeRef := testutils.RandomRef().String()
-	cm.GetCertificateFunc = func() core.Certificate {
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: "test_public_key",
-				Reference: certNodeRef,
-				Role:      "virtual",
-			},
-			MajorityRule: 0,
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					NodeRef:     certNodeRef,
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-				},
-			},
-		}
-	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (core.Certificate, error) {
-		require.Equal(t, "test_node_public_key", key)
-		require.Equal(t, "virtual", role)
-
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: key,
-				Reference: nodeRef,
-				Role:      role,
-			},
-			RootDomainReference: "test_root_domain_ref",
-			MajorityRule:        0,
-			PulsarPublicKeys:    []string{},
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-					NodeRef:     certNodeRef,
-				},
-			},
-		}, nil
-	}
-
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*core.Signature, error) {
-		sig := core.SignatureFromBytes([]byte("test_sig"))
-		return &sig, nil
-	}
+	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
+	cs := mockCryptographyService(t, true)
 
 	coord := newRealNetworkCoordinator(cm, cr, mb, cs, nil)
 	ctx := context.Background()
@@ -342,7 +154,7 @@ func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode(t *testing.T) {
 		PublicKey:   "test_discovery_public_key",
 		Host:        "test_discovery_host",
 		NetworkSign: []byte("test_network_sign"),
-		NodeRef:     certNodeRef,
+		NodeRef:     certNodeRef.String(),
 	}
 	result, err := coord.requestCertSign(ctx, &dNode, &nodeRef)
 	require.NoError(t, err)
@@ -351,75 +163,19 @@ func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode(t *testing.T) {
 
 func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode(t *testing.T) {
 	nodeRef := testutils.RandomRef()
+	certNodeRef := testutils.RandomRef()
+	discoveryNodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
 	ns.GetStateFunc = func() core.NetworkState {
 		return core.CompleteNetworkState
 	}
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.TypeNodeSignRequest)
-	}
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (core.Reply, error) {
-		return &reply.NodeSign{
-			Sign: []byte("test_sig"),
-		}, nil
-	}
+	mb := mockMessageBus(t, true, &nodeRef, &discoveryNodeRef)
 
-	cm := testutils.NewCertificateManagerMock(t)
-	certNodeRef := testutils.RandomRef().String()
-	discoveryNodeRef := testutils.RandomRef().String()
-	cm.GetCertificateFunc = func() core.Certificate {
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: "test_public_key",
-				Reference: certNodeRef,
-				Role:      "virtual",
-			},
-			MajorityRule: 0,
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					NodeRef:     discoveryNodeRef,
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-				},
-			},
-		}
-	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (core.Certificate, error) {
-		require.Equal(t, "test_node_public_key", key)
-		require.Equal(t, "virtual", role)
-
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: key,
-				Reference: nodeRef,
-				Role:      role,
-			},
-			RootDomainReference: "test_root_domain_ref",
-			MajorityRule:        0,
-			PulsarPublicKeys:    []string{},
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-					NodeRef:     discoveryNodeRef,
-				},
-			},
-		}, nil
-	}
-
+	cm := mockCertificateManager(t, &certNodeRef, &discoveryNodeRef, true)
 	pm := testutils.NewPulseManagerMock(t)
 	pm.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
 		return &core.Pulse{}, nil
@@ -431,7 +187,7 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode(t *testing.T) 
 		PublicKey:   "test_discovery_public_key",
 		Host:        "test_discovery_host",
 		NetworkSign: []byte("test_network_sign"),
-		NodeRef:     discoveryNodeRef,
+		NodeRef:     discoveryNodeRef.String(),
 	}
 	result, err := coord.requestCertSign(ctx, &dNode, &nodeRef)
 	require.NoError(t, err)
@@ -440,47 +196,23 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode(t *testing.T) 
 
 func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode_signCertError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
+	certNodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return nil, errors.New("test_error")
-	}
+	cr := mockContractRequester(t, nodeRef, false, nil)
 
 	ns := testutils.NewNetworkSwitcherMock(t)
 	ns.GetStateFunc = func() core.NetworkState {
 		return core.CompleteNetworkState
 	}
 
-	cm := testutils.NewCertificateManagerMock(t)
-	certNodeRef := testutils.RandomRef().String()
-	cm.GetCertificateFunc = func() core.Certificate {
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: "test_public_key",
-				Reference: certNodeRef,
-				Role:      "virtual",
-			},
-			MajorityRule: 0,
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					NodeRef:     certNodeRef,
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-				},
-			},
-		}
-	}
+	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	coord := newRealNetworkCoordinator(cm, cr, nil, nil, nil)
 	ctx := context.Background()
 	dNode := certificate.BootstrapNode{
 		PublicKey:   "test_discovery_public_key",
 		Host:        "test_discovery_host",
 		NetworkSign: []byte("test_network_sign"),
-		NodeRef:     certNodeRef,
+		NodeRef:     certNodeRef.String(),
 	}
 	_, err := coord.requestCertSign(ctx, &dNode, &nodeRef)
 	require.EqualError(t, err, "[ SignCert ] Couldn't extract response: [ GetCert ] Couldn't call GetNodeInfo: test_error")
@@ -488,70 +220,19 @@ func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode_signCertError(t
 
 func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_CurrentPulseError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
+	certNodeRef := testutils.RandomRef()
+	discoveryNodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
 	ns.GetStateFunc = func() core.NetworkState {
 		return core.CompleteNetworkState
 	}
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.TypeNodeSignRequest)
-	}
+	mb := mockMessageBus(t, true, &nodeRef, nil)
 
-	cm := testutils.NewCertificateManagerMock(t)
-	certNodeRef := testutils.RandomRef().String()
-	discoveryNodeRef := testutils.RandomRef().String()
-	cm.GetCertificateFunc = func() core.Certificate {
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: "test_public_key",
-				Reference: certNodeRef,
-				Role:      "virtual",
-			},
-			MajorityRule: 0,
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					NodeRef:     discoveryNodeRef,
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-				},
-			},
-		}
-	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (core.Certificate, error) {
-		require.Equal(t, "test_node_public_key", key)
-		require.Equal(t, "virtual", role)
-
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: key,
-				Reference: nodeRef,
-				Role:      role,
-			},
-			RootDomainReference: "test_root_domain_ref",
-			MajorityRule:        0,
-			PulsarPublicKeys:    []string{},
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-					NodeRef:     discoveryNodeRef,
-				},
-			},
-		}, nil
-	}
-
+	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	pm := testutils.NewPulseManagerMock(t)
 	pm.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
 		return nil, errors.New("test_error")
@@ -563,7 +244,7 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_CurrentPulseEr
 		PublicKey:   "test_discovery_public_key",
 		Host:        "test_discovery_host",
 		NetworkSign: []byte("test_network_sign"),
-		NodeRef:     discoveryNodeRef,
+		NodeRef:     discoveryNodeRef.String(),
 	}
 	_, err := coord.requestCertSign(ctx, &dNode, &nodeRef)
 	require.EqualError(t, err, "test_error")
@@ -571,72 +252,19 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_CurrentPulseEr
 
 func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_SendError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
+	certNodeRef := testutils.RandomRef()
+	discoveryNodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
 	ns.GetStateFunc = func() core.NetworkState {
 		return core.CompleteNetworkState
 	}
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.TypeNodeSignRequest)
-	}
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (core.Reply, error) {
-		return nil, errors.New("test_error")
-	}
+	mb := mockMessageBus(t, false, &nodeRef, &discoveryNodeRef)
 
-	cm := testutils.NewCertificateManagerMock(t)
-	certNodeRef := testutils.RandomRef().String()
-	discoveryNodeRef := testutils.RandomRef().String()
-	cm.GetCertificateFunc = func() core.Certificate {
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: "test_public_key",
-				Reference: certNodeRef,
-				Role:      "virtual",
-			},
-			MajorityRule: 0,
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					NodeRef:     discoveryNodeRef,
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-				},
-			},
-		}
-	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (core.Certificate, error) {
-		require.Equal(t, "test_node_public_key", key)
-		require.Equal(t, "virtual", role)
-
-		return &certificate.Certificate{
-			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: key,
-				Reference: nodeRef,
-				Role:      role,
-			},
-			RootDomainReference: "test_root_domain_ref",
-			MajorityRule:        0,
-			PulsarPublicKeys:    []string{},
-			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
-					PublicKey:   "test_discovery_public_key",
-					Host:        "test_discovery_host",
-					NetworkSign: []byte("test_network_sign"),
-					NodeRef:     discoveryNodeRef,
-				},
-			},
-		}, nil
-	}
+	cm := mockCertificateManager(t, &certNodeRef, &discoveryNodeRef, true)
 
 	pm := testutils.NewPulseManagerMock(t)
 	pm.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
@@ -649,7 +277,7 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_SendError(t *t
 		PublicKey:   "test_discovery_public_key",
 		Host:        "test_discovery_host",
 		NetworkSign: []byte("test_network_sign"),
-		NodeRef:     discoveryNodeRef,
+		NodeRef:     discoveryNodeRef.String(),
 	}
 	_, err := coord.requestCertSign(ctx, &dNode, &nodeRef)
 	require.EqualError(t, err, "test_error")
@@ -658,19 +286,8 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_SendError(t *t
 func TestRealNetworkCoordinator_signCertHandler(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
-
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*core.Signature, error) {
-		sig := core.SignatureFromBytes([]byte("test_sig"))
-		return &sig, nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
+	cs := mockCryptographyService(t, true)
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, cs, nil)
 	ctx := context.Background()
@@ -682,13 +299,7 @@ func TestRealNetworkCoordinator_signCertHandler(t *testing.T) {
 func TestRealNetworkCoordinator_signCertHandler_NodeInfoError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return nil, errors.New("test_error")
-	}
+	cr := mockContractRequester(t, nodeRef, false, nil)
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
 	ctx := context.Background()
@@ -699,18 +310,8 @@ func TestRealNetworkCoordinator_signCertHandler_NodeInfoError(t *testing.T) {
 func TestRealNetworkCoordinator_signCertHandler_SignError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
-
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*core.Signature, error) {
-		return nil, errors.New("test_error")
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
+	cs := mockCryptographyService(t, false)
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, cs, nil)
 	ctx := context.Background()
@@ -721,19 +322,8 @@ func TestRealNetworkCoordinator_signCertHandler_SignError(t *testing.T) {
 func TestRealNetworkCoordinator_signCert(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
-
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*core.Signature, error) {
-		sig := core.SignatureFromBytes([]byte("test_sig"))
-		return &sig, nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
+	cs := mockCryptographyService(t, true)
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, cs, nil)
 	ctx := context.Background()
@@ -745,13 +335,7 @@ func TestRealNetworkCoordinator_signCert(t *testing.T) {
 func TestRealNetworkCoordinator_signCert_NodeInfoError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return nil, errors.New("test_error")
-	}
+	cr := mockContractRequester(t, nodeRef, false, nil)
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
 	ctx := context.Background()
@@ -762,18 +346,8 @@ func TestRealNetworkCoordinator_signCert_NodeInfoError(t *testing.T) {
 func TestRealNetworkCoordinator_signCert_SignError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
-
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*core.Signature, error) {
-		return nil, errors.New("test_error")
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
+	cs := mockCryptographyService(t, false)
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, cs, nil)
 	ctx := context.Background()
@@ -784,13 +358,7 @@ func TestRealNetworkCoordinator_signCert_SignError(t *testing.T) {
 func TestRealNetworkCoordinator_getNodeInfo(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return test_getNode(), nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
 	ctx := context.Background()
@@ -803,13 +371,7 @@ func TestRealNetworkCoordinator_getNodeInfo(t *testing.T) {
 func TestRealNetworkCoordinator_getNodeInfo_SendRequestError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return nil, errors.New("test_error")
-	}
+	cr := mockContractRequester(t, nodeRef, false, nil)
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
 	ctx := context.Background()
@@ -820,15 +382,7 @@ func TestRealNetworkCoordinator_getNodeInfo_SendRequestError(t *testing.T) {
 func TestRealNetworkCoordinator_getNodeInfo_ExtractError(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 
-	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
-		require.Equal(t, nodeRef, *ref)
-		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
-		return &reply.CallMethod{
-			Result: []byte(""),
-		}, nil
-	}
+	cr := mockContractRequester(t, nodeRef, true, []byte(""))
 
 	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
 	ctx := context.Background()
