@@ -67,3 +67,7 @@
 [[constraint]]
   name = "go.opencensus.io"
   version = "0.18.0"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/sync"
