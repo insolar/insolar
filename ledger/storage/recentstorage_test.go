@@ -159,6 +159,7 @@ func TestNewRecentStorageProvider(t *testing.T) {
 
 	// Assert
 	require.Equal(t, 888, provider.DefaultTTL)
+	require.NotNil(t, provider.storage)
 }
 
 func TestRecentStorageProvider_GetStorage(t *testing.T) {
@@ -169,7 +170,7 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(8)
 
-	for i := 0; i < 8; i ++ {
+	for i := 0; i < 8; i++ {
 		i := i
 		go func() {
 			id := core.NewRecordID(core.FirstPulseNumber, []byte{byte(i)})
