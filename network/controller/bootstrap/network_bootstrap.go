@@ -18,6 +18,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -60,6 +61,12 @@ func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyServic
 	nb.bootstrapper.Start(nodeKeeper)
 	nb.authController.Start(networkCoordinator, nodeKeeper)
 	nb.challengeController.Start(cryptographyService, nodeKeeper)
+
+	// TODO: we also have to call Stop method somewhere
+	err := nb.sessionManager.Start(context.TODO())
+	if err != nil {
+		panic(fmt.Sprintf("Failed to start session manager: %s", err.Error()))
+	}
 }
 
 type DiscoveryNode struct {

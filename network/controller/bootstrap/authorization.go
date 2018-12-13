@@ -168,7 +168,7 @@ func (ac *AuthorizationController) processAuthorizeRequest(ctx context.Context, 
 		}
 		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
-	session := ac.sessionManager.NewSession(request.GetSender(), cert)
+	session := ac.sessionManager.NewSession(request.GetSender(), cert, ac.options.HandshakeSessionTTL)
 	return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
