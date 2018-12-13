@@ -50,6 +50,11 @@ const (
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
 
+type messageBusLocker interface {
+	Acquire(ctx context.Context)
+	Release(ctx context.Context)
+}
+
 // Genesis is a component for precreation core contracts types and RootDomain instance
 type Genesis struct {
 	rootDomainRef   *core.RecordRef
@@ -59,11 +64,11 @@ type Genesis struct {
 	isGenesis       bool
 	config          *genesisConfig
 	keyOut          string
-	ArtifactManager core.ArtifactManager   `inject:""`
-	PulseManager    core.PulseManager      `inject:""`
-	JetCoordinator  core.JetCoordinator    `inject:""`
-	Network         core.Network           `inject:""`
-	GIL             core.GlobalInsolarLock `inject:""`
+	ArtifactManager core.ArtifactManager `inject:""`
+	PulseManager    core.PulseManager    `inject:""`
+	JetCoordinator  core.JetCoordinator  `inject:""`
+	Network         core.Network         `inject:""`
+	MBLock          messageBusLocker     `inject:""`
 }
 
 // NewGenesis creates new Genesis
@@ -356,7 +361,8 @@ func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
 
-	g.GIL.Release(ctx)
+	g.MBLock.Release(ctx)
+	defer g.MBLock.Acquire(ctx)
 	_, insgocc, err := goplugintestutils.Build()
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
