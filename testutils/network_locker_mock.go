@@ -19,12 +19,12 @@ import (
 type NetworkLockerMock struct {
 	t minimock.Tester
 
-	AcquireGlobalLockFunc       func(p context.Context)
+	AcquireGlobalLockFunc       func(p context.Context, p1 string)
 	AcquireGlobalLockCounter    uint64
 	AcquireGlobalLockPreCounter uint64
 	AcquireGlobalLockMock       mNetworkLockerMockAcquireGlobalLock
 
-	ReleaseGlobalLockFunc       func(p context.Context)
+	ReleaseGlobalLockFunc       func(p context.Context, p1 string)
 	ReleaseGlobalLockCounter    uint64
 	ReleaseGlobalLockPreCounter uint64
 	ReleaseGlobalLockMock       mNetworkLockerMockReleaseGlobalLock
@@ -55,18 +55,19 @@ type NetworkLockerMockAcquireGlobalLockExpectation struct {
 }
 
 type NetworkLockerMockAcquireGlobalLockInput struct {
-	p context.Context
+	p  context.Context
+	p1 string
 }
 
 //Expect specifies that invocation of NetworkLocker.AcquireGlobalLock is expected from 1 to Infinity times
-func (m *mNetworkLockerMockAcquireGlobalLock) Expect(p context.Context) *mNetworkLockerMockAcquireGlobalLock {
+func (m *mNetworkLockerMockAcquireGlobalLock) Expect(p context.Context, p1 string) *mNetworkLockerMockAcquireGlobalLock {
 	m.mock.AcquireGlobalLockFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &NetworkLockerMockAcquireGlobalLockExpectation{}
 	}
-	m.mainExpectation.input = &NetworkLockerMockAcquireGlobalLockInput{p}
+	m.mainExpectation.input = &NetworkLockerMockAcquireGlobalLockInput{p, p1}
 	return m
 }
 
@@ -83,18 +84,18 @@ func (m *mNetworkLockerMockAcquireGlobalLock) Return() *NetworkLockerMock {
 }
 
 //ExpectOnce specifies that invocation of NetworkLocker.AcquireGlobalLock is expected once
-func (m *mNetworkLockerMockAcquireGlobalLock) ExpectOnce(p context.Context) *NetworkLockerMockAcquireGlobalLockExpectation {
+func (m *mNetworkLockerMockAcquireGlobalLock) ExpectOnce(p context.Context, p1 string) *NetworkLockerMockAcquireGlobalLockExpectation {
 	m.mock.AcquireGlobalLockFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &NetworkLockerMockAcquireGlobalLockExpectation{}
-	expectation.input = &NetworkLockerMockAcquireGlobalLockInput{p}
+	expectation.input = &NetworkLockerMockAcquireGlobalLockInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of NetworkLocker.AcquireGlobalLock method
-func (m *mNetworkLockerMockAcquireGlobalLock) Set(f func(p context.Context)) *NetworkLockerMock {
+func (m *mNetworkLockerMockAcquireGlobalLock) Set(f func(p context.Context, p1 string)) *NetworkLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -103,18 +104,18 @@ func (m *mNetworkLockerMockAcquireGlobalLock) Set(f func(p context.Context)) *Ne
 }
 
 //AcquireGlobalLock implements github.com/insolar/insolar/core.NetworkLocker interface
-func (m *NetworkLockerMock) AcquireGlobalLock(p context.Context) {
+func (m *NetworkLockerMock) AcquireGlobalLock(p context.Context, p1 string) {
 	counter := atomic.AddUint64(&m.AcquireGlobalLockPreCounter, 1)
 	defer atomic.AddUint64(&m.AcquireGlobalLockCounter, 1)
 
 	if len(m.AcquireGlobalLockMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.AcquireGlobalLockMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkLockerMock.AcquireGlobalLock. %v", p)
+			m.t.Fatalf("Unexpected call to NetworkLockerMock.AcquireGlobalLock. %v %v", p, p1)
 			return
 		}
 
 		input := m.AcquireGlobalLockMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkLockerMockAcquireGlobalLockInput{p}, "NetworkLocker.AcquireGlobalLock got unexpected parameters")
+		testify_assert.Equal(m.t, *input, NetworkLockerMockAcquireGlobalLockInput{p, p1}, "NetworkLocker.AcquireGlobalLock got unexpected parameters")
 
 		return
 	}
@@ -123,18 +124,18 @@ func (m *NetworkLockerMock) AcquireGlobalLock(p context.Context) {
 
 		input := m.AcquireGlobalLockMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkLockerMockAcquireGlobalLockInput{p}, "NetworkLocker.AcquireGlobalLock got unexpected parameters")
+			testify_assert.Equal(m.t, *input, NetworkLockerMockAcquireGlobalLockInput{p, p1}, "NetworkLocker.AcquireGlobalLock got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.AcquireGlobalLockFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkLockerMock.AcquireGlobalLock. %v", p)
+		m.t.Fatalf("Unexpected call to NetworkLockerMock.AcquireGlobalLock. %v %v", p, p1)
 		return
 	}
 
-	m.AcquireGlobalLockFunc(p)
+	m.AcquireGlobalLockFunc(p, p1)
 }
 
 //AcquireGlobalLockMinimockCounter returns a count of NetworkLockerMock.AcquireGlobalLockFunc invocations
@@ -178,18 +179,19 @@ type NetworkLockerMockReleaseGlobalLockExpectation struct {
 }
 
 type NetworkLockerMockReleaseGlobalLockInput struct {
-	p context.Context
+	p  context.Context
+	p1 string
 }
 
 //Expect specifies that invocation of NetworkLocker.ReleaseGlobalLock is expected from 1 to Infinity times
-func (m *mNetworkLockerMockReleaseGlobalLock) Expect(p context.Context) *mNetworkLockerMockReleaseGlobalLock {
+func (m *mNetworkLockerMockReleaseGlobalLock) Expect(p context.Context, p1 string) *mNetworkLockerMockReleaseGlobalLock {
 	m.mock.ReleaseGlobalLockFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &NetworkLockerMockReleaseGlobalLockExpectation{}
 	}
-	m.mainExpectation.input = &NetworkLockerMockReleaseGlobalLockInput{p}
+	m.mainExpectation.input = &NetworkLockerMockReleaseGlobalLockInput{p, p1}
 	return m
 }
 
@@ -206,18 +208,18 @@ func (m *mNetworkLockerMockReleaseGlobalLock) Return() *NetworkLockerMock {
 }
 
 //ExpectOnce specifies that invocation of NetworkLocker.ReleaseGlobalLock is expected once
-func (m *mNetworkLockerMockReleaseGlobalLock) ExpectOnce(p context.Context) *NetworkLockerMockReleaseGlobalLockExpectation {
+func (m *mNetworkLockerMockReleaseGlobalLock) ExpectOnce(p context.Context, p1 string) *NetworkLockerMockReleaseGlobalLockExpectation {
 	m.mock.ReleaseGlobalLockFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &NetworkLockerMockReleaseGlobalLockExpectation{}
-	expectation.input = &NetworkLockerMockReleaseGlobalLockInput{p}
+	expectation.input = &NetworkLockerMockReleaseGlobalLockInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of NetworkLocker.ReleaseGlobalLock method
-func (m *mNetworkLockerMockReleaseGlobalLock) Set(f func(p context.Context)) *NetworkLockerMock {
+func (m *mNetworkLockerMockReleaseGlobalLock) Set(f func(p context.Context, p1 string)) *NetworkLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -226,18 +228,18 @@ func (m *mNetworkLockerMockReleaseGlobalLock) Set(f func(p context.Context)) *Ne
 }
 
 //ReleaseGlobalLock implements github.com/insolar/insolar/core.NetworkLocker interface
-func (m *NetworkLockerMock) ReleaseGlobalLock(p context.Context) {
+func (m *NetworkLockerMock) ReleaseGlobalLock(p context.Context, p1 string) {
 	counter := atomic.AddUint64(&m.ReleaseGlobalLockPreCounter, 1)
 	defer atomic.AddUint64(&m.ReleaseGlobalLockCounter, 1)
 
 	if len(m.ReleaseGlobalLockMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ReleaseGlobalLockMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkLockerMock.ReleaseGlobalLock. %v", p)
+			m.t.Fatalf("Unexpected call to NetworkLockerMock.ReleaseGlobalLock. %v %v", p, p1)
 			return
 		}
 
 		input := m.ReleaseGlobalLockMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkLockerMockReleaseGlobalLockInput{p}, "NetworkLocker.ReleaseGlobalLock got unexpected parameters")
+		testify_assert.Equal(m.t, *input, NetworkLockerMockReleaseGlobalLockInput{p, p1}, "NetworkLocker.ReleaseGlobalLock got unexpected parameters")
 
 		return
 	}
@@ -246,18 +248,18 @@ func (m *NetworkLockerMock) ReleaseGlobalLock(p context.Context) {
 
 		input := m.ReleaseGlobalLockMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkLockerMockReleaseGlobalLockInput{p}, "NetworkLocker.ReleaseGlobalLock got unexpected parameters")
+			testify_assert.Equal(m.t, *input, NetworkLockerMockReleaseGlobalLockInput{p, p1}, "NetworkLocker.ReleaseGlobalLock got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.ReleaseGlobalLockFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkLockerMock.ReleaseGlobalLock. %v", p)
+		m.t.Fatalf("Unexpected call to NetworkLockerMock.ReleaseGlobalLock. %v %v", p, p1)
 		return
 	}
 
-	m.ReleaseGlobalLockFunc(p)
+	m.ReleaseGlobalLockFunc(p, p1)
 }
 
 //ReleaseGlobalLockMinimockCounter returns a count of NetworkLockerMock.ReleaseGlobalLockFunc invocations
