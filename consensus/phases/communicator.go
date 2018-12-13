@@ -141,6 +141,21 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 	return nil
 }
 
+func (nc *NaiveCommunicator) generatePhase2Response(p *packets.Phase2Packet) (network.Request, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (nc *NaiveCommunicator) convertConsensusPacket(packet packets.ConsensusPacket,
+	packetType types.PacketType) (network.Request, error) {
+
+	packetBuffer, err := packet.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[convertConsensusPacket] Failed to serialize ConsensusPacket.")
+	}
+	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
+	return requestBuilder.Type(packetType).Data(packetBuffer).Build(), nil
+}
+
 // ExchangePhase1 used in first consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangePhase1(
 	ctx context.Context,
@@ -165,12 +180,10 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 		responsePacket.RemoveAnnounceClaim()
 	}
 
-	packetBuffer, err := responsePacket.Serialize()
+	request, err := nc.convertConsensusPacket(responsePacket, types.Phase1)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ExchangePhase1] Failed to serialize Phase1Packet.")
+		return nil, errors.Wrap(err, "[ExchangePhase1] Failed to convert consensus packet to network request")
 	}
-	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
-	request := requestBuilder.Type(types.Phase1).Data(packetBuffer).Build()
 
 	if originClaim == nil {
 		nc.sendRequestToNodes(participants, request)
@@ -181,10 +194,12 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 		}
 	}
 
-	resultReceived := func(ref core.RecordRef) bool {
+	shouldSendResponse := func(ref core.RecordRef) bool {
 		val, ok := result[ref]
-		return ok && val != nil
+		return !ok || val == nil
 	}
+	response := request
+
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	for {
 		select {
@@ -193,9 +208,9 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 				continue
 			}
 
-			if !resultReceived(res.id) {
+			if shouldSendResponse(res.id) {
 				// send response
-				err := nc.ConsensusNetwork.SendRequest(request, res.id)
+				err := nc.ConsensusNetwork.SendRequest(response, res.id)
 				if err != nil {
 					log.Errorln(err.Error())
 				}
@@ -218,23 +233,21 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
-	packetBuffer, err := packet.Serialize()
+	request, err := nc.convertConsensusPacket(packet, types.Phase2)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ExchangePhase2] Failed to serialize Phase2Packet.")
+		return nil, errors.Wrap(err, "[ExchangePhase2] Failed to convert consensus packet to network request")
 	}
-
-	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
-	request := requestBuilder.Type(types.Phase2).Data(packetBuffer).Build()
 
 	nc.sendRequestToNodes(participants, request)
 
-	inslogger.FromContext(ctx).Infof("result len %d", len(result))
-
-	resultReceived := func(ref core.RecordRef) bool {
-		val, ok := result[ref]
-		return ok && val != nil
+	shouldSendResponse := func(p *phase2Result) bool {
+		val, ok := result[p.id]
+		firstResultReceive := !ok || val == nil
+		packetContainsVoteRequests := p.packet.ContainsRequests()
+		return firstResultReceive || packetContainsVoteRequests
 	}
 
+	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	for {
 		select {
 		case res := <-nc.phase2result:
@@ -242,9 +255,14 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 				continue
 			}
 
-			if !resultReceived(res.id) || res.packet.ContainsRequests() {
+			if shouldSendResponse(&res) {
 				// send response
-				err := nc.ConsensusNetwork.SendRequest(request, res.id)
+				response := request
+				if res.packet.ContainsRequests() {
+					response, err = nc.generatePhase2Response(res.packet)
+				}
+				// TODO: process referendum votes and send answers
+				err := nc.ConsensusNetwork.SendRequest(response, res.id)
 				if err != nil {
 					log.Errorln(err.Error())
 				}
@@ -269,13 +287,10 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
-	packetBuffer, err := packet.Serialize()
+	request, err := nc.convertConsensusPacket(packet, types.Phase3)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ExchangePhase3] Failed to serialize Phase3Packet.")
+		return nil, errors.Wrap(err, "[ExchangePhase3] Failed to convert consensus packet to network request")
 	}
-
-	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
-	request := requestBuilder.Type(types.Phase3).Data(packetBuffer).Build()
 
 	nc.sendRequestToNodes(participants, request)
 
@@ -292,7 +307,7 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 			}
 			result[res.id] = res.packet
 
-			// FIXME: early return is commented to have synchronized length of phases on all nodes
+			// FIXME: currently we remove early return to have synchronized times of phases on all nodes
 			// if len(result) == len(participants) {
 			// 	return result, nil
 			// }

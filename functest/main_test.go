@@ -43,7 +43,6 @@ const HOST = "http://localhost:19191"
 const TestAPIURL = HOST + "/api"
 const TestRPCUrl = TestAPIURL + "/rpc"
 const TestCallUrl = TestAPIURL + "/call"
-const insolarImportPath = "github.com/insolar/insolar"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 
@@ -52,11 +51,8 @@ var cmdCompleted = make(chan error, 1)
 var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
-var insolarPath = filepath.Join(testdataPath(), "insolar")
-var insolardPath = filepath.Join(testdataPath(), "insolard")
 
 var insolarRootMemberKeysPath = filepath.Join("../scripts/insolard/configs", insolarRootMemberKeys)
-var insolarNodesKeysPath = filepath.Join(testdataPath(), "discovery_node_")
 
 var info infoResponse
 var root user
@@ -67,14 +63,6 @@ type user struct {
 	pubKey  string
 }
 
-func testdataPath() string {
-	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Join(p.Dir, "testdata", "functional")
-}
-
 func functestPath() string {
 	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
 	if err != nil {
@@ -83,25 +71,12 @@ func functestPath() string {
 	return filepath.Join(p.Dir, "functest")
 }
 
-func buildInsolar() error {
-	out, err := exec.Command(
-		"go", "build",
-		"-o", insolarPath,
-		insolarImportPath+"/cmd/insolar/",
-	).CombinedOutput()
-	return errors.Wrapf(err, "[ buildInsolar ] could't build insolar: %s", out)
-}
-
 func createDirForContracts() error {
 	return os.MkdirAll(filepath.Join(functestPath(), "contractstorage"), 0777)
 }
 
 func deleteDirForContracts() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "contractstorage"))
-}
-
-func deleteDirForData() error {
-	return os.RemoveAll(filepath.Join(functestPath(), "data"))
 }
 
 func loadRootKeys() error {
@@ -193,7 +168,7 @@ func stopInsgorund() error {
 
 func waitForNet() error {
 	numAttempts := 90
-	ports := []string{"19191", "19195", "19199"}
+	ports := []string{"19191", "19192", "19193"}
 	numNodes := len(ports)
 	currentOk := 0
 	for i := 0; i < numAttempts; i++ {
@@ -236,7 +211,7 @@ func startNet() error {
 		return errors.Wrap(err, "[ startNet  ] Can't change dir")
 	}
 
-	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-ng")
+	cmd = exec.Command("bash", "-x", "./scripts/insolard/launchnet.sh", "-ng")
 	stdout, _ = cmd.StdoutPipe()
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] could't set stdout: ")
@@ -302,13 +277,7 @@ func waitForLaunch() error {
 }
 
 func setup() error {
-
-	err := deleteDirForData()
-	if err != nil {
-		fmt.Println("[ setup ] failed to remove data directory for func tests: ", err)
-	}
-
-	err = createDirForContracts()
+	err := createDirForContracts()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't create dirs for test: ")
 	}
@@ -319,12 +288,6 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't build ginsider CLI: ")
 	}
 	fmt.Println("[ setup ] ginsider CLI was successfully builded")
-
-	err = buildInsolar()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't build insolar: ")
-	}
-	fmt.Println("[ setup ] insolar was successfully builded")
 
 	err = startInsgorund()
 	if err != nil {
@@ -375,12 +338,6 @@ func teardown() {
 		fmt.Println("[ teardown ] failed to stop insgorund: ", err)
 	}
 	fmt.Println("[ teardown ] insgorund was successfully stoped")
-
-	err = deleteDirForData()
-	if err != nil {
-		fmt.Println("[ teardown ] failed to remove data directory for func tests: ", err)
-	}
-	fmt.Println("[ teardown ] data directory was successfully deleted")
 
 	err = deleteDirForContracts()
 	if err != nil {

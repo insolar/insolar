@@ -38,7 +38,7 @@ func makeStateFraudNodeSupplementaryVote() *StateFraudNodeSupplementaryVote {
 	result := &StateFraudNodeSupplementaryVote{}
 	result.Node1PulseProof = *makeNodePulseProof()
 	result.Node2PulseProof = *makeNodePulseProof()
-	result.PulseData = PulseData{1, makeDefaultPulseDataExt()}
+	result.PulseData = PulseData{PulseNumber: 1, Data: makeDefaultPulseDataExt()}
 
 	return result
 }

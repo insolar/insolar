@@ -78,8 +78,8 @@ func TestPacketHeaderReadWrite_BadData(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(Phase1), "unexpected EOF")
 }
 
-func makeDefaultPulseDataExt() *PulseDataExt {
-	pulseDataExt := &PulseDataExt{}
+func makeDefaultPulseDataExt() PulseDataExt {
+	pulseDataExt := PulseDataExt{}
 	pulseDataExt.NextPulseDelta = uint16(11)
 	pulseDataExt.PrevPulseDelta = uint16(12)
 	pulseDataExt.Entropy = core.Entropy{}
@@ -92,11 +92,13 @@ func makeDefaultPulseDataExt() *PulseDataExt {
 }
 
 func TestPulseDataExtReadWrite(t *testing.T) {
-	checkSerializationDeserialization(t, makeDefaultPulseDataExt())
+	pulseDataExt := makeDefaultPulseDataExt()
+	checkSerializationDeserialization(t, &pulseDataExt)
 }
 
 func TestPulseDataExtReadWrite_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeDefaultPulseDataExt(), "unexpected EOF")
+	pulseDataExt := makeDefaultPulseDataExt()
+	checkBadDataSerializationDeserialization(t, &pulseDataExt, "unexpected EOF")
 }
 
 func TestPulseDataReadWrite(t *testing.T) {
@@ -251,7 +253,7 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 func makePhase1Packet() *Phase1Packet {
 	phase1Packet := NewPhase1Packet()
 	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
-	phase1Packet.pulseData = *makeDefaultPulseDataExt()
+	phase1Packet.pulseData = makeDefaultPulseDataExt()
 	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray71(), NodeStateHash: randomArray64()}
 
 	phase1Packet.AddClaim(makeNodeJoinClaim(true))
@@ -273,10 +275,11 @@ func makePhase2Packet() *Phase2Packet {
 	phase2Packet.globuleHashSignature = randomArray64()
 	phase2Packet.SignatureHeaderSection1 = randomArray71()
 	phase2Packet.SignatureHeaderSection2 = randomArray71()
+	phase2Packet.bitSet, _ = NewBitSet(134)
 
-	// TODO: uncomment when support ser\deser of ReferendumVote
-	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
-	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
+	vote := &MissingNode{NodeIndex: 25}
+
+	phase2Packet.AddVote(vote)
 
 	return phase2Packet
 }
