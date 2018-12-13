@@ -87,14 +87,14 @@ func TestExporter_Export(t *testing.T) {
 	_, err = json.Marshal(result)
 	assert.NoError(t, err)
 
-	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].(pulseData).Pulse
+	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber, int(pulse.PulseNumber))
 	assert.Equal(t, int64(1), pulse.PulseTimestamp)
-	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].(pulseData).Pulse
+	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber+1, int(pulse.PulseNumber))
 	assert.Equal(t, int64(2), pulse.PulseTimestamp)
 
-	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].(pulseData).Records
+	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Records
 	object, ok := records[base58.Encode(objectID[:])]
 	if assert.True(t, ok, "object not found by ID") {
 		assert.Equal(t, "TypeActivate", object.Type)
