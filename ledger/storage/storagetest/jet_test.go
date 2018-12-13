@@ -96,7 +96,7 @@ func TestAddDropSizeAndIncreaseLimit(t *testing.T) {
 	db, cleaner := TmpDB(ctx, t)
 	defer cleaner()
 
-	numElements := db.GetMaxLenJetDropSizeList() * 2
+	numElements := db.GetJetSizesHistoryDepth() * 2
 
 	for i := 0; i <= numElements; i++ {
 		addDropSizeToDB(ctx, t, db, jetID, uint64(i))
@@ -106,9 +106,9 @@ func TestAddDropSizeAndIncreaseLimit(t *testing.T) {
 	require.NoError(t, err)
 
 	dropSizeArray := []jet.DropSize(dropSizeList)
-	require.Equal(t, db.GetMaxLenJetDropSizeList(), len(dropSizeArray))
+	require.Equal(t, db.GetJetSizesHistoryDepth(), len(dropSizeArray))
 
-	for i := numElements; i > (numElements - db.GetMaxLenJetDropSizeList()); i-- {
+	for i := numElements; i > (numElements - db.GetJetSizesHistoryDepth()); i-- {
 		require.True(t, findSize(uint64(i), dropSizeArray), "Couldn't find %d", i)
 	}
 }

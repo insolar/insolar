@@ -35,6 +35,7 @@ func encode(data interface{}) []byte {
 	return buf.Bytes()
 }
 
+// DropSize contains info about size of drop
 type DropSize struct {
 	JetID     core.RecordID
 	PulseNo   core.PulseNumber
@@ -63,8 +64,10 @@ func (ds *DropSize) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(ds.serializeDropSize())
 }
 
+// DropSizeList is chain of drop sizes
 type DropSizeList []DropSize
 
+// DeserializeJetDropSizeList deserializes DropSizeList
 func DeserializeJetDropSizeList(ctx context.Context, buff []byte) (DropSizeList, error) {
 	inslogger.FromContext(ctx).Debugf("DeserializeJetDropSizeList starts ... ( buff len: %d)", len(buff))
 	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
@@ -78,6 +81,7 @@ func DeserializeJetDropSizeList(ctx context.Context, buff []byte) (DropSizeList,
 	return dropSizes, nil
 }
 
+// Bytes serializes DropSizeList
 func (dropSizeList DropSizeList) Bytes(ctx context.Context) []byte {
 	inslogger.FromContext(ctx).Debug("DropSizeList.Bytes starts ...")
 	return encode(dropSizeList)

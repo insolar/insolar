@@ -251,7 +251,7 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 			return errors.Wrapf(err, "[ AddDropSize ] Can't decode dropSizes")
 		}
 
-		if len([]jet.DropSize(dropSizes)) >= db.maxLenJetDropSizeList {
+		if len([]jet.DropSize(dropSizes)) >= db.etSizesHistoryDepth {
 			dropSizes = dropSizes[1:]
 		}
 	}
@@ -259,7 +259,6 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 	dropSizes = append(dropSizes, *dropSize)
 
 	return db.set(ctx, k, dropSizes.Bytes(ctx))
-
 }
 
 func (db *DB) ResetDropSizeList(ctx context.Context, dropSizeList jet.DropSizeList) error {

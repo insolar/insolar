@@ -11,17 +11,14 @@ discovery_nodes:
   -
     host: "127.0.0.1:13831"
     role: "virtual"
-    cert_name: "discovery_cert_1.json"
     keys_file: "scripts/insolard/nodes/1/keys.json"
   -
     host: "127.0.0.1:23832"
     role: "heavy_material"
-    cert_name: "discovery_cert_2.json"
     keys_file: "scripts/insolard/nodes/2/keys.json"
   -
     host: "127.0.0.1:33833"
     role: "light_material"
-    cert_name: "discovery_cert_3.json"
     keys_file: "scripts/insolard/nodes/3/keys.json"
 #  -
 #    host: "127.0.0.1:43834"
