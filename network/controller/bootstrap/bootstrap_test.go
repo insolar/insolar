@@ -28,10 +28,10 @@ import (
 
 func getOptions(infinity bool) *common.Options {
 	return &common.Options{
-		TimeoutMult:       2,
+		TimeoutMult:       2 * time.Millisecond,
 		InfinityBootstrap: infinity,
-		MinTimeout:        1,
-		MaxTimeout:        10,
+		MinTimeout:        100 * time.Millisecond,
+		MaxTimeout:        200 * time.Millisecond,
 		PingTimeout:       1 * time.Second,
 		PacketTimeout:     10 * time.Second,
 		BootstrapTimeout:  10 * time.Second,
@@ -59,9 +59,9 @@ func TestBootstrap(t *testing.T) {
 	assert.Error(t, err, BootstrapError)
 
 	startTime := time.Now()
-	expectedTime := startTime.Add(time.Second * 15) // 1s, 2s, 4s, 8s, return nil error
+	expectedTime := startTime.Add(time.Millisecond * 700) // 100ms, 200ms, 200ms, 200ms, return nil error
 	_, err = bootstrap("192.180.0.1:1234", getOptions(true), mockInfinityBootstrap)
 	endTime := time.Now()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedTime.Round(time.Second), endTime.Round(time.Second))
+	assert.WithinDuration(t, expectedTime.Round(time.Millisecond), endTime.Round(time.Millisecond), time.Millisecond*100)
 }

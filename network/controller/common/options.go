@@ -34,13 +34,13 @@ type Options struct {
 	BootstrapTimeout time.Duration
 
 	// Min bootstrap retry timeout
-	MinTimeout int
+	MinTimeout time.Duration
 
 	// Max bootstrap retry timeout
-	MaxTimeout int
+	MaxTimeout time.Duration
 
 	// Multiplier for boostrap retry time
-	TimeoutMult int
+	TimeoutMult time.Duration
 
 	// True - infinity tries to bootstrap
 	InfinityBootstrap bool

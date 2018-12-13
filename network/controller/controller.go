@@ -73,14 +73,14 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 // ConfigureOptions convert daemon configuration to controller options
 func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 	return &common.Options{
-		TimeoutMult:         config.TimeoutMult,
 		InfinityBootstrap:   config.InfinityBootstrap,
-		MinTimeout:          config.MinTimeout,
-		MaxTimeout:          config.MaxTimeout,
-		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
+		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Second,
+		MinTimeout:          time.Duration(config.MinTimeout) * time.Second,
+		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Second,
 		PingTimeout:         1 * time.Second,
 		PacketTimeout:       10 * time.Second,
 		BootstrapTimeout:    10 * time.Second,
+		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
 	}
 }
 
