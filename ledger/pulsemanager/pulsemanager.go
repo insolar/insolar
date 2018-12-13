@@ -110,7 +110,7 @@ func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
 	return &p, nil
 }
 
-func (m *PulseManager) dropAllJets(ctx context.Context, pulse *storage.Pulse) error {
+func (m *PulseManager) handleJetDrops(ctx context.Context, pulse *storage.Pulse) error {
 	jetIDs, err := m.db.GetJets(ctx)
 	if err != nil {
 		return errors.Wrap(err, "can't get jets from storage")
@@ -327,7 +327,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, persist bool) 
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		err = m.dropAllJets(ctx, lastSlotPulse)
+		err = m.handleJetDrops(ctx, lastSlotPulse)
 		if err != nil {
 			return err
 		}

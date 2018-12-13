@@ -31,7 +31,9 @@ type HostNetwork struct {
 	Transport           Transport
 	IsRelay             bool  // set if node must be relay explicit
 	InfinityBootstrap   bool  // set true for infinity tries to bootstrap
-	Timeout             int   // bootstrap reconnect timeout
+	MinTimeout          int   // bootstrap timeout min
+	MaxTimeout          int   // bootstrap timeout max
+	TimeoutMult         int   // bootstrap timout multiplier
 	SignMessages        bool  // signing a messages if true
 	HandshakeSessionTTL int32 // ms
 }
@@ -44,7 +46,9 @@ func NewHostNetwork() HostNetwork {
 	return HostNetwork{
 		Transport:           transport,
 		IsRelay:             false,
-		Timeout:             4,
+		MinTimeout:          1,
+		MaxTimeout:          60,
+		TimeoutMult:         2,
 		InfinityBootstrap:   false,
 		SignMessages:        false,
 		HandshakeSessionTTL: 5000,
