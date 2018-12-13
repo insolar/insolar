@@ -46,10 +46,9 @@ type PulseManager struct {
 	Bus                   core.MessageBus        `inject:""`
 	NodeNet               core.NodeNetwork       `inject:""`
 	JetCoordinator        core.JetCoordinator    `inject:""`
-	GIL                   core.GlobalInsolarLock `inject:""`
 	RecentStorageProvider recentstorage.Provider `inject:""`
 	ActiveListSwapper     ActiveListSwapper      `inject:""`
-	NetworkSwitcher       core.NetworkSwitcher   `inject:""`
+	NetworkLocker         core.NetworkLocker     `inject:""`
 
 	currentPulse core.Pulse
 
@@ -222,7 +221,7 @@ func (m *PulseManager) processRecentObjects(
 }
 
 // Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) error {
+func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, noPersist bool) error {
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -231,9 +230,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	}
 
 	var err error
-	if m.NetworkSwitcher.GetState() == core.CompleteNetworkState {
-		m.GIL.Acquire(ctx)
-	}
+	m.NetworkLocker.AcquireGlobalLock(ctx)
 
 	// swap pulse
 	m.currentPulse = pulse
@@ -245,7 +242,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 
 	// swap active nodes
 	m.ActiveListSwapper.MoveSyncToActive()
-	if !dry {
+	if !noPersist {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
@@ -255,18 +252,16 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 		}
 	}
 
-	if m.NetworkSwitcher.GetState() == core.CompleteNetworkState {
-		m.GIL.Release(ctx)
-	}
+	m.NetworkLocker.ReleaseGlobalLock(ctx)
 
-	if dry {
+	if noPersist {
 		return nil
 	}
 
 	// Run only on material executor.
 	// execute only on material executor
 	// TODO: do as much as possible async.
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial && m.NetworkSwitcher.GetState() == core.CompleteNetworkState {
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 
 		drop, dropSerialized, messages, err := m.createDrop(ctx, lastSlotPulse)
 		if err != nil {
