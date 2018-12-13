@@ -20,8 +20,11 @@ import (
 	"crypto"
 	"encoding/gob"
 
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 type MutableNode interface {
@@ -101,4 +104,19 @@ func (n *node) SetShortID(id core.ShortNodeID) {
 
 func init() {
 	gob.Register(&node{})
+}
+
+func ClaimToNode(version string, claim *packets.NodeJoinClaim) (core.Node, error) {
+	keyProc := platformpolicy.NewKeyProcessor()
+	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
+	}
+	node := NewNode(
+		claim.NodeRef,
+		claim.NodeRoleRecID,
+		key,
+		claim.NodeAddress.Get(),
+		version)
+	return node, nil
 }

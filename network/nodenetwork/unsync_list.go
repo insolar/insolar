@@ -22,8 +22,6 @@ import (
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
@@ -43,6 +41,10 @@ type unsyncList struct {
 	ghs         map[core.RecordRef]consensus.GlobuleHashSignature
 	indexToRef  map[int]core.RecordRef
 	cache       []byte
+}
+
+func (ul *unsyncList) AddNode(node core.Node, bitsetIndex uint16) {
+	ul.addNode(node, int(bitsetIndex))
 }
 
 func (ul *unsyncList) GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim {
@@ -135,7 +137,7 @@ func (ul *unsyncList) mergeClaim(nodes map[core.RecordRef]core.Node, claim conse
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:
 		// TODO: fix version
-		node, err := claimToNode("", t)
+		node, err := ClaimToNode("", t)
 		if err != nil {
 			log.Error("[ mergeClaim ] failed to convert Claim -> Node")
 		}
@@ -211,7 +213,7 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 			}
 
 			// TODO: fix version
-			node, err := claimToNode("", &c.NodeJoinClaim)
+			node, err := ClaimToNode("", &c.NodeJoinClaim)
 			if err != nil {
 				log.Error("[ AddClaims ] failed to convert Claim -> Node")
 			}
@@ -220,19 +222,4 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 			ul.addNode(ul.origin, int(c.NodeJoinerIndex))
 		}
 	}
-}
-
-func claimToNode(version string, claim *consensus.NodeJoinClaim) (core.Node, error) {
-	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
-	}
-	node := NewNode(
-		claim.NodeRef,
-		claim.NodeRoleRecID,
-		key,
-		claim.NodeAddress.Get(),
-		version)
-	return node, nil
 }

@@ -74,8 +74,8 @@ func (p2p *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	return header, nil
 }
 
-func (p2p *Phase2Packet) GetGlobuleHashSignature() []byte {
-	return p2p.globuleHashSignature[:]
+func (p2p *Phase2Packet) GetGlobuleHashSignature() GlobuleHashSignature {
+	return p2p.globuleHashSignature
 }
 
 func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {

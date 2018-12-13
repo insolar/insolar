@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
 
@@ -88,10 +89,12 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 			continue
 		}
 
+		ghs := packet.GetGlobuleHashSignature()
+		state.UnsyncList.SetGlobuleHashSignature(ref, ghs)
 		node := state.UnsyncList.GetActiveNode(ref)
 		proof := &merkle.GlobuleProof{
 			BaseProof: merkle.BaseProof{
-				Signature: core.SignatureFromBytes(packet.GetGlobuleHashSignature()),
+				Signature: core.SignatureFromBytes(ghs[:]),
 			},
 			PrevCloudHash: prevCloudHash,
 			GlobuleID:     globuleProof.GlobuleID,
@@ -158,6 +161,36 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	if len(results) != count {
 		return nil, errors.New(fmt.Sprintf("[ Phase 2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses: %d/%d", len(results), count))
 	}
+
+	for index, result := range results {
+		node, err := nodenetwork.ClaimToNode("", &result.NodeClaimUnsigned)
+		if err != nil {
+			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to convert claim to node, ref: %s", result.NodeClaimUnsigned.NodeRef)
+		}
+		state.UnsyncList.AddNode(node, index)
+		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
+		state.UnsyncList.SetGlobuleHashSignature(node.ID(), result.GlobuleHashSignature)
+	}
+	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
+	for index, claim := range claims {
+		ref, err := state.UnsyncList.IndexToRef(int(index))
+		if err != nil {
+			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to map index %d to ref", index)
+		}
+		list := claimMap[ref]
+		if list == nil {
+			list = make([]packets.ReferendumClaim, 0)
+		}
+		list = append(list, claim.Claim)
+		claimMap[ref] = list
+	}
+	state.UnsyncList.AddClaims(claimMap)
+
+	// cloudEntry := &merkle.CloudEntry{
+	//
+	// }
+
+	// cloudHash, _, _ := sp.Calculator.GetCloudProof(cloudEntry)
 
 	return state, nil
 }

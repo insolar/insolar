@@ -182,6 +182,8 @@ type UnsyncList interface {
 	RemoveNodeAndClaims(core.RecordRef)
 	// AddClaims
 	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim)
+	// AddNode
+	AddNode(node core.Node, bitsetIndex uint16)
 	// GetClaims
 	GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim
 	// AddProof

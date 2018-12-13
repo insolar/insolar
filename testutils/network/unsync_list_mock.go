@@ -25,6 +25,11 @@ type UnsyncListMock struct {
 	AddClaimsPreCounter uint64
 	AddClaimsMock       mUnsyncListMockAddClaims
 
+	AddNodeFunc       func(p core.Node, p1 uint16)
+	AddNodeCounter    uint64
+	AddNodePreCounter uint64
+	AddNodeMock       mUnsyncListMockAddNode
+
 	AddProofFunc       func(p core.RecordRef, p1 *packets.NodePulseProof)
 	AddProofCounter    uint64
 	AddProofPreCounter uint64
@@ -95,6 +100,7 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 	}
 
 	m.AddClaimsMock = mUnsyncListMockAddClaims{mock: m}
+	m.AddNodeMock = mUnsyncListMockAddNode{mock: m}
 	m.AddProofMock = mUnsyncListMockAddProof{mock: m}
 	m.CalculateHashMock = mUnsyncListMockCalculateHash{mock: m}
 	m.GetActiveNodeMock = mUnsyncListMockGetActiveNode{mock: m}
@@ -229,6 +235,130 @@ func (m *UnsyncListMock) AddClaimsFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.AddClaimsFunc != nil {
 		return atomic.LoadUint64(&m.AddClaimsCounter) > 0
+	}
+
+	return true
+}
+
+type mUnsyncListMockAddNode struct {
+	mock              *UnsyncListMock
+	mainExpectation   *UnsyncListMockAddNodeExpectation
+	expectationSeries []*UnsyncListMockAddNodeExpectation
+}
+
+type UnsyncListMockAddNodeExpectation struct {
+	input *UnsyncListMockAddNodeInput
+}
+
+type UnsyncListMockAddNodeInput struct {
+	p  core.Node
+	p1 uint16
+}
+
+//Expect specifies that invocation of UnsyncList.AddNode is expected from 1 to Infinity times
+func (m *mUnsyncListMockAddNode) Expect(p core.Node, p1 uint16) *mUnsyncListMockAddNode {
+	m.mock.AddNodeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockAddNodeExpectation{}
+	}
+	m.mainExpectation.input = &UnsyncListMockAddNodeInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of UnsyncList.AddNode
+func (m *mUnsyncListMockAddNode) Return() *UnsyncListMock {
+	m.mock.AddNodeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockAddNodeExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of UnsyncList.AddNode is expected once
+func (m *mUnsyncListMockAddNode) ExpectOnce(p core.Node, p1 uint16) *UnsyncListMockAddNodeExpectation {
+	m.mock.AddNodeFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &UnsyncListMockAddNodeExpectation{}
+	expectation.input = &UnsyncListMockAddNodeInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of UnsyncList.AddNode method
+func (m *mUnsyncListMockAddNode) Set(f func(p core.Node, p1 uint16)) *UnsyncListMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.AddNodeFunc = f
+	return m.mock
+}
+
+//AddNode implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) AddNode(p core.Node, p1 uint16) {
+	counter := atomic.AddUint64(&m.AddNodePreCounter, 1)
+	defer atomic.AddUint64(&m.AddNodeCounter, 1)
+
+	if len(m.AddNodeMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.AddNodeMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to UnsyncListMock.AddNode. %v %v", p, p1)
+			return
+		}
+
+		input := m.AddNodeMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, UnsyncListMockAddNodeInput{p, p1}, "UnsyncList.AddNode got unexpected parameters")
+
+		return
+	}
+
+	if m.AddNodeMock.mainExpectation != nil {
+
+		input := m.AddNodeMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, UnsyncListMockAddNodeInput{p, p1}, "UnsyncList.AddNode got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.AddNodeFunc == nil {
+		m.t.Fatalf("Unexpected call to UnsyncListMock.AddNode. %v %v", p, p1)
+		return
+	}
+
+	m.AddNodeFunc(p, p1)
+}
+
+//AddNodeMinimockCounter returns a count of UnsyncListMock.AddNodeFunc invocations
+func (m *UnsyncListMock) AddNodeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AddNodeCounter)
+}
+
+//AddNodeMinimockPreCounter returns the value of UnsyncListMock.AddNode invocations
+func (m *UnsyncListMock) AddNodeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AddNodePreCounter)
+}
+
+//AddNodeFinished returns true if mock invocations count is ok
+func (m *UnsyncListMock) AddNodeFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.AddNodeMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.AddNodeCounter) == uint64(len(m.AddNodeMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.AddNodeMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.AddNodeCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.AddNodeFunc != nil {
+		return atomic.LoadUint64(&m.AddNodeCounter) > 0
 	}
 
 	return true
@@ -1922,6 +2052,10 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to UnsyncListMock.AddClaims")
 	}
 
+	if !m.AddNodeFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.AddNode")
+	}
+
 	if !m.AddProofFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.AddProof")
 	}
@@ -1991,6 +2125,10 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.AddClaims")
 	}
 
+	if !m.AddNodeFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.AddNode")
+	}
+
 	if !m.AddProofFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.AddProof")
 	}
@@ -2054,6 +2192,7 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.AddClaimsFinished()
+		ok = ok && m.AddNodeFinished()
 		ok = ok && m.AddProofFinished()
 		ok = ok && m.CalculateHashFinished()
 		ok = ok && m.GetActiveNodeFinished()
@@ -2076,6 +2215,10 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 
 			if !m.AddClaimsFinished() {
 				m.t.Error("Expected call to UnsyncListMock.AddClaims")
+			}
+
+			if !m.AddNodeFinished() {
+				m.t.Error("Expected call to UnsyncListMock.AddNode")
 			}
 
 			if !m.AddProofFinished() {
@@ -2139,6 +2282,10 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 func (m *UnsyncListMock) AllMocksCalled() bool {
 
 	if !m.AddClaimsFinished() {
+		return false
+	}
+
+	if !m.AddNodeFinished() {
 		return false
 	}
 
