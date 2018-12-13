@@ -262,7 +262,7 @@ func (bc *Bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *h
 }
 
 func bootstrap(address string, options *common.Options, bootstrapF func(string) (*host.Host, error)) (*host.Host, error) {
-	mitTO := options.MinTimeout
+	minTO := options.MinTimeout
 	if !options.InfinityBootstrap {
 		return bootstrapF(address)
 	}
@@ -271,10 +271,10 @@ func bootstrap(address string, options *common.Options, bootstrapF func(string) 
 		if err == nil {
 			return result, nil
 		}
-		time.Sleep(mitTO)
-		mitTO *= options.TimeoutMult
-		if mitTO > options.MaxTimeout {
-			mitTO = options.MaxTimeout
+		time.Sleep(minTO)
+		minTO *= options.TimeoutMult
+		if minTO > options.MaxTimeout {
+			minTO = options.MaxTimeout
 		}
 	}
 }
