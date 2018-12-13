@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 
@@ -643,9 +644,10 @@ func TestProxyGeneration(t *testing.T) {
 			assert.NoError(t, err)
 
 			buff := bytes.NewBufferString("")
-			parsed.WriteProxy(testutils.RandomRef().String(), buff)
+			err = parsed.WriteProxy("", buff)
+			require.NoError(t, err)
 
-			cmd := exec.Command("diff", proxy, "-")
+			cmd := exec.Command("diff", "-u", proxy, "-")
 			cmd.Stdin = buff
 			out, err := cmd.CombinedOutput()
 			assert.NoError(t, err, string(out))
