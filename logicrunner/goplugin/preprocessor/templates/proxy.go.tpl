@@ -14,6 +14,7 @@ import (
 // error checking hides in generator
 var PrototypeReference, _ = core.NewRefFromBase58("{{ .ClassReference }}")
 
+
 // {{ .ContractType }} holds proxy type
 type {{ .ContractType }} struct {
 	Reference core.RecordRef
