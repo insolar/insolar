@@ -63,7 +63,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
-var parallel = true
+var parallel = false
 
 func TestMain(m *testing.M) {
 	var err error
@@ -572,7 +572,7 @@ func (r *Two) Hello() (string, error) {
 	// TODO: use am := testutil.NewTestArtifactManager() here
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer func() {
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 30)
 		cleaner()
 	}()
 
