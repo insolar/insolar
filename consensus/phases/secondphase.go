@@ -38,6 +38,8 @@ type SecondPhase struct {
 func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
 	prevCloudHash := sp.NodeKeeper.GetCloudHash()
 
+	state.ValidProofs[sp.NodeKeeper.GetOrigin()] = state.PulseProof
+
 	entry := &merkle.GlobuleEntry{
 		PulseEntry:    state.PulseEntry,
 		ProofSet:      state.ValidProofs,
