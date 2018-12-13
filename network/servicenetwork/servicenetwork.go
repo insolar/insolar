@@ -156,12 +156,12 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		thirdPhase,
 	)
 
+	err = n.MerkleCalculator.(component.Initer).Init(ctx)
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n, n.cfg.Pulsar.PulseTime)
 
-	err = n.MerkleCalculator.(component.Initer).Init(ctx)
 	return err
 }
 
