@@ -70,7 +70,7 @@ func NewCaseBindFromValidateMessage(ctx context.Context, mb core.MessageBus, msg
 }
 
 func NewCaseBindFromExecutorResultsMessage(msg *message.ExecutorResults) *CaseBind {
-	panic("fucker")
+	panic("not implemented")
 }
 
 func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.Pulse) *message.ValidateCaseBind {
