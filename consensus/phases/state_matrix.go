@@ -115,7 +115,10 @@ func (sm *StateMatrix) CalculatePhase2(origin core.RecordRef) (*Phase2MatrixStat
 				return nil, err
 			}
 		}
-		sm.fillState2Result(result, j)
+		err = sm.fillState2Result(result, j)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Can't set active matrix state for index %d", j)
+		}
 	}
 	return result, nil
 }

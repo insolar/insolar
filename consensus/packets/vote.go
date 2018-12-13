@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const NodeListHashLength = 32
+type NodeListHash [32]byte
 
 type VoteType uint8
 
@@ -49,7 +49,7 @@ type StateFraudNodeSupplementaryVote struct {
 
 type NodeListSupplementaryVote struct {
 	NodeListCount uint16
-	NodeListHash  [32]byte
+	NodeListHash  NodeListHash
 }
 
 type MissingNodeClaim struct {

@@ -82,7 +82,11 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		} else if !signIsCorrect {
 			log.Warn("recieved a bad sign packet: ", err.Error())
 		}
-		stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
+		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
+		if err != nil {
+			log.Warnf("[ SecondPhase ] could not apply bitset from node %s", ref)
+			continue
+		}
 
 		node := state.UnsyncList.GetActiveNode(ref)
 		proof := &merkle.GlobuleProof{
