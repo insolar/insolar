@@ -90,10 +90,10 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// always return true
 	jcMock.IsAuthorizedMock.Return(true, nil)
 
-	// Mock N7: GIL mock
-	gilMock := testutils.NewGlobalInsolarLockMock(t)
-	gilMock.AcquireFunc = func(context.Context) {}
-	gilMock.ReleaseFunc = func(context.Context) {}
+	// Mock N7: NetworkLocker
+	nlMock := testutils.NewNetworkLockerMock(t)
+	nlMock.AcquireGlobalLockFunc = func(p context.Context) {}
+	nlMock.ReleaseGlobalLockFunc = func(p context.Context) {}
 
 	// Mock N8: Active List Swapper mock
 	alsMock := testutils.NewActiveListSwapperMock(t)
@@ -157,7 +157,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.NodeNet = nodenetMock
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
-	pm.GIL = gilMock
+	pm.NetworkLocker = nlMock
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
