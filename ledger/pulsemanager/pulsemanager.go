@@ -265,7 +265,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, noPersist bool
 	}
 
 	var err error
-	m.NetworkLocker.AcquireGlobalLock(ctx)
+	m.NetworkLocker.AcquireGlobalLock(ctx, "PulseManager")
 
 	// swap pulse
 	m.currentPulse = pulse
@@ -287,7 +287,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, noPersist bool
 		}
 	}
 
-	m.NetworkLocker.ReleaseGlobalLock(ctx)
+	m.NetworkLocker.ReleaseGlobalLock(ctx, "PulseManager")
 
 	if noPersist {
 		return nil
