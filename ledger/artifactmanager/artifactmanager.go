@@ -149,8 +149,8 @@ func (m *LedgerArtifactManager) GetCode(
 		ctx:         ctx,
 		ref:         code,
 		machineType: react.MachineType,
+		code:        react.Code,
 	}
-	desc.cache.code = react.Code
 	entry.desc = &desc
 	return &desc, nil
 }
