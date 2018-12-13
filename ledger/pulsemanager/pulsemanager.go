@@ -286,7 +286,7 @@ func (m *PulseManager) processRecentObjects(
 }
 
 // Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, noPersist bool) error {
+func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, persist bool) error {
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -307,7 +307,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, noPersist bool
 
 	// swap active nodes
 	m.ActiveListSwapper.MoveSyncToActive()
-	if !noPersist {
+	if persist {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
@@ -319,7 +319,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, noPersist bool
 
 	m.GIL.Release(ctx)
 
-	if noPersist {
+	if !persist {
 		return nil
 	}
 
