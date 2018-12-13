@@ -19,6 +19,7 @@ package artifactmanager
 import (
 	"context"
 	"math/rand"
+	"sync"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -122,6 +123,47 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
 	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.CallRequest).Payload)
+}
+
+func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
+	t.Parallel()
+
+	code := []byte("test_code")
+	ctx := context.Background()
+	codeRef := testutils.RandomRef()
+
+	mb := testutils.NewMessageBusMock(t)
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		return &reply.Code{
+			Code: code,
+		}, nil
+	}
+
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	am := LedgerArtifactManager{
+		DefaultBus:    mb,
+		db:            db,
+		codeCacheLock: &sync.Mutex{},
+		codeCache:     make(map[core.RecordRef]*cacheEntry),
+	}
+
+	desc, err := am.GetCode(ctx, codeRef)
+	receivedCode, err := desc.Code()
+	require.NoError(t, err)
+	require.Equal(t, code, receivedCode)
+
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		t.Fatal("Func must not be called here")
+		return nil, nil
+	}
+
+	desc, err = am.GetCode(ctx, codeRef)
+	receivedCode, err = desc.Code()
+	require.NoError(t, err)
+	require.Equal(t, code, receivedCode)
+
 }
 
 func TestLedgerArtifactManager_DeclareType(t *testing.T) {
