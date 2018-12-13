@@ -97,6 +97,9 @@ func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
 
 func (ns *NetworkSwitcher) Release(ctx context.Context) {
 	ns.counterLock.Lock()
+	if ns.counter == uint64(0) {
+		panic("Trying to unlock without locking")
+	}
 	ns.counter = ns.counter - 1
 	if ns.counter == uint64(0) {
 		ns.MBLocker.Unlock(ctx)
