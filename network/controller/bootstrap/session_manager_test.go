@@ -26,6 +26,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func sessionMapLen(sm *SessionManager) int {
+	sm.lock.RLock()
+	defer sm.lock.RUnlock()
+
+	return len(sm.sessions)
+}
+
+func sessionMapDelete(sm *SessionManager, id SessionID) {
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	delete(sm.sessions, id)
+}
+
 func TestSessionManager_CleanupSimple(t *testing.T) {
 	sm := NewSessionManager()
 
@@ -33,10 +47,10 @@ func TestSessionManager_CleanupSimple(t *testing.T) {
 	require.NoError(t, err)
 
 	sm.NewSession(core.RecordRef{}, nil, time.Second)
-	require.Len(t, sm.sessions, 1)
+	require.Equal(t, sessionMapLen(sm), 1)
 
 	time.Sleep(1500 * time.Millisecond)
-	assert.Len(t, sm.sessions, 0)
+	assert.Equal(t, sessionMapLen(sm), 0)
 }
 
 func TestSessionManager_CleanupConcurrent(t *testing.T) {
@@ -46,13 +60,13 @@ func TestSessionManager_CleanupConcurrent(t *testing.T) {
 	require.NoError(t, err)
 
 	id := sm.NewSession(core.RecordRef{}, nil, time.Second)
-	require.Len(t, sm.sessions, 1)
+	require.Equal(t, sessionMapLen(sm), 1)
 
 	// delete session here and check nothing happened
-	delete(sm.sessions, id)
+	sessionMapDelete(sm, id)
 
 	time.Sleep(1500 * time.Millisecond)
-	assert.Len(t, sm.sessions, 0)
+	assert.Equal(t, sessionMapLen(sm), 0)
 }
 
 func TestSessionManager_CleanupOrder(t *testing.T) {
@@ -64,8 +78,8 @@ func TestSessionManager_CleanupOrder(t *testing.T) {
 	sm.NewSession(core.RecordRef{}, nil, 2*time.Second)
 	sm.NewSession(core.RecordRef{}, nil, 2*time.Second)
 	sm.NewSession(core.RecordRef{}, nil, time.Second)
-	require.Len(t, sm.sessions, 3)
+	require.Equal(t, sessionMapLen(sm), 3)
 
 	time.Sleep(1500 * time.Millisecond)
-	assert.Len(t, sm.sessions, 2)
+	assert.Equal(t, sessionMapLen(sm), 2)
 }
