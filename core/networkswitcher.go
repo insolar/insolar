@@ -45,3 +45,9 @@ type NetworkSwitcher interface {
 	// OnPulse method checks current state and finds out reasons to update this state
 	OnPulse(context.Context, Pulse) error
 }
+
+//go:generate minimock -i github.com/insolar/insolar/core.NetworkLocker -o ../testutils -s _mock.go
+type NetworkLocker interface {
+	AcquireGlobalLock(ctx context.Context)
+	ReleaseGlobalLock(ctx context.Context)
+}
