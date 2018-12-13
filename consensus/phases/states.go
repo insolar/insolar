@@ -46,7 +46,7 @@ type SecondPhaseState struct {
 	MatrixState *Phase2MatrixState
 	Matrix      *StateMatrix
 
-	DBitSet packets.BitSet
+	BitSet packets.BitSet
 }
 
 type ThirdPhasePulseState struct {

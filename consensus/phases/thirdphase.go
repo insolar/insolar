@@ -39,7 +39,7 @@ type ThirdPhase struct {
 func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
-	packet := packets.NewPhase3Packet(gSign, state.DBitSet)
+	packet := packets.NewPhase3Packet(gSign, state.BitSet)
 
 	err := tp.signPhase3Packet(&packet)
 

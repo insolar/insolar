@@ -32,6 +32,11 @@ type CommunicatorMock struct {
 	ExchangePhase2PreCounter uint64
 	ExchangePhase2Mock       mCommunicatorMockExchangePhase2
 
+	ExchangePhase21Func       func(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error)
+	ExchangePhase21Counter    uint64
+	ExchangePhase21PreCounter uint64
+	ExchangePhase21Mock       mCommunicatorMockExchangePhase21
+
 	ExchangePhase3Func       func(p context.Context, p1 []core.Node, p2 *packets.Phase3Packet) (r map[core.RecordRef]*packets.Phase3Packet, r1 error)
 	ExchangePhase3Counter    uint64
 	ExchangePhase3PreCounter uint64
@@ -48,6 +53,7 @@ func NewCommunicatorMock(t minimock.Tester) *CommunicatorMock {
 
 	m.ExchangePhase1Mock = mCommunicatorMockExchangePhase1{mock: m}
 	m.ExchangePhase2Mock = mCommunicatorMockExchangePhase2{mock: m}
+	m.ExchangePhase21Mock = mCommunicatorMockExchangePhase21{mock: m}
 	m.ExchangePhase3Mock = mCommunicatorMockExchangePhase3{mock: m}
 
 	return m
@@ -359,6 +365,158 @@ func (m *CommunicatorMock) ExchangePhase2Finished() bool {
 	return true
 }
 
+type mCommunicatorMockExchangePhase21 struct {
+	mock              *CommunicatorMock
+	mainExpectation   *CommunicatorMockExchangePhase21Expectation
+	expectationSeries []*CommunicatorMockExchangePhase21Expectation
+}
+
+type CommunicatorMockExchangePhase21Expectation struct {
+	input  *CommunicatorMockExchangePhase21Input
+	result *CommunicatorMockExchangePhase21Result
+}
+
+type CommunicatorMockExchangePhase21Input struct {
+	p  context.Context
+	p1 *packets.Phase2Packet
+	p2 []*AdditionalRequest
+}
+
+type CommunicatorMockExchangePhase21Result struct {
+	r  []packets.ReferendumVote
+	r1 error
+}
+
+//Expect specifies that invocation of Communicator.ExchangePhase21 is expected from 1 to Infinity times
+func (m *mCommunicatorMockExchangePhase21) Expect(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) *mCommunicatorMockExchangePhase21 {
+	m.mock.ExchangePhase21Func = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CommunicatorMockExchangePhase21Expectation{}
+	}
+	m.mainExpectation.input = &CommunicatorMockExchangePhase21Input{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of Communicator.ExchangePhase21
+func (m *mCommunicatorMockExchangePhase21) Return(r []packets.ReferendumVote, r1 error) *CommunicatorMock {
+	m.mock.ExchangePhase21Func = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CommunicatorMockExchangePhase21Expectation{}
+	}
+	m.mainExpectation.result = &CommunicatorMockExchangePhase21Result{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Communicator.ExchangePhase21 is expected once
+func (m *mCommunicatorMockExchangePhase21) ExpectOnce(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) *CommunicatorMockExchangePhase21Expectation {
+	m.mock.ExchangePhase21Func = nil
+	m.mainExpectation = nil
+
+	expectation := &CommunicatorMockExchangePhase21Expectation{}
+	expectation.input = &CommunicatorMockExchangePhase21Input{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CommunicatorMockExchangePhase21Expectation) Return(r []packets.ReferendumVote, r1 error) {
+	e.result = &CommunicatorMockExchangePhase21Result{r, r1}
+}
+
+//Set uses given function f as a mock of Communicator.ExchangePhase21 method
+func (m *mCommunicatorMockExchangePhase21) Set(f func(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error)) *CommunicatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ExchangePhase21Func = f
+	return m.mock
+}
+
+//ExchangePhase21 implements github.com/insolar/insolar/consensus/phases.Communicator interface
+func (m *CommunicatorMock) ExchangePhase21(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error) {
+	counter := atomic.AddUint64(&m.ExchangePhase21PreCounter, 1)
+	defer atomic.AddUint64(&m.ExchangePhase21Counter, 1)
+
+	if len(m.ExchangePhase21Mock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ExchangePhase21Mock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CommunicatorMock.ExchangePhase21. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.ExchangePhase21Mock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CommunicatorMockExchangePhase21Input{p, p1, p2}, "Communicator.ExchangePhase21 got unexpected parameters")
+
+		result := m.ExchangePhase21Mock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CommunicatorMock.ExchangePhase21")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ExchangePhase21Mock.mainExpectation != nil {
+
+		input := m.ExchangePhase21Mock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CommunicatorMockExchangePhase21Input{p, p1, p2}, "Communicator.ExchangePhase21 got unexpected parameters")
+		}
+
+		result := m.ExchangePhase21Mock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CommunicatorMock.ExchangePhase21")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ExchangePhase21Func == nil {
+		m.t.Fatalf("Unexpected call to CommunicatorMock.ExchangePhase21. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.ExchangePhase21Func(p, p1, p2)
+}
+
+//ExchangePhase21MinimockCounter returns a count of CommunicatorMock.ExchangePhase21Func invocations
+func (m *CommunicatorMock) ExchangePhase21MinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ExchangePhase21Counter)
+}
+
+//ExchangePhase21MinimockPreCounter returns the value of CommunicatorMock.ExchangePhase21 invocations
+func (m *CommunicatorMock) ExchangePhase21MinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ExchangePhase21PreCounter)
+}
+
+//ExchangePhase21Finished returns true if mock invocations count is ok
+func (m *CommunicatorMock) ExchangePhase21Finished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ExchangePhase21Mock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ExchangePhase21Counter) == uint64(len(m.ExchangePhase21Mock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ExchangePhase21Mock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ExchangePhase21Counter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ExchangePhase21Func != nil {
+		return atomic.LoadUint64(&m.ExchangePhase21Counter) > 0
+	}
+
+	return true
+}
+
 type mCommunicatorMockExchangePhase3 struct {
 	mock              *CommunicatorMock
 	mainExpectation   *CommunicatorMockExchangePhase3Expectation
@@ -523,6 +681,10 @@ func (m *CommunicatorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase2")
 	}
 
+	if !m.ExchangePhase21Finished() {
+		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase21")
+	}
+
 	if !m.ExchangePhase3Finished() {
 		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase3")
 	}
@@ -552,6 +714,10 @@ func (m *CommunicatorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase2")
 	}
 
+	if !m.ExchangePhase21Finished() {
+		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase21")
+	}
+
 	if !m.ExchangePhase3Finished() {
 		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase3")
 	}
@@ -572,6 +738,7 @@ func (m *CommunicatorMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.ExchangePhase1Finished()
 		ok = ok && m.ExchangePhase2Finished()
+		ok = ok && m.ExchangePhase21Finished()
 		ok = ok && m.ExchangePhase3Finished()
 
 		if ok {
@@ -587,6 +754,10 @@ func (m *CommunicatorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ExchangePhase2Finished() {
 				m.t.Error("Expected call to CommunicatorMock.ExchangePhase2")
+			}
+
+			if !m.ExchangePhase21Finished() {
+				m.t.Error("Expected call to CommunicatorMock.ExchangePhase21")
 			}
 
 			if !m.ExchangePhase3Finished() {
@@ -610,6 +781,10 @@ func (m *CommunicatorMock) AllMocksCalled() bool {
 	}
 
 	if !m.ExchangePhase2Finished() {
+		return false
+	}
+
+	if !m.ExchangePhase21Finished() {
 		return false
 	}
 

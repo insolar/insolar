@@ -52,9 +52,12 @@ type NodeListSupplementaryVote struct {
 }
 
 type MissingNodeSupplementaryVote struct {
+	NodeIndex uint16
+
 	NodePulseProof NodePulseProof
 	// TODO: make it signed
 	NodeClaimUnsigned NodeJoinClaim
+	// TODO: also pass claims of missing nodes
 }
 
 type MissingNode struct {
@@ -184,7 +187,11 @@ func (v *MissingNodeSupplementaryVote) Type() VoteType {
 
 // Deserialize implements interface method
 func (v *MissingNodeSupplementaryVote) Deserialize(data io.Reader) error {
-	err := v.NodePulseProof.Deserialize(data)
+	err := binary.Read(data, defaultByteOrder, &v.NodeIndex)
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodeIndex")
+	}
+	err = v.NodePulseProof.Deserialize(data)
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodePulseProof")
 	}
@@ -200,6 +207,11 @@ func (v *MissingNodeSupplementaryVote) Deserialize(data io.Reader) error {
 func (v *MissingNodeSupplementaryVote) Serialize() ([]byte, error) {
 	result := allocateBuffer(1024)
 
+	err := binary.Write(result, defaultByteOrder, v.NodeIndex)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't write NodeIndex")
+	}
+
 	nodePulseProofRaw, err := v.NodePulseProof.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't serialize NodePulseProof")
@@ -212,12 +224,12 @@ func (v *MissingNodeSupplementaryVote) Serialize() ([]byte, error) {
 
 	joinClaim, err := v.NodeClaimUnsigned.SerializeRaw()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Failed to serialize join claim")
+		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't serialize join claim")
 	}
 
 	_, err = result.Write(joinClaim)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Failed to write join claim")
+		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't write join claim")
 	}
 
 	return result.Bytes(), nil

@@ -42,6 +42,8 @@ type Communicator interface {
 	) (map[core.RecordRef]*packets.Phase1Packet, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
 	ExchangePhase2(ctx context.Context, list network.UnsyncList, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
+	// ExchangePhase21 is used between phases 2 and 3 of consensus to send additional MissingNode requests
+	ExchangePhase21(ctx context.Context, packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
 	ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
 }
@@ -326,8 +328,7 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 }
 
 // ExchangePhase21 used in second consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.UnsyncList,
-	participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error) {
 	return nil, errors.New("not implemented")
 }
 

@@ -18,6 +18,7 @@ package phases
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
@@ -104,12 +105,11 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate bitset matrix consensus result")
 	}
 
-	// TODO: timeouts, deviants, etc.
 	return &SecondPhaseState{
 		FirstPhaseState: state,
 		Matrix:          stateMatrix,
 		MatrixState:     matrixCalculation,
-		DBitSet:         bitset,
+		BitSet:          bitset,
 
 		GlobuleEntry:    entry,
 		GlobuleHash:     globuleHash,
@@ -119,7 +119,43 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 }
 
 func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error) {
-	return nil, errors.New("not implemented")
+	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
+	count := len(additionalRequests)
+	results := make(map[uint16]*packets.MissingNodeSupplementaryVote)
+
+	packet := packets.Phase2Packet{}
+	err := packet.SetGlobuleHashSignature(state.GlobuleProof.Signature.Bytes())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to set pulse proof in Phase2Packet.")
+	}
+	packet.SetBitSet(state.BitSet)
+	err = sp.signPhase2Packet(&packet)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to sign a packet")
+	}
+
+	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, &packet, additionalRequests)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to send additional requests.")
+	}
+
+	for _, vote := range voteAnswers {
+		if vote.Type() != packets.TypeMissingNodeSupplementaryVote {
+			continue
+		}
+		v, ok := vote.(*packets.MissingNodeSupplementaryVote)
+		if !ok {
+			log.Warn("Failed to convert vote of type TypeMissingNodeSupplementaryVote to MissingNodeSupplementaryVote")
+			continue
+		}
+		results[v.NodeIndex] = v
+	}
+
+	if len(results) != count {
+		return nil, errors.New(fmt.Sprintf("Failed to receive enough MissingNodeSupplementaryVote responses: %d/%d", len(results), count))
+	}
+
+	return state, nil
 }
 
 func (sp *SecondPhase) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
