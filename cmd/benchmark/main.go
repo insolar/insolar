@@ -51,7 +51,6 @@ func parseInputParams() {
 	pflag.Parse()
 }
 
-// TODO FIXME use buffered output
 func chooseOutput(path string) (io.Writer, error) {
 	var res io.Writer
 	if path == defaultStdoutPath {
