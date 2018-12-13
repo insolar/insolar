@@ -48,6 +48,6 @@ type NetworkSwitcher interface {
 
 //go:generate minimock -i github.com/insolar/insolar/core.NetworkLocker -o ../testutils -s _mock.go
 type NetworkLocker interface {
-	AcquireGlobalLock(ctx context.Context)
-	ReleaseGlobalLock(ctx context.Context)
+	AcquireGlobalLock(ctx context.Context, caller string)
+	ReleaseGlobalLock(ctx context.Context, caller string)
 }
