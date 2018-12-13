@@ -482,8 +482,6 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
 	}
 
-	es.callContext.Prototype = es.objectbody.Prototype
-
 	executor, err := lr.GetExecutor(es.objectbody.CodeMachineType)
 	if err != nil {
 		return nil, es.WrapError(err, "no executor registered")
