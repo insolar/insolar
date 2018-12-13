@@ -18,6 +18,7 @@ package utils
 
 import (
 	"bufio"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"os"
@@ -26,6 +27,21 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 )
+
+type traceIDKey struct{}
+
+// TraceID returns traceid provided by WithTraceField and ContextWithTrace helpers.
+func TraceID(ctx context.Context) string {
+	val := ctx.Value(traceIDKey{})
+	if val == nil {
+		return ""
+	}
+	return val.(string)
+}
+
+func SetTraceID(ctx context.Context, traceid string) context.Context {
+	return context.WithValue(ctx, traceIDKey{}, traceid)
+}
 
 // RandTraceID returns random traceID in uuid format
 func RandTraceID() string {
@@ -112,13 +128,15 @@ func EnableExecutionTimeMeasurement(fname string) (func(), error) {
 }
 
 // Writes execution time of given function to the profile log (if profile logging is enabled)
-func MeasureExecutionTime(comment string, thefunction func()) {
+func MeasureExecutionTime(ctx context.Context, comment string, thefunction func()) {
 	if !measurementsEnabled {
 		return
 	}
 
+	traceId := TraceID(ctx)
+
 	start := TimestampMs()
-	err := writeMeasure("%v STARTED %s\n", start, comment)
+	err := writeMeasure("%v %s STARTED %s\n", start, traceId, comment)
 	if err != nil {
 		return
 	}
@@ -127,5 +145,5 @@ func MeasureExecutionTime(comment string, thefunction func()) {
 
 	end := TimestampMs()
 	delta := end - start
-	_ = writeMeasure("%v ENDED %s, took: %v ms\n", end, comment, delta)
+	_ = writeMeasure("%v %s ENDED %s, took: %v ms\n", end, traceId, comment, delta)
 }

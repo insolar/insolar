@@ -103,9 +103,8 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, err
 	}
 
-	// TODO: [OK] use ctx / inslogger.FromContext() traceid
 	var genericReact core.Reply
-	utils.MeasureExecutionTime("artifactmanager.GetCode m.bus(ctx).Send "+inslogger.TraceID(ctx), func() {
+	utils.MeasureExecutionTime(ctx, "artifactmanager.GetCode m.bus(ctx).Send", func() {
 		genericReact, err = m.bus(ctx).Send(
 			ctx,
 			&message.GetCode{Code: code},

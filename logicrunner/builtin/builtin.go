@@ -21,8 +21,6 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -68,8 +66,7 @@ func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *core.LogicCallContex
 	am := bi.AM
 	var codeDescriptor core.CodeDescriptor
 
-	// TODO: [OK] use ctx trace id
-	utils.MeasureExecutionTime("builtin.CallMethod am.GetCode "+inslogger.TraceID(ctx), func() {
+	utils.MeasureExecutionTime(ctx, "builtin.CallMethod am.GetCode", func() {
 		codeDescriptor, err = am.GetCode(ctx, codeRef)
 	})
 	if err != nil {

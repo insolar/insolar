@@ -79,8 +79,7 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 		codeDescriptor core.CodeDescriptor
 		err            error
 	)
-	// TODO: [OK] use ctx traceID
-	utils.MeasureExecutionTime("service.GetCode am.GetCode "+inslogger.TraceID(ctx), func() {
+	utils.MeasureExecutionTime(ctx, "service.GetCode am.GetCode", func() {
 		codeDescriptor, err = am.GetCode(ctx, req.Code)
 	})
 	if err != nil {

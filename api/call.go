@@ -136,14 +136,14 @@ func processError(err error, extraMsg string, resp *answer, insLog core.Logger) 
 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
-		// TODO: [OK] use ctx/insLog traceid
 		traceID := utils.RandTraceID()
-		utils.MeasureExecutionTime("NetRPC Request Processing "+traceID,
+		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
+
+		utils.MeasureExecutionTime(ctx, "NetRPC Request Processing",
 			func() {
 				params := Request{}
 				resp := answer{}
 
-				ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 				resp.TraceID = traceID
 
 				insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
