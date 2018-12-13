@@ -48,7 +48,7 @@ func parseInputParams() {
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
-	pflag.StringVarP(&rootmemberkeys, "rqootmemberkeys", "k", "", "path to file with RootMember keys")
+	pflag.StringVarP(&rootmemberkeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
 	pflag.Parse()
 }
 
@@ -66,8 +66,7 @@ func chooseOutput(path string) (io.Writer, error) {
 	}
 	return res, nil
 }
-
-// TODO FIXME out is not thread safe! Also it should be flushed.
+.
 func writeToOutput(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
 	check("Can't write data to output", err)
@@ -158,28 +157,22 @@ func startScenario(s scenario) {
 }
 
 func main() {
-	log.Printf("Starting benchmark. Calling parseInputParams()...\n")
 	parseInputParams()
 
-	log.Printf("Calling chooseOutput()...\n")
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
 	var members []memberInfo
 
-	log.Printf("Calling getRootMemberInfo()...\n")
 	rootMember = getRootMemberInfo(rootmemberkeys)
 
 	if input != "" {
-		log.Printf("Calling getMembersInfo()...\n")
 		members, err = getMembersInfo(input)
 		check("Problems with parsing input:", err)
 	} else {
-		log.Printf("Calling createMembers(), this may take some time...\n") // TODO: THIS DOES TAKE TIME
 		members, err = createMembers(concurrent, repetitions)
 		check("Problems with create members. One of creating request ended with error: ", err)
 	}
 
-	log.Printf("Calling runScenarios()...\n")
 	runScenarios(out, members, concurrent, repetitions)
 }

@@ -24,7 +24,7 @@ ledger:
       5: 1
 
 log:
-  level: Info
+  level: Debug
   adapter: logrus
 logicrunner:
   rpclisten: 127.0.0.1:58182

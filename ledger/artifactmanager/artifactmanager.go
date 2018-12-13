@@ -20,14 +20,13 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/core/utils"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 )

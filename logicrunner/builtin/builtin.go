@@ -21,12 +21,12 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/insolar/insolar/core/utils"
-
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 )
 
 // Contract is a interface for builtin contract
