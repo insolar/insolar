@@ -63,7 +63,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
-var parallel = false
+var parallel = true
 
 func TestMain(m *testing.M) {
 	var err error
@@ -571,7 +571,10 @@ func (r *Two) Hello() (string, error) {
 	ctx := context.TODO()
 	// TODO: use am := testutil.NewTestArtifactManager() here
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
-	defer cleaner()
+	defer func() {
+		time.Sleep(time.Second * 10)
+		cleaner()
+	}()
 
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
