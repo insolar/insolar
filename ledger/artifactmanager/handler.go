@@ -99,7 +99,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
 	return func(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-		err := persistMessageToDb(ctx, h.db, *genericMsg.DefaultTarget().Record(), genericMsg.Message())
+		err := persistMessageToDb(ctx, h.db, genericMsg.Message())
 		if err != nil {
 			return nil, err
 		}
@@ -121,6 +121,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 	jetID, isMine, err := h.checkMyJet(
 		ctx,
 		*record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, pulseNumber, rec),
+		pulseNumber,
 	)
 	if err != nil {
 		return nil, err
@@ -147,20 +148,11 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, pulseNumber core.P
 
 func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.SetBlob)
-
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.TargetRef.Record(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
+	// TODO: add jetIS in message - @nordicdyno 6.Dec.2018
+	jetID := core.TODOJetID
 
 	calculatedID := record.CalculateIDForBlob(h.PlatformCryptographyScheme, pulseNumber, msg.Memory)
-	_, err = h.db.GetBlob(ctx, *jetID, calculatedID)
+	_, err := h.db.GetBlob(ctx, jetID, calculatedID)
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
@@ -168,7 +160,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 		return nil, err
 	}
 
-	id, err := h.db.SetBlob(ctx, *jetID, pulseNumber, msg.Memory)
+	id, err := h.db.SetBlob(ctx, jetID, pulseNumber, msg.Memory)
 	if err != nil {
 		return nil, err
 	}
@@ -178,17 +170,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, pulseNumber core.Pul
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
-
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.Code.Record(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
+	jetID := core.TODOJetID
 
 	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
 	if err == storage.ErrNotFound {
@@ -213,7 +195,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, pulseNumber core.Pul
 	if err != nil {
 		return nil, err
 	}
-	code, err := h.db.GetBlob(ctx, *jetID, codeRec.Code)
+	code, err := h.db.GetBlob(ctx, jetID, codeRec.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -230,30 +212,19 @@ func (h *MessageHandler) handleGetObject(
 	ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel,
 ) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetObject)
+	jetID := core.TODOJetID
 
 	var (
 		idx *index.ObjectLifeline
 		err error
 	)
-
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.Head.Record(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
-
-	idx, err = h.db.GetObjectIndex(ctx, *jetID, msg.Head.Record(), false)
+	idx, err = h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
 		heavy, err := h.findHeavy(ctx, msg.Head.Record(), pulseNumber)
 		if err != nil {
 			return nil, err
 		}
-		_, err = h.saveIndexFromHeavy(ctx, h.db, *jetID, msg.Head, heavy)
+		_, err = h.saveIndexFromHeavy(ctx, h.db, msg.Head, heavy)
 		if err != nil {
 			return nil, err
 		}
@@ -270,9 +241,9 @@ func (h *MessageHandler) handleGetObject(
 		}
 		return nil, err
 	}
-	h.RecentStorageProvider.GetStorage(*jetID).AddObject(*msg.Head.Record(), false)
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record(), false)
 
-	state, err := getObjectStateRecord(ctx, h.db, *jetID, stateID)
+	state, err := getObjectStateRecord(ctx, h.db, stateID)
 	if err != nil {
 		switch err {
 		case ErrObjectDeactivated:
@@ -314,7 +285,7 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	if state.GetMemory() != nil {
-		rep.Memory, err = h.db.GetBlob(ctx, *jetID, state.GetMemory())
+		rep.Memory, err = h.db.GetBlob(ctx, jetID, state.GetMemory())
 		if err != nil {
 			return nil, err
 		}
@@ -325,30 +296,19 @@ func (h *MessageHandler) handleGetObject(
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.GetDelegate)
+	jetID := core.TODOJetID
 
 	var (
 		idx *index.ObjectLifeline
 		err error
 	)
-
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.Head.Record(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
-
-	idx, err = h.db.GetObjectIndex(ctx, *jetID, msg.Head.Record(), false)
+	idx, err = h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
 		heavy, err := h.findHeavy(ctx, msg.Head.Record(), pulseNumber)
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, h.db, *jetID, msg.Head, heavy)
+		idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Head, heavy)
 		if err != nil {
 			return nil, err
 		}
@@ -356,7 +316,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, pulseNumber core
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	h.RecentStorageProvider.GetStorage(*jetID).AddObject(*msg.Head.Record(), false)
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record(), false)
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -374,25 +334,15 @@ func (h *MessageHandler) handleGetChildren(
 	ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel,
 ) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
+	jetID := core.TODOJetID
 
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.Parent.Record(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
-
-	idx, err := h.db.GetObjectIndex(ctx, *jetID, msg.Parent.Record(), false)
+	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
 		heavy, err := h.findHeavy(ctx, msg.Parent.Record(), pulseNumber)
 		if err != nil {
 			return nil, err
 		}
-		_, err = h.saveIndexFromHeavy(ctx, h.db, *jetID, msg.Parent, heavy)
+		_, err = h.saveIndexFromHeavy(ctx, h.db, msg.Parent, heavy)
 		if err != nil {
 			return nil, err
 		}
@@ -401,7 +351,7 @@ func (h *MessageHandler) handleGetChildren(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.RecentStorageProvider.GetStorage(*jetID).AddObject(*msg.Parent.Record(), false)
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record(), false)
 
 	var (
 		refs         []core.RecordRef
@@ -443,7 +393,7 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		counter++
 
-		rec, err := h.db.GetRecord(ctx, *jetID, currentChild)
+		rec, err := h.db.GetRecord(ctx, jetID, currentChild)
 		// We don't have this child reference. Return what was collected.
 		if err == storage.ErrNotFound {
 			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
@@ -472,16 +422,7 @@ func (h *MessageHandler) handleGetChildren(
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.UpdateObject)
 
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.Object.Record(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
+	jetID := core.TODOJetID
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ObjectState)
@@ -489,11 +430,11 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		return nil, errors.New("wrong object state record")
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(*jetID)
+	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var idx *index.ObjectLifeline
-	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
+	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		idx, err = tx.GetObjectIndex(ctx, *jetID, msg.Object.Record(), true)
+		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == storage.ErrNotFound {
 			if state.State() == record.StateActivation {
@@ -505,7 +446,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 				if err != nil {
 					return err
 				}
-				idx, err = h.saveIndexFromHeavy(ctx, h.db, *jetID, msg.Object, heavy)
+				idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Object, heavy)
 				if err != nil {
 					return err
 				}
@@ -523,7 +464,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 
 		recentStorage.AddObject(*msg.Object.Record(), true)
 
-		id, err := tx.SetRecord(ctx, *jetID, pulseNumber, rec)
+		id, err := tx.SetRecord(ctx, jetID, pulseNumber, rec)
 		if err != nil {
 			return err
 		}
@@ -532,7 +473,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 		if state.State() == record.StateActivation {
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
 		}
-		return tx.SetObjectIndex(ctx, *jetID, msg.Object.Record(), idx)
+		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
 	})
 	if err != nil {
 		if err == ErrObjectDeactivated {
@@ -557,16 +498,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, pulseNumber cor
 func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber core.PulseNumber, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.RegisterChild)
 
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.Parent.Record(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
+	jetID := core.TODOJetID
 
 	rec := record.DeserializeRecord(msg.Record)
 	childRec, ok := rec.(*record.ChildRecord)
@@ -574,16 +506,16 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		return nil, errors.New("wrong child record")
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(*jetID)
+	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var child *core.RecordID
-	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
-		idx, err := h.db.GetObjectIndex(ctx, *jetID, msg.Parent.Record(), false)
+	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
+		idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 		if err == storage.ErrNotFound {
 			heavy, err := h.findHeavy(ctx, msg.Parent.Record(), pulseNumber)
 			if err != nil {
 				return err
 			}
-			idx, err = h.saveIndexFromHeavy(ctx, h.db, *jetID, msg.Parent, heavy)
+			idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Parent, heavy)
 			if err != nil {
 				return err
 			}
@@ -597,7 +529,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 			return errors.New("invalid child record")
 		}
 
-		child, err = tx.SetRecord(ctx, *jetID, pulseNumber, childRec)
+		child, err = tx.SetRecord(ctx, jetID, pulseNumber, childRec)
 		if err != nil {
 			return err
 		}
@@ -605,7 +537,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, pulseNumber co
 		if msg.AsType != nil {
 			idx.Delegates[*msg.AsType] = msg.Child
 		}
-		err = tx.SetObjectIndex(ctx, *jetID, msg.Parent.Record(), idx)
+		err = tx.SetObjectIndex(ctx, jetID, msg.Parent.Record(), idx)
 		if err != nil {
 			return err
 		}
@@ -655,30 +587,20 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, genericMsg core.Parc
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber core.PulseNumber, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.ValidateRecord)
-
+	jetID := core.TODOJetID
 	currentPulse, err := h.db.GetLatestPulse(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.Object.Record())
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
-
 	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
-		idx, err := tx.GetObjectIndex(ctx, *jetID, msg.Object.Record(), true)
+		idx, err := tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		if err == storage.ErrNotFound {
 			heavy, err := h.findHeavy(ctx, msg.Object.Record(), pulseNumber)
 			if err != nil {
 				return err
 			}
-			idx, err = h.saveIndexFromHeavy(ctx, h.db, *jetID, msg.Object, heavy)
+			idx, err = h.saveIndexFromHeavy(ctx, h.db, msg.Object, heavy)
 			if err != nil {
 				return err
 			}
@@ -721,7 +643,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 			} else {
 				idx.LatestState = idx.LatestStateApproved
 			}
-			err = tx.SetObjectIndex(ctx, *jetID, msg.Object.Record(), idx)
+			err = tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
 			if err != nil {
 				return errors.Wrap(err, "failed to save object index")
 			}
@@ -743,19 +665,9 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, pulseNumber c
 
 func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetObjectIndex)
+	jetID := core.TODOJetID
 
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.Object.Record(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
-
-	idx, err := h.db.GetObjectIndex(ctx, *jetID, msg.Object.Record(), true)
+	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
@@ -771,18 +683,9 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.ValidationCheck)
 
-	jetID, isMine, err := h.checkMyJet(
-		ctx,
-		*msg.Object.Record(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !isMine {
-		return &reply.JetMiss{JetID: *jetID}, nil
-	}
+	jetID := core.TODOJetID
 
-	rec, err := h.db.GetRecord(ctx, *jetID, &msg.ValidatedState)
+	rec, err := h.db.GetRecord(ctx, jetID, &msg.ValidatedState)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch state record")
 	}
@@ -799,12 +702,12 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 	return &reply.OK{}, nil
 }
 
-func persistMessageToDb(ctx context.Context, db *storage.DB, jetID core.RecordID, genericMsg core.Message) error {
+func persistMessageToDb(ctx context.Context, db *storage.DB, genericMsg core.Message) error {
 	lastPulse, err := db.GetLatestPulse(ctx)
 	if err != nil {
 		return err
 	}
-	err = db.SetMessage(ctx, jetID, lastPulse.Pulse.PulseNumber, genericMsg)
+	err = db.SetMessage(ctx, core.TODOJetID, lastPulse.Pulse.PulseNumber, genericMsg)
 	if err != nil {
 		return err
 	}
@@ -852,9 +755,10 @@ func getObjectState(
 func getObjectStateRecord(
 	ctx context.Context,
 	s storage.Store,
-	jetID core.RecordID,
 	state *core.RecordID,
 ) (record.ObjectState, error) {
+	jetID := core.TODOJetID
+
 	rec, err := s.GetRecord(ctx, jetID, state)
 	if err != nil {
 		return nil, err
@@ -895,8 +799,10 @@ func (h *MessageHandler) findHeavy(ctx context.Context, obj *core.RecordID, puls
 }
 
 func (h *MessageHandler) saveIndexFromHeavy(
-	ctx context.Context, s storage.Store, jetID core.RecordID, obj core.RecordRef, heavy *core.RecordRef,
+	ctx context.Context, s storage.Store, obj core.RecordRef, heavy *core.RecordRef,
 ) (*index.ObjectLifeline, error) {
+	jetID := core.TODOJetID
+
 	currentPulse, err := h.db.GetLatestPulse(ctx)
 	if err != nil {
 		return nil, err
@@ -941,7 +847,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		len(msg.RecentObjects),
 		len(msg.PendingRequests),
 	)
-	jetID := *msg.Jet.Record()
+	jetID := core.TODOJetID
 
 	err := h.db.SetDrop(ctx, jetID, &msg.Drop)
 	if err != nil {
@@ -1002,12 +908,12 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) checkMyJet(ctx context.Context, obj core.RecordID) (*core.RecordID, bool, error) {
-	isMine, err := h.JetCoordinator.AmI(ctx, core.DynamicRoleLightExecutor, &obj, obj.Pulse())
+func (h *MessageHandler) checkMyJet(ctx context.Context, obj core.RecordID, pulse core.PulseNumber) (*core.RecordID, bool, error) {
+	isMine, err := h.JetCoordinator.AmI(ctx, core.DynamicRoleLightExecutor, &obj, pulse)
 	if err != nil {
 		return nil, false, err
 	}
-	tree, err := h.db.GetJetTree(ctx, obj.Pulse())
+	tree, err := h.db.GetJetTree(ctx, pulse)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed to fetch jet tree")
 	}
