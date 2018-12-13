@@ -130,8 +130,8 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	alsMock.MoveSyncToActiveFunc = func() {}
 
 	nlMock := testutils.NewNetworkLockerMock(t)
-	nlMock.AcquireGlobalLockFunc = func(p context.Context) {}
-	nlMock.ReleaseGlobalLockFunc = func(p context.Context) {}
+	nlMock.AcquireGlobalLockFunc = func(p context.Context, p1 string) {}
+	nlMock.ReleaseGlobalLockFunc = func(p context.Context, p1 string) {}
 
 	pm.LR = lr
 
