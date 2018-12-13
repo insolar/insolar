@@ -72,9 +72,9 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
 
-	gilMock := testutils.NewGlobalInsolarLockMock(t)
-	gilMock.AcquireFunc = func(context.Context) {}
-	gilMock.ReleaseFunc = func(context.Context) {}
+	networkLockerMock := testutils.NewNetworkLockerMock(t)
+	networkLockerMock.AcquireGlobalLockFunc = func(context.Context) {}
+	networkLockerMock.ReleaseGlobalLockFunc = func(context.Context) {}
 
 	alsMock := testutils.NewActiveListSwapperMock(t)
 	alsMock.MoveSyncToActiveFunc = func() {}
@@ -82,7 +82,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	handler.Bus = c.MessageBus
 	am.DefaultBus = c.MessageBus
 	pm.NodeNet = c.NodeNetwork
-	pm.GIL = gilMock
+	pm.NetworkLocker = networkLockerMock
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
