@@ -67,7 +67,7 @@ func TestExporter_Export(t *testing.T) {
 		},
 		IsDelegate: true,
 	})
-	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest"})
+	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest", Msg: &message.CallConstructor{}})
 	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.CallRequest{
 		Payload: pl,
 	})
@@ -107,5 +107,6 @@ func TestExporter_Export(t *testing.T) {
 		assert.Equal(t, "TypeCallRequest", request.Type)
 		assert.Equal(t, pl, request.Data.(*record.CallRequest).Payload)
 		assert.Equal(t, "callRequest", request.Payload["Payload"].(*message.Parcel).LogTraceID)
+		assert.Equal(t, core.TypeCallConstructor.String(), request.Payload["Type"])
 	}
 }
