@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -69,10 +70,11 @@ func TestStore_DropWaitWrites(t *testing.T) {
 		<-txstarted
 		log.Debugln("start CreateDrop")
 		close(dropwaits)
-		_, _, droperr := db.CreateDrop(ctx, core.TODOJetID, 0, []byte{})
+		_, _, dropSize, droperr := db.CreateDrop(ctx, core.TODOJetID, 0, []byte{})
 		if droperr != nil {
 			panic(droperr)
 		}
+		require.NotEqual(t, 0, dropSize)
 		dropFin = time.Now()
 		log.Debugln("end CreateDrop")
 		wg.Done()
