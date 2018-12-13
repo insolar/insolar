@@ -12,7 +12,8 @@ type RecordInfo struct {
 }
 
 // PrototypeReference to prototype of this contract
-var PrototypeReference, _ = core.NewRefFromBase58("")
+// error checking hides in generator
+var PrototypeReference, _ = core.NewRefFromBase58("11112rJdjdVwCCkc9tvLdJwKkV16m6iryEJ7tWLNRPK.11111111111111111111111111111111")
 
 // NodeRecord holds proxy type
 type NodeRecord struct {
@@ -93,7 +94,7 @@ func (r *NodeRecord) GetPrototype() (core.RecordRef, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), PrototypeReference)
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -123,7 +124,7 @@ func (r *NodeRecord) GetCode() (core.RecordRef, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), PrototypeReference)
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -160,7 +161,7 @@ func (r *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetNodeInfo", argsSerialized, PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetNodeInfo", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -187,7 +188,7 @@ func (r *NodeRecord) GetNodeInfoNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetNodeInfo", argsSerialized, PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetNodeInfo", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -212,7 +213,7 @@ func (r *NodeRecord) GetPublicKey() (string, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized, PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -239,7 +240,7 @@ func (r *NodeRecord) GetPublicKeyNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized, PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -264,7 +265,7 @@ func (r *NodeRecord) GetRole() (core.StaticRole, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRole", argsSerialized, PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRole", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -291,7 +292,7 @@ func (r *NodeRecord) GetRoleNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRole", argsSerialized, PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRole", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -314,7 +315,7 @@ func (r *NodeRecord) Destroy() error {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Destroy", argsSerialized, PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Destroy", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -341,7 +342,7 @@ func (r *NodeRecord) DestroyNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Destroy", argsSerialized, PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Destroy", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
