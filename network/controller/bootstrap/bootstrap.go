@@ -269,7 +269,6 @@ func (bc *Bootstrapper) bootstrap(address string) (*host.Host, error) {
 			result, err := bc.startBootstrap(address)
 			if err != nil {
 				time.Sleep(time.Second * time.Duration(seconds))
-				err = nil
 				seconds *= bc.options.TimeoutMult
 				if seconds > bc.options.MaxTimeout {
 					seconds = bc.options.MaxTimeout
