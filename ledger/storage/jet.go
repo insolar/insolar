@@ -251,7 +251,7 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 			return errors.Wrapf(err, "[ AddDropSize ] Can't decode dropSizes")
 		}
 
-		if len([]jet.DropSize(dropSizes)) >= jet.MaxLenJetDropSizeList {
+		if len([]jet.DropSize(dropSizes)) >= db.maxLenJetDropSizeList {
 			dropSizes = dropSizes[1:]
 		}
 	}

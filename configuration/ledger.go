@@ -79,6 +79,9 @@ type Ledger struct {
 	//
 	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit core.PulseNumber
+
+	// MaxLenJetDropSizeList holds maximum number of drop sizes
+	MaxLenJetDropSizeList int
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -115,5 +118,7 @@ func NewLedger() Ledger {
 		},
 
 		LightChainLimit: 10 * 30, // 30 pulses
+
+		MaxLenJetDropSizeList: 10,
 	}
 }

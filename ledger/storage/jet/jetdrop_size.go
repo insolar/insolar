@@ -63,8 +63,6 @@ func (ds *DropSize) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(ds.serializeDropSize())
 }
 
-const MaxLenJetDropSizeList = 10
-
 type DropSizeList []DropSize
 
 func DeserializeJetDropSizeList(ctx context.Context, buff []byte) (DropSizeList, error) {

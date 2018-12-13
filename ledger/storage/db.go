@@ -68,6 +68,8 @@ type DB struct {
 	// so txretiries is our knob to tune up retry logic.
 	txretiries int
 
+	maxLenJetDropSizeList int
+
 	idlocker *IDLocker
 
 	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
@@ -84,6 +86,11 @@ type DB struct {
 // SetTxRetiries sets number of retries on conflict in Update
 func (db *DB) SetTxRetiries(n int) {
 	db.txretiries = n
+}
+
+// GetMaxLenJetDropSizeList returns max amount of drop sizes
+func (db *DB) GetMaxLenJetDropSizeList() int {
+	return db.maxLenJetDropSizeList
 }
 
 func setOptions(o *badger.Options) *badger.Options {
@@ -114,10 +121,11 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	}
 
 	db := &DB{
-		db:          bdb,
-		txretiries:  conf.Storage.TxRetriesOnConflict,
-		idlocker:    NewIDLocker(),
-		nodeHistory: map[core.PulseNumber][]core.Node{},
+		db:                    bdb,
+		txretiries:            conf.Storage.TxRetriesOnConflict,
+		maxLenJetDropSizeList: conf.MaxLenJetDropSizeList,
+		idlocker:              NewIDLocker(),
+		nodeHistory:           map[core.PulseNumber][]core.Node{},
 	}
 	return db, nil
 }
