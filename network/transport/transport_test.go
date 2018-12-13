@@ -171,8 +171,15 @@ func TestUDPTransport(t *testing.T) {
 }
 
 func TestTCPTransport(t *testing.T) {
-	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17014", BehindNAT: false}
-	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17015", BehindNAT: false}
+	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17016", BehindNAT: false}
+	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17017", BehindNAT: false}
+
+	suite.Run(t, NewSuite(cfg1, cfg2))
+}
+
+func TestQuicTransport(t *testing.T) {
+	cfg1 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17018", BehindNAT: false}
+	cfg2 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17019", BehindNAT: false}
 
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }

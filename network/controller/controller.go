@@ -72,17 +72,12 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 
 // ConfigureOptions convert daemon configuration to controller options
 func ConfigureOptions(config configuration.HostNetwork) *common.Options {
-	options := &common.Options{}
-	if options.PingTimeout == 0 {
-		options.PingTimeout = time.Second * 1
+	return &common.Options{
+		PingTimeout:         1 * time.Second,
+		PacketTimeout:       10 * time.Second,
+		BootstrapTimeout:    10 * time.Second,
+		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
 	}
-	if options.PacketTimeout == 0 {
-		options.PacketTimeout = time.Second * 10
-	}
-	if options.BootstrapTimeout == 0 {
-		options.BootstrapTimeout = time.Second * 10
-	}
-	return options
 }
 
 // NewNetworkController create new network controller.

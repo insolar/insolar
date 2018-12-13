@@ -733,7 +733,7 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 
 	jetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{2})
 	msg := message.JetDrop{
-		Jet: *jetID,
+		JetID: *jetID,
 	}
 	expectedSetId := jet.IDSet{
 		*jetID: struct{}{},
@@ -749,11 +749,13 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 
 	idSet, err := db.GetJets(ctx)
 	require.NoError(t, err)
+	require.NotNil(t, idSet)
 
 	// Assert
 	require.Equal(t, &reply.OK{}, response)
-	require.Equal(t, expectedSetId, idSet)
-
+	for id := range expectedSetId {
+		require.True(t, idSet.Has(id))
+	}
 }
 
 func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
@@ -769,10 +771,10 @@ func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
 	jetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{2})
 	secondJetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{3})
 	msg := message.JetDrop{
-		Jet: *jetID,
+		JetID: *jetID,
 	}
 	secondMsg := message.JetDrop{
-		Jet: *secondJetID,
+		JetID: *secondJetID,
 	}
 	expectedSetId := jet.IDSet{
 		*jetID:       struct{}{},
@@ -794,9 +796,12 @@ func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
 
 	idSet, err := db.GetJets(ctx)
 	require.NoError(t, err)
+	require.NotNil(t, idSet)
 
 	// Assert
-	require.Equal(t, expectedSetId, idSet)
+	for id := range expectedSetId {
+		require.True(t, idSet.Has(id))
+	}
 }
 
 func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {

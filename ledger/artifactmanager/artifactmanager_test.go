@@ -612,9 +612,12 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 		Record: record.SerializeRecord(&codeRecord),
 	}
 
+	jetID := *jet.NewID(0, nil)
+
 	rep, err := am.DefaultBus.Send(
 		ctx,
 		&message.JetDrop{
+			JetID: jetID,
 			Messages: [][]byte{
 				message.ToBytes(&setRecordMessage),
 			},
@@ -626,7 +629,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
 
-	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
+	rec, err := db.GetRecord(ctx, jetID, id)
 	assert.NoError(t, err)
 	assert.Equal(t, codeRecord, *rec.(*record.CodeRecord))
 }
