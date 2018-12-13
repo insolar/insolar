@@ -24,14 +24,22 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/state.messageBusLocker -o ./ -s _mock.go
+type messageBusLocker interface {
+	Acquire(ctx context.Context)
+	Release(ctx context.Context)
+}
+
 // NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher struct {
 	NodeNetwork        core.NodeNetwork        `inject:""`
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
-	GIL                core.GlobalInsolarLock  `inject:""`
+	MBLock             messageBusLocker        `inject:""`
 
 	state     core.NetworkState
 	stateLock sync.RWMutex
+
+	gilLocked bool
 }
 
 // NewNetworkSwitcher creates new NetworkSwitcher
@@ -40,6 +48,17 @@ func NewNetworkSwitcher() (*NetworkSwitcher, error) {
 		state:     core.NoNetworkState,
 		stateLock: sync.RWMutex{},
 	}, nil
+}
+
+// TODO: after INS-923 remove this func
+func (ns *NetworkSwitcher) Start(ctx context.Context) error {
+	ns.stateLock.Lock()
+	defer ns.stateLock.Unlock()
+
+	ns.MBLock.Release(ctx)
+	ns.gilLocked = false
+	ns.state = core.CompleteNetworkState
+	return nil
 }
 
 // GetState method returns current network state
@@ -59,9 +78,30 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 
 	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
 		ns.state = core.CompleteNetworkState
-		ns.GIL.Release(ctx)
+		ns.MBLock.Release(ctx)
+		ns.gilLocked = false
 		inslogger.FromContext(ctx).Info("Current NetworkSwitcher state switched to: %s", ns.state)
 	}
 
 	return nil
+}
+
+func (ns *NetworkSwitcher) AcquireGlobalLock(ctx context.Context) {
+	ns.stateLock.RLock()
+	defer ns.stateLock.RUnlock()
+
+	if ns.state == core.CompleteNetworkState {
+		ns.MBLock.Acquire(ctx)
+		ns.gilLocked = true
+	}
+}
+
+func (ns *NetworkSwitcher) ReleaseGlobalLock(ctx context.Context) {
+	ns.stateLock.RLock()
+	defer ns.stateLock.RUnlock()
+
+	if ns.gilLocked {
+		ns.MBLock.Release(ctx)
+		ns.gilLocked = false
+	}
 }
