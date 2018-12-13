@@ -62,26 +62,37 @@ type recordsData map[string]recordData
 type pulseData struct {
 	Records recordsData
 	Pulse   core.Pulse
+	JetID   core.RecordID
 }
 
 // Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
 	result := core.StorageExportResult{Data: map[string]interface{}{}}
 
-	jetID := core.TODOJetID
+	jetIDs, err := e.db.GetJets(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	counter := 0
 	currentPN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
 	current := &currentPN
 	for current != nil && counter < size {
 		pulse, err := e.db.GetPulse(ctx, *current)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch pulse data 22222")
+			return nil, errors.Wrap(err, "failed to fetch pulse data")
 		}
-		data, err := e.exportPulse(ctx, jetID, &pulse.Pulse)
-		if err != nil {
-			return nil, err
+
+		var data[]*pulseData
+		for jetID := range jetIDs {
+			fetchedData, err := e.exportPulse(ctx, jetID, &pulse.Pulse)
+			if err != nil {
+				return nil, err
+			}
+			data = append(data, fetchedData)
 		}
-		result.Data[strconv.FormatUint(uint64(pulse.Pulse.PulseNumber), 10)] = *data
+
+		result.Data[strconv.FormatUint(uint64(pulse.Pulse.PulseNumber), 10)] = data
 
 		current = pulse.Next
 		counter++
@@ -93,9 +104,9 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	return &result, nil
 }
 
-func (e *Exporter) exportPulse(ctx context.Context, jet core.RecordID, pulse *core.Pulse) (*pulseData, error) {
+func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.db.IterateRecords(ctx, jet, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
+	err := e.db.IterateRecords(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
 		pl, err := e.getPayload(ctx, rec)
 		if err != nil {
 			return err
@@ -114,6 +125,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jet core.RecordID, pulse *co
 	data := pulseData{
 		Records: records,
 		Pulse:   *pulse,
+		JetID:   jetID,
 	}
 
 	return &data, nil
