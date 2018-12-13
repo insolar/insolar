@@ -64,8 +64,15 @@ var measurementsEnabled = false
 func writeMeasure(format string, args ...interface{}) error {
 	measurementsLock.Lock()
 	_, err := fmt.Fprintf(measurementsWriter, format, args...)
-	measurementsLock.Unlock()
 	if err != nil { // very unlikely to happen
+		measurementsEnabled = false
+		measurementsLock.Unlock()
+		return err
+	}
+
+	err = measurementsWriter.Flush()
+	measurementsLock.Unlock()
+	if err != nil {
 		measurementsEnabled = false
 	}
 	return err
@@ -93,11 +100,9 @@ func EnableExecutionTimeMeasurement(fname string) (func(), error) {
 			return
 		}
 
-		// Mark the fact that the cleanup function was invoked properly
-		_ = writeMeasure("End of file")
-
 		measurementsLock.Lock()
 		_ = measurementsWriter.Flush()
+		_ = mfile.Sync()
 		_ = mfile.Close()
 		measurementsLock.Unlock()
 
