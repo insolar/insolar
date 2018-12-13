@@ -19,18 +19,14 @@ package jet
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
+	"io"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
-
-type DropSizeData struct {
-	JetID    core.RecordID
-	PulseNo  core.PulseNumber
-	DropSize uint64
-}
 
 func encode(data interface{}) []byte {
 	var buf bytes.Buffer
@@ -39,14 +35,32 @@ func encode(data interface{}) []byte {
 	return buf.Bytes()
 }
 
-func (dsd *DropSizeData) Bytes(ctx context.Context) []byte {
-	inslogger.FromContext(ctx).Debug("DropSizeData.Bytes starts ...")
-	return encode(dsd)
+type DropSize struct {
+	JetID     core.RecordID
+	PulseNo   core.PulseNumber
+	DropSize  uint64
+	Signature []byte
 }
 
-type DropSize struct {
-	SizeData  DropSizeData
-	Signature []byte
+func (ds *DropSize) serializeDropSize() []byte {
+	result := make([]byte, 0, 64)
+
+	buff := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buff, ds.DropSize)
+	result = append(result, buff...)
+
+	buff = make([]byte, 4)
+	binary.LittleEndian.PutUint32(buff, uint32(ds.PulseNo))
+	result = append(result, buff...)
+
+	result = append(result, ds.JetID.Bytes()...)
+
+	return result
+}
+
+// WriteHashData writes DropSize data to provided writer. This data is used to calculate DropSize's hash.
+func (ds *DropSize) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(ds.serializeDropSize())
 }
 
 const MaxLenJetDropSizeList = 10

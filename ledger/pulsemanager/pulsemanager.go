@@ -42,14 +42,15 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                    core.LogicRunner         `inject:""`
-	Bus                   core.MessageBus          `inject:""`
-	NodeNet               core.NodeNetwork         `inject:""`
-	JetCoordinator        core.JetCoordinator      `inject:""`
-	GIL                   core.GlobalInsolarLock   `inject:""`
-	CryptographyService   core.CryptographyService `inject:""`
-	RecentStorageProvider recentstorage.Provider   `inject:""`
-	ActiveListSwapper     ActiveListSwapper        `inject:""`
+	LR                         core.LogicRunner                `inject:""`
+	Bus                        core.MessageBus                 `inject:""`
+	NodeNet                    core.NodeNetwork                `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
+	GIL                        core.GlobalInsolarLock          `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	RecentStorageProvider      recentstorage.Provider          `inject:""`
+	ActiveListSwapper          ActiveListSwapper               `inject:""`
 
 	currentPulse core.Pulse
 
@@ -133,22 +134,24 @@ func (m *PulseManager) createDrop(ctx context.Context, lastSlotPulse *storage.Pu
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
 	}
 
-	dropSizeData := jet.DropSizeData{
+	dropSizeData := &jet.DropSize{
 		JetID:    jetID,
-		PulseNo:  lastSlotPulse.Pulse.PulseNumber, // TODO: is pulse correct ?
+		PulseNo:  lastSlotPulse.Pulse.PulseNumber,
 		DropSize: dropSize,
 	}
-	signature, err := m.CryptographyService.Sign(dropSizeData.Bytes(ctx))
-	jetDropSize := &jet.DropSize{
-		SizeData:  dropSizeData,
-		Signature: signature.Bytes(),
+	hasher := m.PlatformCryptographyScheme.IntegrityHasher()
+	_, err = dropSizeData.WriteHashData(hasher)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't WriteHashData")
 	}
+	signature, err := m.CryptographyService.Sign(hasher.Sum(nil))
+	dropSizeData.Signature = signature.Bytes()
 
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Sign")
 	}
 
-	err = m.db.AddDropSize(ctx, jetDropSize)
+	err = m.db.AddDropSize(ctx, dropSizeData)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't AddDropSize")
 	}

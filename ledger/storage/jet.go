@@ -279,8 +279,12 @@ func (db *DB) GetDropSizeList(ctx context.Context) (jet.DropSizeList, error) {
 
 	k := dropSizesPrefixKey()
 	buff, err := db.get(ctx, k)
-	if err != nil {
+	if err != nil && err != ErrNotFound {
 		return nil, errors.Wrap(err, "[ GetDropSizeList ] Can't db.set")
+	}
+
+	if err == ErrNotFound {
+		return jet.DropSizeList{}, nil
 	}
 
 	dropSizes, err := jet.DeserializeJetDropSizeList(ctx, buff)

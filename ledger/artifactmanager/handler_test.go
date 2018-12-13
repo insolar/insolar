@@ -594,7 +594,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 const testDropSize uint64 = 100
 
 func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID core.RecordID) {
-	dropSizeData := jet.DropSizeData{
+	dropSizeData := &jet.DropSize{
 		JetID:    jetID,
 		PulseNo:  core.FirstPulseNumber,
 		DropSize: testDropSize,
@@ -605,15 +605,17 @@ func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID co
 		signature := core.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	signature, err := cryptoServiceMock.Sign(dropSizeData.Bytes(ctx))
-	jetDropSize := &jet.DropSize{
-		SizeData:  dropSizeData,
-		Signature: signature.Bytes(),
-	}
 
+	hasher := testutils.NewPlatformCryptographyScheme().IntegrityHasher()
+	_, err := dropSizeData.WriteHashData(hasher)
 	require.NoError(t, err)
 
-	err = db.AddDropSize(ctx, jetDropSize)
+	signature, err := cryptoServiceMock.Sign(hasher.Sum(nil))
+	require.NoError(t, err)
+
+	dropSizeData.Signature = signature.Bytes()
+
+	err = db.AddDropSize(ctx, dropSizeData)
 	require.NoError(t, err)
 }
 
@@ -639,8 +641,8 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	})
 
 	dropSizeList, err := db.GetDropSizeList(ctx)
-	require.Contains(t, err.Error(), "storage object not found")
-	require.Equal(t, jet.DropSizeList(nil), dropSizeList)
+	require.NoError(t, err)
+	require.Equal(t, jet.DropSizeList{}, dropSizeList)
 	addDropSizeToDB(ctx, t, db, jetID)
 
 	dropSizeList, err = db.GetDropSizeList(ctx)
@@ -692,9 +694,9 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	// check drop size list
 	dropSizeList, err = db.GetDropSizeList(ctx)
 	require.NoError(t, err)
-	require.Equal(t, testDropSize, dropSizeList[0].SizeData.DropSize)
-	require.Equal(t, jetID, dropSizeList[0].SizeData.JetID)
-	require.Equal(t, core.FirstPulseNumber, int(dropSizeList[0].SizeData.PulseNo))
+	require.Equal(t, testDropSize, dropSizeList[0].DropSize)
+	require.Equal(t, jetID, dropSizeList[0].JetID)
+	require.Equal(t, core.FirstPulseNumber, int(dropSizeList[0].PulseNo))
 
 	recentStorageMock.MinimockFinish()
 

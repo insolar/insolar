@@ -99,12 +99,13 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	alsMock := testutils.NewActiveListSwapperMock(t)
 	alsMock.MoveSyncToActiveFunc = func() {}
 
-	// Mock N8: CryptographyService mock
+	// Mock N8: Crypto things mock
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
 	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
 		signature := core.SignatureFromBytes(nil)
 		return &signature, nil
 	}
+	cryptoScheme := testutils.NewPlatformCryptographyScheme()
 
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var synckeys []key
@@ -174,6 +175,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock
+	pm.PlatformCryptographyScheme = cryptoScheme
 
 	// Actial test logic
 	// start PulseManager

@@ -147,6 +147,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pm.GIL = gil
 	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock
+	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	// Act
 	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
