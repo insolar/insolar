@@ -126,12 +126,12 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 	pm := pulsemanager.NewPulseManager(db, configuration.Ledger{})
 
-	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() {}
-
 	gil := testutils.NewGlobalInsolarLockMock(t)
 	gil.AcquireMock.Return()
 	gil.ReleaseMock.Return()
+
+	alsMock := testutils.NewActiveListSwapperMock(t)
+	alsMock.MoveSyncToActiveFunc = func() {}
 
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
 	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
@@ -144,8 +144,8 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pm.RecentStorageProvider = providerMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
-	pm.ActiveListSwapper = alsMock
 	pm.GIL = gil
+	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock
 	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
