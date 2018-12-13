@@ -12,6 +12,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
@@ -590,6 +591,34 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	assert.Equal(t, childID, idx.ChildPointer)
 }
 
+const testDropSize uint64 = 100
+
+func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID core.RecordID) {
+	dropSizeData := &jet.DropSize{
+		JetID:    jetID,
+		PulseNo:  core.FirstPulseNumber,
+		DropSize: testDropSize,
+	}
+
+	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
+	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+
+	hasher := testutils.NewPlatformCryptographyScheme().IntegrityHasher()
+	_, err := dropSizeData.WriteHashData(hasher)
+	require.NoError(t, err)
+
+	signature, err := cryptoServiceMock.Sign(hasher.Sum(nil))
+	require.NoError(t, err)
+
+	dropSizeData.Signature = signature.Bytes()
+
+	err = db.AddDropSize(ctx, dropSizeData)
+	require.NoError(t, err)
+}
+
 func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	jetID := core.TODOJetID
@@ -610,7 +639,15 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	err = db.SetObjectIndex(ctx, jetID, firstID, &index.ObjectLifeline{
 		LatestState: firstID,
 	})
+
+	dropSizeHistory, err := db.GetDropSizeHistory(ctx)
 	require.NoError(t, err)
+	require.Equal(t, jet.DropSizeHistory{}, dropSizeHistory)
+	addDropSizeToDB(ctx, t, db, jetID)
+
+	dropSizeHistory, err = db.GetDropSizeHistory(ctx)
+	require.NoError(t, err)
+
 	hotIndexes := &message.HotData{
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
@@ -622,7 +659,8 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		PendingRequests: map[core.RecordID][]byte{
 			*secondId: record.SerializeRecord(&record.CodeRecord{}),
 		},
-		Drop: jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+		JetDropSizeHistory: dropSizeHistory,
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -653,7 +691,15 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, &jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
 
+	// check drop size list
+	dropSizeHistory, err = db.GetDropSizeHistory(ctx)
+	require.NoError(t, err)
+	require.Equal(t, testDropSize, dropSizeHistory[0].DropSize)
+	require.Equal(t, jetID, dropSizeHistory[0].JetID)
+	require.Equal(t, core.FirstPulseNumber, int(dropSizeHistory[0].PulseNo))
+
 	recentStorageMock.MinimockFinish()
+
 }
 
 func TestMessageHandler_HandleValidationCheck(t *testing.T) {
