@@ -19,6 +19,12 @@ func NewID(depth uint8, prefix []byte) *core.RecordID {
 // IDSet is an alias for map[ID]struct{}
 type IDSet map[core.RecordID]struct{}
 
+// Has checks if passed id is in IDSet set.
+func (j IDSet) Has(id core.RecordID) bool {
+	_, ok := j[id]
+	return ok
+}
+
 // Bytes serializes pulse.
 func (j IDSet) Bytes() []byte {
 	var buf bytes.Buffer

@@ -82,6 +82,7 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 	if options.BootstrapTimeout == 0 {
 		options.BootstrapTimeout = time.Second * 10
 	}
+	options.HandshakeSessionTTL = time.Duration(config.HandshakeSessionTTL) * time.Millisecond
 	options.TimeoutMult = config.TimeoutMult
 	options.InfinityBootstrap = config.InfinityBootstrap
 	options.MinTimeout = config.MinTimeout

@@ -44,4 +44,7 @@ type Options struct {
 
 	// True - infinity tries to bootstrap
 	InfinityBootstrap bool
+
+	// HandshakeSession TTL
+	HandshakeSessionTTL time.Duration
 }
