@@ -90,7 +90,7 @@ func TestBareHelloworld(t *testing.T) {
 	_ = l.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: mb.PulseNumber, Entropy: core.Entropy{}},
-		false,
+		true,
 	)
 
 	nw := network.GetTestNetwork()
