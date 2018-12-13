@@ -63,7 +63,7 @@ func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
 		db:                   db,
 		getChildrenChunkSize: getChildrenChunkSize,
 		cacheLock:            &sync.Mutex{},
-		cache:                make(map[core.RecordRef]cacheEntry, 0),
+		cache:                make(map[core.RecordRef]cacheEntry),
 	}
 }
 
