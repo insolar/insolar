@@ -21,24 +21,26 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
 
 // Fakepulsar needed when the network starts and can't receive a real pulse.
 
 // onPulse is a callbaback for pulse recv.
-type callbackOnPulse func(ctx context.Context, pulse core.Pulse)
+//type callbackOnPulse func(ctx context.Context, pulse core.Pulse)
 
 // FakePulsar is a struct which uses at void network state.
 type FakePulsar struct {
-	onPulse   callbackOnPulse
+	onPulse   network.PulseHandler
 	stop      chan bool
 	timeoutMs int32 // ms
 	running   bool
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
-func NewFakePulsar(callback callbackOnPulse, timeoutMs int32) *FakePulsar {
+func NewFakePulsar(callback network.PulseHandler, timeoutMs int32) *FakePulsar {
 	return &FakePulsar{
 		onPulse:   callback,
 		timeoutMs: timeoutMs,
@@ -59,15 +61,14 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 		for {
 			select {
 			case <-time.After(time.Millisecond * time.Duration(fp.timeoutMs)):
-				{
-					fp.onPulse(ctx, *fp.GetFakePulse())
-				}
+				fp.onPulse.HandlePulse(ctx, *fp.GetFakePulse())
 			case <-fp.stop:
 				return
 			}
 		}
 
 	}(fp)
+	log.Info("fake pulsar started")
 }
 
 // Stop sending a fake pulse.

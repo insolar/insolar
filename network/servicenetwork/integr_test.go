@@ -17,82 +17,143 @@
 package servicenetwork
 
 import (
-	"bytes"
 	"context"
 	"crypto"
-	"encoding/json"
+	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 )
+
+var testNetworkPort = 10001
 
 type testSuite struct {
 	suite.Suite
 	ctx            context.Context
-	bootstrapNodes []networkNode
-	networkNodes   []networkNode
-	testNode       networkNode
-	networkPort    int
+	bootstrapNodes []*networkNode
+	networkNodes   []*networkNode
+	testNode       *networkNode
 }
 
-func NewTestSuite() *testSuite {
-	return &testSuite{
-		Suite:        suite.Suite{},
-		ctx:          context.Background(),
-		networkNodes: make([]networkNode, 0),
-		networkPort:  10001,
+func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
+	s := &testSuite{
+		Suite:          suite.Suite{},
+		ctx:            context.Background(),
+		bootstrapNodes: make([]*networkNode, 0),
+		networkNodes:   make([]*networkNode, 0),
 	}
+
+	for i := 0; i < bootstrapCount; i++ {
+		s.bootstrapNodes = append(s.bootstrapNodes, newNetworkNode())
+	}
+
+	for i := 0; i < nodesCount; i++ {
+		s.networkNodes = append(s.networkNodes, newNetworkNode())
+	}
+
+	s.testNode = newNetworkNode()
+	return s
 }
-func (s *testSuite) InitNodes() {
+
+// SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
+func (s *testSuite) SetupSuite() {
+	log.Infoln("SetupSuite")
+	for _, node := range s.bootstrapNodes {
+		s.initNode(node, Disable)
+	}
+
+	for _, node := range s.networkNodes {
+		s.initNode(node, Disable)
+	}
+
+	log.Infoln("Init bootstrap nodes")
 	for _, n := range s.bootstrapNodes {
 		err := n.componentManager.Init(s.ctx)
 		s.NoError(err)
 	}
-	log.Info("========== Bootstrap nodes inited")
-	<-time.After(time.Second * 1)
+	log.Infoln("Init network nodes")
+	for _, n := range s.networkNodes {
+		err := n.componentManager.Init(s.ctx)
+		s.NoError(err)
+	}
 
+	log.Infoln("Start bootstrap nodes")
+	for _, n := range s.bootstrapNodes {
+		err := n.componentManager.Start(s.ctx)
+		s.NoError(err)
+	}
+	log.Infoln("Start network nodes")
+	for _, n := range s.networkNodes {
+		err := n.componentManager.Start(s.ctx)
+		s.NoError(err)
+	}
+
+	//TODO: wait for first consensus
+	// active nodes count verification
+	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount(), len(activeNodes))
+}
+
+// TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
+func (s *testSuite) TearDownSuite() {
+	log.Infoln("TearDownSuite")
+	log.Infoln("Stop network nodes")
+	for _, n := range s.networkNodes {
+		err := n.componentManager.Stop(s.ctx)
+		s.NoError(err)
+	}
+	log.Infoln("Stop bootstrap nodes")
+	for _, n := range s.bootstrapNodes {
+		err := n.componentManager.Stop(s.ctx)
+		s.NoError(err)
+	}
+}
+
+// nodesCount returns count of nodes in network without testNode
+func (s *testSuite) nodesCount() int {
+	return len(s.bootstrapNodes) + len(s.networkNodes)
+}
+
+type PhaseTimeOut uint8
+
+const (
+	Disable = PhaseTimeOut(iota + 1)
+	Partial
+	Full
+)
+
+func (s *testSuite) InitTestNode() {
 	if s.testNode.componentManager != nil {
 		err := s.testNode.componentManager.Init(s.ctx)
 		s.NoError(err)
 	}
 }
 
-func (s *testSuite) StartNodes() {
-	for _, n := range s.bootstrapNodes {
-		err := n.componentManager.Start(s.ctx)
-		s.NoError(err)
-	}
-	log.Info("========== Bootstrap nodes started")
-	<-time.After(time.Second * 1)
-
+func (s *testSuite) StartTestNode() {
 	if s.testNode.componentManager != nil {
 		err := s.testNode.componentManager.Init(s.ctx)
 		s.NoError(err)
 		err = s.testNode.componentManager.Start(s.ctx)
 		s.NoError(err)
 	}
-
 }
 
-func (s *testSuite) StopNodes() {
-	for _, n := range s.networkNodes {
-		err := n.componentManager.Stop(s.ctx)
-		s.NoError(err)
-	}
-
+func (s *testSuite) StopTestNode() {
 	if s.testNode.componentManager != nil {
 		err := s.testNode.componentManager.Stop(s.ctx)
 		s.NoError(err)
@@ -100,94 +161,275 @@ func (s *testSuite) StopNodes() {
 }
 
 type networkNode struct {
+	id                  core.RecordRef
+	privateKey          crypto.PrivateKey
+	cryptographyService core.CryptographyService
+	host                string
+
 	componentManager *component.Manager
 	serviceNetwork   *ServiceNetwork
 }
 
-func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey, ref core.RecordRef) *certificate.CertificateManager {
-	proc := platformpolicy.NewKeyProcessor()
-	publicKey, err := proc.ExportPublicKey(key)
-	assert.NoError(t, err)
-	bytes.NewReader(publicKey)
-
-	type сertInfo map[string]interface{}
-	j := сertInfo{
-		"public_key": string(publicKey[:]),
-	}
-
-	data, err := json.Marshal(j)
-
-	cert, err := certificate.ReadCertificateFromReader(key, proc, bytes.NewReader(data))
-	cert.Reference = ref.String()
-	assert.NoError(t, err)
-	cert.BootstrapNodes = nodes
-	mngr := certificate.NewCertificateManager(cert)
-	return mngr
-}
-
-func initCrypto(t *testing.T, nodes []certificate.BootstrapNode, ref core.RecordRef) (*certificate.CertificateManager, core.CryptographyService) {
+// newNetworkNode returns networkNode initialized only with id, host address and key pair
+func newNetworkNode() *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	assert.NoError(t, err)
-	require.NotNil(t, key)
-	cs := cryptography.NewKeyBoundCryptographyService(key)
-	pubKey, err := cs.GetPublicKey()
-	assert.NoError(t, err)
-	mngr := initCertificate(t, nodes, pubKey, ref)
-
-	return mngr, cs
-}
-
-func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode {
-	result := make([]certificate.BootstrapNode, 0)
-	for _, b := range s.bootstrapNodes {
-		node := certificate.NewBootstrapNode(
-			b.serviceNetwork.CertificateManager.GetCertificate().GetPublicKey(),
-			b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey,
-			b.serviceNetwork.cfg.Host.Transport.Address,
-			b.serviceNetwork.NodeNetwork.GetOrigin().ID().String())
-		result = append(result, *node)
+	if err != nil {
+		panic(err.Error())
 	}
-	return result
+	address := "127.0.0.1:" + strconv.Itoa(testNetworkPort)
+	testNetworkPort += 2 // coz consensus transport port+=1
+
+	return &networkNode{
+		id:                  testutils.RandomRef(),
+		privateKey:          key,
+		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
+		host:                address,
+	}
 }
 
-func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
-	address := "127.0.0.1:" + strconv.Itoa(s.networkPort)
-	s.networkPort += 2 // coz consensus transport port+=1
+func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certificate.CertificateManager, core.CryptographyService) {
+	pubKey, err := node.cryptographyService.GetPublicKey()
+	s.NoError(err)
 
-	origin := nodenetwork.NewNode(testutils.RandomRef(),
-		core.StaticRoleVirtual,
-		nil,
-		address,
-		"",
-	)
+	// init certificate
+
+	proc := platformpolicy.NewKeyProcessor()
+	publicKey, err := proc.ExportPublicKey(pubKey)
+	s.NoError(err)
+
+	cert := &certificate.Certificate{}
+	cert.PublicKey = string(publicKey[:])
+	cert.Reference = ref.String()
+	cert.Role = "virtual"
+	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
+
+	for _, b := range s.bootstrapNodes {
+		pubKey, _ := b.cryptographyService.GetPublicKey()
+		pubKeyBuf, err := proc.ExportPublicKey(pubKey)
+		s.NoError(err)
+
+		bootstrapNode := certificate.NewBootstrapNode(
+			pubKey,
+			string(pubKeyBuf[:]),
+			b.host,
+			b.id.String())
+
+		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
+	}
+
+	// dump cert and read it again from json for correct private files initialization
+	jsonCert, err := cert.Dump()
+	s.NoError(err)
+	log.Infof("cert: %s", jsonCert)
+
+	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
+	s.NoError(err)
+	return certificate.NewCertificateManager(cert), node.cryptographyService
+}
+
+// initNode inits previously created node
+func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
+
+	origin := nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, node.host, "")
 
 	cfg := configuration.NewConfiguration()
-	cfg.Host.Transport.Address = address
+	cfg.Host.Transport.Address = node.host
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	serviceNetwork, err := NewServiceNetwork(cfg, scheme)
-	assert.NoError(t, err)
+	s.NoError(err)
 
-	pulseManagerMock := testutils.NewPulseManagerMock(t)
-	netCoordinator := testutils.NewNetworkCoordinatorMock(t)
+	pulseManagerMock := testutils.NewPulseManagerMock(s.T())
+	pulseManagerMock.CurrentMock.Set(func(p context.Context) (r *core.Pulse, r1 error) {
+		return &core.Pulse{PulseNumber: 0}, nil
+	})
+	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
+		return nil
+	})
+
+	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
 	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
 		return true, nil
 	})
+	netCoordinator.WriteActiveNodesMock.Set(func(p context.Context, p1 core.PulseNumber, p2 []core.Node) (r error) {
+		return nil
+	})
 
-	amMock := testutils.NewArtifactManagerMock(t)
+	amMock := testutils.NewArtifactManagerMock(s.T())
+	amMock.StateMock.Set(func() (r []byte, r1 error) {
+		return make([]byte, 0), nil
+	})
 
-	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t), origin.ID())
-	netSwitcher := testutils.NewNetworkSwitcherMock(t)
-
+	certManager, cryptographyService := s.initCrypto(node, origin.ID())
+	netSwitcher := testutils.NewNetworkSwitcherMock(s.T())
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
-	keeper := &nodeKeeperWrapper{realKeeper}
+	var keeper network.NodeKeeper
+	keeper = &nodeKeeperWrapper{realKeeper}
 
-	cm := &component.Manager{}
-	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
-	cm.Register(certManager, cryptographyService)
-	cm.Inject(serviceNetwork, netSwitcher)
+	var phaseManager phases.PhaseManager
+	switch timeOut {
+	case Disable:
+		phaseManager = phases.NewPhaseManager()
+	case Full:
+		phaseManager = &FullTimeoutPhaseManager{}
+	case Partial:
+		phaseManager = &PartialTimeoutPhaseManager{}
+		keeper = &nodeKeeperWrapper{realKeeper}
+	}
 
-	serviceNetwork.NodeKeeper = keeper
+	node.componentManager = &component.Manager{}
+	node.componentManager.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
+	node.componentManager.Register(certManager, cryptographyService, phaseManager)
+	node.componentManager.Inject(serviceNetwork, netSwitcher)
+	node.serviceNetwork = serviceNetwork
+}
 
-	return networkNode{cm, serviceNetwork}
+func (s *testSuite) TestNodeConnect() {
+	phasesResult := make(chan error)
+
+	s.initNode(s.testNode, Disable)
+
+	s.InitTestNode()
+	s.StartTestNode()
+
+	res := <-phasesResult
+	s.NoError(res)
+	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount()+1, len(activeNodes))
+	// teardown
+	<-time.After(time.Second * 5)
+	s.StopTestNode()
+}
+
+func (s *testSuite) TestNodeLeave() {
+
+	s.initNode(s.testNode, Disable)
+
+	phasesResult := make(chan error)
+	s.InitTestNode()
+	s.StartTestNode()
+	res := <-phasesResult
+	s.NoError(res)
+	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(2, len(activeNodes))
+
+	// teardown
+	<-time.After(time.Second * 5)
+
+	res = <-phasesResult
+	s.NoError(res)
+	activeNodes = s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount(), len(activeNodes))
+
+	s.StopTestNode()
+}
+
+func TestServiceNetworkIntegration(t *testing.T) {
+	s := NewTestSuite(1, 0)
+	suite.Run(t, s)
+}
+
+func TestServiceNetwork3BootsrtapNodes(t *testing.T) {
+	s := NewTestSuite(3, 0)
+	suite.Run(t, s)
+}
+
+// Full timeout test
+
+type FullTimeoutPhaseManager struct {
+}
+
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	return nil
+}
+
+func (s *testSuite) TestFullTimeOut() {
+	s.T().Skip("will be available after phase result fix !")
+	phasesResult := make(chan error)
+
+	s.initNode(s.testNode, Full)
+
+	s.InitTestNode()
+	s.StartTestNode()
+	res := <-phasesResult
+	s.NoError(res)
+	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(1, len(activeNodes))
+	// teardown
+	<-time.After(time.Second * 5)
+	s.StopTestNode()
+}
+
+// Partial timeout
+
+func (s *testSuite) TestPartialTimeOut() {
+	phasesResult := make(chan error)
+
+	s.initNode(s.testNode, Partial)
+
+	s.InitTestNode()
+	s.StartTestNode()
+	res := <-phasesResult
+	s.NoError(res)
+	// activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	// s.Equal(1, len(activeNodes))	// TODO: do test check
+	// teardown
+	<-time.After(time.Second * 5)
+	s.StopTestNode()
+}
+
+type PartialTimeoutPhaseManager struct {
+	FirstPhase  *phases.FirstPhase
+	SecondPhase *phases.SecondPhase
+	ThirdPhase  *phases.ThirdPhase
+	Keeper      network.NodeKeeper `inject:""`
+}
+
+func (ftpm *PartialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	var err error
+
+	pulseDuration, err := getPulseDuration(pulse)
+	if err != nil {
+		return errors.Wrap(err, "[ OnPulse ] Failed to get pulse duration")
+	}
+
+	var tctx context.Context
+	var cancel context.CancelFunc
+
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
+
+	firstPhaseState, err := ftpm.FirstPhase.Execute(tctx, pulse)
+
+	if err != nil {
+		return errors.Wrap(err, "[ TestCase.OnPulse ] failed to execute a phase")
+	}
+
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
+
+	secondPhaseState, err := ftpm.SecondPhase.Execute(tctx, firstPhaseState)
+	checkError(err)
+
+	fmt.Println(secondPhaseState) // TODO: remove after use
+	checkError(ftpm.ThirdPhase.Execute(ctx, secondPhaseState))
+
+	return nil
+}
+
+func contextTimeout(ctx context.Context, duration time.Duration, k float64) (context.Context, context.CancelFunc) {
+	timeout := time.Duration(k * float64(duration))
+	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
+	return timedCtx, cancelFund
+}
+
+func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
+	duration := time.Duration(pulse.PulseNumber-pulse.PrevPulseNumber) * time.Second
+	return &duration, nil
+}
+
+func checkError(err error) {
+	if err != nil {
+		log.Error(err)
+	}
 }
