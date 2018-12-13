@@ -66,7 +66,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to sign a packet")
 	}
 	activeNodes := state.UnsyncList.GetActiveNodes()
-	packets, err := sp.Communicator.ExchangePhase2(ctx, activeNodes, &packet)
+	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange results.")
 	}

@@ -41,7 +41,7 @@ type Communicator interface {
 		packet *packets.Phase1Packet,
 	) (map[core.RecordRef]*packets.Phase1Packet, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
-	ExchangePhase2(ctx context.Context, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
+	ExchangePhase2(ctx context.Context, list network.UnsyncList, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
 	ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
 }
@@ -141,8 +141,43 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 	return nil
 }
 
-func (nc *NaiveCommunicator) generatePhase2Response(p *packets.Phase2Packet) (network.Request, error) {
-	return nil, errors.New("not implemented")
+func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2Packet, list network.UnsyncList) (network.Request, error) {
+	answers := make([]packets.ReferendumVote, 0)
+	for _, vote := range req.GetVotes() {
+		if vote.Type() != packets.TypeMissingNode {
+			continue
+		}
+		v, ok := vote.(*packets.MissingNode)
+		if !ok {
+			log.Warnf("Phase 2 MissingNode request type mismatch")
+			continue
+		}
+		ref, err := list.IndexToRef(int(v.NodeIndex))
+		if err != nil {
+			log.Warnf("Phase 2 MissingNode requested index: %d, error: %s", v.NodeIndex, err.Error())
+			continue
+		}
+		node := list.GetActiveNode(ref)
+		if node == nil {
+			log.Warnf("Phase 2 MissingNode requested index: %d; mapped ref %s not found", v.NodeIndex, ref)
+			continue
+		}
+		claim, err := packets.NodeToClaim(node)
+		if err != nil {
+			log.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, convertation node -> claim error: %s",
+				v.NodeIndex, ref, err.Error())
+			continue
+		}
+		// TODO: add stored nodepulseproof
+		answer := packets.MissingNodeSupplementaryVote{NodeClaimUnsigned: *claim}
+		answers = append(answers, &answer)
+	}
+	response := packets.Phase2Packet{}
+	response.SetBitSet(origReq.GetBitSet())
+	for _, answer := range answers {
+		response.AddVote(answer)
+	}
+	return nc.convertConsensusPacket(&response, types.Phase2)
 }
 
 func (nc *NaiveCommunicator) convertConsensusPacket(packet packets.ConsensusPacket,
@@ -228,7 +263,9 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 }
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.UnsyncList,
+	participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+
 	result := make(map[core.RecordRef]*packets.Phase2Packet, len(participants))
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
@@ -259,9 +296,12 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, participants []
 				// send response
 				response := request
 				if res.packet.ContainsRequests() {
-					response, err = nc.generatePhase2Response(res.packet)
+					response, err = nc.generatePhase2Response(packet, res.packet, list)
+					if err != nil {
+						log.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
+						continue
+					}
 				}
-				// TODO: process referendum votes and send answers
 				err := nc.ConsensusNetwork.SendRequest(response, res.id)
 				if err != nil {
 					log.Errorln(err.Error())
