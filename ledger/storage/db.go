@@ -183,7 +183,9 @@ func (db *DB) Init(ctx context.Context) error {
 		return errors.Wrap(err, "bootstrap failed")
 	}
 
-	return nil
+	// TODO: required for test passing, need figure out how to do init jets properly
+	return db.SaveJet(ctx, jetID)
+	// return nil
 }
 
 // GenesisRef returns the genesis record reference.

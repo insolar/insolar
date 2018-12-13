@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"crypto/rand"
 	"fmt"
+	"math"
 	"sort"
 
 	"github.com/insolar/insolar/core"
@@ -60,14 +61,23 @@ func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core
 		return sortedSlice[i] >= conflictingID
 	})
 	result := conflictingID
+	repeated := false
 	for {
+		if result == math.MaxUint32 {
+			if !repeated {
+				repeated = true
+				result = 0
+				index = 0
+			} else {
+				panic("[ generateNonConflictingID ] shortID overflow twice")
+			}
+		}
 		index++
 		result++
 		if index >= len(sortedSlice) || result != sortedSlice[index] {
 			return result
 		}
 	}
-	// TODO: handle uint32 overflow
 }
 
 func RemoveOrigin(discoveryNodes []core.DiscoveryNode, origin core.RecordRef) ([]core.DiscoveryNode, error) {
