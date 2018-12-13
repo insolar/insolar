@@ -81,11 +81,11 @@ func TestBareHelloworld(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseNumber = 0
 
-	nlMock := testutils.NewNetworkLockerMock(t)
-	nlMock.AcquireGlobalLockFunc = func(p context.Context, p1 string) {}
-	nlMock.ReleaseGlobalLockFunc = func(p context.Context, p1 string) {}
+	gil := testutils.NewGlobalInsolarLockMock(t)
+	gil.AcquireMock.Return()
+	gil.ReleaseMock.Return()
 
-	l.PulseManager.(*pulsemanager.PulseManager).NetworkLocker = nlMock
+	l.PulseManager.(*pulsemanager.PulseManager).GIL = gil
 
 	_ = l.GetPulseManager().Set(
 		ctx,
