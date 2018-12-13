@@ -247,14 +247,13 @@ func (sm *SessionManager) expireSessions(sessionsByExpirationTime []*sessionWith
 	sm.lock.Lock()
 
 	for i, session := range sessionsByExpirationTime {
-		shift = i + 1
-
 		// Check when we have to stop expire
 		if session.expirationTime().After(time.Now()) {
 			break
 		}
 
 		delete(sm.sessions, session.SessionID)
+		shift = i + 1
 	}
 
 	sm.lock.Unlock()
