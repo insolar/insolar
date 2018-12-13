@@ -73,8 +73,8 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	handler.JetCoordinator = jc
 
 	networkLockerMock := testutils.NewNetworkLockerMock(t)
-	networkLockerMock.AcquireGlobalLockFunc = func(context.Context) {}
-	networkLockerMock.ReleaseGlobalLockFunc = func(context.Context) {}
+	networkLockerMock.AcquireGlobalLockFunc = func(context.Context, string) {}
+	networkLockerMock.ReleaseGlobalLockFunc = func(context.Context, string) {}
 
 	alsMock := testutils.NewActiveListSwapperMock(t)
 	alsMock.MoveSyncToActiveFunc = func() {}
