@@ -144,7 +144,7 @@ func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, 
 		if err != nil {
 			return payload{"PayloadBinary": r.GetPayload()}, nil
 		}
-		return payload{"Payload": parcel}, nil
+		return payload{"Payload": parcel, "Type": parcel.Type().String()}, nil
 	}
 
 	return nil, nil
