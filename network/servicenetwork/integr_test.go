@@ -40,7 +40,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var testNetworkPort = 10001
+var testNetworkPort = 10010
 
 type testSuite struct {
 	suite.Suite
@@ -103,10 +103,11 @@ func (s *testSuite) SetupSuite() {
 		s.NoError(err)
 	}
 
+	<-time.After(time.Second * 2)
 	//TODO: wait for first consensus
 	// active nodes count verification
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes))
+	//activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	//s.Equal(s.nodesCount(), len(activeNodes))
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
@@ -269,7 +270,7 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 	var phaseManager phases.PhaseManager
 	switch timeOut {
 	case Disable:
-		phaseManager = phases.NewPhaseManager()
+		phaseManager = &phaseManagerWrapper{original: phases.NewPhaseManager()}
 	case Full:
 		phaseManager = &FullTimeoutPhaseManager{}
 	case Partial:
@@ -285,6 +286,7 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 }
 
 func (s *testSuite) TestNodeConnect() {
+
 	phasesResult := make(chan error)
 
 	s.initNode(s.testNode, Disable)
@@ -296,8 +298,9 @@ func (s *testSuite) TestNodeConnect() {
 	s.NoError(res)
 	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount()+1, len(activeNodes))
+
 	// teardown
-	<-time.After(time.Second * 5)
+	<-time.After(time.Second * 3)
 	s.StopTestNode()
 }
 
@@ -329,11 +332,12 @@ func TestServiceNetworkIntegration(t *testing.T) {
 	suite.Run(t, s)
 }
 
+/*
 func TestServiceNetwork3BootsrtapNodes(t *testing.T) {
 	t.Skip("123")
 	s := NewTestSuite(3, 0)
 	suite.Run(t, s)
-}
+}*/
 
 // Full timeout test
 
