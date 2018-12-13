@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
@@ -71,7 +72,21 @@ func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) 
 	checkError(ctx, err, "failed to delete ledger storage data directory")
 }
 
+// TODO refactor add flag!
+func DELETEME_enableProfile() {
+	f, err := os.Create("insolard-" + string(os.Getegid()) + ".prof")
+	if err != nil {
+		log.Fatal("could not create CPU profile: ", err)
+	}
+	if err := pprof.StartCPUProfile(f); err != nil {
+		log.Fatal("could not start CPU profile: ", err)
+	}
+	defer pprof.StopCPUProfile()
+}
+
 func main() {
+	DELETEME_enableProfile()
+
 	params := parseInputParams()
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
