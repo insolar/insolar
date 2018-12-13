@@ -266,11 +266,11 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	return newUnsyncList(nk.GetActiveNodes())
+	return newUnsyncList(nk.origin, nk.GetActiveNodes())
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
-	return newSparseUnsyncList(length)
+	return newSparseUnsyncList(nk.origin, length)
 }
 
 func (nk *nodekeeper) Sync(list network.UnsyncList) {

@@ -35,6 +35,7 @@ func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
 }
 
 type unsyncList struct {
+	origin      core.Node
 	activeNodes map[core.RecordRef]core.Node
 	claims      map[core.RecordRef][]consensus.ReferendumClaim
 	refToIndex  map[core.RecordRef]int
@@ -65,8 +66,9 @@ func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof 
 	return ul.proofs[nodeID]
 }
 
-func newUnsyncList(activeNodesSorted []core.Node) *unsyncList {
+func newUnsyncList(origin core.Node, activeNodesSorted []core.Node) *unsyncList {
 	result := &unsyncList{
+		origin:      origin,
 		indexToRef:  make(map[int]core.RecordRef, len(activeNodesSorted)),
 		refToIndex:  make(map[core.RecordRef]int, len(activeNodesSorted)),
 		activeNodes: make(map[core.RecordRef]core.Node, len(activeNodesSorted)),
@@ -186,8 +188,8 @@ type sparseUnsyncList struct {
 	capacity int
 }
 
-func newSparseUnsyncList(capacity int) *sparseUnsyncList {
-	return &sparseUnsyncList{unsyncList: *newUnsyncList(nil), capacity: capacity}
+func newSparseUnsyncList(origin core.Node, capacity int) *sparseUnsyncList {
+	return &sparseUnsyncList{unsyncList: *newUnsyncList(origin, nil), capacity: capacity}
 }
 
 func (ul *sparseUnsyncList) Length() int {
@@ -213,9 +215,9 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 			if err != nil {
 				log.Error("[ AddClaims ] failed to convert Claim -> Node")
 			}
+			// TODO: check these two
 			ul.addNode(node, int(c.NodeAnnouncerIndex))
-
-			// TODO: add origin
+			ul.addNode(ul.origin, int(c.NodeJoinerIndex))
 		}
 	}
 }
