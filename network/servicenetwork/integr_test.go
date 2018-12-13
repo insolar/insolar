@@ -147,9 +147,7 @@ func (s *testSuite) InitTestNode() {
 
 func (s *testSuite) StartTestNode() {
 	if s.testNode.componentManager != nil {
-		err := s.testNode.componentManager.Init(s.ctx)
-		s.NoError(err)
-		err = s.testNode.componentManager.Start(s.ctx)
+		err := s.testNode.componentManager.Start(s.ctx)
 		s.NoError(err)
 	}
 }
