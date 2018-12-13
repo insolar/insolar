@@ -262,23 +262,20 @@ func (bc *Bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *h
 }
 
 func (bc *Bootstrapper) bootstrap(address string) (*host.Host, error) {
-	// TODO: add infinite bootstrap option
 	seconds := bc.options.MinTimeout
-	if bc.options.InfinityBootstrap {
-		for {
-			result, err := bc.startBootstrap(address)
-			if err != nil {
-				time.Sleep(time.Second * time.Duration(seconds))
-				seconds *= bc.options.TimeoutMult
-				if seconds > bc.options.MaxTimeout {
-					seconds = bc.options.MaxTimeout
-				}
-			} else {
-				return result, nil
-			}
-		}
-	} else {
+	if !bc.options.InfinityBootstrap {
 		return bc.startBootstrap(address)
+	}
+	for {
+		result, err := bc.startBootstrap(address)
+		if err == nil {
+			return result, nil
+		}
+		time.Sleep(time.Second * time.Duration(seconds))
+		seconds *= bc.options.TimeoutMult
+		if seconds > bc.options.MaxTimeout {
+			seconds = bc.options.MaxTimeout
+		}
 	}
 }
 
