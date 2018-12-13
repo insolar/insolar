@@ -19,6 +19,7 @@ package builtin
 
 import (
 	"context"
+	"log"
 	"reflect"
 
 	"github.com/insolar/insolar/core"
@@ -62,7 +63,9 @@ func (bi *BuiltIn) Stop() error {
 // CallMethod runs a method on contract
 func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *core.LogicCallContext, codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
 	am := bi.AM
+	log.Printf("[PROFILE-4] Calling am.GetCode(ctx, codeRef)...\n")
 	codeDescriptor, err := am.GetCode(ctx, codeRef)
+	log.Printf("[PROFILE-4] DONE\n")
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Can't find code")
 	}

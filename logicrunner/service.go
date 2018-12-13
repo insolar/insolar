@@ -21,11 +21,12 @@ package logicrunner
 import (
 	"bytes"
 	"context"
+	"log"
 	"net"
 	"net/rpc"
 	"sync/atomic"
 
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -73,7 +74,9 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
+	log.Printf("[PROFILE-3] Calling am.GetCode(ctx, req.Code)...\n")
 	codeDescriptor, err := am.GetCode(ctx, req.Code)
+	log.Printf("[PROFILE-3] DONE\n")
 	if err != nil {
 		return err
 	}
