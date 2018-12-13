@@ -101,12 +101,12 @@ func (mb *MessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
 	panic("this is not a recorder")
 }
 
-func (mb *MessageBus) Acquire(ctx context.Context) {
+func (mb *MessageBus) Lock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Acquire GIL")
 	mb.globalLock.Lock()
 }
 
-func (mb *MessageBus) Release(ctx context.Context) {
+func (mb *MessageBus) Unlock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Release GIL")
 	mb.globalLock.Unlock()
 }
