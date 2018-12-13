@@ -26,22 +26,63 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	domainStr = ".4F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
+	id1Str    = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
+	id2Str    = "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
+	id3Str    = "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
+	id4Str    = "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm"
+	id5Str    = "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U"
+	id6Str    = "4ecxjG9Yw73EXtWQZ8cciGgCBaMsNS5HB2zS9XRMLzRB"
+	id7Str    = "4iYFsZcZXQLTfykuzRwY19SxRja53Vm6jSf6CuTx6Kjt"
+	id8Str    = "4nTZ1s5a7hdgp51RRjGTJ2DiftnGiZSvHrKkGHWYqf4b"
+	id9Str    = "4rNrAAYahzvuxAFvs2bNatzUv3zUPd8jrFzQKfZ9azPJ"
+	id10Str   = "4K1b7kbvUPB935DdMuLqpfmG23zMhxKcHQ9gbdmydPVZ"
+	id11Str   = "4K2UQtex1jnjN2Vx8yCMcsmf1HNuMJ4NeA7TgNeVs7kk"
+	id12Str   = "4K3Mi2hyZ6QKgynGv33sR5n3zWmSzdo8zv5Em7X26r1w"
+)
+
 func TestCalculateNextNodes(t *testing.T) {
 	//	t.Skip()
-	nodeIds := []core.RecordRef{
-		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
-		core.NewRefFromBase58("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"),
-		core.NewRefFromBase58("9uE5MEWQB2yfKY8kTgTNovWii88D4anmf7GAiovgcxx6Uc6EBmZ212mpyMa1L22u9TcUUd94i8LvULdsdBoG8ed"),
-		core.NewRefFromBase58("4qXdYkfL9U4tL3qRPthdbdajtafR4KArcXjpyQSEgEMtpuin3t8aZYmMzKGRnXHBauytaPQ6bfwZyKZzRPpR6gyX"),
-		core.NewRefFromBase58("5q5rnvayXyKszoWofxp4YyK7FnLDwhsqAXKxj6H7B5sdEsNn4HKNFoByph4Aj8rGptdWL54ucwMQrySMJgKavxX1"),
-		core.NewRefFromBase58("5tsFDwNLMW4GRHxSbBjjxvKpR99G4CSBLRqZAcpqdSk5SaeVcDL3hCiyjjidCRJ7Lu4VZoANWQJN2AgPvSRgCghn"),
-		core.NewRefFromBase58("48UWM6w7YKYCHoP7GHhogLvbravvJ6bs4FGETqXfgdhF9aPxiuwDWwHipeiuNBQvx7zyCN9wFxbuRrDYRoAiw5Fj"),
-		core.NewRefFromBase58("5owQeqWyHcobFaJqS2BZU2o2ZRQ33GojXkQK6f8vNLgvNx6xeWRwenJMc53eEsS7MCxrpXvAhtpTaNMPr3rjMHA"),
-		core.NewRefFromBase58("xF12WfbkcWrjrPXvauSYpEGhkZT2Zha53xpYh5KQdmGHMywJNNgnemfDN2JfPV45aNQobkdma4dsx1N7Xf5wCJ9"),
-		core.NewRefFromBase58("4VgDz9o23wmYXN9mEiLnnsGqCEEARGByx1oys2MXtC6M94K85ZpB9sEJwiGDER61gHkBxkwfJqtg9mAFR7PQcssq"),
-		core.NewRefFromBase58("48g7C8QnH2CGMa62sNaL1gVVyygkto8EbMRHv168psCBuFR2FXkpTfwk4ZwpY8awFFXKSnWspYWWQ7sMMk5W7s3T"),
-		core.NewRefFromBase58("Lvssptdwq7tatd567LUfx2AgsrWZfo4u9q6FJgJ9BgZK8cVooZv2A7F7rrs1FS5VpnTmXhr6XihXuKWVZ8i5YX9"),
-	}
+	nodeIds := make([]core.RecordRef, 0)
+
+	ref, err := core.NewRefFromBase58(id1Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id2Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id3Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id4Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id5Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id6Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id7Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id8Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id9Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id10Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id11Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+	ref, err = core.NewRefFromBase58(id12Str + domainStr)
+	require.NoError(t, err)
+	nodeIds = append(nodeIds, *ref)
+
 	c := core.Cascade{
 		NodeIds:           nodeIds,
 		Entropy:           core.Entropy{0},
@@ -50,11 +91,11 @@ func TestCalculateNextNodes(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	r, _ := CalculateNextNodes(pcs, c, nil)
-	require.Equal(t, []core.RecordRef{nodeIds[8], nodeIds[5]}, r)
-	r, _ = CalculateNextNodes(pcs, c, &nodeIds[8])
-	require.Equal(t, []core.RecordRef{nodeIds[2], nodeIds[0]}, r)
-	r, _ = CalculateNextNodes(pcs, c, &nodeIds[2])
-	require.Equal(t, []core.RecordRef{nodeIds[11], nodeIds[10]}, r)
+	require.Equal(t, []core.RecordRef{nodeIds[3], nodeIds[8]}, r)
+	r, _ = CalculateNextNodes(pcs, c, &nodeIds[3])
+	require.Equal(t, []core.RecordRef{nodeIds[1], nodeIds[6]}, r)
+	r, _ = CalculateNextNodes(pcs, c, &nodeIds[1])
+	require.Equal(t, []core.RecordRef{nodeIds[4], nodeIds[7]}, r)
 }
 
 func Test_geometricProgressionSum(t *testing.T) {
@@ -65,9 +106,10 @@ func Test_geometricProgressionSum(t *testing.T) {
 func Test_calcHash(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	ref := core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")
-	c, _ := hex.DecodeString("39e1040cc17bd51bb59803edece23a82a7d8fe01394c337c74c003852f1683e5cba9a396556b6e737e15b54950efb46228cbd1a745c85016b9b3b8fbbe0d94d3")
-	require.Equal(t, c, calcHash(pcs, ref, core.Entropy{0}))
+	ref, err := core.NewRefFromBase58("4SxZ6BSx6qBP41nqQgtsFW5EF3JLDxYscZeVQnviPUGZ.4P3FnY89dNJKiR3qTzMvSbgryVwnxMspus6JrwrAYiVG")
+	require.NoError(t, err)
+	c, _ := hex.DecodeString("b87473cbc572fd5afc8f165c6b554939068e870490bac3077daf6f9f9ec83df6dbe2d50c061d7034617c24f2d841bc9800121f9f43f90ba91bd8b646df0642ad")
+	require.Equal(t, c, calcHash(pcs, *ref, core.Entropy{0}))
 }
 
 func Test_getNextCascadeLayerIndexes(t *testing.T) {

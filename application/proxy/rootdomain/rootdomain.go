@@ -7,7 +7,7 @@ import (
 )
 
 // PrototypeReference to prototype of this contract
-var PrototypeReference = core.NewRefFromBase58("")
+var PrototypeReference, _ = core.NewRefFromBase58("")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -24,7 +24,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*RootDomain, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*RootDomain,
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*RootDomain, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -47,12 +47,12 @@ func GetObject(ref core.RecordRef) (r *RootDomain) {
 
 // GetPrototype returns reference to the prototype
 func GetPrototype() core.RecordRef {
-	return PrototypeReference
+	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*RootDomain, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
+	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (r *RootDomain) GetReference() core.RecordRef {
 
 // GetPrototype returns reference to the code
 func (r *RootDomain) GetPrototype() (core.RecordRef, error) {
-	if r.Prototype == core.NewRefFromBase58("") {
+	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
 		ret[0] = &ret0
@@ -109,7 +109,7 @@ func (r *RootDomain) GetPrototype() (core.RecordRef, error) {
 
 // GetCode returns reference to the code
 func (r *RootDomain) GetCode() (core.RecordRef, error) {
-	if r.Code == core.NewRefFromBase58("") {
+	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
 		ret[0] = &ret0

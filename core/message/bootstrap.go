@@ -17,6 +17,8 @@
 package message
 
 import (
+	"log"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -38,8 +40,12 @@ func (*GenesisRequest) DefaultRole() core.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (gr *GenesisRequest) DefaultTarget() *core.RecordRef {
-	ref := core.NewRefFromBase58(gr.Name)
-	return &ref
+	ref, err := core.NewRefFromBase58(gr.Name)
+	if err != nil {
+		log.Printf("Failed to parse Genesis record ref: '%s'. %s", gr.Name, err.Error())
+		panic(err)
+	}
+	return ref
 }
 
 // Type implementation for genesis request.
