@@ -82,8 +82,8 @@ func TestBareHelloworld(t *testing.T) {
 	mb.PulseNumber = 0
 
 	nlMock := testutils.NewNetworkLockerMock(t)
-	nlMock.AcquireGlobalLockFunc = func(p context.Context) {}
-	nlMock.ReleaseGlobalLockFunc = func(p context.Context) {}
+	nlMock.AcquireGlobalLockFunc = func(p context.Context, p1 string) {}
+	nlMock.ReleaseGlobalLockFunc = func(p context.Context, p1 string) {}
 
 	l.PulseManager.(*pulsemanager.PulseManager).NetworkLocker = nlMock
 
