@@ -64,25 +64,25 @@ func (ds *DropSize) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(ds.serializeDropSize())
 }
 
-// DropSizeList is chain of drop sizes
-type DropSizeList []DropSize
+// DropSizeHistory is chain of drop sizes
+type DropSizeHistory []DropSize
 
-// DeserializeJetDropSizeList deserializes DropSizeList
-func DeserializeJetDropSizeList(ctx context.Context, buff []byte) (DropSizeList, error) {
-	inslogger.FromContext(ctx).Debugf("DeserializeJetDropSizeList starts ... ( buff len: %d)", len(buff))
+// DeserializeJetDropSizeHistory deserializes DropSizeHistory
+func DeserializeJetDropSizeHistory(ctx context.Context, buff []byte) (DropSizeHistory, error) {
+	inslogger.FromContext(ctx).Debugf("DeserializeJetDropSizeHistory starts ... ( buff len: %d)", len(buff))
 	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
-	var dropSizes = DropSizeList{}
+	var dropSizes = DropSizeHistory{}
 
 	err := dec.Decode(&dropSizes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[ DeserializeJetDropSizeList ] Can't decode DropSizeList")
+		return nil, errors.Wrapf(err, "[ DeserializeJetDropSizeHistory ] Can't decode DropSizeHistory")
 	}
 
 	return dropSizes, nil
 }
 
-// Bytes serializes DropSizeList
-func (dropSizeList DropSizeList) Bytes(ctx context.Context) []byte {
-	inslogger.FromContext(ctx).Debug("DropSizeList.Bytes starts ...")
+// Bytes serializes DropSizeHistory
+func (dropSizeList DropSizeHistory) Bytes(ctx context.Context) []byte {
+	inslogger.FromContext(ctx).Debug("DropSizeHistory.Bytes starts ...")
 	return encode(dropSizeList)
 }

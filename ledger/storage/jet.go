@@ -244,9 +244,9 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 		return errors.Wrapf(err, "[ AddDropSize ] Can't get object: %s", string(k))
 	}
 
-	var dropSizes = jet.DropSizeList{}
+	var dropSizes = jet.DropSizeHistory{}
 	if err != ErrNotFound {
-		dropSizes, err = jet.DeserializeJetDropSizeList(ctx, buff)
+		dropSizes, err = jet.DeserializeJetDropSizeHistory(ctx, buff)
 		if err != nil {
 			return errors.Wrapf(err, "[ AddDropSize ] Can't decode dropSizes")
 		}
@@ -261,7 +261,7 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 	return db.set(ctx, k, dropSizes.Bytes(ctx))
 }
 
-func (db *DB) ResetDropSizeList(ctx context.Context, dropSizeList jet.DropSizeList) error {
+func (db *DB) ResetDropSizeList(ctx context.Context, dropSizeList jet.DropSizeHistory) error {
 	inslogger.FromContext(ctx).Debug("DB.ResetDropSizeList starts ...")
 	db.addBlockSizeLock.Lock()
 	defer db.addBlockSizeLock.Unlock()
@@ -271,7 +271,7 @@ func (db *DB) ResetDropSizeList(ctx context.Context, dropSizeList jet.DropSizeLi
 	return errors.Wrap(err, "[ ResetDropSizeList ] Can't db.set")
 }
 
-func (db *DB) GetDropSizeList(ctx context.Context) (jet.DropSizeList, error) {
+func (db *DB) GetDropSizeList(ctx context.Context) (jet.DropSizeHistory, error) {
 	inslogger.FromContext(ctx).Debug("DB.GetDropSizeList starts ...")
 	db.addBlockSizeLock.RLock()
 	defer db.addBlockSizeLock.RUnlock()
@@ -283,10 +283,10 @@ func (db *DB) GetDropSizeList(ctx context.Context) (jet.DropSizeList, error) {
 	}
 
 	if err == ErrNotFound {
-		return jet.DropSizeList{}, nil
+		return jet.DropSizeHistory{}, nil
 	}
 
-	dropSizes, err := jet.DeserializeJetDropSizeList(ctx, buff)
+	dropSizes, err := jet.DeserializeJetDropSizeHistory(ctx, buff)
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ GetDropSizeList ] Can't decode dropSizes")
 	}

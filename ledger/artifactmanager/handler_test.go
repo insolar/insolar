@@ -642,7 +642,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 
 	dropSizeList, err := db.GetDropSizeList(ctx)
 	require.NoError(t, err)
-	require.Equal(t, jet.DropSizeList{}, dropSizeList)
+	require.Equal(t, jet.DropSizeHistory{}, dropSizeList)
 	addDropSizeToDB(ctx, t, db, jetID)
 
 	dropSizeList, err = db.GetDropSizeList(ctx)
