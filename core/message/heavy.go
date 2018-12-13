@@ -23,6 +23,7 @@ import (
 // HeavyPayload carries Key/Value records and pulse number
 // that replicates to Heavy Material node.
 type HeavyPayload struct {
+	JetID    core.RecordID
 	PulseNum core.PulseNumber
 	Records  []core.KV
 }
@@ -54,6 +55,7 @@ func (e *HeavyPayload) Type() core.MessageType {
 
 // HeavyStartStop carries heavy replication start/stop signal with pulse number.
 type HeavyStartStop struct {
+	JetID    core.RecordID
 	PulseNum core.PulseNumber
 	Finished bool
 }
@@ -85,6 +87,7 @@ func (e *HeavyStartStop) Type() core.MessageType {
 
 // HeavyReset carries heavy replication start/stop signal with pulse number.
 type HeavyReset struct {
+	JetID    core.RecordID
 	PulseNum core.PulseNumber
 }
 

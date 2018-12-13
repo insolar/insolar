@@ -38,10 +38,10 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Service                    core.Network                    `inject:""`
+	Network                    core.Network                    `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 	LocalStorage               core.LocalStorage               `inject:""`
-	ActiveNodes                core.NodeNetwork                `inject:""`
+	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
@@ -86,7 +86,7 @@ func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) 
 
 // Start initializes message bus.
 func (mb *MessageBus) Start(ctx context.Context) error {
-	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
+	mb.Network.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 
 	return nil
 }
@@ -141,7 +141,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse c
 
 // CreateParcel creates signed message from provided message.
 func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), token, currentPulse)
+	return mb.ParcelFactory.Create(ctx, msg, mb.NodeNetwork.GetOrigin().ID(), token, currentPulse)
 }
 
 // SendParcel sends provided message via network.
@@ -162,7 +162,7 @@ func (mb *MessageBus) SendParcel(
 		// TODO: send to all actors of the role if nil Target
 		target := parcel.DefaultTarget()
 		var err error
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), target, currentPulse.PulseNumber)
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), target.Record(), currentPulse.PulseNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -174,16 +174,17 @@ func (mb *MessageBus) SendParcel(
 			Entropy:           currentPulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
+		err := mb.Network.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
 		return nil, err
 	}
 
 	// Short path when sending to self node. Skip serialization
-	if nodes[0].Equal(mb.Service.GetNodeID()) {
+	origin := mb.NodeNetwork.GetOrigin()
+	if nodes[0].Equal(origin.ID()) {
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
-	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, parcel)
+	res, err := mb.Network.SendMessage(nodes[0], deliverRPCMethodName, parcel)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +241,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	scope.Lock()
 	defer scope.Unlock()
 
-	senderKey := mb.ActiveNodes.GetActiveNode(sender).PublicKey()
+	senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
 	if mb.signmessages {
 		err := mb.ParcelFactory.Validate(senderKey, parcel)
 		if err != nil {
@@ -260,7 +261,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 		sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
 		if sendingObject != nil {
 			validSender, err := mb.JetCoordinator.IsAuthorized(
-				parcelCtx, allowedSenderRole, sendingObject, parcel.Pulse(), sender,
+				parcelCtx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,
 			)
 			if err != nil {
 				return nil, err

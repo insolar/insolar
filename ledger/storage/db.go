@@ -75,7 +75,8 @@ type DB struct {
 	nodeHistory     map[core.PulseNumber][]core.Node
 	nodeHistoryLock sync.Mutex
 
-	addJetLock sync.RWMutex
+	addJetLock  sync.RWMutex
+	jetTreeLock sync.Mutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
@@ -182,7 +183,9 @@ func (db *DB) Init(ctx context.Context) error {
 		return errors.Wrap(err, "bootstrap failed")
 	}
 
-	return nil
+	// TODO: required for test passing, need figure out how to do init jets properly
+	return db.SaveJet(ctx, jetID)
+	// return nil
 }
 
 // GenesisRef returns the genesis record reference.
