@@ -17,9 +17,11 @@
 package utils
 
 import (
+	"bufio"
 	"encoding/binary"
-	"log"
+	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -53,13 +55,54 @@ func TimestampMs() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
 
+// We have to use a lock since all IO is not thread safe by default
+var measurementsLock sync.Mutex
+var measurementsWriter *bufio.Writer
+var measurementsEnabled = false
+
+// Enables execution time measurement and uses `fname` to write measurements
+func EnableExecutionTimeMeasurement(fname string) error {
+	if measurementsEnabled {
+		// already enabled
+		return nil
+	}
+	// if the file doesn't exist, create it, or append to the file
+	mfile, err := os.OpenFile(fname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	measurementsWriter = bufio.NewWriter(mfile)
+	measurementsEnabled = true
+	return nil
+}
+
+// write one measure to the log
+func writeMeasure(format string, args ...interface{}) error {
+	measurementsLock.Lock()
+	_, err := fmt.Fprintf(measurementsWriter, format, args...)
+	measurementsLock.Unlock()
+	if err != nil { // very unlikely to happen
+		measurementsEnabled = false
+	}
+	return err
+}
+
 // Writes execution time of given function to the profile log (if profile logging is enabled)
-// TODO: use seperate log file! + enable/disable flag
-func MeasureExecutionTime(comment string, f func()) {
+func MeasureExecutionTime(comment string, thefunction func()) {
+	if !measurementsEnabled {
+		return
+	}
+
 	start := TimestampMs()
-	log.Printf("[PROFILE] %s - STARTED @ %v\n", comment, start)
-	f()
+	err := writeMeasure("%v STARTED %s\n", start, comment)
+	if err != nil {
+		return
+	}
+
+	thefunction()
+
 	end := TimestampMs()
 	delta := end - start
-	log.Printf("[PROFILE] %s - ENDED @ %v, delta: %v ms\n", comment, end, delta)
+	_ = writeMeasure("%v ENDED %s, took: %v ms\n", end, comment, delta)
 }
