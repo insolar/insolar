@@ -72,7 +72,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange results.")
 	}
 
-	nodeProofs := make(map[core.Node]*merkle.GlobuleProof)
+	nodeProofs := make(map[core.Node]*GlobuleProofValidated)
 	stateMatrix := NewStateMatrix(state.UnsyncList)
 
 	for ref, packet := range packets {
@@ -94,10 +94,8 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 			NodeCount:     globuleProof.NodeCount,
 			NodeRoot:      globuleProof.NodeRoot,
 		}
-
-		if !sp.Calculator.IsValid(proof, globuleHash, node.PublicKey()) {
-			nodeProofs[node] = proof
-		}
+		valid := sp.Calculator.IsValid(proof, globuleHash, node.PublicKey())
+		nodeProofs[node] = &GlobuleProofValidated{Proof: proof, Valid: valid}
 	}
 
 	matrixCalculation, err := stateMatrix.CalculatePhase2(sp.NodeKeeper.GetOrigin().ID())
@@ -120,8 +118,13 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error) {
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
+	if len(additionalRequests) == 0 {
+		return state, nil
+	}
+
 	count := len(additionalRequests)
 	results := make(map[uint16]*packets.MissingNodeSupplementaryVote)
+	claims := make(map[uint16]*packets.MissingNodeClaim)
 
 	packet := packets.Phase2Packet{}
 	err := packet.SetGlobuleHashSignature(state.GlobuleProof.Signature.Bytes())
@@ -140,19 +143,16 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	}
 
 	for _, vote := range voteAnswers {
-		if vote.Type() != packets.TypeMissingNodeSupplementaryVote {
-			continue
+		switch v := vote.(type) {
+		case *packets.MissingNodeSupplementaryVote:
+			results[v.NodeIndex] = v
+		case *packets.MissingNodeClaim:
+			claims[v.NodeIndex] = v
 		}
-		v, ok := vote.(*packets.MissingNodeSupplementaryVote)
-		if !ok {
-			log.Warn("Failed to convert vote of type TypeMissingNodeSupplementaryVote to MissingNodeSupplementaryVote")
-			continue
-		}
-		results[v.NodeIndex] = v
 	}
 
 	if len(results) != count {
-		return nil, errors.New(fmt.Sprintf("Failed to receive enough MissingNodeSupplementaryVote responses: %d/%d", len(results), count))
+		return nil, errors.New(fmt.Sprintf("[ Phase 2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses: %d/%d", len(results), count))
 	}
 
 	return state, nil

@@ -22,12 +22,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+type GlobuleHashSignature [SignatureLength]byte
+
 type Phase2Packet struct {
 	// -------------------- Header
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    [HashLength]byte
+	globuleHashSignature    GlobuleHashSignature
 	bitSet                  BitSet
 	SignatureHeaderSection1 [SignatureLength]byte
 

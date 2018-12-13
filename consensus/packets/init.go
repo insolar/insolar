@@ -57,4 +57,6 @@ func init() {
 	voteSizeMap[TypeNodeListSupplementaryVote] = sizeOf(&NodeListSupplementaryVote{})
 	voteSizeMap[TypeMissingNodeSupplementaryVote] = sizeOf(&MissingNodeSupplementaryVote{})
 	voteSizeMap[TypeMissingNode] = sizeOf(&MissingNode{})
+	// MissingNodeClaim has variable-sized length
+	voteSizeMap[TypeMissingNodeClaim] = 0
 }

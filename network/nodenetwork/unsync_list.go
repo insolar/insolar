@@ -39,8 +39,22 @@ type unsyncList struct {
 	claims      map[core.RecordRef][]consensus.ReferendumClaim
 	refToIndex  map[core.RecordRef]int
 	proofs      map[core.RecordRef]*consensus.NodePulseProof
+	ghs         map[core.RecordRef]consensus.GlobuleHashSignature
 	indexToRef  map[int]core.RecordRef
 	cache       []byte
+}
+
+func (ul *unsyncList) GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim {
+	return ul.claims[nodeID]
+}
+
+func (ul *unsyncList) SetGlobuleHashSignature(nodeID core.RecordRef, signature consensus.GlobuleHashSignature) {
+	ul.ghs[nodeID] = signature
+}
+
+func (ul *unsyncList) GetGlobuleHashSignature(nodeID core.RecordRef) (consensus.GlobuleHashSignature, bool) {
+	result, ok := ul.ghs[nodeID]
+	return result, ok
 }
 
 func (ul *unsyncList) AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof) {
@@ -52,18 +66,25 @@ func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof 
 }
 
 func newUnsyncList(activeNodesSorted []core.Node) *unsyncList {
-	indexToRef := make(map[int]core.RecordRef, len(activeNodesSorted))
-	refToIndex := make(map[core.RecordRef]int, len(activeNodesSorted))
-	activeNodes := make(map[core.RecordRef]core.Node, len(activeNodesSorted))
-	proofs := make(map[core.RecordRef]*consensus.NodePulseProof)
-	for i, node := range activeNodesSorted {
-		indexToRef[i] = node.ID()
-		refToIndex[node.ID()] = i
-		activeNodes[node.ID()] = node
+	result := &unsyncList{
+		indexToRef:  make(map[int]core.RecordRef, len(activeNodesSorted)),
+		refToIndex:  make(map[core.RecordRef]int, len(activeNodesSorted)),
+		activeNodes: make(map[core.RecordRef]core.Node, len(activeNodesSorted)),
 	}
-	claims := make(map[core.RecordRef][]consensus.ReferendumClaim)
+	for i, node := range activeNodesSorted {
+		result.addNode(node, i)
+	}
+	result.proofs = make(map[core.RecordRef]*consensus.NodePulseProof)
+	result.claims = make(map[core.RecordRef][]consensus.ReferendumClaim)
+	result.ghs = make(map[core.RecordRef]consensus.GlobuleHashSignature)
 
-	return &unsyncList{activeNodes: activeNodes, claims: claims, refToIndex: refToIndex, indexToRef: indexToRef, proofs: proofs}
+	return result
+}
+
+func (ul *unsyncList) addNode(node core.Node, index int) {
+	ul.indexToRef[index] = node.ID()
+	ul.refToIndex[node.ID()] = index
+	ul.activeNodes[node.ID()] = node
 }
 
 func (ul *unsyncList) RemoveNodeAndClaims(from core.RecordRef) {
@@ -192,7 +213,9 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 			if err != nil {
 				log.Error("[ AddClaims ] failed to convert Claim -> Node")
 			}
-			ul.activeNodes[node.ID()] = node
+			ul.addNode(node, int(c.NodeAnnouncerIndex))
+
+			// TODO: add origin
 		}
 	}
 }

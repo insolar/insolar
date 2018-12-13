@@ -33,6 +33,7 @@ const (
 	TypeNodeListSupplementaryVote
 	TypeMissingNodeSupplementaryVote
 	TypeMissingNode
+	TypeMissingNodeClaim
 )
 
 type ReferendumVote interface {
@@ -51,13 +52,24 @@ type NodeListSupplementaryVote struct {
 	NodeListHash  [32]byte
 }
 
+type MissingNodeClaim struct {
+	NodeIndex uint16
+	claimSize uint16
+
+	Claim ReferendumClaim
+}
+
+func (mn *MissingNodeClaim) Type() VoteType {
+	return TypeMissingNodeClaim
+}
+
 type MissingNodeSupplementaryVote struct {
 	NodeIndex uint16
 
-	NodePulseProof NodePulseProof
+	NodePulseProof       NodePulseProof
+	GlobuleHashSignature GlobuleHashSignature
 	// TODO: make it signed
 	NodeClaimUnsigned NodeJoinClaim
-	// TODO: also pass claims of missing nodes
 }
 
 type MissingNode struct {
@@ -82,6 +94,49 @@ func (mn *MissingNode) Deserialize(data io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNode.Deserialize ] failed to read a node index")
 	}
+	return nil
+}
+
+func (mn *MissingNodeClaim) Serialize() ([]byte, error) {
+	var result bytes.Buffer
+	err := binary.Write(&result, defaultByteOrder, mn.NodeIndex)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeClaim.Serialize ] Can't write NodeIndex")
+	}
+	serializedClaim, err := mn.Claim.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeClaim.Serialize ] Can't serialize claim")
+	}
+	err = binary.Write(&result, defaultByteOrder, uint16(len(serializedClaim)))
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeClaim.Serialize ] Can't write claimSize")
+	}
+	err = binary.Write(&result, defaultByteOrder, serializedClaim)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeClaim.Serialize ] Can't write Claim")
+	}
+	return result.Bytes(), nil
+}
+
+func (mn *MissingNodeClaim) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &mn.NodeIndex)
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNodeClaim.Deserialize ] Can't read NodeIndex")
+	}
+	err = binary.Read(data, defaultByteOrder, &mn.claimSize)
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNodeClaim.Deserialize ] Can't read claimSize")
+	}
+	claimData := make([]byte, mn.claimSize)
+	err = binary.Read(data, defaultByteOrder, claimData[:])
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNodeClaim.Deserialize ] Can't read claim data")
+	}
+	claims, err := parseReferendumClaim(claimData[:])
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNodeClaim.Deserialize ] Can't parse claim from claim data")
+	}
+	mn.Claim = claims[0]
 	return nil
 }
 
@@ -195,6 +250,10 @@ func (v *MissingNodeSupplementaryVote) Deserialize(data io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodePulseProof")
 	}
+	err = binary.Read(data, defaultByteOrder, &v.GlobuleHashSignature)
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read GlobuleHashSignature")
+	}
 	err = v.NodeClaimUnsigned.deserializeRaw(data)
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodeClaimUnsigned")
@@ -216,17 +275,20 @@ func (v *MissingNodeSupplementaryVote) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't serialize NodePulseProof")
 	}
-
 	_, err = result.Write(nodePulseProofRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't append NodePulseProof")
+	}
+
+	_, err = result.Write(v.GlobuleHashSignature[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't write GlobuleHashSignature")
 	}
 
 	joinClaim, err := v.NodeClaimUnsigned.SerializeRaw()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't serialize join claim")
 	}
-
 	_, err = result.Write(joinClaim)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't write join claim")

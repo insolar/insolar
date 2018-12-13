@@ -272,7 +272,7 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 func makePhase2Packet() *Phase2Packet {
 	phase2Packet := &Phase2Packet{}
 	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
-	phase2Packet.globuleHashSignature = randomArray64()
+	phase2Packet.globuleHashSignature = randomArray71()
 	phase2Packet.SignatureHeaderSection1 = randomArray71()
 	phase2Packet.SignatureHeaderSection2 = randomArray71()
 	phase2Packet.bitSet, _ = NewBitSet(134)

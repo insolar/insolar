@@ -175,8 +175,23 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 			log.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, proof not found", v.NodeIndex, ref)
 			continue
 		}
-		answer := packets.MissingNodeSupplementaryVote{NodeClaimUnsigned: *claim, NodePulseProof: *proof}
+		ghs, ok := list.GetGlobuleHashSignature(ref)
+		if !ok {
+			log.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, GHS not found", v.NodeIndex, ref)
+			continue
+		}
+		answer := packets.MissingNodeSupplementaryVote{
+			NodeIndex:            v.NodeIndex,
+			NodePulseProof:       *proof,
+			GlobuleHashSignature: ghs,
+			NodeClaimUnsigned:    *claim,
+		}
 		answers = append(answers, &answer)
+		claims := list.GetClaims(ref)
+		for _, claim := range claims {
+			claimAnswer := packets.MissingNodeClaim{NodeIndex: v.NodeIndex, Claim: claim}
+			answers = append(answers, &claimAnswer)
+		}
 	}
 	response := packets.Phase2Packet{}
 	response.SetBitSet(origReq.GetBitSet())

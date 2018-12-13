@@ -45,6 +45,16 @@ type UnsyncListMock struct {
 	GetActiveNodesPreCounter uint64
 	GetActiveNodesMock       mUnsyncListMockGetActiveNodes
 
+	GetClaimsFunc       func(p core.RecordRef) (r []packets.ReferendumClaim)
+	GetClaimsCounter    uint64
+	GetClaimsPreCounter uint64
+	GetClaimsMock       mUnsyncListMockGetClaims
+
+	GetGlobuleHashSignatureFunc       func(p core.RecordRef) (r packets.GlobuleHashSignature, r1 bool)
+	GetGlobuleHashSignatureCounter    uint64
+	GetGlobuleHashSignaturePreCounter uint64
+	GetGlobuleHashSignatureMock       mUnsyncListMockGetGlobuleHashSignature
+
 	GetProofFunc       func(p core.RecordRef) (r *packets.NodePulseProof)
 	GetProofCounter    uint64
 	GetProofPreCounter uint64
@@ -69,6 +79,11 @@ type UnsyncListMock struct {
 	RemoveNodeAndClaimsCounter    uint64
 	RemoveNodeAndClaimsPreCounter uint64
 	RemoveNodeAndClaimsMock       mUnsyncListMockRemoveNodeAndClaims
+
+	SetGlobuleHashSignatureFunc       func(p core.RecordRef, p1 packets.GlobuleHashSignature)
+	SetGlobuleHashSignatureCounter    uint64
+	SetGlobuleHashSignaturePreCounter uint64
+	SetGlobuleHashSignatureMock       mUnsyncListMockSetGlobuleHashSignature
 }
 
 //NewUnsyncListMock returns a mock for github.com/insolar/insolar/network.UnsyncList
@@ -84,11 +99,14 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 	m.CalculateHashMock = mUnsyncListMockCalculateHash{mock: m}
 	m.GetActiveNodeMock = mUnsyncListMockGetActiveNode{mock: m}
 	m.GetActiveNodesMock = mUnsyncListMockGetActiveNodes{mock: m}
+	m.GetClaimsMock = mUnsyncListMockGetClaims{mock: m}
+	m.GetGlobuleHashSignatureMock = mUnsyncListMockGetGlobuleHashSignature{mock: m}
 	m.GetProofMock = mUnsyncListMockGetProof{mock: m}
 	m.IndexToRefMock = mUnsyncListMockIndexToRef{mock: m}
 	m.LengthMock = mUnsyncListMockLength{mock: m}
 	m.RefToIndexMock = mUnsyncListMockRefToIndex{mock: m}
 	m.RemoveNodeAndClaimsMock = mUnsyncListMockRemoveNodeAndClaims{mock: m}
+	m.SetGlobuleHashSignatureMock = mUnsyncListMockSetGlobuleHashSignature{mock: m}
 
 	return m
 }
@@ -766,6 +784,303 @@ func (m *UnsyncListMock) GetActiveNodesFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetActiveNodesFunc != nil {
 		return atomic.LoadUint64(&m.GetActiveNodesCounter) > 0
+	}
+
+	return true
+}
+
+type mUnsyncListMockGetClaims struct {
+	mock              *UnsyncListMock
+	mainExpectation   *UnsyncListMockGetClaimsExpectation
+	expectationSeries []*UnsyncListMockGetClaimsExpectation
+}
+
+type UnsyncListMockGetClaimsExpectation struct {
+	input  *UnsyncListMockGetClaimsInput
+	result *UnsyncListMockGetClaimsResult
+}
+
+type UnsyncListMockGetClaimsInput struct {
+	p core.RecordRef
+}
+
+type UnsyncListMockGetClaimsResult struct {
+	r []packets.ReferendumClaim
+}
+
+//Expect specifies that invocation of UnsyncList.GetClaims is expected from 1 to Infinity times
+func (m *mUnsyncListMockGetClaims) Expect(p core.RecordRef) *mUnsyncListMockGetClaims {
+	m.mock.GetClaimsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockGetClaimsExpectation{}
+	}
+	m.mainExpectation.input = &UnsyncListMockGetClaimsInput{p}
+	return m
+}
+
+//Return specifies results of invocation of UnsyncList.GetClaims
+func (m *mUnsyncListMockGetClaims) Return(r []packets.ReferendumClaim) *UnsyncListMock {
+	m.mock.GetClaimsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockGetClaimsExpectation{}
+	}
+	m.mainExpectation.result = &UnsyncListMockGetClaimsResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of UnsyncList.GetClaims is expected once
+func (m *mUnsyncListMockGetClaims) ExpectOnce(p core.RecordRef) *UnsyncListMockGetClaimsExpectation {
+	m.mock.GetClaimsFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &UnsyncListMockGetClaimsExpectation{}
+	expectation.input = &UnsyncListMockGetClaimsInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *UnsyncListMockGetClaimsExpectation) Return(r []packets.ReferendumClaim) {
+	e.result = &UnsyncListMockGetClaimsResult{r}
+}
+
+//Set uses given function f as a mock of UnsyncList.GetClaims method
+func (m *mUnsyncListMockGetClaims) Set(f func(p core.RecordRef) (r []packets.ReferendumClaim)) *UnsyncListMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetClaimsFunc = f
+	return m.mock
+}
+
+//GetClaims implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) GetClaims(p core.RecordRef) (r []packets.ReferendumClaim) {
+	counter := atomic.AddUint64(&m.GetClaimsPreCounter, 1)
+	defer atomic.AddUint64(&m.GetClaimsCounter, 1)
+
+	if len(m.GetClaimsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetClaimsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to UnsyncListMock.GetClaims. %v", p)
+			return
+		}
+
+		input := m.GetClaimsMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, UnsyncListMockGetClaimsInput{p}, "UnsyncList.GetClaims got unexpected parameters")
+
+		result := m.GetClaimsMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the UnsyncListMock.GetClaims")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetClaimsMock.mainExpectation != nil {
+
+		input := m.GetClaimsMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, UnsyncListMockGetClaimsInput{p}, "UnsyncList.GetClaims got unexpected parameters")
+		}
+
+		result := m.GetClaimsMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the UnsyncListMock.GetClaims")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetClaimsFunc == nil {
+		m.t.Fatalf("Unexpected call to UnsyncListMock.GetClaims. %v", p)
+		return
+	}
+
+	return m.GetClaimsFunc(p)
+}
+
+//GetClaimsMinimockCounter returns a count of UnsyncListMock.GetClaimsFunc invocations
+func (m *UnsyncListMock) GetClaimsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetClaimsCounter)
+}
+
+//GetClaimsMinimockPreCounter returns the value of UnsyncListMock.GetClaims invocations
+func (m *UnsyncListMock) GetClaimsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetClaimsPreCounter)
+}
+
+//GetClaimsFinished returns true if mock invocations count is ok
+func (m *UnsyncListMock) GetClaimsFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetClaimsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetClaimsCounter) == uint64(len(m.GetClaimsMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetClaimsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetClaimsCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetClaimsFunc != nil {
+		return atomic.LoadUint64(&m.GetClaimsCounter) > 0
+	}
+
+	return true
+}
+
+type mUnsyncListMockGetGlobuleHashSignature struct {
+	mock              *UnsyncListMock
+	mainExpectation   *UnsyncListMockGetGlobuleHashSignatureExpectation
+	expectationSeries []*UnsyncListMockGetGlobuleHashSignatureExpectation
+}
+
+type UnsyncListMockGetGlobuleHashSignatureExpectation struct {
+	input  *UnsyncListMockGetGlobuleHashSignatureInput
+	result *UnsyncListMockGetGlobuleHashSignatureResult
+}
+
+type UnsyncListMockGetGlobuleHashSignatureInput struct {
+	p core.RecordRef
+}
+
+type UnsyncListMockGetGlobuleHashSignatureResult struct {
+	r  packets.GlobuleHashSignature
+	r1 bool
+}
+
+//Expect specifies that invocation of UnsyncList.GetGlobuleHashSignature is expected from 1 to Infinity times
+func (m *mUnsyncListMockGetGlobuleHashSignature) Expect(p core.RecordRef) *mUnsyncListMockGetGlobuleHashSignature {
+	m.mock.GetGlobuleHashSignatureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockGetGlobuleHashSignatureExpectation{}
+	}
+	m.mainExpectation.input = &UnsyncListMockGetGlobuleHashSignatureInput{p}
+	return m
+}
+
+//Return specifies results of invocation of UnsyncList.GetGlobuleHashSignature
+func (m *mUnsyncListMockGetGlobuleHashSignature) Return(r packets.GlobuleHashSignature, r1 bool) *UnsyncListMock {
+	m.mock.GetGlobuleHashSignatureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockGetGlobuleHashSignatureExpectation{}
+	}
+	m.mainExpectation.result = &UnsyncListMockGetGlobuleHashSignatureResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of UnsyncList.GetGlobuleHashSignature is expected once
+func (m *mUnsyncListMockGetGlobuleHashSignature) ExpectOnce(p core.RecordRef) *UnsyncListMockGetGlobuleHashSignatureExpectation {
+	m.mock.GetGlobuleHashSignatureFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &UnsyncListMockGetGlobuleHashSignatureExpectation{}
+	expectation.input = &UnsyncListMockGetGlobuleHashSignatureInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *UnsyncListMockGetGlobuleHashSignatureExpectation) Return(r packets.GlobuleHashSignature, r1 bool) {
+	e.result = &UnsyncListMockGetGlobuleHashSignatureResult{r, r1}
+}
+
+//Set uses given function f as a mock of UnsyncList.GetGlobuleHashSignature method
+func (m *mUnsyncListMockGetGlobuleHashSignature) Set(f func(p core.RecordRef) (r packets.GlobuleHashSignature, r1 bool)) *UnsyncListMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetGlobuleHashSignatureFunc = f
+	return m.mock
+}
+
+//GetGlobuleHashSignature implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) GetGlobuleHashSignature(p core.RecordRef) (r packets.GlobuleHashSignature, r1 bool) {
+	counter := atomic.AddUint64(&m.GetGlobuleHashSignaturePreCounter, 1)
+	defer atomic.AddUint64(&m.GetGlobuleHashSignatureCounter, 1)
+
+	if len(m.GetGlobuleHashSignatureMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetGlobuleHashSignatureMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to UnsyncListMock.GetGlobuleHashSignature. %v", p)
+			return
+		}
+
+		input := m.GetGlobuleHashSignatureMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, UnsyncListMockGetGlobuleHashSignatureInput{p}, "UnsyncList.GetGlobuleHashSignature got unexpected parameters")
+
+		result := m.GetGlobuleHashSignatureMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the UnsyncListMock.GetGlobuleHashSignature")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetGlobuleHashSignatureMock.mainExpectation != nil {
+
+		input := m.GetGlobuleHashSignatureMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, UnsyncListMockGetGlobuleHashSignatureInput{p}, "UnsyncList.GetGlobuleHashSignature got unexpected parameters")
+		}
+
+		result := m.GetGlobuleHashSignatureMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the UnsyncListMock.GetGlobuleHashSignature")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetGlobuleHashSignatureFunc == nil {
+		m.t.Fatalf("Unexpected call to UnsyncListMock.GetGlobuleHashSignature. %v", p)
+		return
+	}
+
+	return m.GetGlobuleHashSignatureFunc(p)
+}
+
+//GetGlobuleHashSignatureMinimockCounter returns a count of UnsyncListMock.GetGlobuleHashSignatureFunc invocations
+func (m *UnsyncListMock) GetGlobuleHashSignatureMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetGlobuleHashSignatureCounter)
+}
+
+//GetGlobuleHashSignatureMinimockPreCounter returns the value of UnsyncListMock.GetGlobuleHashSignature invocations
+func (m *UnsyncListMock) GetGlobuleHashSignatureMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetGlobuleHashSignaturePreCounter)
+}
+
+//GetGlobuleHashSignatureFinished returns true if mock invocations count is ok
+func (m *UnsyncListMock) GetGlobuleHashSignatureFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetGlobuleHashSignatureMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetGlobuleHashSignatureCounter) == uint64(len(m.GetGlobuleHashSignatureMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetGlobuleHashSignatureMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetGlobuleHashSignatureCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetGlobuleHashSignatureFunc != nil {
+		return atomic.LoadUint64(&m.GetGlobuleHashSignatureCounter) > 0
 	}
 
 	return true
@@ -1475,6 +1790,130 @@ func (m *UnsyncListMock) RemoveNodeAndClaimsFinished() bool {
 	return true
 }
 
+type mUnsyncListMockSetGlobuleHashSignature struct {
+	mock              *UnsyncListMock
+	mainExpectation   *UnsyncListMockSetGlobuleHashSignatureExpectation
+	expectationSeries []*UnsyncListMockSetGlobuleHashSignatureExpectation
+}
+
+type UnsyncListMockSetGlobuleHashSignatureExpectation struct {
+	input *UnsyncListMockSetGlobuleHashSignatureInput
+}
+
+type UnsyncListMockSetGlobuleHashSignatureInput struct {
+	p  core.RecordRef
+	p1 packets.GlobuleHashSignature
+}
+
+//Expect specifies that invocation of UnsyncList.SetGlobuleHashSignature is expected from 1 to Infinity times
+func (m *mUnsyncListMockSetGlobuleHashSignature) Expect(p core.RecordRef, p1 packets.GlobuleHashSignature) *mUnsyncListMockSetGlobuleHashSignature {
+	m.mock.SetGlobuleHashSignatureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockSetGlobuleHashSignatureExpectation{}
+	}
+	m.mainExpectation.input = &UnsyncListMockSetGlobuleHashSignatureInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of UnsyncList.SetGlobuleHashSignature
+func (m *mUnsyncListMockSetGlobuleHashSignature) Return() *UnsyncListMock {
+	m.mock.SetGlobuleHashSignatureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockSetGlobuleHashSignatureExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of UnsyncList.SetGlobuleHashSignature is expected once
+func (m *mUnsyncListMockSetGlobuleHashSignature) ExpectOnce(p core.RecordRef, p1 packets.GlobuleHashSignature) *UnsyncListMockSetGlobuleHashSignatureExpectation {
+	m.mock.SetGlobuleHashSignatureFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &UnsyncListMockSetGlobuleHashSignatureExpectation{}
+	expectation.input = &UnsyncListMockSetGlobuleHashSignatureInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of UnsyncList.SetGlobuleHashSignature method
+func (m *mUnsyncListMockSetGlobuleHashSignature) Set(f func(p core.RecordRef, p1 packets.GlobuleHashSignature)) *UnsyncListMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SetGlobuleHashSignatureFunc = f
+	return m.mock
+}
+
+//SetGlobuleHashSignature implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) SetGlobuleHashSignature(p core.RecordRef, p1 packets.GlobuleHashSignature) {
+	counter := atomic.AddUint64(&m.SetGlobuleHashSignaturePreCounter, 1)
+	defer atomic.AddUint64(&m.SetGlobuleHashSignatureCounter, 1)
+
+	if len(m.SetGlobuleHashSignatureMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetGlobuleHashSignatureMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to UnsyncListMock.SetGlobuleHashSignature. %v %v", p, p1)
+			return
+		}
+
+		input := m.SetGlobuleHashSignatureMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, UnsyncListMockSetGlobuleHashSignatureInput{p, p1}, "UnsyncList.SetGlobuleHashSignature got unexpected parameters")
+
+		return
+	}
+
+	if m.SetGlobuleHashSignatureMock.mainExpectation != nil {
+
+		input := m.SetGlobuleHashSignatureMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, UnsyncListMockSetGlobuleHashSignatureInput{p, p1}, "UnsyncList.SetGlobuleHashSignature got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.SetGlobuleHashSignatureFunc == nil {
+		m.t.Fatalf("Unexpected call to UnsyncListMock.SetGlobuleHashSignature. %v %v", p, p1)
+		return
+	}
+
+	m.SetGlobuleHashSignatureFunc(p, p1)
+}
+
+//SetGlobuleHashSignatureMinimockCounter returns a count of UnsyncListMock.SetGlobuleHashSignatureFunc invocations
+func (m *UnsyncListMock) SetGlobuleHashSignatureMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SetGlobuleHashSignatureCounter)
+}
+
+//SetGlobuleHashSignatureMinimockPreCounter returns the value of UnsyncListMock.SetGlobuleHashSignature invocations
+func (m *UnsyncListMock) SetGlobuleHashSignatureMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SetGlobuleHashSignaturePreCounter)
+}
+
+//SetGlobuleHashSignatureFinished returns true if mock invocations count is ok
+func (m *UnsyncListMock) SetGlobuleHashSignatureFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SetGlobuleHashSignatureMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetGlobuleHashSignatureCounter) == uint64(len(m.SetGlobuleHashSignatureMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SetGlobuleHashSignatureMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetGlobuleHashSignatureCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SetGlobuleHashSignatureFunc != nil {
+		return atomic.LoadUint64(&m.SetGlobuleHashSignatureCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *UnsyncListMock) ValidateCallCounters() {
@@ -1499,6 +1938,14 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetActiveNodes")
 	}
 
+	if !m.GetClaimsFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.GetClaims")
+	}
+
+	if !m.GetGlobuleHashSignatureFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.GetGlobuleHashSignature")
+	}
+
 	if !m.GetProofFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetProof")
 	}
@@ -1517,6 +1964,10 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 
 	if !m.RemoveNodeAndClaimsFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.RemoveNodeAndClaims")
+	}
+
+	if !m.SetGlobuleHashSignatureFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.SetGlobuleHashSignature")
 	}
 
 }
@@ -1556,6 +2007,14 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetActiveNodes")
 	}
 
+	if !m.GetClaimsFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.GetClaims")
+	}
+
+	if !m.GetGlobuleHashSignatureFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.GetGlobuleHashSignature")
+	}
+
 	if !m.GetProofFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetProof")
 	}
@@ -1574,6 +2033,10 @@ func (m *UnsyncListMock) MinimockFinish() {
 
 	if !m.RemoveNodeAndClaimsFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.RemoveNodeAndClaims")
+	}
+
+	if !m.SetGlobuleHashSignatureFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.SetGlobuleHashSignature")
 	}
 
 }
@@ -1595,11 +2058,14 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.CalculateHashFinished()
 		ok = ok && m.GetActiveNodeFinished()
 		ok = ok && m.GetActiveNodesFinished()
+		ok = ok && m.GetClaimsFinished()
+		ok = ok && m.GetGlobuleHashSignatureFinished()
 		ok = ok && m.GetProofFinished()
 		ok = ok && m.IndexToRefFinished()
 		ok = ok && m.LengthFinished()
 		ok = ok && m.RefToIndexFinished()
 		ok = ok && m.RemoveNodeAndClaimsFinished()
+		ok = ok && m.SetGlobuleHashSignatureFinished()
 
 		if ok {
 			return
@@ -1628,6 +2094,14 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to UnsyncListMock.GetActiveNodes")
 			}
 
+			if !m.GetClaimsFinished() {
+				m.t.Error("Expected call to UnsyncListMock.GetClaims")
+			}
+
+			if !m.GetGlobuleHashSignatureFinished() {
+				m.t.Error("Expected call to UnsyncListMock.GetGlobuleHashSignature")
+			}
+
 			if !m.GetProofFinished() {
 				m.t.Error("Expected call to UnsyncListMock.GetProof")
 			}
@@ -1646,6 +2120,10 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 
 			if !m.RemoveNodeAndClaimsFinished() {
 				m.t.Error("Expected call to UnsyncListMock.RemoveNodeAndClaims")
+			}
+
+			if !m.SetGlobuleHashSignatureFinished() {
+				m.t.Error("Expected call to UnsyncListMock.SetGlobuleHashSignature")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1680,6 +2158,14 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.GetClaimsFinished() {
+		return false
+	}
+
+	if !m.GetGlobuleHashSignatureFinished() {
+		return false
+	}
+
 	if !m.GetProofFinished() {
 		return false
 	}
@@ -1697,6 +2183,10 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 	}
 
 	if !m.RemoveNodeAndClaimsFinished() {
+		return false
+	}
+
+	if !m.SetGlobuleHashSignatureFinished() {
 		return false
 	}
 
