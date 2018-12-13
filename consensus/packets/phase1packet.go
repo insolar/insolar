@@ -92,7 +92,8 @@ func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
 
 // SetPulseProof sets PulseProof and check struct fields len, returns error if invalid len
 func (p1p *Phase1Packet) SetPulseProof(proofStateHash, proofSignature []byte) error {
-	if len(proofStateHash) == HashLength && len(proofSignature) == SignatureLength {
+	// TODO: need NET-68 impl
+	if len(proofStateHash) == HashLength /*&& len(proofSignature) == SignatureLength*/ {
 		copy(p1p.proofNodePulse.NodeStateHash[:], proofStateHash[:HashLength])
 		copy(p1p.proofNodePulse.NodeSignature[:], proofSignature[:SignatureLength])
 		return nil
