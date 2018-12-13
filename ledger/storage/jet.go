@@ -230,7 +230,7 @@ func (db *DB) GetJets(ctx context.Context) (jet.IDSet, error) {
 }
 
 func dropSizesPrefixKey() []byte {
-	return prefixkey(scopeIDSystem, []byte{sysDropSizeList})
+	return prefixkey(scopeIDSystem, []byte{sysDropSizeHistory})
 }
 
 func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
@@ -251,7 +251,7 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 			return errors.Wrapf(err, "[ AddDropSize ] Can't decode dropSizes")
 		}
 
-		if len([]jet.DropSize(dropSizes)) >= db.etSizesHistoryDepth {
+		if len([]jet.DropSize(dropSizes)) >= db.jetSizesHistoryDepth {
 			dropSizes = dropSizes[1:]
 		}
 	}
@@ -261,25 +261,25 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 	return db.set(ctx, k, dropSizes.Bytes(ctx))
 }
 
-func (db *DB) ResetDropSizeList(ctx context.Context, dropSizeList jet.DropSizeHistory) error {
-	inslogger.FromContext(ctx).Debug("DB.ResetDropSizeList starts ...")
+func (db *DB) ResetDropSizeHistory(ctx context.Context, dropSizeHistory jet.DropSizeHistory) error {
+	inslogger.FromContext(ctx).Debug("DB.ResetDropSizeHistory starts ...")
 	db.addBlockSizeLock.Lock()
 	defer db.addBlockSizeLock.Unlock()
 
 	k := dropSizesPrefixKey()
-	err := db.set(ctx, k, dropSizeList.Bytes(ctx))
-	return errors.Wrap(err, "[ ResetDropSizeList ] Can't db.set")
+	err := db.set(ctx, k, dropSizeHistory.Bytes(ctx))
+	return errors.Wrap(err, "[ ResetDropSizeHistory ] Can't db.set")
 }
 
-func (db *DB) GetDropSizeList(ctx context.Context) (jet.DropSizeHistory, error) {
-	inslogger.FromContext(ctx).Debug("DB.GetDropSizeList starts ...")
+func (db *DB) GetDropSizeHistory(ctx context.Context) (jet.DropSizeHistory, error) {
+	inslogger.FromContext(ctx).Debug("DB.GetDropSizeHistory starts ...")
 	db.addBlockSizeLock.RLock()
 	defer db.addBlockSizeLock.RUnlock()
 
 	k := dropSizesPrefixKey()
 	buff, err := db.get(ctx, k)
 	if err != nil && err != ErrNotFound {
-		return nil, errors.Wrap(err, "[ GetDropSizeList ] Can't db.set")
+		return nil, errors.Wrap(err, "[ GetDropSizeHistory ] Can't db.set")
 	}
 
 	if err == ErrNotFound {
@@ -288,7 +288,7 @@ func (db *DB) GetDropSizeList(ctx context.Context) (jet.DropSizeHistory, error) 
 
 	dropSizes, err := jet.DeserializeJetDropSizeHistory(ctx, buff)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[ GetDropSizeList ] Can't decode dropSizes")
+		return nil, errors.Wrapf(err, "[ GetDropSizeHistory ] Can't decode dropSizes")
 	}
 
 	return dropSizes, nil

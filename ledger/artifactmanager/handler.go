@@ -905,9 +905,9 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, genericMsg core.P
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetJetTree")
 	}
 
-	err = h.db.ResetDropSizeList(ctx, msg.JetDropSizeList)
+	err = h.db.ResetDropSizeHistory(ctx, msg.JetDropSizeHistory)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't ResetDropSizeList")
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't ResetDropSizeHistory")
 	}
 
 	return &reply.OK{}, nil

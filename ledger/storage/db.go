@@ -50,7 +50,7 @@ const (
 	sysLastSyncedPulseOnHeavy byte = 4
 	sysJetTree                byte = 5
 	sysJetList                byte = 6
-	sysDropSizeList           byte = 7
+	sysDropSizeHistory        byte = 7
 )
 
 // DB represents BadgerDB storage implementation.

@@ -231,17 +231,17 @@ func (m *PulseManager) processRecentObjects(
 		pendingRequests[id] = record.SerializeRecord(pendingRecord)
 	}
 
-	dropSizeList, err := m.db.GetDropSizeList(ctx)
+	dropSizeHistory, err := m.db.GetDropSizeHistory(ctx)
 	if err != nil {
-		return errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeList")
+		return errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeHistory")
 	}
 
 	msg := &message.HotData{
-		Drop:            *drop,
-		PulseNumber:     previousSlotPulse.Pulse.PulseNumber,
-		RecentObjects:   recentObjects,
-		PendingRequests: pendingRequests,
-		JetDropSizeList: dropSizeList,
+		Drop:               *drop,
+		PulseNumber:        previousSlotPulse.Pulse.PulseNumber,
+		RecentObjects:      recentObjects,
+		PendingRequests:    pendingRequests,
+		JetDropSizeHistory: dropSizeHistory,
 	}
 	_, err = m.Bus.Send(ctx, msg, *currentSlotPulse, nil)
 	if err != nil {

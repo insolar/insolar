@@ -82,7 +82,7 @@ func DeserializeJetDropSizeHistory(ctx context.Context, buff []byte) (DropSizeHi
 }
 
 // Bytes serializes DropSizeHistory
-func (dropSizeList DropSizeHistory) Bytes(ctx context.Context) []byte {
+func (dropSizeHistory DropSizeHistory) Bytes(ctx context.Context) []byte {
 	inslogger.FromContext(ctx).Debug("DropSizeHistory.Bytes starts ...")
-	return encode(dropSizeList)
+	return encode(dropSizeHistory)
 }

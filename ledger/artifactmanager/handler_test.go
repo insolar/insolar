@@ -640,12 +640,12 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		LatestState: firstID,
 	})
 
-	dropSizeList, err := db.GetDropSizeList(ctx)
+	dropSizeHistory, err := db.GetDropSizeHistory(ctx)
 	require.NoError(t, err)
-	require.Equal(t, jet.DropSizeHistory{}, dropSizeList)
+	require.Equal(t, jet.DropSizeHistory{}, dropSizeHistory)
 	addDropSizeToDB(ctx, t, db, jetID)
 
-	dropSizeList, err = db.GetDropSizeList(ctx)
+	dropSizeHistory, err = db.GetDropSizeHistory(ctx)
 	require.NoError(t, err)
 
 	hotIndexes := &message.HotData{
@@ -659,8 +659,8 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		PendingRequests: map[core.RecordID][]byte{
 			*secondId: record.SerializeRecord(&record.CodeRecord{}),
 		},
-		Drop:            jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
-		JetDropSizeList: dropSizeList,
+		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+		JetDropSizeHistory: dropSizeHistory,
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -692,11 +692,11 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.Equal(t, &jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
 
 	// check drop size list
-	dropSizeList, err = db.GetDropSizeList(ctx)
+	dropSizeHistory, err = db.GetDropSizeHistory(ctx)
 	require.NoError(t, err)
-	require.Equal(t, testDropSize, dropSizeList[0].DropSize)
-	require.Equal(t, jetID, dropSizeList[0].JetID)
-	require.Equal(t, core.FirstPulseNumber, int(dropSizeList[0].PulseNo))
+	require.Equal(t, testDropSize, dropSizeHistory[0].DropSize)
+	require.Equal(t, jetID, dropSizeHistory[0].JetID)
+	require.Equal(t, core.FirstPulseNumber, int(dropSizeHistory[0].PulseNo))
 
 	recentStorageMock.MinimockFinish()
 

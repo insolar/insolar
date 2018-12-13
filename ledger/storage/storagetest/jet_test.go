@@ -77,10 +77,10 @@ func TestAddAndGetDropSize(t *testing.T) {
 		addDropSizeToDB(ctx, t, db, jetID, s)
 	}
 
-	dropSizeList, err := db.GetDropSizeList(ctx)
+	dropSizeHistory, err := db.GetDropSizeHistory(ctx)
 	require.NoError(t, err)
 
-	dropSizeArray := []jet.DropSize(dropSizeList)
+	dropSizeArray := []jet.DropSize(dropSizeHistory)
 
 	require.Equal(t, len(dropSizes), len(dropSizeArray))
 
@@ -102,10 +102,10 @@ func TestAddDropSizeAndIncreaseLimit(t *testing.T) {
 		addDropSizeToDB(ctx, t, db, jetID, uint64(i))
 	}
 
-	dropSizeList, err := db.GetDropSizeList(ctx)
+	dropSizeHistory, err := db.GetDropSizeHistory(ctx)
 	require.NoError(t, err)
 
-	dropSizeArray := []jet.DropSize(dropSizeList)
+	dropSizeArray := []jet.DropSize(dropSizeHistory)
 	require.Equal(t, db.GetJetSizesHistoryDepth(), len(dropSizeArray))
 
 	for i := numElements; i > (numElements - db.GetJetSizesHistoryDepth()); i-- {
