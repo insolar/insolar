@@ -78,6 +78,9 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 		MinTimeout:          config.MinTimeout,
 		MaxTimeout:          config.MaxTimeout,
 		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
+		PingTimeout:         1 * time.Second,
+		PacketTimeout:       10 * time.Second,
+		BootstrapTimeout:    10 * time.Second,
 	}
 }
 
