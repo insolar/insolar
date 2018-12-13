@@ -36,7 +36,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/heavy"
+	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
@@ -112,7 +112,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
-				return heavy.ErrSyncInProgress,
+				return heavyserver.ErrSyncInProgress,
 					errors.New("BusMock one send should be failed (test retry)")
 			}
 
