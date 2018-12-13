@@ -126,20 +126,20 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 	pm := pulsemanager.NewPulseManager(db, configuration.Ledger{})
 
-	gil := testutils.NewGlobalInsolarLockMock(t)
-	gil.AcquireMock.Return()
-	gil.ReleaseMock.Return()
-
 	alsMock := testutils.NewActiveListSwapperMock(t)
 	alsMock.MoveSyncToActiveFunc = func() {}
+
+	nlMock := testutils.NewNetworkLockerMock(t)
+	nlMock.AcquireGlobalLockFunc = func(p context.Context) {}
+	nlMock.ReleaseGlobalLockFunc = func(p context.Context) {}
 
 	pm.LR = lr
 
 	pm.RecentStorageProvider = providerMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
-	pm.GIL = gil
 	pm.ActiveListSwapper = alsMock
+	pm.NetworkLocker = nlMock
 
 	// Act
 	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
