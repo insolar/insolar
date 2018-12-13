@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
@@ -61,13 +60,17 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	defer cancel()
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
-	checkError(err)
+	if err != nil {
+		return errors.Wrap(err, "[ OnPulse ] Failed to execute first phase")
+	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
 	defer cancel()
 
 	secondPhaseState, err := pm.SecondPhase.Execute(tctx, firstPhaseState)
-	checkError(err)
+	if err != nil {
+		return errors.Wrap(err, "[ OnPulse ] Failed to execute second phase")
+	}
 
 	fmt.Println(secondPhaseState) // TODO: remove after use
 	checkError(pm.ThirdPhase.Execute(ctx, secondPhaseState))
@@ -88,6 +91,5 @@ func contextTimeout(ctx context.Context, duration time.Duration, k float64) (con
 
 func checkError(err error) {
 	if err != nil {
-		log.Error(err)
 	}
 }
