@@ -189,11 +189,22 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 		sessionsCount := len(sm.sessions)
 		sm.lock.RUnlock()
 
-		if sessionsCount == 0 || len(sessionsByExpirationTime) == 0 {
+		// We missed notification
+		if sessionsCount != 0 && len(sessionsByExpirationTime) == 0 {
+			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+		}
+
+		// Session count is zero - wait for first session added.
+		if len(sessionsByExpirationTime) == 0 {
 			// Have no active sessions. Block till sessions will be added.
 			<-sm.newSessionNotification
 
 			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+
+			// Check session instantly released concurrently
+			if len(sessionsByExpirationTime) == 0 {
+				continue
+			}
 		}
 
 		// Get expiration time for next session and wait for it
