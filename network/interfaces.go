@@ -182,6 +182,10 @@ type UnsyncList interface {
 	RemoveNodeAndClaims(core.RecordRef)
 	// AddClaims
 	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim)
+	// AddProof
+	AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof)
+	// GetProof
+	GetProof(nodeID core.RecordRef) *consensus.NodePulseProof
 	// CalculateHash calculate node list hash based on active node list and claims
 	CalculateHash(core.PlatformCryptographyScheme) ([]byte, error)
 	// GetActiveNode get active node by reference ID for current consensus

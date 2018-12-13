@@ -38,14 +38,24 @@ type unsyncList struct {
 	activeNodes map[core.RecordRef]core.Node
 	claims      map[core.RecordRef][]consensus.ReferendumClaim
 	refToIndex  map[core.RecordRef]int
+	proofs      map[core.RecordRef]*consensus.NodePulseProof
 	indexToRef  map[int]core.RecordRef
 	cache       []byte
+}
+
+func (ul *unsyncList) AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof) {
+	ul.proofs[nodeID] = proof
+}
+
+func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof {
+	return ul.proofs[nodeID]
 }
 
 func newUnsyncList(activeNodesSorted []core.Node) *unsyncList {
 	indexToRef := make(map[int]core.RecordRef, len(activeNodesSorted))
 	refToIndex := make(map[core.RecordRef]int, len(activeNodesSorted))
 	activeNodes := make(map[core.RecordRef]core.Node, len(activeNodesSorted))
+	proofs := make(map[core.RecordRef]*consensus.NodePulseProof)
 	for i, node := range activeNodesSorted {
 		indexToRef[i] = node.ID()
 		refToIndex[node.ID()] = i
@@ -53,7 +63,7 @@ func newUnsyncList(activeNodesSorted []core.Node) *unsyncList {
 	}
 	claims := make(map[core.RecordRef][]consensus.ReferendumClaim)
 
-	return &unsyncList{activeNodes: activeNodes, claims: claims, refToIndex: refToIndex, indexToRef: indexToRef}
+	return &unsyncList{activeNodes: activeNodes, claims: claims, refToIndex: refToIndex, indexToRef: indexToRef, proofs: proofs}
 }
 
 func (ul *unsyncList) RemoveNodeAndClaims(from core.RecordRef) {

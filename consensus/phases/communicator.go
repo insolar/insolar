@@ -168,8 +168,12 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 				v.NodeIndex, ref, err.Error())
 			continue
 		}
-		// TODO: add stored nodepulseproof
-		answer := packets.MissingNodeSupplementaryVote{NodeClaimUnsigned: *claim}
+		proof := list.GetProof(ref)
+		if proof == nil {
+			log.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, proof not found", v.NodeIndex, ref)
+			continue
+		}
+		answer := packets.MissingNodeSupplementaryVote{NodeClaimUnsigned: *claim, NodePulseProof: *proof}
 		answers = append(answers, &answer)
 	}
 	response := packets.Phase2Packet{}

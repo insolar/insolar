@@ -104,6 +104,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
+	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
 	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for ref, packet := range resultPackets {
 		signIsCorrect, err := fp.isSignPhase1PacketRight(packet, ref)
@@ -113,6 +114,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 			log.Warn("recieved a bad sign packet: ", err.Error())
 		}
 		rawProof := packet.GetPulseProof()
+		rawProofs[ref] = rawProof
 		proofSet[ref] = &merkle.PulseProof{
 			BaseProof: merkle.BaseProof{
 				Signature: core.SignatureFromBytes(rawProof.Signature()),
@@ -131,6 +133,9 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	fp.UnsyncList.AddClaims(claimMap)
+	for id, proof := range rawProofs {
+		fp.UnsyncList.AddProof(id, proof)
+	}
 
 	valid, fault := fp.validateProofs(pulseHash, proofSet)
 
