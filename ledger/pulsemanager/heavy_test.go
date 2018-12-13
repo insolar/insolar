@@ -92,8 +92,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock N7: NetworkLocker
 	nlMock := testutils.NewNetworkLockerMock(t)
-	nlMock.AcquireGlobalLockFunc = func(p context.Context) {}
-	nlMock.ReleaseGlobalLockFunc = func(p context.Context) {}
+	nlMock.AcquireGlobalLockFunc = func(p context.Context, p1 string) {}
+	nlMock.ReleaseGlobalLockFunc = func(p context.Context, p1 string) {}
 
 	// Mock N8: Active List Swapper mock
 	alsMock := testutils.NewActiveListSwapperMock(t)
