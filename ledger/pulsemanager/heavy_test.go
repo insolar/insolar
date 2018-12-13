@@ -236,7 +236,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {
 	// fmt.Printf("CALL setpulse %v\n", pulsenum)
-	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)}, false)
+	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)}, true)
 }
 
 func addRecords(
