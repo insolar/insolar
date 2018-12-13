@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"runtime/pprof"
+	"strconv"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
@@ -74,7 +75,7 @@ func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) 
 
 // TODO refactor add flag!
 func DELETEME_enableProfile() {
-	f, err := os.Create("insolard-" + string(os.Getegid()) + ".prof")
+	f, err := os.Create("insolard-" + strconv.Itoa(os.Getegid()) + ".prof")
 	if err != nil {
 		log.Fatal("could not create CPU profile: ", err)
 	}
