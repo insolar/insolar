@@ -47,11 +47,11 @@ type PulseManager struct {
 	Bus                        core.MessageBus                 `inject:""`
 	NodeNet                    core.NodeNetwork                `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
+	GIL                        core.GlobalInsolarLock          `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	RecentStorageProvider      recentstorage.Provider          `inject:""`
 	ActiveListSwapper          ActiveListSwapper               `inject:""`
-	NetworkLocker              core.NetworkLocker              `inject:""`
 
 	currentPulse core.Pulse
 
@@ -295,7 +295,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, noPersist bool
 	}
 
 	var err error
-	m.NetworkLocker.AcquireGlobalLock(ctx, "PulseManager")
+	m.GIL.Acquire(ctx)
 
 	// swap pulse
 	m.currentPulse = pulse
@@ -317,7 +317,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, noPersist bool
 		}
 	}
 
-	m.NetworkLocker.ReleaseGlobalLock(ctx, "PulseManager")
+	m.GIL.Release(ctx)
 
 	if noPersist {
 		return nil
