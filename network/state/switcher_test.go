@@ -116,14 +116,3 @@ func TestGetStateAfterStateChanged(t *testing.T) {
 	state := switcher.GetState()
 	require.Equal(t, core.CompleteNetworkState, state)
 }
-
-// func TestAcquireGlobalLock(t *testing.T) {
-// 	switcher, err := NewNetworkSwitcher()
-// 	require.NoError(t, err)
-// 	messageBusLocker := mockMessageBusLocker(t)
-// 	switcher.MBLocker = messageBusLocker
-// 	switcher.state = core.CompleteNetworkState
-//
-// 	switcher.AcquireGlobalLock(context.Background())
-// 	require.Equal(t, uint64(1), messageBusLocker.ReleaseCounter)
-// }
