@@ -21,10 +21,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"log"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/core/utils"
 
 	"github.com/pkg/errors"
 
@@ -417,9 +418,12 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't get code reference")
 	}
-	log.Printf("[PROFILE-2] Calling lr.ArtifactManager.GetCode(ctx, *codeRef)...\n")
-	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
-	log.Printf("[PROFILE-2] DONE\n")
+
+	var codeDesc core.CodeDescriptor
+	utils.MeasureExecutionTime("logicrunner.getObjectMessage lr.ArtifactManager.GetCode", func() {
+		codeDesc, err = lr.ArtifactManager.GetCode(ctx, *codeRef)
+	})
+
 	if err != nil {
 		return errors.Wrap(err, "couldn't get code")
 	}
@@ -549,9 +553,12 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	if err != nil {
 		return nil, es.ErrorWrap(err, "couldn't code reference")
 	}
-	log.Printf("[PROFILE-1] Calling lr.ArtifactManager.GetCode(ctx, *codeRef)...\n")
-	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
-	log.Printf("[PROFILE-1] DONE\n")
+
+	var codeDesc core.CodeDescriptor
+	utils.MeasureExecutionTime("logicRunner.executeConstructorCall: lr.ArtifactManager.GetCode", func() {
+		codeDesc, err = lr.ArtifactManager.GetCode(ctx, *codeRef)
+	})
+
 	if err != nil {
 		return nil, es.ErrorWrap(err, "couldn't code")
 	}
