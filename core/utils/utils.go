@@ -18,9 +18,11 @@ package utils
 
 import (
 	"encoding/binary"
+	"log"
 	"os"
+	"time"
 
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 // RandTraceID returns random traceID in uuid format
@@ -44,4 +46,20 @@ func SendGracefulStopSignal() error {
 		return err
 	}
 	return p.Signal(os.Interrupt)
+}
+
+// Returns current timestamp in milliseconds
+func TimestampMs() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
+}
+
+// Writes execution time of given function to the profile log (if profile logging is enabled)
+// TODO: use seperate log file! + enable/disable flag
+func MeasureExecutionTime(comment string, f func()) {
+	start := TimestampMs()
+	log.Printf("[PROFILE] %s - STARTED @ %v\n", comment, start)
+	f()
+	end := TimestampMs()
+	delta := end - start
+	log.Printf("[PROFILE] %s - ENDED @ %v, delta: %v ms\n", comment, end, delta)
 }

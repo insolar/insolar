@@ -48,7 +48,7 @@ func parseInputParams() {
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
-	pflag.StringVarP(&rootmemberkeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
+	pflag.StringVarP(&rootmemberkeys, "rqootmemberkeys", "k", "", "path to file with RootMember keys")
 	pflag.Parse()
 }
 
