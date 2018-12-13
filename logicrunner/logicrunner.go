@@ -419,7 +419,8 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	}
 
 	var codeDesc core.CodeDescriptor
-	utils.MeasureExecutionTime("logicrunner.getObjectMessage lr.ArtifactManager.GetCode", func() {
+	// TODO: [OK] pass ctx traceid
+	utils.MeasureExecutionTime("logicrunner.getObjectMessage lr.ArtifactManager.GetCode "+inslogger.TraceID(ctx), func() {
 		codeDesc, err = lr.ArtifactManager.GetCode(ctx, *codeRef)
 	})
 
@@ -554,7 +555,8 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 	}
 
 	var codeDesc core.CodeDescriptor
-	utils.MeasureExecutionTime("logicRunner.executeConstructorCall: lr.ArtifactManager.GetCode", func() {
+	// TODO: [OK] use ctx trace id
+	utils.MeasureExecutionTime("logicRunner.executeConstructorCall: lr.ArtifactManager.GetCode "+inslogger.TraceID(ctx), func() {
 		codeDesc, err = lr.ArtifactManager.GetCode(ctx, *codeRef)
 	})
 

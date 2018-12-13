@@ -21,6 +21,8 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -65,7 +67,9 @@ func (bi *BuiltIn) Stop() error {
 func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *core.LogicCallContext, codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
 	am := bi.AM
 	var codeDescriptor core.CodeDescriptor
-	utils.MeasureExecutionTime("builtin.CallMethod am.GetCode", func() {
+
+	// TODO: [OK] use ctx trace id
+	utils.MeasureExecutionTime("builtin.CallMethod am.GetCode "+inslogger.TraceID(ctx), func() {
 		codeDescriptor, err = am.GetCode(ctx, codeRef)
 	})
 	if err != nil {
