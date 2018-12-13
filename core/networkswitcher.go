@@ -46,8 +46,8 @@ type NetworkSwitcher interface {
 	OnPulse(context.Context, Pulse) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/core.NetworkLocker -o ../testutils -s _mock.go
-type NetworkLocker interface {
-	AcquireGlobalLock(ctx context.Context, caller string)
-	ReleaseGlobalLock(ctx context.Context, caller string)
+//go:generate minimock -i github.com/insolar/insolar/core.GlobalInsolarLock -o ../testutils -s _mock.go
+type GlobalInsolarLock interface {
+	Acquire(ctx context.Context)
+	Release(ctx context.Context)
 }
