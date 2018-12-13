@@ -129,9 +129,9 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	alsMock := testutils.NewActiveListSwapperMock(t)
 	alsMock.MoveSyncToActiveFunc = func() {}
 
-	nlMock := testutils.NewNetworkLockerMock(t)
-	nlMock.AcquireGlobalLockFunc = func(p context.Context, p1 string) {}
-	nlMock.ReleaseGlobalLockFunc = func(p context.Context, p1 string) {}
+	gil := testutils.NewGlobalInsolarLockMock(t)
+	gil.AcquireMock.Return()
+	gil.ReleaseMock.Return()
 
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
 	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
@@ -145,7 +145,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
 	pm.ActiveListSwapper = alsMock
-	pm.NetworkLocker = nlMock
+	pm.GIL = gil
 	pm.CryptographyService = cryptoServiceMock
 	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
