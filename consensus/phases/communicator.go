@@ -325,6 +325,12 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 	return result, nil
 }
 
+// ExchangePhase21 used in second consensus phase to exchange data between participants
+func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.UnsyncList,
+	participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+	return nil, errors.New("not implemented")
+}
+
 // ExchangePhase3 used in third consensus step to exchange data between participants
 func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase3Packet, len(participants))

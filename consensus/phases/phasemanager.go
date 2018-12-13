@@ -18,11 +18,9 @@ package phases
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
@@ -61,17 +59,27 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	defer cancel()
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
-	checkError(err)
+	if err != nil {
+		return errors.Wrap(err, "Network consensus: error executing phase 1")
+	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
 	defer cancel()
 
 	secondPhaseState, err := pm.SecondPhase.Execute(tctx, firstPhaseState)
-	checkError(err)
+	if err != nil {
+		return errors.Wrap(err, "Network consensus: error executing phase 2.0")
+	}
 
-	fmt.Println(secondPhaseState) // TODO: remove after use
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
 
-	checkError(pm.ThirdPhase.Execute(ctx, secondPhaseState))
+	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, secondPhaseState)
+	if err != nil {
+		return errors.Wrap(err, "Network consensus: error executing phase 2.1")
+	}
+
+	pm.NodeKeeper.Sync(secondPhaseState.UnsyncList)
 
 	return nil
 }
@@ -85,10 +93,4 @@ func contextTimeout(ctx context.Context, duration time.Duration, k float64) (con
 	timeout := time.Duration(k * float64(duration))
 	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
 	return timedCtx, cancelFund
-}
-
-func checkError(err error) {
-	if err != nil {
-		log.Error(err)
-	}
 }

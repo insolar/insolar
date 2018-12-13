@@ -103,18 +103,23 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate bitset matrix consensus result")
 	}
-	log.Debug(matrixCalculation.NeedPhase21)
 
 	// TODO: timeouts, deviants, etc.
-	sp.NodeKeeper.Sync(state.UnsyncList)
 	return &SecondPhaseState{
 		FirstPhaseState: state,
+		Matrix:          stateMatrix,
+		MatrixState:     matrixCalculation,
+		DBitSet:         bitset,
 
 		GlobuleEntry:    entry,
 		GlobuleHash:     globuleHash,
 		GlobuleProof:    globuleProof,
 		GlobuleProofSet: nodeProofs,
 	}, nil
+}
+
+func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error) {
+	return nil, errors.New("not implemented")
 }
 
 func (sp *SecondPhase) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {

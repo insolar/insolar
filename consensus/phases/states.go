@@ -38,15 +38,13 @@ type FirstPhaseState struct {
 type SecondPhaseState struct {
 	*FirstPhaseState
 
-	GlobuleEntry *merkle.GlobuleEntry
-
-	GlobuleHash  merkle.OriginHash
-	GlobuleProof *merkle.GlobuleProof
-
+	GlobuleEntry    *merkle.GlobuleEntry
+	GlobuleHash     merkle.OriginHash
+	GlobuleProof    *merkle.GlobuleProof
 	GlobuleProofSet map[core.Node]*merkle.GlobuleProof
 
-	NodeListCount uint16
-	NodeListHash  []byte
+	MatrixState *Phase2MatrixState
+	Matrix      *StateMatrix
 
 	DBitSet packets.BitSet
 }
