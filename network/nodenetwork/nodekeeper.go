@@ -42,7 +42,9 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Ce
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
+	nodeKeeper.SetState(network.Waiting)
 	if len(certificate.GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certificate) {
+		nodeKeeper.SetState(network.Ready)
 		nodeKeeper.AddActiveNodes([]core.Node{origin})
 	}
 	return nodeKeeper, nil
@@ -84,7 +86,7 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
-	return &nodekeeper{
+	result := &nodekeeper{
 		origin:       origin,
 		state:        network.Undefined,
 		claimQueue:   newClaimQueue(),
@@ -92,6 +94,8 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		indexNode:    make(map[core.StaticRole]*recordRefSet),
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 	}
+	result.SetState(network.Ready)
+	return result
 }
 
 type nodekeeper struct {
