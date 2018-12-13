@@ -150,7 +150,12 @@ func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
 }
 
 func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
-	key := fp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+	activeNode := fp.NodeNetwork.GetActiveNode(recordRef)
+	if activeNode == nil {
+		return false, errors.New("failed to get active node")
+	}
+
+	key := activeNode.PublicKey()
 	raw, err := packet.RawBytes()
 
 	if err != nil {
