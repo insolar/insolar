@@ -51,8 +51,8 @@ const (
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
 
 type messageBusLocker interface {
-	Acquire(ctx context.Context)
-	Release(ctx context.Context)
+	Lock(ctx context.Context)
+	Unlock(ctx context.Context)
 }
 
 // Genesis is a component for precreation core contracts types and RootDomain instance
@@ -361,8 +361,8 @@ func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
 
-	g.MBLock.Release(ctx)
-	defer g.MBLock.Acquire(ctx)
+	g.MBLock.Unlock(ctx)
+	defer g.MBLock.Lock(ctx)
 	_, insgocc, err := goplugintestutils.Build()
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
