@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
@@ -256,7 +257,7 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 
 	amMock := testutils.NewArtifactManagerMock(s.T())
 	amMock.StateMock.Set(func() (r []byte, r1 error) {
-		return make([]byte, 0), nil
+		return make([]byte, packets.HashLength), nil
 	})
 
 	certManager, cryptographyService := s.initCrypto(node, origin.ID())
