@@ -159,8 +159,10 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
-	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
-	return nil
+	n.fakePulsar = fakepulsar.NewFakePulsar(n, n.cfg.Pulsar.PulseTime)
+
+	err = n.MerkleCalculator.(component.Initer).Init(ctx)
+	return err
 }
 
 // Start implements component.Starter
@@ -213,7 +215,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			return
 		}
 
-		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
+		//err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
 			return
