@@ -161,6 +161,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n, n.cfg.Pulsar.PulseTime)
+	log.Info("==== ServiceNetwork inited ====")
 
 	return err
 }
@@ -180,7 +181,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	}
 
 	n.fakePulsar.Start(ctx)
-
+	log.Info("----- ServiceNetwork started ------")
 	return nil
 }
 
@@ -230,6 +231,8 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
+			log.Info("ServiceNetwork call PhaseManager.OnPulse")
+
 			err = n.PhaseManager.OnPulse(ctx, &pulse)
 			if err != nil {
 				logger.Warn("phase manager fail: " + err.Error())
