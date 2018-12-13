@@ -60,23 +60,6 @@ var measurementsLock sync.Mutex
 var measurementsWriter *bufio.Writer
 var measurementsEnabled = false
 
-// Enables execution time measurement and uses `fname` to write measurements
-func EnableExecutionTimeMeasurement(fname string) error {
-	if measurementsEnabled {
-		// already enabled
-		return nil
-	}
-	// if the file doesn't exist, create it, or append to the file
-	mfile, err := os.OpenFile(fname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-
-	measurementsWriter = bufio.NewWriter(mfile)
-	measurementsEnabled = true
-	return nil
-}
-
 // write one measure to the log
 func writeMeasure(format string, args ...interface{}) error {
 	measurementsLock.Lock()
@@ -86,6 +69,41 @@ func writeMeasure(format string, args ...interface{}) error {
 		measurementsEnabled = false
 	}
 	return err
+}
+
+// Enables execution time measurement and uses `fname` to write measurements
+func EnableExecutionTimeMeasurement(fname string) (func(), error) {
+	if measurementsEnabled {
+		// already enabled
+		return func() {}, nil
+	}
+	// if the file doesn't exist, create it, or append to the file
+	mfile, err := os.OpenFile(fname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	measurementsWriter = bufio.NewWriter(mfile)
+	measurementsEnabled = true
+
+	cleanup := func() {
+		if !measurementsEnabled {
+			// an error has occurred during the execution of the program
+			// don't flush any buffers in this case
+			return
+		}
+
+		// Mark the fact that the cleanup function was invoked properly
+		_ = writeMeasure("End of file")
+
+		measurementsLock.Lock()
+		_ = measurementsWriter.Flush()
+		_ = mfile.Close()
+		measurementsLock.Unlock()
+
+		measurementsEnabled = false
+	}
+	return cleanup, nil
 }
 
 // Writes execution time of given function to the profile log (if profile logging is enabled)

@@ -116,12 +116,14 @@ func main() {
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
+	cleanup := func() { /* by default - do nothing */ }
 	if params.measurementsFile != "" {
-		err = utils.EnableExecutionTimeMeasurement(params.measurementsFile)
+		cleanup, err = utils.EnableExecutionTimeMeasurement(params.measurementsFile)
 		if err != nil {
 			log.Warnln("failed to enable execution time measurement:", err.Error())
 		}
 	}
+	defer cleanup()
 
 	jaegerflush := func() {}
 	if params.traceEnabled {
