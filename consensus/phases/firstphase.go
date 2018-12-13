@@ -86,7 +86,11 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		}
 	}
 	for {
-		success = packet.AddClaim(fp.NodeKeeper.GetClaimQueue().Front())
+		claim := fp.NodeKeeper.GetClaimQueue().Front()
+		if claim == nil {
+			break
+		}
+		success = packet.AddClaim(claim)
 		if !success {
 			break
 		}
