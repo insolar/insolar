@@ -26,8 +26,8 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/network/state.messageBusLocker -o ./ -s _mock.go
 type messageBusLocker interface {
-	Acquire(ctx context.Context)
-	Release(ctx context.Context)
+	Lock(ctx context.Context)
+	Unlock(ctx context.Context)
 }
 
 // NetworkSwitcher is a network FSM using for bootstrapping
@@ -36,29 +36,20 @@ type NetworkSwitcher struct {
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
 	MBLocker           messageBusLocker        `inject:""`
 
+	counter     uint64
+	counterLock sync.RWMutex
+
 	state     core.NetworkState
 	stateLock sync.RWMutex
-
-	mbLocks     map[string]*lock
-	mbLocksLock sync.RWMutex
-}
-
-type lock struct {
-	sync.RWMutex
-	lockCount int
 }
 
 // NewNetworkSwitcher creates new NetworkSwitcher
 func NewNetworkSwitcher() (*NetworkSwitcher, error) {
-	ns := &NetworkSwitcher{
+	return &NetworkSwitcher{
 		state:     core.NoNetworkState,
 		stateLock: sync.RWMutex{},
-		mbLocks:   make(map[string]*lock),
-	}
-	ns.mbLocksLock.Lock()
-	ns.mbLocks["NetworkSwitcher"] = &lock{lockCount: 1}
-	ns.mbLocksLock.Unlock()
-	return ns, nil
+		counter:   1,
+	}, nil
 }
 
 // TODO: after INS-923 remove this func
@@ -66,7 +57,7 @@ func (ns *NetworkSwitcher) Start(ctx context.Context) error {
 	ns.stateLock.Lock()
 	defer ns.stateLock.Unlock()
 
-	ns.ReleaseGlobalLock(ctx, "NetworkSwitcher")
+	ns.Release(ctx)
 	ns.state = core.CompleteNetworkState
 	return nil
 }
@@ -88,60 +79,27 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 
 	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
 		ns.state = core.CompleteNetworkState
-		ns.ReleaseGlobalLock(ctx, "NetworkSwitcher")
+		ns.Release(ctx)
 		inslogger.FromContext(ctx).Info("Current NetworkSwitcher state switched to: %s", ns.state)
 	}
 
 	return nil
 }
 
-func (ns *NetworkSwitcher) AcquireGlobalLock(ctx context.Context, caller string) {
-	ns.mbLocksLock.Lock()
-
-	callerLock, ok := ns.mbLocks[caller]
-	if !ok {
-		ns.mbLocks[caller] = &lock{}
+func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
+	ns.counterLock.Lock()
+	if ns.counter == uint64(0) {
+		ns.MBLocker.Lock(ctx)
 	}
-	callerLock = ns.mbLocks[caller]
-	ns.mbLocksLock.Unlock()
-
-	callerLock.Lock()
-	callerLock.lockCount = callerLock.lockCount + 1
-	callerLock.Unlock()
-
-	ns.mbLocksLock.Lock()
-	defer ns.mbLocksLock.Unlock()
-	for _, lock := range ns.mbLocks {
-		if lock.lockCount != 0 {
-			return
-		}
-	}
-	ns.MBLocker.Acquire(ctx)
+	ns.counter = ns.counter + 1
+	ns.counterLock.Unlock()
 }
 
-func (ns *NetworkSwitcher) ReleaseGlobalLock(ctx context.Context, caller string) {
-	ns.mbLocksLock.Lock()
-
-	callerLock, ok := ns.mbLocks[caller]
-	ns.mbLocksLock.Unlock()
-	if !ok {
-		panic("You are trying to unlock GlobalLock without previously locking it!")
+func (ns *NetworkSwitcher) Release(ctx context.Context) {
+	ns.counterLock.Lock()
+	ns.counter = ns.counter - 1
+	if ns.counter == uint64(0) {
+		ns.MBLocker.Unlock(ctx)
 	}
-
-	callerLock.Lock()
-	if callerLock.lockCount == 0 {
-		callerLock.Unlock()
-		panic("You are trying to unlock GlobalLock without previously locking it!")
-	}
-	callerLock.lockCount = callerLock.lockCount - 1
-	callerLock.Unlock()
-
-	ns.mbLocksLock.Lock()
-	defer ns.mbLocksLock.Unlock()
-	for _, lock := range ns.mbLocks {
-		if lock.lockCount != 0 {
-			return
-		}
-	}
-	ns.MBLocker.Release(ctx)
+	ns.counterLock.Unlock()
 }
