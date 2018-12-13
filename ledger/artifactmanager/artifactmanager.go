@@ -40,8 +40,8 @@ type LedgerArtifactManager struct {
 	db                         *storage.DB
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	cacheLock                  *sync.Mutex
-	cache                      map[core.RecordRef]cacheEntry
+	codeCacheLock              *sync.Mutex
+	codeCache                  map[core.RecordRef]*cacheEntry
 
 	getChildrenChunkSize int
 }
@@ -62,8 +62,8 @@ func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
 	return &LedgerArtifactManager{
 		db:                   db,
 		getChildrenChunkSize: getChildrenChunkSize,
-		cacheLock:            &sync.Mutex{},
-		cache:                make(map[core.RecordRef]cacheEntry),
+		codeCacheLock:        &sync.Mutex{},
+		codeCache:            make(map[core.RecordRef]*cacheEntry),
 	}
 }
 
@@ -109,12 +109,13 @@ func (m *LedgerArtifactManager) GetCode(
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
 
-	m.cacheLock.Lock()
-	entry, ok := m.cache[code]
+	m.codeCacheLock.Lock()
+	entry, ok := m.codeCache[code]
 	if !ok {
-		m.cache[code] = cacheEntry{}
+		entry = &cacheEntry{}
+		m.codeCache[code] = entry
 	}
-	m.cacheLock.Unlock()
+	m.codeCacheLock.Unlock()
 
 	entry.Lock()
 	defer entry.Unlock()
