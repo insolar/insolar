@@ -185,9 +185,7 @@ func TestTriStateBitSet_SerializeCompressed(t *testing.T) {
 	data, err := bitset.Serialize()
 	assert.NoError(t, err)
 
-	parsedBitSet, err := NewBitSet(len(cells))
-	assert.NoError(t, err)
-	parsedBitSet, err = DeserializeBitSet(bytes.NewReader(data))
+	parsedBitSet, err := DeserializeBitSet(bytes.NewReader(data))
 	assert.NoError(t, err)
 
 	expected, err := bitset.GetCells(mapper)

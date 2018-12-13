@@ -198,13 +198,13 @@ func (dbs *TriStateBitSet) parseCells(mapper BitSetMapper) ([]BitSetCell, error)
 }
 
 func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
-	count := uint8(0)
+	count := uint16(0)
 	value := uint8(0)
 	var payload []uint8
 	blockSize := 0
 	block := uint8(0)
 	var err error
-	for i := 0; i < size; i = i + 2 {
+	for i := 1; i < size; i = i + 2 { // i := 1 to skip first byte which was read at prev func
 		err = binary.Read(data, binary.BigEndian, &count)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
@@ -213,7 +213,7 @@ func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
 		}
-		for j := uint8(0); j < count; j++ {
+		for j := uint16(0); j < count; j++ {
 			block += value
 			blockSize += 2
 			if (blockSize >= sizeOfBlock) || (j+1 >= count) {
