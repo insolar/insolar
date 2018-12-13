@@ -82,11 +82,11 @@ func DELETEME_enableProfile() {
 	if err := pprof.StartCPUProfile(f); err != nil {
 		log.Fatal("could not start CPU profile: ", err)
 	}
-	defer pprof.StopCPUProfile()
 }
 
 func main() {
 	DELETEME_enableProfile()
+	defer pprof.StopCPUProfile()
 
 	params := parseInputParams()
 
