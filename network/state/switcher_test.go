@@ -37,7 +37,7 @@ func mockSwitcherWorkAround(t *testing.T, isBootstrapped bool) *network.Switcher
 
 func mockMessageBusLocker(t *testing.T) *messageBusLockerMock {
 	mblMock := NewmessageBusLockerMock(t)
-	mblMock.ReleaseFunc = func(p context.Context) {}
+	mblMock.UnlockFunc = func(p context.Context) {}
 	return mblMock
 }
 
@@ -80,7 +80,7 @@ func TestOnPulseNoChange(t *testing.T) {
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)
 	require.Equal(t, core.NoNetworkState, switcher.state)
-	require.Equal(t, uint64(0), messageBusLocker.ReleaseCounter)
+	require.Equal(t, uint64(0), messageBusLocker.UnlockCounter)
 }
 
 func TestOnPulseStateChanged(t *testing.T) {
@@ -96,7 +96,7 @@ func TestOnPulseStateChanged(t *testing.T) {
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)
 	require.Equal(t, core.CompleteNetworkState, switcher.state)
-	require.Equal(t, uint64(1), messageBusLocker.ReleaseCounter)
+	require.Equal(t, uint64(1), messageBusLocker.UnlockCounter)
 }
 
 func TestGetStateAfterStateChanged(t *testing.T) {
