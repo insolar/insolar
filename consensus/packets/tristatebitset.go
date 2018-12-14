@@ -236,7 +236,15 @@ func parseState(array *bitArray, index int) (TriState, error) {
 
 func parseBitArray(payload []uint8) (*bitArray, error) {
 	len := len(payload)
-	array := newBitArray(len*sizeOfBlock - 4) // bits count from bytes size
+	lastByte := payload[len-1]
+	emptyBits := 0
+	for i := 1; i < 5; i++ {
+		if (lastByte & lastTwoBitsMask) == 0 {
+			emptyBits++
+			lastByte >>= 2
+		}
+	}
+	array := newBitArray(len*sizeOfBlock - emptyBits*2)
 	for i := 0; i < len; i++ {
 		array.array[i] = payload[i]
 	}
