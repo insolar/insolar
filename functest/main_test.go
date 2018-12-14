@@ -138,13 +138,22 @@ func stopInsolard() error {
 	if stdout != nil {
 		defer stdout.Close()
 	}
+
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
+
 	err := cmd.Process.Kill()
 	if err != nil {
 		return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
 	}
+
+	killOutput, err := exec.Command("bash", "-c", "pkill insolard --config").CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "[ stopInsolard ] failed to kill all insolards")
+	}
+	fmt.Println("Kill output: ", string(killOutput))
+
 	return nil
 }
 
