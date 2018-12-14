@@ -778,7 +778,7 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 
 		tree, err := db.GetJetTree(ctx, core.FirstPulseNumber)
 		require.NoError(t, err)
-		jetID := tree.Find([]byte{0xD5})
+		jetID := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
 		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
 	})
 }

@@ -58,7 +58,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch jet tree")
 		}
-		jetID := tree.Find(target.Hash())
+		jetID := tree.Find(*target)
 		if err != nil {
 			return nil, err
 		}
