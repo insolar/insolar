@@ -61,7 +61,7 @@ func NewMessageHandler(
 	}
 }
 
-// Init initializes replayHandlers.
+// Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
 	m := middleware{db: h.db, jetCoordinator: h.JetCoordinator}
 
