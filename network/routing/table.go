@@ -30,6 +30,30 @@ type Table struct {
 	NodeKeeper network.NodeKeeper
 }
 
+func (t *Table) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
+	node := t.NodeKeeper.GetActiveNodeByShortID(id)
+	if node != nil {
+		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
+	}
+	h := t.NodeKeeper.ResolveConsensus(id)
+	if h == nil {
+		return nil, errors.New("no such local node with ShortID: " + strconv.FormatUint(uint64(id), 10))
+	}
+	return h, nil
+}
+
+func (t *Table) ResolveConsensusRef(ref core.RecordRef) (*host.Host, error) {
+	node := t.NodeKeeper.GetActiveNode(ref)
+	if node != nil {
+		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
+	}
+	h := t.NodeKeeper.ResolveConsensusRef(ref)
+	if h == nil {
+		return nil, errors.New("no such local node with node ID: " + ref.String())
+	}
+	return h, nil
+}
+
 func (t *Table) isLocalNode(core.RecordRef) bool {
 	return true
 }
@@ -52,15 +76,6 @@ func (t *Table) Resolve(ref core.RecordRef) (*host.Host, error) {
 		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
 	}
 	return t.resolveRemoteNode(ref)
-}
-
-// ResolveS ShortID -> NodeID, Address for node inside current globe.
-func (t *Table) ResolveS(id core.ShortNodeID) (*host.Host, error) {
-	node := t.NodeKeeper.GetActiveNodeByShortID(id)
-	if node == nil {
-		return nil, errors.New("no such local node with ShortID: " + strconv.FormatUint(uint64(id), 10))
-	}
-	return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
 }
 
 // AddToKnownHosts add host to routing table.

@@ -219,8 +219,10 @@ type RoutingTable interface {
 	Inject(nodeKeeper NodeKeeper)
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(core.RecordRef) (*host.Host, error)
-	// ResolveS ShortID -> NodeID, Address for node inside current globe.
-	ResolveS(core.ShortNodeID) (*host.Host, error)
+	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.
+	ResolveConsensus(core.ShortNodeID) (*host.Host, error)
+	// ResolveConsensusRef NodeID -> ShortID, Address for node inside current globe for current consensus.
+	ResolveConsensusRef(core.RecordRef) (*host.Host, error)
 	// AddToKnownHosts add host to routing table.
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
