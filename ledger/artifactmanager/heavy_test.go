@@ -39,7 +39,7 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	// prepare mock
 	heavysync := testutils.NewHeavySyncMock(t)
 	heavysync.StartMock.Return(nil)
-	heavysync.StoreMock.Set(func(ctx context.Context, jet core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
+	heavysync.StoreMock.Set(func(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
 		return db.StoreKeyValues(ctx, kvs)
 	})
 	heavysync.StopMock.Return(nil)
