@@ -104,6 +104,15 @@ func (p2p *Phase2Packet) ContainsRequests() bool {
 	return false
 }
 
+func (p2p *Phase2Packet) ContainsResponses() bool {
+	for _, vote := range p2p.votesAndAnswers {
+		if vote.Type() == TypeMissingNodeSupplementaryVote || vote.Type() == TypeMissingNodeClaim {
+			return true
+		}
+	}
+	return false
+}
+
 func (p2p *Phase2Packet) AddVote(vote ReferendumVote) {
 	// TODO: check size
 

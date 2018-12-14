@@ -43,7 +43,7 @@ type Communicator interface {
 	// ExchangePhase2 used in second consensus step to exchange data between participants
 	ExchangePhase2(ctx context.Context, list network.UnsyncList, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
 	// ExchangePhase21 is used between phases 2 and 3 of consensus to send additional MissingNode requests
-	ExchangePhase21(ctx context.Context, packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error)
+	ExchangePhase21(ctx context.Context, list network.UnsyncList, packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
 	ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
 }
@@ -195,6 +195,8 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 	}
 	response := packets.Phase2Packet{}
 	response.SetBitSet(origReq.GetBitSet())
+	ghs := origReq.GetGlobuleHashSignature()
+	response.SetGlobuleHashSignature(ghs[:])
 	for _, answer := range answers {
 		response.AddVote(answer)
 	}
@@ -342,9 +344,110 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 	return result, nil
 }
 
+func selectCandidate(candidates []core.RecordRef) core.RecordRef {
+	// TODO: make it random
+	return candidates[0]
+}
+
+func (nc *NaiveCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packet, additionalRequests []*AdditionalRequest) error {
+	for _, req := range additionalRequests {
+		newReq := *origReq
+		newReq.AddVote(&packets.MissingNode{NodeIndex: uint16(req.RequestIndex)})
+		request, err := nc.convertConsensusPacket(&newReq, types.Phase2)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to generate additional phase 2.1 request for index %d", req.RequestIndex)
+		}
+		receiver := selectCandidate(req.Candidates)
+		err = nc.ConsensusNetwork.SendRequest(request, receiver)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to send additional phase 2.1 request for index %d to node %s", req.RequestIndex, receiver)
+		}
+	}
+
+	return nil
+}
+
 // ExchangePhase21 used in second consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error) {
-	return nil, errors.New("not implemented")
+func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.UnsyncList, packet *packets.Phase2Packet,
+	additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error) {
+
+	request, err := nc.convertConsensusPacket(packet, types.Phase2)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ExchangePhase2.1 ] Failed to convert consensus packet to network request")
+	}
+
+	type none struct{}
+	incoming := make(map[core.RecordRef]none)
+	responsesFilter := make(map[int]none)
+	for _, req := range additionalRequests {
+		responsesFilter[req.RequestIndex] = none{}
+	}
+
+	shouldSendResponse := func(p *phase2Result) bool {
+		_, ok := incoming[p.id]
+		return !ok || p.packet.ContainsRequests()
+	}
+
+	result := make([]packets.ReferendumVote, 0)
+
+	appendResult := func(index uint16, vote packets.ReferendumVote) {
+		_, ok := responsesFilter[int(index)]
+		if !ok {
+			return
+		}
+		result = append(result, vote)
+	}
+
+	err = nc.sendAdditionalRequests(packet, additionalRequests)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ExchangePhase2.1 ] Failed to send additional phase 2.1 requests")
+	}
+
+	for {
+		select {
+		case res := <-nc.phase2result:
+			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
+				continue
+			}
+
+			if shouldSendResponse(&res) {
+				// send response
+				response := request
+				if res.packet.ContainsRequests() {
+					response, err = nc.generatePhase2Response(packet, res.packet, list)
+					if err != nil {
+						log.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
+						continue
+					}
+				}
+				err := nc.ConsensusNetwork.SendRequest(response, res.id)
+				if err != nil {
+					log.Errorln(err.Error())
+				}
+			}
+
+			if res.packet.ContainsResponses() {
+				voteAnswers := res.packet.GetVotes()
+				for _, vote := range voteAnswers {
+					switch v := vote.(type) {
+					case *packets.MissingNodeSupplementaryVote:
+						appendResult(v.NodeIndex, v)
+					case *packets.MissingNodeClaim:
+						appendResult(v.NodeIndex, v)
+					}
+				}
+			}
+
+			incoming[res.id] = none{}
+
+			// FIXME: early return is commented to have synchronized length of phases on all nodes
+			// if len(result) == len(participants) {
+			// 	return result, nil
+			// }
+		case <-ctx.Done():
+			return result, nil
+		}
+	}
 }
 
 // ExchangePhase3 used in third consensus step to exchange data between participants
@@ -373,7 +476,7 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 			}
 			result[res.id] = res.packet
 
-			// FIXME: currently we remove early return to have synchronized times of phases on all nodes
+			// FIXME: early return is commented to have synchronized length of phases on all nodes
 			// if len(result) == len(participants) {
 			// 	return result, nil
 			// }

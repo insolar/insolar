@@ -144,7 +144,7 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to sign a packet")
 	}
 
-	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, &packet, additionalRequests)
+	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, &packet, additionalRequests)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to send additional requests.")
 	}

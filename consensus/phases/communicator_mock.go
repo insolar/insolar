@@ -32,7 +32,7 @@ type CommunicatorMock struct {
 	ExchangePhase2PreCounter uint64
 	ExchangePhase2Mock       mCommunicatorMockExchangePhase2
 
-	ExchangePhase21Func       func(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error)
+	ExchangePhase21Func       func(p context.Context, p1 network.UnsyncList, p2 *packets.Phase2Packet, p3 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error)
 	ExchangePhase21Counter    uint64
 	ExchangePhase21PreCounter uint64
 	ExchangePhase21Mock       mCommunicatorMockExchangePhase21
@@ -378,8 +378,9 @@ type CommunicatorMockExchangePhase21Expectation struct {
 
 type CommunicatorMockExchangePhase21Input struct {
 	p  context.Context
-	p1 *packets.Phase2Packet
-	p2 []*AdditionalRequest
+	p1 network.UnsyncList
+	p2 *packets.Phase2Packet
+	p3 []*AdditionalRequest
 }
 
 type CommunicatorMockExchangePhase21Result struct {
@@ -388,14 +389,14 @@ type CommunicatorMockExchangePhase21Result struct {
 }
 
 //Expect specifies that invocation of Communicator.ExchangePhase21 is expected from 1 to Infinity times
-func (m *mCommunicatorMockExchangePhase21) Expect(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) *mCommunicatorMockExchangePhase21 {
+func (m *mCommunicatorMockExchangePhase21) Expect(p context.Context, p1 network.UnsyncList, p2 *packets.Phase2Packet, p3 []*AdditionalRequest) *mCommunicatorMockExchangePhase21 {
 	m.mock.ExchangePhase21Func = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &CommunicatorMockExchangePhase21Expectation{}
 	}
-	m.mainExpectation.input = &CommunicatorMockExchangePhase21Input{p, p1, p2}
+	m.mainExpectation.input = &CommunicatorMockExchangePhase21Input{p, p1, p2, p3}
 	return m
 }
 
@@ -412,12 +413,12 @@ func (m *mCommunicatorMockExchangePhase21) Return(r []packets.ReferendumVote, r1
 }
 
 //ExpectOnce specifies that invocation of Communicator.ExchangePhase21 is expected once
-func (m *mCommunicatorMockExchangePhase21) ExpectOnce(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) *CommunicatorMockExchangePhase21Expectation {
+func (m *mCommunicatorMockExchangePhase21) ExpectOnce(p context.Context, p1 network.UnsyncList, p2 *packets.Phase2Packet, p3 []*AdditionalRequest) *CommunicatorMockExchangePhase21Expectation {
 	m.mock.ExchangePhase21Func = nil
 	m.mainExpectation = nil
 
 	expectation := &CommunicatorMockExchangePhase21Expectation{}
-	expectation.input = &CommunicatorMockExchangePhase21Input{p, p1, p2}
+	expectation.input = &CommunicatorMockExchangePhase21Input{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -427,7 +428,7 @@ func (e *CommunicatorMockExchangePhase21Expectation) Return(r []packets.Referend
 }
 
 //Set uses given function f as a mock of Communicator.ExchangePhase21 method
-func (m *mCommunicatorMockExchangePhase21) Set(f func(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error)) *CommunicatorMock {
+func (m *mCommunicatorMockExchangePhase21) Set(f func(p context.Context, p1 network.UnsyncList, p2 *packets.Phase2Packet, p3 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error)) *CommunicatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -436,18 +437,18 @@ func (m *mCommunicatorMockExchangePhase21) Set(f func(p context.Context, p1 *pac
 }
 
 //ExchangePhase21 implements github.com/insolar/insolar/consensus/phases.Communicator interface
-func (m *CommunicatorMock) ExchangePhase21(p context.Context, p1 *packets.Phase2Packet, p2 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error) {
+func (m *CommunicatorMock) ExchangePhase21(p context.Context, p1 network.UnsyncList, p2 *packets.Phase2Packet, p3 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error) {
 	counter := atomic.AddUint64(&m.ExchangePhase21PreCounter, 1)
 	defer atomic.AddUint64(&m.ExchangePhase21Counter, 1)
 
 	if len(m.ExchangePhase21Mock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ExchangePhase21Mock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CommunicatorMock.ExchangePhase21. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to CommunicatorMock.ExchangePhase21. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.ExchangePhase21Mock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CommunicatorMockExchangePhase21Input{p, p1, p2}, "Communicator.ExchangePhase21 got unexpected parameters")
+		testify_assert.Equal(m.t, *input, CommunicatorMockExchangePhase21Input{p, p1, p2, p3}, "Communicator.ExchangePhase21 got unexpected parameters")
 
 		result := m.ExchangePhase21Mock.expectationSeries[counter-1].result
 		if result == nil {
@@ -465,7 +466,7 @@ func (m *CommunicatorMock) ExchangePhase21(p context.Context, p1 *packets.Phase2
 
 		input := m.ExchangePhase21Mock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, CommunicatorMockExchangePhase21Input{p, p1, p2}, "Communicator.ExchangePhase21 got unexpected parameters")
+			testify_assert.Equal(m.t, *input, CommunicatorMockExchangePhase21Input{p, p1, p2, p3}, "Communicator.ExchangePhase21 got unexpected parameters")
 		}
 
 		result := m.ExchangePhase21Mock.mainExpectation.result
@@ -480,11 +481,11 @@ func (m *CommunicatorMock) ExchangePhase21(p context.Context, p1 *packets.Phase2
 	}
 
 	if m.ExchangePhase21Func == nil {
-		m.t.Fatalf("Unexpected call to CommunicatorMock.ExchangePhase21. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to CommunicatorMock.ExchangePhase21. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.ExchangePhase21Func(p, p1, p2)
+	return m.ExchangePhase21Func(p, p1, p2, p3)
 }
 
 //ExchangePhase21MinimockCounter returns a count of CommunicatorMock.ExchangePhase21Func invocations
