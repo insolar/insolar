@@ -178,8 +178,8 @@ type NodeKeeper interface {
 //go:generate minimock -i github.com/insolar/insolar/network.UnsyncList -o ../testutils/network -s _mock.go
 type UnsyncList interface {
 	consensus.BitSetMapper
-	// RemoveNodeAndClaims
-	RemoveNodeAndClaims(core.RecordRef)
+	// ApproveSync
+	ApproveSync([]core.RecordRef)
 	// AddClaims
 	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim)
 	// AddNode

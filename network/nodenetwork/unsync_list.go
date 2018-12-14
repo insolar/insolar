@@ -43,6 +43,17 @@ type unsyncList struct {
 	cache       []byte
 }
 
+func (ul *unsyncList) ApproveSync(sync []core.RecordRef) {
+	prevActive := make([]core.RecordRef, 0, len(ul.activeNodes))
+	for nodeID := range ul.activeNodes {
+		prevActive = append(prevActive, nodeID)
+	}
+	diff := diffList(prevActive, sync)
+	for _, node := range diff {
+		ul.removeNode(node)
+	}
+}
+
 func (ul *unsyncList) AddNode(node core.Node, bitsetIndex uint16) {
 	ul.addNode(node, int(bitsetIndex))
 }
@@ -91,9 +102,16 @@ func (ul *unsyncList) addNode(node core.Node, index int) {
 	ul.activeNodes[node.ID()] = node
 }
 
-func (ul *unsyncList) RemoveNodeAndClaims(from core.RecordRef) {
-	delete(ul.activeNodes, from)
-	delete(ul.claims, from)
+func (ul *unsyncList) removeNode(nodeID core.RecordRef) {
+	delete(ul.activeNodes, nodeID)
+	delete(ul.claims, nodeID)
+	delete(ul.proofs, nodeID)
+	delete(ul.ghs, nodeID)
+	i, ok := ul.refToIndex[nodeID]
+	if ok {
+		delete(ul.indexToRef, i)
+	}
+	delete(ul.refToIndex, nodeID)
 	ul.cache = nil
 }
 

@@ -35,6 +35,11 @@ type UnsyncListMock struct {
 	AddProofPreCounter uint64
 	AddProofMock       mUnsyncListMockAddProof
 
+	ApproveSyncFunc       func(p []core.RecordRef)
+	ApproveSyncCounter    uint64
+	ApproveSyncPreCounter uint64
+	ApproveSyncMock       mUnsyncListMockApproveSync
+
 	CalculateHashFunc       func(p core.PlatformCryptographyScheme) (r []byte, r1 error)
 	CalculateHashCounter    uint64
 	CalculateHashPreCounter uint64
@@ -80,11 +85,6 @@ type UnsyncListMock struct {
 	RefToIndexPreCounter uint64
 	RefToIndexMock       mUnsyncListMockRefToIndex
 
-	RemoveNodeAndClaimsFunc       func(p core.RecordRef)
-	RemoveNodeAndClaimsCounter    uint64
-	RemoveNodeAndClaimsPreCounter uint64
-	RemoveNodeAndClaimsMock       mUnsyncListMockRemoveNodeAndClaims
-
 	SetGlobuleHashSignatureFunc       func(p core.RecordRef, p1 packets.GlobuleHashSignature)
 	SetGlobuleHashSignatureCounter    uint64
 	SetGlobuleHashSignaturePreCounter uint64
@@ -102,6 +102,7 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 	m.AddClaimsMock = mUnsyncListMockAddClaims{mock: m}
 	m.AddNodeMock = mUnsyncListMockAddNode{mock: m}
 	m.AddProofMock = mUnsyncListMockAddProof{mock: m}
+	m.ApproveSyncMock = mUnsyncListMockApproveSync{mock: m}
 	m.CalculateHashMock = mUnsyncListMockCalculateHash{mock: m}
 	m.GetActiveNodeMock = mUnsyncListMockGetActiveNode{mock: m}
 	m.GetActiveNodesMock = mUnsyncListMockGetActiveNodes{mock: m}
@@ -111,7 +112,6 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 	m.IndexToRefMock = mUnsyncListMockIndexToRef{mock: m}
 	m.LengthMock = mUnsyncListMockLength{mock: m}
 	m.RefToIndexMock = mUnsyncListMockRefToIndex{mock: m}
-	m.RemoveNodeAndClaimsMock = mUnsyncListMockRemoveNodeAndClaims{mock: m}
 	m.SetGlobuleHashSignatureMock = mUnsyncListMockSetGlobuleHashSignature{mock: m}
 
 	return m
@@ -483,6 +483,129 @@ func (m *UnsyncListMock) AddProofFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.AddProofFunc != nil {
 		return atomic.LoadUint64(&m.AddProofCounter) > 0
+	}
+
+	return true
+}
+
+type mUnsyncListMockApproveSync struct {
+	mock              *UnsyncListMock
+	mainExpectation   *UnsyncListMockApproveSyncExpectation
+	expectationSeries []*UnsyncListMockApproveSyncExpectation
+}
+
+type UnsyncListMockApproveSyncExpectation struct {
+	input *UnsyncListMockApproveSyncInput
+}
+
+type UnsyncListMockApproveSyncInput struct {
+	p []core.RecordRef
+}
+
+//Expect specifies that invocation of UnsyncList.ApproveSync is expected from 1 to Infinity times
+func (m *mUnsyncListMockApproveSync) Expect(p []core.RecordRef) *mUnsyncListMockApproveSync {
+	m.mock.ApproveSyncFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockApproveSyncExpectation{}
+	}
+	m.mainExpectation.input = &UnsyncListMockApproveSyncInput{p}
+	return m
+}
+
+//Return specifies results of invocation of UnsyncList.ApproveSync
+func (m *mUnsyncListMockApproveSync) Return() *UnsyncListMock {
+	m.mock.ApproveSyncFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockApproveSyncExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of UnsyncList.ApproveSync is expected once
+func (m *mUnsyncListMockApproveSync) ExpectOnce(p []core.RecordRef) *UnsyncListMockApproveSyncExpectation {
+	m.mock.ApproveSyncFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &UnsyncListMockApproveSyncExpectation{}
+	expectation.input = &UnsyncListMockApproveSyncInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of UnsyncList.ApproveSync method
+func (m *mUnsyncListMockApproveSync) Set(f func(p []core.RecordRef)) *UnsyncListMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ApproveSyncFunc = f
+	return m.mock
+}
+
+//ApproveSync implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) ApproveSync(p []core.RecordRef) {
+	counter := atomic.AddUint64(&m.ApproveSyncPreCounter, 1)
+	defer atomic.AddUint64(&m.ApproveSyncCounter, 1)
+
+	if len(m.ApproveSyncMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ApproveSyncMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to UnsyncListMock.ApproveSync. %v", p)
+			return
+		}
+
+		input := m.ApproveSyncMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, UnsyncListMockApproveSyncInput{p}, "UnsyncList.ApproveSync got unexpected parameters")
+
+		return
+	}
+
+	if m.ApproveSyncMock.mainExpectation != nil {
+
+		input := m.ApproveSyncMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, UnsyncListMockApproveSyncInput{p}, "UnsyncList.ApproveSync got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.ApproveSyncFunc == nil {
+		m.t.Fatalf("Unexpected call to UnsyncListMock.ApproveSync. %v", p)
+		return
+	}
+
+	m.ApproveSyncFunc(p)
+}
+
+//ApproveSyncMinimockCounter returns a count of UnsyncListMock.ApproveSyncFunc invocations
+func (m *UnsyncListMock) ApproveSyncMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ApproveSyncCounter)
+}
+
+//ApproveSyncMinimockPreCounter returns the value of UnsyncListMock.ApproveSync invocations
+func (m *UnsyncListMock) ApproveSyncMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ApproveSyncPreCounter)
+}
+
+//ApproveSyncFinished returns true if mock invocations count is ok
+func (m *UnsyncListMock) ApproveSyncFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ApproveSyncMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ApproveSyncCounter) == uint64(len(m.ApproveSyncMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ApproveSyncMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ApproveSyncCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ApproveSyncFunc != nil {
+		return atomic.LoadUint64(&m.ApproveSyncCounter) > 0
 	}
 
 	return true
@@ -1797,129 +1920,6 @@ func (m *UnsyncListMock) RefToIndexFinished() bool {
 	return true
 }
 
-type mUnsyncListMockRemoveNodeAndClaims struct {
-	mock              *UnsyncListMock
-	mainExpectation   *UnsyncListMockRemoveNodeAndClaimsExpectation
-	expectationSeries []*UnsyncListMockRemoveNodeAndClaimsExpectation
-}
-
-type UnsyncListMockRemoveNodeAndClaimsExpectation struct {
-	input *UnsyncListMockRemoveNodeAndClaimsInput
-}
-
-type UnsyncListMockRemoveNodeAndClaimsInput struct {
-	p core.RecordRef
-}
-
-//Expect specifies that invocation of UnsyncList.RemoveNodeAndClaims is expected from 1 to Infinity times
-func (m *mUnsyncListMockRemoveNodeAndClaims) Expect(p core.RecordRef) *mUnsyncListMockRemoveNodeAndClaims {
-	m.mock.RemoveNodeAndClaimsFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockRemoveNodeAndClaimsExpectation{}
-	}
-	m.mainExpectation.input = &UnsyncListMockRemoveNodeAndClaimsInput{p}
-	return m
-}
-
-//Return specifies results of invocation of UnsyncList.RemoveNodeAndClaims
-func (m *mUnsyncListMockRemoveNodeAndClaims) Return() *UnsyncListMock {
-	m.mock.RemoveNodeAndClaimsFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockRemoveNodeAndClaimsExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of UnsyncList.RemoveNodeAndClaims is expected once
-func (m *mUnsyncListMockRemoveNodeAndClaims) ExpectOnce(p core.RecordRef) *UnsyncListMockRemoveNodeAndClaimsExpectation {
-	m.mock.RemoveNodeAndClaimsFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &UnsyncListMockRemoveNodeAndClaimsExpectation{}
-	expectation.input = &UnsyncListMockRemoveNodeAndClaimsInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of UnsyncList.RemoveNodeAndClaims method
-func (m *mUnsyncListMockRemoveNodeAndClaims) Set(f func(p core.RecordRef)) *UnsyncListMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.RemoveNodeAndClaimsFunc = f
-	return m.mock
-}
-
-//RemoveNodeAndClaims implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) RemoveNodeAndClaims(p core.RecordRef) {
-	counter := atomic.AddUint64(&m.RemoveNodeAndClaimsPreCounter, 1)
-	defer atomic.AddUint64(&m.RemoveNodeAndClaimsCounter, 1)
-
-	if len(m.RemoveNodeAndClaimsMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RemoveNodeAndClaimsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to UnsyncListMock.RemoveNodeAndClaims. %v", p)
-			return
-		}
-
-		input := m.RemoveNodeAndClaimsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, UnsyncListMockRemoveNodeAndClaimsInput{p}, "UnsyncList.RemoveNodeAndClaims got unexpected parameters")
-
-		return
-	}
-
-	if m.RemoveNodeAndClaimsMock.mainExpectation != nil {
-
-		input := m.RemoveNodeAndClaimsMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, UnsyncListMockRemoveNodeAndClaimsInput{p}, "UnsyncList.RemoveNodeAndClaims got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.RemoveNodeAndClaimsFunc == nil {
-		m.t.Fatalf("Unexpected call to UnsyncListMock.RemoveNodeAndClaims. %v", p)
-		return
-	}
-
-	m.RemoveNodeAndClaimsFunc(p)
-}
-
-//RemoveNodeAndClaimsMinimockCounter returns a count of UnsyncListMock.RemoveNodeAndClaimsFunc invocations
-func (m *UnsyncListMock) RemoveNodeAndClaimsMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveNodeAndClaimsCounter)
-}
-
-//RemoveNodeAndClaimsMinimockPreCounter returns the value of UnsyncListMock.RemoveNodeAndClaims invocations
-func (m *UnsyncListMock) RemoveNodeAndClaimsMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveNodeAndClaimsPreCounter)
-}
-
-//RemoveNodeAndClaimsFinished returns true if mock invocations count is ok
-func (m *UnsyncListMock) RemoveNodeAndClaimsFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RemoveNodeAndClaimsMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RemoveNodeAndClaimsCounter) == uint64(len(m.RemoveNodeAndClaimsMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.RemoveNodeAndClaimsMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RemoveNodeAndClaimsCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.RemoveNodeAndClaimsFunc != nil {
-		return atomic.LoadUint64(&m.RemoveNodeAndClaimsCounter) > 0
-	}
-
-	return true
-}
-
 type mUnsyncListMockSetGlobuleHashSignature struct {
 	mock              *UnsyncListMock
 	mainExpectation   *UnsyncListMockSetGlobuleHashSignatureExpectation
@@ -2060,6 +2060,10 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to UnsyncListMock.AddProof")
 	}
 
+	if !m.ApproveSyncFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.ApproveSync")
+	}
+
 	if !m.CalculateHashFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.CalculateHash")
 	}
@@ -2094,10 +2098,6 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 
 	if !m.RefToIndexFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.RefToIndex")
-	}
-
-	if !m.RemoveNodeAndClaimsFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.RemoveNodeAndClaims")
 	}
 
 	if !m.SetGlobuleHashSignatureFinished() {
@@ -2133,6 +2133,10 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.AddProof")
 	}
 
+	if !m.ApproveSyncFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.ApproveSync")
+	}
+
 	if !m.CalculateHashFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.CalculateHash")
 	}
@@ -2169,10 +2173,6 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.RefToIndex")
 	}
 
-	if !m.RemoveNodeAndClaimsFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.RemoveNodeAndClaims")
-	}
-
 	if !m.SetGlobuleHashSignatureFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.SetGlobuleHashSignature")
 	}
@@ -2194,6 +2194,7 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AddClaimsFinished()
 		ok = ok && m.AddNodeFinished()
 		ok = ok && m.AddProofFinished()
+		ok = ok && m.ApproveSyncFinished()
 		ok = ok && m.CalculateHashFinished()
 		ok = ok && m.GetActiveNodeFinished()
 		ok = ok && m.GetActiveNodesFinished()
@@ -2203,7 +2204,6 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.IndexToRefFinished()
 		ok = ok && m.LengthFinished()
 		ok = ok && m.RefToIndexFinished()
-		ok = ok && m.RemoveNodeAndClaimsFinished()
 		ok = ok && m.SetGlobuleHashSignatureFinished()
 
 		if ok {
@@ -2223,6 +2223,10 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 
 			if !m.AddProofFinished() {
 				m.t.Error("Expected call to UnsyncListMock.AddProof")
+			}
+
+			if !m.ApproveSyncFinished() {
+				m.t.Error("Expected call to UnsyncListMock.ApproveSync")
 			}
 
 			if !m.CalculateHashFinished() {
@@ -2261,10 +2265,6 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to UnsyncListMock.RefToIndex")
 			}
 
-			if !m.RemoveNodeAndClaimsFinished() {
-				m.t.Error("Expected call to UnsyncListMock.RemoveNodeAndClaims")
-			}
-
 			if !m.SetGlobuleHashSignatureFinished() {
 				m.t.Error("Expected call to UnsyncListMock.SetGlobuleHashSignature")
 			}
@@ -2290,6 +2290,10 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 	}
 
 	if !m.AddProofFinished() {
+		return false
+	}
+
+	if !m.ApproveSyncFinished() {
 		return false
 	}
 
@@ -2326,10 +2330,6 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 	}
 
 	if !m.RefToIndexFinished() {
-		return false
-	}
-
-	if !m.RemoveNodeAndClaimsFinished() {
 		return false
 	}
 
