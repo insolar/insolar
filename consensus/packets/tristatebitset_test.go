@@ -41,6 +41,17 @@ func initBitCells(refs []core.RecordRef) []BitSetCell {
 	return result
 }
 
+func initDiffBitCells(refs []core.RecordRef) []BitSetCell {
+	result := make([]BitSetCell, len(refs))
+	for i := 0; i < len(refs)/2+1; i++ {
+		result[i] = BitSetCell{NodeID: refs[i], State: TimedOut}
+	}
+	for i := len(refs)/2 + 1; i < len(refs); i++ {
+		result[i] = BitSetCell{NodeID: refs[i], State: Legit}
+	}
+	return result
+}
+
 type BitSetMapperMock struct {
 	refs []core.RecordRef
 }
@@ -204,6 +215,30 @@ func TestTriStateBitSet_ThousandStates(t *testing.T) {
 	count := 1024
 	refs := initRefs(count)
 	cells := initBitCells(refs)
+
+	mapper := &BitSetMapperMock{refs: refs}
+
+	bitset, _ := NewTriStateBitSet(len(cells))
+	bitset.CompressedSet = true
+	err := bitset.ApplyChanges(cells, mapper)
+	assert.NoError(t, err)
+	data, err := bitset.Serialize()
+	assert.NoError(t, err)
+
+	parsedBitSet, err := DeserializeBitSet(bytes.NewReader(data))
+	assert.NoError(t, err)
+
+	expected, err := bitset.GetCells(mapper)
+	assert.NoError(t, err)
+	actual, err := parsedBitSet.GetCells(mapper)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
+}
+
+func TestTriStateBitSet_ThousandDiffStates(t *testing.T) {
+	count := 1024
+	refs := initRefs(count)
+	cells := initDiffBitCells(refs)
 
 	mapper := &BitSetMapperMock{refs: refs}
 
