@@ -127,6 +127,10 @@ func (t *baseTransport) prepareDisconnect() {
 	close(t.disconnectStarted)
 }
 
+func (t *baseTransport) prepareListen() {
+	t.disconnectStarted = make(chan bool, 1)
+}
+
 func (t *baseTransport) generateID() packet.RequestID {
 	id := utils.AtomicLoadAndIncrementUint64(t.sequence)
 	return packet.RequestID(id)
