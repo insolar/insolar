@@ -29,6 +29,7 @@ const lastBitMask = 0x01
 const lowLengthSize = 6
 const firstBitMask = 0x80
 const lowBitLengthSize = 6
+const lastTwoBitsMask = 0x3
 
 // TriStateBitSet bitset implementation.
 type TriStateBitSet struct {
@@ -142,6 +143,10 @@ func (dbs *TriStateBitSet) serializeWithLLength(
 func DeserializeBitSet(data io.Reader) (BitSet, error) {
 	firstbyte := uint8(0)
 	err := binary.Read(data, defaultByteOrder, &firstbyte)
+	if firstbyte == 0 {
+		return nil, errors.New("[ DeserializeBitSet ] failed to deserialize: wrong data")
+	}
+
 	var array *bitArray
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Deserialize ] failed to read first byte")
@@ -203,12 +208,14 @@ func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
 	var payload []uint8
 	blockSize := 0
 	block := uint8(0)
+	bitsCount := 0
 	var err error
 	for i := 1; i < size; i = i + 2 { // i := 1 to skip first byte which was read at prev func
 		err = binary.Read(data, binary.BigEndian, &count)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
 		}
+		bitsCount += int(count) * 2
 		err = binary.Read(data, binary.BigEndian, &value)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
