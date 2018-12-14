@@ -669,6 +669,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.NoError(t, err)
 
 	hotIndexes := &message.HotData{
+		Jet:         *core.NewRecordRef(core.DomainID, *jet.NewID(0, nil)),
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {

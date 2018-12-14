@@ -583,6 +583,16 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		return nil, err
 	}
 
+	// TODO: temporary hardcoded tree. Remove after split is functional.
+	err = h.db.UpdateJetTree(
+		ctx,
+		msg.PulseNumber,
+		*jet.NewID(2, []byte{}),
+		*jet.NewID(2, []byte{1 << 6}),
+		*jet.NewID(2, []byte{1 << 7}),
+		msg.JetID, // Don't delete this.
+	)
+
 	return &reply.OK{}, nil
 }
 
@@ -829,17 +839,21 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	// TODO: temporary hardcoded tree. Remove after split is functional.
-	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *jet.NewID(2, []byte{})) // 00
+	err = h.db.UpdateJetTree(
+		ctx,
+		msg.PulseNumber,
+		*jet.NewID(2, []byte{}),
+		*jet.NewID(2, []byte{1 << 6}),
+		*jet.NewID(2, []byte{1 << 7}),
+		*msg.Jet.Record(), // Don't delete this.
+	)
 	if err != nil {
 		return nil, err
 	}
-	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *jet.NewID(2, []byte{1 << 6})) // 01
+
+	err = h.db.SaveJet(ctx, *msg.Jet.Record())
 	if err != nil {
 		return nil, err
-	}
-	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *jet.NewID(2, []byte{1 << 7})) // 10
-	if err != nil {
-		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetJetTree")
 	}
 
 	err = h.db.ResetDropSizeHistory(ctx, msg.JetDropSizeHistory)
