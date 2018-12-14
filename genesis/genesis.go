@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 )
 
@@ -78,7 +77,7 @@ func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) 
 	return genesis, err
 }
 
-func buildSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBuilder) error {
+func buildSmartContracts(ctx context.Context, cb *ContractsBuilder) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
 	contracts, err := getContractsMap()
@@ -97,7 +96,7 @@ func buildSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBui
 }
 
 func (g *Genesis) activateRootDomain(
-	ctx context.Context, cb *goplugintestutils.ContractsBuilder,
+	ctx context.Context, cb *ContractsBuilder,
 ) (*core.RecordID, core.ObjectDescriptor, error) {
 	rd, err := rootdomain.NewRootDomain()
 	if err != nil {
@@ -133,7 +132,7 @@ func (g *Genesis) activateRootDomain(
 }
 
 func (g *Genesis) activateNodeDomain(
-	ctx context.Context, domain *core.RecordID, cb *goplugintestutils.ContractsBuilder,
+	ctx context.Context, domain *core.RecordID, cb *ContractsBuilder,
 ) error {
 	nd, err := nodedomain.NewNodeDomain()
 	if err != nil {
@@ -170,7 +169,7 @@ func (g *Genesis) activateNodeDomain(
 }
 
 func (g *Genesis) activateRootMember(
-	ctx context.Context, domain *core.RecordID, cb *goplugintestutils.ContractsBuilder, rootPubKey string,
+	ctx context.Context, domain *core.RecordID, cb *ContractsBuilder, rootPubKey string,
 ) error {
 
 	m, err := member.New("RootMember", rootPubKey)
@@ -208,7 +207,7 @@ func (g *Genesis) activateRootMember(
 
 // TODO: this is not required since we refer by request id.
 func (g *Genesis) updateRootDomain(
-	ctx context.Context, cb *goplugintestutils.ContractsBuilder, domainDesc core.ObjectDescriptor,
+	ctx context.Context, cb *ContractsBuilder, domainDesc core.ObjectDescriptor,
 ) error {
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *g.rootMemberRef, NodeDomainRef: *g.nodeDomainRef})
 	if err != nil {
@@ -229,7 +228,7 @@ func (g *Genesis) updateRootDomain(
 }
 
 func (g *Genesis) activateRootMemberWallet(
-	ctx context.Context, domain *core.RecordID, cb *goplugintestutils.ContractsBuilder,
+	ctx context.Context, domain *core.RecordID, cb *ContractsBuilder,
 ) error {
 	w, err := wallet.New(g.config.RootBalance)
 	if err != nil {
@@ -263,7 +262,7 @@ func (g *Genesis) activateRootMemberWallet(
 	return nil
 }
 
-func (g *Genesis) activateSmartContracts(ctx context.Context, cb *goplugintestutils.ContractsBuilder, rootPubKey string) error {
+func (g *Genesis) activateSmartContracts(ctx context.Context, cb *ContractsBuilder, rootPubKey string) error {
 	domain, domainDesc, err := g.activateRootDomain(ctx, cb)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
@@ -297,7 +296,7 @@ type genesisNode struct {
 	role    string
 }
 
-func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestutils.ContractsBuilder) ([]genesisNode, error) {
+func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *ContractsBuilder) ([]genesisNode, error) {
 
 	nodes := make([]genesisNode, len(g.config.DiscoveryNodes))
 
@@ -355,12 +354,12 @@ func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
 
-	_, insgocc, err := goplugintestutils.Build()
+	_, insgocc, err := Build()
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
 	}
 
-	cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
+	cb := NewContractBuilder(g.ArtifactManager, insgocc)
 	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 
