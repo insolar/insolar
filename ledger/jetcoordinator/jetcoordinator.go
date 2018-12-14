@@ -111,12 +111,11 @@ func (jc *JetCoordinator) QueryRole(
 	}
 
 	if role == core.DynamicRoleLightExecutor {
-		// TODO: @andreyromancev. 14.12.18. check if object is jet.
 		jetTree, err := jc.db.GetJetTree(ctx, obj.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		id := jetTree.Find(obj.Hash())
+		id := jetTree.Find(*obj)
 		_, prefix := jet.Jet(*id)
 		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, prefix), candidates, count)
 	}

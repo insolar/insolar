@@ -53,12 +53,11 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if target == nil {
 			return nil, errors.New("unexpected message")
 		}
-		// TODO: @andreyromancev. 14.12.18. check if obj is jet.
 		tree, err := m.db.GetJetTree(ctx, target.Pulse())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch jet tree")
 		}
-		jetID := tree.Find(target.Hash())
+		jetID := tree.Find(*target)
 		if err != nil {
 			return nil, err
 		}
