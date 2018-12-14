@@ -159,9 +159,11 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	}
 
 	if len(results) != count {
-		return nil, errors.New(fmt.Sprintf("[ Phase 2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses: %d/%d", len(results), count))
+		return nil, errors.New(fmt.Sprintf("[ Phase 2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses,"+
+			" received: %d/%d", len(results), count))
 	}
 
+	origin := sp.NodeKeeper.GetOrigin().ID()
 	for index, result := range results {
 		node, err := nodenetwork.ClaimToNode("", &result.NodeClaimUnsigned)
 		if err != nil {
@@ -170,6 +172,7 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 		state.UnsyncList.AddNode(node, index)
 		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
 		state.UnsyncList.SetGlobuleHashSignature(node.ID(), result.GlobuleHashSignature)
+		state.Matrix.ReceivedProofFromNode(origin, node.ID())
 	}
 	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for index, claim := range claims {
@@ -185,6 +188,7 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 		claimMap[ref] = list
 	}
 	state.UnsyncList.AddClaims(claimMap)
+	state.MatrixState, err = state.Matrix.CalculatePhase2(origin)
 
 	// cloudEntry := &merkle.CloudEntry{
 	//

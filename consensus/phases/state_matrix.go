@@ -123,6 +123,19 @@ func (sm *StateMatrix) CalculatePhase2(origin core.RecordRef) (*Phase2MatrixStat
 	return result, nil
 }
 
+func (sm *StateMatrix) ReceivedProofFromNode(origin, nodeID core.RecordRef) error {
+	originIndex, err := sm.mapper.RefToIndex(origin)
+	if err != nil {
+		return errors.Wrap(err, "Can't map origin reference to matrix index")
+	}
+	nodeIndex, err := sm.mapper.RefToIndex(nodeID)
+	if err != nil {
+		return errors.Wrap(err, "Can't map node reference to matrix index")
+	}
+	sm.data[originIndex][nodeIndex] = packets.Legit
+	return nil
+}
+
 func (sm *StateMatrix) calculateAdditionalRequest(timedOutNodeIndex int) (*AdditionalRequest, error) {
 	candidates := make([]core.RecordRef, 0)
 	for i := 0; i < len(sm.data); i++ {

@@ -79,6 +79,11 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 		return errors.Wrap(err, "Network consensus: error executing phase 2.1")
 	}
 
+	state := secondPhaseState
+	if len(state.MatrixState.AdditionalRequestsPhase2) != 0 {
+		return errors.New("Failed to get all node proofs in phases 2.0 and 2.1")
+	}
+	state.UnsyncList.ApproveSync(state.MatrixState.Active)
 	pm.NodeKeeper.Sync(secondPhaseState.UnsyncList)
 
 	return nil
