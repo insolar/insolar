@@ -29,19 +29,14 @@ import (
 type tcpTransport struct {
 	baseTransport
 	l       net.Listener
+	addr    string
 	maxChan chan bool
 }
 
 func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
-
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
-		l:             listener,
+		addr:          addr,
 		maxChan:       make(chan bool, 1000),
 	}
 
@@ -73,6 +68,16 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 // Start starts networking.
 func (tcp *tcpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start TCP transport")
+
+	tcp.prepareListen()
+
+	listener, err := net.Listen("tcp", tcp.addr)
+	if err != nil {
+		return err
+	}
+
+	tcp.l = listener
+
 	for {
 
 		tcp.maxChan <- true

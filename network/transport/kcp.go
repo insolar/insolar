@@ -58,6 +58,8 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 // Start starts networking.
 func (t *kcpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start KCP transport")
+
+	t.prepareListen()
 	for {
 		if session, err := t.listener.AcceptKCP(); err == nil {
 			go t.handleAcceptedConnection(session)
