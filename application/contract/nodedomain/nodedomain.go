@@ -60,19 +60,28 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 		return "", fmt.Errorf("[ RegisterNode ] Can't save as child: %s", err.Error())
 	}
 
-	return node.Reference.String(), err
+	newNodeRef := node.GetReference()
+	nd.nodeIndexPK[publicKey] = newNodeRef
+
+	return newNodeRef.String(), err
 }
 
-func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (core.RecordRef, error) {
+func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 	nodeRef, ok := nd.nodeIndexPK[publicKey]
 	if !ok {
-		return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
+		return nodeRef.String(), fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
 	}
-	return nodeRef, nil
+	return nodeRef.String(), nil
 }
 
 // RemoveNode deletes node from registry
 func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 	node := nd.getNodeRecord(nodeRef)
+	nodePK, err := node.GetPublicKey()
+	if err != nil {
+		return err
+	}
+
+	delete(nd.nodeIndexPK, nodePK)
 	return node.Destroy()
 }
