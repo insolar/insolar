@@ -592,6 +592,9 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		*jet.NewID(2, []byte{1 << 7}),
 		msg.JetID, // Don't delete this.
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	return &reply.OK{}, nil
 }
