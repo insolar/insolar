@@ -85,6 +85,7 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 	return nil
 }
 
+// Acquire increase lock counter and locks message bus if it wasn't lock before
 func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
 	if ns.counter == uint64(0) {
 		ns.MBLocker.Lock(ctx)
