@@ -71,7 +71,7 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (tcp *tcpTransport) Start(ctx context.Context) error {
+func (tcp *tcpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start TCP transport")
 	for {
 
