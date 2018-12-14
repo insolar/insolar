@@ -51,7 +51,7 @@ func (handler *Handler) isRequestValid(ctx context.Context, request *Payload) (s
 		return false, neighbour, err
 	}
 	if !result {
-		inslogger.FromContext(ctx).Warnf("Message %v, from host %v failed signature check")
+		inslogger.FromContext(ctx).Warnf("Message %v, from host %v failed signature check", request.Body, request.PublicKey)
 		return false, neighbour, errors.New("signature check failed")
 	}
 
