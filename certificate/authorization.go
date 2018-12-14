@@ -20,6 +20,7 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -40,8 +41,12 @@ func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
 
 // GetNodeRef returns reference from node certificate
 func (authCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
-	ref := core.NewRefFromBase58(authCert.Reference)
-	return &ref
+	ref, err := core.NewRefFromBase58(authCert.Reference)
+	if err != nil {
+		log.Errorf("Invalid node reference in auth cert: %s\n", authCert.Reference)
+		return nil
+	}
+	return ref
 }
 
 // GetRole returns role from node certificate
