@@ -94,7 +94,7 @@ func (jc *JetCoordinator) QueryRole(
 ) ([]core.RecordRef, error) {
 	pulseData, err := jc.db.GetPulse(ctx, pulse)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch pulse data for pulse %v", pulse))
+		return nil, errors.Wrapf(err, "failed to fetch pulse data for pulse %v", pulse)
 	}
 	candidates := jc.NodeNet.GetActiveNodesByRole(role)
 	if len(candidates) == 0 {
