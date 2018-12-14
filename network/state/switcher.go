@@ -90,7 +90,7 @@ func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Call Acquire in NetworkSwitcher: ", ns.counter)
 	ns.counter = ns.counter + 1
 	if ns.counter-1 == 0 {
-		inslogger.FromContext(ctx).Info("Acquire MB")
+		inslogger.FromContext(ctx).Info("Lock MB")
 		ns.MBLocker.Lock(ctx)
 	}
 }
@@ -103,7 +103,7 @@ func (ns *NetworkSwitcher) Release(ctx context.Context) {
 	}
 	ns.counter = ns.counter - 1
 	if ns.counter == 0 {
-		inslogger.FromContext(ctx).Info("Release MB")
+		inslogger.FromContext(ctx).Info("Unlock MB")
 		ns.MBLocker.Unlock(ctx)
 	}
 }
