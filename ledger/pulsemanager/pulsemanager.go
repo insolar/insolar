@@ -307,8 +307,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, persist bool) 
 	}
 
 	// swap active nodes
-	// TODO: fix network consensus and uncomment this (after NETD18-74)
-	// m.ActiveListSwapper.MoveSyncToActive()
+	m.ActiveListSwapper.MoveSyncToActive()
 	if persist {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
 			m.GIL.Release(ctx)
