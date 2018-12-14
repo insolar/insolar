@@ -245,18 +245,22 @@ func parseState(array *bitArray, index int) (TriState, error) {
 func parseBitArray(payload []uint8) (*bitArray, error) {
 	len := len(payload)
 	lastByte := payload[len-1]
-	emptyBits := 0
-	for i := 1; i < 5; i++ {
-		if (lastByte & lastTwoBitsMask) == 0 {
-			emptyBits++
-			lastByte >>= 2
-		}
-	}
-	array := newBitArray(len*sizeOfBlock - emptyBits*2)
+	array := newBitArray(len*sizeOfBlock - getEmptyBitsCount(lastByte))
 	for i := 0; i < len; i++ {
 		array.array[i] = payload[i]
 	}
 	return array, nil
+}
+
+func getEmptyBitsCount(byte uint8) int {
+	emptyStates := 0
+	for i := 0; i < 4; i++ {
+		if (byte & lastTwoBitsMask) == 0 {
+			emptyStates++
+			byte >>= 2
+		}
+	}
+	return emptyStates * 2 // cuz calculated
 }
 
 func (dbs *TriStateBitSet) changeBucketState(index int, newState TriState) error {
