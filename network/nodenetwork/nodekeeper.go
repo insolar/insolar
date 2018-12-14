@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
@@ -88,6 +89,8 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		active:       make(map[core.RecordRef]core.Node),
 		indexNode:    make(map[core.StaticRole]*recordRefSet),
 		indexShortID: make(map[core.ShortNodeID]core.Node),
+		tempMapR:     make(map[core.RecordRef]*host.Host),
+		tempMapS:     make(map[core.ShortNodeID]*host.Host),
 	}
 }
 
@@ -107,6 +110,10 @@ type nodekeeper struct {
 	indexNode    map[core.StaticRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
 
+	tempLock sync.RWMutex
+	tempMapR map[core.RecordRef]*host.Host
+	tempMapS map[core.ShortNodeID]*host.Host
+
 	sync     network.UnsyncList
 	syncLock sync.Mutex
 
@@ -114,6 +121,36 @@ type nodekeeper struct {
 	isBootstrapLock sync.RWMutex
 
 	Cryptography core.CryptographyService `inject:""`
+}
+
+func (nk *nodekeeper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
+	consensusAddress, err := incrementPort(address)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to increment port for address %s", address)
+	}
+	h, err := host.NewHostNS(consensusAddress, nodeID, shortID)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to generate address (%s, %s, %d)", consensusAddress, nodeID, shortID)
+	}
+	nk.tempLock.Lock()
+	nk.tempMapR[nodeID] = h
+	nk.tempMapS[shortID] = h
+	nk.tempLock.Unlock()
+	return nil
+}
+
+func (nk *nodekeeper) ResolveConsensus(shortID core.ShortNodeID) *host.Host {
+	nk.tempLock.RLock()
+	defer nk.tempLock.RUnlock()
+
+	return nk.tempMapS[shortID]
+}
+
+func (nk *nodekeeper) ResolveConsensusRef(nodeID core.RecordRef) *host.Host {
+	nk.tempLock.RLock()
+	defer nk.tempLock.RUnlock()
+
+	return nk.tempMapR[nodeID]
 }
 
 // TODO: remove this method when bootstrap mechanism completed
@@ -288,6 +325,12 @@ func (nk *nodekeeper) MoveSyncToActive() {
 		nk.activeLock.Unlock()
 	}()
 
+	nk.tempLock.Lock()
+	// clear temporary mappings
+	nk.tempMapR = make(map[core.RecordRef]*host.Host)
+	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
+	nk.tempLock.Unlock()
+
 	sync := nk.sync.(*unsyncList)
 	nk.active = sync.getMergedNodeMap()
 	nk.reindex()
@@ -334,7 +377,7 @@ func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to sign a claim")
 	}
-	//copy(claim.Signature[:], sign[:consensus.SignatureLength])
+	// copy(claim.Signature[:], sign[:consensus.SignatureLength])
 	return claim, nil
 }
 

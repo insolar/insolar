@@ -172,6 +172,12 @@ type NodeKeeper interface {
 	Sync(list UnsyncList)
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive()
+	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
+	AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error
+	// ResolveConsensus get temporary mapping by short ID
+	ResolveConsensus(shortID core.ShortNodeID) *host.Host
+	// ResolveConsensusRef get temporary mapping by node ID
+	ResolveConsensusRef(nodeID core.RecordRef) *host.Host
 }
 
 // UnsyncList is interface to manage unsync list
