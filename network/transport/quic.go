@@ -89,7 +89,7 @@ func (q *quicTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (q *quicTransport) Start(ctx context.Context) error {
+func (q *quicTransport) Listen(ctx context.Context) error {
 	log.Debug("Start QUIC transport")
 	for {
 		session, err := q.l.Accept()

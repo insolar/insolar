@@ -45,7 +45,7 @@ func (h *transportBase) Start(ctx context.Context) {
 	}
 	go h.listen(ctx)
 	go func(ctx context.Context) {
-		err := h.transport.Start(ctx)
+		err := h.transport.Listen(ctx)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 		}

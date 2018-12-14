@@ -40,8 +40,8 @@ type Transport interface {
 	// SendPacket low-level send packet without requestId and without spawning a waiting future
 	SendPacket(p *packet.Packet) error
 
-	// Start starts thread to listen incoming packets.
-	Start(ctx context.Context) error
+	// Listen starts thread to listen incoming packets.
+	Listen(ctx context.Context) error
 
 	// Stop gracefully stops listening.
 	Stop()
