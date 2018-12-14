@@ -38,8 +38,7 @@ func (*GenesisRequest) DefaultRole() core.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (gr *GenesisRequest) DefaultTarget() *core.RecordRef {
-	ref := core.NewRefFromBase58(gr.Name)
-	return &ref
+	return &core.RecordRef{}
 }
 
 // Type implementation for genesis request.

@@ -96,7 +96,7 @@ functest:
 	CGO_ENABLED=1 go test -tags functest ./functest
 
 test:
-	go test -v $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(ALL_PACKAGES)
 
 test_with_coverage:
 	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)

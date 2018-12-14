@@ -50,6 +50,7 @@ const (
 	sysLastSyncedPulseOnHeavy byte = 4
 	sysJetTree                byte = 5
 	sysJetList                byte = 6
+	sysDropSizeHistory        byte = 7
 )
 
 // DB represents BadgerDB storage implementation.
@@ -67,6 +68,8 @@ type DB struct {
 	// so txretiries is our knob to tune up retry logic.
 	txretiries int
 
+	jetSizesHistoryDepth int
+
 	idlocker *IDLocker
 
 	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
@@ -75,13 +78,19 @@ type DB struct {
 	nodeHistory     map[core.PulseNumber][]core.Node
 	nodeHistoryLock sync.Mutex
 
-	addJetLock  sync.RWMutex
-	jetTreeLock sync.Mutex
+	addJetLock       sync.RWMutex
+	addBlockSizeLock sync.RWMutex
+	jetTreeLock      sync.Mutex
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
 func (db *DB) SetTxRetiries(n int) {
 	db.txretiries = n
+}
+
+// GetJetSizesHistoryDepth returns max amount of drop sizes
+func (db *DB) GetJetSizesHistoryDepth() int {
+	return db.jetSizesHistoryDepth
 }
 
 func setOptions(o *badger.Options) *badger.Options {
@@ -112,10 +121,11 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	}
 
 	db := &DB{
-		db:          bdb,
-		txretiries:  conf.Storage.TxRetriesOnConflict,
-		idlocker:    NewIDLocker(),
-		nodeHistory: map[core.PulseNumber][]core.Node{},
+		db:                   bdb,
+		txretiries:           conf.Storage.TxRetriesOnConflict,
+		jetSizesHistoryDepth: conf.JetSizesHistoryDepth,
+		idlocker:             NewIDLocker(),
+		nodeHistory:          map[core.PulseNumber][]core.Node{},
 	}
 	return db, nil
 }
@@ -183,7 +193,9 @@ func (db *DB) Init(ctx context.Context) error {
 		return errors.Wrap(err, "bootstrap failed")
 	}
 
-	return nil
+	// TODO: required for test passing, need figure out how to do init jets properly
+	return db.SaveJet(ctx, jetID)
+	// return nil
 }
 
 // GenesisRef returns the genesis record reference.
