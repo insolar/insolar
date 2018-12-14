@@ -130,6 +130,7 @@ func EnableExecutionTimeMeasurement(fname string) (func(), error) {
 // Writes execution time of given function to the profile log (if profile logging is enabled)
 func MeasureExecutionTime(ctx context.Context, comment string, thefunction func()) {
 	if !measurementsEnabled {
+		thefunction()
 		return
 	}
 
