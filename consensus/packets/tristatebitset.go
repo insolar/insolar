@@ -208,14 +208,12 @@ func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
 	var payload []uint8
 	blockSize := 0
 	block := uint8(0)
-	bitsCount := 0
 	var err error
-	for i := 1; i < size; i = i + 2 { // i := 1 to skip first byte which was read at prev func
+	for i := 1; i < size; i = i + 3 { // i := 1 to skip first byte which was read at prev func
 		err = binary.Read(data, binary.BigEndian, &count)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
 		}
-		bitsCount += int(count) * 2
 		err = binary.Read(data, binary.BigEndian, &value)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
@@ -223,10 +221,7 @@ func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
 		for j := uint16(0); j < count; j++ {
 			block += value
 			blockSize += 2
-			if (blockSize >= sizeOfBlock) || (j+1 >= count) {
-				if j+1 >= count {
-					block = block << uint(sizeOfBlock-blockSize)
-				}
+			if blockSize >= sizeOfBlock {
 				payload = append(payload, block)
 				blockSize = 0
 			}
