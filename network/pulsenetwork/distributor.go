@@ -18,7 +18,6 @@ package pulsenetwork
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
