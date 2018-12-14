@@ -272,6 +272,7 @@ func (m *PulseManager) processRecentObjects(
 	}
 
 	msg := &message.HotData{
+		Jet:                *core.NewRecordRef(core.DomainID, jetID),
 		Drop:               *drop,
 		PulseNumber:        previousSlotPulse.Pulse.PulseNumber,
 		RecentObjects:      recentObjects,

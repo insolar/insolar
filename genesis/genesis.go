@@ -431,7 +431,8 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 		if err != nil {
 			return errors.Wrap(err, "[ makeCertificates ]")
 		}
-		err = ioutil.WriteFile(path.Join(g.keyOut, "discovery_cert_"+strconv.Itoa(i+1)+".json"), cert, 0644)
+
+		err = ioutil.WriteFile(path.Join(g.keyOut, g.config.DiscoveryNodes[i].CertName), cert, 0644)
 		if err != nil {
 			return errors.Wrap(err, "[ makeCertificates ]")
 		}

@@ -231,11 +231,12 @@ do
     i=$((i + 1))
     if [ "$i" -eq "$NUM_NODES" ]
     then
+        echo "NODE $i STARTED in foreground"
         $INSOLARD --config scripts/insolard/insolar_$i.yaml &> $node/output.txt
         break
     fi
     $INSOLARD --config scripts/insolard/insolar_$i.yaml &> $node/output.txt &
-    echo "NODE $i STARTED"
+    echo "NODE $i STARTED in background"
 done
 
 echo "FINISHING ..."
