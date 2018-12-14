@@ -25,7 +25,6 @@ import (
 )
 
 func TestTree_Find(t *testing.T) {
-	// Pulse in ID is equal to depth.
 	tree := Tree{
 		Head: &jet{
 			Right: &jet{
@@ -77,4 +76,41 @@ func TestTree_Update(t *testing.T) {
 	depth, prefix = Jet(*id)
 	assert.Equal(t, uint8(8), depth)
 	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
+}
+
+func TestTree_Split(t *testing.T) {
+	tree := Tree{
+		Head: &jet{
+			Right: &jet{
+				Right: &jet{},
+			},
+			Left: &jet{},
+		},
+	}
+	tooDeep := NewID(6, []byte{0xD5}) // 11010101
+	ok := NewID(2, []byte{0xD5})      // 11010101
+
+	t.Run("not existing jet returns error", func(t *testing.T) {
+		_, _, err := tree.Split(*tooDeep)
+		assert.Error(t, err)
+	})
+
+	t.Run("splits jet", func(t *testing.T) {
+		okDepth, okPrefix := Jet(*ok)
+		lExpectedPrefix := make([]byte, len(okPrefix))
+		copy(lExpectedPrefix, okPrefix)
+		lExpectedPrefix[0] = 0xC0 // 11000000
+		rExpectedPrefix := make([]byte, len(okPrefix))
+		copy(rExpectedPrefix, okPrefix)
+		rExpectedPrefix[0] = 0xE0 // 11100000
+
+		left, right, err := tree.Split(*ok)
+		require.NoError(t, err)
+		lDepth, lPrefix := Jet(*left)
+		rDepth, rPrefix := Jet(*right)
+		assert.Equal(t, uint8(okDepth+1), lDepth)
+		assert.Equal(t, uint8(okDepth+1), rDepth)
+		assert.Equal(t, lExpectedPrefix, lPrefix)
+		assert.Equal(t, rExpectedPrefix, rPrefix)
+	})
 }
