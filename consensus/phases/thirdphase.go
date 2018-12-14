@@ -75,6 +75,12 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) erro
 		}
 	}
 
+	// cloudEntry := &merkle.CloudEntry{
+	//
+	// }
+
+	// cloudHash, _, _ := sp.Calculator.GetCloudProof(cloudEntry)
+
 	return nil
 }
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
@@ -112,9 +113,12 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	for ref, packet := range resultPackets {
 		signIsCorrect, err := fp.isSignPhase1PacketRight(packet, ref)
 		if err != nil {
-			log.Warn("failed to check a sign: ", err.Error())
-		} else if !signIsCorrect {
-			log.Warn("recieved a bad sign packet: ", err.Error())
+			inslogger.FromContext(ctx).Warnf("Failed to check phase1 packet signature from %s: %s", ref, err.Error())
+			continue
+		}
+		if !signIsCorrect {
+			inslogger.FromContext(ctx).Warnf("Received phase1 packet from %s with bad signature", ref)
+			continue
 		}
 		rawProof := packet.GetPulseProof()
 		rawProofs[ref] = rawProof
@@ -141,6 +145,10 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	valid, fault := fp.validateProofs(pulseHash, proofSet)
+
+	for nodeID, _ := range fault {
+		inslogger.FromContext(ctx).Warnf("Failed to validate proof from %s", nodeID)
+	}
 
 	return &FirstPhaseState{
 		PulseEntry:  entry,
@@ -240,15 +248,15 @@ func (fp *FirstPhase) filterClaims(nodeID core.RecordRef, claims []packets.Refer
 func (fp *FirstPhase) checkClaimSignature(claim packets.SignedClaim) error {
 	key, err := claim.GetPublicKey()
 	if err != nil {
-		return errors.Wrap(err, "[ checkClaimSignature ] failed to import a key")
+		return errors.Wrap(err, "[ checkClaimSignature ] Failed to import a key")
 	}
 	rawClaim, err := claim.SerializeRaw()
 	if err != nil {
-		return errors.Wrap(err, "[ checkClaimSignature ] failed to serialize a claim")
+		return errors.Wrap(err, "[ checkClaimSignature ] Failed to serialize a claim")
 	}
 	success := fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.GetSignature()), rawClaim)
 	if !success {
-		return errors.New("Signature verification failed")
+		return errors.New("[ checkClaimSignature ] Signature verification failed")
 	}
 	return nil
 }

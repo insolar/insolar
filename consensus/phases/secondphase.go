@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
@@ -73,36 +74,38 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange results.")
 	}
 
-	nodeProofs := make(map[core.Node]*GlobuleProofValidated)
+	// nodeProofs := make(map[core.Node]*GlobuleProofValidated)
 	stateMatrix := NewStateMatrix(state.UnsyncList)
 
 	for ref, packet := range packets {
 		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
 		if err != nil {
-			log.Warn("failed to check a sign: ", err.Error())
-		} else if !signIsCorrect {
-			log.Warn("recieved a bad sign packet: ", err.Error())
-		}
-		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
-		if err != nil {
-			log.Warnf("[ SecondPhase ] could not apply bitset from node %s", ref)
+			inslogger.FromContext(ctx).Warnf("Failed to check phase2 packet signature from %s: %s", ref, err.Error())
 			continue
 		}
-
+		if !signIsCorrect {
+			inslogger.FromContext(ctx).Warnf("Received phase2 packet from %s with bad signature", ref)
+			continue
+		}
 		ghs := packet.GetGlobuleHashSignature()
 		state.UnsyncList.SetGlobuleHashSignature(ref, ghs)
-		node := state.UnsyncList.GetActiveNode(ref)
-		proof := &merkle.GlobuleProof{
-			BaseProof: merkle.BaseProof{
-				Signature: core.SignatureFromBytes(ghs[:]),
-			},
-			PrevCloudHash: prevCloudHash,
-			GlobuleID:     globuleProof.GlobuleID,
-			NodeCount:     globuleProof.NodeCount,
-			NodeRoot:      globuleProof.NodeRoot,
+		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
+		if err != nil {
+			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s", ref)
+			continue
 		}
-		valid := sp.Calculator.IsValid(proof, globuleHash, node.PublicKey())
-		nodeProofs[node] = &GlobuleProofValidated{Proof: proof, Valid: valid}
+		// node := state.UnsyncList.GetActiveNode(ref)
+		// proof := &merkle.GlobuleProof{
+		// 	BaseProof: merkle.BaseProof{
+		// 		Signature: core.SignatureFromBytes(ghs[:]),
+		// 	},
+		// 	PrevCloudHash: prevCloudHash,
+		// 	GlobuleID:     globuleProof.GlobuleID,
+		// 	NodeCount:     globuleProof.NodeCount,
+		// 	NodeRoot:      globuleProof.NodeRoot,
+		// }
+		// valid := sp.Calculator.IsValid(proof, globuleHash, node.PublicKey())
+		// nodeProofs[node] = &GlobuleProofValidated{Proof: proof, Valid: valid}
 	}
 
 	matrixCalculation, err := stateMatrix.CalculatePhase2(sp.NodeKeeper.GetOrigin().ID())
@@ -116,10 +119,10 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		MatrixState:     matrixCalculation,
 		BitSet:          bitset,
 
-		GlobuleEntry:    entry,
-		GlobuleHash:     globuleHash,
-		GlobuleProof:    globuleProof,
-		GlobuleProofSet: nodeProofs,
+		GlobuleEntry: entry,
+		GlobuleHash:  globuleHash,
+		GlobuleProof: globuleProof,
+		// GlobuleProofSet: nodeProofs,
 	}, nil
 }
 
@@ -189,12 +192,6 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	}
 	state.UnsyncList.AddClaims(claimMap)
 	state.MatrixState, err = state.Matrix.CalculatePhase2(origin)
-
-	// cloudEntry := &merkle.CloudEntry{
-	//
-	// }
-
-	// cloudHash, _, _ := sp.Calculator.GetCloudProof(cloudEntry)
 
 	return state, nil
 }

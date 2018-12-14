@@ -43,10 +43,10 @@ type GlobuleProofValidated struct {
 type SecondPhaseState struct {
 	*FirstPhaseState
 
-	GlobuleEntry    *merkle.GlobuleEntry
-	GlobuleHash     merkle.OriginHash
-	GlobuleProof    *merkle.GlobuleProof
-	GlobuleProofSet map[core.Node]*GlobuleProofValidated
+	GlobuleEntry *merkle.GlobuleEntry
+	GlobuleHash  merkle.OriginHash
+	GlobuleProof *merkle.GlobuleProof
+	// GlobuleProofSet map[core.Node]*GlobuleProofValidated
 
 	MatrixState *Phase2MatrixState
 	Matrix      *StateMatrix
