@@ -22,6 +22,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
@@ -74,9 +75,9 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	})
 
 	t.Run("material returns correct nodes", func(t *testing.T) {
-		objID := core.NewRecordID(core.PulseNumberJet, []byte{1, 42, 123})
+		objID := core.NewRecordID(0, []byte{1, 42, 123})
 		jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleLightExecutor: 1}
-		err := db.UpdateJetTree(ctx, 0, *objID)
+		err := db.UpdateJetTree(ctx, 0, *jet.NewID(1, []byte{1, 42, 123}))
 		require.NoError(t, err)
 		nodeNet.GetActiveNodesByRoleMock.Expect(core.DynamicRoleLightExecutor).Return(nodes)
 

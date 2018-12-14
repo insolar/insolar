@@ -76,9 +76,10 @@ func getTestData(t *testing.T) (
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testmessagebus.NewTestMessageBus(t)
+	db.PlatformCryptographyScheme = scheme
 	handler := MessageHandler{
 		db:                         db,
-		jetDropHandlers:            map[core.MessageType]internalHandler{},
+		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
@@ -172,7 +173,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	memory := []byte{1, 2, 3}
 	codeRef := genRandomRef(0)
@@ -234,7 +235,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	objID, _ := db.SetRecord(
 		ctx,
@@ -277,7 +278,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	objID, _ := db.SetRecord(
 		ctx,
@@ -329,7 +330,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
@@ -430,7 +431,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	parentID, _ := db.SetRecord(
 		ctx,
@@ -483,7 +484,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 
 	t.Run("returns correct children without pulse", func(t *testing.T) {
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
 		assert.Equal(t, *child3Ref, *child)
@@ -502,7 +503,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Run("returns correct children with pulse", func(t *testing.T) {
 		pn := core.PulseNumber(1)
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), &pn)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
 		assert.Equal(t, *child2Ref, *child)
@@ -519,7 +520,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Run("returns correct children in many chunks", func(t *testing.T) {
 		am.getChildrenChunkSize = 1
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
 		assert.Equal(t, *child3Ref, *child)
@@ -540,7 +541,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 		am.getChildrenChunkSize = 1
 		pn := core.PulseNumber(3)
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), &pn)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
 		assert.Equal(t, *child3Ref, *child)
@@ -601,12 +602,6 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	codeRecord := record.CodeRecord{
 		Code: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
 	}
-	recHash := am.PlatformCryptographyScheme.ReferenceHasher()
-	_, err := codeRecord.WriteHashData(recHash)
-	assert.NoError(t, err)
-	latestPulse, err := db.GetLatestPulse(ctx)
-	assert.NoError(t, err)
-	id := core.NewRecordID(latestPulse.Pulse.PulseNumber, recHash.Sum(nil))
 
 	setRecordMessage := message.SetRecord{
 		Record: record.SerializeRecord(&codeRecord),
@@ -629,8 +624,9 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
 
+	id := record.NewRecordIDFromRecord(db.PlatformCryptographyScheme, 0, &codeRecord)
 	rec, err := db.GetRecord(ctx, jetID, id)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, codeRecord, *rec.(*record.CodeRecord))
 }
 
@@ -653,7 +649,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	handler := MessageHandler{
 		db:                         db,
-		jetDropHandlers:            map[core.MessageType]internalHandler{},
+		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
@@ -754,7 +750,9 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
+	cs := testutils.NewPlatformCryptographyScheme()
 	am := NewArtifactManger(db)
+	am.PlatformCryptographyScheme = cs
 
 	t.Run("returns error on exceeding retry limit", func(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)
@@ -780,7 +778,7 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 
 		tree, err := db.GetJetTree(ctx, core.FirstPulseNumber)
 		require.NoError(t, err)
-		jetID := tree.Find([]byte{0xD5})
+		jetID := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
 		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
 	})
 }
