@@ -261,10 +261,11 @@ func setDrop(
 	} else if err != storage.ErrNotFound {
 		require.NoError(t, err)
 	}
-	drop, _, err := db.CreateDrop(ctx, jet, pulsenum, prevhash)
+	drop, _, dropSize, err := db.CreateDrop(ctx, jet, pulsenum, prevhash)
 	if err != nil {
 		require.NoError(t, err)
 	}
+	require.NotEqual(t, 0, dropSize)
 	err = db.SetDrop(ctx, jet, drop)
 	require.NoError(t, err)
 }

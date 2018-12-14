@@ -11,7 +11,9 @@ import (
 {{ end }}
 
 // PrototypeReference to prototype of this contract
-var PrototypeReference = core.NewRefFromBase58("{{ .ClassReference }}")
+// error checking hides in generator
+var PrototypeReference, _ = core.NewRefFromBase58("{{ .ClassReference }}")
+
 
 // {{ .ContractType }} holds proxy type
 type {{ .ContractType }} struct {
@@ -28,7 +30,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*{{ .ContractType }}, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +39,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*{{ .Contrac
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*{{ .ContractType }}, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -51,12 +53,12 @@ func GetObject(ref core.RecordRef) (r *{{ .ContractType }}) {
 
 // GetPrototype returns reference to the prototype
 func GetPrototype() core.RecordRef {
-	return PrototypeReference
+	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*{{ .ContractType }}, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
+	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -85,14 +87,14 @@ func (r *{{ $.ContractType }}) GetReference() core.RecordRef {
 
 // GetPrototype returns reference to the code
 func (r *{{ $.ContractType }}) GetPrototype() (core.RecordRef, error) {
-	if r.Prototype == core.NewRefFromBase58("") {
+	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -115,14 +117,14 @@ func (r *{{ $.ContractType }}) GetPrototype() (core.RecordRef, error) {
 
 // GetCode returns reference to the code
 func (r *{{ $.ContractType }}) GetCode() (core.RecordRef, error) {
-	if r.Code == core.NewRefFromBase58("") {
+	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -155,7 +157,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
 		return {{ $method.ResultsWithErr }}
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "{{ $method.Name }}", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
@@ -181,7 +183,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }}
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "{{ $method.Name }}", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

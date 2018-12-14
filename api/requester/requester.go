@@ -120,8 +120,13 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
 	}
 
+	callerRef, err := core.NewRefFromBase58(userCfg.Caller)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Failed to parse userCfg.Caller")
+	}
+
 	serRequest, err := core.MarshalArgs(
-		core.NewRefFromBase58(userCfg.Caller),
+		*callerRef,
 		reqCfg.Method,
 		params,
 		seed)

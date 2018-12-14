@@ -578,7 +578,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		}
 	}
 
-	err := h.db.SaveJet(ctx, msg.Jet)
+	err := h.db.SaveJet(ctx, msg.JetID)
 	if err != nil {
 		return nil, err
 	}
@@ -788,7 +788,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 	err := h.db.SetDrop(ctx, jetID, &msg.Drop)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDrop")
 	}
 
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
@@ -814,7 +814,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 		savedIndex, err := h.db.GetObjectIndex(ctx, jetID, &id, false)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "[ handleHotRecords ] Can't GetObjectIndex")
 		}
 		isMine := savedIndex != nil
 
@@ -839,7 +839,12 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 	err = h.db.UpdateJetTree(ctx, msg.PulseNumber, *jet.NewID(2, []byte{1 << 7})) // 10
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetJetTree")
+	}
+
+	err = h.db.ResetDropSizeHistory(ctx, msg.JetDropSizeHistory)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't ResetDropSizeHistory")
 	}
 
 	return &reply.OK{}, nil

@@ -228,7 +228,7 @@ func (e *GetChildren) Type() core.MessageType {
 type JetDrop struct {
 	ledgerMessage
 
-	Jet core.RecordID
+	JetID core.RecordID
 
 	Drop        []byte
 	Messages    [][]byte
@@ -248,7 +248,7 @@ func (*JetDrop) DefaultRole() core.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (jd *JetDrop) DefaultTarget() *core.RecordRef {
-	return core.NewRecordRef(core.RecordID{}, jd.Jet)
+	return core.NewRecordRef(core.RecordID{}, jd.JetID)
 }
 
 // Type implementation of Message interface.
@@ -374,11 +374,12 @@ func (*ValidationCheck) Type() core.MessageType {
 // HotData contains hot-data
 type HotData struct {
 	ledgerMessage
-	Jet             core.RecordRef
-	Drop            jet.JetDrop
-	RecentObjects   map[core.RecordID]*HotIndex
-	PendingRequests map[core.RecordID][]byte
-	PulseNumber     core.PulseNumber
+	Jet                core.RecordRef
+	Drop               jet.JetDrop
+	RecentObjects      map[core.RecordID]*HotIndex
+	PendingRequests    map[core.RecordID][]byte
+	PulseNumber        core.PulseNumber
+	JetDropSizeHistory jet.DropSizeHistory
 }
 
 // AllowedSenderObjectAndRole implements interface method

@@ -72,21 +72,6 @@ func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCry
 	return serviceNetwork, nil
 }
 
-// GetAddress returns host public address.
-func (n *ServiceNetwork) GetAddress() string {
-	return n.hostNetwork.PublicAddress()
-}
-
-// GetNodeID returns current node id.
-func (n *ServiceNetwork) GetNodeID() core.RecordRef {
-	return n.NodeNetwork.GetOrigin().ID()
-}
-
-// GetGlobuleID returns current globule id.
-func (n *ServiceNetwork) GetGlobuleID() core.GlobuleID {
-	return 0
-}
-
 // SendMessage sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
 	return n.controller.SendMessage(nodeID, method, msg)
