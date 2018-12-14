@@ -235,3 +235,23 @@ func TestDB_IterateLocalData(t *testing.T) {
 		{k: []byte{2}, v: []byte{2}},
 	}, results)
 }
+
+func TestDB_Close(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+
+	jetID := testutils.RandomID()
+
+	cleaner()
+
+	rec, err := db.GetRecord(ctx, jetID, &core.RecordID{})
+	assert.Nil(t, rec)
+	assert.Equal(t, err, storage.ErrClosed)
+
+	rec = &record.CallRequest{}
+	gotRef, err := db.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, rec)
+	assert.Nil(t, gotRef)
+	assert.Equal(t, err, storage.ErrClosed)
+}
