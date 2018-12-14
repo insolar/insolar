@@ -107,10 +107,10 @@ func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving address")
 	}
-	nodeID := core.NewRefFromBase58(id)
-	if nodeID.Equal(core.RecordRef{}) {
-		return nil, errors.New("error parsing NodeID from string (NodeID is zero)")
+	nodeID, err := core.NewRefFromBase58(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "error parsing NodeID from string")
 	}
-	origin := &host.Host{NodeID: nodeID, Address: address}
+	origin := &host.Host{NodeID: *nodeID, Address: address}
 	return origin, nil
 }

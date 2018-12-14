@@ -25,6 +25,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
@@ -130,7 +133,7 @@ func TestBasicGeneration(t *testing.T) {
 		t.Parallel()
 
 		buf := bytes.Buffer{}
-		err := parsed.WriteProxy("testRef", &buf)
+		err := parsed.WriteProxy(testutils.RandomRef().String(), &buf)
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -235,7 +238,7 @@ func TestCompileContractProxy(t *testing.T) {
 	parsed, err := ParseFile(filepath.Join(tmpDir, "/contracts/secondary/main.go"))
 	assert.NoError(t, err)
 
-	err = parsed.WriteProxy("testRef", proxyFh)
+	err = parsed.WriteProxy(testutils.RandomRef().String(), proxyFh)
 	assert.NoError(t, err)
 
 	err = proxyFh.Close()
@@ -250,7 +253,8 @@ import (
 )
 
 func main() {
-	_ = secondary.GetObject(core.NewRefFromBase58("some"))
+	ref, _ := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	_ = secondary.GetObject(*ref)
 }
 	`)
 	assert.NoError(t, err)
@@ -310,7 +314,7 @@ func ( a *A ) Get(
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy("testRef", &bufProxy)
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), "var ret0 int")
 	assert.Contains(t, bufProxy.String(), "ret[0] = &ret0")
@@ -448,7 +452,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType) error {
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy("testRef", &bufProxy)
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/pointerPath"`)
@@ -492,7 +496,7 @@ func ( A ) Get(i someAlias.SomeType) error {
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy("testRef", &bufProxy)
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `someAlias "some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -536,7 +540,7 @@ func ( A ) Get() error {
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy("testRef", &bufProxy)
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufProxy.String(), `"some/test/import/path"`)
 	code, err := ioutil.ReadAll(&bufProxy)
@@ -578,7 +582,7 @@ func ( A ) Get() (path.SomeValue, error) {
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy("testRef", &bufProxy)
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
 	code, err := ioutil.ReadAll(&bufProxy)
@@ -611,7 +615,7 @@ type A struct{
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy("testRef", &bufProxy)
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
 	assert.EqualError(t, err, "couldn't match filename without extension and path")
 }
 
@@ -640,9 +644,10 @@ func TestProxyGeneration(t *testing.T) {
 			assert.NoError(t, err)
 
 			buff := bytes.NewBufferString("")
-			parsed.WriteProxy("", buff)
+			err = parsed.WriteProxy("", buff)
+			require.NoError(t, err)
 
-			cmd := exec.Command("diff", proxy, "-")
+			cmd := exec.Command("diff", "-u", proxy, "-")
 			cmd.Stdin = buff
 			out, err := cmd.CombinedOutput()
 			assert.NoError(t, err, string(out))
