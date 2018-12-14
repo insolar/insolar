@@ -743,7 +743,7 @@ func (h *MessageHandler) findHeavy(ctx context.Context, obj *core.RecordID, puls
 }
 
 func (h *MessageHandler) saveIndexFromHeavy(
-	ctx context.Context, s storage.Store, jet core.RecordID, obj core.RecordRef, heavy *core.RecordRef,
+	ctx context.Context, s storage.Store, jetID core.RecordID, obj core.RecordRef, heavy *core.RecordRef,
 ) (*index.ObjectLifeline, error) {
 	currentPulse, err := h.db.GetLatestPulse(ctx)
 	if err != nil {
@@ -770,7 +770,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	err = s.SetObjectIndex(ctx, jet, obj.Record(), idx)
+	err = s.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}

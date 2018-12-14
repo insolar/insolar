@@ -222,14 +222,14 @@ func (db *DB) Stop(ctx context.Context) error {
 
 // GetBlob returns binary value stored by record ID.
 // TODO: switch from reference to passing blob id for consistency - @nordicdyno 6.Dec.2018
-func (db *DB) GetBlob(ctx context.Context, jet core.RecordID, id *core.RecordID) ([]byte, error) {
+func (db *DB) GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error) {
 	var (
 		blob []byte
 		err  error
 	)
 
 	err = db.View(ctx, func(tx *TransactionManager) error {
-		blob, err = tx.GetBlob(ctx, jet, id)
+		blob, err = tx.GetBlob(ctx, jetID, id)
 		return err
 	})
 	if err != nil {
@@ -239,13 +239,13 @@ func (db *DB) GetBlob(ctx context.Context, jet core.RecordID, id *core.RecordID)
 }
 
 // SetBlob saves binary value for provided pulse.
-func (db *DB) SetBlob(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+func (db *DB) SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
 	)
 	err = db.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetBlob(ctx, jet, pulseNumber, blob)
+		id, err = tx.SetBlob(ctx, jetID, pulseNumber, blob)
 		return err
 	})
 	if err != nil {
@@ -255,14 +255,14 @@ func (db *DB) SetBlob(ctx context.Context, jet core.RecordID, pulseNumber core.P
 }
 
 // GetRecord wraps matching transaction manager method.
-func (db *DB) GetRecord(ctx context.Context, jet core.RecordID, id *core.RecordID) (record.Record, error) {
+func (db *DB) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error) {
 	var (
 		fetchedRecord record.Record
 		err           error
 	)
 
 	err = db.View(ctx, func(tx *TransactionManager) error {
-		fetchedRecord, err = tx.GetRecord(ctx, jet, id)
+		fetchedRecord, err = tx.GetRecord(ctx, jetID, id)
 		return err
 	})
 	if err != nil {
@@ -272,13 +272,13 @@ func (db *DB) GetRecord(ctx context.Context, jet core.RecordID, id *core.RecordI
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (db *DB) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
 	)
 	err = db.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(ctx, jet, pulseNumber, rec)
+		id, err = tx.SetRecord(ctx, jetID, pulseNumber, rec)
 		return err
 	})
 	if err != nil {
@@ -290,14 +290,14 @@ func (db *DB) SetRecord(ctx context.Context, jet core.RecordID, pulseNumber core
 // GetObjectIndex wraps matching transaction manager method.
 func (db *DB) GetObjectIndex(
 	ctx context.Context,
-	jet core.RecordID,
+	jetID core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
 ) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	idx, err := tx.GetObjectIndex(ctx, jet, id, forupdate)
+	idx, err := tx.GetObjectIndex(ctx, jetID, id, forupdate)
 	if err != nil {
 		return nil, err
 	}
@@ -307,23 +307,23 @@ func (db *DB) GetObjectIndex(
 // SetObjectIndex wraps matching transaction manager method.
 func (db *DB) SetObjectIndex(
 	ctx context.Context,
-	jet core.RecordID,
+	jetID core.RecordID,
 	id *core.RecordID,
 	idx *index.ObjectLifeline,
 ) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.SetObjectIndex(ctx, jet, id, idx)
+		return tx.SetObjectIndex(ctx, jetID, id, idx)
 	})
 }
 
 // RemoveObjectIndex removes an index of an object
 func (db *DB) RemoveObjectIndex(
 	ctx context.Context,
-	jet core.RecordID,
+	jetID core.RecordID,
 	ref *core.RecordID,
 ) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.RemoveObjectIndex(ctx, jet, ref)
+		return tx.RemoveObjectIndex(ctx, jetID, ref)
 	})
 }
 
@@ -396,7 +396,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 }
 
 // SetMessage persists message to the database
-func (db *DB) SetMessage(ctx context.Context, jet core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
+func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
 	messageBytes := message.ToBytes(genericMessage)
 	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
@@ -407,7 +407,7 @@ func (db *DB) SetMessage(ctx context.Context, jet core.RecordID, pulseNumber cor
 
 	return db.set(
 		ctx,
-		prefixkeyany(scopeIDMessage, jet[:], pulseNumber.Bytes(), hw.Sum(nil)),
+		prefixkeyany(scopeIDMessage, jetID[:], pulseNumber.Bytes(), hw.Sum(nil)),
 		messageBytes,
 	)
 }
@@ -445,11 +445,11 @@ func (db *DB) IterateLocalData(
 // IterateRecords iterates over records.
 func (db *DB) IterateRecords(
 	ctx context.Context,
-	jet core.RecordID,
+	jetID core.RecordID,
 	pulse core.PulseNumber,
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
-	prefix := prefixkeyany(scopeIDRecord, jet[:], pulse.Bytes())
+	prefix := prefixkeyany(scopeIDRecord, jetID[:], pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := core.NewRecordID(pulse, k)

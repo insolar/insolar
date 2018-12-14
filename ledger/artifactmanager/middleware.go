@@ -32,8 +32,8 @@ type middleware struct {
 
 type jetKey struct{}
 
-func contextWithJet(ctx context.Context, jet core.RecordID) context.Context {
-	return context.WithValue(ctx, jetKey{}, jet)
+func contextWithJet(ctx context.Context, jetID core.RecordID) context.Context {
+	return context.WithValue(ctx, jetKey{}, jetID)
 }
 
 func jetFromContext(ctx context.Context) core.RecordID {
