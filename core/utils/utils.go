@@ -134,10 +134,10 @@ func MeasureExecutionTime(ctx context.Context, comment string, thefunction func(
 		return
 	}
 
-	traceId := TraceID(ctx)
+	traceID := TraceID(ctx)
 
 	start := TimestampMs()
-	err := writeMeasure("%v %s STARTED %s\n", start, traceId, comment)
+	err := writeMeasure("%v %s STARTED %s\n", start, traceID, comment)
 	if err != nil {
 		return
 	}
@@ -146,5 +146,5 @@ func MeasureExecutionTime(ctx context.Context, comment string, thefunction func(
 
 	end := TimestampMs()
 	delta := end - start
-	_ = writeMeasure("%v %s ENDED %s, took: %v ms\n", end, traceId, comment, delta)
+	_ = writeMeasure("%v %s ENDED %s, took: %v ms\n", end, traceID, comment, delta)
 }
