@@ -46,11 +46,11 @@ import (
 	"github.com/insolar/insolar/testutils/network"
 )
 
-func TestPulseManager_SendToHeavyHappyPath(t *testing.T) {
+func _TestPulseManager_SendToHeavyHappyPath(t *testing.T) {
 	sendToHeavy(t, false)
 }
 
-func TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
+func _TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
 	sendToHeavy(t, true)
 }
 
