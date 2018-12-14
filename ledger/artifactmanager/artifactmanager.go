@@ -41,8 +41,15 @@ type LedgerArtifactManager struct {
 	db                         *storage.DB
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	codeCacheLock              *sync.Mutex
+	codeCache                  map[core.RecordRef]*cacheEntry
 
 	getChildrenChunkSize int
+}
+
+type cacheEntry struct {
+	sync.Mutex
+	desc core.CodeDescriptor
 }
 
 // State returns hash state for artifact manager.
@@ -53,7 +60,12 @@ func (m *LedgerArtifactManager) State() ([]byte, error) {
 
 // NewArtifactManger creates new manager instance.
 func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
-	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}
+	return &LedgerArtifactManager{
+		db:                   db,
+		getChildrenChunkSize: getChildrenChunkSize,
+		codeCacheLock:        &sync.Mutex{},
+		codeCache:            make(map[core.RecordRef]*cacheEntry),
+	}
 }
 
 // GenesisRef returns the root record reference.
@@ -77,12 +89,15 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		return nil, err
 	}
 
+	rec := record.CallRequest{
+		Payload: message.ParcelToBytes(parcel),
+	}
+	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.Pulse.PulseNumber, &rec)
+	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
 	id, err := m.setRecord(
 		ctx,
-		&record.CallRequest{
-			Payload: message.ParcelToBytes(parcel),
-		},
-		*parcel.Message().DefaultTarget(),
+		&rec,
+		*recRef,
 		currentPulse.Pulse,
 	)
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
@@ -97,6 +112,21 @@ func (m *LedgerArtifactManager) GetCode(
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetCode starts ...")
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
+
+	m.codeCacheLock.Lock()
+	entry, ok := m.codeCache[code]
+	if !ok {
+		entry = &cacheEntry{}
+		m.codeCache[code] = entry
+	}
+	m.codeCacheLock.Unlock()
+
+	entry.Lock()
+	defer entry.Unlock()
+
+	if entry.desc != nil {
+		return entry.desc, nil
+	}
 
 	latestPulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
@@ -126,8 +156,9 @@ func (m *LedgerArtifactManager) GetCode(
 		ctx:         ctx,
 		ref:         code,
 		machineType: react.MachineType,
+		code:        react.Code,
 	}
-	desc.cache.code = react.Code
+	entry.desc = &desc
 	return &desc, nil
 }
 
