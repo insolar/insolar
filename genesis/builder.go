@@ -23,11 +23,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
@@ -52,6 +52,14 @@ func WriteFile(dir string, name string, text string) error {
 		return err
 	}
 	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
+}
+
+func OpenFile(dir string, name string) (*os.File, error) {
+	err := os.MkdirAll(dir, 0775)
+	if err != nil {
+		return nil, err
+	}
+	return os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 }
 
 // ContractsBuilder for tests
@@ -91,7 +99,7 @@ func (cb *ContractsBuilder) Clean() {
 }
 
 // Build ...
-func (cb *ContractsBuilder) Build(contracts map[string]string) error {
+func (cb *ContractsBuilder) Build(contracts map[string]*preprocessor.ParsedFile) error {
 	ctx := context.TODO()
 
 	for name := range contracts {
@@ -109,21 +117,37 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		cb.Prototypes[name] = &protoRef
 	}
 
-	re := regexp.MustCompile(`package\s+\S+`)
 	for name, code := range contracts {
-		//preprocessor.ParseFile()
-		code = re.ReplaceAllString(code, "package main")
-		err := WriteFile(filepath.Join(cb.root, "src/contract", name), "main.go", code)
+		code.ChangePackageToMain()
+
+		ctr, err := OpenFile(filepath.Join(cb.root, "src/contract", name), "main.go")
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] Can't open contract file")
+		}
+		err = code.Write(ctr)
+		ctr.Close()
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't WriteFile")
 		}
-		err = cb.proxy(name)
+
+		proxy, err := OpenFile(filepath.Join(cb.root, "src/github.com/insolar/insolar/application/proxy", name), "main.go")
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't call proxy")
+			return errors.Wrap(err, "[ Build ] Can't open proxy file")
 		}
-		err = cb.wrapper(name)
+		err = code.WriteProxy(cb.Prototypes[name].String(), proxy)
+		proxy.Close()
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't call wrapper")
+			return errors.Wrap(err, "[ Build ] Can't write proxy")
+		}
+
+		wrp, err := OpenFile(filepath.Join(cb.root, "src/contract", name), "main_wrapper.go")
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] Can't open wrapper file")
+		}
+		err = code.WriteWrapper(wrp)
+		wrp.Close()
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] Can't write wrapper")
 		}
 	}
 
@@ -139,11 +163,18 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
+		nonce := testutils.RandomRef()
+		codeReq, err := cb.ArtifactManager.RegisterRequest(
+			ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+		)
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+		}
 
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
-			core.RecordRef{}, core.RecordRef{},
+			core.RecordRef{}, *core.NewRecordRef(core.RecordID{}, *codeReq),
 			pluginBinary, core.MachineTypeGoPlugin,
 		)
 		codeRef := &core.RecordRef{}
@@ -168,39 +199,6 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 	}
 
-	return nil
-}
-
-func (cb *ContractsBuilder) proxy(name string) error {
-	dstDir := filepath.Join(cb.root, "src/github.com/insolar/insolar/application/proxy", name)
-
-	err := os.MkdirAll(dstDir, 0777)
-	if err != nil {
-		return errors.Wrap(err, "[ proxy ]")
-	}
-
-	contractPath := filepath.Join(cb.root, "src/contract", name, "main.go")
-
-	out, err := exec.Command(
-		cb.IccPath, "proxy",
-		"-o", filepath.Join(dstDir, "main.go"),
-		"--code-reference", cb.Prototypes[name].String(),
-		contractPath,
-	).CombinedOutput()
-	if err != nil {
-		return errors.Wrap(err, "can't generate proxy: "+string(out))
-	}
-	return nil
-}
-
-func (cb *ContractsBuilder) wrapper(name string) error {
-	contractPath := filepath.Join(cb.root, "src/contract", name, "main.go")
-	wrapperPath := filepath.Join(cb.root, "src/contract", name, "main_wrapper.go")
-
-	out, err := exec.Command(cb.IccPath, "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
-	if err != nil {
-		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"': "+string(out))
-	}
 	return nil
 }
 
