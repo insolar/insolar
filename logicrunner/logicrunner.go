@@ -334,7 +334,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	if es.Current == nil {
 		inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-		go lr.ProcessExecutionQueue(es)
+		go lr.ProcessExecutionQueue(ctx, es)
 	}
 	es.Unlock()
 
@@ -351,10 +351,11 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	return res.reply, nil
 }
 
-func (lr *LogicRunner) ProcessExecutionQueue(es *ExecutionState) {
+func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
 	// Current == nil indicates that we have no queue processor
 	// and one should be started
 	defer func() {
+		inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
 		es.Lock()
 		es.Current = nil
 		es.Unlock()
