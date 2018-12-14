@@ -199,7 +199,7 @@ func NodeToClaim(node core.Node) (*NodeJoinClaim, error) {
 		NodeRoleRecID:           node.Role(),
 		NodeRef:                 node.ID(),
 		NodePK:                  keyData,
-		NodeAddress:             NewNodeAddress(node.PhysicalAddress()),
+		NodeAddress:             NewNodeAddress(node.Address()),
 		Signature:               s,
 	}, nil
 }

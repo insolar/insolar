@@ -19,6 +19,9 @@ package nodenetwork
 import (
 	"crypto"
 	"encoding/gob"
+	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
@@ -41,23 +44,29 @@ type node struct {
 
 	NodePulseNum core.PulseNumber
 
-	NodePhysicalAddress string
-	NodeVersion         string
+	NodeAddress string
+	CAddress    string
+	NodeVersion string
 }
 
 func newMutableNode(
 	id core.RecordRef,
 	role core.StaticRole,
 	publicKey crypto.PublicKey,
-	physicalAddress,
-	version string) MutableNode {
+	address, version string) MutableNode {
+
+	consensusAddress, err := incrementPort(address)
+	if err != nil {
+		panic(err)
+	}
 	return &node{
-		NodeID:              id,
-		NodeShortID:         utils.GenerateShortID(id),
-		NodeRole:            role,
-		NodePublicKey:       publicKey,
-		NodePhysicalAddress: physicalAddress,
-		NodeVersion:         version,
+		NodeID:        id,
+		NodeShortID:   utils.GenerateShortID(id),
+		NodeRole:      role,
+		NodePublicKey: publicKey,
+		NodeAddress:   address,
+		CAddress:      consensusAddress,
+		NodeVersion:   version,
 	}
 }
 
@@ -65,9 +74,8 @@ func NewNode(
 	id core.RecordRef,
 	role core.StaticRole,
 	publicKey crypto.PublicKey,
-	physicalAddress,
-	version string) core.Node {
-	return newMutableNode(id, role, publicKey, physicalAddress, version)
+	address, version string) core.Node {
+	return newMutableNode(id, role, publicKey, address, version)
 }
 
 func (n *node) ID() core.RecordRef {
@@ -86,8 +94,12 @@ func (n *node) PublicKey() crypto.PublicKey {
 	return n.NodePublicKey
 }
 
-func (n *node) PhysicalAddress() string {
-	return n.NodePhysicalAddress
+func (n *node) Address() string {
+	return n.NodeAddress
+}
+
+func (n *node) ConsensusAddress() string {
+	return n.CAddress
 }
 
 func (n *node) GetGlobuleID() core.GlobuleID {
@@ -119,4 +131,21 @@ func ClaimToNode(version string, claim *packets.NodeJoinClaim) (core.Node, error
 		claim.NodeAddress.Get(),
 		version)
 	return node, nil
+}
+
+// incrementPort increments port number if it not equals 0
+func incrementPort(address string) (string, error) {
+	parts := strings.Split(address, ":")
+	if len(parts) != 2 {
+		return address, errors.New("failed to get port from address")
+	}
+	port, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return address, err
+	}
+
+	if port != 0 {
+		port++
+	}
+	return fmt.Sprintf("%s:%d", parts[0], port), nil
 }

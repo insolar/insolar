@@ -49,7 +49,7 @@ func (t *Table) Resolve(ref core.RecordRef) (*host.Host, error) {
 		if node == nil {
 			return nil, errors.New("no such local node with NodeID: " + ref.String())
 		}
-		return host.NewHostNS(node.PhysicalAddress(), node.ID(), node.ShortID())
+		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
 	}
 	return t.resolveRemoteNode(ref)
 }
@@ -60,7 +60,7 @@ func (t *Table) ResolveS(id core.ShortNodeID) (*host.Host, error) {
 	if node == nil {
 		return nil, errors.New("no such local node with ShortID: " + strconv.FormatUint(uint64(id), 10))
 	}
-	return host.NewHostNS(node.PhysicalAddress(), node.ID(), node.ShortID())
+	return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
 }
 
 // AddToKnownHosts add host to routing table.
@@ -82,7 +82,7 @@ func (t *Table) GetRandomNodes(count int) []host.Host {
 	}
 	result := make([]host.Host, 0)
 	for i := 0; i < resultCount; i++ {
-		address, err := host.NewAddress(nodes[i].PhysicalAddress())
+		address, err := host.NewAddress(nodes[i].Address())
 		if err != nil {
 			log.Error(err)
 			continue
