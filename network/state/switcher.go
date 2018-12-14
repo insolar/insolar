@@ -87,19 +87,23 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 
 // Acquire increases lock counter and locks message bus if it wasn't lock before
 func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
-	if ns.counter == uint64(0) {
+	inslogger.FromContext(ctx).Info("Call Acquire in NetworkSwitcher: ", ns.counter)
+	ns.counter = ns.counter + 1
+	if ns.counter-1 == 0 {
+		inslogger.FromContext(ctx).Info("Acquire MB")
 		ns.MBLocker.Lock(ctx)
 	}
-	ns.counter = ns.counter + 1
 }
 
 // Release decreases lock counter and unlocks message bus if it wasn't lock by someone else
 func (ns *NetworkSwitcher) Release(ctx context.Context) {
-	if ns.counter == uint64(0) {
+	inslogger.FromContext(ctx).Info("Call Release in NetworkSwitcher: ", ns.counter)
+	if ns.counter == 0 {
 		panic("Trying to unlock without locking")
 	}
 	ns.counter = ns.counter - 1
-	if ns.counter == uint64(0) {
+	if ns.counter == 0 {
+		inslogger.FromContext(ctx).Info("Release MB")
 		ns.MBLocker.Unlock(ctx)
 	}
 }
