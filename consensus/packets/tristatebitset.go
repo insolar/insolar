@@ -228,6 +228,12 @@ func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
 			block = block << 2
 		}
 	}
+	if (blockSize != 0) && (blockSize < sizeOfBlock) {
+		block += value
+		blockSize += 2
+		block = block << uint(sizeOfBlock-blockSize)
+		payload = append(payload, block)
+	}
 	return parseBitArray(payload)
 }
 
