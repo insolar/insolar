@@ -36,8 +36,7 @@ type NetworkSwitcher struct {
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
 	MBLocker           messageBusLocker        `inject:""`
 
-	counter     uint64
-	counterLock sync.RWMutex
+	counter uint64
 
 	state     core.NetworkState
 	stateLock sync.RWMutex
@@ -87,16 +86,13 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 }
 
 func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
-	ns.counterLock.Lock()
 	if ns.counter == uint64(0) {
 		ns.MBLocker.Lock(ctx)
 	}
 	ns.counter = ns.counter + 1
-	ns.counterLock.Unlock()
 }
 
 func (ns *NetworkSwitcher) Release(ctx context.Context) {
-	ns.counterLock.Lock()
 	if ns.counter == uint64(0) {
 		panic("Trying to unlock without locking")
 	}
@@ -104,5 +100,4 @@ func (ns *NetworkSwitcher) Release(ctx context.Context) {
 	if ns.counter == uint64(0) {
 		ns.MBLocker.Unlock(ctx)
 	}
-	ns.counterLock.Unlock()
 }
