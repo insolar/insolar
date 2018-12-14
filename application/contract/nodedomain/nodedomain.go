@@ -66,6 +66,8 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	return newNodeRef.String(), err
 }
 
+var INSATTR_GetNodeRefByPK_API = true
+
 func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 	nodeRef, ok := nd.nodeIndexPK[publicKey]
 	if !ok {
