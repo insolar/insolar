@@ -326,7 +326,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		parcel:  parcel,
 		request: request,
 		pulse:   lr.pulse(ctx).PulseNumber,
-		result:  make(chan ExecutionQueueResult),
+		result:  make(chan ExecutionQueueResult, 1),
 	}
 
 	es.Lock()

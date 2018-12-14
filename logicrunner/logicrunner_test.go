@@ -543,6 +543,15 @@ func (r *One) Hello() error {
 
 	return nil
 }
+
+func (r *One) Value() (int, error) {
+	friend, err := two.GetImplementationFrom(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	return friend.Value()
+}
 `
 
 	var contractTwoCode = `
@@ -567,14 +576,15 @@ func (r *Two) Hello() (string, error) {
 	r.X *= 2
 	return fmt.Sprintf("Hello %d times!", r.X), nil
 }
+
+func (r *Two) Value() (int, error) {
+	return r.X, nil
+}
 `
 	ctx := context.TODO()
 	// TODO: use am := testutil.NewTestArtifactManager() here
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
-	defer func() {
-		time.Sleep(time.Second * 30)
-		cleaner()
-	}()
+	defer cleaner()
 
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
@@ -584,6 +594,9 @@ func (r *Two) Hello() (string, error) {
 	_, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Hello")
 	assert.NoError(t, err, "contract call")
 
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Value")
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(644), firstMethodRes(t, resp))
 }
 
 func TestContextPassing(t *testing.T) {
