@@ -82,6 +82,9 @@ type Ledger struct {
 
 	// JetSizesHistoryDepth holds maximum number of drop sizes
 	JetSizesHistoryDepth int
+
+	// Drop size in bytes to perform split.
+	SplitThreshold int
 }
 
 // NewLedger creates new default Ledger configuration.
