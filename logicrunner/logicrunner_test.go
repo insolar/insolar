@@ -182,7 +182,7 @@ func newTestPulse(ctx context.Context, lr *LogicRunner, mb *testmessagebus.TestM
 	lr.Ledger.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
-		false,
+		true,
 	)
 
 	mb.PulseNumber = newPulseNumber
@@ -1242,7 +1242,7 @@ func New(n int) (*Child, error) {
 	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}},
-		false,
+		true,
 	)
 	assert.NoError(t, err)
 
@@ -1648,7 +1648,7 @@ func (r *One) ShortSleep() (error) {
 		err = pm.Set(
 			ctx,
 			core.Pulse{PulseNumber: 1, Entropy: core.Entropy{}},
-			false,
+			true,
 		)
 		log.Debugf("!!!!! Pulse end")
 	}()

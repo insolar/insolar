@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
@@ -80,10 +81,16 @@ func TestBareHelloworld(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseNumber = 0
 
+	gil := testutils.NewGlobalInsolarLockMock(t)
+	gil.AcquireMock.Return()
+	gil.ReleaseMock.Return()
+
+	l.PulseManager.(*pulsemanager.PulseManager).GIL = gil
+
 	_ = l.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: mb.PulseNumber, Entropy: core.Entropy{}},
-		false,
+		true,
 	)
 
 	nw := network.GetTestNetwork()
@@ -92,7 +99,7 @@ func TestBareHelloworld(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Register(scheme)
 	cm.Register(l.GetPulseManager(), l.GetArtifactManager(), l.GetJetCoordinator())
- 	cm.Inject(nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
