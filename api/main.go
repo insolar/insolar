@@ -176,8 +176,11 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 		return publicKey, nil
 	}
 
-	reference := core.NewRefFromBase58(ref)
-	res, err := ar.ContractRequester.SendRequest(ctx, &reference, "GetPublicKey", []interface{}{})
+	reference, err := core.NewRefFromBase58(ref)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't parse ref")
+	}
+	res, err := ar.ContractRequester.SendRequest(ctx, reference, "GetPublicKey", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't get public key")
 	}

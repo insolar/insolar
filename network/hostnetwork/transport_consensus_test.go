@@ -35,20 +35,28 @@ import (
 func createTwoConsensusNetworks(id1, id2 core.ShortNodeID) (t1, t2 network.ConsensusNetwork, err error) {
 	m := newMockResolver()
 
-	cn1, err := NewConsensusNetwork("127.0.0.1:0", ID1, id1, m)
+	cn1, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, id1, m)
 	if err != nil {
 		return nil, nil, err
 	}
-	cn2, err := NewConsensusNetwork("127.0.0.1:0", ID2, id2, m)
+	cn2, err := NewConsensusNetwork("127.0.0.1:0", ID2+DOMAIN, id2, m)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	routing1, err := host.NewHostNS(cn1.PublicAddress(), core.NewRefFromBase58(ID1), id1)
+	ref1, err := core.NewRefFromBase58(ID2 + DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	routing2, err := host.NewHostNS(cn2.PublicAddress(), core.NewRefFromBase58(ID2), id2)
+	routing1, err := host.NewHostNS(cn1.PublicAddress(), *ref1, id1)
+	if err != nil {
+		return nil, nil, err
+	}
+	ref2, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	if err != nil {
+		return nil, nil, err
+	}
+	routing2, err := host.NewHostNS(cn2.PublicAddress(), *ref2, id2)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -91,7 +99,7 @@ func TestTransportConsensus_SendRequest(t *testing.T) {
 func TestTransportConsensus_RegisterPacketHandler(t *testing.T) {
 	m := newMockResolver()
 
-	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1, 0, m)
+	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, 0, m)
 	require.NoError(t, err)
 	defer cn.Stop()
 	handler := func(request network.Request) {
