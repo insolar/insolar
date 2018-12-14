@@ -521,7 +521,7 @@ func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {
 		go nc.PulseHandler.HandlePulse(context.Background(), newPulse)
 	}
 
-	nc.phase1result <- phase1Result{request.GetSender(), request.GetSenderHost().Address, p}
+	nc.phase1result <- phase1Result{id: request.GetSender(), packet: p}
 }
 
 func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
@@ -543,7 +543,7 @@ func (nc *NaiveCommunicator) phase2DataHandler(request network.Request) {
 		return
 	}
 
-	nc.phase2result <- phase2Result{request.GetSender(), p}
+	nc.phase2result <- phase2Result{id: request.GetSender(), packet: p}
 }
 
 func (nc *NaiveCommunicator) phase3DataHandler(request network.Request) {
@@ -555,5 +555,5 @@ func (nc *NaiveCommunicator) phase3DataHandler(request network.Request) {
 	if !ok {
 		log.Warn("failed to cast a type 3 packet to phase3packet")
 	}
-	nc.phase3result <- phase3Result{request.GetSender(), packet}
+	nc.phase3result <- phase3Result{id: request.GetSender(), packet: packet}
 }

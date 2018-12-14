@@ -51,7 +51,6 @@ type FirstPhase struct {
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
-	State        *FirstPhaseState
 	UnsyncList   network.UnsyncList
 }
 
