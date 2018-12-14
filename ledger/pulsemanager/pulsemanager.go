@@ -302,17 +302,21 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, persist bool) 
 
 	lastSlotPulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
+		m.GIL.Release(ctx)
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
 	// swap active nodes
-	m.ActiveListSwapper.MoveSyncToActive()
+	// TODO: fix network consensus and uncomment this (after NETD18-74)
+	// m.ActiveListSwapper.MoveSyncToActive()
 	if persist {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
+			m.GIL.Release(ctx)
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
+			m.GIL.Release(ctx)
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
