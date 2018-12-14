@@ -132,6 +132,17 @@ func (p1p *Phase1Packet) RemoveAnnounceClaim() {
 	}
 }
 
+func (p1p *Phase1Packet) GetAnnounceClaim() *NodeAnnounceClaim {
+	for _, claim := range p1p.claims {
+		c, ok := claim.(*NodeAnnounceClaim)
+		if !ok {
+			continue
+		}
+		return c
+	}
+	return nil
+}
+
 func (p1p *Phase1Packet) GetClaims() []ReferendumClaim {
 	return p1p.claims
 }

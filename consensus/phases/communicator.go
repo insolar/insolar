@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
@@ -49,9 +48,8 @@ type Communicator interface {
 }
 
 type phase1Result struct {
-	id      core.RecordRef
-	address *host.Address
-	packet  *packets.Phase1Packet
+	id     core.RecordRef
+	packet *packets.Phase1Packet
 }
 
 type phase2Result struct {
@@ -69,6 +67,7 @@ type NaiveCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
 	PulseHandler     network.PulseHandler     `inject:""`
 	Cryptography     core.CryptographyService `inject:""`
+	NodeKeeper       network.NodeKeeper       `inject:""`
 
 	phase1result chan phase1Result
 	phase2result chan phase2Result
@@ -264,6 +263,19 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 		case res := <-nc.phase1result:
 			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
 				continue
+			}
+
+			if res.id.IsEmpty() {
+				claim := res.packet.GetAnnounceClaim()
+				if claim == nil {
+					continue
+				}
+				res.id = claim.NodeRef
+				err := nc.NodeKeeper.AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
+				if err != nil {
+					inslogger.FromContext(ctx).Warn("Error adding temporary mapping: " + err.Error())
+					continue
+				}
 			}
 
 			if shouldSendResponse(res.id) {
