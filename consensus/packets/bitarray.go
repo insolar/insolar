@@ -32,6 +32,9 @@ type bitArray struct {
 }
 
 func round(dividend, divider int) float64 {
+	if (dividend % divider) == 0 {
+		return float64(dividend / divider)
+	}
 	return math.Round(float64(dividend/divider) + 0.5)
 }
 
@@ -93,7 +96,6 @@ func (arr *bitArray) serializeCompressed() ([]byte, error) {
 			return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
 		}
 		if (last != current) || (i+1 >= arr.bitsSize/2) {
-			count++
 			err := binary.Write(&result, binary.BigEndian, count)
 			if err != nil {
 				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
@@ -102,7 +104,7 @@ func (arr *bitArray) serializeCompressed() ([]byte, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
 			}
-			count = 0
+			count = 1
 			last = current
 		} else {
 			count++
