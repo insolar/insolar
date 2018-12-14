@@ -36,6 +36,10 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/insolar/insolar/platformpolicy"
+
+	"github.com/insolar/insolar/core"
+
 	"github.com/pkg/errors"
 )
 
@@ -264,6 +268,17 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	proxyPackageName, err := pf.ProxyPackageName()
 	if err != nil {
 		return err
+	}
+
+	if classReference == "" {
+		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
+		codeHash := hasher.Hash([]byte(pf.code))
+		ref := core.NewRecordRef(core.RecordID{}, *core.NewRecordID(0, codeHash))
+		classReference = ref.String()
+	}
+	_, err = core.NewRefFromBase58(classReference)
+	if err != nil {
+		return errors.Wrap(err, "can't write proxy: ")
 	}
 
 	tmpl, err := openTemplate("templates/proxy.go.tpl")

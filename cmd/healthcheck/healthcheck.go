@@ -46,7 +46,11 @@ func main() {
 		os.Exit(2)
 	}
 
-	ref := core.NewRefFromBase58(*refString)
+	ref, err := core.NewRefFromBase58(*refString)
+	if err != nil {
+		log.Errorf("Failed to parse healthcheck contract ref: %s", err.Error())
+		os.Exit(2)
+	}
 
 	empty, _ := core.Serialize([]interface{}{})
 
@@ -54,7 +58,7 @@ func main() {
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{
 		Context:   &core.LogicCallContext{Caller: &caller},
-		Code:      ref,
+		Code:      *ref,
 		Data:      empty,
 		Method:    "Check",
 		Arguments: empty,

@@ -24,6 +24,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/insolar/insolar/testutils"
+
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/stretchr/testify/assert"
@@ -67,7 +69,7 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 			assert.NoError(t, err)
 
 			var buf bytes.Buffer
-			err = parsed.WriteProxy("testRef", &buf)
+			err = parsed.WriteProxy(testutils.RandomRef().String(), &buf)
 			assert.NoError(t, err)
 
 			code, err := ioutil.ReadAll(&buf)

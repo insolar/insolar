@@ -1,7 +1,7 @@
 {
     "majority_rule": 0,
     "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/kltJAtODHfdxAtn/H/TPbdPsx+G\n6DhdDIFrridWSphE8ejBZXGPwR6Rou57n4FdHVavUgm4jBrBu9fdOMXLjA==\n-----END PUBLIC KEY-----\n",
-    "reference": "55aevHu65iDsYnDLPxtH2p2p6ZDDyXqNww4dFZRKHbZ7FBAr8U3cVbtMYh8CfGbNuTjSf4R1j7fkgzx1uMmwnYvf",
+    "reference": "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
     "roles": [],
     "bootstrap_nodes": []
 }
