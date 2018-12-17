@@ -107,8 +107,6 @@ func (q *quicTransport) Listen(ctx context.Context) error {
 
 // Stop stops networking.
 func (q *quicTransport) Stop() {
-	q.mutex.Lock()
-	defer q.mutex.Unlock()
 
 	log.Debug("[ Stop ] Stop QUIC transport")
 	q.prepareDisconnect()
