@@ -481,11 +481,16 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 
 	nc.sendRequestToNodes(participants, request)
 
+	shouldSendResponse := func(p *phase3Result) bool {
+		val, ok := result[p.id]
+		return !ok || val == nil
+	}
+
 	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	for {
 		select {
 		case res := <-nc.phase3result:
-			if val, ok := result[res.id]; !ok || val == nil {
+			if shouldSendResponse(&res) {
 				// send response
 				err := nc.ConsensusNetwork.SendRequest(request, res.id)
 				if err != nil {
@@ -502,6 +507,8 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 			return result, nil
 		}
 	}
+
+	return result, nil
 }
 
 func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {

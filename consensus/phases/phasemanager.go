@@ -79,12 +79,17 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 		return errors.Wrap(err, "Network consensus: error executing phase 2.1")
 	}
 
-	state := secondPhaseState
-	if len(state.MatrixState.AdditionalRequestsPhase2) != 0 {
-		return errors.New("Failed to get all node proofs in phases 2.0 and 2.1")
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
+
+	thirdPhaseState, err := pm.ThirdPhase.Execute(ctx, secondPhaseState)
+	if err != nil {
+		return errors.Wrap(err, "Network consensus: error executing phase 3")
 	}
-	state.UnsyncList.ApproveSync(state.MatrixState.Active)
+
+	thirdPhaseState.UnsyncList.ApproveSync(thirdPhaseState.ActiveNodes)
 	pm.NodeKeeper.Sync(secondPhaseState.UnsyncList)
+	// TODO: set cloud hash
 
 	return nil
 }

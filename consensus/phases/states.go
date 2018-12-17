@@ -53,3 +53,9 @@ type SecondPhaseState struct {
 
 	BitSet packets.BitSet
 }
+
+type ThirdPhaseState struct {
+	ActiveNodes []core.RecordRef
+	UnsyncList  network.UnsyncList
+	CloudHash   merkle.OriginHash
+}

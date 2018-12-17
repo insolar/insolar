@@ -21,7 +21,9 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
 
@@ -30,13 +32,10 @@ type ThirdPhase struct {
 	NodeNetwork  core.NodeNetwork         `inject:""`
 	Communicator Communicator             `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
-
-	newActiveNodeList []core.Node
-	// TODO: insert it from somewhere
-	mapper packets.BitSetMapper
+	Calculator   merkle.Calculator        `inject:""`
 }
 
-func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
+func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*ThirdPhaseState, error) {
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(gSign, state.BitSet)
@@ -44,53 +43,36 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) erro
 	err := tp.signPhase3Packet(&packet)
 
 	if err != nil {
-		return errors.Wrap(err, "[ Execute ] failed to sign a phase 3 packet")
+		return nil, errors.Wrap(err, "[ Phase 3 ] Failed to sign phase 3 packet")
 	}
 
-	nodes := tp.NodeKeeper.GetActiveNodes()
-	answers, err := tp.Communicator.ExchangePhase3(ctx, nodes, &packet)
+	nodes := state.FirstPhaseState.UnsyncList.GetActiveNodes()
+	responses, err := tp.Communicator.ExchangePhase3(ctx, nodes, &packet)
 	if err != nil {
-		return errors.Wrap(err, "[ Execute ] failed to get answers on phase 3")
+		return nil, errors.Wrap(err, "[ Phase 3 ] Failed exchange packets on phase 3")
 	}
 
-	for ref, packet := range answers {
+	for ref, packet := range responses {
 		signed, err := tp.isSignPhase3PacketRight(packet, ref)
 		if err != nil {
-			return errors.Wrap(err, "[ Execute ] failed to check a packet sign")
+			inslogger.FromContext(ctx).Warnf("Failed to check phase3 packet signature from %s: %s", ref, err.Error())
+			continue
 		} else if !signed {
-			return errors.New("recv not signed packet")
+			inslogger.FromContext(ctx).Warnf("Received phase3 packet from %s with bad signature", ref)
+			continue
 		}
-		cells, err := packet.GetBitset().GetCells(tp.mapper)
-		if err != nil {
-			return errors.Wrap(err, "[ Execute ] failed to get a cells")
-		}
-		for _, cell := range cells {
-			if cell.State == packets.Legit {
-				node, err := getNode(cell.NodeID, nodes)
-				if err != nil {
-					return errors.Wrap(err, "[ Execute ] failed to find a node on phase 3")
-				}
-				tp.newActiveNodeList = append(tp.newActiveNodeList, node)
-			}
-		}
+		// not needed until we implement fraud detection
+		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
+
+		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 	}
 
 	// cloudEntry := &merkle.CloudEntry{
 	//
 	// }
+	// cloudHash, _, _ := tp.Calculator.GetCloudProof(cloudEntry)
 
-	// cloudHash, _, _ := sp.Calculator.GetCloudProof(cloudEntry)
-
-	return nil
-}
-
-func getNode(ref core.RecordRef, nodes []core.Node) (core.Node, error) {
-	for _, node := range nodes {
-		if ref == node.ID() {
-			return node, nil
-		}
-	}
-	return nil, errors.New("[ getNode ] failed to find a node on phase 3")
+	return &ThirdPhaseState{}, nil
 }
 
 func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
@@ -104,7 +86,6 @@ func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
 	}
 
 	copy(p.SignatureHeaderSection1[:], sign.Bytes())
-	// TODO: sign a second part after claim addition
 	return nil
 }
 
