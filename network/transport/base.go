@@ -134,6 +134,7 @@ func (t *baseTransport) prepareDisconnect() {
 	defer t.mutex.Unlock()
 
 	t.disconnectStarted <- true
+	close(t.disconnectStarted)
 }
 
 func (t *baseTransport) prepareListen() {
