@@ -104,12 +104,12 @@ func (lre Error) Error() string {
 	return buffer.String()
 }
 
-func (os *ObjectState) MustModeState(mode string) (res *ExecutionState) {
+func (st *ObjectState) MustModeState(mode string) (res *ExecutionState) {
 	switch mode {
 	case "execution":
-		res = os.ExecutionState
+		res = st.ExecutionState
 	case "validation":
-		res = os.Validation
+		res = st.Validation
 	default:
 		panic("'" + mode + "' is unknown object processing mode")
 	}
@@ -119,7 +119,7 @@ func (os *ObjectState) MustModeState(mode string) (res *ExecutionState) {
 	return res
 }
 
-func (os *ObjectState) WrapError(err error, message string) error {
+func (st *ObjectState) WrapError(err error, message string) error {
 	if err == nil {
 		err = errors.New(message)
 	} else {
@@ -127,7 +127,7 @@ func (os *ObjectState) WrapError(err error, message string) error {
 	}
 	return Error{
 		Err:      err,
-		Contract: os.Ref,
+		Contract: st.Ref,
 	}
 }
 

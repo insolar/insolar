@@ -77,7 +77,8 @@ type rpcInfoResponse struct {
 }
 
 type statusResponse struct {
-	NetworkState string `json:"NetworkState"`
+	NetworkState   string `json:"NetworkState"`
+	ActiveListSize int    `json:"ActiveListSize"`
 }
 
 type rpcStatusResponse struct {

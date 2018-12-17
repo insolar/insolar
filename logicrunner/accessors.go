@@ -63,7 +63,7 @@ func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
 func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
 	res := lr.GetObjectState(ref)
 	if res == nil {
-		panic("No requested execution state")
+		panic("No requested object state")
 	}
 	return res
 }
@@ -98,22 +98,22 @@ func (lr *LogicRunner) GetConsensus(ctx context.Context, ref Ref) *Consensus {
 	return state.Consensus
 }
 
-func (os *ObjectState) RefreshConsensus() {
-	if os.Consensus == nil {
+func (st *ObjectState) RefreshConsensus() {
+	if st.Consensus == nil {
 		return
 	}
 
-	os.Consensus.ready = true
-	os.Consensus = nil
+	st.Consensus.ready = true
+	st.Consensus = nil
 }
 
-func (os *ObjectState) StartValidation() *ExecutionState {
-	os.Lock()
-	defer os.Unlock()
+func (st *ObjectState) StartValidation() *ExecutionState {
+	st.Lock()
+	defer st.Unlock()
 
-	if os.Validation != nil {
+	if st.Validation != nil {
 		panic("Unexpected. Validation already in progress")
 	}
-	os.Validation = &ExecutionState{}
-	return os.Validation
+	st.Validation = &ExecutionState{}
+	return st.Validation
 }
