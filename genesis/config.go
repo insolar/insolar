@@ -9,6 +9,7 @@ type discovery struct {
 	Host     string `mapstructure:"host"`
 	Role     string `mapstructure:"role"`
 	KeysFile string `mapstructure:"keys_file"`
+	CertName string `mapstructure:"cert_name"`
 }
 
 type genesisConfig struct {

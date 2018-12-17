@@ -23,8 +23,6 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -32,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -81,6 +80,9 @@ type DB struct {
 	addJetLock       sync.RWMutex
 	addBlockSizeLock sync.RWMutex
 	jetTreeLock      sync.Mutex
+
+	closeLock sync.RWMutex
+	isClosed  bool
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
@@ -211,7 +213,13 @@ func (db *DB) GenesisRef() *core.RecordRef {
 // «It's crucial to call it to ensure all the pending updates make their way to disk.
 // Calling DB.Close() multiple times is not safe and wouldcause panic.»
 func (db *DB) Close() error {
-	// TODO: add close flag and mutex guard on Close method
+	db.closeLock.Lock()
+	defer db.closeLock.Unlock()
+	if db.isClosed {
+		return ErrClosed
+	}
+	db.isClosed = true
+
 	return db.db.Close()
 }
 
@@ -294,7 +302,10 @@ func (db *DB) GetObjectIndex(
 	id *core.RecordID,
 	forupdate bool,
 ) (*index.ObjectLifeline, error) {
-	tx := db.BeginTransaction(false)
+	tx, err := db.BeginTransaction(false)
+	if err != nil {
+		return nil, err
+	}
 	defer tx.Discard()
 
 	idx, err := tx.GetObjectIndex(ctx, jetID, id, forupdate)
@@ -334,7 +345,13 @@ func (db *DB) waitinflight() {
 // BeginTransaction opens a new transaction.
 // All methods called on returned transaction manager will persist changes
 // only after success on "Commit" call.
-func (db *DB) BeginTransaction(update bool) *TransactionManager {
+func (db *DB) BeginTransaction(update bool) (*TransactionManager, error) {
+	db.closeLock.RLock()
+	defer db.closeLock.RUnlock()
+	if db.isClosed {
+		return nil, ErrClosed
+	}
+
 	if update {
 		db.dropWG.Add(1)
 	}
@@ -342,12 +359,15 @@ func (db *DB) BeginTransaction(update bool) *TransactionManager {
 		db:        db,
 		update:    update,
 		txupdates: make(map[string]keyval),
-	}
+	}, nil
 }
 
 // View accepts transaction function. All calls to received transaction manager will be consistent.
 func (db *DB) View(ctx context.Context, fn func(*TransactionManager) error) error {
-	tx := db.BeginTransaction(false)
+	tx, err := db.BeginTransaction(false)
+	if err != nil {
+		return err
+	}
 	defer tx.Discard()
 	return fn(tx)
 }
@@ -359,7 +379,10 @@ func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) er
 	var tx *TransactionManager
 	var err error
 	for {
-		tx = db.BeginTransaction(true)
+		tx, err = db.BeginTransaction(true)
+		if err != nil {
+			return err
+		}
 		err = fn(tx)
 		if err != nil {
 			break
@@ -501,7 +524,10 @@ func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
 
 // get wraps matching transaction manager method.
 func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
-	tx := db.BeginTransaction(false)
+	tx, err := db.BeginTransaction(false)
+	if err != nil {
+		return nil, err
+	}
 	defer tx.Discard()
 	return tx.get(ctx, key)
 }
@@ -518,6 +544,12 @@ func (db *DB) iterate(
 	prefix []byte,
 	handler func(k, v []byte) error,
 ) error {
+	db.closeLock.RLock()
+	defer db.closeLock.RUnlock()
+	if db.isClosed {
+		return ErrClosed
+	}
+
 	return db.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()

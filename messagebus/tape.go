@@ -202,6 +202,9 @@ func (t *memoryTape) Write(ctx context.Context, w io.Writer) error {
 }
 
 func (t *memoryTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
+	if len(t.storage) == 0 {
+		return nil, errors.New("Validation error. Message is not expected")
+	}
 	if !bytes.Equal(msgHash, t.storage[0].msgHash) {
 		return nil, errors.New("Validation error. Message mismatch")
 	}
