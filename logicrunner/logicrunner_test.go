@@ -63,7 +63,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
-var parallel = true
+var parallel = false
 
 func TestMain(m *testing.M) {
 	var err error
@@ -115,12 +115,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	nk := nodekeeper.GetTestNodekeeper(mock)
+
 	mb := testmessagebus.NewTestMessageBus(t)
-
-	var pulseNumber core.PulseNumber
-	pulseNumber = 0
-
-	mb.PulseNumber = pulseNumber
+	mb.PulseNumber = 0
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
@@ -134,7 +131,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		},
 	)
 
-	recentMock := recentstorage.NewRecentStorageMock(t)
+	recentMock := recentstorage.NewProviderMock(t)
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
@@ -142,6 +139,8 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cm.Inject(nk, recentMock, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	err = cm.Init(ctx)
+	assert.NoError(t, err)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -182,7 +181,7 @@ func newTestPulse(ctx context.Context, lr *LogicRunner, mb *testmessagebus.TestM
 	lr.Ledger.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
-		false,
+		true,
 	)
 
 	mb.PulseNumber = newPulseNumber
@@ -196,10 +195,15 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 
 	rlr := lr.(*LogicRunner)
 
-	for ref, state := range rlr.execution {
+	for ref, state := range rlr.state {
 		log.Debugf("TEST validating: %s", ref)
 
-		_, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), state.caseBind)
+		msg := state.ExecutionState.Behaviour.(*ValidationSaver).caseBind.ToValidateMessage(
+			ctx, ref, *rlr.pulse(ctx),
+		)
+		cb := NewCaseBindFromValidateMessage(ctx, rlr.MessageBus, msg)
+
+		_, err := rlr.Validate(ctx, ref, *rlr.pulse(ctx), *cb)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation %s", ref)
 		} else {
@@ -210,7 +214,8 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 
 func executeMethod(
 	ctx context.Context, lr core.LogicRunner, pm core.PulseManager,
-	objRef core.RecordRef, nonce uint64,
+	objRef core.RecordRef, proxyPrototype core.RecordRef,
+	nonce uint64,
 	method string, arguments ...interface{},
 ) (
 	core.Reply, error,
@@ -221,9 +226,10 @@ func executeMethod(
 	}
 
 	msg := &message.CallMethod{
-		ObjectRef: objRef,
-		Method:    method,
-		Arguments: argsSerialized,
+		ObjectRef:      objRef,
+		Method:         method,
+		Arguments:      argsSerialized,
+		ProxyPrototype: proxyPrototype,
 	}
 	msg.Caller = testutils.RandomRef()
 	if nonce != 0 {
@@ -292,39 +298,25 @@ func (c *One) Dec() (int, error) {
 	err := cb.Build(map[string]string{"one": contractOneCode})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(
-		ctx, &message.Parcel{Msg: &message.CallConstructor{}},
-	)
-	assert.NoError(t, err)
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{}, *obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, &struct{}{}),
-	)
-	assert.NoError(t, err)
-
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Get")
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Get")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "Inc")
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Inc")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(1), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "Get")
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Get")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(1), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "Dec")
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Dec")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "Get")
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Get")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
@@ -408,25 +400,15 @@ func (r *Two) Hello(s string) (string, error) {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{}, *obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, &struct{}{}),
-	)
-	assert.NoError(t, err)
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
+	_, prototypeTwo := getObjectInstance(t, ctx, am, cb, "two")
 
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello", "ins")
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Hello", "ins")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", firstMethodRes(t, resp))
 
 	for i := 2; i <= 5; i++ {
-		resp, err = executeMethod(ctx, lr, pm, *obj, uint64(i), "Again", "ins")
+		resp, err = executeMethod(ctx, lr, pm, *obj, *cb.Prototypes["one"], uint64(i), "Again", "ins")
 		assert.NoError(t, err, "contract call")
 		assert.Equal(
 			t,
@@ -435,7 +417,7 @@ func (r *Two) Hello(s string) (string, error) {
 		)
 	}
 
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetFriend")
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "GetFriend")
 	assert.NoError(t, err, "contract call")
 	r0 := firstMethodRes(t, resp).([]uint8)
 	var two core.RecordRef
@@ -444,7 +426,7 @@ func (r *Two) Hello(s string) (string, error) {
 	}
 
 	for i := 6; i <= 9; i++ {
-		resp, err = executeMethod(ctx, lr, pm, two, uint64(i), "Hello", "Insolar")
+		resp, err = executeMethod(ctx, lr, pm, two, *prototypeTwo, uint64(i), "Hello", "Insolar")
 		assert.NoError(t, err, "contract call")
 		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), firstMethodRes(t, resp))
 	}
@@ -518,29 +500,16 @@ func (r *Two) Hello(s string) (string, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	data := goplugintestutils.CBORMarshal(t, &struct{}{})
-
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{}, *obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		data,
-	)
-	assert.NoError(t, err)
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello", "ins")
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Hello", "ins")
 	assert.NoError(t, err)
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", firstMethodRes(t, resp))
 
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "HelloFromDelegate", "ins")
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "HelloFromDelegate", "ins")
 	assert.NoError(t, err)
 	assert.Equal(t, "Hello you too, ins. 1288 times!", firstMethodRes(t, resp))
 }
@@ -574,6 +543,15 @@ func (r *One) Hello() error {
 
 	return nil
 }
+
+func (r *One) Value() (int, error) {
+	friend, err := two.GetImplementationFrom(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	return friend.Value()
+}
 `
 
 	var contractTwoCode = `
@@ -598,6 +576,10 @@ func (r *Two) Hello() (string, error) {
 	r.X *= 2
 	return fmt.Sprintf("Hello %d times!", r.X), nil
 }
+
+func (r *Two) Value() (int, error) {
+	return r.X, nil
+}
 `
 	ctx := context.TODO()
 	// TODO: use am := testutil.NewTestArtifactManager() here
@@ -607,23 +589,14 @@ func (r *Two) Hello() (string, error) {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{},
-		*obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, &struct{}{}),
-	)
-	assert.NoError(t, err)
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	_, err = executeMethod(ctx, lr, pm, *obj, 0, "Hello")
+	_, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Hello")
 	assert.NoError(t, err, "contract call")
 
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Value")
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(644), firstMethodRes(t, resp))
 }
 
 func TestContextPassing(t *testing.T) {
@@ -650,21 +623,9 @@ func (r *One) Hello() (string, error) {
 	err := cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{},
-		*obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, &struct{}{}),
-	)
-	assert.NoError(t, err)
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	res, err := executeMethod(ctx, lr, pm, *obj, 0, "Hello")
+	res, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Hello")
 	assert.NoError(t, err)
 
 	resParsed := goplugintestutils.CBORUnMarshalToSlice(t, res.(*reply.CallMethod).Result)
@@ -696,20 +657,9 @@ func (r *One) Kill() error {
 	err := cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{}, *obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, &struct{}{}),
-	)
-	assert.NoError(t, err)
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	_, err = executeMethod(ctx, lr, pm, *obj, 0, "Kill")
+	_, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Kill")
 	assert.NoError(t, err, "contract call")
 }
 
@@ -741,23 +691,12 @@ func (r *One) NotPanic() error {
 	err := cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{}, *obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, &struct{}{}),
-	)
-	assert.NoError(t, err)
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	_, err = executeMethod(ctx, lr, pm, *obj, 0, "Panic")
+	_, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Panic")
 	assert.Error(t, err)
 
-	_, err = executeMethod(ctx, lr, pm, *obj, 0, "NotPanic")
+	_, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "NotPanic")
 	assert.NoError(t, err)
 }
 
@@ -837,35 +776,18 @@ func New(n int) (*Child, error) {
 	err = cb.Build(map[string]string{"contract": goContract})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(
-		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")}},
-	)
-	assert.NoError(t, err)
-	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(
-		ctx,
-		domain,
-		*contract,
-		*am.GenesisRef(),
-		*cb.Prototypes["contract"],
-		false,
-		goplugintestutils.CBORMarshal(t, nil),
-	)
-	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "contract")
 
 	// no childs, expect 0
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "SumChildsByIterator")
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "SumChildsByIterator")
 	assert.NoError(t, err, "empty children")
 	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", 10)
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "NewChilds", 10)
 	assert.NoError(t, err, "add children")
 	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
-	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "SumChildsByIterator")
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "SumChildsByIterator")
 	assert.NoError(t, err, "sum real children")
 	assert.Equal(t, uint64(45), firstMethodRes(t, resp))
 
@@ -901,31 +823,14 @@ func (c *Contract) Rand() (int, error) {
 	err := cb.Build(map[string]string{"contract": goContract})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(
-		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")}},
-	)
-	assert.NoError(t, err)
-	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(
-		ctx,
-		domain,
-		*contract,
-		*am.GenesisRef(),
-		*cb.Prototypes["contract"],
-		false,
-		goplugintestutils.CBORMarshal(t, nil),
-	)
-	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "contract")
 
 	for i := 0; i < 5; i++ {
-		_, err = executeMethod(ctx, lr, pm, *contract, uint64(i), "Rand")
+		_, err = executeMethod(ctx, lr, pm, *obj, *prototype, uint64(i), "Rand")
 		assert.NoError(t, err, "contract call")
 	}
 
-	ValidateAllResults(t, ctx, lr, *contract)
+	ValidateAllResults(t, ctx, lr, *obj)
 }
 
 func TestErrorInterface(t *testing.T) {
@@ -997,32 +902,17 @@ func (r *Two) NoError() error {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(
-		ctx,
-		domain,
-		*contract,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, nil),
-	)
-	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "AnError")
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "AnError")
 	assert.NoError(t, err, "contract call")
 
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
-	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 
-	resp, err = executeMethod(ctx, lr, pm, *contract, 0, "NoError")
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "NoError")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, nil, firstMethodRes(t, resp))
 
@@ -1083,23 +973,9 @@ func (r *Two) Hello() (*string, error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(
-		ctx,
-		domain,
-		*contract,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, nil),
-	)
-	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Hello")
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Hello")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, nil, firstMethodRes(t, resp))
 
@@ -1113,15 +989,18 @@ type Caller struct {
 	cs     core.CryptographyService
 }
 
-func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomain core.RecordRef, method string, params []interface{}) interface{} {
+func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomain core.RecordRef, method string, proxyPrototype core.RecordRef, params []interface{}) interface{} {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	assert.NoError(s.t, err)
 
 	buf := goplugintestutils.CBORMarshal(s.t, params)
 
+	memberRef, err := core.NewRefFromBase58(s.member)
+	require.NoError(s.t, err)
+
 	args, err := core.MarshalArgs(
-		core.NewRefFromBase58(s.member),
+		*memberRef,
 		method,
 		buf,
 		seed)
@@ -1132,7 +1011,7 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 	assert.NoError(s.t, err)
 
 	res, err := executeMethod(
-		ctx, s.lr, pm, core.NewRefFromBase58(s.member), 0,
+		ctx, s.lr, pm, *memberRef, proxyPrototype, 0,
 		"Call", rootDomain, method, buf, seed, signature.Bytes(),
 	)
 	assert.NoError(s.t, err, "contract call")
@@ -1171,11 +1050,23 @@ func TestRootDomainContract(t *testing.T) {
 	// TODO need use pulseManager to sync all refs
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
+	err = cb.Build(map[string]string{
+		"member":     string(memberCode),
+		"allowance":  string(allowanceCode),
+		"wallet":     string(walletCode),
+		"rootdomain": string(rootDomainCode),
+	})
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c1"}})
+	rootDomainID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
+			},
+		},
+	)
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1198,7 +1089,14 @@ func TestRootDomainContract(t *testing.T) {
 	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c2"}})
+	rootMemberID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
+			},
+		},
+	)
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
@@ -1229,7 +1127,7 @@ func TestRootDomainContract(t *testing.T) {
 	member1PubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(member1Key))
 	assert.NoError(t, err)
 
-	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member1", member1PubKey})
+	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member1", member1PubKey})
 	member1Ref := res1.(string)
 	assert.NotEqual(t, "", member1Ref)
 
@@ -1239,22 +1137,22 @@ func TestRootDomainContract(t *testing.T) {
 	member2PubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(member2Key))
 	assert.NoError(t, err)
 
-	res2 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member2", member2PubKey})
+	res2 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member2", member2PubKey})
 	member2Ref := res2.(string)
 	assert.NotEqual(t, "", member2Ref)
 
 	// Transfer 1 coin from Member1 to Member2
 	csMember1 := cryptography.NewKeyBoundCryptographyService(member1Key)
 	member1 := Caller{member1Ref, lr, t, csMember1}
-	resTransfer := member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", []interface{}{1, member2Ref})
+	resTransfer := member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", *cb.Prototypes["member"], []interface{}{1, member2Ref})
 	assert.Equal(t, nil, resTransfer)
 
 	// Verify Member1 balance
-	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", []interface{}{member1Ref})
+	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member1Ref})
 	assert.Equal(t, 999, int(res3.(uint64)))
 
 	// Verify Member2 balance
-	res4 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", []interface{}{member2Ref})
+	res4 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member2Ref})
 	assert.Equal(t, 1001, int(res4.(uint64)))
 }
 
@@ -1338,26 +1236,9 @@ func New(n int) (*Child, error) {
 	err := cb.Build(map[string]string{"child": goChild, "contract": goContract})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(
-		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("dassads")}},
-	)
-	assert.NoError(t, err)
-	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(
-		ctx,
-		domain,
-		*contract,
-		*am.GenesisRef(),
-		*cb.Prototypes["contract"],
-		false,
-		goplugintestutils.CBORMarshal(t, nil),
-	)
-	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "contract")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "NewChilds", 1)
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "NewChilds", 1)
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, uint64(0), firstMethodRes(t, resp))
 
@@ -1381,7 +1262,7 @@ func New(n int) (*Child, error) {
 	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}},
-		false,
+		true,
 	)
 	assert.NoError(t, err)
 
@@ -1449,23 +1330,9 @@ func New() (*Two, error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(
-		ctx,
-		domain,
-		*contract,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, nil),
-	)
-	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Hello")
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Hello")
 	assert.NoError(t, err, "contract call")
 
 	var result interface{}
@@ -1514,21 +1381,9 @@ func (r *One) Recursive() (error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(
-		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("recursive")}},
-	)
-	assert.NoError(t, err)
-	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(
-		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["recursive"], false,
-		goplugintestutils.CBORMarshal(t, nil),
-	)
-	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "recursive")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "Recursive")
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Recursive")
 	assert.NoError(t, err, "contract call")
 
 	var contractErr *foundation.Error
@@ -1555,7 +1410,11 @@ type One struct {
 	foundation.BaseContract
 }
 func (r *One) CreateAllowance(member string) (error) {
-	w, _ := wallet.GetImplementationFrom(core.NewRefFromBase58(member))
+	memberRef, refErr := core.NewRefFromBase58(member)
+	if refErr != nil {
+		return refErr
+	}
+	w, _ := wallet.GetImplementationFrom(*memberRef)
 	walletRef := w.GetReference()
 	ah := allowance.New(&walletRef, 111, r.GetContext().Time.Unix()+10)
 	_, err := ah.AsChild(walletRef)
@@ -1586,13 +1445,19 @@ func (r *One) CreateAllowance(member string) (error) {
 	ctx := context.TODO()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{"one": contractOneCode, "member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
+	err = cb.Build(map[string]string{
+		"one":        contractOneCode,
+		"member":     string(memberCode),
+		"allowance":  string(allowanceCode),
+		"wallet":     string(walletCode),
+		"rootdomain": string(rootDomainCode),
+	})
 	assert.NoError(t, err)
 
 	kp := platformpolicy.NewKeyProcessor()
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c1"}})
+	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1613,7 +1478,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c2"}})
+	rootMemberID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
+			},
+		},
+	)
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
@@ -1644,18 +1516,19 @@ func (r *One) CreateAllowance(member string) (error) {
 	memberPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(memberKey))
 	assert.NoError(t, err)
 
-	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", []interface{}{"Member", string(memberPubKey)})
+	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member", string(memberPubKey)})
 	memberRef := res1.(string)
 	assert.NotEqual(t, "", memberRef)
 
 	// Call CreateAllowance method in custom contract
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*contract,
 		*am.GenesisRef(),
 		*cb.Prototypes["one"],
@@ -1665,7 +1538,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := executeMethod(ctx, lr, pm, *contract, 0, "CreateAllowance", memberRef)
+	resp, err := executeMethod(ctx, lr, pm, *contract, *cb.Prototypes["one"], 0, "CreateAllowance", memberRef)
 	assert.NoError(t, err, "contract call")
 
 	var contractErr *foundation.Error
@@ -1676,7 +1549,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	assert.Contains(t, contractErr.Error(), "[ New Allowance ] : Can't create allowance from not wallet contract")
 
 	// Verify Member balance
-	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", []interface{}{memberRef})
+	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{memberRef})
 	assert.Equal(t, 1000, int(res3.(uint64)))
 }
 
@@ -1723,20 +1596,10 @@ package main
 	defer cleaner()
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{},
-		*obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, &struct{}{}),
-	)
-	assert.NoError(t, err)
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "AddChildAndReturnMyselfAsParent")
+
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
+
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "AddChildAndReturnMyselfAsParent")
 	assert.Equal(t, *obj, Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)))
 
 	ValidateAllResults(t, ctx, lr)
@@ -1786,26 +1649,14 @@ func (r *One) ShortSleep() (error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	contractID, err := am.RegisterRequest(
-		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: core.NewRefFromBase58("one")}},
-	)
-	assert.NoError(t, err)
-	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(
-		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
-		goplugintestutils.CBORMarshal(t, nil),
-	)
-	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
 	lr = getLogicRunnerWithoutValidation(lr)
 
 	// hold executor
 	go func() {
 		log.Debugf("!!!!! Long start")
-		executeMethod(ctx, lr, pm, *contract, 0, "LongSleep")
+		executeMethod(ctx, lr, pm, *obj, *prototype, 0, "LongSleep")
 		log.Debugf("!!!!! Long end")
 	}()
 
@@ -1817,7 +1668,7 @@ func (r *One) ShortSleep() (error) {
 		err = pm.Set(
 			ctx,
 			core.Pulse{PulseNumber: 1, Entropy: core.Entropy{}},
-			false,
+			true,
 		)
 		log.Debugf("!!!!! Pulse end")
 	}()
@@ -1826,7 +1677,7 @@ func (r *One) ShortSleep() (error) {
 	log.Debugf("!!!!! Short sleep")
 	time.Sleep(time.Second)
 	log.Debugf("!!!!! Short start")
-	_, err = executeMethod(ctx, lr, pm, *contract, 0, "ShortSleep")
+	_, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "ShortSleep")
 	log.Debugf("!!!!! Short end")
 	assert.Error(t, err, "contract call")
 
@@ -1885,25 +1736,10 @@ func (r *One) EmptyMethod() (error) {
 	})
 	assert.NoError(t, err)
 
-	domain := core.NewRefFromBase58("c1")
-	protoRef := core.NewRefFromBase58("one")
-	contractID, err := am.RegisterRequest(
-		ctx,
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: protoRef}},
-	)
-	assert.NoError(t, err)
-	contract := getRefFromID(contractID)
-	object, err := am.ActivateObject(
-		ctx, domain, *contract, *am.GenesisRef(), *cb.Prototypes["one"], false,
-		goplugintestutils.CBORMarshal(t, nil),
-	)
-	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	_, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
-	//prototype = *cb.Prototypes["one"]
-	prototypeRef, err := object.Prototype()
-	prototype, err := am.GetObject(ctx, *prototypeRef, nil, false)
-	codeRef, err := prototype.Code()
+	proto, err := am.GetObject(ctx, *prototype, nil, false)
+	codeRef, err := proto.Code()
 
 	assert.NoError(t, err, "get contract code")
 
@@ -1923,7 +1759,6 @@ func (r *One) EmptyMethod() (error) {
 	req := rpctypes.DownCallMethodReq{
 		Context:   callContext,
 		Code:      *codeRef,
-		Data:      object.Memory(),
 		Method:    "EmptyMethod",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
@@ -1994,25 +1829,14 @@ package main
 	defer cleaner()
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{},
-		*obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, &struct{}{}),
-	)
-	assert.NoError(t, err)
 
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "GetChildCode")
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
+
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "GetChildCode")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, *cb.Codes["two"], Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)), "Compare Code Refs")
 
-	resp, err = executeMethod(ctx, lr, pm, *obj, 0, "GetChildPrototype")
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "GetChildPrototype")
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)), "Compare Code Prototypes")
 }
@@ -2074,26 +1898,111 @@ package main
 	defer cleaner()
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
-	assert.NoError(t, err)
-	obj := getRefFromID(objID)
-	_, err = am.ActivateObject(
-		ctx,
-		core.RecordRef{},
-		*obj,
-		*am.GenesisRef(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(t, &struct{}{}),
-	)
-	assert.NoError(t, err)
+
+	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
 
 	for i := 0; i < 100; i++ {
 
 	}
 
-	resp, err := executeMethod(ctx, lr, pm, *obj, 0, "GetChildCode", goplugintestutils.CBORMarshal(t, []interface{}{}))
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "GetChildCode", goplugintestutils.CBORMarshal(t, []interface{}{}))
 	assert.NoError(t, err, "contract call")
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}{uint64(100), nil}, r)
+}
+
+func TestPrototypeMismatch(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	testContract := `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/application/proxy/first"
+	"github.com/insolar/insolar/core"
+)
+
+type Contract struct {
+	foundation.BaseContract
+}
+
+func (c *Contract) Test(firstRef *core.RecordRef) (string, error) {
+	return first.GetObject(*firstRef).GetName()
+}
+`
+
+	// right contract
+	firstContract := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type First struct {
+	foundation.BaseContract
+}
+
+func (c *First) GetName() (string, error) {
+	return "first", nil
+}
+`
+
+	// malicious contract with same method signature and another behaviour
+	secondContract := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type First struct {
+	foundation.BaseContract
+}
+
+func (c *First) GetName() (string, error) {
+	return "YOU ARE ROBBED!", nil
+}
+`
+	ctx := context.TODO()
+	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{"test": testContract, "first": firstContract, "second": secondContract})
+	assert.NoError(t, err)
+
+	testObj, testPrototype := getObjectInstance(t, ctx, am, cb, "test")
+	secondObj, _ := getObjectInstance(t, ctx, am, cb, "second")
+
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, secondObj, nil, "contract created")
+
+	resp, err := executeMethod(ctx, lr, pm, *testObj, *testPrototype, 0, "Test", *secondObj)
+	assert.NoError(t, err, "contract call")
+
+	ch := new(codec.CborHandle)
+	res := []interface{}{&foundation.Error{}}
+	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
+	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: couldn't dispatch event: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
+}
+
+func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*core.RecordRef, *core.RecordRef) {
+	domain, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
+	contractID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}},
+	)
+	assert.NoError(t, err)
+	objectRef := getRefFromID(contractID)
+
+	_, err = am.ActivateObject(
+		ctx,
+		*domain,
+		*objectRef,
+		*am.GenesisRef(),
+		*cb.Prototypes[contractName],
+		false,
+		goplugintestutils.CBORMarshal(t, nil),
+	)
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, objectRef, nil, "contract created")
+
+	return objectRef, cb.Prototypes[contractName]
 }

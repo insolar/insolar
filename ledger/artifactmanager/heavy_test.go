@@ -34,11 +34,12 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	t.Parallel()
 	ctx, db, _, cleaner := getTestData(t)
 	defer cleaner()
+	jetID := testutils.RandomID()
 
 	// prepare mock
 	heavysync := testutils.NewHeavySyncMock(t)
 	heavysync.StartMock.Return(nil)
-	heavysync.StoreMock.Set(func(ctx context.Context, pn core.PulseNumber, kvs []core.KV) error {
+	heavysync.StoreMock.Set(func(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
 		return db.StoreKeyValues(ctx, kvs)
 	})
 	heavysync.StopMock.Return(nil)
@@ -50,7 +51,14 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 
 	// message hanler with mok
 	mh := NewMessageHandler(db, nil)
-	mh.Recent = recentStorageMock
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	mh.RecentStorageProvider = provideMock
+
 	mh.HeavySync = heavysync
 
 	payload := []core.KV{
@@ -60,7 +68,10 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	}
 
 	parcel := &message.Parcel{
-		Msg: &message.HeavyPayload{Records: payload},
+		Msg: &message.HeavyPayload{
+			JetID:   jetID,
+			Records: payload,
+		},
 	}
 
 	var err error

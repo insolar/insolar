@@ -19,28 +19,62 @@ package jet
 import (
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTree_Find(t *testing.T) {
 	// Pulse in ID is equal to depth.
 	tree := Tree{
-		Head: &Jet{
-			Right: &Jet{
-				Right: &Jet{
-					Left: &Jet{
-						Right: &Jet{},
-						Left:  &Jet{},
+		Head: &jet{
+			Right: &jet{
+				Right: &jet{
+					Left: &jet{
+						Right: &jet{},
+						Left:  &jet{},
 					},
-					Right: &Jet{},
+					Right: &jet{},
 				},
 			},
-			Left: &Jet{},
+			Left: &jet{},
 		},
 	}
-	val := []byte{0xD5} // 11010101
+	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
+	jetLookup := NewID(15, []byte{1, 2, 3})
+	expectedPrefix := make([]byte, core.RecordIDSize-core.PulseNumberSize-1)
+	expectedPrefix[0] = 0xD0 // 11010000
 
-	jet, depth := tree.Find(val)
-	assert.Equal(t, tree.Head.Right.Right.Left.Right, jet)
-	assert.Equal(t, depth, 4)
+	id := tree.Find(*lookup)
+	depth, prefix := Jet(*id)
+	assert.Equal(t, depth, uint8(4))
+	assert.Equal(t, expectedPrefix, prefix)
+
+	jetID := tree.Find(*jetLookup)
+	assert.Equal(t, jetLookup, jetID)
+}
+
+func TestTree_Update(t *testing.T) {
+	tree := Tree{Head: &jet{}}
+
+	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
+
+	id := tree.Find(*lookup)
+	depth, prefix := Jet(*id)
+	assert.Equal(t, depth, uint8(0))
+	assert.Equal(t, prefix, make([]byte, core.RecordHashSize-1))
+
+	tree.Update(*NewID(1, []byte{1 << 7}))
+	id = tree.Find(*lookup)
+	depth, prefix = Jet(*id)
+	expectedPrefix := make([]byte, core.RecordHashSize-1)
+	expectedPrefix[0] = 0x80
+	require.Equal(t, uint8(1), depth)
+	assert.Equal(t, expectedPrefix, prefix)
+
+	tree.Update(*NewID(8, lookup.Hash()))
+	id = tree.Find(*lookup)
+	depth, prefix = Jet(*id)
+	assert.Equal(t, uint8(8), depth)
+	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
 }

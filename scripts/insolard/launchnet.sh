@@ -15,17 +15,18 @@ KEYS_FILE=scripts/insolard/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=scripts/insolard/$CONFIGS_DIR/root_member_keys.json
 NODES_DATA=scripts/insolard/nodes/
 
-NODE_1=$NODES_DATA/1
-NODE_2=$NODES_DATA/2
-NODE_3=$NODES_DATA/3
-NODE_4=$NODES_DATA/4
-NODE_5=$NODES_DATA/5
+NUM_NODES=3
 
+for i in `seq 1 $NUM_NODES`
+do
+    NODES+=($NODES_DATA/$i)
+done
 
 DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
 stop_listening()
 {
+    echo "stop_listening() starts ..."
     stop_insgorund=$1
     ports="13831 13832 23832 23833 33833 33834"
     if [ "$stop_insgorund" == "true" ]
@@ -44,37 +45,42 @@ stop_listening()
             kill -9 $pid
         done
     done
+    echo "stop_listening() end."
 }
 
 clear_dirs()
 {
-    echo "Cleaning directories ... "
+    echo "clear_dirs() starts ..."
     rm -rfv $CONTRACT_STORAGE/*
     rm -rfv $LEDGER_DIR/*
     rm -rfv $NODES_DATA/*
+    echo "clear_dirs() end."
 }
 
 create_required_dirs()
 {
-    mkdir -p $TEST_DATA/functional
-    mkdir -p $CONTRACT_STORAGE
-    mkdir -p $LEDGER_DIR
-    mkdir -p $NODES_DATA/certs
+    echo "create_required_dirs() starts ..."
+    mkdir -vp $CONTRACT_STORAGE
+    mkdir -vp $LEDGER_DIR
+    mkdir -vp $NODES_DATA/certs
 
-    mkdir -p $NODE_1/data
-    mkdir -p $NODE_2/data
-    mkdir -p $NODE_3/data
-    mkdir -p $NODE_4/data
-    mkdir -p $NODE_5/data
+    for node in "${NODES[@]}"
+    do
+        mkdir -vp $node/data
+    done
 
     mkdir -p scripts/insolard/$CONFIGS_DIR
+
+    echo "create_required_dirs() end."
 }
 
 prepare()
 {
+    echo "prepare() starts ..."
     stop_listening $run_insgorund
     clear_dirs
     create_required_dirs
+    echo "prepare() end."
 }
 
 build_binaries()
@@ -90,30 +96,37 @@ rebuild_binaries()
 
 generate_bootstrap_keys()
 {
+    echo "generate_bootstrap_keys() starts ..."
 	bin/insolar -c gen_keys > $KEYS_FILE
+	echo "generate_bootstrap_keys() end."
 }
 
 generate_root_member_keys()
 {
+    echo "generate_root_member_keys() starts ..."
 	bin/insolar -c gen_keys > $ROOT_MEMBER_KEYS_FILE
+	echo "generate_root_member_keys() end."
 }
 
 generate_discovery_nodes_keys()
 {
-    bin/insolar -c gen_keys > $NODE_1/keys.json
-    bin/insolar -c gen_keys > $NODE_2/keys.json
-    bin/insolar -c gen_keys > $NODE_3/keys.json
-    bin/insolar -c gen_keys > $NODE_4/keys.json
-    bin/insolar -c gen_keys > $NODE_5/keys.json
+    echo "generate_discovery_nodes_keys() starts ..."
+    for node in "${NODES[@]}"
+    do
+        bin/insolar -c gen_keys > $node/keys.json
+    done
+    echo "generate_discovery_nodes_keys() end."
 }
 
 check_working_dir()
 {
+    echo "check_working_dir() starts ..."
     if ! pwd | grep -q "src/github.com/insolar/insolar$"
     then
         echo "Run me from insolar root"
         exit 1
     fi
+    echo "check_working_dir() end."
 }
 
 usage()
@@ -157,20 +170,24 @@ launch_insgorund()
 
 copy_data()
 {
-    cp $LEDGER_DIR/* $NODE_1/data
-    cp $LEDGER_DIR/* $NODE_2/data
-    cp $LEDGER_DIR/* $NODE_3/data
-    cp $LEDGER_DIR/* $NODE_4/data
-    cp $LEDGER_DIR/* $NODE_5/data
+    echo "copy_data() starts ..."
+    for node in "${NODES[@]}"
+    do
+        cp -v $LEDGER_DIR/* $node/data
+    done
+    echo "copy_data() end."
 }
 
 copy_certs()
 {
-    cp $NODES_DATA/certs/discovery_cert_1.json $NODE_1/cert.json
-    cp $NODES_DATA/certs/discovery_cert_2.json $NODE_2/cert.json
-    cp $NODES_DATA/certs/discovery_cert_3.json $NODE_3/cert.json
-#    cp $NODES_DATA/certs/discovery_cert_4.json $NODE_4/cert.json
-#    cp $NODES_DATA/certs/discovery_cert_5.json $NODE_5/cert.json
+    echo "copy_certs() starts ..."
+    i=0
+    for node in "${NODES[@]}"
+    do
+        i=$((i + 1))
+        cp -v $NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
+    done
+    echo "copy_certs() end."
 }
 
 genesis()
@@ -189,7 +206,7 @@ genesis()
     copy_certs
 }
 
-trap 'stop_listening true' EXIT
+trap 'stop_listening true' INT TERM EXIT
 
 run_insgorund=true
 check_working_dir
@@ -208,13 +225,18 @@ fi
 
 printf "start nodes ... \n"
 
-$INSOLARD --config scripts/insolard/insolar_1.yaml &> $NODE_1/output.txt &
-echo "STARTED 1"
-$INSOLARD --config scripts/insolard/insolar_2.yaml &> $NODE_2/output.txt &
-echo "STARTED 2"
-$INSOLARD --config scripts/insolard/insolar_3.yaml &> $NODE_3/output.txt
-#echo "STARTED 3"
-#$INSOLARD --config scripts/insolard/insolar_4.yaml &> $NODE_4/output.txt &
-#echo "STARTED 4"
-#$INSOLARD --config scripts/insolard/insolar_5.yaml &> $NODE_5/output.txt
-#echo "FINISHING ..."
+i=0
+for node in "${NODES[@]}"
+do
+    i=$((i + 1))
+    if [ "$i" -eq "$NUM_NODES" ]
+    then
+        echo "NODE $i STARTED in foreground"
+        $INSOLARD --config scripts/insolard/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt
+        break
+    fi
+    $INSOLARD --config scripts/insolard/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt &
+    echo "NODE $i STARTED in background"
+done
+
+echo "FINISHING ..."

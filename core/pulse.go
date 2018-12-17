@@ -93,8 +93,13 @@ type PulseSenderConfirmation struct {
 
 // FirstPulseDate is the hardcoded date of the first pulse
 const firstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
-// FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
-const FirstPulseNumber = 65537
+
+const (
+	// FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
+	FirstPulseNumber = 65537
+	// PulseNumberJet is a special pulse number value that signifies jet ID.
+	PulseNumberJet = PulseNumber(1)
+)
 
 // GenesisPulse is a first pulse for the system
 // because first 2 bits of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time

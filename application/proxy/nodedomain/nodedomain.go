@@ -7,7 +7,8 @@ import (
 )
 
 // PrototypeReference to prototype of this contract
-var PrototypeReference = core.NewRefFromBase58("")
+// error checking hides in generator
+var PrototypeReference, _ = core.NewRefFromBase58("1111dURjMHbQNr1Mboh3q1nQVF2wUtqG21WHHhKfXj.11111111111111111111111111111111")
 
 // NodeDomain holds proxy type
 type NodeDomain struct {
@@ -24,7 +25,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeDomain, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +34,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeDomain,
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeDomain, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -47,12 +48,12 @@ func GetObject(ref core.RecordRef) (r *NodeDomain) {
 
 // GetPrototype returns reference to the prototype
 func GetPrototype() core.RecordRef {
-	return PrototypeReference
+	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*NodeDomain, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
+	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -79,14 +80,14 @@ func (r *NodeDomain) GetReference() core.RecordRef {
 
 // GetPrototype returns reference to the code
 func (r *NodeDomain) GetPrototype() (core.RecordRef, error) {
-	if r.Prototype == core.NewRefFromBase58("") {
+	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -109,14 +110,14 @@ func (r *NodeDomain) GetPrototype() (core.RecordRef, error) {
 
 // GetCode returns reference to the code
 func (r *NodeDomain) GetCode() (core.RecordRef, error) {
-	if r.Code == core.NewRefFromBase58("") {
+	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -155,7 +156,7 @@ func (r *NodeDomain) RegisterNode(publicKey string, role string) (string, error)
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -184,7 +185,7 @@ func (r *NodeDomain) RegisterNodeNoWait(publicKey string, role string) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -208,7 +209,7 @@ func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RemoveNode", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RemoveNode", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -236,7 +237,7 @@ func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RemoveNode", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RemoveNode", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

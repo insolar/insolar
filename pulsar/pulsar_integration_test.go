@@ -54,6 +54,12 @@ func initCrypto(t *testing.T) (*certificate.CertificateManager, core.Cryptograph
 	return certManager, cs
 }
 
+func newPulseDistributor(t *testing.T) core.PulseDistributor {
+	mock := testutils.NewPulseDistributorMock(t)
+	mock.DistributeFunc = func(p context.Context, p1 *core.Pulse) {}
+	return mock
+}
+
 func TestTwoPulsars_Handshake(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
@@ -75,6 +81,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		service,
 		pcs,
 		keyProcessor,
+		newPulseDistributor(t),
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutils.MockEntropyGenerator{},
@@ -94,6 +101,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		service,
 		pcs,
 		keyProcessor,
+		newPulseDistributor(t),
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutils.MockEntropyGenerator{},
@@ -176,14 +184,17 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	err = serviceNetwork.Init(ctx)
 	require.NoError(t, err)
 
-	nodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
-	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, core.NewRefFromBase58(nodeId), serviceNetwork.GetAddress(), true)
+	nodeId := "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"
+	nodeRef, err := core.NewRefFromBase58(nodeId)
+	require.NoError(t, err)
+	addr := c.NodeNetwork.GetOrigin().PhysicalAddress()
+	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, *nodeRef, addr, true)
 
 	serviceNetwork.PulseManager = tempLedger.GetPulseManager()
 	require.NoError(t, err)
 	err = serviceNetwork.Start(ctx)
 	require.NoError(t, err)
-	address := serviceNetwork.GetAddress()
+	address := addr
 	return tempLedger, cleaner, serviceNetwork, address
 }
 
@@ -191,7 +202,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	t.Skip("INS-31")
 	ctx := inslogger.TestContext(t)
 	// Arrange
-	bootstrapLedger, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(ctx, t, nil)
+	bootstrapLedger, bootstrapLedgerCleaner, bootstrapNodeNetwork, _ := initNetwork(ctx, t, nil)
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
@@ -205,15 +216,15 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 
 	newPulsar, err := NewPulsar(
 		configuration.Pulsar{
-			ConnectionType:      "tcp",
-			MainListenerAddress: ":1640",
-			BootstrapNodes:      []string{bootstrapAddress},
-			BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1890", BehindNAT: false},
-			Neighbours:          []configuration.PulsarNodeAddress{},
+			ConnectionType:        "tcp",
+			MainListenerAddress:   ":1640",
+			DistributionTransport: configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1890", BehindNAT: false},
+			Neighbours:            []configuration.PulsarNodeAddress{},
 		},
 		service,
 		pcs,
 		keyProcessor,
+		newPulseDistributor(t),
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutils.MockEntropyGenerator{},
@@ -274,8 +285,6 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		configuration.Pulsar{
 			ConnectionType:      "tcp",
 			MainListenerAddress: ":1140",
-			BootstrapNodes:      []string{bootstrapAddress},
-			BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
 			Neighbours: []configuration.PulsarNodeAddress{
 				{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: "publicKey"},
 			},
@@ -287,6 +296,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		service,
 		pcs,
 		keyProcessor,
+		newPulseDistributor(t),
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
@@ -301,8 +311,6 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		configuration.Pulsar{
 			ConnectionType:      "tcp",
 			MainListenerAddress: ":1641",
-			BootstrapNodes:      []string{bootstrapAddress},
-			BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
 			Neighbours: []configuration.PulsarNodeAddress{
 				{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: "publicKey"},
 			},
@@ -314,6 +322,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		service,
 		pcs,
 		keyProcessor,
+		newPulseDistributor(t),
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
@@ -388,18 +397,12 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		"127.0.0.1:1646",
 		"127.0.0.1:1647",
 	}
-	transportAddress := "127.0.0.1:1648"
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 		conf := configuration.Configuration{
 			Pulsar: configuration.Pulsar{
-				ConnectionType:      "tcp",
-				MainListenerAddress: mainAddresses[pulsarIndex],
-				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener: configuration.Transport{
-					Protocol:  "UTP",
-					Address:   transportAddress,
-					BehindNAT: false},
+				ConnectionType:                 "tcp",
+				MainListenerAddress:            mainAddresses[pulsarIndex],
 				Neighbours:                     []configuration.PulsarNodeAddress{},
 				ReceivingSignTimeout:           50,
 				ReceivingNumberTimeout:         50,
@@ -427,6 +430,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 			service,
 			pcs,
 			keyProcessor,
+			newPulseDistributor(t),
 			storage,
 			&RPCClientWrapperFactoryImpl{},
 			&entropygenerator.StandardEntropyGenerator{},

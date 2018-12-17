@@ -46,25 +46,28 @@ type syncstate struct {
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
 	db *storage.DB
-	syncstate
+
+	sync.Mutex
+	jetSyncStates map[core.RecordID]*syncstate
 }
 
 // NewSync creates new Sync instance.
 func NewSync(db *storage.DB) *Sync {
 	return &Sync{
-		db: db,
+		db:            db,
+		jetSyncStates: map[core.RecordID]*syncstate{},
 	}
 }
 
-func (s *Sync) checkIsNextPulse(ctx context.Context, pn core.PulseNumber) error {
+func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetstate *syncstate, pn core.PulseNumber) error {
 	var (
 		checkpoint core.PulseNumber
 		err        error
 	)
 
-	checkpoint = s.lastok
+	checkpoint = jetstate.lastok
 	if checkpoint == 0 {
-		checkpoint, err = s.db.GetHeavySyncedPulse(ctx)
+		checkpoint, err = s.db.GetHeavySyncedPulse(ctx, jetID)
 		if err != nil {
 			return errors.Wrap(err, "GetHeavySyncedPulse failed")
 		}
@@ -78,8 +81,8 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, pn core.PulseNumber) error 
 		return nil
 	}
 
-	if pn <= s.lastok {
-		return fmt.Errorf("Pulse %v is not greater than last synced pulse %v", pn, s.lastok)
+	if pn <= jetstate.lastok {
+		return fmt.Errorf("Pulse %v is not greater than last synced pulse %v", pn, jetstate.lastok)
 	}
 
 	pulse, err := s.db.GetPulse(ctx, checkpoint)
@@ -96,37 +99,54 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, pn core.PulseNumber) error 
 	return nil
 }
 
-// Start try to start heavy sync for provided pulse.
-func (s *Sync) Start(ctx context.Context, pn core.PulseNumber) error {
+func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncstate {
 	s.Lock()
-	defer s.Unlock()
+	jetState, ok := s.jetSyncStates[jetID]
+	if !ok {
+		jetState = &syncstate{}
+		s.jetSyncStates[jetID] = jetState
+	}
+	s.Unlock()
+	return jetState
+}
 
-	if s.syncpulse != nil {
+// Start try to start heavy sync for provided pulse.
+func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) error {
+	jetState := s.getJetSyncState(ctx, jetID)
+	jetState.Lock()
+	defer jetState.Unlock()
+
+	if jetState.syncpulse != nil {
 		return ErrSyncInProgress
 	}
 
-	if err := s.checkIsNextPulse(ctx, pn); err != nil {
+	if err := s.checkIsNextPulse(ctx, jetID, jetState, pn); err != nil {
 		return err
 	}
 
-	s.syncpulse = &pn
+	jetState.syncpulse = &pn
 	return nil
 }
 
 // Store stores recieved key/value pairs at heavy storage.
 //
-// TODO: check actual pulse in keys
-func (s *Sync) Store(ctx context.Context, pn core.PulseNumber, kvs []core.KV) error {
+// TODO: check actual jet and pulse in keys
+func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
+	jetState := s.getJetSyncState(ctx, jetID)
+
 	err := func() error {
-		s.Lock()
-		defer s.Unlock()
-		if s.syncpulse == nil {
-			return errors.New("Jet not in sync mode")
+		jetState.Lock()
+		defer jetState.Unlock()
+		if jetState.syncpulse == nil {
+			return fmt.Errorf("Jet %v not in sync mode", jetID)
 		}
-		if *s.syncpulse != pn {
-			return fmt.Errorf("Passed pulse %v doesn't math in-sync pulse %v", pn, *s.syncpulse)
+		if *jetState.syncpulse != pn {
+			return fmt.Errorf("Passed pulse %v doesn't math in-sync pulse %v", pn, *jetState.syncpulse)
 		}
-		s.insync = true
+		if jetState.insync {
+			return ErrSyncInProgress
+		}
+		jetState.insync = true
 		return nil
 	}()
 	if err != nil {
@@ -134,49 +154,53 @@ func (s *Sync) Store(ctx context.Context, pn core.PulseNumber, kvs []core.KV) er
 	}
 
 	defer func() {
-		s.Lock()
-		s.insync = false
-		s.Unlock()
+		jetState.Lock()
+		jetState.insync = false
+		jetState.Unlock()
 	}()
-	// could be retryable error only on low level storage issues
-	// TODO: check error value and wrap to repeatable if it is not integrity errors
+	// TODO: check jet in keys?
 	return s.db.StoreKeyValues(ctx, kvs)
 }
 
 // Stop successfully stops replication for specified pulse.
 //
 // TODO: call Stop if range sync too long
-func (s *Sync) Stop(ctx context.Context, pn core.PulseNumber) error {
-	s.Lock()
-	defer s.Unlock()
-	if s.syncpulse == nil {
-		return errors.New("Jet not in sync mode")
+func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) error {
+	jetState := s.getJetSyncState(ctx, jetID)
+	jetState.Lock()
+	defer jetState.Unlock()
+
+	if jetState.syncpulse == nil {
+		return errors.Errorf("Jet %v not in sync mode", jetID)
 	}
-	if *s.syncpulse != pn {
-		return fmt.Errorf("Passed pulse %v doesn't match pulse %v current in sync", pn, *s.syncpulse)
+	if *jetState.syncpulse != pn {
+		return fmt.Errorf(
+			"Passed pulse %v doesn't match pulse %v current in sync for jet %v",
+			pn, *jetState.syncpulse, jetID)
 	}
-	if s.insync {
+	if jetState.insync {
 		return ErrSyncInProgress
 	}
-	s.syncpulse = nil
+	jetState.syncpulse = nil
 
-	err := s.db.SetHeavySyncedPulse(ctx, pn)
+	err := s.db.SetHeavySyncedPulse(ctx, jetID, pn)
 	if err != nil {
 		return err
 	}
-	s.lastok = pn
+	jetState.lastok = pn
 	return nil
 }
 
 // Reset resets sync for provided pulse.
-func (s *Sync) Reset(ctx context.Context, pn core.PulseNumber) error {
-	s.Lock()
-	defer s.Unlock()
+func (s *Sync) Reset(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) error {
+	jetState := s.getJetSyncState(ctx, jetID)
+	jetState.Lock()
+	defer jetState.Unlock()
 
-	if s.insync {
+	if jetState.insync {
 		return ErrSyncInProgress
 	}
 
-	s.syncpulse = nil
+	jetState.syncpulse = nil
 	return nil
 }

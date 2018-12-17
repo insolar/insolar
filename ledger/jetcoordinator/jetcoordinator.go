@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
@@ -58,7 +59,7 @@ func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
 func (jc *JetCoordinator) IsAuthorized(
 	ctx context.Context,
 	role core.DynamicRole,
-	obj *core.RecordRef,
+	obj *core.RecordID,
 	pulse core.PulseNumber,
 	node core.RecordRef,
 ) (bool, error) {
@@ -74,16 +75,26 @@ func (jc *JetCoordinator) IsAuthorized(
 	return false, nil
 }
 
+// AmI checks for role on concrete pulse for current node.
+func (jc *JetCoordinator) AmI(
+	ctx context.Context,
+	role core.DynamicRole,
+	obj *core.RecordID,
+	pulse core.PulseNumber,
+) (bool, error) {
+	return jc.IsAuthorized(ctx, role, obj, pulse, jc.NodeNet.GetOrigin().ID())
+}
+
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
 func (jc *JetCoordinator) QueryRole(
 	ctx context.Context,
 	role core.DynamicRole,
-	obj *core.RecordRef,
+	obj *core.RecordID,
 	pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
 	pulseData, err := jc.db.GetPulse(ctx, pulse)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to fetch pulse data for pulse %v", pulse)
 	}
 	candidates := jc.NodeNet.GetActiveNodesByRole(role)
 	if len(candidates) == 0 {
@@ -99,23 +110,17 @@ func (jc *JetCoordinator) QueryRole(
 		return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
 	}
 
-	objHash := obj.Record().Hash()
 	if role == core.DynamicRoleLightExecutor {
-		jetTree, err := jc.db.GetJetTree(ctx, pulseData.Pulse.PulseNumber)
-		if err == storage.ErrNotFound {
-			return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
-		}
-
+		jetTree, err := jc.db.GetJetTree(ctx, obj.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		_, depth := jetTree.Find(objHash)
-
-		// Reset everything except prefix.
-		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, resetBits(objHash, depth+1)), candidates, count)
+		id := jetTree.Find(*obj)
+		_, prefix := jet.Jet(*id)
+		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, prefix), candidates, count)
 	}
 
-	return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, objHash), candidates, count)
+	return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, obj.Hash()), candidates, count)
 }
 
 // GetActiveNodes return active nodes for specified pulse.

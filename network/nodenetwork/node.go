@@ -27,7 +27,6 @@ import (
 type MutableNode interface {
 	core.Node
 
-	SetPulse(core.PulseNumber)
 	SetShortID(shortID core.ShortNodeID)
 }
 
@@ -76,10 +75,6 @@ func (n *node) ShortID() core.ShortNodeID {
 	return n.NodeShortID
 }
 
-func (n *node) Pulse() core.PulseNumber {
-	return n.NodePulseNum
-}
-
 func (n *node) Role() core.StaticRole {
 	return n.NodeRole
 }
@@ -92,26 +87,16 @@ func (n *node) PhysicalAddress() string {
 	return n.NodePhysicalAddress
 }
 
+func (n *node) GetGlobuleID() core.GlobuleID {
+	return 0
+}
+
 func (n *node) Version() string {
 	return n.NodeVersion
 }
 
-func (n *node) SetPulse(pulseNum core.PulseNumber) {
-	n.NodePulseNum = pulseNum
-}
-
 func (n *node) SetShortID(id core.ShortNodeID) {
 	n.NodeShortID = id
-}
-
-type mutableNodes []MutableNode
-
-func (mn mutableNodes) Export() []core.Node {
-	nodes := make([]core.Node, len(mn))
-	for i := range mn {
-		nodes[i] = mn[i]
-	}
-	return nodes
 }
 
 func init() {

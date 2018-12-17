@@ -30,7 +30,6 @@ import (
 // SecondPhase is a second phase.
 type SecondPhase struct {
 	NodeKeeper   network.NodeKeeper       `inject:""`
-	Network      core.Network             `inject:""`
 	Calculator   merkle.Calculator        `inject:""`
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
@@ -38,14 +37,13 @@ type SecondPhase struct {
 
 func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
 	prevCloudHash := sp.NodeKeeper.GetCloudHash()
-	globuleID := sp.Network.GetGlobuleID()
 
 	entry := &merkle.GlobuleEntry{
 		PulseEntry:    state.PulseEntry,
 		ProofSet:      state.ValidProofs,
 		PulseHash:     state.PulseHash,
 		PrevCloudHash: prevCloudHash,
-		GlobuleID:     globuleID,
+		GlobuleID:     sp.NodeKeeper.GetOrigin().GetGlobuleID(),
 	}
 	globuleHash, globuleProof, err := sp.Calculator.GetGlobuleProof(entry)
 

@@ -7,7 +7,8 @@ import (
 )
 
 // PrototypeReference to prototype of this contract
-var PrototypeReference = core.NewRefFromBase58("")
+// error checking hides in generator
+var PrototypeReference, _ = core.NewRefFromBase58("111124YnRDsqTTetymaRDU7fFH6oJqrUrjdMqsYqK3v.11111111111111111111111111111111")
 
 // Wallet holds proxy type
 type Wallet struct {
@@ -24,7 +25,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Wallet, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +34,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Wallet, err
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*Wallet, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -47,12 +48,12 @@ func GetObject(ref core.RecordRef) (r *Wallet) {
 
 // GetPrototype returns reference to the prototype
 func GetPrototype() core.RecordRef {
-	return PrototypeReference
+	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) (*Wallet, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, PrototypeReference)
+	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -80,14 +81,14 @@ func (r *Wallet) GetReference() core.RecordRef {
 
 // GetPrototype returns reference to the code
 func (r *Wallet) GetPrototype() (core.RecordRef, error) {
-	if r.Prototype == core.NewRefFromBase58("") {
+	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -110,14 +111,14 @@ func (r *Wallet) GetPrototype() (core.RecordRef, error) {
 
 // GetCode returns reference to the code
 func (r *Wallet) GetCode() (core.RecordRef, error) {
-	if r.Code == core.NewRefFromBase58("") {
+	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0))
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -154,7 +155,7 @@ func (r *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Transfer", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -183,7 +184,7 @@ func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Transfer", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -207,7 +208,7 @@ func (r *Wallet) Accept(aRef *core.RecordRef) error {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Accept", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Accept", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -235,7 +236,7 @@ func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Accept", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Accept", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -260,7 +261,7 @@ func (r *Wallet) GetBalance() (uint, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalance", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -287,7 +288,7 @@ func (r *Wallet) GetBalanceNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetBalance", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

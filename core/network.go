@@ -33,21 +33,19 @@ type Cascade struct {
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(ctx context.Context, args [][]byte) ([]byte, error)
 
-// GlobuleID is the ID of the globe
-type GlobuleID uint32
-
 // Network is interface for network modules facade.
 type Network interface {
 	// SendParcel sends a message.
 	SendMessage(nodeID RecordRef, method string, msg Parcel) ([]byte, error)
 	// SendCascadeMessage sends a message.
 	SendCascadeMessage(data Cascade, method string, msg Parcel) error
-	// GetAddress returns an origin address.
-	GetAddress() string
 	// RemoteProcedureRegister is remote procedure register func.
 	RemoteProcedureRegister(name string, method RemoteProcedure)
-	// GetNodeID returns current node id.
-	GetNodeID() RecordRef
-	// GetGlobuleID returns current globule id.
-	GetGlobuleID() GlobuleID
+}
+
+// PulseDistributor is interface for pulse distribution.
+//go:generate minimock -i github.com/insolar/insolar/core.PulseDistributor -o ../testutils -s _mock.go
+type PulseDistributor interface {
+	// Distribute distributes a pulse across the network.
+	Distribute(context.Context, *Pulse)
 }

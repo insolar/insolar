@@ -38,10 +38,10 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Service                    core.Network                    `inject:""`
+	Network                    core.Network                    `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 	LocalStorage               core.LocalStorage               `inject:""`
-	ActiveNodes                core.NodeNetwork                `inject:""`
+	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
@@ -56,10 +56,12 @@ type MessageBus struct {
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
 // wrap it, providing additional functionality.
 func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
-	return &MessageBus{
+	mb := &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
 		signmessages: config.Host.SignMessages,
-	}, nil
+	}
+	mb.globalLock.Lock()
+	return mb, nil
 }
 
 // NewPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
@@ -86,7 +88,7 @@ func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) 
 
 // Start initializes message bus.
 func (mb *MessageBus) Start(ctx context.Context) error {
-	mb.Service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
+	mb.Network.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 
 	return nil
 }
@@ -99,12 +101,12 @@ func (mb *MessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
 	panic("this is not a recorder")
 }
 
-func (mb *MessageBus) Acquire(ctx context.Context) {
+func (mb *MessageBus) Lock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Acquire GIL")
 	mb.globalLock.Lock()
 }
 
-func (mb *MessageBus) Release(ctx context.Context) {
+func (mb *MessageBus) Unlock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Release GIL")
 	mb.globalLock.Unlock()
 }
@@ -141,7 +143,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse c
 
 // CreateParcel creates signed message from provided message.
 func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), token, currentPulse)
+	return mb.ParcelFactory.Create(ctx, msg, mb.NodeNetwork.GetOrigin().ID(), token, currentPulse)
 }
 
 // SendParcel sends provided message via network.
@@ -152,17 +154,17 @@ func (mb *MessageBus) SendParcel(
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
 	scope := newReaderScope(&mb.globalLock)
-	scope.Lock()
-	defer scope.Unlock()
+	scope.Lock(ctx, "Sending parcel ...")
+	defer scope.Unlock(ctx, "Sending parcel done")
 
 	var nodes []core.RecordRef
 	if options != nil && options.Receiver != nil {
 		nodes = []core.RecordRef{*options.Receiver}
 	} else {
 		// TODO: send to all actors of the role if nil Target
-		target := message.ExtractTarget(parcel)
+		target := parcel.DefaultTarget()
 		var err error
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, message.ExtractRole(parcel), &target, currentPulse.PulseNumber)
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), target.Record(), currentPulse.PulseNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -174,21 +176,22 @@ func (mb *MessageBus) SendParcel(
 			Entropy:           currentPulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
+		err := mb.Network.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
 		return nil, err
 	}
 
 	// Short path when sending to self node. Skip serialization
-	if nodes[0].Equal(mb.Service.GetNodeID()) {
+	origin := mb.NodeNetwork.GetOrigin()
+	if nodes[0].Equal(origin.ID()) {
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
-	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, parcel)
+	res, err := mb.Network.SendMessage(nodes[0], deliverRPCMethodName, parcel)
 	if err != nil {
 		return nil, err
 	}
 
-	scope.Unlock()
+	scope.Unlock(ctx, "Sending parcel done")
 
 	return reply.Deserialize(bytes.NewBuffer(res))
 }
@@ -202,6 +205,7 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
 		return nil, errors.New("no handler for received message type")
@@ -236,10 +240,10 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	sender := parcel.GetSender()
 
 	scope := newReaderScope(&mb.globalLock)
-	scope.Lock()
-	defer scope.Unlock()
+	scope.Lock(ctx, "Delivering ...")
+	defer scope.Unlock(ctx, "Delivering done")
 
-	senderKey := mb.ActiveNodes.GetActiveNode(sender).PublicKey()
+	senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
 	if mb.signmessages {
 		err := mb.ParcelFactory.Validate(senderKey, parcel)
 		if err != nil {
@@ -256,10 +260,10 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 			return nil, errors.New("delegation token is not valid")
 		}
 	} else {
-		sendingObject, allowedSenderRole := message.ExtractAllowedSenderObjectAndRole(parcel)
+		sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
 		if sendingObject != nil {
 			validSender, err := mb.JetCoordinator.IsAuthorized(
-				parcelCtx, allowedSenderRole, sendingObject, parcel.Pulse(), sender,
+				parcelCtx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,
 			)
 			if err != nil {
 				return nil, err
@@ -275,7 +279,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 		return nil, err
 	}
 
-	scope.Unlock()
+	scope.Unlock(ctx, "Delivering done")
 
 	rd, err := reply.Serialize(resp)
 	if err != nil {
@@ -304,14 +308,16 @@ func newReaderScope(mutex *sync.RWMutex) *readerScope {
 	}
 }
 
-func (rs *readerScope) Lock() {
+func (rs *readerScope) Lock(ctx context.Context, info string) {
+	inslogger.FromContext(ctx).Info(info)
 	rs.mutex.RLock()
 	rs.locked = true
 }
 
-func (rs *readerScope) Unlock() {
+func (rs *readerScope) Unlock(ctx context.Context, info string) {
 	if rs.locked {
 		rs.locked = false
+		inslogger.FromContext(ctx).Info(info)
 		rs.mutex.RUnlock()
 	}
 }

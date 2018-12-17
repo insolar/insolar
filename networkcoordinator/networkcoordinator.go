@@ -43,7 +43,7 @@ func New() (*NetworkCoordinator, error) {
 
 // Start implements interface of Component
 func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	nc.MessageBus.MustRegister(core.NetworkCoordinatorNodeSignRequest, nc.signCertHandler)
+	nc.MessageBus.MustRegister(core.TypeNodeSignRequest, nc.signCertHandler)
 
 	nc.zeroCoordinator = newZeroNetworkCoordinator()
 	nc.realCoordinator = newRealNetworkCoordinator(

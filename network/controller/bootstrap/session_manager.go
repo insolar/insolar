@@ -17,10 +17,14 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
@@ -43,26 +47,71 @@ type Session struct {
 
 	DiscoveryNonce Nonce
 
-	// TODO: expiry time
+	Time time.Time
+	TTL  time.Duration
 }
+
+func (s *Session) expirationTime() time.Time {
+	return s.Time.Add(s.TTL)
+}
+
+type sessionWithID struct {
+	*Session
+	SessionID
+}
+
+type notification struct{}
 
 type SessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
 	sessions map[SessionID]*Session
+
+	newSessionNotification  chan notification
+	stopCleanupNotification chan notification
 }
 
 func NewSessionManager() *SessionManager {
-	return &SessionManager{sessions: make(map[SessionID]*Session)}
+	return &SessionManager{
+		sessions:                make(map[SessionID]*Session),
+		newSessionNotification:  make(chan notification),
+		stopCleanupNotification: make(chan notification),
+	}
 }
 
-func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate) SessionID {
+func (sm *SessionManager) Start(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("[ SessionManager::Start ] start cleaning up sessions")
+
+	go sm.cleanupExpiredSessions()
+
+	return nil
+}
+
+func (sm *SessionManager) Stop(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("[ SessionManager::Stop ] stop cleaning up sessions")
+
+	sm.stopCleanupNotification <- notification{}
+
+	return nil
+}
+
+func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
-	result := &Session{NodeID: ref, State: Authorized, Cert: cert}
+	session := &Session{
+		NodeID: ref,
+		State:  Authorized,
+		Cert:   cert,
+		Time:   time.Now(),
+		TTL:    ttl,
+	}
 	sessionID := SessionID(id)
+
 	sm.lock.Lock()
-	sm.sessions[sessionID] = result
+	sm.sessions[sessionID] = session
 	sm.lock.Unlock()
+
+	sm.newSessionNotification <- notification{}
+
 	return sessionID
 }
 
@@ -131,4 +180,94 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	}
 	delete(sm.sessions, id)
 	return session, nil
+}
+
+func (sm *SessionManager) cleanupExpiredSessions() {
+	var sessionsByExpirationTime []*sessionWithID
+	for {
+		sm.lock.RLock()
+		sessionsCount := len(sm.sessions)
+		sm.lock.RUnlock()
+
+		// We missed notification
+		if sessionsCount != 0 && len(sessionsByExpirationTime) == 0 {
+			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+		}
+
+		// Session count is zero - wait for first session added.
+		if len(sessionsByExpirationTime) == 0 {
+			// Have no active sessions. Block till sessions will be added.
+			<-sm.newSessionNotification
+
+			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+
+			// Check session instantly released concurrently
+			if len(sessionsByExpirationTime) == 0 {
+				continue
+			}
+		}
+
+		// Get expiration time for next session and wait for it
+		nextSessionToExpire := sessionsByExpirationTime[0]
+		waitTime := time.Until(nextSessionToExpire.expirationTime())
+
+		select {
+		case <-sm.newSessionNotification:
+			// Handle new session. reorder expiration short list
+			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+
+		case <-time.After(waitTime):
+			// Move forward through sessions and check whether we should delete the session
+			sessionsByExpirationTime = sm.expireSessions(sessionsByExpirationTime)
+
+		case <-sm.stopCleanupNotification:
+			return
+		}
+	}
+}
+
+func (sm *SessionManager) sortSessionsByExpirationTime() []*sessionWithID {
+	sm.lock.RLock()
+
+	// Read active session with their ids. We have to store them as a slice to keep ordering by expiration time.
+	sessionsByExpirationTime := make([]*sessionWithID, len(sm.sessions))
+	idx := 0
+	for sessionID, session := range sm.sessions {
+		sessionsByExpirationTime[idx] = &sessionWithID{
+			SessionID: sessionID,
+			Session:   session,
+		}
+		idx++
+	}
+
+	sm.lock.RUnlock()
+
+	sort.SliceStable(sessionsByExpirationTime, func(i, j int) bool {
+		expirationTime1 := sessionsByExpirationTime[i].expirationTime()
+		expirationTime2 := sessionsByExpirationTime[j].expirationTime()
+
+		return expirationTime1.Before(expirationTime2)
+	})
+
+	return sessionsByExpirationTime
+}
+
+func (sm *SessionManager) expireSessions(sessionsByExpirationTime []*sessionWithID) []*sessionWithID {
+	var shift int
+
+	sm.lock.Lock()
+
+	for i, session := range sessionsByExpirationTime {
+		// Check when we have to stop expire
+		if session.expirationTime().After(time.Now()) {
+			break
+		}
+
+		delete(sm.sessions, session.SessionID)
+		shift = i + 1
+	}
+
+	sm.lock.Unlock()
+
+	return sessionsByExpirationTime[shift:]
 }

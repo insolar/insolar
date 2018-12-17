@@ -64,10 +64,30 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 // CallMethod - Simply call method and return result
 type CallMethod struct {
 	BaseLogicMessage
-	ReturnMode MethodReturnMode
-	ObjectRef  core.RecordRef
-	Method     string
-	Arguments  core.Arguments
+	ReturnMode     MethodReturnMode
+	ObjectRef      core.RecordRef
+	Method         string
+	Arguments      core.Arguments
+	ProxyPrototype core.RecordRef
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (cm *CallMethod) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	c := cm.GetCaller()
+	if c.IsEmpty() {
+		return nil, 0
+	}
+	return c, core.DynamicRoleVirtualExecutor
+}
+
+// DefaultRole returns role for this event
+func (*CallMethod) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (cm *CallMethod) DefaultTarget() *core.RecordRef {
+	return &cm.ObjectRef
 }
 
 func (m *CallMethod) GetReference() core.RecordRef {
@@ -97,6 +117,28 @@ type CallConstructor struct {
 	PulseNum     core.PulseNumber
 }
 
+//
+func (cc *CallConstructor) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	c := cc.GetCaller()
+	if c.IsEmpty() {
+		return nil, 0
+	}
+	return c, core.DynamicRoleVirtualExecutor
+}
+
+// DefaultRole returns role for this event
+func (*CallConstructor) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (cc *CallConstructor) DefaultTarget() *core.RecordRef {
+	if cc.SaveAs == Delegate {
+		return &cc.ParentRef
+	}
+	return genRequest(cc.PulseNum, MustSerializeBytes(cc))
+}
+
 func (m *CallConstructor) GetReference() core.RecordRef {
 	return *genRequest(m.PulseNum, MustSerializeBytes(m))
 }
@@ -109,7 +151,22 @@ func (m *CallConstructor) Type() core.MessageType {
 type ExecutorResults struct {
 	Caller    core.RecordRef
 	RecordRef core.RecordRef
-	CaseBind  core.CaseBind
+	Requests  []CaseBindRequest
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (er *ExecutorResults) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+// DefaultRole returns role for this event
+func (er *ExecutorResults) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (er *ExecutorResults) DefaultTarget() *core.RecordRef {
+	return &er.RecordRef
 }
 
 func (m *ExecutorResults) Type() core.MessageType {
@@ -128,8 +185,31 @@ func (m *ExecutorResults) GetReference() core.RecordRef {
 type ValidateCaseBind struct {
 	Caller    core.RecordRef
 	RecordRef core.RecordRef
-	CaseBind  core.CaseBind
+	Requests  []CaseBindRequest
 	Pulse     core.Pulse
+}
+
+type CaseBindRequest struct {
+	Message        core.Message
+	Request        core.RecordRef
+	MessageBusTape []byte
+	Reply          core.Reply
+	Error          error
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (vcb *ValidateCaseBind) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &vcb.RecordRef, core.DynamicRoleVirtualExecutor
+}
+
+// DefaultRole returns role for this event
+func (*ValidateCaseBind) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualValidator
+}
+
+// DefaultTarget returns of target of this event.
+func (vcb *ValidateCaseBind) DefaultTarget() *core.RecordRef {
+	return &vcb.RecordRef
 }
 
 func (m *ValidateCaseBind) Type() core.MessageType {
@@ -156,17 +236,32 @@ type ValidationResults struct {
 	Error            string
 }
 
-func (m *ValidationResults) Type() core.MessageType {
+// AllowedSenderObjectAndRole implements interface method
+func (vr *ValidationResults) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &vr.RecordRef, core.DynamicRoleVirtualValidator
+}
+
+// DefaultRole returns role for this event
+func (*ValidationResults) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (vr *ValidationResults) DefaultTarget() *core.RecordRef {
+	return &vr.RecordRef
+}
+
+func (vr *ValidationResults) Type() core.MessageType {
 	return core.TypeValidationResults
 }
 
 // TODO change after changing pulsar
-func (m *ValidationResults) GetCaller() *core.RecordRef {
-	return &m.Caller // TODO actually it's not right. There is no caller.
+func (vr *ValidationResults) GetCaller() *core.RecordRef {
+	return &vr.Caller // TODO actually it's not right. There is no caller.
 }
 
-func (m *ValidationResults) GetReference() core.RecordRef {
-	return m.RecordRef
+func (vr *ValidationResults) GetReference() core.RecordRef {
+	return vr.RecordRef
 }
 
 var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory

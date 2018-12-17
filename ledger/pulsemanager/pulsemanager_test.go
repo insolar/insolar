@@ -94,6 +94,9 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		return bytes.Equal(firstID.Bytes(), inputID.Bytes())
 	}
 
+	providerMock := recentstorage.NewProviderMock(t)
+	providerMock.GetStorageMock.Return(recentMock)
+
 	mbMock := testutils.NewMessageBusMock(t)
 	mbMock.SendFunc = func(p context.Context, p1 core.Message, _ core.Pulse, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		val, ok := p1.(*message.HotData)
@@ -130,15 +133,24 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	alsMock := testutils.NewActiveListSwapperMock(t)
 	alsMock.MoveSyncToActiveFunc = func() {}
 
+	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
+	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+
 	pm.LR = lr
-	pm.Recent = recentMock
+
+	pm.RecentStorageProvider = providerMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
 	pm.GIL = gil
 	pm.ActiveListSwapper = alsMock
+	pm.CryptographyService = cryptoServiceMock
+	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	// Act
-	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
+	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
 	require.NoError(t, err)
 	savedIndex, err := db.GetObjectIndex(ctx, jetID, firstID, false)
 	require.NoError(t, err)

@@ -50,7 +50,7 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 }
 
 // Start starts networking.
-func (t *utpTransport) Start(ctx context.Context) error {
+func (t *utpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start UTP transport")
 	for {
 		conn, err := t.socket.Accept()

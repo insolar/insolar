@@ -71,10 +71,14 @@ func main() {
 			log.Fatal("code param format is <ref>:</path/to/plugin.so>")
 			os.Exit(1)
 		}
-		ref := core.NewRefFromBase58(codeSlice[0])
+		ref, err := core.NewRefFromBase58(codeSlice[0])
+		if err != nil {
+			log.Fatalf("Couldn't parse ref: %s", err.Error())
+			os.Exit(1)
+		}
 		pluginPath := codeSlice[1]
 
-		err := insider.AddPlugin(ref, pluginPath)
+		err = insider.AddPlugin(*ref, pluginPath)
 		if err != nil {
 			log.Fatalf("Couldn't add plugin by ref %s with .so from %s, err: %s ", ref, pluginPath, err.Error())
 			os.Exit(1)

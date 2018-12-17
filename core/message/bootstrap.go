@@ -26,6 +26,21 @@ type GenesisRequest struct {
 	Name string
 }
 
+// AllowedSenderObjectAndRole implements interface method
+func (*GenesisRequest) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+// DefaultRole returns role for this event
+func (*GenesisRequest) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (gr *GenesisRequest) DefaultTarget() *core.RecordRef {
+	return &core.RecordRef{}
+}
+
 // Type implementation for genesis request.
 func (*GenesisRequest) Type() core.MessageType {
 	return core.TypeBootstrapRequest

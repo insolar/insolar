@@ -32,4 +32,19 @@ type Options struct {
 
 	// Bootstrap reconnect timeout
 	BootstrapTimeout time.Duration
+
+	// Min bootstrap retry timeout
+	MinTimeout time.Duration
+
+	// Max bootstrap retry timeout
+	MaxTimeout time.Duration
+
+	// Multiplier for boostrap retry time
+	TimeoutMult time.Duration
+
+	// True - infinity tries to bootstrap
+	InfinityBootstrap bool
+
+	// HandshakeSession TTL
+	HandshakeSessionTTL time.Duration
 }
