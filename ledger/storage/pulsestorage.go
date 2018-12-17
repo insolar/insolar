@@ -40,7 +40,7 @@ func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
 	defer ps.rwLock.RUnlock()
 
 	latestPulse, err := ps.db.GetLatestPulse(ctx)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -48,12 +48,11 @@ func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
 }
 
 // Lock takes lock on parent's pulse storage
-func (p *PulseStorage) Lock() {
-	p.rwLock.Lock()
+func (ps *PulseStorage) Lock() {
+	ps.rwLock.Lock()
 }
 
 // Unlock takes unlock on parent's pulse storage
-func (p *PulseStorage) Unlock() {
-	p.rwLock.Unlock()
+func (ps *PulseStorage) Unlock() {
+	ps.rwLock.Unlock()
 }
-
