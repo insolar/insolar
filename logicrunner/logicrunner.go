@@ -50,9 +50,10 @@ type ObjectState struct {
 
 type ExecutionState struct {
 	sync.Mutex
-	objectbody *ObjectBody
-	deactivate bool
-	nonce      uint64
+	objectbody             *ObjectBody
+	somebodyStillExecuting *bool
+	deactivate             bool
+	nonce                  uint64
 
 	Behaviour ValidationBehaviour
 	Current   *CurrentExecution
@@ -338,7 +339,29 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	es.Queue = append(es.Queue, qElement)
 
-	if es.Current == nil {
+	startProcessor := es.Current == nil
+	if startProcessor {
+		if es.somebodyStillExecuting == nil {
+			var exec bool
+			if _, ok := parcel.Message().(*message.CallMethod); ok {
+				_, err := lr.ArtifactManager.GetObject(ctx, ref, nil, false)
+				if err != nil {
+					es.Unlock()
+					return nil, err
+				}
+
+				// TODO: FIXME: waiting ledger team
+				// if objDesc.HasPendingRequests() {
+				//	exec = true
+				// }
+			} else {
+				exec = false
+			}
+			es.somebodyStillExecuting = &exec
+		}
+	}
+
+	if startProcessor {
 		inslogger.FromContext(ctx).Debug("Starting a new queue processor")
 		go lr.ProcessExecutionQueue(ctx, es)
 	}
