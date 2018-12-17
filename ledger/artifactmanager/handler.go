@@ -79,7 +79,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	// Validation.
 	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
 	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
-	h.replayHandlers[core.TypeHotRecords] = m.checkJet(h.handleHotRecords)
+	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
 	// Heavy.
 	h.replayHandlers[core.TypeHeavyStartStop] = m.checkJet(h.handleHeavyStartStop)
@@ -797,7 +797,8 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	msg := parcel.Message().(*message.HotData)
-	jetID := jetFromContext(ctx)
+	// FIXME: check split signatures.
+	jetID := *msg.Jet.Record()
 
 	err := h.db.SetDrop(ctx, jetID, &msg.Drop)
 	if err != nil {
@@ -848,7 +849,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		*jet.NewID(2, []byte{}),       // 00
 		*jet.NewID(2, []byte{1 << 6}), // 01
 		*jet.NewID(2, []byte{1 << 7}), // 10
-		*msg.Jet.Record(),             // Don't delete this.
+		jetID,                         // Don't delete this.
 	)
 	if err != nil {
 		return nil, err
