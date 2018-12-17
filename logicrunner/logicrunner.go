@@ -55,9 +55,10 @@ type ExecutionState struct {
 	deactivate             bool
 	nonce                  uint64
 
-	Behaviour ValidationBehaviour
-	Current   *CurrentExecution
-	Queue     []ExecutionQueueElement
+	Behaviour            ValidationBehaviour
+	Current              *CurrentExecution
+	QueueProcessorActive bool
+	Queue                []ExecutionQueueElement
 	pending   bool // TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 }
 
@@ -339,7 +340,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	es.Queue = append(es.Queue, qElement)
 
-	startProcessor := es.Current == nil
+	startProcessor := !es.QueueProcessorActive
 	if startProcessor {
 		if es.somebodyStillExecuting == nil {
 			var exec bool
@@ -363,6 +364,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 	if startProcessor {
 		inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+		es.QueueProcessorActive = true
 		go lr.ProcessExecutionQueue(ctx, es)
 	}
 	es.Unlock()
@@ -386,6 +388,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 	defer func() {
 		inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
 		es.Lock()
+		es.QueueProcessorActive = false
 		es.Current = nil
 		es.Unlock()
 	}()
