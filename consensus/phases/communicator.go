@@ -231,7 +231,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 
 	var responsePacket *packets.Phase1Packet
 
-	// awful, need rework
+	// TODO: awful, need rework
 	if originClaim == nil {
 		responsePacket = packet
 	} else {
@@ -361,6 +361,9 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 
 func selectCandidate(candidates []core.RecordRef) core.RecordRef {
 	// TODO: make it random
+	if len(candidates) == 0 {
+		panic("candidates list should have at least 1 candidate (check consensus state matrix calculation routines)")
+	}
 	return candidates[0]
 }
 
