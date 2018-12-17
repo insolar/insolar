@@ -578,7 +578,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		}
 	}
 
-	err := h.db.SaveJet(ctx, msg.JetID)
+	err := h.db.AddJets(ctx, msg.JetID)
 	if err != nil {
 		return nil, err
 	}
@@ -854,7 +854,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		return nil, err
 	}
 
-	err = h.db.SaveJet(ctx, *msg.Jet.Record())
+	err = h.db.AddJets(ctx, *msg.Jet.Record())
 	if err != nil {
 		return nil, err
 	}

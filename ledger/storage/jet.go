@@ -210,8 +210,8 @@ func (db *DB) SplitJetTree(
 	return left, right, nil
 }
 
-// SaveJets stores a list of jets of the current node
-func (db *DB) SaveJet(ctx context.Context, id core.RecordID) error {
+// AddJets stores a list of jets of the current node.
+func (db *DB) AddJets(ctx context.Context, ids ...core.RecordID) error {
 	db.addJetLock.Lock()
 	defer db.addJetLock.Unlock()
 
@@ -231,7 +231,9 @@ func (db *DB) SaveJet(ctx context.Context, id core.RecordID) error {
 		return err
 	}
 
-	jets[id] = struct{}{}
+	for _, id := range ids {
+		jets[id] = struct{}{}
+	}
 	return db.set(ctx, k, jets.Bytes())
 }
 
