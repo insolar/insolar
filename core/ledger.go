@@ -57,9 +57,6 @@ type Ledger interface {
 // PulseManager provides Ledger's methods related to Pulse.
 //go:generate minimock -i github.com/insolar/insolar/core.PulseManager -o ../testutils -s _mock.go
 type PulseManager interface {
-	// Current returns current pulse structure.
-	Current(context.Context) (*Pulse, error)
-
 	// Set set's new pulse and closes current jet drop. If dry is true, nothing will be saved to storage.
 	Set(ctx context.Context, pulse Pulse, persist bool) error
 }
