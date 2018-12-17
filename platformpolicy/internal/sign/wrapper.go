@@ -20,11 +20,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/asn1"
+	"fmt"
 	"math/big"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
+
+const BigIntLength = 32
 
 type ecdsaSignature struct {
 	R, S *big.Int
@@ -66,7 +69,8 @@ func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
 
-	ecdsaSignature, err := fromRS(r, s).Marshal()
+	// ecdsaSignature, err := fromRS(r, s).Marshal()
+	ecdsaSignature := makeSignature(r, s)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
@@ -81,16 +85,32 @@ type ecdsaVerifyWrapper struct {
 }
 
 func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool {
-	var ecdsaSignature ecdsaSignature
-	err := ecdsaSignature.Unmarshal(signature.Bytes())
-	if err != nil {
-		return false
-	}
+	// var ecdsaSignature ecdsaSignature
+	// err := ecdsaSignature.Unmarshal(signature.Bytes())
+	// if err != nil {
+	// 	return false
+	// }
 
+	r, s := getRSFromBytes(signature.Bytes())
+	ecdsaSignature := ecdsaSignature{r, s}
 	hash := sw.hasher.Hash(data)
 
 	return ecdsa.Verify(sw.publicKey, hash, ecdsaSignature.R, ecdsaSignature.S)
 }
+
+func makeSignature(r, s *big.Int) []byte {
+	if (len(r.Bytes()) > BigIntLength) ||
+		(len(s.Bytes()) > BigIntLength) {
+		panic("[ makeSignature ] wrong r, s length")
+	}
+	var res [BigIntLength * 2]byte
+	copy(res[:BigIntLength], r.Bytes())
+	fmt.Printf("%v\n", r.Bytes())
+	copy(res[BigIntLength:], s.Bytes())
+	fmt.Printf("%v\n", s.Bytes())
+	return res[:]
+}
+
 func getRSFromBytes(data []byte) (*big.Int, *big.Int) {
 	if len(data) != BigIntLength*2 {
 		panic("[ getRSFromBytes ] wrong data length to get a r, s")
