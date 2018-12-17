@@ -217,7 +217,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 		configuration.Pulsar{
 			ConnectionType:        "tcp",
 			MainListenerAddress:   ":1640",
-			DistributionTransport: configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1890", BehindNAT: false},
+			DistributionTransport: configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:1890", BehindNAT: false},
 			Neighbours:            []configuration.PulsarNodeAddress{},
 		},
 		service,

@@ -41,7 +41,7 @@ type HostNetwork struct {
 // NewHostNetwork creates new default HostNetwork configuration
 func NewHostNetwork() HostNetwork {
 	// IP address should not be 0.0.0.0!!!
-	transport := Transport{Protocol: "UTP", Address: "127.0.0.1:0", BehindNAT: false}
+	transport := Transport{Protocol: "TCP", Address: "127.0.0.1:0", BehindNAT: false}
 
 	return HostNetwork{
 		Transport:           transport,
