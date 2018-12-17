@@ -339,6 +339,8 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	}
 	es.Unlock()
 
+	// todo SPLIT HERE
+
 	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
 		return &reply.CallMethod{}, nil
 	}
@@ -518,7 +520,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 
 	es.objectbody.Object = newData
 
-	return &reply.CallMethod{Data: newData, Result: result}, nil
+	return &reply.CallMethod{Result: result}, nil
 }
 
 func (lr *LogicRunner) getDescriptorsByPrototypeRef(

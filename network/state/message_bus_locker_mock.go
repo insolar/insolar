@@ -45,92 +45,55 @@ func NewmessageBusLockerMock(t minimock.Tester) *messageBusLockerMock {
 }
 
 type mmessageBusLockerMockLock struct {
-	mock              *messageBusLockerMock
-	mainExpectation   *messageBusLockerMockLockExpectation
-	expectationSeries []*messageBusLockerMockLockExpectation
+	mock             *messageBusLockerMock
+	mockExpectations *messageBusLockerMockLockParams
 }
 
-type messageBusLockerMockLockExpectation struct {
-	input *messageBusLockerMockLockInput
-}
-
-type messageBusLockerMockLockInput struct {
+//messageBusLockerMockLockParams represents input parameters of the messageBusLocker.Lock
+type messageBusLockerMockLockParams struct {
 	p context.Context
 }
 
-//Expect specifies that invocation of messageBusLocker.Lock is expected from 1 to Infinity times
+//Expect sets up expected params for the messageBusLocker.Lock
 func (m *mmessageBusLockerMockLock) Expect(p context.Context) *mmessageBusLockerMockLock {
-	m.mock.LockFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &messageBusLockerMockLockExpectation{}
-	}
-	m.mainExpectation.input = &messageBusLockerMockLockInput{p}
+	m.mockExpectations = &messageBusLockerMockLockParams{p}
 	return m
 }
 
-//Return specifies results of invocation of messageBusLocker.Lock
+//Return sets up a mock for messageBusLocker.Lock to return Return's arguments
 func (m *mmessageBusLockerMockLock) Return() *messageBusLockerMock {
-	m.mock.LockFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &messageBusLockerMockLockExpectation{}
+	m.mock.LockFunc = func(p context.Context) {
+		return
 	}
-
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of messageBusLocker.Lock is expected once
-func (m *mmessageBusLockerMockLock) ExpectOnce(p context.Context) *messageBusLockerMockLockExpectation {
-	m.mock.LockFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &messageBusLockerMockLockExpectation{}
-	expectation.input = &messageBusLockerMockLockInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
 }
 
 //Set uses given function f as a mock of messageBusLocker.Lock method
 func (m *mmessageBusLockerMockLock) Set(f func(p context.Context)) *messageBusLockerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.LockFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Lock implements github.com/insolar/insolar/network/state.messageBusLocker interface
 func (m *messageBusLockerMock) Lock(p context.Context) {
-	counter := atomic.AddUint64(&m.LockPreCounter, 1)
+	atomic.AddUint64(&m.LockPreCounter, 1)
 	defer atomic.AddUint64(&m.LockCounter, 1)
 
-	if len(m.LockMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.LockMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to messageBusLockerMock.Lock. %v", p)
+	if m.LockMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.LockMock.mockExpectations, messageBusLockerMockLockParams{p},
+			"messageBusLocker.Lock got unexpected parameters")
+
+		if m.LockFunc == nil {
+
+			m.t.Fatal("No results are set for the messageBusLockerMock.Lock")
+
 			return
 		}
-
-		input := m.LockMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, messageBusLockerMockLockInput{p}, "messageBusLocker.Lock got unexpected parameters")
-
-		return
-	}
-
-	if m.LockMock.mainExpectation != nil {
-
-		input := m.LockMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, messageBusLockerMockLockInput{p}, "messageBusLocker.Lock got unexpected parameters")
-		}
-
-		return
 	}
 
 	if m.LockFunc == nil {
-		m.t.Fatalf("Unexpected call to messageBusLockerMock.Lock. %v", p)
+		m.t.Fatal("Unexpected call to messageBusLockerMock.Lock")
 		return
 	}
 
@@ -147,113 +110,56 @@ func (m *messageBusLockerMock) LockMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.LockPreCounter)
 }
 
-//LockFinished returns true if mock invocations count is ok
-func (m *messageBusLockerMock) LockFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.LockMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.LockCounter) == uint64(len(m.LockMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.LockMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.LockCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.LockFunc != nil {
-		return atomic.LoadUint64(&m.LockCounter) > 0
-	}
-
-	return true
-}
-
 type mmessageBusLockerMockUnlock struct {
-	mock              *messageBusLockerMock
-	mainExpectation   *messageBusLockerMockUnlockExpectation
-	expectationSeries []*messageBusLockerMockUnlockExpectation
+	mock             *messageBusLockerMock
+	mockExpectations *messageBusLockerMockUnlockParams
 }
 
-type messageBusLockerMockUnlockExpectation struct {
-	input *messageBusLockerMockUnlockInput
-}
-
-type messageBusLockerMockUnlockInput struct {
+//messageBusLockerMockUnlockParams represents input parameters of the messageBusLocker.Unlock
+type messageBusLockerMockUnlockParams struct {
 	p context.Context
 }
 
-//Expect specifies that invocation of messageBusLocker.Unlock is expected from 1 to Infinity times
+//Expect sets up expected params for the messageBusLocker.Unlock
 func (m *mmessageBusLockerMockUnlock) Expect(p context.Context) *mmessageBusLockerMockUnlock {
-	m.mock.UnlockFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &messageBusLockerMockUnlockExpectation{}
-	}
-	m.mainExpectation.input = &messageBusLockerMockUnlockInput{p}
+	m.mockExpectations = &messageBusLockerMockUnlockParams{p}
 	return m
 }
 
-//Return specifies results of invocation of messageBusLocker.Unlock
+//Return sets up a mock for messageBusLocker.Unlock to return Return's arguments
 func (m *mmessageBusLockerMockUnlock) Return() *messageBusLockerMock {
-	m.mock.UnlockFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &messageBusLockerMockUnlockExpectation{}
+	m.mock.UnlockFunc = func(p context.Context) {
+		return
 	}
-
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of messageBusLocker.Unlock is expected once
-func (m *mmessageBusLockerMockUnlock) ExpectOnce(p context.Context) *messageBusLockerMockUnlockExpectation {
-	m.mock.UnlockFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &messageBusLockerMockUnlockExpectation{}
-	expectation.input = &messageBusLockerMockUnlockInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
 }
 
 //Set uses given function f as a mock of messageBusLocker.Unlock method
 func (m *mmessageBusLockerMockUnlock) Set(f func(p context.Context)) *messageBusLockerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.UnlockFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Unlock implements github.com/insolar/insolar/network/state.messageBusLocker interface
 func (m *messageBusLockerMock) Unlock(p context.Context) {
-	counter := atomic.AddUint64(&m.UnlockPreCounter, 1)
+	atomic.AddUint64(&m.UnlockPreCounter, 1)
 	defer atomic.AddUint64(&m.UnlockCounter, 1)
 
-	if len(m.UnlockMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.UnlockMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to messageBusLockerMock.Unlock. %v", p)
+	if m.UnlockMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.UnlockMock.mockExpectations, messageBusLockerMockUnlockParams{p},
+			"messageBusLocker.Unlock got unexpected parameters")
+
+		if m.UnlockFunc == nil {
+
+			m.t.Fatal("No results are set for the messageBusLockerMock.Unlock")
+
 			return
 		}
-
-		input := m.UnlockMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, messageBusLockerMockUnlockInput{p}, "messageBusLocker.Unlock got unexpected parameters")
-
-		return
-	}
-
-	if m.UnlockMock.mainExpectation != nil {
-
-		input := m.UnlockMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, messageBusLockerMockUnlockInput{p}, "messageBusLocker.Unlock got unexpected parameters")
-		}
-
-		return
 	}
 
 	if m.UnlockFunc == nil {
-		m.t.Fatalf("Unexpected call to messageBusLockerMock.Unlock. %v", p)
+		m.t.Fatal("Unexpected call to messageBusLockerMock.Unlock")
 		return
 	}
 
@@ -270,35 +176,15 @@ func (m *messageBusLockerMock) UnlockMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.UnlockPreCounter)
 }
 
-//UnlockFinished returns true if mock invocations count is ok
-func (m *messageBusLockerMock) UnlockFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.UnlockMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.UnlockCounter) == uint64(len(m.UnlockMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.UnlockMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.UnlockCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.UnlockFunc != nil {
-		return atomic.LoadUint64(&m.UnlockCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *messageBusLockerMock) ValidateCallCounters() {
 
-	if !m.LockFinished() {
+	if m.LockFunc != nil && atomic.LoadUint64(&m.LockCounter) == 0 {
 		m.t.Fatal("Expected call to messageBusLockerMock.Lock")
 	}
 
-	if !m.UnlockFinished() {
+	if m.UnlockFunc != nil && atomic.LoadUint64(&m.UnlockCounter) == 0 {
 		m.t.Fatal("Expected call to messageBusLockerMock.Unlock")
 	}
 
@@ -319,11 +205,11 @@ func (m *messageBusLockerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *messageBusLockerMock) MinimockFinish() {
 
-	if !m.LockFinished() {
+	if m.LockFunc != nil && atomic.LoadUint64(&m.LockCounter) == 0 {
 		m.t.Fatal("Expected call to messageBusLockerMock.Lock")
 	}
 
-	if !m.UnlockFinished() {
+	if m.UnlockFunc != nil && atomic.LoadUint64(&m.UnlockCounter) == 0 {
 		m.t.Fatal("Expected call to messageBusLockerMock.Unlock")
 	}
 
@@ -341,8 +227,8 @@ func (m *messageBusLockerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.LockFinished()
-		ok = ok && m.UnlockFinished()
+		ok = ok && (m.LockFunc == nil || atomic.LoadUint64(&m.LockCounter) > 0)
+		ok = ok && (m.UnlockFunc == nil || atomic.LoadUint64(&m.UnlockCounter) > 0)
 
 		if ok {
 			return
@@ -351,11 +237,11 @@ func (m *messageBusLockerMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.LockFinished() {
+			if m.LockFunc != nil && atomic.LoadUint64(&m.LockCounter) == 0 {
 				m.t.Error("Expected call to messageBusLockerMock.Lock")
 			}
 
-			if !m.UnlockFinished() {
+			if m.UnlockFunc != nil && atomic.LoadUint64(&m.UnlockCounter) == 0 {
 				m.t.Error("Expected call to messageBusLockerMock.Unlock")
 			}
 
@@ -371,11 +257,11 @@ func (m *messageBusLockerMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *messageBusLockerMock) AllMocksCalled() bool {
 
-	if !m.LockFinished() {
+	if m.LockFunc != nil && atomic.LoadUint64(&m.LockCounter) == 0 {
 		return false
 	}
 
-	if !m.UnlockFinished() {
+	if m.UnlockFunc != nil && atomic.LoadUint64(&m.UnlockCounter) == 0 {
 		return false
 	}
 

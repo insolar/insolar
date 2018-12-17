@@ -58,118 +58,57 @@ func NewHeavySyncMock(t minimock.Tester) *HeavySyncMock {
 }
 
 type mHeavySyncMockReset struct {
-	mock              *HeavySyncMock
-	mainExpectation   *HeavySyncMockResetExpectation
-	expectationSeries []*HeavySyncMockResetExpectation
+	mock             *HeavySyncMock
+	mockExpectations *HeavySyncMockResetParams
 }
 
-type HeavySyncMockResetExpectation struct {
-	input  *HeavySyncMockResetInput
-	result *HeavySyncMockResetResult
-}
-
-type HeavySyncMockResetInput struct {
+//HeavySyncMockResetParams represents input parameters of the HeavySync.Reset
+type HeavySyncMockResetParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 }
 
-type HeavySyncMockResetResult struct {
-	r error
-}
-
-//Expect specifies that invocation of HeavySync.Reset is expected from 1 to Infinity times
+//Expect sets up expected params for the HeavySync.Reset
 func (m *mHeavySyncMockReset) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mHeavySyncMockReset {
-	m.mock.ResetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockResetExpectation{}
-	}
-	m.mainExpectation.input = &HeavySyncMockResetInput{p, p1, p2}
+	m.mockExpectations = &HeavySyncMockResetParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of HeavySync.Reset
+//Return sets up a mock for HeavySync.Reset to return Return's arguments
 func (m *mHeavySyncMockReset) Return(r error) *HeavySyncMock {
-	m.mock.ResetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockResetExpectation{}
+	m.mock.ResetFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) error {
+		return r
 	}
-	m.mainExpectation.result = &HeavySyncMockResetResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of HeavySync.Reset is expected once
-func (m *mHeavySyncMockReset) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *HeavySyncMockResetExpectation {
-	m.mock.ResetFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &HeavySyncMockResetExpectation{}
-	expectation.input = &HeavySyncMockResetInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *HeavySyncMockResetExpectation) Return(r error) {
-	e.result = &HeavySyncMockResetResult{r}
 }
 
 //Set uses given function f as a mock of HeavySync.Reset method
 func (m *mHeavySyncMockReset) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)) *HeavySyncMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.ResetFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Reset implements github.com/insolar/insolar/core.HeavySync interface
 func (m *HeavySyncMock) Reset(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error) {
-	counter := atomic.AddUint64(&m.ResetPreCounter, 1)
+	atomic.AddUint64(&m.ResetPreCounter, 1)
 	defer atomic.AddUint64(&m.ResetCounter, 1)
 
-	if len(m.ResetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ResetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HeavySyncMock.Reset. %v %v %v", p, p1, p2)
+	if m.ResetMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.ResetMock.mockExpectations, HeavySyncMockResetParams{p, p1, p2},
+			"HeavySync.Reset got unexpected parameters")
+
+		if m.ResetFunc == nil {
+
+			m.t.Fatal("No results are set for the HeavySyncMock.Reset")
+
 			return
 		}
-
-		input := m.ResetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, HeavySyncMockResetInput{p, p1, p2}, "HeavySync.Reset got unexpected parameters")
-
-		result := m.ResetMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.Reset")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.ResetMock.mainExpectation != nil {
-
-		input := m.ResetMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, HeavySyncMockResetInput{p, p1, p2}, "HeavySync.Reset got unexpected parameters")
-		}
-
-		result := m.ResetMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.Reset")
-		}
-
-		r = result.r
-
-		return
 	}
 
 	if m.ResetFunc == nil {
-		m.t.Fatalf("Unexpected call to HeavySyncMock.Reset. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to HeavySyncMock.Reset")
 		return
 	}
 
@@ -186,139 +125,58 @@ func (m *HeavySyncMock) ResetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ResetPreCounter)
 }
 
-//ResetFinished returns true if mock invocations count is ok
-func (m *HeavySyncMock) ResetFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ResetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ResetCounter) == uint64(len(m.ResetMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ResetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ResetCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ResetFunc != nil {
-		return atomic.LoadUint64(&m.ResetCounter) > 0
-	}
-
-	return true
-}
-
 type mHeavySyncMockStart struct {
-	mock              *HeavySyncMock
-	mainExpectation   *HeavySyncMockStartExpectation
-	expectationSeries []*HeavySyncMockStartExpectation
+	mock             *HeavySyncMock
+	mockExpectations *HeavySyncMockStartParams
 }
 
-type HeavySyncMockStartExpectation struct {
-	input  *HeavySyncMockStartInput
-	result *HeavySyncMockStartResult
-}
-
-type HeavySyncMockStartInput struct {
+//HeavySyncMockStartParams represents input parameters of the HeavySync.Start
+type HeavySyncMockStartParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 }
 
-type HeavySyncMockStartResult struct {
-	r error
-}
-
-//Expect specifies that invocation of HeavySync.Start is expected from 1 to Infinity times
+//Expect sets up expected params for the HeavySync.Start
 func (m *mHeavySyncMockStart) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mHeavySyncMockStart {
-	m.mock.StartFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockStartExpectation{}
-	}
-	m.mainExpectation.input = &HeavySyncMockStartInput{p, p1, p2}
+	m.mockExpectations = &HeavySyncMockStartParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of HeavySync.Start
+//Return sets up a mock for HeavySync.Start to return Return's arguments
 func (m *mHeavySyncMockStart) Return(r error) *HeavySyncMock {
-	m.mock.StartFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockStartExpectation{}
+	m.mock.StartFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) error {
+		return r
 	}
-	m.mainExpectation.result = &HeavySyncMockStartResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of HeavySync.Start is expected once
-func (m *mHeavySyncMockStart) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *HeavySyncMockStartExpectation {
-	m.mock.StartFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &HeavySyncMockStartExpectation{}
-	expectation.input = &HeavySyncMockStartInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *HeavySyncMockStartExpectation) Return(r error) {
-	e.result = &HeavySyncMockStartResult{r}
 }
 
 //Set uses given function f as a mock of HeavySync.Start method
 func (m *mHeavySyncMockStart) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)) *HeavySyncMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.StartFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Start implements github.com/insolar/insolar/core.HeavySync interface
 func (m *HeavySyncMock) Start(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error) {
-	counter := atomic.AddUint64(&m.StartPreCounter, 1)
+	atomic.AddUint64(&m.StartPreCounter, 1)
 	defer atomic.AddUint64(&m.StartCounter, 1)
 
-	if len(m.StartMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.StartMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HeavySyncMock.Start. %v %v %v", p, p1, p2)
+	if m.StartMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.StartMock.mockExpectations, HeavySyncMockStartParams{p, p1, p2},
+			"HeavySync.Start got unexpected parameters")
+
+		if m.StartFunc == nil {
+
+			m.t.Fatal("No results are set for the HeavySyncMock.Start")
+
 			return
 		}
-
-		input := m.StartMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, HeavySyncMockStartInput{p, p1, p2}, "HeavySync.Start got unexpected parameters")
-
-		result := m.StartMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.Start")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.StartMock.mainExpectation != nil {
-
-		input := m.StartMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, HeavySyncMockStartInput{p, p1, p2}, "HeavySync.Start got unexpected parameters")
-		}
-
-		result := m.StartMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.Start")
-		}
-
-		r = result.r
-
-		return
 	}
 
 	if m.StartFunc == nil {
-		m.t.Fatalf("Unexpected call to HeavySyncMock.Start. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to HeavySyncMock.Start")
 		return
 	}
 
@@ -335,139 +193,58 @@ func (m *HeavySyncMock) StartMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.StartPreCounter)
 }
 
-//StartFinished returns true if mock invocations count is ok
-func (m *HeavySyncMock) StartFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.StartMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.StartCounter) == uint64(len(m.StartMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.StartMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.StartCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.StartFunc != nil {
-		return atomic.LoadUint64(&m.StartCounter) > 0
-	}
-
-	return true
-}
-
 type mHeavySyncMockStop struct {
-	mock              *HeavySyncMock
-	mainExpectation   *HeavySyncMockStopExpectation
-	expectationSeries []*HeavySyncMockStopExpectation
+	mock             *HeavySyncMock
+	mockExpectations *HeavySyncMockStopParams
 }
 
-type HeavySyncMockStopExpectation struct {
-	input  *HeavySyncMockStopInput
-	result *HeavySyncMockStopResult
-}
-
-type HeavySyncMockStopInput struct {
+//HeavySyncMockStopParams represents input parameters of the HeavySync.Stop
+type HeavySyncMockStopParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 }
 
-type HeavySyncMockStopResult struct {
-	r error
-}
-
-//Expect specifies that invocation of HeavySync.Stop is expected from 1 to Infinity times
+//Expect sets up expected params for the HeavySync.Stop
 func (m *mHeavySyncMockStop) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mHeavySyncMockStop {
-	m.mock.StopFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockStopExpectation{}
-	}
-	m.mainExpectation.input = &HeavySyncMockStopInput{p, p1, p2}
+	m.mockExpectations = &HeavySyncMockStopParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of HeavySync.Stop
+//Return sets up a mock for HeavySync.Stop to return Return's arguments
 func (m *mHeavySyncMockStop) Return(r error) *HeavySyncMock {
-	m.mock.StopFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockStopExpectation{}
+	m.mock.StopFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) error {
+		return r
 	}
-	m.mainExpectation.result = &HeavySyncMockStopResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of HeavySync.Stop is expected once
-func (m *mHeavySyncMockStop) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *HeavySyncMockStopExpectation {
-	m.mock.StopFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &HeavySyncMockStopExpectation{}
-	expectation.input = &HeavySyncMockStopInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *HeavySyncMockStopExpectation) Return(r error) {
-	e.result = &HeavySyncMockStopResult{r}
 }
 
 //Set uses given function f as a mock of HeavySync.Stop method
 func (m *mHeavySyncMockStop) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)) *HeavySyncMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.StopFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Stop implements github.com/insolar/insolar/core.HeavySync interface
 func (m *HeavySyncMock) Stop(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error) {
-	counter := atomic.AddUint64(&m.StopPreCounter, 1)
+	atomic.AddUint64(&m.StopPreCounter, 1)
 	defer atomic.AddUint64(&m.StopCounter, 1)
 
-	if len(m.StopMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.StopMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HeavySyncMock.Stop. %v %v %v", p, p1, p2)
+	if m.StopMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.StopMock.mockExpectations, HeavySyncMockStopParams{p, p1, p2},
+			"HeavySync.Stop got unexpected parameters")
+
+		if m.StopFunc == nil {
+
+			m.t.Fatal("No results are set for the HeavySyncMock.Stop")
+
 			return
 		}
-
-		input := m.StopMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, HeavySyncMockStopInput{p, p1, p2}, "HeavySync.Stop got unexpected parameters")
-
-		result := m.StopMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.Stop")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.StopMock.mainExpectation != nil {
-
-		input := m.StopMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, HeavySyncMockStopInput{p, p1, p2}, "HeavySync.Stop got unexpected parameters")
-		}
-
-		result := m.StopMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.Stop")
-		}
-
-		r = result.r
-
-		return
 	}
 
 	if m.StopFunc == nil {
-		m.t.Fatalf("Unexpected call to HeavySyncMock.Stop. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to HeavySyncMock.Stop")
 		return
 	}
 
@@ -484,140 +261,59 @@ func (m *HeavySyncMock) StopMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.StopPreCounter)
 }
 
-//StopFinished returns true if mock invocations count is ok
-func (m *HeavySyncMock) StopFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.StopMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.StopCounter) == uint64(len(m.StopMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.StopMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.StopCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.StopFunc != nil {
-		return atomic.LoadUint64(&m.StopCounter) > 0
-	}
-
-	return true
-}
-
 type mHeavySyncMockStore struct {
-	mock              *HeavySyncMock
-	mainExpectation   *HeavySyncMockStoreExpectation
-	expectationSeries []*HeavySyncMockStoreExpectation
+	mock             *HeavySyncMock
+	mockExpectations *HeavySyncMockStoreParams
 }
 
-type HeavySyncMockStoreExpectation struct {
-	input  *HeavySyncMockStoreInput
-	result *HeavySyncMockStoreResult
-}
-
-type HeavySyncMockStoreInput struct {
+//HeavySyncMockStoreParams represents input parameters of the HeavySync.Store
+type HeavySyncMockStoreParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 	p3 []core.KV
 }
 
-type HeavySyncMockStoreResult struct {
-	r error
-}
-
-//Expect specifies that invocation of HeavySync.Store is expected from 1 to Infinity times
+//Expect sets up expected params for the HeavySync.Store
 func (m *mHeavySyncMockStore) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) *mHeavySyncMockStore {
-	m.mock.StoreFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockStoreExpectation{}
-	}
-	m.mainExpectation.input = &HeavySyncMockStoreInput{p, p1, p2, p3}
+	m.mockExpectations = &HeavySyncMockStoreParams{p, p1, p2, p3}
 	return m
 }
 
-//Return specifies results of invocation of HeavySync.Store
+//Return sets up a mock for HeavySync.Store to return Return's arguments
 func (m *mHeavySyncMockStore) Return(r error) *HeavySyncMock {
-	m.mock.StoreFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockStoreExpectation{}
+	m.mock.StoreFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) error {
+		return r
 	}
-	m.mainExpectation.result = &HeavySyncMockStoreResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of HeavySync.Store is expected once
-func (m *mHeavySyncMockStore) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) *HeavySyncMockStoreExpectation {
-	m.mock.StoreFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &HeavySyncMockStoreExpectation{}
-	expectation.input = &HeavySyncMockStoreInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *HeavySyncMockStoreExpectation) Return(r error) {
-	e.result = &HeavySyncMockStoreResult{r}
 }
 
 //Set uses given function f as a mock of HeavySync.Store method
 func (m *mHeavySyncMockStore) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) (r error)) *HeavySyncMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.StoreFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Store implements github.com/insolar/insolar/core.HeavySync interface
 func (m *HeavySyncMock) Store(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) (r error) {
-	counter := atomic.AddUint64(&m.StorePreCounter, 1)
+	atomic.AddUint64(&m.StorePreCounter, 1)
 	defer atomic.AddUint64(&m.StoreCounter, 1)
 
-	if len(m.StoreMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.StoreMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HeavySyncMock.Store. %v %v %v %v", p, p1, p2, p3)
+	if m.StoreMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.StoreMock.mockExpectations, HeavySyncMockStoreParams{p, p1, p2, p3},
+			"HeavySync.Store got unexpected parameters")
+
+		if m.StoreFunc == nil {
+
+			m.t.Fatal("No results are set for the HeavySyncMock.Store")
+
 			return
 		}
-
-		input := m.StoreMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, HeavySyncMockStoreInput{p, p1, p2, p3}, "HeavySync.Store got unexpected parameters")
-
-		result := m.StoreMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.Store")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.StoreMock.mainExpectation != nil {
-
-		input := m.StoreMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, HeavySyncMockStoreInput{p, p1, p2, p3}, "HeavySync.Store got unexpected parameters")
-		}
-
-		result := m.StoreMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.Store")
-		}
-
-		r = result.r
-
-		return
 	}
 
 	if m.StoreFunc == nil {
-		m.t.Fatalf("Unexpected call to HeavySyncMock.Store. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatal("Unexpected call to HeavySyncMock.Store")
 		return
 	}
 
@@ -634,43 +330,23 @@ func (m *HeavySyncMock) StoreMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.StorePreCounter)
 }
 
-//StoreFinished returns true if mock invocations count is ok
-func (m *HeavySyncMock) StoreFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.StoreMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.StoreCounter) == uint64(len(m.StoreMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.StoreMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.StoreCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.StoreFunc != nil {
-		return atomic.LoadUint64(&m.StoreCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *HeavySyncMock) ValidateCallCounters() {
 
-	if !m.ResetFinished() {
+	if m.ResetFunc != nil && atomic.LoadUint64(&m.ResetCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Reset")
 	}
 
-	if !m.StartFinished() {
+	if m.StartFunc != nil && atomic.LoadUint64(&m.StartCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Start")
 	}
 
-	if !m.StopFinished() {
+	if m.StopFunc != nil && atomic.LoadUint64(&m.StopCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Stop")
 	}
 
-	if !m.StoreFinished() {
+	if m.StoreFunc != nil && atomic.LoadUint64(&m.StoreCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Store")
 	}
 
@@ -691,19 +367,19 @@ func (m *HeavySyncMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *HeavySyncMock) MinimockFinish() {
 
-	if !m.ResetFinished() {
+	if m.ResetFunc != nil && atomic.LoadUint64(&m.ResetCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Reset")
 	}
 
-	if !m.StartFinished() {
+	if m.StartFunc != nil && atomic.LoadUint64(&m.StartCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Start")
 	}
 
-	if !m.StopFinished() {
+	if m.StopFunc != nil && atomic.LoadUint64(&m.StopCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Stop")
 	}
 
-	if !m.StoreFinished() {
+	if m.StoreFunc != nil && atomic.LoadUint64(&m.StoreCounter) == 0 {
 		m.t.Fatal("Expected call to HeavySyncMock.Store")
 	}
 
@@ -721,10 +397,10 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.ResetFinished()
-		ok = ok && m.StartFinished()
-		ok = ok && m.StopFinished()
-		ok = ok && m.StoreFinished()
+		ok = ok && (m.ResetFunc == nil || atomic.LoadUint64(&m.ResetCounter) > 0)
+		ok = ok && (m.StartFunc == nil || atomic.LoadUint64(&m.StartCounter) > 0)
+		ok = ok && (m.StopFunc == nil || atomic.LoadUint64(&m.StopCounter) > 0)
+		ok = ok && (m.StoreFunc == nil || atomic.LoadUint64(&m.StoreCounter) > 0)
 
 		if ok {
 			return
@@ -733,19 +409,19 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.ResetFinished() {
+			if m.ResetFunc != nil && atomic.LoadUint64(&m.ResetCounter) == 0 {
 				m.t.Error("Expected call to HeavySyncMock.Reset")
 			}
 
-			if !m.StartFinished() {
+			if m.StartFunc != nil && atomic.LoadUint64(&m.StartCounter) == 0 {
 				m.t.Error("Expected call to HeavySyncMock.Start")
 			}
 
-			if !m.StopFinished() {
+			if m.StopFunc != nil && atomic.LoadUint64(&m.StopCounter) == 0 {
 				m.t.Error("Expected call to HeavySyncMock.Stop")
 			}
 
-			if !m.StoreFinished() {
+			if m.StoreFunc != nil && atomic.LoadUint64(&m.StoreCounter) == 0 {
 				m.t.Error("Expected call to HeavySyncMock.Store")
 			}
 
@@ -761,19 +437,19 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *HeavySyncMock) AllMocksCalled() bool {
 
-	if !m.ResetFinished() {
+	if m.ResetFunc != nil && atomic.LoadUint64(&m.ResetCounter) == 0 {
 		return false
 	}
 
-	if !m.StartFinished() {
+	if m.StartFunc != nil && atomic.LoadUint64(&m.StartCounter) == 0 {
 		return false
 	}
 
-	if !m.StopFinished() {
+	if m.StopFunc != nil && atomic.LoadUint64(&m.StopCounter) == 0 {
 		return false
 	}
 
-	if !m.StoreFinished() {
+	if m.StoreFunc != nil && atomic.LoadUint64(&m.StoreCounter) == 0 {
 		return false
 	}
 

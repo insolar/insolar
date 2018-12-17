@@ -40,93 +40,56 @@ func NewPulseDistributorMock(t minimock.Tester) *PulseDistributorMock {
 }
 
 type mPulseDistributorMockDistribute struct {
-	mock              *PulseDistributorMock
-	mainExpectation   *PulseDistributorMockDistributeExpectation
-	expectationSeries []*PulseDistributorMockDistributeExpectation
+	mock             *PulseDistributorMock
+	mockExpectations *PulseDistributorMockDistributeParams
 }
 
-type PulseDistributorMockDistributeExpectation struct {
-	input *PulseDistributorMockDistributeInput
-}
-
-type PulseDistributorMockDistributeInput struct {
+//PulseDistributorMockDistributeParams represents input parameters of the PulseDistributor.Distribute
+type PulseDistributorMockDistributeParams struct {
 	p  context.Context
 	p1 *core.Pulse
 }
 
-//Expect specifies that invocation of PulseDistributor.Distribute is expected from 1 to Infinity times
+//Expect sets up expected params for the PulseDistributor.Distribute
 func (m *mPulseDistributorMockDistribute) Expect(p context.Context, p1 *core.Pulse) *mPulseDistributorMockDistribute {
-	m.mock.DistributeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PulseDistributorMockDistributeExpectation{}
-	}
-	m.mainExpectation.input = &PulseDistributorMockDistributeInput{p, p1}
+	m.mockExpectations = &PulseDistributorMockDistributeParams{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of PulseDistributor.Distribute
+//Return sets up a mock for PulseDistributor.Distribute to return Return's arguments
 func (m *mPulseDistributorMockDistribute) Return() *PulseDistributorMock {
-	m.mock.DistributeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PulseDistributorMockDistributeExpectation{}
+	m.mock.DistributeFunc = func(p context.Context, p1 *core.Pulse) {
+		return
 	}
-
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of PulseDistributor.Distribute is expected once
-func (m *mPulseDistributorMockDistribute) ExpectOnce(p context.Context, p1 *core.Pulse) *PulseDistributorMockDistributeExpectation {
-	m.mock.DistributeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &PulseDistributorMockDistributeExpectation{}
-	expectation.input = &PulseDistributorMockDistributeInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
 }
 
 //Set uses given function f as a mock of PulseDistributor.Distribute method
 func (m *mPulseDistributorMockDistribute) Set(f func(p context.Context, p1 *core.Pulse)) *PulseDistributorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.DistributeFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Distribute implements github.com/insolar/insolar/core.PulseDistributor interface
 func (m *PulseDistributorMock) Distribute(p context.Context, p1 *core.Pulse) {
-	counter := atomic.AddUint64(&m.DistributePreCounter, 1)
+	atomic.AddUint64(&m.DistributePreCounter, 1)
 	defer atomic.AddUint64(&m.DistributeCounter, 1)
 
-	if len(m.DistributeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.DistributeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PulseDistributorMock.Distribute. %v %v", p, p1)
+	if m.DistributeMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.DistributeMock.mockExpectations, PulseDistributorMockDistributeParams{p, p1},
+			"PulseDistributor.Distribute got unexpected parameters")
+
+		if m.DistributeFunc == nil {
+
+			m.t.Fatal("No results are set for the PulseDistributorMock.Distribute")
+
 			return
 		}
-
-		input := m.DistributeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PulseDistributorMockDistributeInput{p, p1}, "PulseDistributor.Distribute got unexpected parameters")
-
-		return
-	}
-
-	if m.DistributeMock.mainExpectation != nil {
-
-		input := m.DistributeMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, PulseDistributorMockDistributeInput{p, p1}, "PulseDistributor.Distribute got unexpected parameters")
-		}
-
-		return
 	}
 
 	if m.DistributeFunc == nil {
-		m.t.Fatalf("Unexpected call to PulseDistributorMock.Distribute. %v %v", p, p1)
+		m.t.Fatal("Unexpected call to PulseDistributorMock.Distribute")
 		return
 	}
 
@@ -143,31 +106,11 @@ func (m *PulseDistributorMock) DistributeMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.DistributePreCounter)
 }
 
-//DistributeFinished returns true if mock invocations count is ok
-func (m *PulseDistributorMock) DistributeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.DistributeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.DistributeCounter) == uint64(len(m.DistributeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.DistributeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.DistributeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.DistributeFunc != nil {
-		return atomic.LoadUint64(&m.DistributeCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PulseDistributorMock) ValidateCallCounters() {
 
-	if !m.DistributeFinished() {
+	if m.DistributeFunc != nil && atomic.LoadUint64(&m.DistributeCounter) == 0 {
 		m.t.Fatal("Expected call to PulseDistributorMock.Distribute")
 	}
 
@@ -188,7 +131,7 @@ func (m *PulseDistributorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PulseDistributorMock) MinimockFinish() {
 
-	if !m.DistributeFinished() {
+	if m.DistributeFunc != nil && atomic.LoadUint64(&m.DistributeCounter) == 0 {
 		m.t.Fatal("Expected call to PulseDistributorMock.Distribute")
 	}
 
@@ -206,7 +149,7 @@ func (m *PulseDistributorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.DistributeFinished()
+		ok = ok && (m.DistributeFunc == nil || atomic.LoadUint64(&m.DistributeCounter) > 0)
 
 		if ok {
 			return
@@ -215,7 +158,7 @@ func (m *PulseDistributorMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.DistributeFinished() {
+			if m.DistributeFunc != nil && atomic.LoadUint64(&m.DistributeCounter) == 0 {
 				m.t.Error("Expected call to PulseDistributorMock.Distribute")
 			}
 
@@ -231,7 +174,7 @@ func (m *PulseDistributorMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PulseDistributorMock) AllMocksCalled() bool {
 
-	if !m.DistributeFinished() {
+	if m.DistributeFunc != nil && atomic.LoadUint64(&m.DistributeCounter) == 0 {
 		return false
 	}
 

@@ -45,92 +45,55 @@ func NewGlobalInsolarLockMock(t minimock.Tester) *GlobalInsolarLockMock {
 }
 
 type mGlobalInsolarLockMockAcquire struct {
-	mock              *GlobalInsolarLockMock
-	mainExpectation   *GlobalInsolarLockMockAcquireExpectation
-	expectationSeries []*GlobalInsolarLockMockAcquireExpectation
+	mock             *GlobalInsolarLockMock
+	mockExpectations *GlobalInsolarLockMockAcquireParams
 }
 
-type GlobalInsolarLockMockAcquireExpectation struct {
-	input *GlobalInsolarLockMockAcquireInput
-}
-
-type GlobalInsolarLockMockAcquireInput struct {
+//GlobalInsolarLockMockAcquireParams represents input parameters of the GlobalInsolarLock.Acquire
+type GlobalInsolarLockMockAcquireParams struct {
 	p context.Context
 }
 
-//Expect specifies that invocation of GlobalInsolarLock.Acquire is expected from 1 to Infinity times
+//Expect sets up expected params for the GlobalInsolarLock.Acquire
 func (m *mGlobalInsolarLockMockAcquire) Expect(p context.Context) *mGlobalInsolarLockMockAcquire {
-	m.mock.AcquireFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &GlobalInsolarLockMockAcquireExpectation{}
-	}
-	m.mainExpectation.input = &GlobalInsolarLockMockAcquireInput{p}
+	m.mockExpectations = &GlobalInsolarLockMockAcquireParams{p}
 	return m
 }
 
-//Return specifies results of invocation of GlobalInsolarLock.Acquire
+//Return sets up a mock for GlobalInsolarLock.Acquire to return Return's arguments
 func (m *mGlobalInsolarLockMockAcquire) Return() *GlobalInsolarLockMock {
-	m.mock.AcquireFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &GlobalInsolarLockMockAcquireExpectation{}
+	m.mock.AcquireFunc = func(p context.Context) {
+		return
 	}
-
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of GlobalInsolarLock.Acquire is expected once
-func (m *mGlobalInsolarLockMockAcquire) ExpectOnce(p context.Context) *GlobalInsolarLockMockAcquireExpectation {
-	m.mock.AcquireFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &GlobalInsolarLockMockAcquireExpectation{}
-	expectation.input = &GlobalInsolarLockMockAcquireInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
 }
 
 //Set uses given function f as a mock of GlobalInsolarLock.Acquire method
 func (m *mGlobalInsolarLockMockAcquire) Set(f func(p context.Context)) *GlobalInsolarLockMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.AcquireFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Acquire implements github.com/insolar/insolar/core.GlobalInsolarLock interface
 func (m *GlobalInsolarLockMock) Acquire(p context.Context) {
-	counter := atomic.AddUint64(&m.AcquirePreCounter, 1)
+	atomic.AddUint64(&m.AcquirePreCounter, 1)
 	defer atomic.AddUint64(&m.AcquireCounter, 1)
 
-	if len(m.AcquireMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.AcquireMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to GlobalInsolarLockMock.Acquire. %v", p)
+	if m.AcquireMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.AcquireMock.mockExpectations, GlobalInsolarLockMockAcquireParams{p},
+			"GlobalInsolarLock.Acquire got unexpected parameters")
+
+		if m.AcquireFunc == nil {
+
+			m.t.Fatal("No results are set for the GlobalInsolarLockMock.Acquire")
+
 			return
 		}
-
-		input := m.AcquireMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, GlobalInsolarLockMockAcquireInput{p}, "GlobalInsolarLock.Acquire got unexpected parameters")
-
-		return
-	}
-
-	if m.AcquireMock.mainExpectation != nil {
-
-		input := m.AcquireMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, GlobalInsolarLockMockAcquireInput{p}, "GlobalInsolarLock.Acquire got unexpected parameters")
-		}
-
-		return
 	}
 
 	if m.AcquireFunc == nil {
-		m.t.Fatalf("Unexpected call to GlobalInsolarLockMock.Acquire. %v", p)
+		m.t.Fatal("Unexpected call to GlobalInsolarLockMock.Acquire")
 		return
 	}
 
@@ -147,113 +110,56 @@ func (m *GlobalInsolarLockMock) AcquireMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.AcquirePreCounter)
 }
 
-//AcquireFinished returns true if mock invocations count is ok
-func (m *GlobalInsolarLockMock) AcquireFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.AcquireMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.AcquireCounter) == uint64(len(m.AcquireMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.AcquireMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.AcquireCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.AcquireFunc != nil {
-		return atomic.LoadUint64(&m.AcquireCounter) > 0
-	}
-
-	return true
-}
-
 type mGlobalInsolarLockMockRelease struct {
-	mock              *GlobalInsolarLockMock
-	mainExpectation   *GlobalInsolarLockMockReleaseExpectation
-	expectationSeries []*GlobalInsolarLockMockReleaseExpectation
+	mock             *GlobalInsolarLockMock
+	mockExpectations *GlobalInsolarLockMockReleaseParams
 }
 
-type GlobalInsolarLockMockReleaseExpectation struct {
-	input *GlobalInsolarLockMockReleaseInput
-}
-
-type GlobalInsolarLockMockReleaseInput struct {
+//GlobalInsolarLockMockReleaseParams represents input parameters of the GlobalInsolarLock.Release
+type GlobalInsolarLockMockReleaseParams struct {
 	p context.Context
 }
 
-//Expect specifies that invocation of GlobalInsolarLock.Release is expected from 1 to Infinity times
+//Expect sets up expected params for the GlobalInsolarLock.Release
 func (m *mGlobalInsolarLockMockRelease) Expect(p context.Context) *mGlobalInsolarLockMockRelease {
-	m.mock.ReleaseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &GlobalInsolarLockMockReleaseExpectation{}
-	}
-	m.mainExpectation.input = &GlobalInsolarLockMockReleaseInput{p}
+	m.mockExpectations = &GlobalInsolarLockMockReleaseParams{p}
 	return m
 }
 
-//Return specifies results of invocation of GlobalInsolarLock.Release
+//Return sets up a mock for GlobalInsolarLock.Release to return Return's arguments
 func (m *mGlobalInsolarLockMockRelease) Return() *GlobalInsolarLockMock {
-	m.mock.ReleaseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &GlobalInsolarLockMockReleaseExpectation{}
+	m.mock.ReleaseFunc = func(p context.Context) {
+		return
 	}
-
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of GlobalInsolarLock.Release is expected once
-func (m *mGlobalInsolarLockMockRelease) ExpectOnce(p context.Context) *GlobalInsolarLockMockReleaseExpectation {
-	m.mock.ReleaseFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &GlobalInsolarLockMockReleaseExpectation{}
-	expectation.input = &GlobalInsolarLockMockReleaseInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
 }
 
 //Set uses given function f as a mock of GlobalInsolarLock.Release method
 func (m *mGlobalInsolarLockMockRelease) Set(f func(p context.Context)) *GlobalInsolarLockMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.ReleaseFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Release implements github.com/insolar/insolar/core.GlobalInsolarLock interface
 func (m *GlobalInsolarLockMock) Release(p context.Context) {
-	counter := atomic.AddUint64(&m.ReleasePreCounter, 1)
+	atomic.AddUint64(&m.ReleasePreCounter, 1)
 	defer atomic.AddUint64(&m.ReleaseCounter, 1)
 
-	if len(m.ReleaseMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ReleaseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to GlobalInsolarLockMock.Release. %v", p)
+	if m.ReleaseMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.ReleaseMock.mockExpectations, GlobalInsolarLockMockReleaseParams{p},
+			"GlobalInsolarLock.Release got unexpected parameters")
+
+		if m.ReleaseFunc == nil {
+
+			m.t.Fatal("No results are set for the GlobalInsolarLockMock.Release")
+
 			return
 		}
-
-		input := m.ReleaseMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, GlobalInsolarLockMockReleaseInput{p}, "GlobalInsolarLock.Release got unexpected parameters")
-
-		return
-	}
-
-	if m.ReleaseMock.mainExpectation != nil {
-
-		input := m.ReleaseMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, GlobalInsolarLockMockReleaseInput{p}, "GlobalInsolarLock.Release got unexpected parameters")
-		}
-
-		return
 	}
 
 	if m.ReleaseFunc == nil {
-		m.t.Fatalf("Unexpected call to GlobalInsolarLockMock.Release. %v", p)
+		m.t.Fatal("Unexpected call to GlobalInsolarLockMock.Release")
 		return
 	}
 
@@ -270,35 +176,15 @@ func (m *GlobalInsolarLockMock) ReleaseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ReleasePreCounter)
 }
 
-//ReleaseFinished returns true if mock invocations count is ok
-func (m *GlobalInsolarLockMock) ReleaseFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ReleaseMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ReleaseCounter) == uint64(len(m.ReleaseMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ReleaseMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ReleaseCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ReleaseFunc != nil {
-		return atomic.LoadUint64(&m.ReleaseCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *GlobalInsolarLockMock) ValidateCallCounters() {
 
-	if !m.AcquireFinished() {
+	if m.AcquireFunc != nil && atomic.LoadUint64(&m.AcquireCounter) == 0 {
 		m.t.Fatal("Expected call to GlobalInsolarLockMock.Acquire")
 	}
 
-	if !m.ReleaseFinished() {
+	if m.ReleaseFunc != nil && atomic.LoadUint64(&m.ReleaseCounter) == 0 {
 		m.t.Fatal("Expected call to GlobalInsolarLockMock.Release")
 	}
 
@@ -319,11 +205,11 @@ func (m *GlobalInsolarLockMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *GlobalInsolarLockMock) MinimockFinish() {
 
-	if !m.AcquireFinished() {
+	if m.AcquireFunc != nil && atomic.LoadUint64(&m.AcquireCounter) == 0 {
 		m.t.Fatal("Expected call to GlobalInsolarLockMock.Acquire")
 	}
 
-	if !m.ReleaseFinished() {
+	if m.ReleaseFunc != nil && atomic.LoadUint64(&m.ReleaseCounter) == 0 {
 		m.t.Fatal("Expected call to GlobalInsolarLockMock.Release")
 	}
 
@@ -341,8 +227,8 @@ func (m *GlobalInsolarLockMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.AcquireFinished()
-		ok = ok && m.ReleaseFinished()
+		ok = ok && (m.AcquireFunc == nil || atomic.LoadUint64(&m.AcquireCounter) > 0)
+		ok = ok && (m.ReleaseFunc == nil || atomic.LoadUint64(&m.ReleaseCounter) > 0)
 
 		if ok {
 			return
@@ -351,11 +237,11 @@ func (m *GlobalInsolarLockMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.AcquireFinished() {
+			if m.AcquireFunc != nil && atomic.LoadUint64(&m.AcquireCounter) == 0 {
 				m.t.Error("Expected call to GlobalInsolarLockMock.Acquire")
 			}
 
-			if !m.ReleaseFinished() {
+			if m.ReleaseFunc != nil && atomic.LoadUint64(&m.ReleaseCounter) == 0 {
 				m.t.Error("Expected call to GlobalInsolarLockMock.Release")
 			}
 
@@ -371,11 +257,11 @@ func (m *GlobalInsolarLockMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *GlobalInsolarLockMock) AllMocksCalled() bool {
 
-	if !m.AcquireFinished() {
+	if m.AcquireFunc != nil && atomic.LoadUint64(&m.AcquireCounter) == 0 {
 		return false
 	}
 
-	if !m.ReleaseFinished() {
+	if m.ReleaseFunc != nil && atomic.LoadUint64(&m.ReleaseCounter) == 0 {
 		return false
 	}
 

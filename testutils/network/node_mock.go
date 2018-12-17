@@ -74,103 +74,31 @@ func NewNodeMock(t minimock.Tester) *NodeMock {
 }
 
 type mNodeMockGetGlobuleID struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockGetGlobuleIDExpectation
-	expectationSeries []*NodeMockGetGlobuleIDExpectation
+	mock *NodeMock
 }
 
-type NodeMockGetGlobuleIDExpectation struct {
-	result *NodeMockGetGlobuleIDResult
-}
-
-type NodeMockGetGlobuleIDResult struct {
-	r core.GlobuleID
-}
-
-//Expect specifies that invocation of Node.GetGlobuleID is expected from 1 to Infinity times
-func (m *mNodeMockGetGlobuleID) Expect() *mNodeMockGetGlobuleID {
-	m.mock.GetGlobuleIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockGetGlobuleIDExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.GetGlobuleID
+//Return sets up a mock for Node.GetGlobuleID to return Return's arguments
 func (m *mNodeMockGetGlobuleID) Return(r core.GlobuleID) *NodeMock {
-	m.mock.GetGlobuleIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockGetGlobuleIDExpectation{}
+	m.mock.GetGlobuleIDFunc = func() core.GlobuleID {
+		return r
 	}
-	m.mainExpectation.result = &NodeMockGetGlobuleIDResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.GetGlobuleID is expected once
-func (m *mNodeMockGetGlobuleID) ExpectOnce() *NodeMockGetGlobuleIDExpectation {
-	m.mock.GetGlobuleIDFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockGetGlobuleIDExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockGetGlobuleIDExpectation) Return(r core.GlobuleID) {
-	e.result = &NodeMockGetGlobuleIDResult{r}
 }
 
 //Set uses given function f as a mock of Node.GetGlobuleID method
 func (m *mNodeMockGetGlobuleID) Set(f func() (r core.GlobuleID)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.GetGlobuleIDFunc = f
+
 	return m.mock
 }
 
 //GetGlobuleID implements github.com/insolar/insolar/core.Node interface
 func (m *NodeMock) GetGlobuleID() (r core.GlobuleID) {
-	counter := atomic.AddUint64(&m.GetGlobuleIDPreCounter, 1)
+	atomic.AddUint64(&m.GetGlobuleIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetGlobuleIDCounter, 1)
 
-	if len(m.GetGlobuleIDMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetGlobuleIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.GetGlobuleID.")
-			return
-		}
-
-		result := m.GetGlobuleIDMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.GetGlobuleID")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetGlobuleIDMock.mainExpectation != nil {
-
-		result := m.GetGlobuleIDMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.GetGlobuleID")
-		}
-
-		r = result.r
-
-		return
-	}
-
 	if m.GetGlobuleIDFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.GetGlobuleID.")
+		m.t.Fatal("Unexpected call to NodeMock.GetGlobuleID")
 		return
 	}
 
@@ -187,124 +115,32 @@ func (m *NodeMock) GetGlobuleIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetGlobuleIDPreCounter)
 }
 
-//GetGlobuleIDFinished returns true if mock invocations count is ok
-func (m *NodeMock) GetGlobuleIDFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetGlobuleIDMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetGlobuleIDCounter) == uint64(len(m.GetGlobuleIDMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetGlobuleIDMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetGlobuleIDCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetGlobuleIDFunc != nil {
-		return atomic.LoadUint64(&m.GetGlobuleIDCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeMockID struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockIDExpectation
-	expectationSeries []*NodeMockIDExpectation
+	mock *NodeMock
 }
 
-type NodeMockIDExpectation struct {
-	result *NodeMockIDResult
-}
-
-type NodeMockIDResult struct {
-	r core.RecordRef
-}
-
-//Expect specifies that invocation of Node.ID is expected from 1 to Infinity times
-func (m *mNodeMockID) Expect() *mNodeMockID {
-	m.mock.IDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockIDExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.ID
+//Return sets up a mock for Node.ID to return Return's arguments
 func (m *mNodeMockID) Return(r core.RecordRef) *NodeMock {
-	m.mock.IDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockIDExpectation{}
+	m.mock.IDFunc = func() core.RecordRef {
+		return r
 	}
-	m.mainExpectation.result = &NodeMockIDResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.ID is expected once
-func (m *mNodeMockID) ExpectOnce() *NodeMockIDExpectation {
-	m.mock.IDFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockIDExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockIDExpectation) Return(r core.RecordRef) {
-	e.result = &NodeMockIDResult{r}
 }
 
 //Set uses given function f as a mock of Node.ID method
 func (m *mNodeMockID) Set(f func() (r core.RecordRef)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.IDFunc = f
+
 	return m.mock
 }
 
 //ID implements github.com/insolar/insolar/core.Node interface
 func (m *NodeMock) ID() (r core.RecordRef) {
-	counter := atomic.AddUint64(&m.IDPreCounter, 1)
+	atomic.AddUint64(&m.IDPreCounter, 1)
 	defer atomic.AddUint64(&m.IDCounter, 1)
 
-	if len(m.IDMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.ID.")
-			return
-		}
-
-		result := m.IDMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.ID")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.IDMock.mainExpectation != nil {
-
-		result := m.IDMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.ID")
-		}
-
-		r = result.r
-
-		return
-	}
-
 	if m.IDFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.ID.")
+		m.t.Fatal("Unexpected call to NodeMock.ID")
 		return
 	}
 
@@ -321,124 +157,32 @@ func (m *NodeMock) IDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IDPreCounter)
 }
 
-//IDFinished returns true if mock invocations count is ok
-func (m *NodeMock) IDFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IDMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IDCounter) == uint64(len(m.IDMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.IDMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IDCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.IDFunc != nil {
-		return atomic.LoadUint64(&m.IDCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeMockPhysicalAddress struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockPhysicalAddressExpectation
-	expectationSeries []*NodeMockPhysicalAddressExpectation
+	mock *NodeMock
 }
 
-type NodeMockPhysicalAddressExpectation struct {
-	result *NodeMockPhysicalAddressResult
-}
-
-type NodeMockPhysicalAddressResult struct {
-	r string
-}
-
-//Expect specifies that invocation of Node.PhysicalAddress is expected from 1 to Infinity times
-func (m *mNodeMockPhysicalAddress) Expect() *mNodeMockPhysicalAddress {
-	m.mock.PhysicalAddressFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockPhysicalAddressExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.PhysicalAddress
+//Return sets up a mock for Node.PhysicalAddress to return Return's arguments
 func (m *mNodeMockPhysicalAddress) Return(r string) *NodeMock {
-	m.mock.PhysicalAddressFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockPhysicalAddressExpectation{}
+	m.mock.PhysicalAddressFunc = func() string {
+		return r
 	}
-	m.mainExpectation.result = &NodeMockPhysicalAddressResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.PhysicalAddress is expected once
-func (m *mNodeMockPhysicalAddress) ExpectOnce() *NodeMockPhysicalAddressExpectation {
-	m.mock.PhysicalAddressFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockPhysicalAddressExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockPhysicalAddressExpectation) Return(r string) {
-	e.result = &NodeMockPhysicalAddressResult{r}
 }
 
 //Set uses given function f as a mock of Node.PhysicalAddress method
 func (m *mNodeMockPhysicalAddress) Set(f func() (r string)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.PhysicalAddressFunc = f
+
 	return m.mock
 }
 
 //PhysicalAddress implements github.com/insolar/insolar/core.Node interface
 func (m *NodeMock) PhysicalAddress() (r string) {
-	counter := atomic.AddUint64(&m.PhysicalAddressPreCounter, 1)
+	atomic.AddUint64(&m.PhysicalAddressPreCounter, 1)
 	defer atomic.AddUint64(&m.PhysicalAddressCounter, 1)
 
-	if len(m.PhysicalAddressMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.PhysicalAddressMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.PhysicalAddress.")
-			return
-		}
-
-		result := m.PhysicalAddressMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.PhysicalAddress")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.PhysicalAddressMock.mainExpectation != nil {
-
-		result := m.PhysicalAddressMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.PhysicalAddress")
-		}
-
-		r = result.r
-
-		return
-	}
-
 	if m.PhysicalAddressFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.PhysicalAddress.")
+		m.t.Fatal("Unexpected call to NodeMock.PhysicalAddress")
 		return
 	}
 
@@ -455,124 +199,32 @@ func (m *NodeMock) PhysicalAddressMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.PhysicalAddressPreCounter)
 }
 
-//PhysicalAddressFinished returns true if mock invocations count is ok
-func (m *NodeMock) PhysicalAddressFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.PhysicalAddressMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.PhysicalAddressCounter) == uint64(len(m.PhysicalAddressMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.PhysicalAddressMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.PhysicalAddressCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.PhysicalAddressFunc != nil {
-		return atomic.LoadUint64(&m.PhysicalAddressCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeMockPublicKey struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockPublicKeyExpectation
-	expectationSeries []*NodeMockPublicKeyExpectation
+	mock *NodeMock
 }
 
-type NodeMockPublicKeyExpectation struct {
-	result *NodeMockPublicKeyResult
-}
-
-type NodeMockPublicKeyResult struct {
-	r crypto.PublicKey
-}
-
-//Expect specifies that invocation of Node.PublicKey is expected from 1 to Infinity times
-func (m *mNodeMockPublicKey) Expect() *mNodeMockPublicKey {
-	m.mock.PublicKeyFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockPublicKeyExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.PublicKey
+//Return sets up a mock for Node.PublicKey to return Return's arguments
 func (m *mNodeMockPublicKey) Return(r crypto.PublicKey) *NodeMock {
-	m.mock.PublicKeyFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockPublicKeyExpectation{}
+	m.mock.PublicKeyFunc = func() crypto.PublicKey {
+		return r
 	}
-	m.mainExpectation.result = &NodeMockPublicKeyResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.PublicKey is expected once
-func (m *mNodeMockPublicKey) ExpectOnce() *NodeMockPublicKeyExpectation {
-	m.mock.PublicKeyFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockPublicKeyExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockPublicKeyExpectation) Return(r crypto.PublicKey) {
-	e.result = &NodeMockPublicKeyResult{r}
 }
 
 //Set uses given function f as a mock of Node.PublicKey method
 func (m *mNodeMockPublicKey) Set(f func() (r crypto.PublicKey)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.PublicKeyFunc = f
+
 	return m.mock
 }
 
 //PublicKey implements github.com/insolar/insolar/core.Node interface
 func (m *NodeMock) PublicKey() (r crypto.PublicKey) {
-	counter := atomic.AddUint64(&m.PublicKeyPreCounter, 1)
+	atomic.AddUint64(&m.PublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.PublicKeyCounter, 1)
 
-	if len(m.PublicKeyMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.PublicKeyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.PublicKey.")
-			return
-		}
-
-		result := m.PublicKeyMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.PublicKey")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.PublicKeyMock.mainExpectation != nil {
-
-		result := m.PublicKeyMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.PublicKey")
-		}
-
-		r = result.r
-
-		return
-	}
-
 	if m.PublicKeyFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.PublicKey.")
+		m.t.Fatal("Unexpected call to NodeMock.PublicKey")
 		return
 	}
 
@@ -589,124 +241,32 @@ func (m *NodeMock) PublicKeyMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.PublicKeyPreCounter)
 }
 
-//PublicKeyFinished returns true if mock invocations count is ok
-func (m *NodeMock) PublicKeyFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.PublicKeyMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.PublicKeyCounter) == uint64(len(m.PublicKeyMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.PublicKeyMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.PublicKeyCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.PublicKeyFunc != nil {
-		return atomic.LoadUint64(&m.PublicKeyCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeMockRole struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockRoleExpectation
-	expectationSeries []*NodeMockRoleExpectation
+	mock *NodeMock
 }
 
-type NodeMockRoleExpectation struct {
-	result *NodeMockRoleResult
-}
-
-type NodeMockRoleResult struct {
-	r core.StaticRole
-}
-
-//Expect specifies that invocation of Node.Role is expected from 1 to Infinity times
-func (m *mNodeMockRole) Expect() *mNodeMockRole {
-	m.mock.RoleFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockRoleExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.Role
+//Return sets up a mock for Node.Role to return Return's arguments
 func (m *mNodeMockRole) Return(r core.StaticRole) *NodeMock {
-	m.mock.RoleFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockRoleExpectation{}
+	m.mock.RoleFunc = func() core.StaticRole {
+		return r
 	}
-	m.mainExpectation.result = &NodeMockRoleResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.Role is expected once
-func (m *mNodeMockRole) ExpectOnce() *NodeMockRoleExpectation {
-	m.mock.RoleFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockRoleExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockRoleExpectation) Return(r core.StaticRole) {
-	e.result = &NodeMockRoleResult{r}
 }
 
 //Set uses given function f as a mock of Node.Role method
 func (m *mNodeMockRole) Set(f func() (r core.StaticRole)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.RoleFunc = f
+
 	return m.mock
 }
 
 //Role implements github.com/insolar/insolar/core.Node interface
 func (m *NodeMock) Role() (r core.StaticRole) {
-	counter := atomic.AddUint64(&m.RolePreCounter, 1)
+	atomic.AddUint64(&m.RolePreCounter, 1)
 	defer atomic.AddUint64(&m.RoleCounter, 1)
 
-	if len(m.RoleMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RoleMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.Role.")
-			return
-		}
-
-		result := m.RoleMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.Role")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RoleMock.mainExpectation != nil {
-
-		result := m.RoleMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.Role")
-		}
-
-		r = result.r
-
-		return
-	}
-
 	if m.RoleFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.Role.")
+		m.t.Fatal("Unexpected call to NodeMock.Role")
 		return
 	}
 
@@ -723,124 +283,32 @@ func (m *NodeMock) RoleMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RolePreCounter)
 }
 
-//RoleFinished returns true if mock invocations count is ok
-func (m *NodeMock) RoleFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RoleMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RoleCounter) == uint64(len(m.RoleMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.RoleMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RoleCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.RoleFunc != nil {
-		return atomic.LoadUint64(&m.RoleCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeMockShortID struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockShortIDExpectation
-	expectationSeries []*NodeMockShortIDExpectation
+	mock *NodeMock
 }
 
-type NodeMockShortIDExpectation struct {
-	result *NodeMockShortIDResult
-}
-
-type NodeMockShortIDResult struct {
-	r core.ShortNodeID
-}
-
-//Expect specifies that invocation of Node.ShortID is expected from 1 to Infinity times
-func (m *mNodeMockShortID) Expect() *mNodeMockShortID {
-	m.mock.ShortIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockShortIDExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.ShortID
+//Return sets up a mock for Node.ShortID to return Return's arguments
 func (m *mNodeMockShortID) Return(r core.ShortNodeID) *NodeMock {
-	m.mock.ShortIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockShortIDExpectation{}
+	m.mock.ShortIDFunc = func() core.ShortNodeID {
+		return r
 	}
-	m.mainExpectation.result = &NodeMockShortIDResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.ShortID is expected once
-func (m *mNodeMockShortID) ExpectOnce() *NodeMockShortIDExpectation {
-	m.mock.ShortIDFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockShortIDExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockShortIDExpectation) Return(r core.ShortNodeID) {
-	e.result = &NodeMockShortIDResult{r}
 }
 
 //Set uses given function f as a mock of Node.ShortID method
 func (m *mNodeMockShortID) Set(f func() (r core.ShortNodeID)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.ShortIDFunc = f
+
 	return m.mock
 }
 
 //ShortID implements github.com/insolar/insolar/core.Node interface
 func (m *NodeMock) ShortID() (r core.ShortNodeID) {
-	counter := atomic.AddUint64(&m.ShortIDPreCounter, 1)
+	atomic.AddUint64(&m.ShortIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ShortIDCounter, 1)
 
-	if len(m.ShortIDMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ShortIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.ShortID.")
-			return
-		}
-
-		result := m.ShortIDMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.ShortID")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.ShortIDMock.mainExpectation != nil {
-
-		result := m.ShortIDMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.ShortID")
-		}
-
-		r = result.r
-
-		return
-	}
-
 	if m.ShortIDFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.ShortID.")
+		m.t.Fatal("Unexpected call to NodeMock.ShortID")
 		return
 	}
 
@@ -857,124 +325,32 @@ func (m *NodeMock) ShortIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ShortIDPreCounter)
 }
 
-//ShortIDFinished returns true if mock invocations count is ok
-func (m *NodeMock) ShortIDFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ShortIDMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ShortIDCounter) == uint64(len(m.ShortIDMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ShortIDMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ShortIDCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ShortIDFunc != nil {
-		return atomic.LoadUint64(&m.ShortIDCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeMockVersion struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockVersionExpectation
-	expectationSeries []*NodeMockVersionExpectation
+	mock *NodeMock
 }
 
-type NodeMockVersionExpectation struct {
-	result *NodeMockVersionResult
-}
-
-type NodeMockVersionResult struct {
-	r string
-}
-
-//Expect specifies that invocation of Node.Version is expected from 1 to Infinity times
-func (m *mNodeMockVersion) Expect() *mNodeMockVersion {
-	m.mock.VersionFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockVersionExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.Version
+//Return sets up a mock for Node.Version to return Return's arguments
 func (m *mNodeMockVersion) Return(r string) *NodeMock {
-	m.mock.VersionFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockVersionExpectation{}
+	m.mock.VersionFunc = func() string {
+		return r
 	}
-	m.mainExpectation.result = &NodeMockVersionResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.Version is expected once
-func (m *mNodeMockVersion) ExpectOnce() *NodeMockVersionExpectation {
-	m.mock.VersionFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockVersionExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockVersionExpectation) Return(r string) {
-	e.result = &NodeMockVersionResult{r}
 }
 
 //Set uses given function f as a mock of Node.Version method
 func (m *mNodeMockVersion) Set(f func() (r string)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.VersionFunc = f
+
 	return m.mock
 }
 
 //Version implements github.com/insolar/insolar/core.Node interface
 func (m *NodeMock) Version() (r string) {
-	counter := atomic.AddUint64(&m.VersionPreCounter, 1)
+	atomic.AddUint64(&m.VersionPreCounter, 1)
 	defer atomic.AddUint64(&m.VersionCounter, 1)
 
-	if len(m.VersionMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.VersionMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.Version.")
-			return
-		}
-
-		result := m.VersionMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.Version")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.VersionMock.mainExpectation != nil {
-
-		result := m.VersionMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.Version")
-		}
-
-		r = result.r
-
-		return
-	}
-
 	if m.VersionFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.Version.")
+		m.t.Fatal("Unexpected call to NodeMock.Version")
 		return
 	}
 
@@ -991,55 +367,35 @@ func (m *NodeMock) VersionMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.VersionPreCounter)
 }
 
-//VersionFinished returns true if mock invocations count is ok
-func (m *NodeMock) VersionFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.VersionMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.VersionCounter) == uint64(len(m.VersionMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.VersionMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.VersionCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.VersionFunc != nil {
-		return atomic.LoadUint64(&m.VersionCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NodeMock) ValidateCallCounters() {
 
-	if !m.GetGlobuleIDFinished() {
+	if m.GetGlobuleIDFunc != nil && atomic.LoadUint64(&m.GetGlobuleIDCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
 	}
 
-	if !m.IDFinished() {
+	if m.IDFunc != nil && atomic.LoadUint64(&m.IDCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
 
-	if !m.PhysicalAddressFinished() {
+	if m.PhysicalAddressFunc != nil && atomic.LoadUint64(&m.PhysicalAddressCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.PhysicalAddress")
 	}
 
-	if !m.PublicKeyFinished() {
+	if m.PublicKeyFunc != nil && atomic.LoadUint64(&m.PublicKeyCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.PublicKey")
 	}
 
-	if !m.RoleFinished() {
+	if m.RoleFunc != nil && atomic.LoadUint64(&m.RoleCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.Role")
 	}
 
-	if !m.ShortIDFinished() {
+	if m.ShortIDFunc != nil && atomic.LoadUint64(&m.ShortIDCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.ShortID")
 	}
 
-	if !m.VersionFinished() {
+	if m.VersionFunc != nil && atomic.LoadUint64(&m.VersionCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.Version")
 	}
 
@@ -1060,31 +416,31 @@ func (m *NodeMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *NodeMock) MinimockFinish() {
 
-	if !m.GetGlobuleIDFinished() {
+	if m.GetGlobuleIDFunc != nil && atomic.LoadUint64(&m.GetGlobuleIDCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
 	}
 
-	if !m.IDFinished() {
+	if m.IDFunc != nil && atomic.LoadUint64(&m.IDCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
 
-	if !m.PhysicalAddressFinished() {
+	if m.PhysicalAddressFunc != nil && atomic.LoadUint64(&m.PhysicalAddressCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.PhysicalAddress")
 	}
 
-	if !m.PublicKeyFinished() {
+	if m.PublicKeyFunc != nil && atomic.LoadUint64(&m.PublicKeyCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.PublicKey")
 	}
 
-	if !m.RoleFinished() {
+	if m.RoleFunc != nil && atomic.LoadUint64(&m.RoleCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.Role")
 	}
 
-	if !m.ShortIDFinished() {
+	if m.ShortIDFunc != nil && atomic.LoadUint64(&m.ShortIDCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.ShortID")
 	}
 
-	if !m.VersionFinished() {
+	if m.VersionFunc != nil && atomic.LoadUint64(&m.VersionCounter) == 0 {
 		m.t.Fatal("Expected call to NodeMock.Version")
 	}
 
@@ -1102,13 +458,13 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.GetGlobuleIDFinished()
-		ok = ok && m.IDFinished()
-		ok = ok && m.PhysicalAddressFinished()
-		ok = ok && m.PublicKeyFinished()
-		ok = ok && m.RoleFinished()
-		ok = ok && m.ShortIDFinished()
-		ok = ok && m.VersionFinished()
+		ok = ok && (m.GetGlobuleIDFunc == nil || atomic.LoadUint64(&m.GetGlobuleIDCounter) > 0)
+		ok = ok && (m.IDFunc == nil || atomic.LoadUint64(&m.IDCounter) > 0)
+		ok = ok && (m.PhysicalAddressFunc == nil || atomic.LoadUint64(&m.PhysicalAddressCounter) > 0)
+		ok = ok && (m.PublicKeyFunc == nil || atomic.LoadUint64(&m.PublicKeyCounter) > 0)
+		ok = ok && (m.RoleFunc == nil || atomic.LoadUint64(&m.RoleCounter) > 0)
+		ok = ok && (m.ShortIDFunc == nil || atomic.LoadUint64(&m.ShortIDCounter) > 0)
+		ok = ok && (m.VersionFunc == nil || atomic.LoadUint64(&m.VersionCounter) > 0)
 
 		if ok {
 			return
@@ -1117,31 +473,31 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.GetGlobuleIDFinished() {
+			if m.GetGlobuleIDFunc != nil && atomic.LoadUint64(&m.GetGlobuleIDCounter) == 0 {
 				m.t.Error("Expected call to NodeMock.GetGlobuleID")
 			}
 
-			if !m.IDFinished() {
+			if m.IDFunc != nil && atomic.LoadUint64(&m.IDCounter) == 0 {
 				m.t.Error("Expected call to NodeMock.ID")
 			}
 
-			if !m.PhysicalAddressFinished() {
+			if m.PhysicalAddressFunc != nil && atomic.LoadUint64(&m.PhysicalAddressCounter) == 0 {
 				m.t.Error("Expected call to NodeMock.PhysicalAddress")
 			}
 
-			if !m.PublicKeyFinished() {
+			if m.PublicKeyFunc != nil && atomic.LoadUint64(&m.PublicKeyCounter) == 0 {
 				m.t.Error("Expected call to NodeMock.PublicKey")
 			}
 
-			if !m.RoleFinished() {
+			if m.RoleFunc != nil && atomic.LoadUint64(&m.RoleCounter) == 0 {
 				m.t.Error("Expected call to NodeMock.Role")
 			}
 
-			if !m.ShortIDFinished() {
+			if m.ShortIDFunc != nil && atomic.LoadUint64(&m.ShortIDCounter) == 0 {
 				m.t.Error("Expected call to NodeMock.ShortID")
 			}
 
-			if !m.VersionFinished() {
+			if m.VersionFunc != nil && atomic.LoadUint64(&m.VersionCounter) == 0 {
 				m.t.Error("Expected call to NodeMock.Version")
 			}
 
@@ -1157,31 +513,31 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *NodeMock) AllMocksCalled() bool {
 
-	if !m.GetGlobuleIDFinished() {
+	if m.GetGlobuleIDFunc != nil && atomic.LoadUint64(&m.GetGlobuleIDCounter) == 0 {
 		return false
 	}
 
-	if !m.IDFinished() {
+	if m.IDFunc != nil && atomic.LoadUint64(&m.IDCounter) == 0 {
 		return false
 	}
 
-	if !m.PhysicalAddressFinished() {
+	if m.PhysicalAddressFunc != nil && atomic.LoadUint64(&m.PhysicalAddressCounter) == 0 {
 		return false
 	}
 
-	if !m.PublicKeyFinished() {
+	if m.PublicKeyFunc != nil && atomic.LoadUint64(&m.PublicKeyCounter) == 0 {
 		return false
 	}
 
-	if !m.RoleFinished() {
+	if m.RoleFunc != nil && atomic.LoadUint64(&m.RoleCounter) == 0 {
 		return false
 	}
 
-	if !m.ShortIDFinished() {
+	if m.ShortIDFunc != nil && atomic.LoadUint64(&m.ShortIDCounter) == 0 {
 		return false
 	}
 
-	if !m.VersionFinished() {
+	if m.VersionFunc != nil && atomic.LoadUint64(&m.VersionCounter) == 0 {
 		return false
 	}
 
