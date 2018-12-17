@@ -34,7 +34,7 @@ type RootDomain struct {
 }
 
 // CreateMember processes create member request
-func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
+func (rd *RootDomain) CreateMember(name, key string) (string, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
 		return "", fmt.Errorf("[ CreateMember ] Only Root member can create members")
 	}

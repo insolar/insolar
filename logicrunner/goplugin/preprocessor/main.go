@@ -542,19 +542,31 @@ func genFieldList(parsed *ParsedFile, params *ast.FieldList, withNames bool) str
 		if i > 0 {
 			res += ", "
 		}
+
 		if withNames {
-			res += e.Names[0].Name + " "
+			for paramIndex, paramValue := range e.Names {
+				if paramIndex > 0 {
+					res += ", "
+				}
+				res += paramValue.Name + " " + parsed.codeOfNode(e.Type)
+			}
+		} else {
+			res += parsed.codeOfNode(e.Type)
 		}
-		res += parsed.codeOfNode(e.Type)
 	}
+
 	return res
 }
 
 func generateInitArguments(list *ast.FieldList) string {
 	initArgs := ""
 	initArgs += fmt.Sprintf("var args [%d]interface{}\n", list.NumFields())
-	for i, arg := range list.List {
-		initArgs += fmt.Sprintf("\targs[%d] = %s\n", i, arg.Names[0].Name)
+	i := 0
+	for _, arg := range list.List {
+		for _, argsWithSameType := range arg.Names {
+			initArgs += fmt.Sprintf("\targs[%d] = %s\n", i, argsWithSameType.Name)
+			i++
+		}
 	}
 	return initArgs
 }
