@@ -185,6 +185,31 @@ func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 	return &tree, nil
 }
 
+// SplitJetTree performs jet split and returns resulting jet ids.
+func (db *DB) SplitJetTree(
+	ctx context.Context, from, to core.PulseNumber, id core.RecordID,
+) (*core.RecordID, *core.RecordID, error) {
+	db.jetTreeLock.Lock()
+	defer db.jetTreeLock.Unlock()
+
+	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, to.Bytes()...))
+	tree, err := db.GetJetTree(ctx, from)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	left, right, err := tree.Split(id)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = db.set(ctx, k, tree.Bytes())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return left, right, nil
+}
+
 // SaveJets stores a list of jets of the current node
 func (db *DB) SaveJet(ctx context.Context, id core.RecordID) error {
 	db.addJetLock.Lock()
