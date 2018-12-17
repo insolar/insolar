@@ -40,6 +40,7 @@ var (
 	repetitions    int
 	rootmemberkeys string
 	apiurl         string
+	loglevel       string
 
 	rootMember memberInfo
 )
@@ -51,6 +52,7 @@ func parseInputParams() {
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
 	pflag.StringVarP(&rootmemberkeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
 	pflag.StringVarP(&apiurl, "apiurl", "u", "http://localhost:19191/api", "url to api")
+	pflag.StringVarP(&loglevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.Parse()
 }
 
@@ -160,8 +162,8 @@ func startScenario(s scenario) {
 func main() {
 	parseInputParams()
 
-	err := log.SetLevel("error")
-	check("can not set 'error' level on logger:", err)
+	err := log.SetLevel(loglevel)
+	check(fmt.Sprintf("can not set '%s' level on logger:", loglevel), err)
 
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
