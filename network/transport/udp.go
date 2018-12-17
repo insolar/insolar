@@ -133,8 +133,6 @@ func (udpT *udpTransport) Listen(ctx context.Context) error {
 
 // Stop stops networking.
 func (udpT *udpTransport) Stop() {
-	udpT.mutex.Lock()
-	defer udpT.mutex.Unlock()
 
 	log.Info("Stop UDP transport")
 	udpT.prepareDisconnect()
