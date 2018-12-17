@@ -27,9 +27,7 @@ import (
 
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor struct {
-	cache struct {
-		code []byte
-	}
+	code        []byte
 	machineType core.MachineType
 	ref         core.RecordRef
 
@@ -49,19 +47,7 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 
 // Code returns code data.
 func (d *CodeDescriptor) Code() ([]byte, error) {
-	if d.cache.code == nil {
-		desc, err := d.am.GetCode(d.ctx, d.ref)
-		if err != nil {
-			return nil, err
-		}
-		code, err := desc.Code()
-		if err != nil {
-			return nil, err
-		}
-		d.cache.code = code
-	}
-
-	return d.cache.code, nil
+	return d.code, nil
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.

@@ -132,7 +132,10 @@ func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error)
 
 // GetLatestPulse returns the latest pulse
 func (db *DB) GetLatestPulse(ctx context.Context) (*Pulse, error) {
-	tx := db.BeginTransaction(false)
+	tx, err := db.BeginTransaction(false)
+	if err != nil {
+		return nil, err
+	}
 	defer tx.Discard()
 
 	return tx.GetLatestPulse(ctx)

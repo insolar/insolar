@@ -63,7 +63,7 @@ type ReplicaIter struct {
 func NewReplicaIter(
 	ctx context.Context,
 	db *DB,
-	jet core.RecordID,
+	jetID core.RecordID,
 	start core.PulseNumber,
 	end core.PulseNumber,
 	limit int,
@@ -87,10 +87,10 @@ func NewReplicaIter(
 		limitBytes: limit,
 		// record iterators (order matters for heavy node consistency)
 		istates: []*iterstate{
-			newit(scopeIDRecord, &jet, start, end),
-			newit(scopeIDBlob, &jet, start, end),
-			newit(scopeIDLifeline, &jet, core.FirstPulseNumber, end),
-			newit(scopeIDJetDrop, &jet, start, end),
+			newit(scopeIDRecord, &jetID, start, end),
+			newit(scopeIDBlob, &jetID, start, end),
+			newit(scopeIDLifeline, &jetID, core.FirstPulseNumber, end),
+			newit(scopeIDJetDrop, &jetID, start, end),
 		},
 	}
 }
