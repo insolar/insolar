@@ -168,7 +168,7 @@ type LogicRunner struct {
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
-	PulseManager               core.PulseManager               `inject:""`
+	PulseStorage               core.PulseStorage               `inject:""`
 	ArtifactManager            core.ArtifactManager            `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 
@@ -206,7 +206,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 
 	if lr.Cfg.GoPlugin != nil {
 		if lr.Cfg.RPCListen != "" {
-			StartRPC(ctx, lr, lr.PulseManager)
+			StartRPC(ctx, lr, lr.PulseStorage)
 		}
 
 		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
