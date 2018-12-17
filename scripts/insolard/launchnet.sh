@@ -206,7 +206,7 @@ genesis()
     copy_certs
 }
 
-trap 'stop_listening true' EXIT
+trap 'stop_listening true' INT TERM EXIT
 
 run_insgorund=true
 check_working_dir
