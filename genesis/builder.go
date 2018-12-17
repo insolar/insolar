@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
@@ -99,12 +98,11 @@ func (cb *ContractsBuilder) Clean() {
 }
 
 // Build ...
-func (cb *ContractsBuilder) Build(contracts map[string]*preprocessor.ParsedFile) error {
-	ctx := context.TODO()
+func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile) error {
 
 	for name := range contracts {
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name}},
+			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -162,9 +160,8 @@ func (cb *ContractsBuilder) Build(contracts map[string]*preprocessor.ParsedFile)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
-		nonce := testutils.RandomRef()
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_bin"}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")

@@ -27,5 +27,5 @@ import (
 func TestGetStatus(t *testing.T) {
 	status := getStatus(t)
 	require.NotNil(t, status)
-	require.Equal(t, "NoNetworkState", status.NetworkState)
+	require.Equal(t, "CompleteNetworkState", status.NetworkState)
 }

@@ -49,6 +49,11 @@ const (
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
 
+type messageBusLocker interface {
+	Lock(ctx context.Context)
+	Unlock(ctx context.Context)
+}
+
 // Genesis is a component for precreation core contracts types and RootDomain instance
 type Genesis struct {
 	rootDomainRef   *core.RecordRef
@@ -62,6 +67,7 @@ type Genesis struct {
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
 	Network         core.Network         `inject:""`
+	MBLock          messageBusLocker     `inject:""`
 }
 
 // NewGenesis creates new Genesis
@@ -86,7 +92,7 @@ func buildSmartContracts(ctx context.Context, cb *ContractsBuilder) error {
 	}
 
 	inslog.Info("[ buildSmartContracts ] Start building contracts ...")
-	err = cb.Build(contracts)
+	err = cb.Build(ctx, contracts)
 	if err != nil {
 		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
 	}
@@ -354,6 +360,8 @@ func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
 
+	g.MBLock.Unlock(ctx)
+	defer g.MBLock.Lock(ctx)
 	_, insgocc, err := Build()
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
