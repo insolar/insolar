@@ -115,11 +115,6 @@ func (g *Genesis) activateRootDomain(
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
-	//contractID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootDomain"}})
-
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
-	}
 	contract := core.NewRecordRef(*contractID, *contractID)
 	desc, err := g.ArtifactManager.ActivateObject(
 		ctx,
@@ -373,6 +368,9 @@ func (g *Genesis) Start(ctx context.Context) error {
 	}
 
 	rootDomainId, err := g.registerGenesisRequest(ctx, rootDomain)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance")
+	}
 
 	cb := NewContractBuilder(g.ArtifactManager, insgocc)
 	g.prototypeRefs = cb.Prototypes
