@@ -69,7 +69,7 @@ func transfer(ctx context.Context, amount float64, from memberInfo, to memberInf
 	return "success"
 }
 
-func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
+func createMembers(concurrent int) ([]memberInfo, error) {
 	var members []memberInfo
 	for i := 0; i < concurrent*2; i++ {
 		memberName := testutils.RandomString()

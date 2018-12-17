@@ -172,7 +172,7 @@ func main() {
 		members, err = getMembersInfo(input)
 		check("Problems with parsing input:", err)
 	} else {
-		members, err = createMembers(concurrent, repetitions)
+		members, err = createMembers(concurrent)
 		check("Problems with create members. One of creating request ended with error: ", err)
 	}
 
