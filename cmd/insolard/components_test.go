@@ -29,6 +29,7 @@ func TestInitComponents(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
+	cfg.Host.Transport.Protocol = "TCP"
 
 	bootstrapComponents := initBootstrapComponents(ctx, cfg)
 	cert := initCertificateManager(
