@@ -44,6 +44,8 @@ type PulseManager struct {
 	HeavySyncMessageLimit int
 	// Backoff configures retry backoff algorithm for Heavy Sync
 	HeavyBackoff Backoff
+	// Drop size in bytes to perform split.
+	SplitThreshold uint64
 }
 
 // Backoff configures retry backoff algorithm
@@ -82,9 +84,6 @@ type Ledger struct {
 
 	// JetSizesHistoryDepth holds maximum number of drop sizes
 	JetSizesHistoryDepth int
-
-	// Drop size in bytes to perform split.
-	SplitThreshold int
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -114,6 +113,7 @@ func NewLedger() Ledger {
 				Max:    2 * time.Second,
 				Factor: 2,
 			},
+			SplitThreshold: 10 * 1000 * 1000, // 10 megabytes.
 		},
 
 		RecentStorage: RecentStorage{

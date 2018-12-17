@@ -75,6 +75,7 @@ type pmOptions struct {
 	enableSync       bool
 	syncMessageLimit int
 	pulsesDeltaLimit core.PulseNumber
+	splitThreshold   uint64
 }
 
 func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
@@ -97,6 +98,7 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 	pm.options.enableSync = pmconf.HeavySyncEnabled
 	pm.options.syncMessageLimit = pmconf.HeavySyncMessageLimit
 	pm.options.pulsesDeltaLimit = conf.LightChainLimit
+	pm.options.splitThreshold = pmconf.SplitThreshold
 	pm.syncbackoff = backoffFromConfig(pmconf.HeavyBackoff)
 	return pm
 }
