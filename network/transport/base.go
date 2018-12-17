@@ -50,6 +50,7 @@ type baseTransport struct {
 	received chan *packet.Packet
 	sequence *uint64
 
+	listedStarted      chan bool
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
 
@@ -67,6 +68,7 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 		received: make(chan *packet.Packet),
 		sequence: new(uint64),
 
+		listedStarted:      make(chan bool, 1),
 		disconnectStarted:  make(chan bool, 1),
 		disconnectFinished: make(chan bool),
 
@@ -119,16 +121,26 @@ func (t *baseTransport) Packets() <-chan *packet.Packet {
 
 // Stopped checks if networking is stopped already.
 func (t *baseTransport) Stopped() <-chan bool {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
 	return t.disconnectStarted
 }
 
 func (t *baseTransport) prepareDisconnect() {
+	<-t.listedStarted
+
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	t.disconnectStarted <- true
-	close(t.disconnectStarted)
 }
 
 func (t *baseTransport) prepareListen() {
-	t.disconnectStarted = make(chan bool, 1)
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	t.listedStarted <- true
 }
 
 func (t *baseTransport) generateID() packet.RequestID {
