@@ -28,8 +28,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const apiurl = "http://localhost:19191/api"
-
 type response struct {
 	Error  string
 	Result interface{}
