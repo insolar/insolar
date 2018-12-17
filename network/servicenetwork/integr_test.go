@@ -38,6 +38,7 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -107,8 +108,8 @@ func (s *testSuite) SetupSuite() {
 	<-time.After(time.Second * 2)
 	//TODO: wait for first consensus
 	// active nodes count verification
-	//activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	//s.Equal(s.nodesCount(), len(activeNodes))
+	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	require.Equal(s.T(), s.nodesCount(), len(activeNodes))
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
@@ -229,9 +230,6 @@ func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certific
 
 // initNode inits previously created node
 func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
-
-	origin := nodenetwork.NewNode(node.id, core.StaticRoleVirtual, nil, node.host, "")
-
 	cfg := configuration.NewConfiguration()
 	cfg.Host.Transport.Address = node.host
 
@@ -260,8 +258,15 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 		return make([]byte, packets.HashLength), nil
 	})
 
+	pubKey, _ := node.cryptographyService.GetPublicKey()
+
+	origin := nodenetwork.NewNode(node.id, core.StaticRoleVirtual, pubKey, node.host, "")
 	certManager, cryptographyService := s.initCrypto(node, origin.ID())
 	netSwitcher := testutils.NewNetworkSwitcherMock(s.T())
+	netSwitcher.GetStateMock.Set(func() (r core.NetworkState) {
+		return core.CompleteNetworkState
+	})
+
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 	var keeper network.NodeKeeper
 	keeper = &nodeKeeperWrapper{realKeeper}
