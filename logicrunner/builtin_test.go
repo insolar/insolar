@@ -67,19 +67,23 @@ func TestBareHelloworld(t *testing.T) {
 	}
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
-
 	nk := nodekeeper.GetTestNodekeeper(mock)
-
-	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
-
-	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
-	defer cleaner()
-
-	recent := recentstorage.NewProviderMock(t)
 
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseNumber = 0
+
+	// FIXME: TmpLedger is deprecated. Use mocks instead.
+	l, cleaner := ledgertestutils.TmpLedger(
+		t, "",
+		core.Components{
+			LogicRunner: lr,
+			NodeNetwork: nk,
+			MessageBus:  mb,
+		},
+	)
+	defer cleaner()
+
+	recent := recentstorage.NewProviderMock(t)
 
 	gil := testutils.NewGlobalInsolarLockMock(t)
 	gil.AcquireMock.Return()
@@ -100,6 +104,8 @@ func TestBareHelloworld(t *testing.T) {
 	cm.Register(scheme)
 	cm.Register(l.GetPulseManager(), l.GetArtifactManager(), l.GetJetCoordinator())
 	cm.Inject(nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	err = cm.Init(ctx)
+	assert.NoError(t, err)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
