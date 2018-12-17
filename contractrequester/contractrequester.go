@@ -20,11 +20,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/pkg/errors"
 )
 
@@ -32,11 +34,20 @@ import (
 type ContractRequester struct {
 	MessageBus   core.MessageBus   `inject:""`
 	PulseManager core.PulseManager `inject:""`
+	ResultMutex  sync.Mutex
+	ResultMap    map[core.RecordRef]chan *message.ReturnResults
 }
 
 // New creates new ContractRequester
 func New() (*ContractRequester, error) {
-	return &ContractRequester{}, nil
+	return &ContractRequester{
+		ResultMap: make(map[core.RecordRef]chan *message.ReturnResults),
+	}, nil
+}
+
+func (cr *ContractRequester) Start(ctx context.Context) error {
+	cr.MessageBus.MustRegister(core.TypeReturnResults, cr.ReceiveResult)
+	return nil
 }
 
 func randomUint64() uint64 {
@@ -127,5 +138,37 @@ func (cr *ContractRequester) CallContract(ctx context.Context, base core.Message
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
 
+	r, ok := res.(*reply.CallMethod)
+	if !ok {
+		return nil, errors.New("Got not reply.CallMethod in reply for CallMethod")
+	}
+
+	cr.ResultMutex.Lock()
+	cr.ResultMap[r.Request] = make(chan *message.ReturnResults)
+	cr.ResultMutex.Unlock()
+
 	return res, err
+}
+
+func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg, ok := parcel.Message().(*message.ReturnResults)
+	if !ok {
+		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")
+	}
+
+	cr.ResultMutex.Lock()
+	defer cr.ResultMutex.Unlock()
+	/*
+		c, ok := cr.ResultMap[msg.Request]
+		if !ok {
+			inslogger.FromContext(ctx).Debug("oops unwaited results")
+			return &reply.OK{}, nil
+		}
+		inslogger.FromContext(ctx).Debug("Got wanted results")
+
+		c <- msg
+		<- c // todo FIX HERE
+	*/
+	delete(cr.ResultMap, msg.Request)
+	return &reply.OK{}, nil
 }
