@@ -66,14 +66,13 @@ type ContractsBuilder struct {
 	root string
 
 	ArtifactManager core.ArtifactManager
-	IccPath         string
 	Prototypes      map[string]*core.RecordRef
 	Codes           map[string]*core.RecordRef
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
+func NewContractBuilder(am core.ArtifactManager) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
@@ -83,8 +82,7 @@ func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
 		root:            tmpDir,
 		Prototypes:      make(map[string]*core.RecordRef),
 		Codes:           make(map[string]*core.RecordRef),
-		ArtifactManager: am,
-		IccPath:         icc}
+		ArtifactManager: am}
 	return cb
 }
 

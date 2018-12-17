@@ -362,17 +362,13 @@ func (g *Genesis) Start(ctx context.Context) error {
 
 	g.MBLock.Unlock(ctx)
 	defer g.MBLock.Lock(ctx)
-	_, insgocc, err := Build()
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
-	}
 
 	rootDomainId, err := g.registerGenesisRequest(ctx, rootDomain)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance")
 	}
 
-	cb := NewContractBuilder(g.ArtifactManager, insgocc)
+	cb := NewContractBuilder(g.ArtifactManager)
 	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 
