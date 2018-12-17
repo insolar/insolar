@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 )
@@ -132,12 +133,15 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, err
 	}
 
-	genericReact, err := m.bus(ctx).Send(
-		ctx,
-		&message.GetCode{Code: code},
-		latestPulse.Pulse,
-		nil,
-	)
+	var genericReact core.Reply
+	utils.MeasureExecutionTime(ctx, "artifactmanager.GetCode m.bus(ctx).Send", func() {
+		genericReact, err = m.bus(ctx).Send(
+			ctx,
+			&message.GetCode{Code: code},
+			latestPulse.Pulse,
+			nil,
+		)
+	})
 	if err != nil {
 		return nil, err
 	}
