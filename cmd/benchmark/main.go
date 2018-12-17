@@ -39,6 +39,7 @@ var (
 	concurrent     int
 	repetitions    int
 	rootmemberkeys string
+	apiurl         string
 
 	rootMember memberInfo
 )
@@ -49,6 +50,7 @@ func parseInputParams() {
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
 	pflag.StringVarP(&rootmemberkeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
+	pflag.StringVarP(&apiurl, "apiurl", "u", "http://localhost:19191/api", "url to api")
 	pflag.Parse()
 }
 
