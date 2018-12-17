@@ -63,7 +63,7 @@ func (m *PulseManager) HeavySync(
 	)
 	jetID := core.TODOJetID
 
-	pulse, err := m.Current(ctx)
+	pulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return err
 	}
