@@ -21,6 +21,8 @@ import (
 	"crypto"
 	"testing"
 
+	"github.com/insolar/insolar/contractrequester"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -103,7 +105,9 @@ func TestBareHelloworld(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Register(scheme)
 	cm.Register(l.GetPulseManager(), l.GetArtifactManager(), l.GetJetCoordinator())
-	cm.Inject(nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	cr, err := contractrequester.New()
+
+	cm.Inject(nk, recent, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)

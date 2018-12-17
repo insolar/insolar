@@ -103,37 +103,18 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	mb := core.MessageBusFromContext(ctx, gpr.lr.MessageBus)
-	if mb == nil {
-		return errors.New("No access to message bus")
-	}
-
-	var mode message.MethodReturnMode
-	if req.Wait {
-		mode = message.ReturnResult
-	} else {
-		mode = message.ReturnNoWait
-	}
-
-	msg := &message.CallMethod{
-		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq, es),
-		ReturnMode:       mode,
-		ObjectRef:        req.Object,
-		Method:           req.Method,
-		Arguments:        req.Arguments,
-		ProxyPrototype:   req.ProxyPrototype,
-	}
-
-	currentSlotPulse, err := gpr.pm.Current(ctx)
+	bm := MakeBaseMessage(req.UpBaseReq, es)
+	res, err := gpr.lr.ContractRequester.CallContract(ctx,
+		&bm,
+		!req.Wait,
+		&req.Object,
+		req.Method,
+		req.Arguments,
+		&req.ProxyPrototype,
+	)
 	if err != nil {
 		return err
 	}
-
-	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
-	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
-	}
-
 	rep.Result = res.(*reply.CallMethod).Result
 
 	return nil

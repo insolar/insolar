@@ -21,6 +21,8 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/pkg/errors"
@@ -85,4 +87,45 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRe
 	}
 
 	return routResult, nil
+}
+
+func (cr *ContractRequester) CallContract(ctx context.Context, base core.Message, async bool, ref *core.RecordRef, method string, argsIn core.Arguments, mustPrototype *core.RecordRef) (core.Reply, error) {
+	baseMessage, ok := base.(*message.BaseLogicMessage)
+	if !ok {
+		return nil, errors.New("Wrong type for BaseMessage")
+	}
+	log := inslogger.FromContext(ctx)
+
+	mb := core.MessageBusFromContext(ctx, cr.MessageBus)
+	if mb == nil {
+		log.Debug("Context doesn't provide MessageBus")
+		mb = cr.MessageBus
+	}
+
+	var mode message.MethodReturnMode
+	if async {
+		mode = message.ReturnNoWait
+	} else {
+		mode = message.ReturnResult
+	}
+	msg := &message.CallMethod{
+		BaseLogicMessage: *baseMessage,
+		ReturnMode:       mode,
+		ObjectRef:        *ref,
+		Method:           method,
+		Arguments:        argsIn,
+		ProxyPrototype:   *mustPrototype,
+	}
+
+	currentSlotPulse, err := cr.PulseManager.Current(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get pulse")
+	}
+
+	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't dispatch event")
+	}
+
+	return res, err
 }

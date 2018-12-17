@@ -48,6 +48,26 @@ type BaseLogicMessage struct {
 	Nonce           uint64
 }
 
+func (m *BaseLogicMessage) Type() core.MessageType {
+	panic("Virtual")
+}
+
+func (m *BaseLogicMessage) DefaultTarget() *core.RecordRef {
+	panic("Virtual")
+}
+
+func (m *BaseLogicMessage) DefaultRole() core.DynamicRole {
+	panic("implement me")
+}
+
+func (m *BaseLogicMessage) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	panic("implement me")
+}
+
+func (m *BaseLogicMessage) GetReference() core.RecordRef {
+	panic("implement me")
+}
+
 func (m *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &m.Caller
 }

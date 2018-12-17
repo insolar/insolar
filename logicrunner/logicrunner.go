@@ -164,6 +164,7 @@ func (es *ExecutionState) ReleaseQueue() {
 type LogicRunner struct {
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	MessageBus                 core.MessageBus                 `inject:""`
+	ContractRequester          core.ContractRequester          `inject:""`
 	Ledger                     core.Ledger                     `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`

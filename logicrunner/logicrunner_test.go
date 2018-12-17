@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/contractrequester"
+
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 
@@ -138,7 +140,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
-	cm.Inject(nk, recentMock, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	cr, err := contractrequester.New()
+
+	cm.Inject(nk, recentMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
