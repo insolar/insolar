@@ -23,50 +23,28 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// HeavyErr holds core.Reply and implements core.Retryable and error interfaces.
-type HeavyErr struct {
-	reply core.Reply
-	err   error
-}
-
-// Error implements error interface.
-func (he HeavyErr) Error() string {
-	return he.err.Error()
-}
-
-// IsRetryable checks retryability of message.
-func (he HeavyErr) IsRetryable() bool {
-	herr, ok := he.reply.(*reply.HeavyError)
-	if !ok {
-		return false
-	}
-	return herr.ConcreteType() == reply.ErrHeavySyncInProgress
-}
-
-func (m *PulseManager) pulseIsOutdated(ctx context.Context, pn core.PulseNumber) bool {
-	current, err := m.Current(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return current.PulseNumber-pn > m.options.pulsesDeltaLimit
-}
-
 // HeavySync syncs records from light to heavy node, returns last synced pulse and error.
 //
 // It syncs records from start to end of provided pulse numbers.
-func (m *PulseManager) HeavySync(
+func (jsc *jetSyncClient) HeavySync(
 	ctx context.Context,
-	busPulse core.Pulse,
-	jetID core.RecordID,
 	pn core.PulseNumber,
 	retry bool,
 ) error {
+	mbus := jsc.PulseManager.Bus
+	db := jsc.PulseManager.db
 	inslog := inslogger.FromContext(ctx)
+	jetID := jsc.jetID
+
+	current, err := db.GetLatestPulse(ctx)
+	if err != nil {
+		return err
+	}
+
 	var (
 		busreply core.Reply
 		buserr   error
@@ -75,13 +53,13 @@ func (m *PulseManager) HeavySync(
 	if retry {
 		inslog.Infof("send reset message for pulse %v (retry sync)", pn)
 		resetMsg := &message.HeavyReset{PulseNum: pn}
-		if busreply, buserr := m.Bus.Send(ctx, resetMsg, busPulse, nil); buserr != nil {
+		if busreply, buserr := mbus.Send(ctx, resetMsg, current.Pulse, nil); buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg := &message.HeavyStartStop{PulseNum: pn}
-	busreply, buserr = m.Bus.Send(ctx, signalMsg, busPulse, nil)
+	busreply, buserr = mbus.Send(ctx, signalMsg, current.Pulse, nil)
 	// TODO: check if locked
 	if buserr != nil {
 		return HeavyErr{reply: busreply, err: buserr}
@@ -89,7 +67,7 @@ func (m *PulseManager) HeavySync(
 	inslog.Infof("synchronize, sucessfully send start message for pulse %v", pn)
 
 	replicator := storage.NewReplicaIter(
-		ctx, m.db, jetID, pn, pn+1, m.options.syncMessageLimit)
+		ctx, db, jetID, pn, pn+1, jsc.syncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
@@ -99,22 +77,22 @@ func (m *PulseManager) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{Records: recs}
-		busreply, buserr = m.Bus.Send(ctx, msg, busPulse, nil)
+		busreply, buserr = mbus.Send(ctx, msg, current.Pulse, nil)
 		if buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg.Finished = true
-	busreply, buserr = m.Bus.Send(ctx, signalMsg, busPulse, nil)
+	busreply, buserr = mbus.Send(ctx, signalMsg, current.Pulse, nil)
 	if buserr != nil {
 		return HeavyErr{reply: busreply, err: buserr}
 	}
 	inslog.Infof("synchronize, sucessfully send finish message for pulse %v", pn)
 
-	lastmeetpulse := replicator.LastPulse()
+	lastMeetPulse := replicator.LastPulse()
 	inslog.Infof("synchronize on %v finised (maximum record pulse is %v)",
-		pn, lastmeetpulse)
+		pn, lastMeetPulse)
 	return nil
 }
 
@@ -125,12 +103,12 @@ func (m *PulseManager) initJetSyncState(ctx context.Context) error {
 	}
 	// not so effective, because we rescan pulses
 	// but for now it is easier to do this in this way
-	for jet := range allJets {
-		pulseNums, err := m.NextSyncPulses(ctx, jet)
+	for jetID := range allJets {
+		pulseNums, err := m.NextSyncPulses(ctx, jetID)
 		if err != nil {
 			return err
 		}
-		m.syncstates.setJetPulses(jet, pulseNums)
+		m.syncClientsPool.AddPulsesToSyncClient(ctx, m, jetID, pulseNums...)
 	}
 	return nil
 }

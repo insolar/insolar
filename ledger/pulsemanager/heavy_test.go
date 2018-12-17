@@ -52,7 +52,6 @@ func TestPulseManager_SendToHeavyHappyPath(t *testing.T) {
 
 func TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
 	// TODO: until retry logic be fixed - 14.Dec.2018 @nordicdyno
-	t.Skip()
 	sendToHeavy(t, true)
 }
 
@@ -112,6 +111,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	syncmessagesPerMessage := map[int]*messageStat{}
 	var bussendfailed int32
 	busMock.SendFunc = func(ctx context.Context, msg core.Message, _ core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
+		// fmt.Printf("got msg: %T (%s)\n", msg, msg.Type())
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
@@ -223,8 +223,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// printkeys(synckeys, "  ")
 	// fmt.Println("getallkeys")
 	// printkeys(recs, "  ")
+	require.Equal(t, len(recs), len(synckeys), "synced keys count are the same as records count in storage")
 	assert.Equal(t, recs, synckeys, "synced keys are the same as records in storage")
-	// assert.Equal(t, len(recs), len(synckeys), "synced keys count are the same as records count in storage")
 }
 
 func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {

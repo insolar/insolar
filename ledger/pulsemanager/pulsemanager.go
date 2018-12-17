@@ -57,25 +57,13 @@ type PulseManager struct {
 	// setLock locks Set method call.
 	setLock sync.RWMutex
 	stopped bool
-	stop    chan struct{}
 
 	// Heavy sync stuff:
 	//
-	syncstates *jetSyncStates
-	// gotpulse signals if there is something to sync to Heavy
-	gotpulse chan struct{}
-	// syncdone closes when sync is over
-	syncdone chan struct{}
-	// sync backoff instance
-	syncbackoff *backoff.Backoff
-	// stores pulse manager options
-	options pmOptions
-}
-
-type pmOptions struct {
-	enableSync       bool
-	syncMessageLimit int
-	pulsesDeltaLimit core.PulseNumber
+	// is sync enabled at all
+	enableSync bool
+	// syncstates *jetSyncStates
+	syncClientsPool *syncClientsPool
 }
 
 func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
@@ -89,18 +77,20 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
+	pmconf := conf.PulseManager
 	pm := &PulseManager{
 		db:           db,
-		gotpulse:     make(chan struct{}, 1),
 		currentPulse: *core.GenesisPulse,
-
-		syncstates: newJetSyncStates(),
+		enableSync:   pmconf.HeavySyncEnabled,
 	}
-	pmconf := conf.PulseManager
-	pm.options.enableSync = pmconf.HeavySyncEnabled
-	pm.options.syncMessageLimit = pmconf.HeavySyncMessageLimit
-	pm.options.pulsesDeltaLimit = conf.LightChainLimit
-	pm.syncbackoff = backoffFromConfig(pmconf.HeavyBackoff)
+	// TODO: untie this circular dependency after moving sync client to separate component - 17.Dec.2018 @nordicdyno
+	heavySyncPool := newSyncClientsPool(
+		pm,
+		clientOptions{
+			syncMessageLimit: pmconf.HeavySyncMessageLimit,
+			pulsesDeltaLimit: conf.LightChainLimit,
+		})
+	pm.syncClientsPool = heavySyncPool
 	return pm
 }
 
@@ -306,51 +296,40 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 		if err != nil {
 			return err
 		}
-		if m.options.enableSync {
-			err := m.AddPulseToSyncJets(ctx, lastSlotPulse.Pulse.PulseNumber)
+		if m.enableSync {
+			err := m.AddPulseToSyncClients(ctx, lastSlotPulse.Pulse.PulseNumber)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	// signal heavy syncloop about new pulse recieved
-	if len(m.gotpulse) == 0 {
-		m.gotpulse <- struct{}{}
-	}
 
 	return m.LR.OnPulse(ctx, pulse)
 }
 
-// AddPulseToSyncJets add pulse number for sync list to all jets created jetdrop on this pulse.
-//
-// (should never be called after Stop call)
-func (m *PulseManager) AddPulseToSyncJets(ctx context.Context, pn core.PulseNumber) error {
+// AddPulseToSyncClients add pulse number to all sync clients in pool.
+func (m *PulseManager) AddPulseToSyncClients(ctx context.Context, pn core.PulseNumber) error {
 	// get all jets with drops (required sync)
 	allJets, err := m.db.GetJets(ctx)
 	if err != nil {
 		return err
 	}
-	var jets []core.RecordID
-	for jet := range allJets {
-		_, err := m.db.GetDrop(ctx, jet, pn)
+	for jetID := range allJets {
+		_, err := m.db.GetDrop(ctx, jetID, pn)
 		if err == nil {
-			jets = append(jets, jet)
+			m.syncClientsPool.AddPulsesToSyncClient(ctx, m, jetID, pn)
 		}
 	}
-	m.syncstates.addPulseToJets(jets, pn)
 	return nil
 }
 
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
-	m.syncdone = make(chan struct{})
-	m.stop = make(chan struct{})
-	if m.options.enableSync {
+	if m.enableSync {
 		err := m.initJetSyncState(ctx)
 		if err != nil {
 			return err
 		}
-		go m.syncloop(ctx)
 	}
 	return nil
 }
@@ -361,12 +340,10 @@ func (m *PulseManager) Stop(ctx context.Context) error {
 	m.setLock.Lock()
 	m.stopped = true
 	m.setLock.Unlock()
-	close(m.stop)
 
-	if m.options.enableSync {
-		close(m.gotpulse)
+	if m.enableSync {
 		inslogger.FromContext(ctx).Info("waiting finish of heavy replication client...")
-		<-m.syncdone
+		m.syncClientsPool.Stop(ctx)
 	}
 	return nil
 }
