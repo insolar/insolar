@@ -97,21 +97,40 @@ func (cb *ContractsBuilder) Clean() {
 	}
 }
 
+func (cb *ContractsBuilder) RegisterPrototype(ctx context.Context, name string, domain *core.RecordRef) error {
+	protoID, err := cb.ArtifactManager.RegisterRequest(
+		ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
+	)
+	if err != nil {
+		return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+	}
+	var protoRef *core.RecordRef
+	if domain == nil {
+		protoRef = core.NewRecordRef(*protoID, *protoID)
+	} else {
+		protoRef = core.NewRecordRef(*domain.Domain(), *protoID)
+	}
+	log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
+	cb.Prototypes[name] = protoRef
+	return nil
+}
+
 // Build ...
-func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile) error {
+func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *core.RecordID) error {
+
+	domainRef := core.NewRecordRef(*domain, *domain)
 
 	for name := range contracts {
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
+			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
 		}
 
-		protoRef := core.RecordRef{}
-		protoRef.SetRecord(*protoID)
+		protoRef := core.NewRecordRef(*domain, *protoID)
 		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
-		cb.Prototypes[name] = &protoRef
+		cb.Prototypes[name] = protoRef
 	}
 
 	for name, code := range contracts {
@@ -161,7 +180,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_bin"}},
+			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -170,11 +189,10 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
-			core.RecordRef{}, *core.NewRecordRef(core.RecordID{}, *codeReq),
+			*domainRef, *core.NewRecordRef(*domain, *codeReq),
 			pluginBinary, core.MachineTypeGoPlugin,
 		)
-		codeRef := &core.RecordRef{}
-		codeRef.SetRecord(*codeID)
+		codeRef := core.NewRecordRef(*domain, *codeID)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}
@@ -184,7 +202,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
 		_, err = cb.ArtifactManager.ActivatePrototype(
 			ctx,
-			core.RecordRef{},
+			*domainRef,
 			*cb.Prototypes[name],
 			*cb.ArtifactManager.GenesisRef(), // FIXME: Only bootstrap can do this!
 			*codeRef,
