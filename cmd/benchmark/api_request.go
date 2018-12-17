@@ -71,7 +71,7 @@ func transfer(ctx context.Context, amount float64, from memberInfo, to memberInf
 
 func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 	var members []memberInfo
-	for i := 0; i < concurrent*repetitions*2; i++ {
+	for i := 0; i < concurrent*2; i++ {
 		memberName := testutils.RandomString()
 
 		ks := platformpolicy.NewKeyProcessor()
