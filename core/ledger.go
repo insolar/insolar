@@ -226,6 +226,9 @@ type ObjectDescriptor interface {
 
 	// Parent returns object's parent.
 	Parent() *RecordRef
+
+	// HasPendingRequests returns true if the object has unclosed requests.
+	HasPendingRequests() bool
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.
