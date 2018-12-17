@@ -270,3 +270,9 @@ var (
 	TODOJetID = *NewRecordID(PulseNumberJet, nil)
 	DomainID  = *NewRecordID(0, nil)
 )
+
+// PulseStorage provides the interface for fetching current pulse of the system
+//go:generate minimock -i github.com/insolar/insolar/core.PulseStorage -o ../testutils -s _mock.go
+type PulseStorage interface {
+	Current(ctx context.Context) (*Pulse, error)
+}
