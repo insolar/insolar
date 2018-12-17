@@ -100,7 +100,7 @@ func newNodeStruct(node core.Node) (*NodeStruct, error) {
 		SID:     node.ShortID(),
 		Role:    node.Role(),
 		PK:      pk,
-		Address: node.PhysicalAddress(),
+		Address: node.Address(),
 		Version: node.Version(),
 	}, nil
 }

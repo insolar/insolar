@@ -109,7 +109,7 @@ func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode 
 func (ac *AuthorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
 	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode)
 
-	originClaim, err := ac.keeper.GetOriginClaim()
+	originClaim, err := ac.keeper.GetOriginJoinClaim()
 	if err != nil {
 		return errors.Wrap(err, "[ Register ] failed to get origin claim")
 	}

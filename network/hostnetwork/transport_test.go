@@ -49,16 +49,20 @@ type MockResolver struct {
 	smapping map[core.ShortNodeID]*host.Host
 }
 
-func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
-	result, exist := m.mapping[nodeID]
+func (m *MockResolver) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
+	result, exist := m.smapping[id]
 	if !exist {
 		return nil, errors.New("failed to resolve")
 	}
 	return result, nil
 }
 
-func (m *MockResolver) ResolveS(id core.ShortNodeID) (*host.Host, error) {
-	result, exist := m.smapping[id]
+func (m *MockResolver) ResolveConsensusRef(nodeID core.RecordRef) (*host.Host, error) {
+	return m.Resolve(nodeID)
+}
+
+func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
+	result, exist := m.mapping[nodeID]
 	if !exist {
 		return nil, errors.New("failed to resolve")
 	}

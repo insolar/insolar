@@ -152,7 +152,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 
 	c.MessageBus = testmessagebus.NewTestMessageBus(t)
 
-	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleVirtual, nil, "", ""))
+	c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleVirtual, nil, "127.0.0.1:5432", ""))
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -187,7 +187,7 @@ func initNetwork(ctx context.Context, t *testing.T, bootstrapHosts []string) (*l
 	nodeId := "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"
 	nodeRef, err := core.NewRefFromBase58(nodeId)
 	require.NoError(t, err)
-	addr := c.NodeNetwork.GetOrigin().PhysicalAddress()
+	addr := c.NodeNetwork.GetOrigin().Address()
 	serviceNetwork.CryptographyService, serviceNetwork.NodeKeeper = initComponents(t, *nodeRef, addr, true)
 
 	serviceNetwork.PulseManager = tempLedger.GetPulseManager()

@@ -39,7 +39,7 @@ type ThirdPhase struct {
 func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
-	packet := packets.NewPhase3Packet(gSign, state.DBitSet)
+	packet := packets.NewPhase3Packet(gSign, state.BitSet)
 
 	err := tp.signPhase3Packet(&packet)
 
@@ -75,6 +75,12 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) erro
 		}
 	}
 
+	// cloudEntry := &merkle.CloudEntry{
+	//
+	// }
+
+	// cloudHash, _, _ := sp.Calculator.GetCloudProof(cloudEntry)
+
 	return nil
 }
 
@@ -84,7 +90,7 @@ func getNode(ref core.RecordRef, nodes []core.Node) (core.Node, error) {
 			return node, nil
 		}
 	}
-	return nil, errors.New("[ getNode] failed to find a node on phase 3")
+	return nil, errors.New("[ getNode ] failed to find a node on phase 3")
 }
 
 func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {

@@ -23,7 +23,7 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 			core.StaticRoleVirtual,
 			pk,
 			// TODO implement later
-			"",
+			"127.0.0.1:5432",
 			"",
 		))
 
@@ -34,7 +34,7 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 			core.StaticRoleVirtual,
 			pk,
 			// TODO implement later
-			"",
+			"127.0.0.1:5432",
 			"",
 		)
 	}

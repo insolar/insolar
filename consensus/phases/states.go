@@ -35,24 +35,21 @@ type FirstPhaseState struct {
 	UnsyncList network.UnsyncList
 }
 
+type GlobuleProofValidated struct {
+	Proof *merkle.GlobuleProof
+	Valid bool
+}
+
 type SecondPhaseState struct {
 	*FirstPhaseState
 
 	GlobuleEntry *merkle.GlobuleEntry
-
 	GlobuleHash  merkle.OriginHash
 	GlobuleProof *merkle.GlobuleProof
+	// GlobuleProofSet map[core.Node]*GlobuleProofValidated
 
-	GlobuleProofSet map[core.Node]*merkle.GlobuleProof
+	MatrixState *Phase2MatrixState
+	Matrix      *StateMatrix
 
-	NodeListCount uint16
-	NodeListHash  []byte
-
-	DBitSet packets.BitSet
-}
-
-type ThirdPhasePulseState struct {
-}
-
-type ThirdPhaseReferendumState struct {
+	BitSet packets.BitSet
 }

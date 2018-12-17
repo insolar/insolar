@@ -14,33 +14,36 @@
  *    limitations under the License.
  */
 
-package fakepulsar
+package nodenetwork
 
 import (
-	"context"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: write adequate tests instead of this imitation of work
-func TestGetFakePulse(t *testing.T) {
-	handler := network.PulseHandlerMock{}
-	handler.HandlePulseFunc = func(p context.Context, p1 core.Pulse) {}
-	pulsar := NewFakePulsar(&handler, 1000)
-	pulse := pulsar.GetFakePulse()
-	assert.NotNil(t, pulse)
-}
+func Test_diffList(t *testing.T) {
+	old := []core.RecordRef{{0}, {1}, {2}, {3}, {4}}
+	new := []core.RecordRef{{0}, {2}}
+	expected := []core.RecordRef{{1}, {3}, {4}}
 
-func TestFakePulsar_Start(t *testing.T) {
-	handler := network.PulseHandlerMock{}
-	handler.HandlePulseFunc = func(p context.Context, p1 core.Pulse) {}
-	pulsar := NewFakePulsar(&handler, 1000)
-	ctx := context.TODO()
-	pulsar.Start(ctx)
-	time.Sleep(time.Millisecond * 1100)
-	pulsar.Stop(ctx)
+	assert.Equal(t, expected, diffList(old, new))
+
+	old = []core.RecordRef{{4}, {0}, {2}, {3}, {1}}
+	new = []core.RecordRef{{2}, {0}}
+	expected = []core.RecordRef{{1}, {3}, {4}}
+
+	assert.Equal(t, expected, diffList(old, new))
+
+	old = []core.RecordRef{{1}, {2}, {3}, {4}}
+	new = []core.RecordRef{{0}, {2}, {3}}
+	expected = []core.RecordRef{{1}, {4}}
+
+	assert.Equal(t, expected, diffList(old, new))
+
+	old = []core.RecordRef{{1}, {2}, {3}}
+	new = []core.RecordRef{{1}, {2}, {3}}
+
+	assert.Empty(t, diffList(old, new))
 }
