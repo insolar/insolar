@@ -22,12 +22,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+type GlobuleHashSignature [SignatureLength]byte
+
 type Phase2Packet struct {
 	// -------------------- Header
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    [HashLength]byte
+	globuleHashSignature    GlobuleHashSignature
 	bitSet                  BitSet
 	SignatureHeaderSection1 [SignatureLength]byte
 
@@ -72,8 +74,8 @@ func (p2p *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
 	return header, nil
 }
 
-func (p2p *Phase2Packet) GetGlobuleHashSignature() []byte {
-	return p2p.globuleHashSignature[:]
+func (p2p *Phase2Packet) GetGlobuleHashSignature() GlobuleHashSignature {
+	return p2p.globuleHashSignature
 }
 
 func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) error {
@@ -96,6 +98,15 @@ func (p2p *Phase2Packet) SetBitSet(bitset BitSet) {
 func (p2p *Phase2Packet) ContainsRequests() bool {
 	for _, vote := range p2p.votesAndAnswers {
 		if vote.Type() == TypeMissingNode {
+			return true
+		}
+	}
+	return false
+}
+
+func (p2p *Phase2Packet) ContainsResponses() bool {
+	for _, vote := range p2p.votesAndAnswers {
+		if vote.Type() == TypeMissingNodeSupplementaryVote || vote.Type() == TypeMissingNodeClaim {
 			return true
 		}
 	}

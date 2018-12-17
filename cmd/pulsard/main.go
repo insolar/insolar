@@ -130,7 +130,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 
 	cm := &component.Manager{}
 	cm.Register(cryptographyScheme, keyStore, keyProcessor, tp)
-	cm.Inject(cryptographyService)
+	cm.Inject(cryptographyService, pulseDistributor)
 
 	if err = cm.Init(ctx); err != nil {
 		inslogger.FromContext(ctx).Fatal(err)

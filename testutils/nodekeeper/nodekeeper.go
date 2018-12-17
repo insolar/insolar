@@ -12,24 +12,29 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 		panic(err)
 	}
 
+	ref, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	if err != nil {
+		panic(err)
+	}
+
 	keeper := nodenetwork.NewNodeKeeper(
 		nodenetwork.NewNode(
-			core.NewRefFromBase58("v1"),
+			*ref,
 			core.StaticRoleVirtual,
 			pk,
 			// TODO implement later
-			"",
+			"127.0.0.1:5432",
 			"",
 		))
 
 	// dirty hack - we need 3 nodes as validators, pass one node 3 times
 	getValidator := func() core.Node {
 		return nodenetwork.NewNode(
-			core.NewRefFromBase58("v1"),
+			*ref,
 			core.StaticRoleVirtual,
 			pk,
 			// TODO implement later
-			"",
+			"127.0.0.1:5432",
 			"",
 		)
 	}

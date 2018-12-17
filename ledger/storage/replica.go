@@ -42,16 +42,16 @@ func (db *DB) GetReplicatedPulse(ctx context.Context) (core.PulseNumber, error) 
 }
 
 // SetHeavySyncedPulse saves last successfuly synced pulse number on heavy node.
-func (db *DB) SetHeavySyncedPulse(ctx context.Context, pulsenum core.PulseNumber) error {
+func (db *DB) SetHeavySyncedPulse(ctx context.Context, jetID core.RecordID, pulsenum core.PulseNumber) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysLastSyncedPulseOnHeavy}), pulsenum.Bytes())
+		return tx.set(ctx, prefixkeyany(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}), pulsenum.Bytes())
 	})
 }
 
 // GetHeavySyncedPulse returns last successfuly synced pulse number on heavy node.
-func (db *DB) GetHeavySyncedPulse(ctx context.Context) (pn core.PulseNumber, err error) {
+func (db *DB) GetHeavySyncedPulse(ctx context.Context, jetID core.RecordID) (pn core.PulseNumber, err error) {
 	var buf []byte
-	buf, err = db.get(ctx, prefixkey(scopeIDSystem, []byte{sysLastSyncedPulseOnHeavy}))
+	buf, err = db.get(ctx, prefixkeyany(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}))
 	if err == nil {
 		pn = core.NewPulseNumber(buf)
 	} else if err == ErrNotFound {

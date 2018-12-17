@@ -23,10 +23,23 @@ import (
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/transport/host"
 )
 
 type nodeKeeperWrapper struct {
 	original network.NodeKeeper
+}
+
+func (n *nodeKeeperWrapper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
+	return n.original.AddTemporaryMapping(nodeID, shortID, address)
+}
+
+func (n *nodeKeeperWrapper) ResolveConsensus(shortID core.ShortNodeID) *host.Host {
+	return n.original.ResolveConsensus(shortID)
+}
+
+func (n *nodeKeeperWrapper) ResolveConsensusRef(nodeID core.RecordRef) *host.Host {
+	return n.original.ResolveConsensusRef(nodeID)
 }
 
 type phaseManagerWrapper struct {
@@ -35,7 +48,6 @@ type phaseManagerWrapper struct {
 }
 
 func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *core.Pulse) error {
-
 	res := p.original.OnPulse(ctx, pulse)
 	p.result <- res
 	return res
@@ -91,8 +103,12 @@ func (n *nodeKeeperWrapper) GetState() network.NodeKeeperState {
 	return n.original.GetState()
 }
 
-func (n *nodeKeeperWrapper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
-	return n.original.GetOriginClaim()
+func (n *nodeKeeperWrapper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
+	return n.original.GetOriginJoinClaim()
+}
+
+func (n *nodeKeeperWrapper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
+	return n.original.GetOriginAnnounceClaim(mapper)
 }
 
 func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {

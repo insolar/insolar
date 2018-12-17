@@ -67,7 +67,7 @@ func TestExporter_Export(t *testing.T) {
 		},
 		IsDelegate: true,
 	})
-	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest"})
+	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest", Msg: &message.CallConstructor{}})
 	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.CallRequest{
 		Payload: pl,
 	})
@@ -87,14 +87,14 @@ func TestExporter_Export(t *testing.T) {
 	_, err = json.Marshal(result)
 	assert.NoError(t, err)
 
-	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].(pulseData).Pulse
+	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber, int(pulse.PulseNumber))
 	assert.Equal(t, int64(1), pulse.PulseTimestamp)
-	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].(pulseData).Pulse
+	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber+1, int(pulse.PulseNumber))
 	assert.Equal(t, int64(2), pulse.PulseTimestamp)
 
-	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].(pulseData).Records
+	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Records
 	object, ok := records[base58.Encode(objectID[:])]
 	if assert.True(t, ok, "object not found by ID") {
 		assert.Equal(t, "TypeActivate", object.Type)
@@ -107,5 +107,6 @@ func TestExporter_Export(t *testing.T) {
 		assert.Equal(t, "TypeCallRequest", request.Type)
 		assert.Equal(t, pl, request.Data.(*record.CallRequest).Payload)
 		assert.Equal(t, "callRequest", request.Payload["Payload"].(*message.Parcel).LogTraceID)
+		assert.Equal(t, core.TypeCallConstructor.String(), request.Payload["Type"])
 	}
 }

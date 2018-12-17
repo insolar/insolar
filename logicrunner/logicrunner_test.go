@@ -63,7 +63,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
-var parallel = true
+var parallel = false
 
 func TestMain(m *testing.M) {
 	var err error
@@ -115,12 +115,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	nk := nodekeeper.GetTestNodekeeper(mock)
+
 	mb := testmessagebus.NewTestMessageBus(t)
-
-	var pulseNumber core.PulseNumber
-	pulseNumber = 0
-
-	mb.PulseNumber = pulseNumber
+	mb.PulseNumber = 0
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
@@ -142,6 +139,8 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cm.Inject(nk, recentMock, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	err = cm.Init(ctx)
+	assert.NoError(t, err)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
@@ -182,7 +181,7 @@ func newTestPulse(ctx context.Context, lr *LogicRunner, mb *testmessagebus.TestM
 	lr.Ledger.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
-		false,
+		true,
 	)
 
 	mb.PulseNumber = newPulseNumber
@@ -196,10 +195,15 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 
 	rlr := lr.(*LogicRunner)
 
-	for ref, state := range rlr.execution {
+	for ref, state := range rlr.state {
 		log.Debugf("TEST validating: %s", ref)
 
-		_, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), state.caseBind)
+		msg := state.ExecutionState.Behaviour.(*ValidationSaver).caseBind.ToValidateMessage(
+			ctx, ref, *rlr.pulse(ctx),
+		)
+		cb := NewCaseBindFromValidateMessage(ctx, rlr.MessageBus, msg)
+
+		_, err := rlr.Validate(ctx, ref, *rlr.pulse(ctx), *cb)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation %s", ref)
 		} else {
@@ -539,6 +543,15 @@ func (r *One) Hello() error {
 
 	return nil
 }
+
+func (r *One) Value() (int, error) {
+	friend, err := two.GetImplementationFrom(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	return friend.Value()
+}
 `
 
 	var contractTwoCode = `
@@ -563,6 +576,10 @@ func (r *Two) Hello() (string, error) {
 	r.X *= 2
 	return fmt.Sprintf("Hello %d times!", r.X), nil
 }
+
+func (r *Two) Value() (int, error) {
+	return r.X, nil
+}
 `
 	ctx := context.TODO()
 	// TODO: use am := testutil.NewTestArtifactManager() here
@@ -577,6 +594,9 @@ func (r *Two) Hello() (string, error) {
 	_, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Hello")
 	assert.NoError(t, err, "contract call")
 
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Value")
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(644), firstMethodRes(t, resp))
 }
 
 func TestContextPassing(t *testing.T) {
@@ -976,8 +996,11 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 
 	buf := goplugintestutils.CBORMarshal(s.t, params)
 
+	memberRef, err := core.NewRefFromBase58(s.member)
+	require.NoError(s.t, err)
+
 	args, err := core.MarshalArgs(
-		core.NewRefFromBase58(s.member),
+		*memberRef,
 		method,
 		buf,
 		seed)
@@ -988,7 +1011,7 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 	assert.NoError(s.t, err)
 
 	res, err := executeMethod(
-		ctx, s.lr, pm, core.NewRefFromBase58(s.member), proxyPrototype, 0,
+		ctx, s.lr, pm, *memberRef, proxyPrototype, 0,
 		"Call", rootDomain, method, buf, seed, signature.Bytes(),
 	)
 	assert.NoError(s.t, err, "contract call")
@@ -1027,11 +1050,23 @@ func TestRootDomainContract(t *testing.T) {
 	// TODO need use pulseManager to sync all refs
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
+	err = cb.Build(map[string]string{
+		"member":     string(memberCode),
+		"allowance":  string(allowanceCode),
+		"wallet":     string(walletCode),
+		"rootdomain": string(rootDomainCode),
+	})
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c1"}})
+	rootDomainID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
+			},
+		},
+	)
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1054,7 +1089,14 @@ func TestRootDomainContract(t *testing.T) {
 	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c2"}})
+	rootMemberID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
+			},
+		},
+	)
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
@@ -1220,7 +1262,7 @@ func New(n int) (*Child, error) {
 	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}},
-		false,
+		true,
 	)
 	assert.NoError(t, err)
 
@@ -1368,7 +1410,11 @@ type One struct {
 	foundation.BaseContract
 }
 func (r *One) CreateAllowance(member string) (error) {
-	w, _ := wallet.GetImplementationFrom(core.NewRefFromBase58(member))
+	memberRef, refErr := core.NewRefFromBase58(member)
+	if refErr != nil {
+		return refErr
+	}
+	w, _ := wallet.GetImplementationFrom(*memberRef)
 	walletRef := w.GetReference()
 	ah := allowance.New(&walletRef, 111, r.GetContext().Time.Unix()+10)
 	_, err := ah.AsChild(walletRef)
@@ -1399,13 +1445,19 @@ func (r *One) CreateAllowance(member string) (error) {
 	ctx := context.TODO()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{"one": contractOneCode, "member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
+	err = cb.Build(map[string]string{
+		"one":        contractOneCode,
+		"member":     string(memberCode),
+		"allowance":  string(allowanceCode),
+		"wallet":     string(walletCode),
+		"rootdomain": string(rootDomainCode),
+	})
 	assert.NoError(t, err)
 
 	kp := platformpolicy.NewKeyProcessor()
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c1"}})
+	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1426,7 +1478,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
-	rootMemberID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "c2"}})
+	rootMemberID, err := am.RegisterRequest(
+		ctx,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
+			},
+		},
+	)
 	assert.NoError(t, err)
 	rootMemberRef := getRefFromID(rootMemberID)
 
@@ -1462,13 +1521,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	assert.NotEqual(t, "", memberRef)
 
 	// Call CreateAllowance method in custom contract
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*contract,
 		*am.GenesisRef(),
 		*cb.Prototypes["one"],
@@ -1608,7 +1668,7 @@ func (r *One) ShortSleep() (error) {
 		err = pm.Set(
 			ctx,
 			core.Pulse{PulseNumber: 1, Entropy: core.Entropy{}},
-			false,
+			true,
 		)
 		log.Debugf("!!!!! Pulse end")
 	}()
@@ -1923,7 +1983,8 @@ func (c *First) GetName() (string, error) {
 }
 
 func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*core.RecordRef, *core.RecordRef) {
-	domain := core.NewRefFromBase58("c1")
+	domain, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(
 		ctx,
 		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}},
@@ -1933,7 +1994,7 @@ func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManage
 
 	_, err = am.ActivateObject(
 		ctx,
-		domain,
+		*domain,
 		*objectRef,
 		*am.GenesisRef(),
 		*cb.Prototypes[contractName],

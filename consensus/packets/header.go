@@ -42,14 +42,6 @@ func makeClaimHeader(claim ReferendumClaim) uint16 {
 	return result
 }
 
-func getClaimSize(claim ReferendumClaim) uint16 {
-	return claimSizeMap[claim.Type()]
-}
-
-func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
-	return getClaimSize(claim) + HeaderSize
-}
-
 func makeVoteHeader(vote ReferendumVote) uint16 {
 	if vote == nil {
 		panic("invalid vote")

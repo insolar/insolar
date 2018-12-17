@@ -46,7 +46,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	}
 
 	nodeKeeperMock.GetActiveNodesMock.Set(func() (r []core.Node) {
-		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", "")}
+		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")}
 
 	})
 
@@ -60,9 +60,15 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 }
 
 func Test_consensusReached(t *testing.T) {
-	assert.True(t, consensusReached(5, 6))
-	assert.False(t, consensusReached(4, 6))
+	assert.True(t, ConsensusReachedBFT(5, 6))
+	assert.False(t, ConsensusReachedBFT(4, 6))
 
-	assert.True(t, consensusReached(201, 300))
-	assert.False(t, consensusReached(200, 300))
+	assert.True(t, ConsensusReachedBFT(201, 300))
+	assert.False(t, ConsensusReachedBFT(200, 300))
+
+	assert.True(t, consensusReachedMajority(4, 6))
+	assert.False(t, consensusReachedMajority(3, 6))
+
+	assert.True(t, consensusReachedMajority(151, 300))
+	assert.False(t, consensusReachedMajority(150, 300))
 }

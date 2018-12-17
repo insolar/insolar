@@ -45,3 +45,11 @@ type NetworkSwitcher interface {
 	// OnPulse method checks current state and finds out reasons to update this state
 	OnPulse(context.Context, Pulse) error
 }
+
+//go:generate minimock -i github.com/insolar/insolar/core.GlobalInsolarLock -o ../testutils -s _mock.go
+// GlobalInsolarLock is lock of all incoming and outcoming network calls.
+// It's not intended to be used in multiple threads. And main use of it is `Set` method of `PulseManager`.
+type GlobalInsolarLock interface {
+	Acquire(ctx context.Context)
+	Release(ctx context.Context)
+}

@@ -89,7 +89,7 @@ func (m *cryptographySchemeMock) ReferenceHasher() core.Hasher {
 }
 
 func (m *cryptographySchemeMock) IntegrityHasher() core.Hasher {
-	return &hasherMock{}
+	return &hasherMock{h: sha3.New512()}
 }
 
 func (m *cryptographySchemeMock) Signer(privateKey crypto.PrivateKey) core.Signer {

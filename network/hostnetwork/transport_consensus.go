@@ -48,7 +48,7 @@ func (tc *transportConsensus) RegisterRequestHandler(t types.PacketType, handler
 
 func (tc *transportConsensus) SendRequest(request network.Request, receiver core.RecordRef) error {
 	log.Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
-	receiverHost, err := tc.resolver.Resolve(receiver)
+	receiverHost, err := tc.resolver.ResolveConsensusRef(receiver)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to send %s request to node %s",
 			request.GetType().String(), receiver.String())
@@ -59,16 +59,18 @@ func (tc *transportConsensus) SendRequest(request network.Request, receiver core
 
 func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Packet) {
 	log.Debugf("Got %s request from host, shortID: %d", msg.Type.String(), msg.Sender.ShortID)
-	sender, err := tc.resolver.ResolveS(msg.Sender.ShortID)
-	if err != nil {
+	sender, err := tc.resolver.ResolveConsensus(msg.Sender.ShortID)
+	// TODO: NETD18-79
+	// special case for Phase1 because we can get a valid packet from a node we don't know yet (first consensus case)
+	if err != nil && msg.Type != types.Phase1 {
 		log.Errorf("Error processing incoming message: failed to resolve ShortID (%d) -> NodeID", msg.Sender.ShortID)
 		return
 	}
 	msg.Sender = sender
 	handler, exist := tc.handlers[msg.Type]
 	if !exist {
-		log.Errorf("No handler set for packet type %s from node %s",
-			msg.Type.String(), msg.Sender.NodeID.String())
+		log.Errorf("No handler set for packet type %s from node %d, %s",
+			msg.Type.String(), msg.Sender.ShortID, msg.Sender.NodeID)
 		return
 	}
 	handler((*packetWrapper)(msg))
