@@ -75,11 +75,13 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 		if !ok || tcp.connectionClosed(conn) {
 			logger.Debugf("[ send ] Failed to retrieve connection to %s", tcpAddr)
 
-		}
-
-		conn, err = tcp.openTCP(ctx, tcpAddr)
-		if err != nil {
-			return errors.Wrap(err, "[ send ] Failed to create TCP connection")
+			conn, err = tcp.openTCP(ctx, tcpAddr)
+			if err != nil {
+				tcp.connMutex.Unlock()
+				return errors.Wrap(err, "[ send ] Failed to create TCP connection")
+			}
+			tcp.conns[conn.RemoteAddr().String()] = conn
+			logger.Debugf("[ openTCP ] Added connection for %s. Current pool size: %d", conn.RemoteAddr(), len(tcp.conns))
 		}
 
 		tcp.connMutex.Unlock()
@@ -96,12 +98,8 @@ func (tcp *tcpTransport) openTCP(ctx context.Context, addr *net.TCPAddr) (net.Co
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		logger.Warnf("[ openTCP ] Failed to open connection to %s", addr)
-		tcp.connMutex.Unlock()
 		return nil, errors.Wrap(err, "[ openTCP ] Failed to open connection")
 	}
-
-	tcp.conns[conn.RemoteAddr().String()] = conn
-	logger.Debugf("[ openTCP ] Added connection for %s. Current pool size: %d", conn.RemoteAddr(), len(tcp.conns))
 
 	err = conn.SetKeepAlive(true)
 	if err != nil {
