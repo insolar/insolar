@@ -35,3 +35,6 @@ Usage
 
         -u apiurl
                 API url for requests (default - http://localhost:19191/api).
+
+        -l log level
+                Log level (default - info).
