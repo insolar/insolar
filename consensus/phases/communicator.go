@@ -195,7 +195,10 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 	response := packets.Phase2Packet{}
 	response.SetBitSet(origReq.GetBitSet())
 	ghs := origReq.GetGlobuleHashSignature()
-	response.SetGlobuleHashSignature(ghs[:])
+	err := response.SetGlobuleHashSignature(ghs[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "[ generatePhase2Response ] failed to set globule hash")
+	}
 	for _, answer := range answers {
 		response.AddVote(answer)
 	}

@@ -170,12 +170,17 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	for index, result := range results {
 		node, err := nodenetwork.ClaimToNode("", &result.NodeClaimUnsigned)
 		if err != nil {
-			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to convert claim to node, ref: %s", result.NodeClaimUnsigned.NodeRef)
+			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to convert claim to node, ref: %s",
+				result.NodeClaimUnsigned.NodeRef)
 		}
 		state.UnsyncList.AddNode(node, index)
 		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
 		state.UnsyncList.SetGlobuleHashSignature(node.ID(), result.GlobuleHashSignature)
-		state.Matrix.ReceivedProofFromNode(origin, node.ID())
+		err = state.Matrix.ReceivedProofFromNode(origin, node.ID())
+		if err != nil {
+			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to assign proof from node %s to state matrix",
+				result.NodeClaimUnsigned.NodeRef)
+		}
 	}
 	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for index, claim := range claims {
