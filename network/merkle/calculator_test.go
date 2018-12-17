@@ -43,6 +43,7 @@ type calculatorSuite struct {
 }
 
 func (t *calculatorSuite) TestGetNodeProof() {
+	t.Suite.T().Skip("skipped")
 	ph, np, err := t.calculator.GetPulseProof(&PulseEntry{Pulse: t.pulse})
 
 	t.Assert().NoError(err)
@@ -55,6 +56,7 @@ func (t *calculatorSuite) TestGetNodeProof() {
 }
 
 func (t *calculatorSuite) TestGetGlobuleProof() {
+	t.Suite.T().Skip("skipped")
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
 	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
 	t.Assert().NoError(err)
@@ -85,6 +87,7 @@ func (t *calculatorSuite) TestGetGlobuleProof() {
 }
 
 func (t *calculatorSuite) TestGetCloudProof() {
+	t.Suite.T().Skip("skipped")
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
 	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
 	t.Assert().NoError(err)
