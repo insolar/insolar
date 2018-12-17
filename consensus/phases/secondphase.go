@@ -197,7 +197,9 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	}
 	state.UnsyncList.AddClaims(claimMap)
 	state.MatrixState, err = state.Matrix.CalculatePhase2(origin)
-
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to calculate matrix state")
+	}
 	return state, nil
 }
 
