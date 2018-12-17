@@ -274,7 +274,7 @@ func (m *PulseManager) getExecutorData(
 		pendingRequests[id] = record.SerializeRecord(pendingRecord)
 	}
 
-	dropSizeHistory, err := m.db.GetDropSizeHistory(ctx)
+	dropSizeHistory, err := m.db.GetDropSizeHistory(ctx, jetID)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeHistory")
 	}
@@ -296,7 +296,7 @@ func (m *PulseManager) sendExecutorData(
 	msg *message.HotData,
 ) error {
 	shouldSplit := func() (bool, error) {
-		history, err := m.db.GetDropSizeHistory(ctx)
+		history, err := m.db.GetDropSizeHistory(ctx, jetID)
 		if err != nil {
 			return false, err
 		}

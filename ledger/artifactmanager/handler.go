@@ -855,12 +855,12 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		return nil, err
 	}
 
-	err = h.db.AddJets(ctx, *msg.Jet.Record())
+	err = h.db.AddJets(ctx, jetID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.db.ResetDropSizeHistory(ctx, msg.JetDropSizeHistory)
+	err = h.db.ResetDropSizeHistory(ctx, jetID, msg.JetDropSizeHistory)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't ResetDropSizeHistory")
 	}

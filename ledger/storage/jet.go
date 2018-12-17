@@ -258,8 +258,8 @@ func (db *DB) GetJets(ctx context.Context) (jet.IDSet, error) {
 	return jets, nil
 }
 
-func dropSizesPrefixKey() []byte {
-	return prefixkey(scopeIDSystem, []byte{sysDropSizeHistory})
+func dropSizesPrefixKey(jetID core.RecordID) []byte {
+	return prefixkeyany(scopeIDSystem, []byte{sysDropSizeHistory}, jetID.Bytes())
 }
 
 func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
@@ -267,7 +267,7 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 	db.addBlockSizeLock.Lock()
 	defer db.addBlockSizeLock.Unlock()
 
-	k := dropSizesPrefixKey()
+	k := dropSizesPrefixKey(dropSize.JetID)
 	buff, err := db.get(ctx, k)
 	if err != nil && err != ErrNotFound {
 		return errors.Wrapf(err, "[ AddDropSize ] Can't get object: %s", string(k))
@@ -290,22 +290,22 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 	return db.set(ctx, k, dropSizes.Bytes(ctx))
 }
 
-func (db *DB) ResetDropSizeHistory(ctx context.Context, dropSizeHistory jet.DropSizeHistory) error {
+func (db *DB) ResetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error {
 	inslogger.FromContext(ctx).Debug("DB.ResetDropSizeHistory starts ...")
 	db.addBlockSizeLock.Lock()
 	defer db.addBlockSizeLock.Unlock()
 
-	k := dropSizesPrefixKey()
+	k := dropSizesPrefixKey(jetID)
 	err := db.set(ctx, k, dropSizeHistory.Bytes(ctx))
 	return errors.Wrap(err, "[ ResetDropSizeHistory ] Can't db.set")
 }
 
-func (db *DB) GetDropSizeHistory(ctx context.Context) (jet.DropSizeHistory, error) {
+func (db *DB) GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error) {
 	inslogger.FromContext(ctx).Debug("DB.GetDropSizeHistory starts ...")
 	db.addBlockSizeLock.RLock()
 	defer db.addBlockSizeLock.RUnlock()
 
-	k := dropSizesPrefixKey()
+	k := dropSizesPrefixKey(jetID)
 	buff, err := db.get(ctx, k)
 	if err != nil && err != ErrNotFound {
 		return nil, errors.Wrap(err, "[ GetDropSizeHistory ] Can't db.set")
