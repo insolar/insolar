@@ -31,6 +31,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -143,10 +144,17 @@ func stopInsolard() error {
 		return nil
 	}
 
-	err := cmd.Process.Kill()
+	err := cmd.Process.Signal(syscall.SIGHUP)
 	if err != nil {
-		return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
+		return errors.Wrap(err, "[ stopInsolard ] failed to kill process:")
 	}
+
+	pState, err := cmd.Process.Wait()
+	if err != nil {
+		return errors.Wrap(err, "[ stopInsolard ] failed to wait process:")
+	}
+
+	fmt.Println("[ stopInsolard ] State: ", pState.String())
 
 	return nil
 }
@@ -179,24 +187,24 @@ func waitForNet() error {
 		for _, port := range ports {
 			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s/api", port))
 			if err != nil {
-				fmt.Println("[ startNet ] Problem with port " + port + ". Err: " + err.Error())
+				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break
 			} else {
-				fmt.Println("[ startNet ] Good response from port " + port + ". Response: " + resp.NetworkState)
+				fmt.Println("[ waitForNet ] Good response from port " + port + ". Response: " + resp.NetworkState)
 				currentOk++
 			}
 		}
 		if currentOk == numNodes {
-			fmt.Printf("[ startNet ] All %d nodes have started\n", numNodes)
+			fmt.Printf("[ waitForNet ] All %d nodes have started\n", numNodes)
 			break
 		}
 
 		time.Sleep(time.Second)
-		fmt.Printf("[ startNet ] Waiting for net: attempt %d/%d\n", i, numAttempts)
+		fmt.Printf("[ waitForNet ] Waiting for net: attempt %d/%d\n", i, numAttempts)
 	}
 
 	if currentOk != numNodes {
-		return errors.New("[ startNet ] Can't Start net: No attempts left")
+		return errors.New("[ waitForNet ] Can't Start net: No attempts left")
 	}
 
 	return nil
@@ -332,7 +340,7 @@ func setup() error {
 func teardown() {
 	err := stopInsolard()
 	if err != nil {
-		fmt.Println("[ teardown ] failed to stop insolard: ", err)
+		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
 
