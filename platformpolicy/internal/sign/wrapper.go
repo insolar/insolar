@@ -91,3 +91,19 @@ func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool
 
 	return ecdsa.Verify(sw.publicKey, hash, ecdsaSignature.R, ecdsaSignature.S)
 }
+func getRSFromBytes(data []byte) (*big.Int, *big.Int) {
+	if len(data) != BigIntLength*2 {
+		panic("[ getRSFromBytes ] wrong data length to get a r, s")
+	}
+	r := new(big.Int)
+	s := new(big.Int)
+	rBytes := make([]byte, BigIntLength)
+	sBytes := make([]byte, BigIntLength)
+	copy(rBytes, data[:BigIntLength])
+	copy(sBytes, data[BigIntLength:])
+	fmt.Printf("%v\n", rBytes)
+	fmt.Printf("%v\n", sBytes)
+	r.SetBytes(rBytes)
+	s.SetBytes(rBytes)
+	return r, s
+}
