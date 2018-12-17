@@ -76,6 +76,7 @@ type pmOptions struct {
 	syncMessageLimit int
 	pulsesDeltaLimit core.PulseNumber
 	splitThreshold   uint64
+	dropHistorySize  int
 }
 
 func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
@@ -99,6 +100,7 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 	pm.options.syncMessageLimit = pmconf.HeavySyncMessageLimit
 	pm.options.pulsesDeltaLimit = conf.LightChainLimit
 	pm.options.splitThreshold = pmconf.SplitThreshold
+	pm.options.dropHistorySize = conf.JetSizesHistoryDepth
 	pm.syncbackoff = backoffFromConfig(pmconf.HeavyBackoff)
 	return pm
 }
@@ -296,11 +298,10 @@ func (m *PulseManager) sendExecutorData(
 	msg *message.HotData,
 ) error {
 	shouldSplit := func() (bool, error) {
-		history, err := m.db.GetDropSizeHistory(ctx, jetID)
-		if err != nil {
-			return false, err
+		if len(msg.JetDropSizeHistory) < m.options.dropHistorySize {
+			return false, nil
 		}
-		for _, info := range history {
+		for _, info := range msg.JetDropSizeHistory {
 			if info.DropSize < m.options.splitThreshold {
 				return false, nil
 			}
