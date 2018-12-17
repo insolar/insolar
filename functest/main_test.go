@@ -148,12 +148,6 @@ func stopInsolard() error {
 		return errors.Wrap(err, "[ stopInsolard ] failed to kill process: ")
 	}
 
-	killOutput, err := exec.Command("bash", "-c", "pkill insolard --config").CombinedOutput()
-	if err != nil {
-		return errors.Wrap(err, "[ stopInsolard ] failed to kill all insolards")
-	}
-	fmt.Println("Kill output: ", string(killOutput))
-
 	return nil
 }
 
@@ -220,7 +214,7 @@ func startNet() error {
 		return errors.Wrap(err, "[ startNet  ] Can't change dir")
 	}
 
-	cmd = exec.Command("bash", "-x", "./scripts/insolard/launchnet.sh", "-ng")
+	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-ng")
 	stdout, _ = cmd.StdoutPipe()
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] could't set stdout: ")
