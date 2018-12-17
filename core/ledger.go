@@ -61,7 +61,7 @@ type PulseManager interface {
 	Current(context.Context) (*Pulse, error)
 
 	// Set set's new pulse and closes current jet drop. If dry is true, nothing will be saved to storage.
-	Set(ctx context.Context, pulse Pulse, dry bool) error
+	Set(ctx context.Context, pulse Pulse, persist bool) error
 }
 
 // JetCoordinator provides methods for calculating Jet affinity
@@ -271,4 +271,5 @@ var (
 	// on period Jet ID full implementation
 	// TODO: remove it after jets support readyness - @nordicdyno 5.Dec.2018
 	TODOJetID = *NewRecordID(PulseNumberJet, nil)
+	DomainID  = *NewRecordID(0, nil)
 )

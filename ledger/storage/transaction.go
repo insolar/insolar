@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/record"

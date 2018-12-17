@@ -669,6 +669,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.NoError(t, err)
 
 	hotIndexes := &message.HotData{
+		Jet:         *core.NewRecordRef(core.DomainID, *jet.NewID(0, nil)),
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {
@@ -807,7 +808,7 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 		mc.Finish()
 	}()
 
-	jetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{2})
+	jetID := jet.NewID(0, []byte{2})
 	msg := message.JetDrop{
 		JetID: *jetID,
 	}
@@ -844,8 +845,8 @@ func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
 		mc.Finish()
 	}()
 
-	jetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{2})
-	secondJetID := core.NewRecordID(core.GenesisPulse.PulseNumber, []byte{3})
+	jetID := jet.NewID(0, []byte{2})
+	secondJetID := jet.NewID(0, []byte{3})
 	msg := message.JetDrop{
 		JetID: *jetID,
 	}

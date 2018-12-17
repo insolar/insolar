@@ -150,7 +150,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	// Act
-	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
+	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
 	require.NoError(t, err)
 	savedIndex, err := db.GetObjectIndex(ctx, jetID, firstID, false)
 	require.NoError(t, err)

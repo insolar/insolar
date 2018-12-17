@@ -272,6 +272,7 @@ func (m *PulseManager) processRecentObjects(
 	}
 
 	msg := &message.HotData{
+		Jet:                *core.NewRecordRef(core.DomainID, jetID),
 		Drop:               *drop,
 		PulseNumber:        previousSlotPulse.Pulse.PulseNumber,
 		RecentObjects:      recentObjects,
@@ -286,7 +287,7 @@ func (m *PulseManager) processRecentObjects(
 }
 
 // Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) error {
+func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, persist bool) error {
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -302,24 +303,27 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 
 	lastSlotPulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
+		m.GIL.Release(ctx)
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
 	// swap active nodes
 	m.ActiveListSwapper.MoveSyncToActive()
-	if !dry {
+	if persist {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
+			m.GIL.Release(ctx)
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
+			m.GIL.Release(ctx)
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
 
 	m.GIL.Release(ctx)
 
-	if dry {
+	if !persist {
 		return nil
 	}
 
