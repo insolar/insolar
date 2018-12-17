@@ -103,9 +103,8 @@ func (cb *ContractsBuilder) Build(contracts map[string]*preprocessor.ParsedFile)
 	ctx := context.TODO()
 
 	for name := range contracts {
-		nonce := testutils.RandomRef()
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
