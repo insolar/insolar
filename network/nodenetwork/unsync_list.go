@@ -43,6 +43,10 @@ type unsyncList struct {
 	cache       []byte
 }
 
+func (ul *unsyncList) GlobuleHashSignatures() map[core.RecordRef]consensus.GlobuleHashSignature {
+	return ul.ghs
+}
+
 func (ul *unsyncList) ApproveSync(sync []core.RecordRef) {
 	prevActive := make([]core.RecordRef, 0, len(ul.activeNodes))
 	for nodeID := range ul.activeNodes {
@@ -60,15 +64,6 @@ func (ul *unsyncList) AddNode(node core.Node, bitsetIndex uint16) {
 
 func (ul *unsyncList) GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim {
 	return ul.claims[nodeID]
-}
-
-func (ul *unsyncList) SetGlobuleHashSignature(nodeID core.RecordRef, signature consensus.GlobuleHashSignature) {
-	ul.ghs[nodeID] = signature
-}
-
-func (ul *unsyncList) GetGlobuleHashSignature(nodeID core.RecordRef) (consensus.GlobuleHashSignature, bool) {
-	result, ok := ul.ghs[nodeID]
-	return result, ok
 }
 
 func (ul *unsyncList) AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof) {

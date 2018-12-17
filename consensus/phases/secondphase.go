@@ -88,7 +88,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 			continue
 		}
 		ghs := packet.GetGlobuleHashSignature()
-		state.UnsyncList.SetGlobuleHashSignature(ref, ghs)
+		state.UnsyncList.GlobuleHashSignatures()[ref] = ghs
 		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
 		if err != nil {
 			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s", ref)
@@ -175,7 +175,7 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 		}
 		state.UnsyncList.AddNode(node, index)
 		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
-		state.UnsyncList.SetGlobuleHashSignature(node.ID(), result.GlobuleHashSignature)
+		state.UnsyncList.GlobuleHashSignatures()[node.ID()] = result.GlobuleHashSignature
 		err = state.Matrix.ReceivedProofFromNode(origin, node.ID())
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to assign proof from node %s to state matrix",

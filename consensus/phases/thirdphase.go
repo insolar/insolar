@@ -64,7 +64,7 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 		// not needed until we implement fraud detection
 		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
 
-		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
+		state.UnsyncList.GlobuleHashSignatures()[ref] = packet.GetGlobuleHashSignature()
 	}
 
 	// cloudEntry := &merkle.CloudEntry{
