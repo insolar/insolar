@@ -48,7 +48,9 @@ func TestLedgerArtifactManager_Metrics(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.SendMock.Return(&reply.ID{}, nil)
+	cs := testutils.NewPlatformCryptographyScheme()
 	am := NewArtifactManger(db)
+	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb
 
 	tmetrics := testmetrics.Start(ctx)

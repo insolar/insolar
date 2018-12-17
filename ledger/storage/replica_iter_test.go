@@ -144,7 +144,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	var lastPulse core.PulseNumber
 	pulsescount := 2
-	jetID := core.ZeroJetID
+	jetID := core.TODOJetID
 
 	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
 	require.Nil(t, recsBefore)
@@ -251,22 +251,22 @@ func setDrop(
 	ctx context.Context,
 	t *testing.T,
 	db *storage.DB,
-	jet core.RecordID,
+	jetID core.RecordID,
 	pulsenum core.PulseNumber,
 ) {
-	prevDrop, err := db.GetDrop(ctx, jet, pulsenum-1)
+	prevDrop, err := db.GetDrop(ctx, jetID, pulsenum-1)
 	var prevhash []byte
 	if err == nil {
 		prevhash = prevDrop.Hash
 	} else if err != storage.ErrNotFound {
 		require.NoError(t, err)
 	}
-	drop, _, dropSize, err := db.CreateDrop(ctx, jet, pulsenum, prevhash)
+	drop, _, dropSize, err := db.CreateDrop(ctx, jetID, pulsenum, prevhash)
 	if err != nil {
 		require.NoError(t, err)
 	}
 	require.NotEqual(t, 0, dropSize)
-	err = db.SetDrop(ctx, jet, drop)
+	err = db.SetDrop(ctx, jetID, drop)
 	require.NoError(t, err)
 }
 
@@ -274,13 +274,13 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	db *storage.DB,
-	jet core.RecordID,
+	jetID core.RecordID,
 	pulsenum core.PulseNumber,
 ) {
 	// set record
 	parentID, err := db.SetRecord(
 		ctx,
-		jet,
+		jetID,
 		pulsenum,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -291,11 +291,11 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set blob
-	_, err = db.SetBlob(ctx, jet, pulsenum, []byte("100500"))
+	_, err = db.SetBlob(ctx, jetID, pulsenum, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
-	err = db.SetObjectIndex(ctx, jet, parentID, &index.ObjectLifeline{
+	err = db.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)

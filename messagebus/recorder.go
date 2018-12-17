@@ -21,7 +21,6 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/localstorage"
 )
 
 // Recorder is a MessageBus wrapper that stores received replies to the tape. The tape then can be transferred and
@@ -54,22 +53,15 @@ func (r *recorder) Send(ctx context.Context, msg core.Message, currentPulse core
 	if err != nil {
 		return nil, err
 	}
-	id := GetMessageHash(r.scheme, parcel)
 
-	// Check if Value for this message is already stored.
-	rep, err = r.tape.GetReply(ctx, id)
-	if err == nil {
-		return rep, nil
-	}
-	if err != localstorage.ErrNotFound {
-		return nil, err
-	}
 	// Actually send message.
 	rep, err = r.SendParcel(ctx, parcel, currentPulse, ops)
 	if err != nil {
 		return nil, err
 	}
-	// Save the received Value on the storageTape.
+
+	// Save the received Value on the tape.
+	id := GetMessageHash(r.scheme, parcel)
 	err = r.tape.SetReply(ctx, id, rep)
 	if err != nil {
 		return nil, err

@@ -49,18 +49,11 @@ func TestRecorder_Send(t *testing.T) {
 	recorder := newRecorder(s, tape, pcs)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
-		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		s.SendParcelMock.Expect(ctx, &parcel, *core.GenesisPulse, nil)
+		tape.SetReplyMock.Expect(ctx, msgHash, &expectedRep).Return(nil)
+		s.SendParcelMock.Expect(ctx, &parcel, *core.GenesisPulse, nil).Return(&expectedRep, nil)
 
-		_, err := recorder.Send(ctx, &msg, *core.GenesisPulse, nil)
+		reply, err := recorder.Send(ctx, &msg, *core.GenesisPulse, nil)
 		require.NoError(t, err)
-	})
-
-	t.Run("with reply on the tape doesn't send the message and returns reply from the tape", func(t *testing.T) {
-		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		s.SendParcelMock.Set(nil)
-
-		_, err := recorder.Send(ctx, &msg, *core.GenesisPulse, nil)
-		require.NoError(t, err)
+		require.Equal(t, &expectedRep, reply)
 	})
 }
