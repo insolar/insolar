@@ -32,6 +32,7 @@ import (
 
 const (
 	getChildrenChunkSize = 10 * 1000
+	jetMissRetryCount    = 10
 )
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
@@ -39,8 +40,15 @@ type LedgerArtifactManager struct {
 	db                         *storage.DB
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	codeCacheLock              *sync.Mutex
+	codeCache                  map[core.RecordRef]*cacheEntry
 
 	getChildrenChunkSize int
+}
+
+type cacheEntry struct {
+	sync.Mutex
+	desc core.CodeDescriptor
 }
 
 // State returns hash state for artifact manager.
@@ -51,7 +59,12 @@ func (m *LedgerArtifactManager) State() ([]byte, error) {
 
 // NewArtifactManger creates new manager instance.
 func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
-	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}
+	return &LedgerArtifactManager{
+		db:                   db,
+		getChildrenChunkSize: getChildrenChunkSize,
+		codeCacheLock:        &sync.Mutex{},
+		codeCache:            make(map[core.RecordRef]*cacheEntry),
+	}
 }
 
 // GenesisRef returns the root record reference.
@@ -75,12 +88,15 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		return nil, err
 	}
 
+	rec := record.CallRequest{
+		Payload: message.ParcelToBytes(parcel),
+	}
+	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.Pulse.PulseNumber, &rec)
+	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
 	id, err := m.setRecord(
 		ctx,
-		&record.CallRequest{
-			Payload: message.ParcelToBytes(parcel),
-		},
-		*parcel.Message().DefaultTarget(),
+		&rec,
+		*recRef,
 		currentPulse.Pulse,
 	)
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
@@ -95,6 +111,21 @@ func (m *LedgerArtifactManager) GetCode(
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetCode starts ...")
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
+
+	m.codeCacheLock.Lock()
+	entry, ok := m.codeCache[code]
+	if !ok {
+		entry = &cacheEntry{}
+		m.codeCache[code] = entry
+	}
+	m.codeCacheLock.Unlock()
+
+	entry.Lock()
+	defer entry.Unlock()
+
+	if entry.desc != nil {
+		return entry.desc, nil
+	}
 
 	latestPulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
@@ -121,8 +152,9 @@ func (m *LedgerArtifactManager) GetCode(
 		ctx:         ctx,
 		ref:         code,
 		machineType: react.MachineType,
+		code:        react.Code,
 	}
-	desc.cache.code = react.Code
+	entry.desc = &desc
 	return &desc, nil
 }
 
@@ -153,7 +185,7 @@ func (m *LedgerArtifactManager) GetObject(
 		State:    state,
 		Approved: approved,
 	}
-	genericReact, err := m.sendAndFollowRedirect(ctx, getObjectMsg, currentPulse.Pulse)
+	genericReact, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, currentPulse.Pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -631,21 +663,17 @@ func (m *LedgerArtifactManager) setRecord(
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setRecord starts ...")
-	genericReact, err := m.bus(ctx).Send(
-		ctx,
-		&message.SetRecord{
-			Record:    record.SerializeRecord(rec),
-			TargetRef: target,
-		},
-		currentPulse,
-		nil,
-	)
+
+	genericReply, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetRecord{
+		Record:    record.SerializeRecord(rec),
+		TargetRef: target,
+	}, currentPulse, jetMissRetryCount)
 
 	if err != nil {
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.ID)
+	react, ok := genericReply.(*reply.ID)
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}
@@ -761,32 +789,67 @@ func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
 	return core.MessageBusFromContext(ctx, m.DefaultBus)
 }
 
-func (m *LedgerArtifactManager) sendAndFollowRedirect(ctx context.Context, msg core.Message, currentPulse core.Pulse) (core.Reply, error) {
+func sendAndFollowRedirect(
+	ctx context.Context,
+	bus core.MessageBus,
+	db *storage.DB,
+	msg core.Message,
+	pulse core.Pulse,
+) (core.Reply, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
-	rep, err := m.bus(ctx).Send(ctx, msg, currentPulse, nil)
+	rep, err := bus.Send(ctx, msg, pulse, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if redirect, ok := rep.(core.RedirectReply); ok {
-		redirected := redirect.Redirected(msg)
-		rep, err = m.bus(ctx).Send(
+	switch r := rep.(type) {
+	case core.RedirectReply:
+		redirected := r.Redirected(msg)
+		rep, err = bus.Send(
 			ctx,
 			redirected,
-			currentPulse,
+			pulse,
 			&core.MessageSendOptions{
-				Token:    redirect.GetToken(),
-				Receiver: redirect.GetReceiver(),
+				Token:    r.GetToken(),
+				Receiver: r.GetReceiver(),
 			},
 		)
 		if err != nil {
 			return nil, err
 		}
-		if _, ok = rep.(core.RedirectReply); ok {
+		if _, ok := rep.(core.RedirectReply); ok {
 			return nil, errors.New("double redirects are forbidden")
 		}
 		return rep, nil
+	case *reply.JetMiss:
+		return sendAndRetryJet(ctx, bus, db, msg, pulse, jetMissRetryCount)
 	}
 
 	return rep, err
+}
+
+func sendAndRetryJet(
+	ctx context.Context,
+	bus core.MessageBus,
+	db *storage.DB,
+	msg core.Message,
+	pulse core.Pulse,
+	retries int,
+) (core.Reply, error) {
+	if retries <= 0 {
+		return nil, errors.New("failed to find jet (retry limit exceeded)")
+	}
+	rep, err := bus.Send(ctx, msg, pulse, nil)
+	if err != nil {
+		return nil, err
+	}
+	if r, ok := rep.(*reply.JetMiss); ok {
+		err := db.UpdateJetTree(ctx, pulse.PulseNumber, r.JetID)
+		if err != nil {
+			return nil, err
+		}
+		return sendAndRetryJet(ctx, bus, db, msg, pulse, retries-1)
+	}
+
+	return rep, nil
 }

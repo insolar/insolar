@@ -64,10 +64,11 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 // CallMethod - Simply call method and return result
 type CallMethod struct {
 	BaseLogicMessage
-	ReturnMode MethodReturnMode
-	ObjectRef  core.RecordRef
-	Method     string
-	Arguments  core.Arguments
+	ReturnMode     MethodReturnMode
+	ObjectRef      core.RecordRef
+	Method         string
+	Arguments      core.Arguments
+	ProxyPrototype core.RecordRef
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -150,7 +151,7 @@ func (m *CallConstructor) Type() core.MessageType {
 type ExecutorResults struct {
 	Caller    core.RecordRef
 	RecordRef core.RecordRef
-	CaseBind  core.CaseBind
+	Requests  []CaseBindRequest
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -184,8 +185,16 @@ func (m *ExecutorResults) GetReference() core.RecordRef {
 type ValidateCaseBind struct {
 	Caller    core.RecordRef
 	RecordRef core.RecordRef
-	CaseBind  core.CaseBind
+	Requests  []CaseBindRequest
 	Pulse     core.Pulse
+}
+
+type CaseBindRequest struct {
+	Message        core.Message
+	Request        core.RecordRef
+	MessageBusTape []byte
+	Reply          core.Reply
+	Error          error
 }
 
 // AllowedSenderObjectAndRole implements interface method

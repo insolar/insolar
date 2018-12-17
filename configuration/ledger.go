@@ -79,6 +79,9 @@ type Ledger struct {
 	//
 	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit core.PulseNumber
+
+	// JetSizesHistoryDepth holds maximum number of drop sizes
+	JetSizesHistoryDepth int
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -115,5 +118,7 @@ func NewLedger() Ledger {
 		},
 
 		LightChainLimit: 10 * 30, // 30 pulses
+
+		JetSizesHistoryDepth: 10,
 	}
 }

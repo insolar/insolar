@@ -62,7 +62,7 @@ func NewStorageExporterService(runner *Runner) *StorageExporterService {
 //   Response structure:
 //   {
 //     "Data": {
-//       [pulse number]: {
+//       [pulse number]: [{
 //         "Records": {
 //           [record ID]: {
 //             "Type": str, // Constant record type.
@@ -72,8 +72,9 @@ func NewStorageExporterService(runner *Runner) *StorageExporterService {
 //       },
 //         "Pulse": {
 //           "PulseNumber": int, // Pulse number. Same as parent key.
-//         }
-//       },
+//         },
+//         "JetID": string,
+//       }],
 //       "NextFrom": int|null, // Pulse number from which to start next batch. Put it as "From" param for next incremental fetch.
 //       "Size": int // Number of returned pulses (length of the "Data" dictionary).
 //   }

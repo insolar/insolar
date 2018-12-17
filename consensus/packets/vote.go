@@ -159,7 +159,7 @@ func (v *StateFraudNodeSupplementaryVote) Deserialize(data io.Reader) error {
 
 // Serialize implements interface method
 func (v *StateFraudNodeSupplementaryVote) Serialize() ([]byte, error) {
-	result := allocateBuffer(2048)
+	result := allocateBuffer(packetMaxSize)
 
 	node1PulseProofRaw, err := v.Node1PulseProof.Serialize()
 	if err != nil {
@@ -223,4 +223,53 @@ func (v *MissingNodeSupplementaryVote) Serialize() ([]byte, error) {
 	}
 
 	return result.Bytes(), nil
+}
+
+func parseReferendumVotes(data []byte) ([]ReferendumVote, error) {
+	votesSize := len(data)
+	votesReader := bytes.NewReader(data)
+	result := make([]ReferendumVote, 0)
+
+	// get claim header
+	for votesSize > 0 {
+		startSize := votesReader.Len()
+		var voteHeader uint16
+		err := binary.Read(votesReader, defaultByteOrder, &voteHeader)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ PacketHeader.parseReferendumVotes ] Can't read voteHeader")
+		}
+
+		voteType := VoteType(extractTypeFromHeader(voteHeader))
+		// TODO: Do we need voteLength?
+		// voteLength := extractVoteLengthFromHeader(voteHeader)
+		var refVote ReferendumVote
+
+		switch voteType {
+		case TypeNodeJoinSupplementaryVote:
+			refVote = &NodeJoinSupplementaryVote{}
+		case TypeStateFraudNodeSupplementaryVote:
+			refVote = &StateFraudNodeSupplementaryVote{}
+		case TypeNodeListSupplementaryVote:
+			refVote = &NodeListSupplementaryVote{}
+		case TypeMissingNodeSupplementaryVote:
+			refVote = &MissingNodeSupplementaryVote{}
+		case TypeMissingNode:
+			refVote = &MissingNode{}
+		default:
+			return nil, errors.Wrap(err, "[ PacketHeader.parseReferendumVotes ] Unsupported vote type.")
+		}
+		err = refVote.Deserialize(votesReader)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ PacketHeader.parseReferendumVotes ] Can't deserialize vote")
+		}
+		result = append(result, refVote)
+
+		votesSize -= startSize - votesReader.Len()
+	}
+
+	if votesSize != 0 {
+		return nil, errors.New("[ PacketHeader.parseReferendumVotes ] Problem with vote struct")
+	}
+
+	return result, nil
 }
