@@ -45,7 +45,7 @@ func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcp
 	return transport, nil
 }
 
-func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
+func (t *tcpTransport) send(recvAddress string, data []byte) error {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", recvAddress)
 	if err != nil {
 		return errors.Wrap(err, "tcpTransport.send")
@@ -56,8 +56,8 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "tcpTransport.send")
 	}
-	tcp.maxChan <- true
-	defer func() { <-tcp.maxChan }()
+	t.maxChan <- true
+	defer func() { <-t.maxChan }()
 	defer tcpConn.Close()
 
 	log.Debug("tcpTransport.send: len = ", len(data))
@@ -66,56 +66,53 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (tcp *tcpTransport) Listen(ctx context.Context) error {
+func (t *tcpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start TCP transport")
 
-	tcp.prepareListen()
-
-	listener, err := net.Listen("tcp", tcp.addr)
+	listener, err := net.Listen("tcp", t.addr)
 	if err != nil {
 		return err
 	}
 
-	tcp.l = listener
+	t.l = listener
+
+	t.prepareListen()
 
 	for {
 
-		tcp.maxChan <- true
+		t.maxChan <- true
 
-		conn, err := tcp.l.Accept()
+		conn, err := t.l.Accept()
 		if err != nil {
-			<-tcp.maxChan
-			<-tcp.disconnectFinished
+			<-t.maxChan
+			<-t.disconnectFinished
 			return errors.Wrap(err, "[ Start ]")
 		}
 
-		go tcp.handleAcceptedConnection(conn)
+		go t.handleAcceptedConnection(conn)
 	}
 }
 
 // Stop stops networking.
-func (tcp *tcpTransport) Stop() {
-	tcp.mutex.Lock()
-	defer tcp.mutex.Unlock()
-
+func (t *tcpTransport) Stop() {
 	log.Info("Stop TCP transport")
-	tcp.prepareDisconnect()
+	t.prepareDisconnect()
 
-	err := tcp.l.Close()
+	err := t.l.Close()
 	if err != nil {
 		log.Errorln("Failed to close socket:", err.Error())
 	}
 }
 
-func (tcp *tcpTransport) handleAcceptedConnection(conn net.Conn) {
+func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 	defer conn.Close()
-	msg, err := tcp.serializer.DeserializePacket(conn)
+	msg, err := t.serializer.DeserializePacket(conn)
 	if err != nil {
 		log.Error("[ handleAcceptedConnection ] ", err)
 		return
 	}
 
-	tcp.handlePacket(msg)
+	t.handlePacket(msg)
 
-	<-tcp.maxChan
+	<-t.maxChan
 }
