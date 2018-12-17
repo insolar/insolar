@@ -366,7 +366,6 @@ func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	dataToSign, err := claim.SerializeRaw()
 	log.Infof("dataToSign len: %d", len(dataToSign))
 	if err != nil {

@@ -48,7 +48,6 @@ type phaseManagerWrapper struct {
 }
 
 func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *core.Pulse) error {
-
 	res := p.original.OnPulse(ctx, pulse)
 	p.result <- res
 	return res
