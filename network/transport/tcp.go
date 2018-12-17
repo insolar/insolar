@@ -69,14 +69,16 @@ func (t *tcpTransport) send(recvAddress string, data []byte) error {
 func (t *tcpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start TCP transport")
 
+	t.mutex.Lock()
+	t.isStarted = true
+
 	listener, err := net.Listen("tcp", t.addr)
 	if err != nil {
 		return err
 	}
 
 	t.l = listener
-
-	t.prepareListen()
+	t.mutex.Unlock()
 
 	for {
 
@@ -96,11 +98,17 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 // Stop stops networking.
 func (t *tcpTransport) Stop() {
 	log.Info("Stop TCP transport")
+
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	t.prepareDisconnect()
 
-	err := t.l.Close()
-	if err != nil {
-		log.Errorln("Failed to close socket:", err.Error())
+	if t.isStarted {
+		err := t.l.Close()
+		if err != nil {
+			log.Errorln("Failed to close socket:", err.Error())
+		}
 	}
 }
 

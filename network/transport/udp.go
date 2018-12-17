@@ -118,7 +118,6 @@ func (udpT *udpTransport) send(recvAddress string, data []byte) error {
 func (udpT *udpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start UDP transport")
 
-	udpT.prepareListen()
 	for {
 		buf := make([]byte, udpMaxPacketSize)
 		n, addr, err := udpT.serverConn.ReadFrom(buf)
@@ -133,6 +132,8 @@ func (udpT *udpTransport) Listen(ctx context.Context) error {
 
 // Stop stops networking.
 func (udpT *udpTransport) Stop() {
+	udpT.mutex.Lock()
+	defer udpT.mutex.Unlock()
 
 	log.Info("Stop UDP transport")
 	udpT.prepareDisconnect()

@@ -92,7 +92,6 @@ func (q *quicTransport) send(recvAddress string, data []byte) error {
 func (q *quicTransport) Listen(ctx context.Context) error {
 	log.Debug("Start QUIC transport")
 
-	q.prepareListen()
 	for {
 		session, err := q.l.Accept()
 		if err != nil {
@@ -107,6 +106,8 @@ func (q *quicTransport) Listen(ctx context.Context) error {
 
 // Stop stops networking.
 func (q *quicTransport) Stop() {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 
 	log.Debug("[ Stop ] Stop QUIC transport")
 	q.prepareDisconnect()
