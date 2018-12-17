@@ -61,9 +61,10 @@ type ExecutionState struct {
 
 type CurrentExecution struct {
 	sync.Mutex
-	Context      context.Context
-	LogicContext *core.LogicCallContext
-	Request      *Ref
+	Context       context.Context
+	LogicContext  *core.LogicCallContext
+	Request       *Ref
+	RequesterNode *Ref
 }
 
 type ExecutionQueueResult struct {
@@ -73,11 +74,12 @@ type ExecutionQueueResult struct {
 }
 
 type ExecutionQueueElement struct {
-	ctx     context.Context
-	parcel  core.Parcel
-	request *Ref
-	pulse   core.PulseNumber
-	result  chan ExecutionQueueResult
+	ctx           context.Context
+	parcel        core.Parcel
+	request       *Ref
+	RequesterNode *Ref
+	pulse         core.PulseNumber
+	result        chan ExecutionQueueResult
 }
 
 type Error struct {
@@ -322,12 +324,14 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, os.WrapError(err, "can't create request")
 	}
 
+	sender := parcel.GetSender()
 	qElement := ExecutionQueueElement{
-		ctx:     ctx,
-		parcel:  parcel,
-		request: request,
-		pulse:   lr.pulse(ctx).PulseNumber,
-		result:  make(chan ExecutionQueueResult, 1),
+		ctx:           ctx,
+		parcel:        parcel,
+		request:       request,
+		RequesterNode: &sender,
+		pulse:         lr.pulse(ctx).PulseNumber,
+		result:        make(chan ExecutionQueueResult, 1),
 	}
 
 	es.Lock()
@@ -375,7 +379,8 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		es.Queue = q
 
 		es.Current = &CurrentExecution{
-			Request: qe.request,
+			Request:       qe.request,
+			RequesterNode: qe.RequesterNode,
 		}
 		es.Unlock()
 
@@ -520,7 +525,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 
 	es.objectbody.Object = newData
 
-	return &reply.CallMethod{Result: result}, nil
+	_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{}, *lr.pulse(ctx), &core.MessageSendOptions{
+		Receiver: es.Current.RequesterNode,
+	})
+	if err != nil {
+		inslogger.FromContext(ctx).Debug("couldn't deliver results")
+	}
+
+	return &reply.CallMethod{Result: result, Request: *es.Current.Request}, nil
 }
 
 func (lr *LogicRunner) getDescriptorsByPrototypeRef(

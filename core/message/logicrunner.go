@@ -81,6 +81,31 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 	return m.Request
 }
 
+// ReturnResults - push results of methods
+type ReturnResults struct {
+	Result core.Arguments
+}
+
+func (rr *ReturnResults) Type() core.MessageType {
+	return core.TypeReturnResults
+}
+
+func (rr *ReturnResults) GetCaller() *core.RecordRef {
+	panic("Not aplicable")
+}
+
+func (rr *ReturnResults) DefaultTarget() *core.RecordRef {
+	panic("Not aplicable")
+}
+
+func (rr *ReturnResults) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+func (rr *ReturnResults) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleVirtualExecutor
+}
+
 // CallMethod - Simply call method and return result
 type CallMethod struct {
 	BaseLogicMessage

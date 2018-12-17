@@ -22,7 +22,8 @@ import (
 
 // CallMethod - the most common reply
 type CallMethod struct {
-	Result []byte
+	Request core.RecordRef
+	Result  []byte
 }
 
 // Type returns type of the reply
