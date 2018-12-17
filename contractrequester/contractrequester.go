@@ -29,7 +29,7 @@ import (
 // ContractRequester helps to call contracts
 type ContractRequester struct {
 	MessageBus   core.MessageBus   `inject:""`
-	PulseManager core.PulseManager `inject:""`
+	PulseStorage core.PulseStorage `inject:""`
 }
 
 // New creates new ContractRequester
@@ -59,7 +59,7 @@ func (cr *ContractRequester) routeCall(ctx context.Context, ref core.RecordRef, 
 		Arguments:        args,
 	}
 
-	currentPulse, err := cr.PulseManager.Current(ctx)
+	currentPulse, err := cr.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
