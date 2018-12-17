@@ -43,7 +43,7 @@ func SetTraceID(ctx context.Context, traceid string) context.Context {
 	return context.WithValue(ctx, traceIDKey{}, traceid)
 }
 
-// RandTraceID returns random traceID in uuid format
+// RandTraceID returns random traceID in uuid format.
 func RandTraceID() string {
 	traceID, err := uuid.NewV4()
 	if err != nil {
@@ -66,7 +66,7 @@ func SendGracefulStopSignal() error {
 	return p.Signal(os.Interrupt)
 }
 
-// Returns current timestamp in milliseconds
+// TimestampMs returns current timestamp in milliseconds.
 func TimestampMs() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
@@ -94,7 +94,8 @@ func writeMeasure(format string, args ...interface{}) error {
 	return err
 }
 
-// Enables execution time measurement and uses `fname` to write measurements
+// EnableExecutionTimeMeasurement enables execution time measurement
+// and uses `fname` to write measurements.
 func EnableExecutionTimeMeasurement(fname string) (func(), error) {
 	if measurementsEnabled {
 		// already enabled
@@ -127,7 +128,8 @@ func EnableExecutionTimeMeasurement(fname string) (func(), error) {
 	return cleanup, nil
 }
 
-// Writes execution time of given function to the profile log (if profile logging is enabled)
+// MeasureExecutionTime writes execution time of given function to
+// the profile log (if profile logging is enabled).
 func MeasureExecutionTime(ctx context.Context, comment string, thefunction func()) {
 	if !measurementsEnabled {
 		thefunction()
