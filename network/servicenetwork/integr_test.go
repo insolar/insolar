@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -268,6 +269,12 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 	})
 
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
+
+	if len(certManager.GetCertificate().GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certManager.GetCertificate()) {
+		realKeeper.SetState(network.Ready)
+		realKeeper.AddActiveNodes([]core.Node{origin})
+	}
+
 	var keeper network.NodeKeeper
 	keeper = &nodeKeeperWrapper{realKeeper}
 
