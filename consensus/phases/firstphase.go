@@ -32,8 +32,7 @@ import (
 const BFTPercent = 2.0 / 3.0
 const MajorityPercent = 0.5
 
-// ConsensusReachedBFT should be private, but golang CI is an ass
-func ConsensusReachedBFT(resultLen, participanstLen int) bool {
+func consensusReachedBFT(resultLen, participanstLen int) bool {
 	return consensusReachedWithPercent(resultLen, participanstLen, BFTPercent)
 }
 

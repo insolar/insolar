@@ -18,6 +18,7 @@ package phases
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
@@ -65,6 +66,30 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
 
 		state.UnsyncList.GlobuleHashSignatures()[ref] = packet.GetGlobuleHashSignature()
+	}
+
+	totalCount := state.UnsyncList.Length()
+	validCount := 0
+	prevCloudHash := tp.NodeKeeper.GetCloudHash()
+	for ref, ghs := range state.UnsyncList.GlobuleHashSignatures() {
+		node := state.UnsyncList.GetActiveNode(ref)
+		proof := &merkle.GlobuleProof{
+			BaseProof: merkle.BaseProof{
+				Signature: core.SignatureFromBytes(ghs[:]),
+			},
+			PrevCloudHash: prevCloudHash,
+			GlobuleID:     state.GlobuleProof.GlobuleID,
+			NodeCount:     state.GlobuleProof.NodeCount,
+			NodeRoot:      state.GlobuleProof.NodeRoot,
+		}
+		valid := tp.Calculator.IsValid(proof, state.GlobuleHash, node.PublicKey())
+		if valid {
+			validCount++
+		}
+	}
+
+	if !consensusReachedBFT(validCount, totalCount) {
+		return nil, errors.New(fmt.Sprintf("[ Phase 3 ] Failed to pass BFT consensus: %d/%d", validCount, totalCount))
 	}
 
 	// cloudEntry := &merkle.CloudEntry{

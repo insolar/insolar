@@ -94,18 +94,6 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s", ref)
 			continue
 		}
-		// node := state.UnsyncList.GetActiveNode(ref)
-		// proof := &merkle.GlobuleProof{
-		// 	BaseProof: merkle.BaseProof{
-		// 		Signature: core.SignatureFromBytes(ghs[:]),
-		// 	},
-		// 	PrevCloudHash: prevCloudHash,
-		// 	GlobuleID:     globuleProof.GlobuleID,
-		// 	NodeCount:     globuleProof.NodeCount,
-		// 	NodeRoot:      globuleProof.NodeRoot,
-		// }
-		// valid := sp.Calculator.IsValid(proof, globuleHash, node.PublicKey())
-		// nodeProofs[node] = &GlobuleProofValidated{Proof: proof, Valid: valid}
 	}
 
 	matrixCalculation, err := stateMatrix.CalculatePhase2(sp.NodeKeeper.GetOrigin().ID())
