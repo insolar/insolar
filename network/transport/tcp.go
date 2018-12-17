@@ -33,7 +33,7 @@ type tcpTransport struct {
 	baseTransport
 	l net.Listener
 
-	conns     map[net.Addr]net.Conn
+	conns     map[string]net.Conn
 	connMutex sync.RWMutex
 }
 
@@ -47,7 +47,7 @@ func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcp
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
 		l:             listener,
-		conns:         make(map[net.Addr]net.Conn),
+		conns:         make(map[string]net.Conn),
 	}
 
 	transport.sendFunc = transport.send
@@ -64,13 +64,13 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 	}
 
 	tcp.connMutex.RLock()
-	conn, ok := tcp.conns[tcpAddr]
+	conn, ok := tcp.conns[tcpAddr.String()]
 	tcp.connMutex.RUnlock()
 
 	if !ok || tcp.connectionClosed(conn) {
 		tcp.connMutex.Lock()
 
-		conn, ok = tcp.conns[tcpAddr]
+		conn, ok = tcp.conns[tcpAddr.String()]
 		if !ok || tcp.connectionClosed(conn) {
 			logger.Debugf("[ send ] Failed to retrieve connection to %s", tcpAddr)
 
@@ -81,7 +81,8 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 				return errors.Wrap(err, "tcpTransport.send")
 			}
 
-			tcp.conns[conn.RemoteAddr()] = conn
+			tcp.conns[conn.RemoteAddr().String()] = conn
+			logger.Debugf("[ send ] Added coonnection for %s. Current pool size: %d", conn.RemoteAddr(), len(tcp.conns))
 		}
 
 		tcp.connMutex.Unlock()
