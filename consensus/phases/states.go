@@ -35,18 +35,11 @@ type FirstPhaseState struct {
 	UnsyncList network.UnsyncList
 }
 
-type GlobuleProofValidated struct {
-	Proof *merkle.GlobuleProof
-	Valid bool
-}
-
 type SecondPhaseState struct {
 	*FirstPhaseState
 
-	GlobuleEntry *merkle.GlobuleEntry
 	GlobuleHash  merkle.OriginHash
 	GlobuleProof *merkle.GlobuleProof
-	// GlobuleProofSet map[core.Node]*GlobuleProofValidated
 
 	MatrixState *Phase2MatrixState
 	Matrix      *StateMatrix
@@ -55,7 +48,7 @@ type SecondPhaseState struct {
 }
 
 type ThirdPhaseState struct {
-	ActiveNodes []core.RecordRef
-	UnsyncList  network.UnsyncList
-	CloudHash   merkle.OriginHash
+	ActiveNodes  []core.RecordRef
+	UnsyncList   network.UnsyncList
+	GlobuleProof *merkle.GlobuleProof
 }

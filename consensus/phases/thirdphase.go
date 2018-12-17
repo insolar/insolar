@@ -92,12 +92,13 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 		return nil, errors.New(fmt.Sprintf("[ Phase 3 ] Failed to pass BFT consensus: %d/%d", validCount, totalCount))
 	}
 
-	// cloudEntry := &merkle.CloudEntry{
-	//
-	// }
-	// cloudHash, _, _ := tp.Calculator.GetCloudProof(cloudEntry)
+	inslogger.FromContext(ctx).Infof("Network phase 3 BFT consensus passed: %d/%d", validCount, totalCount)
 
-	return &ThirdPhaseState{}, nil
+	return &ThirdPhaseState{
+		ActiveNodes:  state.MatrixState.Active,
+		UnsyncList:   state.UnsyncList,
+		GlobuleProof: state.GlobuleProof,
+	}, nil
 }
 
 func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
