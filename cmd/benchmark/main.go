@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
@@ -156,6 +157,9 @@ func startScenario(s scenario) {
 
 func main() {
 	parseInputParams()
+
+	err := log.SetLevel("error")
+	check("can not set 'error' level on logger:", err)
 
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
