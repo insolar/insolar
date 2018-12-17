@@ -95,24 +95,6 @@ func (cb *ContractsBuilder) Clean() {
 	}
 }
 
-func (cb *ContractsBuilder) RegisterPrototype(ctx context.Context, name string, domain *core.RecordRef) error {
-	protoID, err := cb.ArtifactManager.RegisterRequest(
-		ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
-	)
-	if err != nil {
-		return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
-	}
-	var protoRef *core.RecordRef
-	if domain == nil {
-		protoRef = core.NewRecordRef(*protoID, *protoID)
-	} else {
-		protoRef = core.NewRecordRef(*domain.Domain(), *protoID)
-	}
-	log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
-	cb.Prototypes[name] = protoRef
-	return nil
-}
-
 // Build ...
 func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *core.RecordID) error {
 

@@ -64,9 +64,6 @@ type Genesis struct {
 	config          *genesisConfig
 	keyOut          string
 	ArtifactManager core.ArtifactManager `inject:""`
-	PulseManager    core.PulseManager    `inject:""`
-	JetCoordinator  core.JetCoordinator  `inject:""`
-	Network         core.Network         `inject:""`
 	MBLock          messageBusLocker     `inject:""`
 }
 
@@ -83,7 +80,7 @@ func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) 
 	return genesis, err
 }
 
-func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainId *core.RecordID) error {
+func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainID *core.RecordID) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
 	contracts, err := getContractsMap()
@@ -92,7 +89,7 @@ func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainId
 	}
 
 	inslog.Info("[ buildSmartContracts ] Start building contracts ...")
-	err = cb.Build(ctx, contracts, rootDomainId)
+	err = cb.Build(ctx, contracts, rootDomainID)
 	if err != nil {
 		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
 	}
@@ -264,8 +261,8 @@ func (g *Genesis) activateRootMemberWallet(
 	return nil
 }
 
-func (g *Genesis) activateSmartContracts(ctx context.Context, cb *ContractsBuilder, rootPubKey string, rootDomainId *core.RecordID) error {
-	domain, domainDesc, err := g.activateRootDomain(ctx, cb, rootDomainId)
+func (g *Genesis) activateSmartContracts(ctx context.Context, cb *ContractsBuilder, rootPubKey string, rootDomainID *core.RecordID) error {
+	domain, domainDesc, err := g.activateRootDomain(ctx, cb, rootDomainID)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, errMsg)
