@@ -146,7 +146,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 
 	valid, fault := fp.validateProofs(pulseHash, proofSet)
 
-	for nodeID, _ := range fault {
+	for nodeID := range fault {
 		inslogger.FromContext(ctx).Warnf("Failed to validate proof from %s", nodeID)
 	}
 
