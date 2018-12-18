@@ -64,7 +64,6 @@ func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
 
-	// ecdsaSignature, err := fromRS(r, s).Marshal()
 	ecdsaSignature := makeSignature(r, s)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
@@ -92,27 +91,29 @@ func makeSignature(r, s *big.Int) []byte {
 		(len(s.Bytes()) > BigIntLength) {
 		panic("[ makeSignature ] wrong r, s length")
 	}
-	var res [BigIntLength * 2]byte
-	copy(res[:BigIntLength], r.Bytes())
-	fmt.Printf("%v\n", r.Bytes())
-	copy(res[BigIntLength:], s.Bytes())
-	fmt.Printf("%v\n", s.Bytes())
+	rLen := uint8(len(r.Bytes()))
+	sLen := uint8(len(s.Bytes()))
+	res := make([]byte, rLen+sLen+2) // 2 bytes for len
+	res[0] = rLen
+	copy(res[1:rLen+2], r.Bytes())
+	res[rLen+1] = sLen
+	copy(res[rLen+2:], s.Bytes())
 	return res[:]
 }
 
 func getRSFromBytes(data []byte) (*big.Int, *big.Int) {
-	if len(data) != BigIntLength*2 {
+	if len(data) > (BigIntLength*2 + 2) {
 		panic("[ getRSFromBytes ] wrong data length to get a r, s")
 	}
 	r := new(big.Int)
 	s := new(big.Int)
-	rBytes := make([]byte, BigIntLength)
-	sBytes := make([]byte, BigIntLength)
-	copy(rBytes, data[:BigIntLength])
-	copy(sBytes, data[BigIntLength:])
-	fmt.Printf("%v\n", rBytes)
-	fmt.Printf("%v\n", sBytes)
+	rLen := data[0]
+	sLen := data[rLen+1]
+	rBytes := make([]byte, rLen)
+	sBytes := make([]byte, sLen)
+	copy(rBytes, data[1:rLen+2])
+	copy(sBytes, data[rLen+2:])
 	r.SetBytes(rBytes)
-	s.SetBytes(rBytes)
+	s.SetBytes(sBytes)
 	return r, s
 }
