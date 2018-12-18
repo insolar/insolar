@@ -14,29 +14,5 @@
  *    limitations under the License.
  */
 
-package pulsemanager
-
-import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
-)
-
-// HeavyErr holds core.Reply and implements core.Retryable and error interfaces.
-type HeavyErr struct {
-	reply core.Reply
-	err   error
-}
-
-// Error implements error interface.
-func (he HeavyErr) Error() string {
-	return he.err.Error()
-}
-
-// IsRetryable checks retryability of message.
-func (he HeavyErr) IsRetryable() bool {
-	herr, ok := he.reply.(*reply.HeavyError)
-	if !ok {
-		return false
-	}
-	return herr.ConcreteType() == reply.ErrHeavySyncInProgress
-}
+// Package heavyclient contains heavy replication client code.
+package heavyclient
