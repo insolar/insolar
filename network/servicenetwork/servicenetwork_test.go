@@ -16,15 +16,6 @@
 
 package servicenetwork
 
-import (
-	"testing"
-
-	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-)
-
 /*
 func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) (network.NodeKeeper, core.Node) {
 	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
@@ -362,22 +353,3 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	require.True(t, success)
 }
 */
-
-func TestEcdsaMarshalUnmarshal(t *testing.T) {
-	count := 1000
-	data := testutils.RandomRef()
-	for i := 0; i < count; i++ {
-		privateKey, err := foundation.GeneratePrivateKey()
-		assert.NoError(t, err)
-
-		service := cryptography.NewKeyBoundCryptographyService(privateKey)
-
-		publicKey, err := service.GetPublicKey()
-		assert.NoError(t, err)
-
-		sign, err := service.Sign(data.Bytes())
-		assert.NoError(t, err)
-
-		assert.True(t, service.Verify(publicKey, *sign, data.Bytes()))
-	}
-}

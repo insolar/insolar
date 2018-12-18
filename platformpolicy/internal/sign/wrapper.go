@@ -20,13 +20,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/asn1"
+	"fmt"
 	"math/big"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
 
-const BigIntLength = 32
+const bigIntLength = 32
 
 type ecdsaSignature struct {
 	R, S *big.Int
@@ -87,9 +88,10 @@ func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool
 }
 
 func makeSignature(r, s *big.Int) []byte {
-	if (len(r.Bytes()) > BigIntLength) ||
-		(len(s.Bytes()) > BigIntLength) {
-		panic("[ makeSignature ] wrong r, s length")
+	if (len(r.Bytes()) > bigIntLength) ||
+		(len(s.Bytes()) > bigIntLength) {
+		err := fmt.Sprintf("[ makeSignature ] wrong r, s length. r: %d; s: %d; needed: %d", len(r.Bytes()), len(s.Bytes()), bigIntLength)
+		panic(err)
 	}
 	rLen := uint8(len(r.Bytes()))
 	sLen := uint8(len(s.Bytes()))
@@ -102,8 +104,9 @@ func makeSignature(r, s *big.Int) []byte {
 }
 
 func getRSFromBytes(data []byte) (*big.Int, *big.Int) {
-	if len(data) > (BigIntLength*2 + 2) {
-		panic("[ getRSFromBytes ] wrong data length to get a r, s")
+	if len(data) > (bigIntLength*2 + 2) { // 2 bytes for len
+		err := fmt.Sprintf("[ getRSFromBytes ] wrong data length to get a r, s. recv len: %d", len(data))
+		panic(err)
 	}
 	r := new(big.Int)
 	s := new(big.Int)
