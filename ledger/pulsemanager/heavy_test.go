@@ -153,6 +153,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 			Max:    minretry * 2,
 			Factor: 2,
 		},
+		SplitThreshold: 10 * 1000 * 1000,
 	}
 	pm := pulsemanager.NewPulseManager(
 		db,
