@@ -48,16 +48,29 @@ type ObjectState struct {
 	Consensus      *Consensus
 }
 
+type PendingState int
+
+const (
+	PendingUnknown PendingState = iota
+	NotPending
+	InPending
+)
+
 type ExecutionState struct {
 	sync.Mutex
+
+	ArtifactManager core.ArtifactManager
+
 	objectbody *ObjectBody
+	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+	pending    PendingState
 	deactivate bool
 	nonce      uint64
 
-	Behaviour ValidationBehaviour
-	Current   *CurrentExecution
-	Queue     []ExecutionQueueElement
-	pending   bool // TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+	Behaviour            ValidationBehaviour
+	Current              *CurrentExecution
+	QueueProcessorActive bool
+	Queue                []ExecutionQueueElement
 }
 
 type CurrentExecution struct {
@@ -146,6 +159,23 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 		res.Request = es.Current.Request
 	}
 	return res
+}
+
+func (es *ExecutionState) CheckPendingRequests(ctx context.Context, msg message.IBaseLogicMessage) (PendingState, error) {
+	if _, ok := msg.(*message.CallMethod); !ok {
+		return NotPending, nil
+	}
+
+	oDesc, err := es.ArtifactManager.GetObject(ctx, msg.GetReference(), nil, false)
+	if err != nil {
+		return NotPending, err
+	}
+
+	if oDesc.HasPendingRequests() {
+		return InPending, nil
+	}
+
+	return NotPending, nil
 }
 
 // releaseQueue must be calling only with es.Lock
@@ -294,8 +324,9 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	os.Lock()
 	if os.ExecutionState == nil {
 		os.ExecutionState = &ExecutionState{
-			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			ArtifactManager: lr.ArtifactManager,
+			Queue:           make([]ExecutionQueueElement, 0),
+			Behaviour:       &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 		}
 	}
 	es := os.ExecutionState
@@ -337,12 +368,12 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	}
 
 	es.Queue = append(es.Queue, qElement)
-
-	if es.Current == nil {
-		inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-		go lr.ProcessExecutionQueue(ctx, es)
-	}
 	es.Unlock()
+
+	err = lr.StartQueueProcessorIfNeeded(ctx, es, msg)
+	if err != nil {
+		return nil, err
+	}
 
 	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
 		return &reply.CallMethod{}, nil
@@ -357,12 +388,43 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	return res.reply, nil
 }
 
+func (lr *LogicRunner) StartQueueProcessorIfNeeded(
+	ctx context.Context, es *ExecutionState, msg message.IBaseLogicMessage,
+) error {
+	es.Lock()
+	defer es.Unlock()
+
+	startProcessor := !es.QueueProcessorActive
+	if startProcessor {
+		if es.pending == PendingUnknown {
+			pending, err := es.CheckPendingRequests(ctx, msg)
+			if err != nil {
+				return errors.Wrap(err, "couldn't check for pending requests")
+			}
+			es.pending = pending
+		}
+		if es.pending == InPending {
+			startProcessor = false
+		}
+	}
+
+	if !startProcessor {
+		return nil
+	}
+
+	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+	es.QueueProcessorActive = true
+	go lr.ProcessExecutionQueue(ctx, es)
+	return nil
+}
+
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
 	// Current == nil indicates that we have no queue processor
 	// and one should be started
 	defer func() {
 		inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
 		es.Lock()
+		es.QueueProcessorActive = false
 		es.Current = nil
 		es.Unlock()
 	}()
@@ -628,9 +690,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		if es := state.ExecutionState; es != nil {
 			es.Lock()
 
-			es.pending = es.pending || es.Current != nil
-			queue := es.releaseQueue()
+			if es.Current != nil {
+				es.pending = InPending
+			}
 
+			queue := es.releaseQueue()
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
 			requests := caseBind.getCaseBindForMessage(ctx)
 
@@ -643,7 +707,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 				},
 				&message.ExecutorResults{
 					RecordRef: ref,
-					Pending:   state.ExecutionState.pending,
+					Pending:   es.pending == InPending,
 					Requests:  requests,
 					Queue:     convertQueueToMessageQueue(queue),
 				},

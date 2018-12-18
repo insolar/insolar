@@ -3,14 +3,16 @@ package logicrunner
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core/reply"
-
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestOnPulse(t *testing.T) {
@@ -47,7 +49,7 @@ func TestOnPulse(t *testing.T) {
 	}
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
-	require.Equal(t, true, lr.state[objectRef].ExecutionState.pending)
+	require.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
 
 	// test empty es with query in current and query in queue - es.pending true, message.ExecutorResults.Pending = true, message.ExecutorResults.Queue one element
 	result := make(chan ExecutionQueueResult, 1)
@@ -73,5 +75,92 @@ func TestOnPulse(t *testing.T) {
 
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
-	require.Equal(t, true, lr.state[objectRef].ExecutionState.pending)
+	require.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
+}
+
+func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
+	t *testing.T,
+) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	am := testutils.NewArtifactManagerMock(t)
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	lr.ArtifactManager = am
+
+	objectRef := testutils.RandomRef()
+
+	od := testutils.NewObjectDescriptorMock(t)
+	od.HasPendingRequestsMock.Expect().Return(true)
+
+	am.GetObjectMock.Return(od, nil)
+
+	es := &ExecutionState{ArtifactManager: am}
+	err := lr.StartQueueProcessorIfNeeded(
+		ctx,
+		es,
+		&message.CallMethod{
+			ObjectRef: objectRef,
+			Method:    "some",
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, InPending, es.pending)
+}
+
+func TestCheckPendingRequests(
+	t *testing.T,
+) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	objectRef := testutils.RandomRef()
+
+	am := testutils.NewArtifactManagerMock(t)
+
+	od := testutils.NewObjectDescriptorMock(t)
+	am.GetObjectMock.Return(od, nil)
+
+	es := &ExecutionState{ArtifactManager: am}
+	pending, err := es.CheckPendingRequests(
+		ctx, &message.CallConstructor{},
+	)
+	require.NoError(t, err)
+	require.Equal(t, NotPending, pending)
+
+	od.HasPendingRequestsMock.Expect().Return(false)
+	am.GetObjectMock.Return(od, nil)
+	es = &ExecutionState{ArtifactManager: am}
+	pending, err = es.CheckPendingRequests(
+		ctx, &message.CallMethod{
+			ObjectRef: objectRef,
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, NotPending, pending)
+
+	od.HasPendingRequestsMock.Expect().Return(true)
+	am.GetObjectMock.Return(od, nil)
+	es = &ExecutionState{ArtifactManager: am}
+	pending, err = es.CheckPendingRequests(
+		ctx, &message.CallMethod{
+			ObjectRef: objectRef,
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, InPending, pending)
+
+	am.GetObjectMock.Return(nil, errors.New("some"))
+	es = &ExecutionState{ArtifactManager: am}
+	pending, err = es.CheckPendingRequests(
+		ctx, &message.CallMethod{
+			ObjectRef: objectRef,
+		},
+	)
+	require.Error(t, err)
+	require.Equal(t, NotPending, pending)
 }
