@@ -119,17 +119,15 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
 	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for ref, packet := range resultPackets {
-		/*
-			signIsCorrect, err := fp.isSignPhase1PacketRight(packet, ref)
-			if err != nil {
-				inslogger.FromContext(ctx).Warnf("Failed to check phase1 packet signature from %s: %s", ref, err.Error())
-				continue
-			}
-			if !signIsCorrect {
-				inslogger.FromContext(ctx).Warnf("Received phase1 packet from %s with bad signature", ref)
-				continue
-			}
-		*/
+		signIsCorrect, err := fp.isSignPhase1PacketRight(packet, ref)
+		if err != nil {
+			inslogger.FromContext(ctx).Warnf("Failed to check phase1 packet signature from %s: %s", ref, err.Error())
+			continue
+		}
+		if !signIsCorrect {
+			inslogger.FromContext(ctx).Warnf("Received phase1 packet from %s with bad signature", ref)
+			continue
+		}
 		rawProof := packet.GetPulseProof()
 		rawProofs[ref] = rawProof
 		proofSet[ref] = &merkle.PulseProof{
@@ -224,7 +222,7 @@ func (fp *FirstPhase) filterClaims(nodeID core.RecordRef, claims []packets.Refer
 			err := fp.checkClaimSignature(signedClaim)
 			if err != nil {
 				log.Error("[ filterClaims ] failed to check a claim sign")
-				//continue
+				continue
 			}
 		}
 		supClaim, ok := claim.(packets.ClaimSupplementary)

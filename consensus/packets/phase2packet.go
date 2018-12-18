@@ -84,7 +84,7 @@ func (p2p *Phase2Packet) SetGlobuleHashSignature(globuleHashSignature []byte) er
 		return nil
 	}
 
-	return nil //errors.New("invalid proof fields len")
+	return errors.New("invalid proof fields len")
 }
 
 func (p2p *Phase2Packet) GetBitSet() BitSet {
