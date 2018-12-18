@@ -158,7 +158,7 @@ func (es *ExecutionState) CheckPendingRequests(ctx context.Context, msg message.
 		return false, nil
 	}
 
-	oDesc, err := es.ArtifactManager.GetObject(ctx, *msg.DefaultTarget(), nil, false)
+	oDesc, err := es.ArtifactManager.GetObject(ctx, msg.GetReference(), nil, false)
 	if err != nil {
 		return false, err
 	}
