@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 
 	"github.com/insolar/insolar/core/utils"
@@ -43,6 +44,7 @@ type inputParams struct {
 	genesisKeyOut     string
 	traceEnabled      bool
 	measurementsFile  string
+	profilingFile     string
 }
 
 func parseInputParams() inputParams {
@@ -53,6 +55,7 @@ func parseInputParams() inputParams {
 	rootCmd.Flags().StringVarP(&result.genesisKeyOut, "keyout", "", ".", "genesis certificates path")
 	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	rootCmd.Flags().StringVarP(&result.measurementsFile, "measure", "m", "", "enable execution time logging to the given file")
+	rootCmd.Flags().StringVarP(&result.profilingFile, "profiling", "m", "", "enable profiling to the given file")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
@@ -75,6 +78,9 @@ func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) 
 
 func main() {
 	params := parseInputParams()
+
+	initProfiler(params.profilingFile)
+	defer cleanupProfiler()
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
@@ -184,6 +190,24 @@ func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (con
 		inslog.Errorln(err.Error())
 	}
 	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
+}
+
+func initProfiler(profiling string) {
+	if profiling != "" {
+		f, err := os.Create(profiling)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = pprof.StartCPUProfile(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func cleanupProfiler() {
+	pprof.StopCPUProfile()
 }
 
 func checkError(ctx context.Context, err error, message string) {
