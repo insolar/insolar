@@ -185,6 +185,10 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
+	pulseStorage := pulsemanager.NewpulseStoragePmMock(t)
+	pulseStorage.LockMock.Return()
+	pulseStorage.UnlockMock.Return()
+
 	pm := pulsemanager.NewPulseManager(db, configuration.Ledger{
 		JetSizesHistoryDepth: 2,
 		PulseManager:         configuration.PulseManager{SplitThreshold: 0},
@@ -211,6 +215,7 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock
 	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
+	pm.PulseStorage = pulseStorage
 
 	err = pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
 	require.NoError(t, err)
