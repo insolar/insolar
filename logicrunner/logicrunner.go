@@ -679,8 +679,3 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 
 	return mq
 }
-
-// TODO implement
-func convertMessageQueueToQueue(messageQueue []message.ExecutionQueueElement) []ExecutionQueueElement {
-	return make([]ExecutionQueueElement, 0)
-}
