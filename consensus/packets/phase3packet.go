@@ -26,14 +26,14 @@ type Phase3Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1
-	globuleHashSignature    [SignatureLength]byte
+	globuleHashSignature    GlobuleHashSignature
 	deviantBitSet           BitSet
 	SignatureHeaderSection1 [SignatureLength]byte
 }
 
-func NewPhase3Packet(globuleHash [SignatureLength]byte, bitSet BitSet) Phase3Packet {
+func NewPhase3Packet(globuleHashSignature GlobuleHashSignature, bitSet BitSet) Phase3Packet {
 	return Phase3Packet{
-		globuleHashSignature: globuleHash,
+		globuleHashSignature: globuleHashSignature,
 		deviantBitSet:        bitSet,
 	}
 }
@@ -52,7 +52,7 @@ func (p3p *Phase3Packet) SetPacketHeader(header *RoutingHeader) error {
 func (p3p *Phase3Packet) GetPacketHeader() (*RoutingHeader, error) {
 	header := &RoutingHeader{}
 
-	header.PacketType = types.Phase2
+	header.PacketType = types.Phase3
 	header.OriginID = p3p.packetHeader.OriginNodeID
 	header.TargetID = p3p.packetHeader.TargetNodeID
 
@@ -61,4 +61,8 @@ func (p3p *Phase3Packet) GetPacketHeader() (*RoutingHeader, error) {
 
 func (p3p *Phase3Packet) GetBitset() BitSet {
 	return p3p.deviantBitSet
+}
+
+func (p3p *Phase3Packet) GetGlobuleHashSignature() GlobuleHashSignature {
+	return p3p.globuleHashSignature
 }
