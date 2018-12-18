@@ -196,6 +196,7 @@ type CodeDescriptor interface {
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
+//go:generate minimock -i github.com/insolar/insolar/core.ObjectDescriptor -o ../testutils -s _mock.go
 type ObjectDescriptor interface {
 	// HeadRef returns head reference to represented object record.
 	HeadRef() *RecordRef
