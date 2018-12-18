@@ -60,8 +60,6 @@ type baseTransport struct {
 	publicAddress string
 	sendFunc      func(recvAddress string, data []byte) error
 	serializer    transportSerializer
-
-	isStarted bool
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {

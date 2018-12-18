@@ -28,9 +28,10 @@ import (
 
 type tcpTransport struct {
 	baseTransport
-	l       net.Listener
-	addr    string
-	maxChan chan bool
+	l         net.Listener
+	addr      string
+	maxChan   chan bool
+	isStarted bool
 }
 
 func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
