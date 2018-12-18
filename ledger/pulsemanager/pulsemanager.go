@@ -27,12 +27,12 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/heavyclient"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
-	"github.com/insolar/insolar/utils/backoff"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -53,7 +53,7 @@ type PulseManager struct {
 	ActiveListSwapper          ActiveListSwapper               `inject:""`
 	PulseStorage               pulseStoragePm                  `inject:""`
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
-	syncClientsPool *syncClientsPool
+	syncClientsPool *heavyclient.Pool
 
 	currentPulse core.Pulse
 
@@ -69,30 +69,19 @@ type PulseManager struct {
 }
 
 type pmOptions struct {
-	enableSync bool
-	// syncMessageLimit int
-	// pulsesDeltaLimit core.PulseNumber
+	enableSync      bool
 	splitThreshold  uint64
 	dropHistorySize int
-}
-
-func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
-	return &backoff.Backoff{
-		Jitter: bconf.Jitter,
-		Min:    bconf.Min,
-		Max:    bconf.Max,
-		Factor: bconf.Factor,
-	}
 }
 
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 	pmconf := conf.PulseManager
-	heavySyncPool := newSyncClientsPool(
+	heavySyncPool := heavyclient.NewPool(
 		db,
-		clientOptions{
-			syncMessageLimit: pmconf.HeavySyncMessageLimit,
-			pulsesDeltaLimit: conf.LightChainLimit,
+		heavyclient.Options{
+			SyncMessageLimit: pmconf.HeavySyncMessageLimit,
+			PulsesDeltaLimit: conf.LightChainLimit,
 		},
 	)
 	pm := &PulseManager{

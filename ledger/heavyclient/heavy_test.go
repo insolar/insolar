@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package pulsemanager_test
+package heavyclient_test
 
 import (
 	"bytes"
