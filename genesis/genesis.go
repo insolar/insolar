@@ -360,7 +360,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 	g.MBLock.Unlock(ctx)
 	defer g.MBLock.Lock(ctx)
 
-	rootDomainId, err := g.registerGenesisRequest(ctx, rootDomain)
+	rootDomainID, err := g.registerGenesisRequest(ctx, rootDomain)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance")
 	}
@@ -369,7 +369,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 
-	err = buildSmartContracts(ctx, cb, rootDomainId)
+	err = buildSmartContracts(ctx, cb, rootDomainID)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
 	}
@@ -379,7 +379,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 	}
 
-	err = g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainId)
+	err = g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ]")
 	}
