@@ -57,8 +57,15 @@ type ExecutionState struct {
 	Behaviour ValidationBehaviour
 	Current   *CurrentExecution
 	Queue     []ExecutionQueueElement
-	pending   bool // TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+
+	// pending flag is set to true in OnPulse when next pulse happens
+	// and Current was not nil, i.e. something was executing. Using
+	// this flag we can tell in ProcessExecutionQueue that pulse has
+	// ended.
+	pending bool // TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 }
+
+type PendingFinished struct{}
 
 type CurrentExecution struct {
 	sync.Mutex
@@ -399,7 +406,6 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
-		// TODO: check pulse change and do different things
 
 		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
 		err = es.Behaviour.Result(res.reply, res.err)
@@ -408,6 +414,14 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		}
 
 		finish()
+
+		// check pulse change
+		es.Lock()
+		if es.pending {
+			// TODO send PendingFinised message to current executor
+			es.pending = false
+		}
+		es.Unlock()
 	}
 }
 
