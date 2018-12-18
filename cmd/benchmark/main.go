@@ -34,20 +34,20 @@ import (
 
 const defaultStdoutPath = "-"
 
-type uroboros struct {
+type ringBuffer struct {
 	sync.Mutex
 	urls   []string
 	cursor int
 }
 
-func (u *uroboros) Next() string {
-	u.Lock()
-	defer u.Unlock()
-	u.cursor++
-	if u.cursor >= len(u.urls) {
-		u.cursor = 0
+func (rb *ringBuffer) Next() string {
+	rb.Lock()
+	defer rb.Unlock()
+	rb.cursor++
+	if rb.cursor >= len(rb.urls) {
+		rb.cursor = 0
 	}
-	return u.urls[u.cursor]
+	return rb.urls[rb.cursor]
 }
 
 var (
@@ -56,7 +56,7 @@ var (
 	concurrent     int
 	repetitions    int
 	rootmemberkeys string
-	apiurls        uroboros
+	apiurls        ringBuffer
 	loglevel       string
 
 	rootMember memberInfo
