@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/asn1"
-	"fmt"
 	"math/big"
 
 	"github.com/insolar/insolar/core"
@@ -31,10 +30,6 @@ const BigIntLength = 32
 
 type ecdsaSignature struct {
 	R, S *big.Int
-}
-
-func fromRS(r, s *big.Int) *ecdsaSignature {
-	return &ecdsaSignature{R: r, S: s}
 }
 
 func (p ecdsaSignature) Marshal() ([]byte, error) {
@@ -85,12 +80,6 @@ type ecdsaVerifyWrapper struct {
 }
 
 func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool {
-	// var ecdsaSignature ecdsaSignature
-	// err := ecdsaSignature.Unmarshal(signature.Bytes())
-	// if err != nil {
-	// 	return false
-	// }
-
 	r, s := getRSFromBytes(signature.Bytes())
 	ecdsaSignature := ecdsaSignature{r, s}
 	hash := sw.hasher.Hash(data)
