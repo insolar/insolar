@@ -45,7 +45,7 @@ func init() {
 
 	claimSizeMap = make(map[ClaimType]uint16)
 	claimSizeMap[TypeNodeJoinClaim] = sizeOf(&NodeJoinClaim{})
-	claimSizeMap[TypeNodeAnnounceClaim] = sizeOf(&NodeJoinClaim{})
+	claimSizeMap[TypeNodeAnnounceClaim] = sizeOf(&NodeAnnounceClaim{})
 	claimSizeMap[TypeCapabilityPollingAndActivation] = sizeOf(&CapabilityPoolingAndActivation{})
 	claimSizeMap[TypeNodeViolationBlame] = sizeOf(&NodeViolationBlame{})
 	claimSizeMap[TypeNodeBroadcast] = sizeOf(&NodeBroadcast{})
@@ -53,9 +53,10 @@ func init() {
 	claimSizeMap[TypeChangeNetworkClaim] = sizeOf(&NodeLeaveClaim{})
 
 	voteSizeMap = make(map[VoteType]uint16)
-	voteSizeMap[TypeNodeJoinSupplementaryVote] = sizeOf(&NodeJoinSupplementaryVote{})
 	voteSizeMap[TypeStateFraudNodeSupplementaryVote] = sizeOf(&StateFraudNodeSupplementaryVote{})
 	voteSizeMap[TypeNodeListSupplementaryVote] = sizeOf(&NodeListSupplementaryVote{})
 	voteSizeMap[TypeMissingNodeSupplementaryVote] = sizeOf(&MissingNodeSupplementaryVote{})
 	voteSizeMap[TypeMissingNode] = sizeOf(&MissingNode{})
+	// MissingNodeClaim has variable-sized length
+	voteSizeMap[TypeMissingNodeClaim] = 0
 }

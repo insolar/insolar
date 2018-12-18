@@ -123,6 +123,26 @@ func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) bool {
 	return true
 }
 
+// TODO: I AM AWFUL WORKAROUND, NEED TO REWORK
+func (p1p *Phase1Packet) RemoveAnnounceClaim() {
+	for i, claim := range p1p.claims {
+		if claim.Type() == TypeNodeAnnounceClaim {
+			p1p.claims = append(p1p.claims[:i], p1p.claims[i+1:]...)
+		}
+	}
+}
+
+func (p1p *Phase1Packet) GetAnnounceClaim() *NodeAnnounceClaim {
+	for _, claim := range p1p.claims {
+		c, ok := claim.(*NodeAnnounceClaim)
+		if !ok {
+			continue
+		}
+		return c
+	}
+	return nil
+}
+
 func (p1p *Phase1Packet) GetClaims() []ReferendumClaim {
 	return p1p.claims
 }

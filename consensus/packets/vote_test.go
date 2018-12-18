@@ -34,10 +34,6 @@ func TestNodeListSupplementaryVote(t *testing.T) {
 	checkBadDataSerializationDeserialization(t, makeNodeListSupplementaryVote(), "unexpected EOF")
 }
 
-func TestNodeJoinSupplementaryVote(t *testing.T) {
-	checkSerializationDeserialization(t, &NodeJoinSupplementaryVote{})
-}
-
 func makeStateFraudNodeSupplementaryVote() *StateFraudNodeSupplementaryVote {
 	result := &StateFraudNodeSupplementaryVote{}
 	result.Node1PulseProof = *makeNodePulseProof()
@@ -54,9 +50,10 @@ func TestStateFraudNodeSupplementaryVote(t *testing.T) {
 }
 
 func TestMissingNodeSupplementaryVote(t *testing.T) {
-	checkSerializationDeserialization(t, &MissingNodeSupplementaryVote{*makeNodePulseProof()})
+	checkSerializationDeserialization(t,
+		&MissingNodeSupplementaryVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)})
 
 	checkBadDataSerializationDeserialization(t,
-		&MissingNodeSupplementaryVote{*makeNodePulseProof()},
+		&MissingNodeSupplementaryVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)},
 		"unexpected EOF")
 }

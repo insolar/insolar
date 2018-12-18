@@ -58,7 +58,7 @@ func (s *communicatorSuite) SetupTest() {
 	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
 	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
 	s.originNode = makeRandomNode()
-	nodeN := networkUtils.NewNodeNetworkMock(s.T())
+	nodeN := networkUtils.NewNodeKeeperMock(s.T())
 
 	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
 	cryptoServ.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
@@ -90,7 +90,7 @@ func (s *communicatorSuite) SetupTest() {
 }
 
 func makeRandomNode() core.Node {
-	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1", "")
+	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
 func (s *communicatorSuite) TestExchangeData() {
@@ -98,7 +98,7 @@ func (s *communicatorSuite) TestExchangeData() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	result, _, err := s.communicator.ExchangePhase1(ctx, s.participants, &packets.Phase1Packet{})
+	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
 	s.Assert().NoError(err)
 	s.NotEqual(0, len(result))
 }

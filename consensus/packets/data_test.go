@@ -256,7 +256,7 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet.pulseData = makeDefaultPulseDataExt()
 	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray71(), NodeStateHash: randomArray64()}
 
-	phase1Packet.AddClaim(makeNodeJoinClaim())
+	phase1Packet.AddClaim(makeNodeJoinClaim(true))
 	phase1Packet.AddClaim(makeNodeViolationBlame())
 	phase1Packet.AddClaim(&NodeLeaveClaim{})
 
@@ -272,7 +272,7 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 func makePhase2Packet() *Phase2Packet {
 	phase2Packet := &Phase2Packet{}
 	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
-	phase2Packet.globuleHashSignature = randomArray64()
+	phase2Packet.globuleHashSignature = randomArray71()
 	phase2Packet.SignatureHeaderSection1 = randomArray71()
 	phase2Packet.SignatureHeaderSection2 = randomArray71()
 	phase2Packet.bitSet, _ = NewTriStateBitSet(134)
@@ -345,7 +345,7 @@ func TestExtractPacket_Phase1_BadExtract(t *testing.T) {
 func TestPhase1Packet_AddClaim(t *testing.T) {
 	packet := makePhase1Packet()
 
-	success := packet.AddClaim(makeNodeJoinClaim())
+	success := packet.AddClaim(makeNodeJoinClaim(true))
 	assert.True(t, success)
 
 	for success {

@@ -50,7 +50,7 @@ func calculateNodeHash(scheme core.PlatformCryptographyScheme, processor core.Ke
 		panic(err)
 	}
 	hashWriteChecked(h, pk)
-	hashWriteChecked(h, []byte(node.PhysicalAddress()))
+	hashWriteChecked(h, []byte(node.Address()))
 	hashWriteChecked(h, []byte(node.Version()))
 	return h.Sum(nil)
 }
