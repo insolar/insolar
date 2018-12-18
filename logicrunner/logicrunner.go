@@ -50,6 +50,9 @@ type ObjectState struct {
 
 type ExecutionState struct {
 	sync.Mutex
+
+	ArtifactManager core.ArtifactManager
+
 	objectbody             *ObjectBody
 	somebodyStillExecuting *bool
 	deactivate             bool
@@ -148,6 +151,22 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 		res.Request = es.Current.Request
 	}
 	return res
+}
+
+func (es *ExecutionState) CheckPendingRequests(ctx context.Context, msg message.IBaseLogicMessage) (bool, error) {
+	if _, ok := msg.(*message.CallMethod); !ok {
+		return false, nil
+	}
+
+	oDesc, err := es.ArtifactManager.GetObject(ctx, *msg.DefaultTarget(), nil, false)
+	if err != nil {
+		return false, err
+	}
+
+	if oDesc.HasPendingRequests() {
+		return true, nil
+	}
+	return false, nil
 }
 
 // releaseQueue must be calling only with es.Lock
@@ -296,8 +315,9 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	os.Lock()
 	if os.ExecutionState == nil {
 		os.ExecutionState = &ExecutionState{
-			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			ArtifactManager: lr.ArtifactManager,
+			Queue:           make([]ExecutionQueueElement, 0),
+			Behaviour:       &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 		}
 	}
 	es := os.ExecutionState
@@ -339,35 +359,12 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	}
 
 	es.Queue = append(es.Queue, qElement)
-
-	startProcessor := !es.QueueProcessorActive
-	if startProcessor {
-		if es.somebodyStillExecuting == nil {
-			var exec bool
-			if _, ok := parcel.Message().(*message.CallMethod); ok {
-				_, err := lr.ArtifactManager.GetObject(ctx, ref, nil, false)
-				if err != nil {
-					es.Unlock()
-					return nil, err
-				}
-
-				// TODO: FIXME: waiting ledger team
-				// if objDesc.HasPendingRequests() {
-				//	exec = true
-				// }
-			} else {
-				exec = false
-			}
-			es.somebodyStillExecuting = &exec
-		}
-	}
-
-	if startProcessor {
-		inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-		es.QueueProcessorActive = true
-		go lr.ProcessExecutionQueue(ctx, es)
-	}
 	es.Unlock()
+
+	err = lr.StartQueueProcessorIfNeeded(ctx, es, msg)
+	if err != nil {
+		return nil, err
+	}
 
 	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
 		return &reply.CallMethod{}, nil
@@ -380,6 +377,36 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		panic("not implemented, should be implemented as part of async contract calls")
 	}
 	return res.reply, nil
+}
+
+func (lr *LogicRunner) StartQueueProcessorIfNeeded(
+	ctx context.Context, es *ExecutionState, msg message.IBaseLogicMessage,
+) error {
+	es.Lock()
+	defer es.Unlock()
+
+	startProcessor := !es.QueueProcessorActive
+	if startProcessor {
+		if es.somebodyStillExecuting == nil {
+			pending, err := es.CheckPendingRequests(ctx, msg)
+			if err != nil {
+				return err
+			}
+			es.somebodyStillExecuting = &pending
+		}
+		if *es.somebodyStillExecuting {
+			startProcessor = false
+		}
+	}
+
+	if !startProcessor {
+		return nil
+	}
+
+	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+	es.QueueProcessorActive = true
+	go lr.ProcessExecutionQueue(ctx, es)
+	return nil
 }
 
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
