@@ -171,7 +171,7 @@ type NodeKeeper interface {
 	// Sync move unsync -> sync
 	Sync(list UnsyncList)
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive()
+	MoveSyncToActive() error
 	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
 	AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error
 	// ResolveConsensus get temporary mapping by short ID
@@ -187,7 +187,7 @@ type UnsyncList interface {
 	// ApproveSync
 	ApproveSync([]core.RecordRef)
 	// AddClaims
-	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim)
+	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim) error
 	// AddNode
 	AddNode(node core.Node, bitsetIndex uint16)
 	// GetClaims

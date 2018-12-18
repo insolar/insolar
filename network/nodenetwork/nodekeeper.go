@@ -317,7 +317,7 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	nk.sync = list
 }
 
-func (nk *nodekeeper) MoveSyncToActive() {
+func (nk *nodekeeper) MoveSyncToActive() error {
 	nk.activeLock.Lock()
 	nk.syncLock.Lock()
 	defer func() {
@@ -332,8 +332,13 @@ func (nk *nodekeeper) MoveSyncToActive() {
 	nk.tempLock.Unlock()
 
 	sync := nk.sync.(*unsyncList)
-	nk.active = sync.getMergedNodeMap()
+	var err error
+	nk.active, err = sync.getMergedNodeMap()
+	if err != nil {
+		return errors.Wrap(err, "[ MoveSyncToActive ] failed to mergeWith")
+	}
 	nk.reindex()
+	return nil
 }
 
 func (nk *nodekeeper) reindex() {
