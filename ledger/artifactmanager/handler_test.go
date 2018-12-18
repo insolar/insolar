@@ -660,12 +660,12 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		LatestState: firstID,
 	})
 
-	dropSizeHistory, err := db.GetDropSizeHistory(ctx)
+	dropSizeHistory, err := db.GetDropSizeHistory(ctx, jetID)
 	require.NoError(t, err)
 	require.Equal(t, jet.DropSizeHistory{}, dropSizeHistory)
 	addDropSizeToDB(ctx, t, db, jetID)
 
-	dropSizeHistory, err = db.GetDropSizeHistory(ctx)
+	dropSizeHistory, err = db.GetDropSizeHistory(ctx, jetID)
 	require.NoError(t, err)
 
 	hotIndexes := &message.HotData{
@@ -715,7 +715,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.Equal(t, &jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
 
 	// check drop size list
-	dropSizeHistory, err = db.GetDropSizeHistory(ctx)
+	dropSizeHistory, err = db.GetDropSizeHistory(ctx, jetID)
 	require.NoError(t, err)
 	require.Equal(t, testDropSize, dropSizeHistory[0].DropSize)
 	require.Equal(t, jetID, dropSizeHistory[0].JetID)
