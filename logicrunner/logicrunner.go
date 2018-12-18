@@ -375,12 +375,6 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 	for {
 		es.Lock()
 
-		if es.Pending {
-			es.Pending = false
-			// TODO implement PendingFinished message ... don't transfer anything, just ping current executor
-			return
-		}
-
 		q := es.Queue
 		if len(q) == 0 {
 			es.Unlock()
@@ -416,6 +410,8 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
+
+		// TODO: check pulse change and do different things
 
 		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
 		err = es.Behaviour.Result(res.reply, res.err)
