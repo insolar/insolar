@@ -45,8 +45,6 @@ func TestOnPulse(t *testing.T) {
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	require.Nil(t, lr.state[objectRef].ExecutionState)
-
-	//lr.Execute(ctx, es) // TODO FIXME
 	require.False(t, pendingFinishedWasSent)
 
 	// test empty es with query in current
@@ -58,8 +56,10 @@ func TestOnPulse(t *testing.T) {
 	}
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
-	require.Equal(t, true, lr.state[objectRef].ExecutionState.pending)
-	// require.True(t, pendingFinishedWasSent) // TODO FIXME
+	require.True(t, lr.state[objectRef].ExecutionState.pending)
+	lr.ProcessExecutionQueue(ctx, lr.state[objectRef].ExecutionState)
+	require.False(t, pendingFinishedWasSent)
+	// require.False(t, lr.state[objectRef].ExecutionState.pending) // TODO FIXME probably should pass?
 
 	// test empty es with query in current and query in queue - es.pending true, message.ExecutorResults.Pending = true, message.ExecutorResults.Queue one element
 	result := make(chan ExecutionQueueResult, 1)
@@ -85,5 +85,7 @@ func TestOnPulse(t *testing.T) {
 
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
-	require.Equal(t, true, lr.state[objectRef].ExecutionState.pending)
+	require.True(t, lr.state[objectRef].ExecutionState.pending)
+	lr.ProcessExecutionQueue(ctx, lr.state[objectRef].ExecutionState)
+	//require.True(t, pendingFinishedWasSent) // TODO FIXME
 }
