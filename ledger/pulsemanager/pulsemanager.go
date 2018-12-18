@@ -37,7 +37,7 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
 type ActiveListSwapper interface {
-	MoveSyncToActive()
+	MoveSyncToActive() error
 }
 
 // PulseManager implements core.PulseManager.
@@ -370,7 +370,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.currentPulse = newPulse
 
 	// swap active nodes
-	m.ActiveListSwapper.MoveSyncToActive()
+	err = m.ActiveListSwapper.MoveSyncToActive()
+	if err != nil {
+		return errors.Wrap(err, "[ Set ] failed to move sync")
+	}
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)

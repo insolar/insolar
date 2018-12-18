@@ -16,7 +16,7 @@ import (
 type ActiveListSwapperMock struct {
 	t minimock.Tester
 
-	MoveSyncToActiveFunc       func()
+	MoveSyncToActiveFunc       func() (r error)
 	MoveSyncToActiveCounter    uint64
 	MoveSyncToActivePreCounter uint64
 	MoveSyncToActiveMock       mActiveListSwapperMockMoveSyncToActive
@@ -42,6 +42,11 @@ type mActiveListSwapperMockMoveSyncToActive struct {
 }
 
 type ActiveListSwapperMockMoveSyncToActiveExpectation struct {
+	result *ActiveListSwapperMockMoveSyncToActiveResult
+}
+
+type ActiveListSwapperMockMoveSyncToActiveResult struct {
+	r error
 }
 
 //Expect specifies that invocation of ActiveListSwapper.MoveSyncToActive is expected from 1 to Infinity times
@@ -57,14 +62,14 @@ func (m *mActiveListSwapperMockMoveSyncToActive) Expect() *mActiveListSwapperMoc
 }
 
 //Return specifies results of invocation of ActiveListSwapper.MoveSyncToActive
-func (m *mActiveListSwapperMockMoveSyncToActive) Return() *ActiveListSwapperMock {
+func (m *mActiveListSwapperMockMoveSyncToActive) Return(r error) *ActiveListSwapperMock {
 	m.mock.MoveSyncToActiveFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ActiveListSwapperMockMoveSyncToActiveExpectation{}
 	}
-
+	m.mainExpectation.result = &ActiveListSwapperMockMoveSyncToActiveResult{r}
 	return m.mock
 }
 
@@ -79,8 +84,12 @@ func (m *mActiveListSwapperMockMoveSyncToActive) ExpectOnce() *ActiveListSwapper
 	return expectation
 }
 
+func (e *ActiveListSwapperMockMoveSyncToActiveExpectation) Return(r error) {
+	e.result = &ActiveListSwapperMockMoveSyncToActiveResult{r}
+}
+
 //Set uses given function f as a mock of ActiveListSwapper.MoveSyncToActive method
-func (m *mActiveListSwapperMockMoveSyncToActive) Set(f func()) *ActiveListSwapperMock {
+func (m *mActiveListSwapperMockMoveSyncToActive) Set(f func() (r error)) *ActiveListSwapperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -89,7 +98,7 @@ func (m *mActiveListSwapperMockMoveSyncToActive) Set(f func()) *ActiveListSwappe
 }
 
 //MoveSyncToActive implements github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper interface
-func (m *ActiveListSwapperMock) MoveSyncToActive() {
+func (m *ActiveListSwapperMock) MoveSyncToActive() (r error) {
 	counter := atomic.AddUint64(&m.MoveSyncToActivePreCounter, 1)
 	defer atomic.AddUint64(&m.MoveSyncToActiveCounter, 1)
 
@@ -99,10 +108,25 @@ func (m *ActiveListSwapperMock) MoveSyncToActive() {
 			return
 		}
 
+		result := m.MoveSyncToActiveMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveListSwapperMock.MoveSyncToActive")
+			return
+		}
+
+		r = result.r
+
 		return
 	}
 
 	if m.MoveSyncToActiveMock.mainExpectation != nil {
+
+		result := m.MoveSyncToActiveMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveListSwapperMock.MoveSyncToActive")
+		}
+
+		r = result.r
 
 		return
 	}
@@ -112,7 +136,7 @@ func (m *ActiveListSwapperMock) MoveSyncToActive() {
 		return
 	}
 
-	m.MoveSyncToActiveFunc()
+	return m.MoveSyncToActiveFunc()
 }
 
 //MoveSyncToActiveMinimockCounter returns a count of ActiveListSwapperMock.MoveSyncToActiveFunc invocations
