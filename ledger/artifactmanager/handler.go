@@ -860,9 +860,9 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		return nil, err
 	}
 
-	err = h.db.ResetDropSizeHistory(ctx, jetID, msg.JetDropSizeHistory)
+	err = h.db.SetDropSizeHistory(ctx, jetID, msg.JetDropSizeHistory)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't ResetDropSizeHistory")
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
 	return &reply.OK{}, nil

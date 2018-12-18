@@ -262,6 +262,7 @@ func dropSizesPrefixKey(jetID core.RecordID) []byte {
 	return prefixkeyany(scopeIDSystem, []byte{sysDropSizeHistory}, jetID.Bytes())
 }
 
+// AddDropSize adds Jet drop size stats (required for split decision).
 func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 	inslogger.FromContext(ctx).Debug("DB.AddDropSize starts ...")
 	db.addBlockSizeLock.Lock()
@@ -287,19 +288,21 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 
 	dropSizes = append(dropSizes, *dropSize)
 
-	return db.set(ctx, k, dropSizes.Bytes(ctx))
+	return db.set(ctx, k, dropSizes.Bytes())
 }
 
-func (db *DB) ResetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error {
+// SetDropSizeHistory saves drop sizes history.
+func (db *DB) SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error {
 	inslogger.FromContext(ctx).Debug("DB.ResetDropSizeHistory starts ...")
 	db.addBlockSizeLock.Lock()
 	defer db.addBlockSizeLock.Unlock()
 
 	k := dropSizesPrefixKey(jetID)
-	err := db.set(ctx, k, dropSizeHistory.Bytes(ctx))
+	err := db.set(ctx, k, dropSizeHistory.Bytes())
 	return errors.Wrap(err, "[ ResetDropSizeHistory ] Can't db.set")
 }
 
+// GetDropSizeHistory returns last drops sizes.
 func (db *DB) GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error) {
 	inslogger.FromContext(ctx).Debug("DB.GetDropSizeHistory starts ...")
 	db.addBlockSizeLock.RLock()
