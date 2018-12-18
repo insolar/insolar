@@ -97,7 +97,7 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 	case "RegisterNode":
 		return m.registerNodeCall(rootDomain, params)
 	case "GetNodeRef":
-		return m.GetNodeRef(rootDomain, params)
+		return m.getNodeRef(rootDomain, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -191,20 +191,23 @@ func (m *Member) registerNodeCall(ref core.RecordRef, params []byte) (interface{
 	return string(cert), nil
 }
 
-func (m *Member) GetNodeRef(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) getNodeRef(ref core.RecordRef, params []byte) (interface{}, error) {
 	var publicKey string
 	if err := signer.UnmarshalParams(params, &publicKey); err != nil {
-		return nil, fmt.Errorf("[ registerNodeCall ] Can't unmarshal params: %s", err.Error())
+		return nil, fmt.Errorf("[ GetNodeRef ] Can't unmarshal params: %s", err.Error())
 	}
 
 	rootDomain := rootdomain.GetObject(ref)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ registerNodeCall ] %s", err.Error())
+		return nil, fmt.Errorf("[ GetNodeRef ] %s", err.Error())
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	noreRef, err := nd.GetNodeRefByPK(publicKey)
+	nodeRef, err := nd.GetNodeRefByPK(publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("[ GetNodeRef ] %s", err.Error())
+	}
 
-	return nil, nil
+	return nodeRef, nil
 }
