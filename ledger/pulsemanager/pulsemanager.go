@@ -88,25 +88,25 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 	pmconf := conf.PulseManager
-	pm := &PulseManager{
-		db:           db,
-		currentPulse: *core.GenesisPulse,
-	}
-
-	// TODO: untie this circular dependency after moving sync client to separate component - 17.Dec.2018 @nordicdyno
 	heavySyncPool := newSyncClientsPool(
-		pm,
+		db,
 		clientOptions{
 			syncMessageLimit: pmconf.HeavySyncMessageLimit,
 			pulsesDeltaLimit: conf.LightChainLimit,
-		})
-	pm.syncClientsPool = heavySyncPool
+		},
+	)
+	pm := &PulseManager{
+		db:           db,
+		currentPulse: *core.GenesisPulse,
+		options: pmOptions{
+			enableSync:      pmconf.HeavySyncEnabled,
+			splitThreshold:  pmconf.SplitThreshold,
+			dropHistorySize: conf.JetSizesHistoryDepth,
+		},
+		syncClientsPool: heavySyncPool,
+	}
 
-	pm.options.enableSync = pmconf.HeavySyncEnabled
-	// pm.options.syncMessageLimit = pmconf.HeavySyncMessageLimit
-	// pm.options.pulsesDeltaLimit = conf.LightChainLimit
-	pm.options.splitThreshold = pmconf.SplitThreshold
-	pm.options.dropHistorySize = conf.JetSizesHistoryDepth
+	// TODO: untie this circular dependency after moving sync client to separate component - 17.Dec.2018 @nordicdyno
 	return pm
 }
 
@@ -421,7 +421,7 @@ func (m *PulseManager) AddPulseToSyncClients(ctx context.Context, pn core.PulseN
 	for jetID := range allJets {
 		_, err := m.db.GetDrop(ctx, jetID, pn)
 		if err == nil {
-			m.syncClientsPool.AddPulsesToSyncClient(ctx, m, jetID, true, pn)
+			m.syncClientsPool.AddPulsesToSyncClient(ctx, jetID, true, pn)
 		}
 	}
 	return nil
@@ -430,6 +430,8 @@ func (m *PulseManager) AddPulseToSyncClients(ctx context.Context, pn core.PulseN
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
 	if m.options.enableSync {
+		m.syncClientsPool.Bus = m.Bus
+		m.syncClientsPool.PulseStorage = m.PulseStorage
 		err := m.initJetSyncState(ctx)
 		if err != nil {
 			return err

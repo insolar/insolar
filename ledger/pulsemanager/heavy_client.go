@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 )
@@ -35,7 +36,9 @@ type clientOptions struct {
 }
 
 type syncClientsPool struct {
-	PulseManager *PulseManager
+	Bus          core.MessageBus
+	PulseStorage core.PulseStorage
+	db           *storage.DB
 
 	clientDefaults clientOptions
 
@@ -46,9 +49,9 @@ type syncClientsPool struct {
 	clients map[core.RecordID]*jetSyncClient
 }
 
-func newSyncClientsPool(pm *PulseManager, clientDefaults clientOptions) *syncClientsPool {
+func newSyncClientsPool(db *storage.DB, clientDefaults clientOptions) *syncClientsPool {
 	return &syncClientsPool{
-		PulseManager:   pm,
+		db:             db,
 		clientDefaults: clientDefaults,
 		clients:        map[core.RecordID]*jetSyncClient{},
 	}
@@ -72,7 +75,6 @@ func (scp *syncClientsPool) Stop(ctx context.Context) {
 
 func (scp *syncClientsPool) AddPulsesToSyncClient(
 	ctx context.Context,
-	PulseManager *PulseManager,
 	jetID core.RecordID,
 	shouldrun bool,
 	pns ...core.PulseNumber,
@@ -81,7 +83,10 @@ func (scp *syncClientsPool) AddPulsesToSyncClient(
 	client, ok := scp.clients[jetID]
 	if !ok {
 		client = newJetSyncClient(jetID, scp.clientDefaults)
-		client.PulseManager = scp.PulseManager
+		client.db = scp.db
+		client.Bus = scp.Bus
+		client.PulseStorage = scp.PulseStorage
+
 		scp.clients[jetID] = client
 	}
 	scp.Unlock()
@@ -99,8 +104,9 @@ func (scp *syncClientsPool) AddPulsesToSyncClient(
 }
 
 type jetSyncClient struct {
-	// TODO: use own db, messagebus - @nordicdyno 14/Dec/2018
-	PulseManager *PulseManager
+	Bus          core.MessageBus
+	PulseStorage core.PulseStorage
+	db           *storage.DB
 
 	// life cycle control
 	startOnce sync.Once
@@ -189,10 +195,6 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 	inslog := inslogger.FromContext(ctx)
 	defer close(c.syncdone)
 
-	// TODO: use own db instance (untie from PulseManager)
-	db := c.PulseManager.db
-	pulseStorage := c.PulseManager.PulseStorage
-
 	var (
 		syncPN     core.PulseNumber
 		hasNext    bool
@@ -240,7 +242,7 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 			break
 		}
 
-		if pulseIsOutdated(ctx, pulseStorage, syncPN, c.pulsesDeltaLimit) {
+		if pulseIsOutdated(ctx, c.PulseStorage, syncPN, c.pulsesDeltaLimit) {
 			inslog.Infof("pulse %v on jet %v is outdated, skip it", syncPN, c.jetID)
 			finishpulse()
 			continue
@@ -267,7 +269,7 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
 		}
 
-		err := db.SetReplicatedPulse(ctx, c.jetID, syncPN)
+		err := c.db.SetReplicatedPulse(ctx, c.jetID, syncPN)
 		if err != nil {
 			err = errors.Wrap(err, "SetReplicatedPulse failed")
 			inslog.Error(err)

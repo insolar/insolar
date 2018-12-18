@@ -30,18 +30,15 @@ import (
 // HeavySync syncs records from light to heavy node, returns last synced pulse and error.
 //
 // It syncs records from start to end of provided pulse numbers.
-func (jsc *jetSyncClient) HeavySync(
+func (c *jetSyncClient) HeavySync(
 	ctx context.Context,
 	pn core.PulseNumber,
 	retry bool,
 ) error {
-	mbus := jsc.PulseManager.Bus
-	db := jsc.PulseManager.db
-	pulseStorage := jsc.PulseManager.PulseStorage
 	inslog := inslogger.FromContext(ctx)
-	jetID := jsc.jetID
+	jetID := c.jetID
 
-	current, err := pulseStorage.Current(ctx)
+	current, err := c.PulseStorage.Current(ctx)
 	if err != nil {
 		return err
 	}
@@ -54,13 +51,13 @@ func (jsc *jetSyncClient) HeavySync(
 	if retry {
 		inslog.Infof("send reset message for pulse %v (retry sync)", pn)
 		resetMsg := &message.HeavyReset{PulseNum: pn}
-		if busreply, buserr := mbus.Send(ctx, resetMsg, *current, nil); buserr != nil {
+		if busreply, buserr := c.Bus.Send(ctx, resetMsg, *current, nil); buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg := &message.HeavyStartStop{PulseNum: pn}
-	busreply, buserr = mbus.Send(ctx, signalMsg, *current, nil)
+	busreply, buserr = c.Bus.Send(ctx, signalMsg, *current, nil)
 	// TODO: check if locked
 	if buserr != nil {
 		return HeavyErr{reply: busreply, err: buserr}
@@ -68,7 +65,7 @@ func (jsc *jetSyncClient) HeavySync(
 	inslog.Infof("synchronize, sucessfully send start message for pulse %v", pn)
 
 	replicator := storage.NewReplicaIter(
-		ctx, db, jetID, pn, pn+1, jsc.syncMessageLimit)
+		ctx, c.db, jetID, pn, pn+1, c.syncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
@@ -78,14 +75,14 @@ func (jsc *jetSyncClient) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{Records: recs}
-		busreply, buserr = mbus.Send(ctx, msg, *current, nil)
+		busreply, buserr = c.Bus.Send(ctx, msg, *current, nil)
 		if buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg.Finished = true
-	busreply, buserr = mbus.Send(ctx, signalMsg, *current, nil)
+	busreply, buserr = c.Bus.Send(ctx, signalMsg, *current, nil)
 	if buserr != nil {
 		return HeavyErr{reply: busreply, err: buserr}
 	}
@@ -109,7 +106,7 @@ func (m *PulseManager) initJetSyncState(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		m.syncClientsPool.AddPulsesToSyncClient(ctx, m, jetID, false, pulseNums...)
+		m.syncClientsPool.AddPulsesToSyncClient(ctx, jetID, false, pulseNums...)
 	}
 	return nil
 }

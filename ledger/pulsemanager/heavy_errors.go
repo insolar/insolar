@@ -21,12 +21,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 )
 
-type syncErr struct {
-	jet core.RecordID
-	pn  core.PulseNumber
-	err error
-}
-
 // HeavyErr holds core.Reply and implements core.Retryable and error interfaces.
 type HeavyErr struct {
 	reply core.Reply
