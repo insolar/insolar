@@ -100,7 +100,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRe
 	return routResult, nil
 }
 
-func (cr *ContractRequester) CallContract(ctx context.Context, base core.Message, async bool, ref *core.RecordRef, method string, argsIn core.Arguments, mustPrototype *core.RecordRef) (core.Reply, error) {
+func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, async bool, ref *core.RecordRef, method string, argsIn core.Arguments, mustPrototype *core.RecordRef) (core.Reply, error) {
 	baseMessage, ok := base.(*message.BaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Wrong type for BaseMessage")
@@ -143,11 +143,73 @@ func (cr *ContractRequester) CallContract(ctx context.Context, base core.Message
 		return nil, errors.New("Got not reply.CallMethod in reply for CallMethod")
 	}
 
-	cr.ResultMutex.Lock()
-	cr.ResultMap[r.Request] = make(chan *message.ReturnResults)
-	cr.ResultMutex.Unlock()
+	if async {
+		return res, nil
 
-	return res, err
+	}
+	cr.ResultMutex.Lock()
+	ch := make(chan *message.ReturnResults)
+	cr.ResultMap[r.Request] = ch
+	cr.ResultMutex.Unlock()
+	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
+
+	ret := <-ch
+
+	return &reply.CallMethod{
+		Request: r.Request,
+		Result:  ret.Result,
+	}, nil
+}
+
+func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Message, async bool,
+	prototype *core.RecordRef, to *core.RecordRef, method string,
+	argsIn core.Arguments, saveAs int) (*core.RecordRef, error) {
+	baseMessage, ok := base.(*message.BaseLogicMessage)
+	if !ok {
+		return nil, errors.New("Wrong type for BaseMessage")
+	}
+
+	mb := core.MessageBusFromContext(ctx, cr.MessageBus)
+	if mb == nil {
+		return nil, errors.New("No access to message bus")
+	}
+
+	msg := &message.CallConstructor{
+		BaseLogicMessage: *baseMessage,
+		PrototypeRef:     *prototype,
+		ParentRef:        *to,
+		Name:             method,
+		Arguments:        argsIn,
+		SaveAs:           message.SaveAs(saveAs),
+	}
+
+	currentSlotPulse, err := cr.PulseManager.Current(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get pulse")
+	}
+	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't save new object as delegate")
+	}
+
+	r, ok := res.(*reply.CallConstructor)
+	if !ok {
+		return nil, errors.New("Got not reply.CallConstructor in reply for CallConstructor")
+	}
+
+	if async {
+		return r.Object, nil
+	}
+
+	cr.ResultMutex.Lock()
+	ch := make(chan *message.ReturnResults)
+	cr.ResultMap[*r.Object] = ch
+	cr.ResultMutex.Unlock()
+	inslogger.FromContext(ctx).Debug("Waiting for constructor results ref=", *r.Object)
+
+	<-ch
+
+	return r.Object, nil
 }
 
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
@@ -158,17 +220,15 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
-	/*
-		c, ok := cr.ResultMap[msg.Request]
-		if !ok {
-			inslogger.FromContext(ctx).Debug("oops unwaited results")
-			return &reply.OK{}, nil
-		}
-		inslogger.FromContext(ctx).Debug("Got wanted results")
 
-		c <- msg
-		<- c // todo FIX HERE
-	*/
+	c, ok := cr.ResultMap[msg.Request]
+	if !ok {
+		inslogger.FromContext(ctx).Info("oops unwaited results ref=", msg.Request)
+		return &reply.OK{}, nil
+	}
+	inslogger.FromContext(ctx).Debug("Got wanted results")
+
+	c <- msg
 	delete(cr.ResultMap, msg.Request)
 	return &reply.OK{}, nil
 }

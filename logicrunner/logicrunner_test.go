@@ -224,31 +224,25 @@ func executeMethod(
 ) (
 	core.Reply, error,
 ) {
+	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
+
 	argsSerialized, err := core.Serialize(arguments)
 	if err != nil {
 		return nil, err
 	}
 
-	msg := &message.CallMethod{
-		ObjectRef:      objRef,
-		Method:         method,
-		Arguments:      argsSerialized,
-		ProxyPrototype: proxyPrototype,
-	}
-	msg.Caller = testutils.RandomRef()
-	if nonce != 0 {
-		msg.Nonce = nonce
+	rlr := lr.(*LogicRunner)
+
+	bm := message.BaseLogicMessage{
+		Caller: testutils.RandomRef(),
+		Nonce:  nonce,
 	}
 
-	pf := lr.(*LogicRunner).ParcelFactory
-	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef(), nil, *core.GenesisPulse)
-	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
-	resp, err := lr.Execute(
-		ctx,
-		parcel,
-	)
-
-	return resp, err
+	rep, err := rlr.ContractRequester.CallMethod(ctx, &bm, false, &objRef, method, argsSerialized, &proxyPrototype)
+	if err != nil {
+		log.Fatal("OOOPS")
+	}
+	return rep, err
 }
 
 func firstMethodRes(t *testing.T, resp core.Reply) interface{} {

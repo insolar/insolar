@@ -65,6 +65,7 @@ type CurrentExecution struct {
 	LogicContext  *core.LogicCallContext
 	Request       *Ref
 	RequesterNode *Ref
+	ReturnMode    message.MethodReturnMode
 }
 
 type ExecutionQueueResult struct {
@@ -74,12 +75,12 @@ type ExecutionQueueResult struct {
 }
 
 type ExecutionQueueElement struct {
-	ctx           context.Context
-	parcel        core.Parcel
-	request       *Ref
-	RequesterNode *Ref
-	pulse         core.PulseNumber
-	result        chan ExecutionQueueResult
+	ctx        context.Context
+	parcel     core.Parcel
+	request    *Ref
+	pulse      core.PulseNumber
+	result     chan ExecutionQueueResult
+	returnMode message.MethodReturnMode
 }
 
 type Error struct {
@@ -324,14 +325,15 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, os.WrapError(err, "can't create request")
 	}
 
-	sender := parcel.GetSender()
 	qElement := ExecutionQueueElement{
-		ctx:           ctx,
-		parcel:        parcel,
-		request:       request,
-		RequesterNode: &sender,
-		pulse:         lr.pulse(ctx).PulseNumber,
-		result:        make(chan ExecutionQueueResult, 1),
+		ctx:     ctx,
+		parcel:  parcel,
+		request: request,
+		pulse:   lr.pulse(ctx).PulseNumber,
+		result:  make(chan ExecutionQueueResult, 1),
+	}
+	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
+		qElement.returnMode = msg.ReturnMode
 	}
 
 	es.Lock()
@@ -343,19 +345,9 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	}
 	es.Unlock()
 
-	// todo SPLIT HERE
-
-	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
-		return &reply.CallMethod{}, nil
-	}
-
-	res := <-qElement.result
-	if res.err != nil {
-		return nil, res.err
-	} else if res.somebodyElse {
-		panic("not implemented, should be implemented as part of async contract calls")
-	}
-	return res.reply, nil
+	return &reply.CallMethod{
+		Request: *request,
+	}, nil
 }
 
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
@@ -378,9 +370,11 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		qe, q := q[0], q[1:]
 		es.Queue = q
 
+		sender := qe.parcel.GetSender()
 		es.Current = &CurrentExecution{
 			Request:       qe.request,
-			RequesterNode: qe.RequesterNode,
+			RequesterNode: &sender,
+			ReturnMode:    qe.returnMode,
 		}
 		es.Unlock()
 
@@ -524,12 +518,16 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	es.objectbody.Object = newData
-
-	_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{}, *lr.pulse(ctx), &core.MessageSendOptions{
-		Receiver: es.Current.RequesterNode,
-	})
-	if err != nil {
-		inslogger.FromContext(ctx).Debug("couldn't deliver results")
+	if es.Current.ReturnMode == message.ReturnResult {
+		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
+			Request: *es.Current.Request,
+			Result:  result,
+		}, *lr.pulse(ctx), &core.MessageSendOptions{
+			Receiver: es.Current.RequesterNode,
+		})
+		if err != nil {
+			inslogger.FromContext(ctx).Debug("couldn't deliver results")
+		}
 	}
 
 	return &reply.CallMethod{Result: result, Request: *es.Current.Request}, nil
@@ -613,6 +611,14 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *es.Current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
+		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
+			Request: *es.Current.Request,
+		}, *lr.pulse(ctx), &core.MessageSendOptions{
+			Receiver: es.Current.RequesterNode,
+		})
+		if err != nil {
+			inslogger.FromContext(ctx).Debug("couldn't deliver results")
+		}
 		return &reply.CallConstructor{Object: es.Current.Request}, err
 	default:
 		return nil, es.WrapError(nil, "unsupported type of save object")

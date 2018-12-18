@@ -24,6 +24,7 @@ import (
 	"net/rpc"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
@@ -31,7 +32,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/pkg/errors"
 )
 
 // StartRPC starts RPC server for isolated executors to use
@@ -104,7 +104,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	ctx := es.Current.Context
 
 	bm := MakeBaseMessage(req.UpBaseReq, es)
-	res, err := gpr.lr.ContractRequester.CallContract(ctx,
+	res, err := gpr.lr.ContractRequester.CallMethod(ctx,
 		&bm,
 		!req.Wait,
 		&req.Object,
@@ -126,33 +126,25 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	mb := core.MessageBusFromContext(ctx, gpr.lr.MessageBus)
-	if mb == nil {
-		return errors.New("No access to message bus")
-	}
+	bm := MakeBaseMessage(req.UpBaseReq, es)
+	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, &bm, false, &req.Prototype, &req.Parent, req.ConstructorName, req.ArgsSerialized, int(message.Child))
 
-	msg := &message.CallConstructor{
-		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq, es),
-		PrototypeRef:     req.Prototype,
-		ParentRef:        req.Parent,
-		Name:             req.ConstructorName,
-		Arguments:        req.ArgsSerialized,
-		SaveAs:           message.Child,
-	}
+	rep.Reference = ref
 
-	currentSlotPulse, err := gpr.pm.Current(ctx)
-	if err != nil {
-		return err
-	}
+	return err
+}
 
-	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
-	if err != nil {
-		return errors.Wrap(err, "couldn't save new object as child")
-	}
+// SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
+func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
-	rep.Reference = res.(*reply.CallConstructor).Object
+	bm := MakeBaseMessage(req.UpBaseReq, es)
+	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, &bm, false, &req.Prototype, &req.Into, req.ConstructorName, req.ArgsSerialized, int(message.Delegate))
 
-	return nil
+	rep.Reference = ref
+	return err
 }
 
 var iteratorMap = make(map[string]*core.RefIterator)
@@ -213,40 +205,6 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 		delete(iteratorMap, rep.Iterator.ID)
 	}
 
-	return nil
-}
-
-// SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
-	os := gpr.lr.MustObjectState(req.Callee)
-	es := os.MustModeState(req.Mode)
-	ctx := es.Current.Context
-
-	mb := core.MessageBusFromContext(ctx, gpr.lr.MessageBus)
-	if mb == nil {
-		return errors.New("No access to message bus")
-	}
-
-	msg := &message.CallConstructor{
-		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq, es),
-		PrototypeRef:     req.Prototype,
-		ParentRef:        req.Into,
-		Name:             req.ConstructorName,
-		Arguments:        req.ArgsSerialized,
-		SaveAs:           message.Delegate,
-	}
-
-	currentSlotPulse, err := gpr.pm.Current(ctx)
-	if err != nil {
-		return err
-	}
-
-	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
-	if err != nil {
-		return errors.Wrap(err, "couldn't save new object as delegate")
-	}
-
-	rep.Reference = res.(*reply.CallConstructor).Object
 	return nil
 }
 
