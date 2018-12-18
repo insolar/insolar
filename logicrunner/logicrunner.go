@@ -295,12 +295,6 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
 	ref := msg.GetReference()
-
-	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't play role")
-	}
-
 	os := lr.UpsertObjectState(ref)
 
 	os.Lock()
@@ -313,7 +307,19 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	es := os.ExecutionState
 	os.Unlock()
 
+	// ExecutionState should be locked between CheckOurRole and
+	// appending ExecutionQueueElement to the queue to prevent a race condition.
+	// Otherwise it's possible that OnPulse will clean up the queue and set
+	// ExecutionState.pending to false. Execute will add an element to the
+	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
+
+	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
+	if err != nil {
+		es.Unlock()
+		return nil, errors.Wrap(err, "can't play role")
+	}
+
 	if es.Current != nil {
 		// TODO: check no wait call
 		if inslogger.TraceID(es.Current.Context) == inslogger.TraceID(ctx) {
@@ -321,10 +327,10 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 			return nil, os.WrapError(nil, "loop detected")
 		}
 	}
-	es.Unlock()
 
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
+		es.Unlock()
 		return nil, os.WrapError(err, "can't create request")
 	}
 
@@ -336,7 +342,6 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		result:  make(chan ExecutionQueueResult, 1),
 	}
 
-	es.Lock()
 	es.Queue = append(es.Queue, qElement)
 
 	if es.Current == nil {
@@ -370,6 +375,19 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 	for {
 		es.Lock()
+
+		if es.pending {
+			es.pending = false
+			// TODO implement PendingFinished message ... don't transfer anything, just ping current executor
+			/*
+				records, err := lr.JetCoordinator.QueryRole()
+				if err != nil {
+					inslogger.FromContext(ctx).Error("Unable do determine executors for current pulse and thus can't transfer pending state")
+				}
+			*/
+			return
+		}
+
 		q := es.Queue
 		if len(q) == 0 {
 			es.Unlock()
@@ -405,7 +423,6 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
-		// TODO: check pulse change and do different things
 
 		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
 		err = es.Behaviour.Result(res.reply, res.err)
