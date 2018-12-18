@@ -190,7 +190,14 @@ func (t *baseTransport) processResponse(msg *packet.Packet) {
 }
 
 func (t *baseTransport) processRequest(msg *packet.Packet) {
-	log.Debugf("Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
+	// TODO: ugly. fix. sometime
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("[ processRequest ] Got panic: %s", r)
+		}
+	}()
+
+	log.Debugf("[ processRequest ] Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
 	t.received <- msg
 }
 
