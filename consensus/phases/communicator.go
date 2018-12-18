@@ -507,8 +507,6 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 			return result, nil
 		}
 	}
-
-	return result, nil
 }
 
 func (nc *NaiveCommunicator) phase1DataHandler(request network.Request) {

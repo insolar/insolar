@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
 
@@ -30,12 +31,13 @@ type PhaseManager interface {
 }
 
 type Phases struct {
-	FirstPhase  *FirstPhase  //`inject:""`
-	SecondPhase *SecondPhase //`inject:""`
-	ThirdPhase  *ThirdPhase  //`inject:""`
+	FirstPhase  *FirstPhase  // `inject:""`
+	SecondPhase *SecondPhase // `inject:""`
+	ThirdPhase  *ThirdPhase  // `inject:""`
 
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`
+	Calculator   merkle.Calculator  `inject:""`
 }
 
 // NewPhaseManager creates and returns a new phase manager.
@@ -82,7 +84,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
 	defer cancel()
 
-	thirdPhaseState, err := pm.ThirdPhase.Execute(ctx, secondPhaseState)
+	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, secondPhaseState)
 	if err != nil {
 		return errors.Wrap(err, "Network consensus: error executing phase 3")
 	}
