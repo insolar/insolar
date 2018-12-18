@@ -204,7 +204,7 @@ func (m *Member) GetNodeRef(ref core.RecordRef, params []byte) (interface{}, err
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	cert, err := nd.GetNodeRef(publicKey, role)
+	noreRef, err := nd.GetNodeRefByPK(publicKey)
 
 	return nil, nil
 }

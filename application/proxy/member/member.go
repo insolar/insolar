@@ -304,8 +304,8 @@ func (r *Member) CallNoWait(rootDomain core.RecordRef, method string, params []b
 	return nil
 }
 
-// registerNodeCall is proxy generated method
-func (r *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
+// GetNodeRef is proxy generated method
+func (r *Member) GetNodeRef(ref core.RecordRef, params []byte) (interface{}, error) {
 	var args [2]interface{}
 	args[0] = ref
 	args[1] = params
@@ -323,7 +323,7 @@ func (r *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "registerNodeCall", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetNodeRef", argsSerialized)
 	if err != nil {
 		return ret0, err
 	}
@@ -339,8 +339,8 @@ func (r *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	return ret0, nil
 }
 
-// RegisterNodeCallNoWait is proxy generated method
-func (r *Member) RegisterNodeCallNoWait(ref core.RecordRef, params []byte) error {
+// GetNodeRefNoWait is proxy generated method
+func (r *Member) GetNodeRefNoWait(ref core.RecordRef, params []byte) error {
 	var args [2]interface{}
 	args[0] = ref
 	args[1] = params
@@ -352,7 +352,7 @@ func (r *Member) RegisterNodeCallNoWait(ref core.RecordRef, params []byte) error
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "registerNodeCall", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetNodeRef", argsSerialized)
 	if err != nil {
 		return err
 	}

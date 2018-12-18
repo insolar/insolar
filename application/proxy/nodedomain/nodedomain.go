@@ -192,6 +192,60 @@ func (r *NodeDomain) RegisterNodeNoWait(publicKey string, role string) error {
 	return nil
 }
 
+// GetNodeRefByPK is proxy generated method
+func (r *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
+	var args [1]interface{}
+	args[0] = publicKey
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetNodeRefByPK", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetNodeRefByPKNoWait is proxy generated method
+func (r *NodeDomain) GetNodeRefByPKNoWait(publicKey string) error {
+	var args [1]interface{}
+	args[0] = publicKey
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetNodeRefByPK", argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RemoveNode is proxy generated method
 func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 	var args [1]interface{}
