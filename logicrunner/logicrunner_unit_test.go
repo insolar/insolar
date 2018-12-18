@@ -49,7 +49,7 @@ func TestOnPulse(t *testing.T) {
 	}
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
-	require.Equal(t, true, lr.state[objectRef].ExecutionState.pending)
+	require.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
 
 	// test empty es with query in current and query in queue - es.pending true, message.ExecutorResults.Pending = true, message.ExecutorResults.Queue one element
 	result := make(chan ExecutionQueueResult, 1)
@@ -75,7 +75,7 @@ func TestOnPulse(t *testing.T) {
 
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
-	require.Equal(t, true, lr.state[objectRef].ExecutionState.pending)
+	require.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
 }
 
 func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
@@ -107,8 +107,7 @@ func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
 		},
 	)
 	require.NoError(t, err)
-	require.NotNil(t, es.somebodyStillExecuting)
-	require.Equal(t, true, *es.somebodyStillExecuting)
+	require.Equal(t, InPending, es.pending)
 }
 
 func TestCheckPendingRequests(
@@ -131,7 +130,7 @@ func TestCheckPendingRequests(
 		ctx, &message.CallConstructor{},
 	)
 	require.NoError(t, err)
-	require.False(t, pending)
+	require.Equal(t, NotPending, pending)
 
 	od.HasPendingRequestsMock.Expect().Return(false)
 	am.GetObjectMock.Return(od, nil)
@@ -142,7 +141,7 @@ func TestCheckPendingRequests(
 		},
 	)
 	require.NoError(t, err)
-	require.False(t, pending)
+	require.Equal(t, NotPending, pending)
 
 	od.HasPendingRequestsMock.Expect().Return(true)
 	am.GetObjectMock.Return(od, nil)
@@ -153,7 +152,7 @@ func TestCheckPendingRequests(
 		},
 	)
 	require.NoError(t, err)
-	require.True(t, pending)
+	require.Equal(t, InPending, pending)
 
 	am.GetObjectMock.Return(nil, errors.New("some"))
 	es = &ExecutionState{ArtifactManager: am}
@@ -163,5 +162,5 @@ func TestCheckPendingRequests(
 		},
 	)
 	require.Error(t, err)
-	require.False(t, pending)
+	require.Equal(t, NotPending, pending)
 }
