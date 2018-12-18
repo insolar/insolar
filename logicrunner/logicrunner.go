@@ -58,11 +58,11 @@ type ExecutionState struct {
 	Current   *CurrentExecution
 	Queue     []ExecutionQueueElement
 
-	// pending flag is set to true in OnPulse when next pulse happens
+	// Pending flag is set to true in OnPulse when next pulse happens
 	// and Current was not nil, i.e. something was executing. Using
 	// this flag we can tell in ProcessExecutionQueue that pulse has
 	// ended.
-	pending bool
+	Pending bool
 }
 
 type CurrentExecution struct {
@@ -309,7 +309,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	// ExecutionState should be locked between CheckOurRole and
 	// appending ExecutionQueueElement to the queue to prevent a race condition.
 	// Otherwise it's possible that OnPulse will clean up the queue and set
-	// ExecutionState.pending to false. Execute will add an element to the
+	// ExecutionState.Pending to false. Execute will add an element to the
 	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
 
@@ -375,8 +375,8 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 	for {
 		es.Lock()
 
-		if es.pending {
-			es.pending = false
+		if es.Pending {
+			es.Pending = false
 			// TODO implement PendingFinished message ... don't transfer anything, just ping current executor
 			return
 		}
