@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package pulsemanager
+package heavyclient
 
 import (
 	"context"
@@ -29,86 +29,23 @@ import (
 	"github.com/pkg/errors"
 )
 
-type clientOptions struct {
-	syncMessageLimit int
-	pulsesDeltaLimit core.PulseNumber
-	backoffConf      configuration.Backoff
+// Options contains heavy client configuration params.
+type Options struct {
+	SyncMessageLimit int
+	PulsesDeltaLimit core.PulseNumber
+	BackoffConf      configuration.Backoff
 }
 
-type syncClientsPool struct {
+// JetClient heavy replication client. Replicates records for one jet.
+type JetClient struct {
 	Bus          core.MessageBus
 	PulseStorage core.PulseStorage
-	db           *storage.DB
 
-	clientDefaults clientOptions
-
-	// syncdone closes when all syncs is over
-	// syncdone chan struct{}
-
-	sync.Mutex
-	clients map[core.RecordID]*jetSyncClient
-}
-
-func newSyncClientsPool(db *storage.DB, clientDefaults clientOptions) *syncClientsPool {
-	return &syncClientsPool{
-		db:             db,
-		clientDefaults: clientDefaults,
-		clients:        map[core.RecordID]*jetSyncClient{},
-	}
-}
-
-func (scp *syncClientsPool) Stop(ctx context.Context) {
-	scp.Lock()
-	defer scp.Unlock()
-
-	var wg sync.WaitGroup
-	wg.Add(len(scp.clients))
-	for _, c := range scp.clients {
-		c := c
-		go func() {
-			c.Stop(ctx)
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-}
-
-func (scp *syncClientsPool) AddPulsesToSyncClient(
-	ctx context.Context,
-	jetID core.RecordID,
-	shouldrun bool,
-	pns ...core.PulseNumber,
-) *jetSyncClient {
-	scp.Lock()
-	client, ok := scp.clients[jetID]
-	if !ok {
-		client = newJetSyncClient(jetID, scp.clientDefaults)
-		client.db = scp.db
-		client.Bus = scp.Bus
-		client.PulseStorage = scp.PulseStorage
-
-		scp.clients[jetID] = client
-	}
-	scp.Unlock()
-
-	client.AddPulses(pns)
-
-	if shouldrun {
-		client.RunOnce(ctx)
-		if len(client.signal) == 0 {
-			// send signal we have new pulse
-			client.signal <- struct{}{}
-		}
-	}
-	return client
-}
-
-type jetSyncClient struct {
-	Bus          core.MessageBus
-	PulseStorage core.PulseStorage
-	db           *storage.DB
+	db   *storage.DB
+	opts Options
 
 	// life cycle control
+	//
 	startOnce sync.Once
 	cancel    context.CancelFunc
 	signal    chan struct{}
@@ -116,44 +53,41 @@ type jetSyncClient struct {
 	syncdone chan struct{}
 
 	// state:
-	jetID    core.RecordID
-	muPulses sync.Mutex
-	// currentInSync *core.PulseNumber
-	leftPulses       []core.PulseNumber
-	syncbackoff      *backoff.Backoff
-	syncMessageLimit int
-	pulsesDeltaLimit core.PulseNumber
-	// MAYBE: we can miss next pules sync if retry the same pulse to long
-	// so it probably could be better to abandon failed pulses earlier their outdate
-	//  maxattempt  int
+	jetID       core.RecordID
+	muPulses    sync.Mutex
+	leftPulses  []core.PulseNumber
+	syncbackoff *backoff.Backoff
 }
 
-func newJetSyncClient(jetID core.RecordID, conf clientOptions) *jetSyncClient {
-	jsc := &jetSyncClient{
-		jetID:            jetID,
-		syncbackoff:      backoffFromConfig(conf.backoffConf),
-		syncMessageLimit: conf.syncMessageLimit,
-		pulsesDeltaLimit: conf.pulsesDeltaLimit,
-		signal:           make(chan struct{}),
-		syncdone:         make(chan struct{}),
+// NewJetClient heavy replication client constructor.
+//
+// First argument defines what jet it serve.
+func NewJetClient(jetID core.RecordID, opts Options) *JetClient {
+	jsc := &JetClient{
+		jetID:       jetID,
+		syncbackoff: backoffFromConfig(opts.BackoffConf),
+		signal:      make(chan struct{}),
+		syncdone:    make(chan struct{}),
+		opts:        opts,
 	}
 	return jsc
 }
 
-func (c *jetSyncClient) AddPulses(pns []core.PulseNumber) {
+// addPulses add pulse numbers for syncing.
+func (c *JetClient) addPulses(pns []core.PulseNumber) {
 	c.muPulses.Lock()
 	c.leftPulses = append(c.leftPulses, pns...)
 	c.muPulses.Unlock()
 }
 
-func (c *jetSyncClient) pulsesLeft() int {
+func (c *JetClient) pulsesLeft() int {
 	c.muPulses.Lock()
 	defer c.muPulses.Unlock()
-	left := len(c.leftPulses)
-	return left
+	return len(c.leftPulses)
 }
 
-func (c *jetSyncClient) UnshiftPulse() *core.PulseNumber {
+// unshiftPulse removes and returns pulse number from head of processing queue.
+func (c *JetClient) unshiftPulse() *core.PulseNumber {
 	c.muPulses.Lock()
 	defer c.muPulses.Unlock()
 
@@ -170,7 +104,7 @@ func (c *jetSyncClient) UnshiftPulse() *core.PulseNumber {
 	return &result
 }
 
-func (c *jetSyncClient) NextPulseNumber() (core.PulseNumber, bool) {
+func (c *JetClient) nextPulseNumber() (core.PulseNumber, bool) {
 	c.muPulses.Lock()
 	defer c.muPulses.Unlock()
 
@@ -180,7 +114,7 @@ func (c *jetSyncClient) NextPulseNumber() (core.PulseNumber, bool) {
 	return c.leftPulses[0], true
 }
 
-func (c *jetSyncClient) RunOnce(ctx context.Context) {
+func (c *JetClient) runOnce(ctx context.Context) {
 	// retrydelay = m.syncbackoff.ForAttempt(attempt)
 	c.startOnce.Do(func() {
 		// TODO: reset TraceID from context, or just don't use context?
@@ -191,7 +125,7 @@ func (c *jetSyncClient) RunOnce(ctx context.Context) {
 	})
 }
 
-func (c *jetSyncClient) syncloop(ctx context.Context) {
+func (c *JetClient) syncloop(ctx context.Context) {
 	inslog := inslogger.FromContext(ctx)
 	defer close(c.syncdone)
 
@@ -202,7 +136,7 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 	)
 
 	finishpulse := func() {
-		_ = c.UnshiftPulse()
+		_ = c.unshiftPulse()
 		c.syncbackoff.Reset()
 		retrydelay = 0
 	}
@@ -221,7 +155,7 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 
 		for {
 			// if we have pulses to sync, process it
-			syncPN, hasNext = c.NextPulseNumber()
+			syncPN, hasNext = c.nextPulseNumber()
 			if hasNext {
 				break
 			}
@@ -233,7 +167,7 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 				return
 			}
 			// get latest RP
-			syncPN, hasNext = c.NextPulseNumber()
+			syncPN, hasNext = c.nextPulseNumber()
 			if hasNext {
 				// nothing to do
 				continue
@@ -242,7 +176,7 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 			break
 		}
 
-		if pulseIsOutdated(ctx, c.PulseStorage, syncPN, c.pulsesDeltaLimit) {
+		if pulseIsOutdated(ctx, c.PulseStorage, syncPN, c.opts.PulsesDeltaLimit) {
 			inslog.Infof("pulse %v on jet %v is outdated, skip it", syncPN, c.jetID)
 			finishpulse()
 			continue
@@ -289,11 +223,23 @@ func pulseIsOutdated(ctx context.Context, pstore core.PulseStorage, pn core.Puls
 	return current.PulseNumber-pn > limit
 }
 
-func (c *jetSyncClient) Stop(ctx context.Context) {
+// Stop stops heavy client replication
+func (c *JetClient) Stop(ctx context.Context) {
 	// cancel should be set if client has started
 	if c.cancel != nil {
+		// two signals for sync loop to stop
 		c.cancel()
 		close(c.signal)
+		// waits sync loop to stop
 		<-c.syncdone
+	}
+}
+
+func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
+	return &backoff.Backoff{
+		Jitter: bconf.Jitter,
+		Min:    bconf.Min,
+		Max:    bconf.Max,
+		Factor: bconf.Factor,
 	}
 }
