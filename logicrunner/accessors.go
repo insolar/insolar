@@ -69,7 +69,7 @@ func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
 }
 
 func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {
-	pulse, err := lr.PulseManager.Current(ctx)
+	pulse, err := lr.PulseStorage.Current(ctx)
 	if err != nil {
 		panic(err)
 	}

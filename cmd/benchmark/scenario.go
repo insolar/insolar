@@ -54,7 +54,8 @@ func (s *transferDifferentMembersScenario) getOut() io.Writer {
 }
 
 func (s *transferDifferentMembersScenario) canBeStarted() error {
-	if len(s.members) < s.concurrent*s.repetitions*2 {
+	writeToOutput(s.getOut(), fmt.Sprint("canBeStarted\n"))
+	if len(s.members) < s.concurrent*2 {
 		return fmt.Errorf("not enough members for scenario %s", s.getName())
 	}
 	return nil
@@ -62,7 +63,7 @@ func (s *transferDifferentMembersScenario) canBeStarted() error {
 
 func (s *transferDifferentMembersScenario) start() {
 	var wg sync.WaitGroup
-	for i := 0; i < s.concurrent*s.repetitions*2; i = i + s.repetitions*2 {
+	for i := 0; i < s.concurrent*2; i = i + 2 {
 		wg.Add(1)
 		go s.startMember(i, &wg)
 	}
@@ -71,11 +72,13 @@ func (s *transferDifferentMembersScenario) start() {
 
 func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for j := 0; j < s.repetitions*2; j = j + 2 {
-		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("transferFromMemberNumber%d", index+j))
-		from := s.members[index+j]
-		to := s.members[index+j+1]
+	for j := 0; j < s.repetitions; j = j + 1 {
+		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("transferFromMemberNumber%d", index))
+		from := s.members[index]
+		to := s.members[index+1]
 		response := transfer(ctx, 1, from, to)
-		writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, response))
+		if response != "success" {
+			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, response))
+		}
 	}
 }
