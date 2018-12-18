@@ -36,7 +36,6 @@ func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
 type unsyncList struct {
 	origin      core.Node
 	activeNodes map[core.RecordRef]core.Node
-	addressMap  map[core.RecordRef]string
 	claims      map[core.RecordRef][]consensus.ReferendumClaim
 	refToIndex  map[core.RecordRef]int
 	proofs      map[core.RecordRef]*consensus.NodePulseProof
