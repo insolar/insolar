@@ -235,7 +235,7 @@ do
     profile_key=""
     if [[ "$do_profiling" == "true" ]]
     then
-        profile_key="--profiling insolar_${i}.prof"
+        profile_key="--profiling scripts/insolard/insolar_${i}.prof"
     fi
 
     i=$((i + 1))
