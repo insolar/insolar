@@ -57,7 +57,7 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	w.Balance = newBalance
 
 	r := a.GetReference()
-	err = toWallet.Accept(&r)
+	err = toWallet.AcceptNoWait(&r)
 	return err
 }
 

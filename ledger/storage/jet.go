@@ -152,7 +152,7 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, ids ...
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
-	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
+	k := prefixkeyany(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	tree, err := db.GetJetTree(ctx, pulse)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, ids ...
 
 // GetJetTree fetches tree for specified pulse.
 func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
-	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
+	k := prefixkeyany(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	buff, err := db.get(ctx, k)
 	if err == ErrNotFound {
 		return jet.NewTree(), nil
@@ -185,8 +185,33 @@ func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 	return &tree, nil
 }
 
-// SaveJet stores a list of jets of the current node
-func (db *DB) SaveJet(ctx context.Context, id core.RecordID) error {
+// SplitJetTree performs jet split and returns resulting jet ids.
+func (db *DB) SplitJetTree(
+	ctx context.Context, from, to core.PulseNumber, jetID core.RecordID,
+) (*core.RecordID, *core.RecordID, error) {
+	db.jetTreeLock.Lock()
+	defer db.jetTreeLock.Unlock()
+
+	k := prefixkeyany(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
+	tree, err := db.GetJetTree(ctx, from)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	left, right, err := tree.Split(jetID)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = db.set(ctx, k, tree.Bytes())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return left, right, nil
+}
+
+// AddJets stores a list of jets of the current node.
+func (db *DB) AddJets(ctx context.Context, jetIDs ...core.RecordID) error {
 	db.addJetLock.Lock()
 	defer db.addJetLock.Unlock()
 
@@ -206,7 +231,9 @@ func (db *DB) SaveJet(ctx context.Context, id core.RecordID) error {
 		return err
 	}
 
-	jets[id] = struct{}{}
+	for _, id := range jetIDs {
+		jets[id] = struct{}{}
+	}
 	return db.set(ctx, k, jets.Bytes())
 }
 
@@ -231,8 +258,8 @@ func (db *DB) GetJets(ctx context.Context) (jet.IDSet, error) {
 	return jets, nil
 }
 
-func dropSizesPrefixKey() []byte {
-	return prefixkey(scopeIDSystem, []byte{sysDropSizeHistory})
+func dropSizesPrefixKey(jetID core.RecordID) []byte {
+	return prefixkeyany(scopeIDSystem, []byte{sysDropSizeHistory}, jetID.Bytes())
 }
 
 // AddDropSize adds Jet drop size stats (required for split decision).
@@ -241,7 +268,7 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 	db.addBlockSizeLock.Lock()
 	defer db.addBlockSizeLock.Unlock()
 
-	k := dropSizesPrefixKey()
+	k := dropSizesPrefixKey(dropSize.JetID)
 	buff, err := db.get(ctx, k)
 	if err != nil && err != ErrNotFound {
 		return errors.Wrapf(err, "[ AddDropSize ] Can't get object: %s", string(k))
@@ -265,22 +292,23 @@ func (db *DB) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
 }
 
 // SetDropSizeHistory saves drop sizes history.
-func (db *DB) SetDropSizeHistory(ctx context.Context, dropSizeHistory jet.DropSizeHistory) error {
-	inslogger.FromContext(ctx).Debug("DB.SetDropSizeHistory starts ...")
+func (db *DB) SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error {
+	inslogger.FromContext(ctx).Debug("DB.ResetDropSizeHistory starts ...")
 	db.addBlockSizeLock.Lock()
 	defer db.addBlockSizeLock.Unlock()
 
-	k := dropSizesPrefixKey()
+	k := dropSizesPrefixKey(jetID)
 	err := db.set(ctx, k, dropSizeHistory.Bytes())
-	return errors.Wrap(err, "[ SetDropSizeHistory ] Can't db.set")
+	return errors.Wrap(err, "[ ResetDropSizeHistory ] Can't db.set")
 }
 
-func (db *DB) GetDropSizeHistory(ctx context.Context) (jet.DropSizeHistory, error) {
+// GetDropSizeHistory returns last drops sizes.
+func (db *DB) GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error) {
 	inslogger.FromContext(ctx).Debug("DB.GetDropSizeHistory starts ...")
 	db.addBlockSizeLock.RLock()
 	defer db.addBlockSizeLock.RUnlock()
 
-	k := dropSizesPrefixKey()
+	k := dropSizesPrefixKey(jetID)
 	buff, err := db.get(ctx, k)
 	if err != nil && err != ErrNotFound {
 		return nil, errors.Wrap(err, "[ GetDropSizeHistory ] Can't db.set")
