@@ -143,52 +143,55 @@ func processError(err error, extraMsg string, resp *answer, insLog core.Logger) 
 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
-
-		params := Request{}
-		resp := answer{}
-
 		traceID := utils.RandTraceID()
 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
-		resp.TraceID = traceID
 
-		insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
+		utils.MeasureExecutionTime(ctx, "NetRPC Request Processing",
+			func() {
+				params := Request{}
+				resp := answer{}
 
-		defer func() {
-			res, err := json.MarshalIndent(resp, "", "    ")
-			if err != nil {
-				res = []byte(`{"error": "can't marshal answer to json'"}`)
-			}
-			response.Header().Add("Content-Type", "application/json")
-			_, err = response.Write(res)
-			if err != nil {
-				insLog.Errorf("Can't write response\n")
-			}
-		}()
+				resp.TraceID = traceID
 
-		_, err := UnmarshalRequest(req, &params)
-		if err != nil {
-			processError(err, "Can't unmarshal request", &resp, insLog)
-			return
-		}
+				insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
 
-		err = ar.checkSeed(params.Seed)
-		if err != nil {
-			processError(err, "Can't checkSeed", &resp, insLog)
-			return
-		}
+				defer func() {
+					res, err := json.MarshalIndent(resp, "", "    ")
+					if err != nil {
+						res = []byte(`{"error": "can't marshal answer to json'"}`)
+					}
+					response.Header().Add("Content-Type", "application/json")
+					_, err = response.Write(res)
+					if err != nil {
+						insLog.Errorf("Can't write response\n")
+					}
+				}()
 
-		err = ar.verifySignature(ctx, params)
-		if err != nil {
-			processError(err, "Can't verify signature", &resp, insLog)
-			return
-		}
+				_, err := UnmarshalRequest(req, &params)
+				if err != nil {
+					processError(err, "Can't unmarshal request", &resp, insLog)
+					return
+				}
 
-		result, err := ar.makeCall(ctx, params)
-		if err != nil {
-			processError(err, "Can't makeCall", &resp, insLog)
-			return
-		}
+				err = ar.checkSeed(params.Seed)
+				if err != nil {
+					processError(err, "Can't checkSeed", &resp, insLog)
+					return
+				}
 
-		resp.Result = result
+				err = ar.verifySignature(ctx, params)
+				if err != nil {
+					processError(err, "Can't verify signature", &resp, insLog)
+					return
+				}
+
+				result, err := ar.makeCall(ctx, params)
+				if err != nil {
+					processError(err, "Can't makeCall", &resp, insLog)
+					return
+				}
+
+				resp.Result = result
+			})
 	}
 }

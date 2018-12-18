@@ -89,6 +89,10 @@ type TestObjectDescriptor struct {
 	ChildrenContainer []core.RecordRef
 }
 
+func (t *TestObjectDescriptor) HasPendingRequests() bool {
+	panic("implement me")
+}
+
 // Parent implementation for tests
 func (t *TestObjectDescriptor) Parent() *core.RecordRef {
 	panic("implement me")

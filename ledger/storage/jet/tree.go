@@ -20,6 +20,7 @@ import (
 	"bytes"
 
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
 
@@ -29,9 +30,9 @@ type jet struct {
 }
 
 // Find returns jet for provided reference.
-func (j *jet) Find(val []byte, depth uint8) uint8 {
+func (j *jet) Find(val []byte, depth uint8) (*jet, uint8) {
 	if j == nil || val == nil {
-		return 0
+		return nil, 0
 	}
 
 	if getBit(val, depth) {
@@ -43,7 +44,7 @@ func (j *jet) Find(val []byte, depth uint8) uint8 {
 			return j.Left.Find(val, depth+1)
 		}
 	}
-	return depth
+	return j, depth
 }
 
 // Update add missing tree branches for provided prefix.
@@ -70,6 +71,7 @@ type Tree struct {
 	Head *jet
 }
 
+// NewTree creates new tree.
 func NewTree() *Tree {
 	return &Tree{Head: &jet{}}
 }
@@ -79,7 +81,7 @@ func (t *Tree) Find(id core.RecordID) *core.RecordID {
 	if id.Pulse() == core.PulseNumberJet {
 		return &id
 	}
-	depth := t.Head.Find(id.Hash(), 0)
+	_, depth := t.Head.Find(id.Hash(), 0)
 	return NewID(uint8(depth), resetBits(id.Hash(), depth))
 }
 
@@ -97,6 +99,22 @@ func (t *Tree) Bytes() []byte {
 	return buf.Bytes()
 }
 
+// Split looks for provided jet and creates (and returns) two branches for it. If provided jet is not found, an error
+// will be returned.
+func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error) {
+	depth, prefix := Jet(jetID)
+	j, foundDepth := t.Head.Find(prefix, 0)
+	if depth != foundDepth {
+		return nil, nil, errors.New("failed to split: jet is not present in the tree")
+	}
+	j.Right = &jet{}
+	j.Left = &jet{}
+	leftPrefix := resetBits(prefix, depth)
+	rightPrefix := resetBits(prefix, depth)
+	setBit(rightPrefix, depth)
+	return NewID(depth+1, leftPrefix), NewID(depth+1, rightPrefix), nil
+}
+
 func getBit(value []byte, index uint8) bool {
 	if uint(index) >= uint(len(value)*8) {
 		panic("index overflow")
@@ -105,6 +123,16 @@ func getBit(value []byte, index uint8) bool {
 	bitIndex := uint(7 - index%8)
 	mask := byte(1 << bitIndex)
 	return value[byteIndex]&mask != 0
+}
+
+func setBit(value []byte, index uint8) {
+	if uint(index) >= uint(len(value)*8) {
+		panic("index overflow")
+	}
+	byteIndex := uint(index / 8)
+	bitIndex := uint(7 - index%8)
+	mask := byte(1 << bitIndex)
+	value[byteIndex] |= mask
 }
 
 // ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
@@ -126,19 +154,4 @@ func resetBits(value []byte, start uint8) []byte {
 	result[startByte] = value[startByte] & mask
 
 	return result
-}
-
-// PredefinedTree is used to test multi-jet functionality.
-// TODO: remove me after functional split.
-var PredefinedTree = Tree{
-	Head: &jet{
-		Left: &jet{
-			Left:  &jet{},
-			Right: &jet{},
-		},
-		Right: &jet{
-			Left:  &jet{},
-			Right: &jet{},
-		},
-	},
 }

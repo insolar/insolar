@@ -57,6 +57,7 @@ type ExecutionState struct {
 	Behaviour ValidationBehaviour
 	Current   *CurrentExecution
 	Queue     []ExecutionQueueElement
+	pending   bool // TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 }
 
 type CurrentExecution struct {
@@ -147,10 +148,8 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	return res
 }
 
-func (es *ExecutionState) ReleaseQueue() {
-	es.Lock()
-	defer es.Unlock()
-
+// releaseQueue must be calling only with es.Lock
+func (es *ExecutionState) releaseQueue() []ExecutionQueueElement {
 	q := es.Queue
 	es.Queue = make([]ExecutionQueueElement, 0)
 
@@ -158,6 +157,8 @@ func (es *ExecutionState) ReleaseQueue() {
 		qe.result <- ExecutionQueueResult{somebodyElse: true}
 		close(qe.result)
 	}
+
+	return q
 }
 
 // LogicRunner is a general interface of contract executor
@@ -168,7 +169,7 @@ type LogicRunner struct {
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
-	PulseManager               core.PulseManager               `inject:""`
+	PulseStorage               core.PulseStorage               `inject:""`
 	ArtifactManager            core.ArtifactManager            `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 
@@ -206,7 +207,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 
 	if lr.Cfg.GoPlugin != nil {
 		if lr.Cfg.RPCListen != "" {
-			StartRPC(ctx, lr, lr.PulseManager)
+			StartRPC(ctx, lr, lr.PulseStorage)
 		}
 
 		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
@@ -288,12 +289,6 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
 	ref := msg.GetReference()
-
-	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't play role")
-	}
-
 	os := lr.UpsertObjectState(ref)
 
 	os.Lock()
@@ -306,7 +301,19 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	es := os.ExecutionState
 	os.Unlock()
 
+	// ExecutionState should be locked between CheckOurRole and
+	// appending ExecutionQueueElement to the queue to prevent a race condition.
+	// Otherwise it's possible that OnPulse will clean up the queue and set
+	// ExecutionState.Pending to false. Execute will add an element to the
+	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
+
+	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
+	if err != nil {
+		es.Unlock()
+		return nil, errors.Wrap(err, "can't play role")
+	}
+
 	if es.Current != nil {
 		// TODO: check no wait call
 		if inslogger.TraceID(es.Current.Context) == inslogger.TraceID(ctx) {
@@ -314,10 +321,10 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 			return nil, os.WrapError(nil, "loop detected")
 		}
 	}
-	es.Unlock()
 
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
+		es.Unlock()
 		return nil, os.WrapError(err, "can't create request")
 	}
 
@@ -329,7 +336,6 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		result:  make(chan ExecutionQueueResult, 1),
 	}
 
-	es.Lock()
 	es.Queue = append(es.Queue, qElement)
 
 	if es.Current == nil {
@@ -614,35 +620,67 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	// send copy for validation
 	for ref, state := range lr.state {
+		state.Lock()
+
+		// some old stuff
 		state.RefreshConsensus()
 
 		if es := state.ExecutionState; es != nil {
+			es.Lock()
+
+			es.pending = es.pending || es.Current != nil
+			queue := es.releaseQueue()
+
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
+			requests := caseBind.getCaseBindForMessage(ctx)
+
 			messages = append(
 				messages,
-				caseBind.ToValidateMessage(ctx, ref, pulse),
-				caseBind.ToExecutorResultsMessage(ref),
+				&message.ValidateCaseBind{
+					RecordRef: ref,
+					Requests:  requests,
+					Pulse:     pulse,
+				},
+				&message.ExecutorResults{
+					RecordRef: ref,
+					Pending:   state.ExecutionState.pending,
+					Requests:  requests,
+					Queue:     convertQueueToMessageQueue(queue),
+				},
 			)
-
-			es.ReleaseQueue()
 
 			// TODO: if Current is not nil then we should request here for a delegation token
 			// to continue execution of the current request
 
-			es.Lock()
 			if es.Current == nil {
 				state.ExecutionState = nil
 			}
 			es.Unlock()
 		}
+
+		state.Unlock()
 	}
 
 	for _, msg := range messages {
 		_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
 		if err != nil {
-			return errors.New("error while sending caseBind data to new executor")
+			return errors.Wrap(err, "error while sending validation data on pulse")
 		}
 	}
 
 	return nil
+}
+
+func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
+	mq := make([]message.ExecutionQueueElement, 0)
+	for _, elem := range queue {
+		mq = append(mq, message.ExecutionQueueElement{
+			Ctx:     elem.ctx,
+			Parcel:  elem.parcel,
+			Request: elem.request,
+			Pulse:   elem.pulse,
+		})
+	}
+
+	return mq
 }

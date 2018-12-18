@@ -206,7 +206,7 @@ genesis()
     copy_certs
 }
 
-trap 'stop_listening true' EXIT
+trap 'stop_listening true' INT TERM EXIT
 
 run_insgorund=true
 check_working_dir
@@ -232,10 +232,10 @@ do
     if [ "$i" -eq "$NUM_NODES" ]
     then
         echo "NODE $i STARTED in foreground"
-        $INSOLARD --config scripts/insolard/insolar_$i.yaml &> $node/output.txt
+        $INSOLARD --config scripts/insolard/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt
         break
     fi
-    $INSOLARD --config scripts/insolard/insolar_$i.yaml &> $node/output.txt &
+    $INSOLARD --config scripts/insolard/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt &
     echo "NODE $i STARTED in background"
 done
 

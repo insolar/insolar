@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package jet provides methods for working with Jet objects.
-package jet
+// Package heavyserver contains methods for processing synchronization tasks on heavy node.
+package heavyserver
