@@ -418,26 +418,37 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		finish()
 
-		// check pulse change
-		es.Lock()
-		if es.pending {
-			es.pending = false
-			msg := message.PendingFinished{Reference: *qe.parcel.Message().DefaultTarget()}
-			pulse, err := lr.PulseStorage.Current(ctx)
-			if err != nil {
-				inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message")
-				es.Unlock()
-				return
-			}
-			_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
-			if err != nil {
-				inslogger.FromContext(ctx).Error("Unable to send PendingFinished message")
-				es.Unlock()
-				return
-			}
+		if lr.pulseChanged(ctx, es, *qe.parcel.Message().DefaultTarget()) {
+			return
 		}
-		es.Unlock()
 	} // for
+}
+
+// pulseChanged checks whether last execution was a pending one.
+// If this is true as a side effect the function sends a PendingFinished
+// message to the current executor
+func (lr *LogicRunner) pulseChanged(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) bool {
+	es.Lock()
+	defer es.Unlock()
+
+	if !es.pending {
+		return false
+	}
+
+	es.pending = false
+	msg := message.PendingFinished{Reference: currentRef}
+	pulse, err := lr.PulseStorage.Current(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message")
+		return true
+	}
+	_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Unable to send PendingFinished message")
+		return true
+	}
+
+	return true
 }
 
 func (lr *LogicRunner) executeOrValidate(
