@@ -141,12 +141,12 @@ func (cc *CallConstructor) DefaultTarget() *core.RecordRef {
 	return genRequest(cc.PulseNum, MustSerializeBytes(cc))
 }
 
-func (m *CallConstructor) GetReference() core.RecordRef {
-	return *genRequest(m.PulseNum, MustSerializeBytes(m))
+func (cc *CallConstructor) GetReference() core.RecordRef {
+	return *genRequest(cc.PulseNum, MustSerializeBytes(cc))
 }
 
 // Type returns TypeCallConstructor.
-func (m *CallConstructor) Type() core.MessageType {
+func (cc *CallConstructor) Type() core.MessageType {
 	return core.TypeCallConstructor
 }
 
@@ -181,17 +181,17 @@ func (er *ExecutorResults) DefaultTarget() *core.RecordRef {
 	return &er.RecordRef
 }
 
-func (m *ExecutorResults) Type() core.MessageType {
+func (er *ExecutorResults) Type() core.MessageType {
 	return core.TypeExecutorResults
 }
 
 // TODO change after changing pulsar
-func (m *ExecutorResults) GetCaller() *core.RecordRef {
-	return &m.Caller
+func (er *ExecutorResults) GetCaller() *core.RecordRef {
+	return &er.Caller
 }
 
-func (m *ExecutorResults) GetReference() core.RecordRef {
-	return m.RecordRef
+func (er *ExecutorResults) GetReference() core.RecordRef {
+	return er.RecordRef
 }
 
 type ValidateCaseBind struct {
@@ -224,21 +224,21 @@ func (vcb *ValidateCaseBind) DefaultTarget() *core.RecordRef {
 	return &vcb.RecordRef
 }
 
-func (m *ValidateCaseBind) Type() core.MessageType {
+func (vcb *ValidateCaseBind) Type() core.MessageType {
 	return core.TypeValidateCaseBind
 }
 
 // TODO change after changing pulsar
-func (m *ValidateCaseBind) GetCaller() *core.RecordRef {
-	return &m.Caller // TODO actually it's not right. There is no caller.
+func (vcb *ValidateCaseBind) GetCaller() *core.RecordRef {
+	return &vcb.Caller // TODO actually it's not right. There is no caller.
 }
 
-func (m *ValidateCaseBind) GetReference() core.RecordRef {
-	return m.RecordRef
+func (vcb *ValidateCaseBind) GetReference() core.RecordRef {
+	return vcb.RecordRef
 }
 
-func (m *ValidateCaseBind) GetPulse() core.Pulse {
-	return m.Pulse
+func (vcb *ValidateCaseBind) GetPulse() core.Pulse {
+	return vcb.Pulse
 }
 
 type ValidationResults struct {
