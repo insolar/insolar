@@ -220,7 +220,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 		errstr = validationError.Error()
 	}
 
-	currentSlotPulse, err := lr.PulseManager.Current(ctx)
+	currentSlotPulse, err := lr.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}

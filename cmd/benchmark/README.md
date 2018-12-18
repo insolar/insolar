@@ -32,3 +32,9 @@ Usage
 
         -k rootmemberkeys
                 Path to file with RootMember keys.
+
+        -u apiurl
+                API url for requests (default - http://localhost:19191/api).
+
+        -l loglevel
+                Log level (default - info).
