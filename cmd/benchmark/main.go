@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/log"
@@ -33,13 +34,29 @@ import (
 
 const defaultStdoutPath = "-"
 
+type uroboros struct {
+	sync.Mutex
+	urls   []string
+	cursor int
+}
+
+func (u *uroboros) Next() string {
+	u.Lock()
+	defer u.Unlock()
+	u.cursor++
+	if u.cursor >= len(u.urls) {
+		u.cursor = 0
+	}
+	return u.urls[u.cursor]
+}
+
 var (
 	input          string
 	output         string
 	concurrent     int
 	repetitions    int
 	rootmemberkeys string
-	apiurl         string
+	apiurls        uroboros
 	loglevel       string
 
 	rootMember memberInfo
@@ -51,7 +68,7 @@ func parseInputParams() {
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
 	pflag.StringVarP(&rootmemberkeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
-	pflag.StringVarP(&apiurl, "apiurl", "u", "http://localhost:19191/api", "url to api")
+	pflag.StringArrayVarP(&apiurls.urls, "apiurl", "u", []string{"http://localhost:19191/api"}, "url to api")
 	pflag.StringVarP(&loglevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.Parse()
 }
