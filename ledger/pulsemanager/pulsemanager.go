@@ -289,23 +289,19 @@ func (m *PulseManager) sendExecutorData(
 	jetID core.RecordID,
 	msg *message.HotData,
 ) error {
-	shouldSplit := func() (bool, error) {
+	shouldSplit := func() bool {
 		if len(msg.JetDropSizeHistory) < m.options.dropHistorySize {
-			return false, nil
+			return false
 		}
 		for _, info := range msg.JetDropSizeHistory {
 			if info.DropSize < m.options.splitThreshold {
-				return false, nil
+				return false
 			}
 		}
-		return true, nil
+		return true
 	}
 
-	doSplit, err := shouldSplit()
-	if err != nil {
-		return err
-	}
-	if doSplit {
+	if shouldSplit() {
 		left, right, err := m.db.SplitJetTree(
 			ctx,
 			currentPulse.PulseNumber,

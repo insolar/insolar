@@ -44,7 +44,7 @@ type PulseManager struct {
 	HeavySyncMessageLimit int
 	// Backoff configures retry backoff algorithm for Heavy Sync
 	HeavyBackoff Backoff
-	// Drop size in bytes to perform split.
+	// SplitThreshold is a drop size threshold in bytes to perform split.
 	SplitThreshold uint64
 }
 

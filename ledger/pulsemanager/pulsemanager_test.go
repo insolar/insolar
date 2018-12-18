@@ -151,7 +151,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
 
 	lr := testutils.NewLogicRunnerMock(t)
 	lr.OnPulseMock.Return(nil)

@@ -152,7 +152,7 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, ids ...
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
-	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
+	k := prefixkeyany(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	tree, err := db.GetJetTree(ctx, pulse)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, ids ...
 
 // GetJetTree fetches tree for specified pulse.
 func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
-	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, pulse.Bytes()...))
+	k := prefixkeyany(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	buff, err := db.get(ctx, k)
 	if err == ErrNotFound {
 		return jet.NewTree(), nil
@@ -187,18 +187,18 @@ func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 
 // SplitJetTree performs jet split and returns resulting jet ids.
 func (db *DB) SplitJetTree(
-	ctx context.Context, from, to core.PulseNumber, id core.RecordID,
+	ctx context.Context, from, to core.PulseNumber, jetID core.RecordID,
 ) (*core.RecordID, *core.RecordID, error) {
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
-	k := prefixkey(scopeIDSystem, append([]byte{sysJetTree}, to.Bytes()...))
+	k := prefixkeyany(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
 	tree, err := db.GetJetTree(ctx, from)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	left, right, err := tree.Split(id)
+	left, right, err := tree.Split(jetID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -211,7 +211,7 @@ func (db *DB) SplitJetTree(
 }
 
 // AddJets stores a list of jets of the current node.
-func (db *DB) AddJets(ctx context.Context, ids ...core.RecordID) error {
+func (db *DB) AddJets(ctx context.Context, jetIDs ...core.RecordID) error {
 	db.addJetLock.Lock()
 	defer db.addJetLock.Unlock()
 
@@ -231,7 +231,7 @@ func (db *DB) AddJets(ctx context.Context, ids ...core.RecordID) error {
 		return err
 	}
 
-	for _, id := range ids {
+	for _, id := range jetIDs {
 		jets[id] = struct{}{}
 	}
 	return db.set(ctx, k, jets.Bytes())
