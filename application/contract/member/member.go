@@ -95,7 +95,9 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 	case "DumpAllUsers":
 		return m.dumpAllUsersCall(rootDomain)
 	case "RegisterNode":
-		return m.RegisterNodeCall(rootDomain, params)
+		return m.registerNodeCall(rootDomain, params)
+	case "GetNodeRef":
+		return m.GetNodeRef(rootDomain, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -167,7 +169,7 @@ func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
 	return rootDomain.DumpAllUsers()
 }
 
-func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) registerNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
 	var publicKey string
 	var role string
 	if err := signer.UnmarshalParams(params, &publicKey, &role); err != nil {
@@ -187,4 +189,22 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	return string(cert), nil
+}
+
+func (m *Member) GetNodeRef(ref core.RecordRef, params []byte) (interface{}, error) {
+	var publicKey string
+	if err := signer.UnmarshalParams(params, &publicKey); err != nil {
+		return nil, fmt.Errorf("[ registerNodeCall ] Can't unmarshal params: %s", err.Error())
+	}
+
+	rootDomain := rootdomain.GetObject(ref)
+	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
+	if err != nil {
+		return nil, fmt.Errorf("[ registerNodeCall ] %s", err.Error())
+	}
+
+	nd := nodedomain.GetObject(nodeDomainRef)
+	cert, err := nd.RegisterNode(publicKey, role)
+
+	return nil, nil
 }
