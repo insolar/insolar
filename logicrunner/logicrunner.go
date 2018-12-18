@@ -57,6 +57,7 @@ type ExecutionState struct {
 	Behaviour ValidationBehaviour
 	Current   *CurrentExecution
 	Queue     []ExecutionQueueElement
+	pending   bool // TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 }
 
 type CurrentExecution struct {
@@ -147,7 +148,7 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	return res
 }
 
-func (es *ExecutionState) ReleaseQueue() {
+func (es *ExecutionState) ReleaseQueue() []ExecutionQueueElement {
 	es.Lock()
 	defer es.Unlock()
 
@@ -158,6 +159,8 @@ func (es *ExecutionState) ReleaseQueue() {
 		qe.result <- ExecutionQueueResult{somebodyElse: true}
 		close(qe.result)
 	}
+
+	return q
 }
 
 // LogicRunner is a general interface of contract executor
@@ -614,35 +617,72 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	// send copy for validation
 	for ref, state := range lr.state {
+		state.Lock()
+
+		// some old stuff
 		state.RefreshConsensus()
 
 		if es := state.ExecutionState; es != nil {
+			es.Lock()
+
+			es.pending = es.Current != nil
+			queue := es.ReleaseQueue()
+
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
+			requests := caseBind.getCaseBindRequestsFromMessageBus(ctx)
+
 			messages = append(
 				messages,
-				caseBind.ToValidateMessage(ctx, ref, pulse),
-				caseBind.ToExecutorResultsMessage(ref),
+				&message.ValidateCaseBind{
+					RecordRef: ref,
+					Requests:  requests,
+					Pulse:     pulse,
+				},
+				&message.ExecutorResults{
+					RecordRef: ref,
+					Pending:   state.ExecutionState.pending,
+					Requests:  requests,
+					Queue:     convertQueueToMessageQueue(queue),
+				},
 			)
-
-			es.ReleaseQueue()
 
 			// TODO: if Current is not nil then we should request here for a delegation token
 			// to continue execution of the current request
 
-			es.Lock()
 			if es.Current == nil {
 				state.ExecutionState = nil
 			}
 			es.Unlock()
 		}
+
+		state.Unlock()
 	}
 
 	for _, msg := range messages {
 		_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
 		if err != nil {
-			return errors.New("error while sending caseBind data to new executor")
+			return errors.Wrap(err, "error while sending validation data on pulse")
 		}
 	}
 
 	return nil
+}
+
+func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
+	mq := make([]message.ExecutionQueueElement, 0)
+	for _, elem := range queue {
+		mq = append(mq, message.ExecutionQueueElement{
+			Ctx:     elem.ctx,
+			Parcel:  elem.parcel,
+			Request: elem.request,
+			Pulse:   elem.pulse,
+		})
+	}
+
+	return mq
+}
+
+// TODO implement
+func convertMessageQueueToQueue(messageQueue []message.ExecutionQueueElement) []ExecutionQueueElement {
+	return make([]ExecutionQueueElement, 0)
 }

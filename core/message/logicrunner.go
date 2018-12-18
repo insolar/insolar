@@ -17,6 +17,8 @@
 package message
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -152,10 +154,20 @@ type ExecutorResults struct {
 	Caller    core.RecordRef
 	RecordRef core.RecordRef
 	Requests  []CaseBindRequest
+	Queue     []ExecutionQueueElement
+	Pending   bool
+}
+
+type ExecutionQueueElement struct {
+	Ctx     context.Context
+	Parcel  core.Parcel
+	Request *core.RecordRef
+	Pulse   core.PulseNumber
 }
 
 // AllowedSenderObjectAndRole implements interface method
 func (er *ExecutorResults) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	// TODO need to think - this message can send only Executor of Previous Pulse, this function
 	return nil, 0
 }
 
