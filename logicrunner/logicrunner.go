@@ -418,16 +418,18 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		finish()
 
-		if lr.pulseChanged(ctx, es, *qe.parcel.Message().DefaultTarget()) {
+		if lr.finishPendingIfNeeded(ctx, es, *qe.parcel.Message().DefaultTarget()) {
+			// return right now just to avoid calling es.Lock() once again and figure
+			// out that the queue is empty in the beginning of the loop
 			return
 		}
 	} // for
 }
 
-// pulseChanged checks whether last execution was a pending one.
+// finishPendingIfNeeded checks whether last execution was a pending one.
 // If this is true as a side effect the function sends a PendingFinished
 // message to the current executor
-func (lr *LogicRunner) pulseChanged(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) bool {
+func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) bool {
 	es.Lock()
 	defer es.Unlock()
 
