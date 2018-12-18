@@ -135,6 +135,6 @@ func (n *nodeKeeperWrapper) Sync(list network.UnsyncList) {
 	n.original.Sync(list)
 }
 
-func (n *nodeKeeperWrapper) MoveSyncToActive() {
-	n.original.MoveSyncToActive()
+func (n *nodeKeeperWrapper) MoveSyncToActive() error {
+	return n.original.MoveSyncToActive()
 }

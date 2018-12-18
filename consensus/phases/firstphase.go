@@ -32,8 +32,7 @@ import (
 const BFTPercent = 2.0 / 3.0
 const MajorityPercent = 0.5
 
-// ConsensusReachedBFT should be private, but golang CI is an ass
-func ConsensusReachedBFT(resultLen, participanstLen int) bool {
+func consensusReachedBFT(resultLen, participanstLen int) bool {
 	return consensusReachedWithPercent(resultLen, participanstLen, BFTPercent)
 }
 
@@ -150,15 +149,17 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		fp.UnsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
-	fp.UnsyncList.AddClaims(claimMap)
-	for id, proof := range rawProofs {
-		fp.UnsyncList.AddProof(id, proof)
+	valid, fault := validateProofs(fp.Calculator, fp.UnsyncList, pulseHash, proofSet)
+	for node := range valid {
+		fp.UnsyncList.AddProof(node.ID(), rawProofs[node.ID()])
 	}
-
-	valid, fault := fp.validateProofs(pulseHash, proofSet)
-
 	for nodeID := range fault {
 		inslogger.FromContext(ctx).Warnf("Failed to validate proof from %s", nodeID)
+		delete(claimMap, nodeID)
+	}
+	err = fp.UnsyncList.AddClaims(claimMap)
+	if err != nil {
+		return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to add claims")
 	}
 
 	return &FirstPhaseState{
@@ -197,32 +198,6 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 		return false, errors.Wrap(err, "failed to serialize packet")
 	}
 	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
-}
-
-func (fp *FirstPhase) validateProofs(
-	pulseHash merkle.OriginHash,
-	proofs map[core.RecordRef]*merkle.PulseProof,
-) (valid map[core.Node]*merkle.PulseProof, fault map[core.RecordRef]*merkle.PulseProof) {
-
-	validProofs := make(map[core.Node]*merkle.PulseProof)
-	faultProofs := make(map[core.RecordRef]*merkle.PulseProof)
-	for nodeID, proof := range proofs {
-		valid := fp.validateProof(pulseHash, nodeID, proof)
-		if valid {
-			validProofs[fp.UnsyncList.GetActiveNode(nodeID)] = proof
-		} else {
-			faultProofs[nodeID] = proof
-		}
-	}
-	return validProofs, faultProofs
-}
-
-func (fp *FirstPhase) validateProof(pulseHash merkle.OriginHash, nodeID core.RecordRef, proof *merkle.PulseProof) bool {
-	node := fp.UnsyncList.GetActiveNode(nodeID)
-	if node == nil {
-		return false
-	}
-	return fp.Calculator.IsValid(proof, pulseHash, node.PublicKey())
 }
 
 func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {

@@ -102,7 +102,7 @@ type NodeKeeperMock struct {
 	IsBootstrappedPreCounter uint64
 	IsBootstrappedMock       mNodeKeeperMockIsBootstrapped
 
-	MoveSyncToActiveFunc       func()
+	MoveSyncToActiveFunc       func() (r error)
 	MoveSyncToActiveCounter    uint64
 	MoveSyncToActivePreCounter uint64
 	MoveSyncToActiveMock       mNodeKeeperMockMoveSyncToActive
@@ -2418,6 +2418,11 @@ type mNodeKeeperMockMoveSyncToActive struct {
 }
 
 type NodeKeeperMockMoveSyncToActiveExpectation struct {
+	result *NodeKeeperMockMoveSyncToActiveResult
+}
+
+type NodeKeeperMockMoveSyncToActiveResult struct {
+	r error
 }
 
 //Expect specifies that invocation of NodeKeeper.MoveSyncToActive is expected from 1 to Infinity times
@@ -2433,14 +2438,14 @@ func (m *mNodeKeeperMockMoveSyncToActive) Expect() *mNodeKeeperMockMoveSyncToAct
 }
 
 //Return specifies results of invocation of NodeKeeper.MoveSyncToActive
-func (m *mNodeKeeperMockMoveSyncToActive) Return() *NodeKeeperMock {
+func (m *mNodeKeeperMockMoveSyncToActive) Return(r error) *NodeKeeperMock {
 	m.mock.MoveSyncToActiveFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &NodeKeeperMockMoveSyncToActiveExpectation{}
 	}
-
+	m.mainExpectation.result = &NodeKeeperMockMoveSyncToActiveResult{r}
 	return m.mock
 }
 
@@ -2455,8 +2460,12 @@ func (m *mNodeKeeperMockMoveSyncToActive) ExpectOnce() *NodeKeeperMockMoveSyncTo
 	return expectation
 }
 
+func (e *NodeKeeperMockMoveSyncToActiveExpectation) Return(r error) {
+	e.result = &NodeKeeperMockMoveSyncToActiveResult{r}
+}
+
 //Set uses given function f as a mock of NodeKeeper.MoveSyncToActive method
-func (m *mNodeKeeperMockMoveSyncToActive) Set(f func()) *NodeKeeperMock {
+func (m *mNodeKeeperMockMoveSyncToActive) Set(f func() (r error)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2465,7 +2474,7 @@ func (m *mNodeKeeperMockMoveSyncToActive) Set(f func()) *NodeKeeperMock {
 }
 
 //MoveSyncToActive implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) MoveSyncToActive() {
+func (m *NodeKeeperMock) MoveSyncToActive() (r error) {
 	counter := atomic.AddUint64(&m.MoveSyncToActivePreCounter, 1)
 	defer atomic.AddUint64(&m.MoveSyncToActiveCounter, 1)
 
@@ -2475,10 +2484,25 @@ func (m *NodeKeeperMock) MoveSyncToActive() {
 			return
 		}
 
+		result := m.MoveSyncToActiveMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeKeeperMock.MoveSyncToActive")
+			return
+		}
+
+		r = result.r
+
 		return
 	}
 
 	if m.MoveSyncToActiveMock.mainExpectation != nil {
+
+		result := m.MoveSyncToActiveMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeKeeperMock.MoveSyncToActive")
+		}
+
+		r = result.r
 
 		return
 	}
@@ -2488,7 +2512,7 @@ func (m *NodeKeeperMock) MoveSyncToActive() {
 		return
 	}
 
-	m.MoveSyncToActiveFunc()
+	return m.MoveSyncToActiveFunc()
 }
 
 //MoveSyncToActiveMinimockCounter returns a count of NodeKeeperMock.MoveSyncToActiveFunc invocations

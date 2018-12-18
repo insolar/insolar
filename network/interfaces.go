@@ -171,7 +171,7 @@ type NodeKeeper interface {
 	// Sync move unsync -> sync
 	Sync(list UnsyncList)
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive()
+	MoveSyncToActive() error
 	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
 	AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error
 	// ResolveConsensus get temporary mapping by short ID
@@ -187,7 +187,7 @@ type UnsyncList interface {
 	// ApproveSync
 	ApproveSync([]core.RecordRef)
 	// AddClaims
-	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim)
+	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim) error
 	// AddNode
 	AddNode(node core.Node, bitsetIndex uint16)
 	// GetClaims
@@ -196,10 +196,8 @@ type UnsyncList interface {
 	AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof)
 	// GetProof
 	GetProof(nodeID core.RecordRef) *consensus.NodePulseProof
-	// SetGlobuleHashSignature
-	SetGlobuleHashSignature(nodeID core.RecordRef, signature consensus.GlobuleHashSignature)
-	// GetGlobuleHashSignature
-	GetGlobuleHashSignature(nodeID core.RecordRef) (consensus.GlobuleHashSignature, bool)
+	// GlobuleHashSignatures
+	GlobuleHashSignatures() map[core.RecordRef]consensus.GlobuleHashSignature
 	// CalculateHash calculate node list hash based on active node list and claims
 	CalculateHash(core.PlatformCryptographyScheme) ([]byte, error)
 	// GetActiveNode get active node by reference ID for current consensus

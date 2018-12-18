@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
 
@@ -30,12 +31,13 @@ type PhaseManager interface {
 }
 
 type Phases struct {
-	FirstPhase  *FirstPhase  //`inject:""`
-	SecondPhase *SecondPhase //`inject:""`
-	ThirdPhase  *ThirdPhase  //`inject:""`
+	FirstPhase  *FirstPhase  // `inject:""`
+	SecondPhase *SecondPhase // `inject:""`
+	ThirdPhase  *ThirdPhase  // `inject:""`
 
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`
+	Calculator   merkle.Calculator  `inject:""`
 }
 
 // NewPhaseManager creates and returns a new phase manager.
@@ -79,13 +81,27 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 		return errors.Wrap(err, "Network consensus: error executing phase 2.1")
 	}
 
-	state := secondPhaseState
-	if len(state.MatrixState.AdditionalRequestsPhase2) != 0 {
-		return errors.New("Failed to get all node proofs in phases 2.0 and 2.1")
-	}
-	state.UnsyncList.ApproveSync(state.MatrixState.Active)
-	pm.NodeKeeper.Sync(secondPhaseState.UnsyncList)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	defer cancel()
 
+	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, secondPhaseState)
+	if err != nil {
+		return errors.Wrap(err, "Network consensus: error executing phase 3")
+	}
+
+	state := thirdPhaseState
+	cloud := &merkle.CloudEntry{
+		ProofSet:      []*merkle.GlobuleProof{state.GlobuleProof},
+		PrevCloudHash: pm.NodeKeeper.GetCloudHash(),
+	}
+	hash, _, err := pm.Calculator.GetCloudProof(cloud)
+	if err != nil {
+		return errors.Wrap(err, "Network consensus: error calculating cloud hash")
+	}
+	pm.NodeKeeper.SetCloudHash(hash)
+
+	state.UnsyncList.ApproveSync(state.ActiveNodes)
+	pm.NodeKeeper.Sync(state.UnsyncList)
 	return nil
 }
 

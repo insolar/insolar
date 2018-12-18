@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package heavy
+package heavyserver
 
 import (
 	"context"

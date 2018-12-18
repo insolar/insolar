@@ -53,13 +53,13 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	globuleHash, globuleProof, err := sp.Calculator.GetGlobuleProof(entry)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate pulse proof.")
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
 	}
 
 	packet := packets.Phase2Packet{}
 	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to set pulse proof in Phase2Packet.")
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to set globule proof in Phase2Packet")
 	}
 	bitset, err := sp.generatePhase2Bitset(state.UnsyncList, state.ValidProofs)
 	if err != nil {
@@ -73,7 +73,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	activeNodes := state.UnsyncList.GetActiveNodes()
 	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, &packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange results.")
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange packets on phase 2")
 	}
 
 	// nodeProofs := make(map[core.Node]*GlobuleProofValidated)
@@ -90,24 +90,12 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 			continue
 		}
 		ghs := packet.GetGlobuleHashSignature()
-		state.UnsyncList.SetGlobuleHashSignature(ref, ghs)
+		state.UnsyncList.GlobuleHashSignatures()[ref] = ghs
 		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
 		if err != nil {
 			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s", ref)
 			continue
 		}
-		// node := state.UnsyncList.GetActiveNode(ref)
-		// proof := &merkle.GlobuleProof{
-		// 	BaseProof: merkle.BaseProof{
-		// 		Signature: core.SignatureFromBytes(ghs[:]),
-		// 	},
-		// 	PrevCloudHash: prevCloudHash,
-		// 	GlobuleID:     globuleProof.GlobuleID,
-		// 	NodeCount:     globuleProof.NodeCount,
-		// 	NodeRoot:      globuleProof.NodeRoot,
-		// }
-		// valid := sp.Calculator.IsValid(proof, globuleHash, node.PublicKey())
-		// nodeProofs[node] = &GlobuleProofValidated{Proof: proof, Valid: valid}
 	}
 
 	matrixCalculation, err := stateMatrix.CalculatePhase2(sp.NodeKeeper.GetOrigin().ID())
@@ -121,10 +109,8 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		MatrixState:     matrixCalculation,
 		BitSet:          bitset,
 
-		GlobuleEntry: entry,
 		GlobuleHash:  globuleHash,
 		GlobuleProof: globuleProof,
-		// GlobuleProofSet: nodeProofs,
 	}, nil
 }
 
@@ -151,7 +137,7 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 
 	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, &packet, additionalRequests)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to send additional requests.")
+		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to send additional requests on phase 2.1")
 	}
 
 	for _, vote := range voteAnswers {
@@ -169,20 +155,42 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	}
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
+	bitsetChanges := make([]packets.BitSetCell, 0)
 	for index, result := range results {
 		node, err := nodenetwork.ClaimToNode("", &result.NodeClaimUnsigned)
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to convert claim to node, ref: %s",
 				result.NodeClaimUnsigned.NodeRef)
 		}
-		state.UnsyncList.AddNode(node, index)
-		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
-		state.UnsyncList.SetGlobuleHashSignature(node.ID(), result.GlobuleHashSignature)
+
+		merkleProof := &merkle.PulseProof{
+			BaseProof: merkle.BaseProof{
+				Signature: core.SignatureFromBytes(result.NodePulseProof.Signature()),
+			},
+			StateHash: result.NodePulseProof.StateHash(),
+		}
+
+		valid := validateProof(sp.Calculator, state.UnsyncList, state.PulseHash, node.ID(), merkleProof)
+		if !valid {
+			inslogger.FromContext(ctx).Warnf("Failed to validate proof from %s", node.ID())
+			continue
+		}
+
 		err = state.Matrix.ReceivedProofFromNode(origin, node.ID())
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to assign proof from node %s to state matrix",
 				result.NodeClaimUnsigned.NodeRef)
 		}
+		state.UnsyncList.AddNode(node, index)
+		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
+		state.UnsyncList.GlobuleHashSignatures()[node.ID()] = result.GlobuleHashSignature
+		state.ValidProofs[node] = merkleProof
+		bitsetChanges = append(bitsetChanges, packets.BitSetCell{})
+	}
+
+	err = state.BitSet.ApplyChanges(bitsetChanges, state.UnsyncList)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to apply changes to current bitset")
 	}
 	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for index, claim := range claims {
@@ -202,6 +210,25 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to calculate matrix state")
 	}
+	addReqCount := len(state.MatrixState.AdditionalRequestsPhase2)
+	if addReqCount != 0 {
+		return nil, errors.New(fmt.Sprintf("[ Phase 2.1 ] Failed to get enough data during phase 2.1 "+
+			"(still need additional %d requests)", addReqCount))
+	}
+
+	prevCloudHash := sp.NodeKeeper.GetCloudHash()
+	entry := &merkle.GlobuleEntry{
+		PulseEntry:    state.PulseEntry,
+		ProofSet:      state.ValidProofs,
+		PulseHash:     state.PulseHash,
+		PrevCloudHash: prevCloudHash,
+		GlobuleID:     sp.NodeKeeper.GetOrigin().GetGlobuleID(),
+	}
+	state.GlobuleHash, state.GlobuleProof, err = sp.Calculator.GetGlobuleProof(entry)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to calculate globule proof")
+	}
+
 	return state, nil
 }
 

@@ -26,7 +26,8 @@ import (
 
 // StatusReply is reply for Status service requests.
 type StatusReply struct {
-	NetworkState string
+	NetworkState   string
+	ActiveListSize int
 }
 
 // StatusService is a service that provides API for getting status of node.
@@ -47,6 +48,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	inslog.Infof("[ StatusService.Get ] Incoming request: %s", r.RequestURI)
 
 	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
+	reply.ActiveListSize = len(s.runner.NodeNetwork.GetActiveNodes())
 
 	return nil
 }

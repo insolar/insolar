@@ -47,6 +47,7 @@ type ServiceNetwork struct {
 	CertificateManager  core.CertificateManager         `inject:""`
 	NodeNetwork         core.NodeNetwork                `inject:""`
 	PulseManager        core.PulseManager               `inject:""`
+	PulseStorage        core.PulseStorage               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
 	ArtifactManager     core.ArtifactManager            `inject:""`
@@ -178,7 +179,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		logger.Error("PulseManager is not initialized")
 		return
 	}
-	currentPulse, err := n.PulseManager.Current(ctx)
+	currentPulse, err := n.PulseStorage.Current(ctx)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "Could not get current pulse"))
 		return
