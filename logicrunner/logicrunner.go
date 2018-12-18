@@ -57,6 +57,13 @@ type ExecutionState struct {
 	Behaviour ValidationBehaviour
 	Current   *CurrentExecution
 	Queue     []ExecutionQueueElement
+
+	// pending flag is set to true in OnPulse when next pulse happens
+	// and Current was not nil, i.e. something was executing. Using
+	// this flag we can tell in ProcessExecutionQueue that pulse has
+	// ended.
+	// TODO: maybe it should be reset IF ExecitionState is reused
+	pending bool
 }
 
 type CurrentExecution struct {
