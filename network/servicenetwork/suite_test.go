@@ -235,10 +235,13 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 	serviceNetwork, err := NewServiceNetwork(cfg, scheme)
 	s.NoError(err)
 
-	pulseManagerMock := testutils.NewPulseManagerMock(s.T())
-	pulseManagerMock.CurrentMock.Set(func(p context.Context) (r *core.Pulse, r1 error) {
+	pulseStorageMock := testutils.NewPulseStorageMock(s.T())
+	pulseStorageMock.CurrentMock.Set(func(p context.Context) (r *core.Pulse, r1 error) {
 		return &core.Pulse{PulseNumber: 0}, nil
+
 	})
+
+	pulseManagerMock := testutils.NewPulseManagerMock(s.T())
 	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
 		return nil
 	})
@@ -287,7 +290,7 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 	}
 
 	node.componentManager = &component.Manager{}
-	node.componentManager.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
+	node.componentManager.Register(keeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock, realKeeper)
 	node.componentManager.Register(certManager, cryptographyService, phaseManager)
 	node.componentManager.Inject(serviceNetwork, netSwitcher)
 	node.serviceNetwork = serviceNetwork
