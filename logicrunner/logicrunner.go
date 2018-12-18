@@ -625,7 +625,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		if es := state.ExecutionState; es != nil {
 			es.Lock()
 
-			es.pending = es.Current != nil
+			es.pending = es.pending || es.Current != nil
 			queue := es.ReleaseQueue()
 
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
