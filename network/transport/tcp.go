@@ -68,12 +68,15 @@ func (t *tcpTransport) send(recvAddress string, data []byte) error {
 	if !ok || t.connectionClosed(conn) {
 		t.connMutex.Lock()
 		if ok && t.connectionClosed(conn) {
+			logger.Debugf("[ send ] Delete addr %s from map of connections: %s", tcpAddr)
 			delete(t.conns, conn.RemoteAddr().String())
 		}
 
 		conn, ok = t.conns[tcpAddr.String()]
+		logger.Debugf("[ send ] Finding addr %s in map of connections: %s", tcpAddr, ok)
 		if !ok || t.connectionClosed(conn) {
 			if ok && t.connectionClosed(conn) {
+				logger.Debugf("[ send ] Delete addr %s from map of connections: %s", tcpAddr)
 				delete(t.conns, conn.RemoteAddr().String())
 			}
 
