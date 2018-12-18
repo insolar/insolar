@@ -338,7 +338,7 @@ jobs:
 
                echo create Dockerfile
                cat << EOF > git-explorer/.env.production
-               REACT_APP_API_URL=https://explorer.insolar.io/api
+               REACT_APP_API_URL=http://db-unloader/api
                EOF
                cat << EOF > git-explorer/Dockerfile
                FROM node:8-alpine as builder
