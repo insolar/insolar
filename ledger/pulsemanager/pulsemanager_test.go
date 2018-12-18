@@ -25,36 +25,15 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestPulseManager_Current(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: &configuration.BuiltIn{},
-	})
-	assert.NoError(t, err)
-	c := core.Components{LogicRunner: lr}
-	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
-	defer cleaner()
-
-	pm := ledger.GetPulseManager()
-
-	pulse, err := pm.Current(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, core.GenesisPulse.PulseNumber, pulse.PulseNumber)
-}
 
 func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	// Arrange
@@ -139,6 +118,11 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		return &signature, nil
 	}
 
+	pulseStorageMock := pulsemanager.NewpulseStoragePmMock(t)
+	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
+	pulseStorageMock.LockMock.Return()
+	pulseStorageMock.UnlockMock.Return()
+
 	pm.LR = lr
 
 	pm.RecentStorageProvider = providerMock
@@ -148,6 +132,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock
 	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
+	pm.PulseStorage = pulseStorageMock
 
 	// Act
 	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)

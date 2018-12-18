@@ -28,8 +28,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const apiurl = "http://localhost:19191/api"
-
 type response struct {
 	Error  string
 	Result interface{}
@@ -69,9 +67,9 @@ func transfer(ctx context.Context, amount float64, from memberInfo, to memberInf
 	return "success"
 }
 
-func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
+func createMembers(concurrent int) ([]memberInfo, error) {
 	var members []memberInfo
-	for i := 0; i < concurrent*repetitions*2; i++ {
+	for i := 0; i < concurrent*2; i++ {
 		memberName := testutils.RandomString()
 
 		ks := platformpolicy.NewKeyProcessor()

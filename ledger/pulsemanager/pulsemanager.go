@@ -52,6 +52,7 @@ type PulseManager struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	RecentStorageProvider      recentstorage.Provider          `inject:""`
 	ActiveListSwapper          ActiveListSwapper               `inject:""`
+	PulseStorage               pulseStoragePm                  `inject:""`
 
 	currentPulse core.Pulse
 
@@ -99,15 +100,6 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 	pm.options.pulsesDeltaLimit = conf.LightChainLimit
 	pm.syncbackoff = backoffFromConfig(pmconf.HeavyBackoff)
 	return pm
-}
-
-// Current returns copy (for concurrency safety) of current pulse structure.
-func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
-	m.setLock.RLock()
-	defer m.setLock.RUnlock()
-
-	p := m.currentPulse
-	return &p, nil
 }
 
 func (m *PulseManager) handleJetDrops(ctx context.Context, pulse *storage.Pulse) error {
@@ -298,11 +290,14 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, persist bool) 
 	var err error
 	m.GIL.Acquire(ctx)
 
+	m.PulseStorage.Lock()
+
 	// swap pulse
 	m.currentPulse = pulse
 
 	lastSlotPulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
+		m.PulseStorage.Unlock()
 		m.GIL.Release(ctx)
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
@@ -312,15 +307,18 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, persist bool) 
 	if persist {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
 			m.GIL.Release(ctx)
+			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
 			m.GIL.Release(ctx)
+			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
 
+	m.PulseStorage.Unlock()
 	m.GIL.Release(ctx)
 
 	if !persist {
@@ -471,7 +469,7 @@ func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) 
 }
 
 func (m *PulseManager) pulseIsOutdated(ctx context.Context, pn core.PulseNumber) bool {
-	current, err := m.Current(ctx)
+	current, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		panic(err)
 	}

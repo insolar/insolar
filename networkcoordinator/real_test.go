@@ -176,12 +176,12 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode(t *testing.T) 
 	mb := mockMessageBus(t, true, &nodeRef, &discoveryNodeRef)
 
 	cm := mockCertificateManager(t, &certNodeRef, &discoveryNodeRef, true)
-	pm := testutils.NewPulseManagerMock(t)
-	pm.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+	ps := testutils.NewPulseStorageMock(t)
+	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
 		return &core.Pulse{}, nil
 	}
 
-	coord := newRealNetworkCoordinator(cm, cr, mb, nil, pm)
+	coord := newRealNetworkCoordinator(cm, cr, mb, nil, ps)
 	ctx := context.Background()
 	dNode := certificate.BootstrapNode{
 		PublicKey:   "test_discovery_public_key",
@@ -233,12 +233,12 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_CurrentPulseEr
 	mb := mockMessageBus(t, true, &nodeRef, nil)
 
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
-	pm := testutils.NewPulseManagerMock(t)
-	pm.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+	ps := testutils.NewPulseStorageMock(t)
+	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
 		return nil, errors.New("test_error")
 	}
 
-	coord := newRealNetworkCoordinator(cm, cr, mb, nil, pm)
+	coord := newRealNetworkCoordinator(cm, cr, mb, nil, ps)
 	ctx := context.Background()
 	dNode := certificate.BootstrapNode{
 		PublicKey:   "test_discovery_public_key",
@@ -266,12 +266,12 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_SendError(t *t
 
 	cm := mockCertificateManager(t, &certNodeRef, &discoveryNodeRef, true)
 
-	pm := testutils.NewPulseManagerMock(t)
-	pm.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+	ps := testutils.NewPulseStorageMock(t)
+	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
 		return &core.Pulse{}, nil
 	}
 
-	coord := newRealNetworkCoordinator(cm, cr, mb, nil, pm)
+	coord := newRealNetworkCoordinator(cm, cr, mb, nil, ps)
 	ctx := context.Background()
 	dNode := certificate.BootstrapNode{
 		PublicKey:   "test_discovery_public_key",

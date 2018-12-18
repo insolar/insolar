@@ -36,20 +36,20 @@ func TestNewNetworkCoordinator(t *testing.T) {
 	contractRequester := testutils.NewContractRequesterMock(t)
 	messageBus := testutils.NewMessageBusMock(t)
 	cs := testutils.NewCryptographyServiceMock(t)
-	pm := testutils.NewPulseManagerMock(t)
+	ps := testutils.NewPulseStorageMock(t)
 
 	nc, err := New()
 	require.NoError(t, err)
 	require.Equal(t, &NetworkCoordinator{}, nc)
 
 	cm := &component.Manager{}
-	cm.Inject(certificateManager, networkSwitcher, contractRequester, messageBus, cs, pm, nc)
+	cm.Inject(certificateManager, networkSwitcher, contractRequester, messageBus, cs, ps, nc)
 	require.Equal(t, certificateManager, nc.CertificateManager)
 	require.Equal(t, networkSwitcher, nc.NetworkSwitcher)
 	require.Equal(t, contractRequester, nc.ContractRequester)
 	require.Equal(t, messageBus, nc.MessageBus)
 	require.Equal(t, cs, nc.CS)
-	require.Equal(t, pm, nc.PM)
+	require.Equal(t, ps, nc.PS)
 }
 
 func TestNetworkCoordinator_Start(t *testing.T) {
