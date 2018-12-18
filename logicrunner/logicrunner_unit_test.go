@@ -61,7 +61,6 @@ func TestOnPulse(t *testing.T) {
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	require.True(t, lr.state[objectRef].ExecutionState.pending)
-	lr.ProcessExecutionQueue(ctx, lr.state[objectRef].ExecutionState)
 
 	// make sure pulseChanged sends PendingFinished message and sets ExecutionState.pending back to false
 	pendingFinishedWasSent = false
@@ -94,6 +93,10 @@ func TestOnPulse(t *testing.T) {
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	require.True(t, lr.state[objectRef].ExecutionState.pending)
-	lr.ProcessExecutionQueue(ctx, lr.state[objectRef].ExecutionState)
-	//require.True(t, pendingFinishedWasSent) // TODO FIXME
+
+	// once again, make sure pulseChanged sends PendingFinished message and sets ExecutionState.pending back to false
+	pendingFinishedWasSent = false
+	require.True(t, lr.pulseChanged(ctx, lr.state[objectRef].ExecutionState, objectRef))
+	require.True(t, pendingFinishedWasSent)
+	require.False(t, lr.state[objectRef].ExecutionState.pending)
 }
