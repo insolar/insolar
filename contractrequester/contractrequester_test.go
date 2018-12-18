@@ -46,28 +46,28 @@ func mockMessageBusError(t *testing.T) *testutils.MessageBusMock {
 }
 
 func TestNew(t *testing.T) {
-	pm := testutils.NewPulseManagerMock(t)
+	ps := testutils.NewPulseStorageMock(t)
 	messageBus := mockMessageBus(t, nil)
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(pm, messageBus, contractRequester)
+	cm.Inject(ps, messageBus, contractRequester)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
-	require.Equal(t, pm, contractRequester.PulseManager)
+	require.Equal(t, ps, contractRequester.PulseStorage)
 }
 
 func TestContractRequester_routeCall(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	testResult := &reply.CallMethod{}
 
-	pm := testutils.NewPulseManagerMock(t)
-	pm.CurrentMock.Return(core.GenesisPulse, nil)
+	ps := testutils.NewPulseStorageMock(t)
+	ps.CurrentMock.Return(core.GenesisPulse, nil)
 
 	cReq := &ContractRequester{
-		PulseManager: pm,
+		PulseStorage: ps,
 		MessageBus:   mockMessageBus(t, testResult),
 	}
 
@@ -80,11 +80,11 @@ func TestContractRequester_routeCall(t *testing.T) {
 func TestContractRequester_routeCall_SendError(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	pm := testutils.NewPulseManagerMock(t)
-	pm.CurrentMock.Return(core.GenesisPulse, nil)
+	ps := testutils.NewPulseStorageMock(t)
+	ps.CurrentMock.Return(core.GenesisPulse, nil)
 
 	cReq := &ContractRequester{
-		PulseManager: pm,
+		PulseStorage: ps,
 		MessageBus:   mockMessageBusError(t),
 	}
 
@@ -111,11 +111,11 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	ref := testutils.RandomRef()
 	testResult := &reply.CallMethod{}
 
-	pm := testutils.NewPulseManagerMock(t)
-	pm.CurrentMock.Return(core.GenesisPulse, nil)
+	ps := testutils.NewPulseStorageMock(t)
+	ps.CurrentMock.Return(core.GenesisPulse, nil)
 
 	cReq := &ContractRequester{
-		PulseManager: pm,
+		PulseStorage: ps,
 		MessageBus:   mockMessageBus(t, testResult),
 	}
 
@@ -129,11 +129,11 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ref := testutils.RandomRef()
 
-	pm := testutils.NewPulseManagerMock(t)
-	pm.CurrentMock.Return(core.GenesisPulse, nil)
+	ps := testutils.NewPulseStorageMock(t)
+	ps.CurrentMock.Return(core.GenesisPulse, nil)
 
 	cReq := &ContractRequester{
-		PulseManager: pm,
+		PulseStorage: ps,
 		MessageBus:   mockMessageBusError(t),
 	}
 
