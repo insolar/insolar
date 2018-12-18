@@ -94,7 +94,7 @@ func (tcp *tcpTransport) openTCP(ctx context.Context, addr *net.TCPAddr) (net.Co
 
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
-		logger.Warnf("[ openTCP ] Failed to open connection to %s", addr)
+		logger.Errorf("[ openTCP ] Failed to open connection to %s: %s", addr, err.Error())
 		return nil, errors.Wrap(err, "[ openTCP ] Failed to open connection")
 	}
 
