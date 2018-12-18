@@ -31,7 +31,9 @@ import (
 
 type tcpTransport struct {
 	baseTransport
-	l net.Listener
+	l         net.Listener
+	addr      string
+	isStarted bool
 
 	conns     map[string]net.Conn
 	connMutex sync.RWMutex
@@ -39,14 +41,9 @@ type tcpTransport struct {
 
 func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
 
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
-		l:             listener,
+		addr:          addr,
 		conns:         make(map[string]net.Conn),
 	}
 
@@ -142,6 +139,20 @@ func (tcp *tcpTransport) connectionClosed(conn net.Conn) bool {
 func (tcp *tcpTransport) Listen(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
+
+	tcp.mutex.Lock()
+	tcp.isStarted = true
+
+	listener, err := net.Listen("tcp", tcp.addr)
+	if err != nil {
+		return err
+	}
+
+	tcp.l = listener
+	tcp.prepareListen()
+
+	tcp.mutex.Unlock()
+
 	for {
 		conn, err := tcp.l.Accept()
 		if err != nil {
@@ -164,9 +175,11 @@ func (tcp *tcpTransport) Stop() {
 	log.Info("[ Stop ] Stop TCP transport")
 	tcp.prepareDisconnect()
 
-	err := tcp.l.Close()
-	if err != nil {
-		log.Errorln("[ Stop ] Failed to close socket: ", err.Error())
+	if tcp.isStarted {
+		err := tcp.l.Close()
+		if err != nil {
+			log.Errorln("[ Stop ] Failed to close socket: ", err.Error())
+		}
 	}
 
 	for addr, conn := range tcp.conns {

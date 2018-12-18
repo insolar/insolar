@@ -92,6 +92,7 @@ func (q *quicTransport) send(recvAddress string, data []byte) error {
 func (q *quicTransport) Listen(ctx context.Context) error {
 	log.Debug("Start QUIC transport")
 
+	q.prepareListen()
 	for {
 		session, err := q.l.Accept()
 		if err != nil {

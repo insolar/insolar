@@ -118,6 +118,7 @@ func (udpT *udpTransport) send(recvAddress string, data []byte) error {
 func (udpT *udpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start UDP transport")
 
+	udpT.prepareListen()
 	for {
 		buf := make([]byte, udpMaxPacketSize)
 		n, addr, err := udpT.serverConn.ReadFrom(buf)
