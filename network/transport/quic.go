@@ -42,12 +42,17 @@ type quicTransport struct {
 	l           quic.Listener
 	conn        net.PacketConn
 	connections map[string]quicConnection
-	isStarted   bool
 }
 
 func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*quicTransport, error) {
+	listener, err := quic.Listen(conn, generateTLSConfig(), nil)
+	if err != nil {
+		return nil, err
+	}
+
 	transport := &quicTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
+		l:             listener,
 		conn:          conn,
 		connections:   make(map[string]quicConnection),
 	}
@@ -87,20 +92,6 @@ func (t *quicTransport) send(recvAddress string, data []byte) error {
 func (t *quicTransport) Listen(ctx context.Context) error {
 	t.mutex.Lock()
 
-	if t.isStarted {
-		return errors.New("[ Listen ] Failed to listen, already listening")
-	}
-
-	listener, err := quic.Listen(t.conn, generateTLSConfig(), nil)
-	if err != nil {
-		t.mutex.Unlock()
-
-		return err
-	}
-
-	t.isStarted = true
-	t.l = listener
-
 	log.Debug("Start QUIC transport")
 	t.prepareListen()
 
@@ -125,10 +116,6 @@ func (t *quicTransport) Stop() {
 
 	log.Debug("[ Stop ] Stop QUIC transport")
 	t.prepareDisconnect()
-
-	if !t.isStarted {
-		return
-	}
 
 	err := t.l.Close()
 	if err != nil {
