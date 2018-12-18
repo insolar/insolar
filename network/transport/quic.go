@@ -90,9 +90,13 @@ func (q *quicTransport) send(recvAddress string, data []byte) error {
 
 // Start starts networking.
 func (q *quicTransport) Listen(ctx context.Context) error {
-	log.Debug("Start QUIC transport")
+	q.mutex.Lock()
 
+	log.Debug("Start QUIC transport")
 	q.prepareListen()
+
+	q.mutex.Unlock()
+
 	for {
 		session, err := q.l.Accept()
 		if err != nil {
