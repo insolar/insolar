@@ -122,6 +122,10 @@ func (t *baseTransport) Stopped() <-chan bool {
 	return t.disconnectStarted
 }
 
+func (t *baseTransport) prepareListen() {
+	t.disconnectStarted = make(chan bool, 1)
+}
+
 func (t *baseTransport) prepareDisconnect() {
 	t.disconnectStarted <- true
 	close(t.disconnectStarted)
