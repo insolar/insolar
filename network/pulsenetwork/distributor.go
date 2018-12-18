@@ -43,7 +43,7 @@ type distributor struct {
 }
 
 func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor, error) {
-	bootstrapHosts := make([]*host.Host, len(conf.BootstrapHosts))
+	bootstrapHosts := make([]*host.Host, 0, len(conf.BootstrapHosts))
 
 	for _, node := range conf.BootstrapHosts {
 		bootstrapHost, err := host.NewHost(node)
@@ -70,7 +70,7 @@ func (d *distributor) Start(ctx context.Context) error {
 	}
 	pulsarHost.NodeID = core.RecordRef{}
 
-	d.pause(ctx)
+	d.pulsarHost = pulsarHost
 	return nil
 }
 
