@@ -175,12 +175,15 @@ func (t *baseTransport) handlePacket(msg *packet.Packet) {
 }
 
 func (t *baseTransport) processResponse(msg *packet.Packet) {
-	log.Debugf("Process response %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
+	log.Debugf("[ processResponse ] Process response %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
 
 	future := t.getFuture(msg)
 	if future != nil {
 		if shouldProcessPacket(future, msg) {
+			log.Debugf("[ processResponse ] Processing future with RequestID = %s", msg.RequestID)
 			future.SetResult(msg)
+		} else {
+			log.Debugf("[ processResponse ] Canceling future with RequestID = %s", msg.RequestID)
 		}
 		future.Cancel()
 	}
