@@ -73,7 +73,7 @@ func NewCaseBindFromExecutorResultsMessage(msg *message.ExecutorResults) *CaseBi
 	panic("not implemented")
 }
 
-func (cb *CaseBind) getCaseBindRequestsFromMessageBus(ctx context.Context) []message.CaseBindRequest {
+func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBindRequest {
 	if cb == nil {
 		return make([]message.CaseBindRequest, 0)
 	}
@@ -101,7 +101,7 @@ func (cb *CaseBind) getCaseBindRequestsFromMessageBus(ctx context.Context) []mes
 func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.Pulse) *message.ValidateCaseBind {
 	res := &message.ValidateCaseBind{
 		RecordRef: ref,
-		Requests:  cb.getCaseBindRequestsFromMessageBus(ctx),
+		Requests:  cb.getCaseBindForMessage(ctx),
 		Pulse:     pulse,
 	}
 	return res
@@ -111,7 +111,7 @@ func (cb *CaseBind) ToExecutorResultsMessage(ctx context.Context, ref Ref, pendi
 	res := &message.ExecutorResults{
 		RecordRef: ref,
 		Pending:   pending,
-		Requests:  cb.getCaseBindRequestsFromMessageBus(ctx),
+		Requests:  cb.getCaseBindForMessage(ctx),
 		Queue:     queue,
 	}
 

@@ -627,7 +627,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			queue := es.releaseQueue()
 
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
-			requests := caseBind.getCaseBindRequestsFromMessageBus(ctx)
+			requests := caseBind.getCaseBindForMessage(ctx)
 
 			messages = append(
 				messages,
