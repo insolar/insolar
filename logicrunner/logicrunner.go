@@ -387,7 +387,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 		if es.somebodyStillExecuting == nil {
 			pending, err := es.CheckPendingRequests(ctx, msg)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "couldn't check for pending requests")
 			}
 			es.somebodyStillExecuting = &pending
 		}
