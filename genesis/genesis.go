@@ -143,7 +143,7 @@ func (g *Genesis) activateNodeDomain(
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
-	contractID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "NodeDomain"}})
+	contractID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: "NodeDomain"}})
 
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
@@ -181,7 +181,7 @@ func (g *Genesis) activateRootMember(
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
-	contractID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootMember"}})
+	contractID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootMember"}})
 
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
@@ -239,7 +239,7 @@ func (g *Genesis) activateRootMemberWallet(
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
 
-	contractID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootWallet"}})
+	contractID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootWallet"}})
 
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
@@ -316,7 +316,7 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *ContractsBuild
 			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't serialize discovery node instance")
 		}
 
-		nodeID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)}})
+		nodeID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)}})
 		if err != nil {
 			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't register request to artifact manager")
 		}
@@ -349,7 +349,7 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *ContractsBuild
 }
 
 func (g *Genesis) registerGenesisRequest(ctx context.Context, name string) (*core.RecordID, error) {
-	return g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
+	return g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
 }
 
 // Start creates types and RootDomain instance

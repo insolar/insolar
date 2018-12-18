@@ -102,7 +102,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 
 	for name := range contracts {
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
+			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -160,7 +160,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
+			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")

@@ -70,7 +70,7 @@ type ArtifactManagerMock struct {
 	GetObjectPreCounter uint64
 	GetObjectMock       mArtifactManagerMockGetObject
 
-	RegisterRequestFunc       func(p context.Context, p1 core.Parcel) (r *core.RecordID, r1 error)
+	RegisterRequestFunc       func(p context.Context, p1 core.RecordRef, p2 core.Parcel) (r *core.RecordID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
 	RegisterRequestMock       mArtifactManagerMockRegisterRequest
@@ -1655,7 +1655,8 @@ type ArtifactManagerMockRegisterRequestExpectation struct {
 
 type ArtifactManagerMockRegisterRequestInput struct {
 	p  context.Context
-	p1 core.Parcel
+	p1 core.RecordRef
+	p2 core.Parcel
 }
 
 type ArtifactManagerMockRegisterRequestResult struct {
@@ -1664,14 +1665,14 @@ type ArtifactManagerMockRegisterRequestResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.RegisterRequest is expected from 1 to Infinity times
-func (m *mArtifactManagerMockRegisterRequest) Expect(p context.Context, p1 core.Parcel) *mArtifactManagerMockRegisterRequest {
+func (m *mArtifactManagerMockRegisterRequest) Expect(p context.Context, p1 core.RecordRef, p2 core.Parcel) *mArtifactManagerMockRegisterRequest {
 	m.mock.RegisterRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ArtifactManagerMockRegisterRequestExpectation{}
 	}
-	m.mainExpectation.input = &ArtifactManagerMockRegisterRequestInput{p, p1}
+	m.mainExpectation.input = &ArtifactManagerMockRegisterRequestInput{p, p1, p2}
 	return m
 }
 
@@ -1688,12 +1689,12 @@ func (m *mArtifactManagerMockRegisterRequest) Return(r *core.RecordID, r1 error)
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.RegisterRequest is expected once
-func (m *mArtifactManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 core.Parcel) *ArtifactManagerMockRegisterRequestExpectation {
+func (m *mArtifactManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 core.RecordRef, p2 core.Parcel) *ArtifactManagerMockRegisterRequestExpectation {
 	m.mock.RegisterRequestFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ArtifactManagerMockRegisterRequestExpectation{}
-	expectation.input = &ArtifactManagerMockRegisterRequestInput{p, p1}
+	expectation.input = &ArtifactManagerMockRegisterRequestInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -1703,7 +1704,7 @@ func (e *ArtifactManagerMockRegisterRequestExpectation) Return(r *core.RecordID,
 }
 
 //Set uses given function f as a mock of ArtifactManager.RegisterRequest method
-func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 core.Parcel) (r *core.RecordID, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 core.RecordRef, p2 core.Parcel) (r *core.RecordID, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1712,18 +1713,18 @@ func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 c
 }
 
 //RegisterRequest implements github.com/insolar/insolar/core.ArtifactManager interface
-func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.Parcel) (r *core.RecordID, r1 error) {
+func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.RecordRef, p2 core.Parcel) (r *core.RecordID, r1 error) {
 	counter := atomic.AddUint64(&m.RegisterRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterRequestCounter, 1)
 
 	if len(m.RegisterRequestMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.RegisterRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterRequest. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterRequest. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.RegisterRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterRequestInput{p, p1}, "ArtifactManager.RegisterRequest got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterRequestInput{p, p1, p2}, "ArtifactManager.RegisterRequest got unexpected parameters")
 
 		result := m.RegisterRequestMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -1741,7 +1742,7 @@ func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.Parcel)
 
 		input := m.RegisterRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterRequestInput{p, p1}, "ArtifactManager.RegisterRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterRequestInput{p, p1, p2}, "ArtifactManager.RegisterRequest got unexpected parameters")
 		}
 
 		result := m.RegisterRequestMock.mainExpectation.result
@@ -1756,11 +1757,11 @@ func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.Parcel)
 	}
 
 	if m.RegisterRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterRequest. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterRequest. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.RegisterRequestFunc(p, p1)
+	return m.RegisterRequestFunc(p, p1, p2)
 }
 
 //RegisterRequestMinimockCounter returns a count of ArtifactManagerMock.RegisterRequestFunc invocations

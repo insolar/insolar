@@ -270,7 +270,8 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 }
 
 func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) (*Ref, error) {
-	id, err := lr.ArtifactManager.RegisterRequest(ctx, parcel)
+	obj := parcel.Message().(message.IBaseLogicMessage).GetReference()
+	id, err := lr.ArtifactManager.RegisterRequest(ctx, obj, parcel)
 	if err != nil {
 		return nil, err
 	}

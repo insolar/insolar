@@ -1061,6 +1061,7 @@ func TestRootDomainContract(t *testing.T) {
 	// Initializing Root Domain
 	rootDomainID, err := am.RegisterRequest(
 		ctx,
+		*am.GenesisRef(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
@@ -1091,6 +1092,7 @@ func TestRootDomainContract(t *testing.T) {
 
 	rootMemberID, err := am.RegisterRequest(
 		ctx,
+		*am.GenesisRef(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
@@ -1457,7 +1459,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	kp := platformpolicy.NewKeyProcessor()
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
+	rootDomainID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1480,6 +1482,7 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	rootMemberID, err := am.RegisterRequest(
 		ctx,
+		*am.GenesisRef(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
@@ -1523,7 +1526,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	// Call CreateAllowance method in custom contract
 	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	require.NoError(t, err)
-	contractID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{}})
+	contractID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{}})
 	assert.NoError(t, err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -1987,6 +1990,7 @@ func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManage
 	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(
 		ctx,
+		*am.GenesisRef(),
 		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}},
 	)
 	assert.NoError(t, err)

@@ -78,7 +78,7 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *LedgerArtifactManager) RegisterRequest(
-	ctx context.Context, parcel core.Parcel,
+	ctx context.Context, obj core.RecordRef, parcel core.Parcel,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.RegisterRequest starts ...")
 	var err error
@@ -89,8 +89,9 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		return nil, err
 	}
 
-	rec := record.CallRequest{
+	rec := record.RequestRecord{
 		Payload: message.ParcelToBytes(parcel),
+		Object:  obj,
 	}
 	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.Pulse.PulseNumber, &rec)
 	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)

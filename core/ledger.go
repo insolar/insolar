@@ -87,7 +87,7 @@ type ArtifactManager interface {
 	GenesisRef() *RecordRef
 
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, parcel Parcel) (*RecordID, error)
+	RegisterRequest(ctx context.Context, obj RecordRef, parcel Parcel) (*RecordID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//

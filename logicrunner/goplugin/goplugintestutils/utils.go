@@ -175,7 +175,7 @@ func NewTestArtifactManager() *TestArtifactManager {
 func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx context.Context, parcel core.Parcel) (*core.RecordID, error) {
+func (t *TestArtifactManager) RegisterRequest(ctx context.Context, obj core.RecordRef, parcel core.Parcel) (*core.RecordID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
@@ -390,7 +390,7 @@ func AMPublishCode(
 	codeRef.SetRecord(*codeID)
 
 	nonce := testutils.RandomRef()
-	protoID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}})
+	protoID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}})
 	assert.NoError(t, err)
 	protoRef = &core.RecordRef{}
 	protoRef.SetRecord(*protoID)
@@ -443,7 +443,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+			ctx, *cb.ArtifactManager.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -486,7 +486,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 		nonce := testutils.RandomRef()
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+			ctx, *cb.ArtifactManager.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
