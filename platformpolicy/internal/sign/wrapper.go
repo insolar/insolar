@@ -28,6 +28,7 @@ import (
 )
 
 const bigIntLength = 32
+const lenBytes = 2
 
 type ecdsaSignature struct {
 	R, S *big.Int
@@ -95,7 +96,7 @@ func makeSignature(r, s *big.Int) []byte {
 	}
 	rLen := uint8(len(r.Bytes()))
 	sLen := uint8(len(s.Bytes()))
-	res := make([]byte, rLen+sLen+2) // 2 bytes for len
+	res := make([]byte, rLen+sLen+lenBytes)
 	res[0] = rLen
 	copy(res[1:rLen+2], r.Bytes())
 	res[rLen+1] = sLen
@@ -104,7 +105,7 @@ func makeSignature(r, s *big.Int) []byte {
 }
 
 func getRSFromBytes(data []byte) (*big.Int, *big.Int) {
-	if len(data) > (bigIntLength*2 + 2) { // 2 bytes for len
+	if len(data) > (bigIntLength*2 + lenBytes) {
 		err := fmt.Sprintf("[ getRSFromBytes ] wrong data length to get a r, s. recv len: %d", len(data))
 		panic(err)
 	}
