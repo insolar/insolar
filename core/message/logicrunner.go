@@ -286,3 +286,25 @@ func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
 	)
 	return ref
 }
+
+// PendingFinished is sent by the old executor to the current executor
+// when pending execution finishes.
+type PendingFinished struct {
+	BaseLogicMessage
+}
+
+func (pf *PendingFinished) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &pf.Request, core.DynamicRoleVirtualExecutor
+}
+
+func (pf *PendingFinished) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+func (pf *PendingFinished) DefaultTarget() *core.RecordRef {
+	return &pf.Request
+}
+
+func (pf *PendingFinished) Type() core.MessageType {
+	return core.TypePendingFinished
+}

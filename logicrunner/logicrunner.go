@@ -65,8 +65,6 @@ type ExecutionState struct {
 	pending bool // TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 }
 
-type PendingFinished struct{}
-
 type CurrentExecution struct {
 	sync.Mutex
 	Context      context.Context
@@ -423,8 +421,20 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		// check pulse change
 		es.Lock()
 		if es.pending {
-			// TODO send PendingFinised message to current executor
 			es.pending = false
+			msg := message.PendingFinished{}
+			pulse, err := lr.PulseStorage.Current(ctx)
+			if err != nil {
+				inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message")
+				es.Unlock()
+				return
+			}
+			_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
+			if err != nil {
+				inslogger.FromContext(ctx).Error("Unable to send PendingFinished message")
+				es.Unlock()
+				return
+			}
 		}
 		es.Unlock()
 	}
