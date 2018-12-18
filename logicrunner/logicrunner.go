@@ -62,7 +62,6 @@ type ExecutionState struct {
 	// and Current was not nil, i.e. something was executing. Using
 	// this flag we can tell in ProcessExecutionQueue that pulse has
 	// ended.
-	// TODO: maybe it should be reset IF ExecitionState is reused
 	pending bool
 }
 
@@ -379,12 +378,6 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		if es.pending {
 			es.pending = false
 			// TODO implement PendingFinished message ... don't transfer anything, just ping current executor
-			/*
-				records, err := lr.JetCoordinator.QueryRole()
-				if err != nil {
-					inslogger.FromContext(ctx).Error("Unable do determine executors for current pulse and thus can't transfer pending state")
-				}
-			*/
 			return
 		}
 
