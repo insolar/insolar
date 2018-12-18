@@ -39,11 +39,13 @@ func getCallInfo(skipCallNumber int) *callInfo {
 	packageName := ""
 	funcName := parts[pl-1]
 
-	if parts[pl-2][0] == '(' {
-		funcName = parts[pl-2] + "." + funcName
-		packageName = strings.Join(parts[0:pl-2], ".")
-	} else {
-		packageName = strings.Join(parts[0:pl-1], ".")
+	if len(parts) < pl-2 {
+		if parts[pl-2][0] == '(' {
+			funcName = parts[pl-2] + "." + funcName
+			packageName = strings.Join(parts[0:pl-2], ".")
+		} else {
+			packageName = strings.Join(parts[0:pl-1], ".")
+		}
 	}
 
 	return &callInfo{
