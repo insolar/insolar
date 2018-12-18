@@ -163,10 +163,7 @@ func (es *ExecutionState) CheckPendingRequests(ctx context.Context, msg message.
 		return false, err
 	}
 
-	if oDesc.HasPendingRequests() {
-		return true, nil
-	}
-	return false, nil
+	return oDesc.HasPendingRequests(), nil
 }
 
 // releaseQueue must be calling only with es.Lock
