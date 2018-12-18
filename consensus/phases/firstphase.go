@@ -147,7 +147,10 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		inslogger.FromContext(ctx).Warnf("Failed to validate proof from %s", nodeID)
 		delete(claimMap, nodeID)
 	}
-	fp.UnsyncList.AddClaims(claimMap)
+	err = fp.UnsyncList.AddClaims(claimMap)
+	if err != nil {
+		return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to add claims")
+	}
 
 	return &FirstPhaseState{
 		PulseEntry:  entry,
