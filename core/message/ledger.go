@@ -352,14 +352,12 @@ type ValidationCheck struct {
 
 // DefaultTarget returns of target of this event.
 func (vc *ValidationCheck) DefaultTarget() *core.RecordRef {
-	// TODO: return smth real
-	return nil
+	return &vc.Object
 }
 
 // DefaultRole returns role for this event
 func (vc *ValidationCheck) DefaultRole() core.DynamicRole {
-	// TODO: return smth real
-	return core.DynamicRoleUndefined
+	return core.DynamicRoleLightExecutor
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -376,11 +374,12 @@ func (*ValidationCheck) Type() core.MessageType {
 // HotData contains hot-data
 type HotData struct {
 	ledgerMessage
-	Jet             core.RecordRef
-	Drop            jet.JetDrop
-	RecentObjects   map[core.RecordID]*HotIndex
-	PendingRequests map[core.RecordID][]byte
-	PulseNumber     core.PulseNumber
+	Jet                core.RecordRef
+	Drop               jet.JetDrop
+	RecentObjects      map[core.RecordID]*HotIndex
+	PendingRequests    map[core.RecordID][]byte
+	PulseNumber        core.PulseNumber
+	JetDropSizeHistory jet.DropSizeHistory
 }
 
 // AllowedSenderObjectAndRole implements interface method

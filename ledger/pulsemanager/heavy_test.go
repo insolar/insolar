@@ -40,6 +40,7 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
@@ -51,7 +52,6 @@ func TestPulseManager_SendToHeavyHappyPath(t *testing.T) {
 }
 
 func TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
-	// TODO: until retry logic be fixed - 14.Dec.2018 @nordicdyno
 	sendToHeavy(t, true)
 }
 
@@ -60,7 +60,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
-	jetID := core.ZeroJetID
+	jetID := jet.ZeroJetID
 
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(t)
@@ -100,6 +100,14 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// Mock N8: Active List Swapper mock
 	alsMock := testutils.NewActiveListSwapperMock(t)
 	alsMock.MoveSyncToActiveFunc = func() {}
+
+	// Mock N8: Crypto things mock
+	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
+	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	cryptoScheme := testutils.NewPlatformCryptographyScheme()
 
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var synckeys []key
@@ -161,6 +169,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
+	pm.PulseStorage = storage.NewPulseStorage(db)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -169,6 +178,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.RecentStorageProvider = provideMock
 
 	pm.ActiveListSwapper = alsMock
+	pm.CryptographyService = cryptoServiceMock
+	pm.PlatformCryptographyScheme = cryptoScheme
 
 	// Actial test logic
 	// start PulseManager
@@ -229,7 +240,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {
 	// fmt.Printf("CALL setpulse %v\n", pulsenum)
-	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)}, false)
+	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)}, true)
 }
 
 func addRecords(

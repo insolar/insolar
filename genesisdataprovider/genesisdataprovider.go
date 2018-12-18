@@ -51,10 +51,16 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Can't extract response")
 	}
-	rootMemberRef := core.NewRefFromBase58(info.RootMember)
-	gdp.rootMemberRef = &rootMemberRef
-	nodeDomainRef := core.NewRefFromBase58(info.NodeDomain)
-	gdp.nodeDomainRef = &nodeDomainRef
+	rootMemberRef, err := core.NewRefFromBase58(info.RootMember)
+	if err != nil {
+		return errors.Wrap(err, "[ setInfo ] Failed to parse info.RootMember")
+	}
+	gdp.rootMemberRef = rootMemberRef
+	nodeDomainRef, err := core.NewRefFromBase58(info.NodeDomain)
+	if err != nil {
+		return errors.Wrap(err, "[ setInfo ] Failed to parse info.NodeDomain")
+	}
+	gdp.nodeDomainRef = nodeDomainRef
 
 	return nil
 }

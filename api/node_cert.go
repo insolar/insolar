@@ -53,10 +53,13 @@ func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCe
 
 	inslog.Infof("[ NodeCertService.Get ] Incoming request: %s", r.RequestURI)
 
-	nodeRef := core.NewRefFromBase58(args.Ref)
-	cert, err := s.runner.NetworkCoordinator.GetCert(ctx, &nodeRef)
+	nodeRef, err := core.NewRefFromBase58(args.Ref)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeCertService.Get] ")
+		return errors.Wrap(err, "[ NodeCertService.Get ] failed to parse args.Ref")
+	}
+	cert, err := s.runner.NetworkCoordinator.GetCert(ctx, nodeRef)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeCertService.Get ]")
 	}
 
 	reply.Cert = cert.(*certificate.Certificate)

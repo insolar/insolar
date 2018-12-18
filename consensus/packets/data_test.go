@@ -275,7 +275,7 @@ func makePhase2Packet() *Phase2Packet {
 	phase2Packet.globuleHashSignature = randomArray64()
 	phase2Packet.SignatureHeaderSection1 = randomArray71()
 	phase2Packet.SignatureHeaderSection2 = randomArray71()
-	phase2Packet.bitSet, _ = NewBitSet(134)
+	phase2Packet.bitSet, _ = NewTriStateBitSet(134)
 
 	vote := &MissingNode{NodeIndex: 25}
 
@@ -367,7 +367,8 @@ func getPhase3Packet(t *testing.T) *Phase3Packet {
 	packet.deviantBitSet, err = NewBitSet(100)
 	assert.NoError(t, err)
 
-	refs := initRefs()
+	count := 70
+	refs := initRefs(count)
 	cells := initBitCells(refs)
 	bitset, err := NewBitSet(len(cells))
 	assert.NoError(t, err)

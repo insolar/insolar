@@ -21,6 +21,8 @@ package logicrunner
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
+	"reflect"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
@@ -30,6 +32,109 @@ import (
 	"github.com/pkg/errors"
 )
 
+type CaseRequest struct {
+	Message    core.Message
+	Request    core.RecordRef
+	MessageBus core.MessageBus
+	Reply      core.Reply
+	Error      error
+}
+
+// CaseBinder is a whole result of executor efforts on every object it seen on this pulse
+type CaseBind struct {
+	Requests []CaseRequest
+}
+
+func NewCaseBind() *CaseBind {
+	return &CaseBind{Requests: make([]CaseRequest, 0)}
+}
+
+func NewCaseBindFromValidateMessage(ctx context.Context, mb core.MessageBus, msg *message.ValidateCaseBind) *CaseBind {
+	res := &CaseBind{
+		Requests: make([]CaseRequest, len(msg.Requests)),
+	}
+	for i, req := range msg.Requests {
+		mb, err := mb.NewPlayer(ctx, bytes.NewReader(req.MessageBusTape))
+		if err != nil {
+			panic("couldn't read tape: " + err.Error())
+		}
+		res.Requests[i] = CaseRequest{
+			Message:    req.Message,
+			Request:    req.Request,
+			MessageBus: mb,
+			Reply:      req.Reply,
+			Error:      req.Error,
+		}
+	}
+	return res
+}
+
+func NewCaseBindFromExecutorResultsMessage(msg *message.ExecutorResults) *CaseBind {
+	panic("not implemented")
+}
+
+func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.Pulse) *message.ValidateCaseBind {
+	res := &message.ValidateCaseBind{
+		RecordRef: ref,
+		Requests:  make([]message.CaseBindRequest, len(cb.Requests)),
+		Pulse:     pulse,
+	}
+	for i, req := range cb.Requests {
+		var tape bytes.Buffer
+		err := req.MessageBus.WriteTape(ctx, &tape)
+		if err != nil {
+			panic("couldn't write tape: " + err.Error())
+		}
+		res.Requests[i] = message.CaseBindRequest{
+			Message:        req.Message,
+			Request:        req.Request,
+			MessageBusTape: tape.Bytes(),
+			Reply:          req.Reply,
+			Error:          req.Error,
+		}
+	}
+	return res
+}
+
+func (cb *CaseBind) ToExecutorResultsMessage(ref Ref) *message.ExecutorResults {
+	panic("implemented")
+}
+
+func (cb *CaseBind) NewRequest(msg core.Message, request Ref, mb core.MessageBus) *CaseRequest {
+	res := CaseRequest{
+		Message:    msg,
+		Request:    request,
+		MessageBus: mb,
+	}
+	cb.Requests = append(cb.Requests, res)
+	return &cb.Requests[len(cb.Requests)-1]
+}
+
+type CaseBindReplay struct {
+	Pulse    core.Pulse
+	CaseBind CaseBind
+	Request  int
+	Record   int
+	Steps    int
+	Fail     int
+}
+
+func NewCaseBindReplay(cb CaseBind) *CaseBindReplay {
+	return &CaseBindReplay{
+		CaseBind: cb,
+		Request:  -1,
+		Record:   -1,
+	}
+}
+
+func (r *CaseBindReplay) NextRequest() *CaseRequest {
+	if r.Request+1 >= len(r.CaseBind.Requests) {
+		return nil
+	}
+	r.Request++
+	return &r.CaseBind.Requests[r.Request]
+}
+
 func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byte {
 	s, err := core.Serialize(in)
 	if err != nil {
@@ -38,101 +143,49 @@ func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byt
 	return scheme.IntegrityHasher().Hash(s)
 }
 
-func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb core.CaseBind) (int, error) {
-	if len(cb.Requests) < 1 {
-		return 0, errors.New("casebind is empty")
-	}
+func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb CaseBind) (int, error) {
+	os := lr.UpsertObjectState(ref)
+	vs := os.StartValidation()
 
-	es := lr.UpsertExecution(ref)
-	es.insContext = ctx
-	es.validate = true
-	es.objectbody = nil
-	var cbr core.CaseBindReplay
-	err := func() error {
-		lr.caseBindReplaysMutex.Lock()
-		defer lr.caseBindReplaysMutex.Unlock()
-		if _, ok := lr.caseBindReplays[ref]; ok {
-			return errors.New("already validating this ref")
-		}
-		lr.caseBindReplays[ref] = core.CaseBindReplay{
-			Pulse:    p,
-			CaseBind: cb,
-			Request:  0,
-			Record:   -1,
-			Steps:    0,
-		}
-		cbr = lr.caseBindReplays[ref]
-		return nil
-	}()
-	if err != nil {
-		return 0, err
-	}
+	vs.Lock()
+	defer vs.Unlock()
 
-	defer func() {
-		lr.caseBindReplaysMutex.Lock()
-		defer lr.caseBindReplaysMutex.Unlock()
-		delete(lr.caseBindReplays, ref)
-	}()
+	checker := &ValidationChecker{
+		lr: lr,
+		cb: NewCaseBindReplay(cb),
+	}
+	vs.Behaviour = checker
 
 	for {
-		start, step := lr.nextValidationStep(ref)
-		if step < 0 {
-			return step, errors.New("no validation data")
-		} else if start == nil { // finish
-			return step, nil
-		}
-		if start.Type != core.CaseRecordTypeStart {
-			return step, errors.New("step between two shores")
+		request := checker.NextRequest()
+		if request == nil {
+			break
 		}
 
-		msg := start.Resp.(core.Message)
+		msg := request.Message
 		parcel, err := lr.ParcelFactory.Create(ctx, msg, ref, nil, *core.GenesisPulse)
 		if err != nil {
-			return 0, errors.New("failed to create a parcel message")
+			return 0, errors.New("failed to create a parcel")
 		}
 
-		traceStep, step := lr.nextValidationStep(ref)
-		if traceStep == nil {
-			return step, errors.New("trace is missing")
+		traceID := "TODO" // FIXME
+
+		ctx = inslogger.ContextWithTrace(ctx, traceID)
+		ctx = core.ContextWithMessageBus(ctx, request.MessageBus)
+
+		vs.Current = &CurrentExecution{
+			Context: ctx,
+			Request: &request.Request,
 		}
 
-		traceID, ok := traceStep.Resp.(string)
-		if !ok {
-			return step, errors.New("trace is wrong type")
-		}
+		reply, err := lr.executeOrValidate(ctx, vs, parcel)
 
-		es.insContext = inslogger.ContextWithTrace(es.insContext, traceID)
-		es.Lock()
-		ret, err := lr.executeOrValidate(es.insContext, es, ValidationChecker{lr: lr, cb: cbr}, parcel)
+		err = vs.Behaviour.Result(reply, err)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
-		stop, step := lr.nextValidationStep(ref)
-		if step < 0 {
-			return 0, errors.New("validation container broken")
-		} else if stop.Type != core.CaseRecordTypeResult {
-			return step, errors.New("Validation stoped not on result")
-		}
-
-		switch need := stop.Resp.(type) {
-		case *reply.CallMethod:
-			if got, ok := ret.(*reply.CallMethod); !ok {
-				return step, errors.New("not result type callmethod")
-			} else if !bytes.Equal(got.Data, need.Data) {
-				return step, errors.New("body mismatch")
-			} else if !bytes.Equal(got.Result, need.Result) {
-				return step, errors.New("result mismatch")
-			}
-		case *reply.CallConstructor:
-			if got, ok := ret.(*reply.CallConstructor); !ok {
-				return step, errors.New("not result type callconstructor")
-			} else if !got.Object.Equal(*need.Object) {
-				return step, errors.New("constructed refs mismatch mismatch")
-			}
-		default:
-			return step, errors.New("unknown result type")
-		}
 	}
+	return 1, nil
 }
 
 func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
@@ -146,13 +199,15 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 		return nil, errors.Wrap(err, "can't play role")
 	}
 
-	passedStepsCount, validationError := lr.Validate(ctx, msg.GetReference(), msg.GetPulse(), msg.CaseBind)
+	passedStepsCount, validationError := lr.Validate(
+		ctx, msg.GetReference(), msg.GetPulse(), *NewCaseBindFromValidateMessage(ctx, lr.MessageBus, msg),
+	)
 	errstr := ""
 	if validationError != nil {
 		errstr = validationError.Error()
 	}
 
-	currentSlotPulse, err := lr.PulseManager.Current(ctx)
+	currentSlotPulse, err := lr.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +230,8 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
+
+	c := lr.GetConsensus(ctx, msg.RecordRef)
 	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
 		return nil, err
 	}
@@ -187,101 +243,71 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
-	c, _ := lr.GetConsensus(ctx, msg.RecordRef)
+	c := lr.GetConsensus(ctx, msg.RecordRef)
 	c.AddExecutor(ctx, inmsg, msg)
 	return &reply.OK{}, nil
 }
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
 type ValidationBehaviour interface {
-	Begin(refs Ref, record core.CaseRecord)
-	End(refs Ref, record core.CaseRecord)
-	GetRole() core.DynamicRole
-	ModifyContext(ctx *core.LogicCallContext)
-	NeedSave() bool
-	RegisterRequest(p core.Parcel) (*Ref, error)
+	Mode() string
+	Result(reply core.Reply, err error) error
 }
 
 type ValidationSaver struct {
-	lr *LogicRunner
+	lr       *LogicRunner
+	caseBind *CaseBind
+	current  *CaseRequest
 }
 
-func (vb ValidationSaver) RegisterRequest(p core.Parcel) (*Ref, error) {
-	ctx := context.TODO()
-	m := p.Message().(message.IBaseLogicMessage)
-	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, p)
-	if err != nil {
-		return nil, err
+func (vb *ValidationSaver) Mode() string {
+	return "execution"
+}
+
+func (vb *ValidationSaver) NewRequest(msg core.Message, request Ref, mb core.MessageBus) {
+	vb.current = vb.caseBind.NewRequest(msg, request, mb)
+}
+
+func (vb *ValidationSaver) Result(reply core.Reply, err error) error {
+	if vb.current == nil {
+		return errors.New("result call without request registered")
 	}
-	// TODO: use proper conversion
-	reqref := Ref{}
-	reqref.SetRecord(*reqid)
-
-	vb.lr.addObjectCaseRecord(m.GetReference(), core.CaseRecord{
-		Type:   core.CaseRecordTypeRequest,
-		ReqSig: HashInterface(vb.lr.PlatformCryptographyScheme, m),
-		Resp:   reqref,
-	})
-	return &reqref, err
-}
-
-func (vb ValidationSaver) NeedSave() bool {
-	return true
-}
-
-func (vb ValidationSaver) ModifyContext(ctx *core.LogicCallContext) {
-	// nothing need
-}
-
-func (vb ValidationSaver) Begin(refs Ref, record core.CaseRecord) {
-	vb.lr.addObjectCaseRecord(refs, record)
-}
-
-func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
-	vb.lr.addObjectCaseRecord(refs, record)
-}
-
-func (vb ValidationSaver) GetRole() core.DynamicRole {
-	return core.DynamicRoleVirtualExecutor
+	vb.current.Reply = reply
+	vb.current.Error = err
+	return nil
 }
 
 type ValidationChecker struct {
-	lr *LogicRunner
-	cb core.CaseBindReplay
+	lr      *LogicRunner
+	cb      *CaseBindReplay
+	current *CaseRequest
 }
 
-func (vb ValidationChecker) RegisterRequest(p core.Parcel) (*Ref, error) {
-	m := p.Message().(message.IBaseLogicMessage)
-	cr, _ := vb.lr.nextValidationStep(m.GetReference())
-	if core.CaseRecordTypeRequest != cr.Type {
-		return nil, errors.New("Wrong validation type on Request")
+func (vb *ValidationChecker) Mode() string {
+	return "validation"
+}
+
+func (vb *ValidationChecker) NextRequest() *CaseRequest {
+	vb.current = vb.cb.NextRequest()
+	return vb.current
+}
+
+func (vb *ValidationChecker) Result(reply core.Reply, err error) error {
+	if vb.current == nil {
+		return errors.New("result call without request registered")
 	}
-	if !bytes.Equal(cr.ReqSig, HashInterface(vb.lr.PlatformCryptographyScheme, m)) {
-		return nil, errors.New("Wrong validation sig on Request")
+	// TODO: reflect.DeepEqual is not what we want to go with, we should
+	// go with HASH comparision
+	if !reflect.DeepEqual(vb.current.Reply, reply) {
+		return errors.Errorf("replies arn't equal: expected: %+v, got: %+v, err: %+v", vb.current.Reply, reply, err)
 	}
-	if req, ok := cr.Resp.(Ref); ok {
-		return &req, nil
+	if !reflect.DeepEqual(vb.current.Error, err) {
+		return errors.New("errors arn't equal")
 	}
-	return nil, errors.Errorf("wrong validation, request contains %t", cr.Resp)
-
+	return nil
 }
 
-func (vb ValidationChecker) NeedSave() bool {
-	return false
-}
-
-func (vb ValidationChecker) ModifyContext(ctx *core.LogicCallContext) {
-	ctx.Pulse = vb.cb.Pulse
-}
-
-func (vb ValidationChecker) Begin(refs Ref, record core.CaseRecord) {
-	// do nothing, everything done in lr.Validate
-}
-
-func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
-	// do nothing, everything done in lr.Validate
-}
-
-func (vb ValidationChecker) GetRole() core.DynamicRole {
-	return core.DynamicRoleVirtualValidator
+func init() {
+	gob.Register(&CaseRequest{})
+	gob.Register(&CaseBind{})
 }

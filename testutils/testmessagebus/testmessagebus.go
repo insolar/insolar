@@ -20,36 +20,68 @@ package testmessagebus
 
 import (
 	"context"
-	"errors"
+	"encoding/gob"
 	"fmt"
 	"io"
+	"reflect"
 	"testing"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
+type TapeRecord struct {
+	Message core.Message
+	Reply   core.Reply
+	Error   error
+}
+
 type TestMessageBus struct {
 	handlers    map[core.MessageType]core.MessageHandler
 	pf          message.ParcelFactory
 	PulseNumber core.PulseNumber
+	ReadingTape []TapeRecord
+	WritingTape []TapeRecord
 }
 
 func (mb *TestMessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
-	panic("implement me")
+	tape := make([]TapeRecord, 0)
+	enc := gob.NewDecoder(reader)
+	err := enc.Decode(&tape)
+	if err != nil {
+		return nil, err
+	}
+	res := *mb
+	res.ReadingTape = tape
+	return &res, nil
 }
 
 func (mb *TestMessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
-	panic("implement me")
+	if mb.WritingTape == nil {
+		return errors.New("Not writing message bus")
+	}
+	enc := gob.NewEncoder(writer)
+	err := enc.Encode(mb.WritingTape)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (mb *TestMessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) (core.MessageBus, error) {
-	panic("implement me")
+	tape := make([]TapeRecord, 0)
+	res := *mb
+	res.WritingTape = tape
+	return &res, nil
 }
 
 func NewTestMessageBus(t *testing.T) *TestMessageBus {
@@ -88,7 +120,23 @@ func (mb *TestMessageBus) MustRegister(p core.MessageType, handler core.MessageH
 	}
 }
 
-func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
+func (mb *TestMessageBus) Send(
+	ctx context.Context, m core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions,
+) (core.Reply, error) {
+	if mb.ReadingTape != nil {
+		if len(mb.ReadingTape) == 0 {
+			return nil, errors.Errorf("No expected messages, got %+v", m)
+		}
+		head, tail := mb.ReadingTape[0], mb.ReadingTape[1:]
+		mb.ReadingTape = tail
+
+		inslogger.FromContext(ctx).Debugf("Reading message %+v off the tape", head.Message)
+
+		if !reflect.DeepEqual(head.Message, m) {
+			return nil, errors.Errorf("Message in the tape and sended arn't equal; got: %+v, expected: %+v", m, head.Message)
+		}
+		return head.Reply, head.Error
+	}
 	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil, currentPulse)
 	if err != nil {
 		return nil, err
@@ -99,5 +147,13 @@ func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, currentPulse
 		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
-	return handler(ctx, parcel)
+	ctx = parcel.Context(context.Background())
+
+	reply, err := handler(ctx, parcel)
+	if mb.WritingTape != nil {
+		inslogger.FromContext(ctx).Debugf("Writing message %+v on the tape", m)
+		mb.WritingTape = append(mb.WritingTape, TapeRecord{Message: m, Reply: reply, Error: err})
+	}
+
+	return reply, err
 }

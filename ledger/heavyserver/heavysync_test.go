@@ -19,12 +19,11 @@ package heavyserver
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHeavy_SyncBasic(t *testing.T) {

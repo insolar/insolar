@@ -18,14 +18,12 @@ package pulsemanager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 )
@@ -76,6 +74,7 @@ func (scp *syncClientsPool) AddPulsesToSyncClient(
 	ctx context.Context,
 	PulseManager *PulseManager,
 	jetID core.RecordID,
+	shouldrun bool,
 	pns ...core.PulseNumber,
 ) *jetSyncClient {
 	scp.Lock()
@@ -87,12 +86,14 @@ func (scp *syncClientsPool) AddPulsesToSyncClient(
 	}
 	scp.Unlock()
 
-	client.RunOnce(ctx)
-
 	client.AddPulses(pns)
-	if len(client.signal) == 0 {
-		// send signal we have new pulse
-		client.signal <- struct{}{}
+
+	if shouldrun {
+		client.RunOnce(ctx)
+		if len(client.signal) == 0 {
+			// send signal we have new pulse
+			client.signal <- struct{}{}
+		}
 	}
 	return client
 }
@@ -180,7 +181,6 @@ func (c *jetSyncClient) RunOnce(ctx context.Context) {
 		// (TraceID not meaningful in async sync loop)
 		ctx, cancel := context.WithCancel(ctx)
 		c.cancel = cancel
-		fmt.Printf("*START* client.syncloop for jet %v\n", c.jetID)
 		go c.syncloop(ctx)
 	})
 }
@@ -191,6 +191,7 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 
 	// TODO: use own db instance (untie from PulseManager)
 	db := c.PulseManager.db
+	pulseStorage := c.PulseManager.PulseStorage
 
 	var (
 		syncPN     core.PulseNumber
@@ -239,7 +240,7 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 			break
 		}
 
-		if pulseIsOutdated(ctx, db, syncPN, c.pulsesDeltaLimit) {
+		if pulseIsOutdated(ctx, pulseStorage, syncPN, c.pulsesDeltaLimit) {
 			inslog.Infof("pulse %v on jet %v is outdated, skip it", syncPN, c.jetID)
 			finishpulse()
 			continue
@@ -278,12 +279,12 @@ func (c *jetSyncClient) syncloop(ctx context.Context) {
 
 }
 
-func pulseIsOutdated(ctx context.Context, db *storage.DB, pn core.PulseNumber, limit core.PulseNumber) bool {
-	current, err := db.GetLatestPulse(ctx)
+func pulseIsOutdated(ctx context.Context, pstore core.PulseStorage, pn core.PulseNumber, limit core.PulseNumber) bool {
+	current, err := pstore.Current(ctx)
 	if err != nil {
 		panic(err)
 	}
-	return current.Pulse.PulseNumber-pn > limit
+	return current.PulseNumber-pn > limit
 }
 
 func (c *jetSyncClient) Stop(ctx context.Context) {

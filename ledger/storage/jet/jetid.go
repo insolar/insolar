@@ -23,6 +23,9 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
+// ZeroJetID is value of an empty Jet ID
+var ZeroJetID = *NewID(0, nil)
+
 // NewID generates RecordID for jet.
 func NewID(depth uint8, prefix []byte) *core.RecordID {
 	var id core.RecordID

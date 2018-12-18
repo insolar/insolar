@@ -42,13 +42,16 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                    core.LogicRunner       `inject:""`
-	Bus                   core.MessageBus        `inject:""`
-	NodeNet               core.NodeNetwork       `inject:""`
-	JetCoordinator        core.JetCoordinator    `inject:""`
-	GIL                   core.GlobalInsolarLock `inject:""`
-	RecentStorageProvider recentstorage.Provider `inject:""`
-	ActiveListSwapper     ActiveListSwapper      `inject:""`
+	LR                         core.LogicRunner                `inject:""`
+	Bus                        core.MessageBus                 `inject:""`
+	NodeNet                    core.NodeNetwork                `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
+	GIL                        core.GlobalInsolarLock          `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	RecentStorageProvider      recentstorage.Provider          `inject:""`
+	ActiveListSwapper          ActiveListSwapper               `inject:""`
+	PulseStorage               pulseStoragePm                  `inject:""`
 
 	currentPulse core.Pulse
 
@@ -94,16 +97,7 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 	return pm
 }
 
-// Current returns copy (for concurrency safety) of current pulse structure.
-func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
-	m.setLock.RLock()
-	defer m.setLock.RUnlock()
-
-	p := m.currentPulse
-	return &p, nil
-}
-
-func (m *PulseManager) dropAllJets(ctx context.Context, pulse *storage.Pulse) error {
+func (m *PulseManager) handleJetDrops(ctx context.Context, pulse *storage.Pulse) error {
 	jetIDs, err := m.db.GetJets(ctx)
 	if err != nil {
 		return errors.Wrap(err, "can't get jets from storage")
@@ -145,20 +139,42 @@ func (m *PulseManager) createDrop(
 ) {
 	prevDrop, err := m.db.GetDrop(ctx, jetID, *lastSlotPulse.Prev)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
-	drop, messages, err = m.db.CreateDrop(ctx, jetID, lastSlotPulse.Pulse.PulseNumber, prevDrop.Hash)
+	drop, messages, dropSize, err := m.db.CreateDrop(ctx, jetID, lastSlotPulse.Pulse.PulseNumber, prevDrop.Hash)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
 	err = m.db.SetDrop(ctx, jetID, drop)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
 
 	dropSerialized, err = jet.Encode(drop)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
+	}
+
+	dropSizeData := &jet.DropSize{
+		JetID:    jetID,
+		PulseNo:  lastSlotPulse.Pulse.PulseNumber,
+		DropSize: dropSize,
+	}
+	hasher := m.PlatformCryptographyScheme.IntegrityHasher()
+	_, err = dropSizeData.WriteHashData(hasher)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't WriteHashData")
+	}
+	signature, err := m.CryptographyService.Sign(hasher.Sum(nil))
+	dropSizeData.Signature = signature.Bytes()
+
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Sign")
+	}
+
+	err = m.db.AddDropSize(ctx, dropSizeData)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't AddDropSize")
 	}
 
 	return
@@ -223,7 +239,7 @@ func (m *PulseManager) processRecentObjects(
 			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
 			if err != nil {
 				logger.Error(err)
-				return err
+				return errors.Wrap(err, "[ processRecentObjects ] Can't RemoveObjectIndex")
 			}
 		}
 	}
@@ -237,21 +253,28 @@ func (m *PulseManager) processRecentObjects(
 		pendingRequests[id] = record.SerializeRecord(pendingRecord)
 	}
 
-	msg := &message.HotData{
-		Drop:            *drop,
-		PulseNumber:     previousSlotPulse.Pulse.PulseNumber,
-		RecentObjects:   recentObjects,
-		PendingRequests: pendingRequests,
-	}
-	_, err := m.Bus.Send(ctx, msg, *currentSlotPulse, nil)
+	dropSizeHistory, err := m.db.GetDropSizeHistory(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeHistory")
+	}
+
+	msg := &message.HotData{
+		Jet:                *core.NewRecordRef(core.DomainID, jetID),
+		Drop:               *drop,
+		PulseNumber:        previousSlotPulse.Pulse.PulseNumber,
+		RecentObjects:      recentObjects,
+		PendingRequests:    pendingRequests,
+		JetDropSizeHistory: dropSizeHistory,
+	}
+	_, err = m.Bus.Send(ctx, msg, *currentSlotPulse, nil)
+	if err != nil {
+		return errors.Wrap(err, "[ processRecentObjects ] Can't send msg to bus")
 	}
 	return nil
 }
 
 // Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) error {
+func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, persist bool) error {
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -262,29 +285,38 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	var err error
 	m.GIL.Acquire(ctx)
 
+	m.PulseStorage.Lock()
+
 	// swap pulse
 	m.currentPulse = pulse
 
 	lastSlotPulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
+		m.PulseStorage.Unlock()
+		m.GIL.Release(ctx)
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
 	// swap active nodes
 	m.ActiveListSwapper.MoveSyncToActive()
-	if !dry {
+	if persist {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
+			m.GIL.Release(ctx)
+			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
+			m.GIL.Release(ctx)
+			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
 
+	m.PulseStorage.Unlock()
 	m.GIL.Release(ctx)
 
-	if dry {
+	if !persist {
 		return nil
 	}
 
@@ -292,7 +324,7 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		err = m.dropAllJets(ctx, lastSlotPulse)
+		err = m.handleJetDrops(ctx, lastSlotPulse)
 		if err != nil {
 			return err
 		}
@@ -317,7 +349,7 @@ func (m *PulseManager) AddPulseToSyncClients(ctx context.Context, pn core.PulseN
 	for jetID := range allJets {
 		_, err := m.db.GetDrop(ctx, jetID, pn)
 		if err == nil {
-			m.syncClientsPool.AddPulsesToSyncClient(ctx, m, jetID, pn)
+			m.syncClientsPool.AddPulsesToSyncClient(ctx, m, jetID, true, pn)
 		}
 	}
 	return nil

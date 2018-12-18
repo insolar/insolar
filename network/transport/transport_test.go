@@ -70,8 +70,8 @@ func (t *transportSuite) SetupTest() {
 
 func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	ctx := context.Background()
-	go t.node1.transport.Start(ctx)
-	go t.node2.transport.Start(ctx)
+	go t.node1.transport.Listen(ctx)
+	go t.node2.transport.Listen(ctx)
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {
@@ -124,7 +124,7 @@ func (t *transportSuite) TestSendBigPacket() {
 	}
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TestPacket)
-	requestMsg := builder.Request(&packet.RequestTest{data}).Build()
+	requestMsg := builder.Request(&packet.RequestTest{Data: data}).Build()
 
 	_, err := t.node1.transport.SendRequest(requestMsg)
 	t.Assert().NoError(err)

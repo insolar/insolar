@@ -59,7 +59,7 @@ func NewSync(db *storage.DB) *Sync {
 	}
 }
 
-func (s *Sync) checkIsNextPulse(ctx context.Context, jet core.RecordID, jetstate *syncstate, pn core.PulseNumber) error {
+func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetstate *syncstate, pn core.PulseNumber) error {
 	var (
 		checkpoint core.PulseNumber
 		err        error
@@ -67,7 +67,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jet core.RecordID, jetstate
 
 	checkpoint = jetstate.lastok
 	if checkpoint == 0 {
-		checkpoint, err = s.db.GetHeavySyncedPulse(ctx, jet)
+		checkpoint, err = s.db.GetHeavySyncedPulse(ctx, jetID)
 		if err != nil {
 			return errors.Wrap(err, "GetHeavySyncedPulse failed")
 		}
@@ -99,20 +99,20 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jet core.RecordID, jetstate
 	return nil
 }
 
-func (s *Sync) getJetSyncState(ctx context.Context, jet core.RecordID) *syncstate {
+func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncstate {
 	s.Lock()
-	jetState, ok := s.jetSyncStates[jet]
+	jetState, ok := s.jetSyncStates[jetID]
 	if !ok {
 		jetState = &syncstate{}
-		s.jetSyncStates[jet] = jetState
+		s.jetSyncStates[jetID] = jetState
 	}
 	s.Unlock()
 	return jetState
 }
 
 // Start try to start heavy sync for provided pulse.
-func (s *Sync) Start(ctx context.Context, jet core.RecordID, pn core.PulseNumber) error {
-	jetState := s.getJetSyncState(ctx, jet)
+func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) error {
+	jetState := s.getJetSyncState(ctx, jetID)
 	jetState.Lock()
 	defer jetState.Unlock()
 
@@ -120,7 +120,7 @@ func (s *Sync) Start(ctx context.Context, jet core.RecordID, pn core.PulseNumber
 		return ErrSyncInProgress
 	}
 
-	if err := s.checkIsNextPulse(ctx, jet, jetState, pn); err != nil {
+	if err := s.checkIsNextPulse(ctx, jetID, jetState, pn); err != nil {
 		return err
 	}
 
@@ -131,14 +131,14 @@ func (s *Sync) Start(ctx context.Context, jet core.RecordID, pn core.PulseNumber
 // Store stores recieved key/value pairs at heavy storage.
 //
 // TODO: check actual jet and pulse in keys
-func (s *Sync) Store(ctx context.Context, jet core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
-	jetState := s.getJetSyncState(ctx, jet)
+func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
+	jetState := s.getJetSyncState(ctx, jetID)
 
 	err := func() error {
 		jetState.Lock()
 		defer jetState.Unlock()
 		if jetState.syncpulse == nil {
-			return fmt.Errorf("Jet %v not in sync mode", jet)
+			return fmt.Errorf("Jet %v not in sync mode", jetID)
 		}
 		if *jetState.syncpulse != pn {
 			return fmt.Errorf("Passed pulse %v doesn't math in-sync pulse %v", pn, *jetState.syncpulse)
@@ -165,25 +165,25 @@ func (s *Sync) Store(ctx context.Context, jet core.RecordID, pn core.PulseNumber
 // Stop successfully stops replication for specified pulse.
 //
 // TODO: call Stop if range sync too long
-func (s *Sync) Stop(ctx context.Context, jet core.RecordID, pn core.PulseNumber) error {
-	jetState := s.getJetSyncState(ctx, jet)
+func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) error {
+	jetState := s.getJetSyncState(ctx, jetID)
 	jetState.Lock()
 	defer jetState.Unlock()
 
 	if jetState.syncpulse == nil {
-		return errors.Errorf("Jet %v not in sync mode", jet)
+		return errors.Errorf("Jet %v not in sync mode", jetID)
 	}
 	if *jetState.syncpulse != pn {
 		return fmt.Errorf(
 			"Passed pulse %v doesn't match pulse %v current in sync for jet %v",
-			pn, *jetState.syncpulse, jet)
+			pn, *jetState.syncpulse, jetID)
 	}
 	if jetState.insync {
 		return ErrSyncInProgress
 	}
 	jetState.syncpulse = nil
 
-	err := s.db.SetHeavySyncedPulse(ctx, jet, pn)
+	err := s.db.SetHeavySyncedPulse(ctx, jetID, pn)
 	if err != nil {
 		return err
 	}
@@ -192,8 +192,8 @@ func (s *Sync) Stop(ctx context.Context, jet core.RecordID, pn core.PulseNumber)
 }
 
 // Reset resets sync for provided pulse.
-func (s *Sync) Reset(ctx context.Context, jet core.RecordID, pn core.PulseNumber) error {
-	jetState := s.getJetSyncState(ctx, jet)
+func (s *Sync) Reset(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) error {
+	jetState := s.getJetSyncState(ctx, jetID)
 	jetState.Lock()
 	defer jetState.Unlock()
 

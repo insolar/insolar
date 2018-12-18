@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -45,6 +46,7 @@ type Runner struct {
 	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
+	NodeNetwork         core.NodeNetwork         `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
@@ -140,8 +142,12 @@ func (ar *Runner) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")
 	inslog.Info("Config: ", ar.cfg)
+	listener, err := net.Listen("tcp", ar.server.Addr)
+	if err != nil {
+		return errors.Wrap(err, "Can't start listening")
+	}
 	go func() {
-		if err := ar.server.ListenAndServe(); err != nil {
+		if err := ar.server.Serve(listener); err != nil {
 			inslog.Error("Httpserver: ListenAndServe() error: ", err)
 		}
 	}()
@@ -171,8 +177,11 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 		return publicKey, nil
 	}
 
-	reference := core.NewRefFromBase58(ref)
-	res, err := ar.ContractRequester.SendRequest(ctx, &reference, "GetPublicKey", []interface{}{})
+	reference, err := core.NewRefFromBase58(ref)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't parse ref")
+	}
+	res, err := ar.ContractRequester.SendRequest(ctx, reference, "GetPublicKey", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't get public key")
 	}
