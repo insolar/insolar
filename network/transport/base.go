@@ -130,7 +130,6 @@ func (t *baseTransport) prepareListen() {
 }
 
 func (t *baseTransport) prepareDisconnect() {
-
 	t.disconnectStarted <- true
 	close(t.disconnectStarted)
 }

@@ -143,20 +143,19 @@ func (tcp *tcpTransport) connectionClosed(conn net.Conn) bool {
 
 // Start starts networking.
 func (tcp *tcpTransport) Listen(ctx context.Context) error {
-	tcp.mutex.Lock()
-
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
-
-	tcp.isStarted = true
 
 	listener, err := net.Listen("tcp", tcp.addr)
 	if err != nil {
 		return err
 	}
 
+	tcp.mutex.Lock()
+
 	tcp.l = listener
 	tcp.prepareListen()
+	tcp.isStarted = true
 
 	tcp.mutex.Unlock()
 
