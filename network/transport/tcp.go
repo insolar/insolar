@@ -67,9 +67,16 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 
 	if !ok || tcp.connectionClosed(conn) {
 		tcp.connMutex.Lock()
+		if ok && tcp.connectionClosed(conn) {
+			delete(tcp.conns, conn.RemoteAddr().String())
+		}
 
 		conn, ok = tcp.conns[tcpAddr.String()]
 		if !ok || tcp.connectionClosed(conn) {
+			if ok && tcp.connectionClosed(conn) {
+				delete(tcp.conns, conn.RemoteAddr().String())
+			}
+
 			logger.Debugf("[ send ] Failed to retrieve connection to %s", tcpAddr)
 
 			conn, err = tcp.openTCP(ctx, tcpAddr)
@@ -123,7 +130,6 @@ func (tcp *tcpTransport) connectionClosed(conn net.Conn) bool {
 			log.Debug("[ connectionClosed ] Close connection to %s", conn.RemoteAddr())
 		}
 
-		delete(tcp.conns, conn.RemoteAddr().String())
 		return true
 	}
 
@@ -182,6 +188,9 @@ func (tcp *tcpTransport) Stop() {
 			log.Errorln("[ Stop ] Failed to close socket: ", err.Error())
 		}
 	}
+
+	tcp.connMutex.Lock()
+	defer tcp.connMutex.Unlock()
 
 	for addr, conn := range tcp.conns {
 		err := conn.Close()
