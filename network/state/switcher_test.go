@@ -35,18 +35,26 @@ func mockSwitcherWorkAround(t *testing.T, isBootstrapped bool) *network.Switcher
 	return swaMock
 }
 
+func mockMessageBusLocker(t *testing.T) *messageBusLockerMock {
+	mblMock := NewmessageBusLockerMock(t)
+	mblMock.UnlockFunc = func(p context.Context) {}
+	return mblMock
+}
+
 func TestNewNetworkSwitcher(t *testing.T) {
 	nodeNet := network.NewNodeNetworkMock(t)
 	switcherWorkAround := mockSwitcherWorkAround(t, false)
+	messageBusLocker := mockMessageBusLocker(t)
 
 	switcher, err := NewNetworkSwitcher()
 	require.NoError(t, err)
 
 	cm := &component.Manager{}
-	cm.Inject(nodeNet, switcherWorkAround, switcher)
+	cm.Inject(nodeNet, switcherWorkAround, messageBusLocker, switcher)
 
 	require.Equal(t, nodeNet, switcher.NodeNetwork)
 	require.Equal(t, switcherWorkAround, switcher.SwitcherWorkAround)
+	require.Equal(t, messageBusLocker, switcher.MBLocker)
 	require.Equal(t, core.NoNetworkState, switcher.state)
 	require.Equal(t, sync.RWMutex{}, switcher.stateLock)
 }
@@ -64,13 +72,15 @@ func TestOnPulseNoChange(t *testing.T) {
 	require.NoError(t, err)
 	switcherWorkAround := mockSwitcherWorkAround(t, false)
 	nodeNet := network.NewNodeNetworkMock(t)
+	messageBusLocker := mockMessageBusLocker(t)
 
 	cm := &component.Manager{}
-	cm.Inject(switcherWorkAround, switcher, nodeNet)
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
 
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)
 	require.Equal(t, core.NoNetworkState, switcher.state)
+	require.Equal(t, uint64(0), messageBusLocker.UnlockCounter)
 }
 
 func TestOnPulseStateChanged(t *testing.T) {
@@ -78,13 +88,15 @@ func TestOnPulseStateChanged(t *testing.T) {
 	require.NoError(t, err)
 	switcherWorkAround := mockSwitcherWorkAround(t, true)
 	nodeNet := network.NewNodeNetworkMock(t)
+	messageBusLocker := mockMessageBusLocker(t)
 
 	cm := &component.Manager{}
-	cm.Inject(switcherWorkAround, switcher, nodeNet)
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
 
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)
 	require.Equal(t, core.CompleteNetworkState, switcher.state)
+	require.Equal(t, uint64(1), messageBusLocker.UnlockCounter)
 }
 
 func TestGetStateAfterStateChanged(t *testing.T) {
@@ -92,9 +104,10 @@ func TestGetStateAfterStateChanged(t *testing.T) {
 	require.NoError(t, err)
 	switcherWorkAround := mockSwitcherWorkAround(t, true)
 	nodeNet := network.NewNodeNetworkMock(t)
+	messageBusLocker := mockMessageBusLocker(t)
 
 	cm := &component.Manager{}
-	cm.Inject(switcherWorkAround, switcher, nodeNet)
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
 
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)

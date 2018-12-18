@@ -52,6 +52,7 @@ type PulseManager struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	RecentStorageProvider      recentstorage.Provider          `inject:""`
 	ActiveListSwapper          ActiveListSwapper               `inject:""`
+	PulseStorage               pulseStoragePm                  `inject:""`
 
 	currentPulse core.Pulse
 
@@ -99,15 +100,6 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 	pm.options.pulsesDeltaLimit = conf.LightChainLimit
 	pm.syncbackoff = backoffFromConfig(pmconf.HeavyBackoff)
 	return pm
-}
-
-// Current returns copy (for concurrency safety) of current pulse structure.
-func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
-	m.setLock.RLock()
-	defer m.setLock.RUnlock()
-
-	p := m.currentPulse
-	return &p, nil
 }
 
 func (m *PulseManager) handleJetDrops(ctx context.Context, pulse *storage.Pulse) error {
@@ -272,6 +264,7 @@ func (m *PulseManager) processRecentObjects(
 	}
 
 	msg := &message.HotData{
+		Jet:                *core.NewRecordRef(core.DomainID, jetID),
 		Drop:               *drop,
 		PulseNumber:        previousSlotPulse.Pulse.PulseNumber,
 		RecentObjects:      recentObjects,
@@ -286,7 +279,7 @@ func (m *PulseManager) processRecentObjects(
 }
 
 // Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) error {
+func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, persist bool) error {
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -297,29 +290,38 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	var err error
 	m.GIL.Acquire(ctx)
 
+	m.PulseStorage.Lock()
+
 	// swap pulse
 	m.currentPulse = pulse
 
 	lastSlotPulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
+		m.PulseStorage.Unlock()
+		m.GIL.Release(ctx)
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
 	// swap active nodes
 	m.ActiveListSwapper.MoveSyncToActive()
-	if !dry {
+	if persist {
 		if err := m.db.AddPulse(ctx, pulse); err != nil {
+			m.GIL.Release(ctx)
+			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
+			m.GIL.Release(ctx)
+			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
 
+	m.PulseStorage.Unlock()
 	m.GIL.Release(ctx)
 
-	if dry {
+	if !persist {
 		return nil
 	}
 
@@ -467,7 +469,7 @@ func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) 
 }
 
 func (m *PulseManager) pulseIsOutdated(ctx context.Context, pn core.PulseNumber) bool {
-	current, err := m.Current(ctx)
+	current, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		panic(err)
 	}

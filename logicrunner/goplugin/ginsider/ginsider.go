@@ -292,6 +292,7 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 	}
 
 	return rpctypes.UpBaseReq{
+		Mode:      callCtx.Mode,
 		Callee:    *callCtx.Callee,
 		Prototype: *callCtx.Prototype,
 		Request:   *callCtx.Request,

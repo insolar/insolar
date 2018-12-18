@@ -1,5 +1,3 @@
-// +build functest
-
 /*
  *    Copyright 2018 Insolar
  *
@@ -16,18 +14,17 @@
  *    limitations under the License.
  */
 
-package functest
+package pulsemanager
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/core"
 )
 
-func TestGetStatus(t *testing.T) {
-	status := getStatus(t)
-	require.NotNil(t, status)
+// It's a internal interface of pulse manager, you shouldn't use outside of pm
+//go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.pulseStoragePm -o ./ -s _mock.go
+type pulseStoragePm interface {
+	core.PulseStorage
 
-	require.Equal(t, "CompleteNetworkState", status.NetworkState)
-	require.Equal(t, 3, status.ActiveListSize)
+	Lock()
+	Unlock()
 }

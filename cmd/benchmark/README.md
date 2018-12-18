@@ -13,7 +13,7 @@ Usage
    
 #### Start benchmark
 
-    ./bin/benchmark -c=3 -r=1 -k=scripts/insolard/root_member_keys.json
+    ./bin/benchmark -c=3 -r=1 -k=scripts/insolard/configs/root_member_keys.json
 
 ### Options
 
@@ -32,3 +32,9 @@ Usage
 
         -k rootmemberkeys
                 Path to file with RootMember keys.
+
+        -u apiurl
+                API url for requests (default - http://localhost:19191/api).
+
+        -l loglevel
+                Log level (default - info).

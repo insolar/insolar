@@ -57,6 +57,7 @@ type MessageSignature interface {
 }
 
 // Parcel by senders private key.
+//go:generate minimock -i github.com/insolar/insolar/core.Parcel -o ../testutils -s _mock.go
 type Parcel interface {
 	Message
 	MessageSignature
@@ -121,12 +122,6 @@ type MessageBus interface {
 
 	// WriteTape writes recorder's tape to the provided writer.
 	WriteTape(ctx context.Context, writer io.Writer) error
-}
-
-//go:generate minimock -i github.com/insolar/insolar/core.GlobalInsolarLock -o ../testutils -s _mock.go
-type GlobalInsolarLock interface {
-	Acquire(context.Context)
-	Release(context.Context)
 }
 
 type messageBusKey struct{}

@@ -352,14 +352,12 @@ type ValidationCheck struct {
 
 // DefaultTarget returns of target of this event.
 func (vc *ValidationCheck) DefaultTarget() *core.RecordRef {
-	// TODO: return smth real
-	return nil
+	return &vc.Object
 }
 
 // DefaultRole returns role for this event
 func (vc *ValidationCheck) DefaultRole() core.DynamicRole {
-	// TODO: return smth real
-	return core.DynamicRoleUndefined
+	return core.DynamicRoleLightExecutor
 }
 
 // AllowedSenderObjectAndRole implements interface method

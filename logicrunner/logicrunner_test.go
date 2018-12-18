@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 
@@ -63,7 +64,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
-var parallel = true
+var parallel = false
 
 func TestMain(m *testing.M) {
 	var err error
@@ -115,12 +116,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	nk := nodekeeper.GetTestNodekeeper(mock)
+
 	mb := testmessagebus.NewTestMessageBus(t)
-
-	var pulseNumber core.PulseNumber
-	pulseNumber = 0
-
-	mb.PulseNumber = pulseNumber
+	mb.PulseNumber = 0
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
@@ -134,6 +132,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		},
 	)
 
+	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
 	recentMock := recentstorage.NewProviderMock(t)
 
 	parcelFactory := messagebus.NewParcelFactory()
@@ -141,14 +140,26 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
-	cm.Inject(nk, recentMock, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+
+	cm.Inject(pulseStorage, nk, recentMock, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	err = cm.Init(ctx)
+	assert.NoError(t, err)
 	err = cm.Start(ctx)
 	assert.NoError(t, err)
 
 	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
 
-	newTestPulse(ctx, lr, mb)
+	currentPulse, _ := pulseStorage.Current(ctx)
+	newPulseNumber := currentPulse.PulseNumber + 1
+	err = lr.Ledger.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
+		true,
+	)
+	require.NoError(t, err)
+
+	mb.PulseNumber = newPulseNumber
 
 	assert.NoError(t, err)
 	if err != nil {
@@ -176,18 +187,6 @@ func mockCryptographyService(t *testing.T) core.CryptographyService {
 	return mock
 }
 
-func newTestPulse(ctx context.Context, lr *LogicRunner, mb *testmessagebus.TestMessageBus) {
-	currentPulse, _ := lr.Ledger.GetPulseManager().Current(ctx)
-	newPulseNumber := currentPulse.PulseNumber + 1
-	lr.Ledger.GetPulseManager().Set(
-		ctx,
-		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
-		false,
-	)
-
-	mb.PulseNumber = newPulseNumber
-}
-
 func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, mustfail ...core.RecordRef) {
 	failmap := make(map[core.RecordRef]struct{})
 	for _, r := range mustfail {
@@ -196,10 +195,15 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 
 	rlr := lr.(*LogicRunner)
 
-	for ref, state := range rlr.execution {
+	for ref, state := range rlr.state {
 		log.Debugf("TEST validating: %s", ref)
 
-		_, err := lr.Validate(ctx, ref, *rlr.pulse(ctx), state.caseBind)
+		msg := state.ExecutionState.Behaviour.(*ValidationSaver).caseBind.ToValidateMessage(
+			ctx, ref, *rlr.pulse(ctx),
+		)
+		cb := NewCaseBindFromValidateMessage(ctx, rlr.MessageBus, msg)
+
+		_, err := rlr.Validate(ctx, ref, *rlr.pulse(ctx), *cb)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation %s", ref)
 		} else {
@@ -539,6 +543,15 @@ func (r *One) Hello() error {
 
 	return nil
 }
+
+func (r *One) Value() (int, error) {
+	friend, err := two.GetImplementationFrom(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	return friend.Value()
+}
 `
 
 	var contractTwoCode = `
@@ -563,6 +576,10 @@ func (r *Two) Hello() (string, error) {
 	r.X *= 2
 	return fmt.Sprintf("Hello %d times!", r.X), nil
 }
+
+func (r *Two) Value() (int, error) {
+	return r.X, nil
+}
 `
 	ctx := context.TODO()
 	// TODO: use am := testutil.NewTestArtifactManager() here
@@ -577,6 +594,9 @@ func (r *Two) Hello() (string, error) {
 	_, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Hello")
 	assert.NoError(t, err, "contract call")
 
+	resp, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "Value")
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, uint64(644), firstMethodRes(t, resp))
 }
 
 func TestContextPassing(t *testing.T) {
@@ -1242,7 +1262,7 @@ func New(n int) (*Child, error) {
 	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(
 		ctx,
 		core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}},
-		false,
+		true,
 	)
 	assert.NoError(t, err)
 
@@ -1648,7 +1668,7 @@ func (r *One) ShortSleep() (error) {
 		err = pm.Set(
 			ctx,
 			core.Pulse{PulseNumber: 1, Entropy: core.Entropy{}},
-			false,
+			true,
 		)
 		log.Debugf("!!!!! Pulse end")
 	}()

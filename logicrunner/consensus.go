@@ -42,7 +42,7 @@ type Consensus struct {
 	Need     int
 	Total    int
 	Results  map[Ref]ConsensusRecord
-	CaseBind core.CaseBind
+	CaseBind CaseBind
 	Message  core.Parcel
 }
 
@@ -80,7 +80,7 @@ func (c *Consensus) AddValidated(ctx context.Context, sm core.Parcel, msg *messa
 func (c *Consensus) AddExecutor(ctx context.Context, sm core.Parcel, msg *message.ExecutorResults) {
 	c.Lock()
 	defer c.Unlock()
-	c.CaseBind = msg.CaseBind
+	c.CaseBind = *NewCaseBindFromExecutorResultsMessage(msg)
 	c.Message = sm
 	c.CheckReady(ctx)
 }
