@@ -24,7 +24,6 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -82,10 +81,10 @@ type ecdsaVerifyWrapper struct {
 }
 
 func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool {
-	r, s, err := getRSFromBytes(signature.Bytes())
-	if err != nil {
-		log.Error(err)
+	if signature.Bytes() == nil {
+		return false
 	}
+	r, s := getRSFromBytes(signature.Bytes())
 	ecdsaSignature := ecdsaSignature{r, s}
 	hash := sw.hasher.Hash(data)
 
@@ -108,10 +107,7 @@ func makeSignature(r, s *big.Int) []byte {
 	return res[:]
 }
 
-func getRSFromBytes(data []byte) (*big.Int, *big.Int, error) {
-	if data == nil {
-		return nil, nil, errors.New("[ getRSFromBytes ] incoming data is nil")
-	}
+func getRSFromBytes(data []byte) (*big.Int, *big.Int) {
 	if len(data) > (bigIntLength*lenBytes + lenBytes) {
 		err := fmt.Sprintf("[ getRSFromBytes ] wrong data length to get a r, s. recv len: %d", len(data))
 		panic(err)
@@ -126,5 +122,5 @@ func getRSFromBytes(data []byte) (*big.Int, *big.Int, error) {
 	copy(sBytes, data[rLen+lenBytes:])
 	r.SetBytes(rBytes)
 	s.SetBytes(sBytes)
-	return r, s, nil
+	return r, s
 }
