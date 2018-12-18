@@ -31,7 +31,7 @@ import (
 
 // GetDrop returns jet drop for a given pulse number and jet id.
 func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
-	k := prefixkeyany(scopeIDJetDrop, jetID[:], pulse.Bytes())
+	k := prefixkey(scopeIDJetDrop, jetID[:], pulse.Bytes())
 
 	buf, err := db.get(ctx, k)
 	if err != nil {
@@ -69,7 +69,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 	var messagesError error
 
 	go func() {
-		messagesPrefix := prefixkeyany(scopeIDMessage, jetID[:], pulse.Bytes())
+		messagesPrefix := prefixkey(scopeIDMessage, jetID[:], pulse.Bytes())
 
 		messagesError = db.db.View(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -91,7 +91,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 	var jetDropHashError error
 	var dropSize uint64
 	go func() {
-		recordPrefix := prefixkeyany(scopeIDRecord, jetID[:], pulse.Bytes())
+		recordPrefix := prefixkey(scopeIDRecord, jetID[:], pulse.Bytes())
 
 		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -133,7 +133,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 
 // SetDrop saves provided JetDrop in db.
 func (db *DB) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
-	k := prefixkeyany(scopeIDJetDrop, jetID[:], drop.Pulse.Bytes())
+	k := prefixkey(scopeIDJetDrop, jetID[:], drop.Pulse.Bytes())
 
 	_, err := db.get(ctx, k)
 	if err == nil {
@@ -152,7 +152,7 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, ids ...
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
-	k := prefixkeyany(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
+	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	tree, err := db.GetJetTree(ctx, pulse)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, ids ...
 
 // GetJetTree fetches tree for specified pulse.
 func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
-	k := prefixkeyany(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
+	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	buff, err := db.get(ctx, k)
 	if err == ErrNotFound {
 		return jet.NewTree(), nil
@@ -192,7 +192,7 @@ func (db *DB) SplitJetTree(
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
-	k := prefixkeyany(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
+	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
 	tree, err := db.GetJetTree(ctx, from)
 	if err != nil {
 		return nil, nil, err
@@ -259,7 +259,7 @@ func (db *DB) GetJets(ctx context.Context) (jet.IDSet, error) {
 }
 
 func dropSizesPrefixKey(jetID core.RecordID) []byte {
-	return prefixkeyany(scopeIDSystem, []byte{sysDropSizeHistory}, jetID.Bytes())
+	return prefixkey(scopeIDSystem, []byte{sysDropSizeHistory}, jetID.Bytes())
 }
 
 // AddDropSize adds Jet drop size stats (required for split decision).
