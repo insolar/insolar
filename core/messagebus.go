@@ -57,6 +57,7 @@ type MessageSignature interface {
 }
 
 // Parcel by senders private key.
+//go:generate minimock -i github.com/insolar/insolar/core.Parcel -o ../testutils -s _mock.go
 type Parcel interface {
 	Message
 	MessageSignature

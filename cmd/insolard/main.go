@@ -42,6 +42,7 @@ type inputParams struct {
 	genesisConfigPath string
 	genesisKeyOut     string
 	traceEnabled      bool
+	measurementsFile  string
 }
 
 func parseInputParams() inputParams {
@@ -51,6 +52,7 @@ func parseInputParams() inputParams {
 	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "genesis", "g", "", "path to genesis config file")
 	rootCmd.Flags().StringVarP(&result.genesisKeyOut, "keyout", "", ".", "genesis certificates path")
 	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
+	rootCmd.Flags().StringVarP(&result.measurementsFile, "measure", "m", "", "enable execution time logging to the given file")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
@@ -113,6 +115,15 @@ func main() {
 	)
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
+
+	cleanup := func() { /* by default - do nothing */ }
+	if params.measurementsFile != "" {
+		cleanup, err = utils.EnableExecutionTimeMeasurement(params.measurementsFile)
+		if err != nil {
+			log.Warnln("failed to enable execution time measurement:", err.Error())
+		}
+	}
+	defer cleanup()
 
 	jaegerflush := func() {}
 	if params.traceEnabled {

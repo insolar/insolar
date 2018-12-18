@@ -21,10 +21,12 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 )
 
 // Contract is a interface for builtin contract
@@ -62,7 +64,11 @@ func (bi *BuiltIn) Stop() error {
 // CallMethod runs a method on contract
 func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *core.LogicCallContext, codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
 	am := bi.AM
-	codeDescriptor, err := am.GetCode(ctx, codeRef)
+	var codeDescriptor core.CodeDescriptor
+
+	utils.MeasureExecutionTime(ctx, "builtin.CallMethod am.GetCode", func() {
+		codeDescriptor, err = am.GetCode(ctx, codeRef)
+	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Can't find code")
 	}
