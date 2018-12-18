@@ -31,21 +31,21 @@ import (
 func Test_ReplicatedPulse(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
 
 	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer cleaner()
 
 	// test {Set/Get}ReplicatedPulse methods pair
-	got0, err := db.GetReplicatedPulse(ctx)
+	got0, err := db.GetReplicatedPulse(ctx, jetID)
 	require.NoError(t, err)
 	assert.Equal(t, core.PulseNumber(0), got0)
 
 	expect := core.PulseNumber(100500)
-	err = db.SetReplicatedPulse(ctx, expect)
+	err = db.SetReplicatedPulse(ctx, jetID, expect)
 	require.NoError(t, err)
 
-	got, err := db.GetReplicatedPulse(ctx)
+	got, err := db.GetReplicatedPulse(ctx, jetID)
 	require.NoError(t, err)
 	assert.Equal(t, expect, got)
 

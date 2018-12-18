@@ -22,16 +22,18 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// SetReplicatedPulse saves last pulse succesfully replicated to 'heavy material' node.
-func (db *DB) SetReplicatedPulse(ctx context.Context, pulsenum core.PulseNumber) error {
+// SetReplicatedPulse saves last pulse successfully replicated to 'heavy material' node for given pulse number.
+func (db *DB) SetReplicatedPulse(ctx context.Context, jet core.RecordID, pulsenum core.PulseNumber) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysReplicatedPulse}), pulsenum.Bytes())
+		k := prefixkeyany(scopeIDSystem, jet[:], []byte{sysReplicatedPulse})
+		return tx.set(ctx, k, pulsenum.Bytes())
 	})
 }
 
-// GetReplicatedPulse returns last pulse succesfully replicated to 'heavy material' node.
-func (db *DB) GetReplicatedPulse(ctx context.Context) (core.PulseNumber, error) {
-	buf, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysReplicatedPulse}))
+// GetReplicatedPulse returns last pulse successfully replicated to 'heavy material' node for given pulse number.
+func (db *DB) GetReplicatedPulse(ctx context.Context, jet core.RecordID) (core.PulseNumber, error) {
+	k := prefixkeyany(scopeIDSystem, jet[:], []byte{sysReplicatedPulse})
+	buf, err := db.get(ctx, k)
 	if err != nil {
 		if err == ErrNotFound {
 			err = nil

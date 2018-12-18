@@ -22,6 +22,7 @@ import (
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
 func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
@@ -110,18 +111,21 @@ func (ul *unsyncList) removeNode(nodeID core.RecordRef) {
 	ul.cache = nil
 }
 
-func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) {
+func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) error {
 	ul.claims = claims
 	ul.cache = nil
+	return nil
 }
 
 func (ul *unsyncList) CalculateHash(scheme core.PlatformCryptographyScheme) ([]byte, error) {
 	if ul.cache != nil {
 		return ul.cache, nil
 	}
-	m := ul.getMergedNodeMap()
+	m, err := ul.getMergedNodeMap()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ CalculateHash ] failed to merge a node map")
+	}
 	sorted := sortedNodeList(m)
-	var err error
 	ul.cache, err = CalculateHash(scheme, sorted)
 	return ul.cache, err
 }
@@ -134,25 +138,28 @@ func (ul *unsyncList) GetActiveNodes() []core.Node {
 	return sortedNodeList(ul.activeNodes)
 }
 
-func (ul *unsyncList) getMergedNodeMap() map[core.RecordRef]core.Node {
+func (ul *unsyncList) getMergedNodeMap() (map[core.RecordRef]core.Node, error) {
 	nodes := copyMap(ul.activeNodes)
 
 	for _, claimList := range ul.claims {
 		for _, claim := range claimList {
-			ul.mergeClaim(nodes, claim)
+			err := ul.mergeClaim(nodes, claim)
+			if err != nil {
+				return nil, errors.Wrap(err, "[ getMergedNodeMap ] failed to merge a claim")
+			}
 		}
 	}
 
-	return nodes
+	return nodes, nil
 }
 
-func (ul *unsyncList) mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) {
+func (ul *unsyncList) mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) error {
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:
 		// TODO: fix version
 		node, err := ClaimToNode("", t)
 		if err != nil {
-			log.Error("[ mergeClaim ] failed to convert Claim -> Node")
+			return errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
 		}
 		nodes[node.ID()] = node
 	case *consensus.NodeLeaveClaim:
@@ -160,6 +167,7 @@ func (ul *unsyncList) mergeClaim(nodes map[core.RecordRef]core.Node, claim conse
 		// delete(nodes, ref)
 		break
 	}
+	return nil
 }
 
 func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
@@ -211,8 +219,11 @@ func (ul *sparseUnsyncList) Length() int {
 	return ul.capacity
 }
 
-func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) {
-	ul.unsyncList.AddClaims(claims)
+func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) error {
+	err := ul.unsyncList.AddClaims(claims)
+	if err != nil {
+		return errors.Wrap(err, "[ AddClaims ] failed to add a claims")
+	}
 
 	for _, claimList := range claims {
 		for _, claim := range claimList {
@@ -228,11 +239,12 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 			// TODO: fix version
 			node, err := ClaimToNode("", &c.NodeJoinClaim)
 			if err != nil {
-				log.Error("[ AddClaims ] failed to convert Claim -> Node")
+				return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
 			}
 			// TODO: check these two
 			ul.addNode(node, int(c.NodeAnnouncerIndex))
 			ul.addNode(ul.origin, int(c.NodeJoinerIndex))
 		}
 	}
+	return nil
 }
