@@ -197,7 +197,7 @@ func (db *DB) Init(ctx context.Context) error {
 	}
 
 	// TODO: required for test passing, need figure out how to do init jets properly
-	return db.SaveJet(ctx, jetID)
+	return db.AddJets(ctx, jetID)
 }
 
 // GenesisRef returns the genesis record reference.
