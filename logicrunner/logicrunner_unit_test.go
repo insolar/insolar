@@ -1,6 +1,7 @@
 package logicrunner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/core/reply"
@@ -18,8 +19,15 @@ func TestOnPulse(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
+	pendingFinishedWasSent := false
+
 	mb := testutils.NewMessageBusMock(t)
-	mb.SendMock.Return(&reply.ID{}, nil)
+	mb.SendMock.Set(func(ctx context.Context, msg core.Message, pulse core.Pulse, opts *core.MessageSendOptions) (core.Reply, error) {
+		if msg.Type() == core.TypePendingFinished {
+			pendingFinishedWasSent = true
+		}
+		return &reply.ID{}, nil
+	})
 
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 	lr.MessageBus = mb
@@ -38,6 +46,9 @@ func TestOnPulse(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, lr.state[objectRef].ExecutionState)
 
+	//lr.Execute(ctx, es) // TODO FIXME
+	require.False(t, pendingFinishedWasSent)
+
 	// test empty es with query in current
 	lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
@@ -48,6 +59,7 @@ func TestOnPulse(t *testing.T) {
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	require.Equal(t, true, lr.state[objectRef].ExecutionState.pending)
+	// require.True(t, pendingFinishedWasSent) // TODO FIXME
 
 	// test empty es with query in current and query in queue - es.pending true, message.ExecutorResults.Pending = true, message.ExecutorResults.Queue one element
 	result := make(chan ExecutionQueueResult, 1)

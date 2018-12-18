@@ -290,11 +290,17 @@ func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
 // PendingFinished is sent by the old executor to the current executor
 // when pending execution finishes.
 type PendingFinished struct {
-	BaseLogicMessage
+	Reference core.RecordRef // object pended in executor
+}
+
+func (pf *PendingFinished) GetCaller() *core.RecordRef {
+	// Contract that initiated this call
+	return &pf.Reference
 }
 
 func (pf *PendingFinished) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &pf.Request, core.DynamicRoleVirtualExecutor
+	// This type of message currently can be send from any node todo: rethink it
+	return nil, 0
 }
 
 func (pf *PendingFinished) DefaultRole() core.DynamicRole {
@@ -302,7 +308,7 @@ func (pf *PendingFinished) DefaultRole() core.DynamicRole {
 }
 
 func (pf *PendingFinished) DefaultTarget() *core.RecordRef {
-	return &pf.Request
+	return &pf.Reference
 }
 
 func (pf *PendingFinished) Type() core.MessageType {
