@@ -89,10 +89,19 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 		return errors.Wrap(err, "Network consensus: error executing phase 3")
 	}
 
-	thirdPhaseState.UnsyncList.ApproveSync(thirdPhaseState.ActiveNodes)
-	pm.NodeKeeper.Sync(secondPhaseState.UnsyncList)
-	// TODO: set cloud hash
+	state := thirdPhaseState
+	cloud := &merkle.CloudEntry{
+		ProofSet:      []*merkle.GlobuleProof{state.GlobuleProof},
+		PrevCloudHash: pm.NodeKeeper.GetCloudHash(),
+	}
+	hash, _, err := pm.Calculator.GetCloudProof(cloud)
+	if err != nil {
+		return errors.Wrap(err, "Network consensus: error calculating cloud hash")
+	}
+	pm.NodeKeeper.SetCloudHash(hash)
 
+	state.UnsyncList.ApproveSync(state.ActiveNodes)
+	pm.NodeKeeper.Sync(state.UnsyncList)
 	return nil
 }
 
