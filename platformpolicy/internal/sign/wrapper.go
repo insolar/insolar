@@ -24,6 +24,7 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -81,7 +82,10 @@ type ecdsaVerifyWrapper struct {
 }
 
 func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool {
-	r, s := getRSFromBytes(signature.Bytes())
+	r, s, err := getRSFromBytes(signature.Bytes())
+	if err != nil {
+		log.Error(err)
+	}
 	ecdsaSignature := ecdsaSignature{r, s}
 	hash := sw.hasher.Hash(data)
 
@@ -98,14 +102,17 @@ func makeSignature(r, s *big.Int) []byte {
 	sLen := uint8(len(s.Bytes()))
 	res := make([]byte, rLen+sLen+lenBytes)
 	res[0] = rLen
-	copy(res[1:rLen+2], r.Bytes())
+	copy(res[1:rLen+lenBytes], r.Bytes())
 	res[rLen+1] = sLen
-	copy(res[rLen+2:], s.Bytes())
+	copy(res[rLen+lenBytes:], s.Bytes())
 	return res[:]
 }
 
-func getRSFromBytes(data []byte) (*big.Int, *big.Int) {
-	if len(data) > (bigIntLength*2 + lenBytes) {
+func getRSFromBytes(data []byte) (*big.Int, *big.Int, error) {
+	if data == nil {
+		return nil, nil, errors.New("[ getRSFromBytes ] incoming data is nil")
+	}
+	if len(data) > (bigIntLength*lenBytes + lenBytes) {
 		err := fmt.Sprintf("[ getRSFromBytes ] wrong data length to get a r, s. recv len: %d", len(data))
 		panic(err)
 	}
@@ -115,9 +122,9 @@ func getRSFromBytes(data []byte) (*big.Int, *big.Int) {
 	sLen := data[rLen+1]
 	rBytes := make([]byte, rLen)
 	sBytes := make([]byte, sLen)
-	copy(rBytes, data[1:rLen+2])
-	copy(sBytes, data[rLen+2:])
+	copy(rBytes, data[1:rLen+lenBytes])
+	copy(sBytes, data[rLen+lenBytes:])
 	r.SetBytes(rBytes)
 	s.SetBytes(sBytes)
-	return r, s
+	return r, s, nil
 }
