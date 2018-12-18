@@ -119,10 +119,16 @@ func (t *baseTransport) Packets() <-chan *packet.Packet {
 
 // Stopped checks if networking is stopped already.
 func (t *baseTransport) Stopped() <-chan bool {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
 	return t.disconnectStarted
 }
 
 func (t *baseTransport) prepareListen() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	t.disconnectStarted = make(chan bool, 1)
 }
 
