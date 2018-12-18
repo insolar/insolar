@@ -148,10 +148,8 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	return res
 }
 
-func (es *ExecutionState) ReleaseQueue() []ExecutionQueueElement {
-	es.Lock()
-	defer es.Unlock()
-
+// releaseQueue must be calling only with es.Lock
+func (es *ExecutionState) releaseQueue() []ExecutionQueueElement {
 	q := es.Queue
 	es.Queue = make([]ExecutionQueueElement, 0)
 
@@ -626,7 +624,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			es.Lock()
 
 			es.pending = es.pending || es.Current != nil
-			queue := es.ReleaseQueue()
+			queue := es.releaseQueue()
 
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
 			requests := caseBind.getCaseBindRequestsFromMessageBus(ctx)
