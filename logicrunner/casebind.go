@@ -74,10 +74,11 @@ func NewCaseBindFromExecutorResultsMessage(msg *message.ExecutorResults) *CaseBi
 }
 
 func (cb *CaseBind) getCaseBindRequestsFromMessageBus(ctx context.Context) []message.CaseBindRequest {
-	requests := make([]message.CaseBindRequest, 0)
 	if cb == nil {
-		return requests
+		return make([]message.CaseBindRequest, 0)
 	}
+
+	requests := make([]message.CaseBindRequest, len(cb.Requests))
 
 	for i, req := range cb.Requests {
 		var tape bytes.Buffer
