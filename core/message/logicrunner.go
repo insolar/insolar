@@ -150,6 +150,7 @@ func (cc *CallConstructor) Type() core.MessageType {
 	return core.TypeCallConstructor
 }
 
+// TODO rename to executorObjectResult (results?)
 type ExecutorResults struct {
 	Caller    core.RecordRef
 	RecordRef core.RecordRef
