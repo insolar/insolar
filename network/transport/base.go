@@ -23,11 +23,8 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -47,43 +44,44 @@ func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, erro
 }
 
 type baseTransport struct {
-	received chan *packet.Packet
-	sequence *uint64
+	sequenceGenerator sequenceGenerator
+	futureManager     futureManager
+	serializer        transportSerializer
+	proxy             relay.Proxy
+	packetHandler     packetHandler
 
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
 
-	mutex   *sync.RWMutex
-	futures map[packet.RequestID]Future
+	mutex *sync.RWMutex
 
-	proxy         relay.Proxy
 	publicAddress string
 	sendFunc      func(recvAddress string, data []byte) error
-	serializer    transportSerializer
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
+	futureManager := newFutureManager()
 	return baseTransport{
-		received: make(chan *packet.Packet),
-		sequence: new(uint64),
+		sequenceGenerator: newSequenceGenerator(),
+		futureManager:     futureManager,
+		packetHandler:     newPacketHandler(futureManager),
+		proxy:             proxy,
+		serializer:        &baseSerializer{},
+
+		mutex: &sync.RWMutex{},
 
 		disconnectStarted:  make(chan bool, 1),
-		disconnectFinished: make(chan bool),
+		disconnectFinished: make(chan bool, 1),
 
-		mutex:   &sync.RWMutex{},
-		futures: make(map[packet.RequestID]Future),
-
-		proxy:         proxy,
 		publicAddress: publicAddress,
-		serializer:    &baseSerializer{},
 	}
 }
 
 // SendRequest sends request packet and returns future.
 func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
-	msg.RequestID = t.generateID()
+	msg.RequestID = packet.RequestID(t.sequenceGenerator.Generate())
 
-	future := t.createFuture(msg)
+	future := t.futureManager.Create(msg)
 
 	go func(msg *packet.Packet, f Future) {
 		err := t.SendPacket(msg)
@@ -108,18 +106,27 @@ func (t *baseTransport) Close() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	close(t.received)
 	close(t.disconnectFinished)
 }
 
 // Packets returns incoming packets channel.
 func (t *baseTransport) Packets() <-chan *packet.Packet {
-	return t.received
+	return t.packetHandler.Received()
 }
 
 // Stopped checks if networking is stopped already.
 func (t *baseTransport) Stopped() <-chan bool {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
 	return t.disconnectStarted
+}
+
+func (t *baseTransport) prepareListen() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	t.disconnectStarted = make(chan bool, 1)
 }
 
 func (t *baseTransport) prepareDisconnect() {
@@ -127,61 +134,8 @@ func (t *baseTransport) prepareDisconnect() {
 	close(t.disconnectStarted)
 }
 
-func (t *baseTransport) generateID() packet.RequestID {
-	id := utils.AtomicLoadAndIncrementUint64(t.sequence)
-	return packet.RequestID(id)
-}
-
 func (t *baseTransport) getRemoteAddress(conn net.Conn) string {
 	return strings.Split(conn.RemoteAddr().String(), ":")[0]
-}
-
-func (t *baseTransport) createFuture(msg *packet.Packet) Future {
-	newFuture := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
-		t.mutex.Lock()
-		defer t.mutex.Unlock()
-
-		delete(t.futures, f.Request().RequestID)
-	})
-
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.futures[msg.RequestID] = newFuture
-
-	metrics.NetworkFutures.WithLabelValues(msg.Type.String()).Set(float64(len(t.futures)))
-	return newFuture
-}
-
-func (t *baseTransport) getFuture(msg *packet.Packet) Future {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
-
-	return t.futures[msg.RequestID]
-}
-
-func (t *baseTransport) handlePacket(msg *packet.Packet) {
-	if msg.IsResponse {
-		t.processResponse(msg)
-	} else {
-		t.processRequest(msg)
-	}
-}
-
-func (t *baseTransport) processResponse(msg *packet.Packet) {
-	log.Debugf("Process response %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
-
-	future := t.getFuture(msg)
-	if future != nil {
-		if shouldProcessPacket(future, msg) {
-			future.SetResult(msg)
-		}
-		future.Cancel()
-	}
-}
-
-func (t *baseTransport) processRequest(msg *packet.Packet) {
-	log.Debugf("Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
-	t.received <- msg
 }
 
 // PublicAddress returns transport public ip address
@@ -205,11 +159,4 @@ func (t *baseTransport) SendPacket(p *packet.Packet) error {
 
 	log.Debugf("Send packet to %s with RequestID = %d", recvAddress, p.RequestID)
 	return t.sendFunc(recvAddress, data)
-}
-
-func shouldProcessPacket(future Future, msg *packet.Packet) bool {
-	typesShouldBeEqual := msg.Type == future.Request().Type
-	responseIsForRightSender := future.Actor().Equal(*msg.Sender)
-
-	return typesShouldBeEqual && (responseIsForRightSender || msg.Type == types.Ping)
 }

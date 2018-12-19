@@ -150,6 +150,7 @@ func (cc *CallConstructor) Type() core.MessageType {
 	return core.TypeCallConstructor
 }
 
+// TODO rename to executorObjectResult (results?)
 type ExecutorResults struct {
 	Caller    core.RecordRef
 	RecordRef core.RecordRef
@@ -285,4 +286,32 @@ func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
 		*core.NewRecordID(pn, hasher.Hash(payload)),
 	)
 	return ref
+}
+
+// PendingFinished is sent by the old executor to the current executor
+// when pending execution finishes.
+type PendingFinished struct {
+	Reference core.RecordRef // object pended in executor
+}
+
+func (pf *PendingFinished) GetCaller() *core.RecordRef {
+	// Contract that initiated this call
+	return &pf.Reference
+}
+
+func (pf *PendingFinished) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	// This type of message currently can be send from any node todo: rethink it
+	return nil, 0
+}
+
+func (pf *PendingFinished) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+func (pf *PendingFinished) DefaultTarget() *core.RecordRef {
+	return &pf.Reference
+}
+
+func (pf *PendingFinished) Type() core.MessageType {
+	return core.TypePendingFinished
 }

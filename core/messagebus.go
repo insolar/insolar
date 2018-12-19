@@ -162,6 +162,8 @@ const (
 	TypeValidateCaseBind
 	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
 	TypeValidationResults
+	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
+	TypePendingFinished
 
 	// Ledger
 
