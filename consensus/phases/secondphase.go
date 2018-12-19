@@ -272,5 +272,5 @@ func (sp *SecondPhase) isSignPhase2PacketRight(packet *packets.Phase2Packet, rec
 		return false, errors.Wrap(err, "failed to serialize")
 	}
 
-	return sp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+	return sp.Cryptography.Verify(key, core.SignatureFromBytes(packet.SignatureHeaderSection1[:]), raw), nil
 }

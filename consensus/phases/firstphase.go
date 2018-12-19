@@ -195,7 +195,7 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 	if err != nil {
 		return false, errors.Wrap(err, "failed to serialize packet")
 	}
-	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+	return fp.Cryptography.Verify(key, core.SignatureFromBytes(packet.Signature[:]), raw), nil
 }
 
 func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
