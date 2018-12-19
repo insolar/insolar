@@ -417,6 +417,7 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 
 	es.Lock()
 	if es.Current != nil {
+		es.Unlock()
 		return nil, errors.New("received PendingFinished when we are already executing")
 	}
 	es.Unlock()
