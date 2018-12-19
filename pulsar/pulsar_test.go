@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"net"
 	"net/rpc"
 	"os"
 	"testing"
@@ -75,48 +76,48 @@ func mockKeyProcessor(t *testing.T) *testutils.KeyProcessorMock {
 	return keyProcessor
 }
 
-// func TestNewPulsar_WithoutNeighbours(t *testing.T) {
-//
-// 	actualConnectionType := ""
-// 	actualAddress := ""
-//
-// 	mockListener := func(connectionType string, address string) (net.Listener, error) {
-// 		actualConnectionType = connectionType
-// 		actualAddress = address
-// 		return &pulsartestutils.MockListener{}, nil
-// 	}
-// 	storage := pulsartestutils.NewPulsarStorageMock(t)
-// 	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
-//
-// 	factoryMock := NewRPCClientWrapperFactoryMock(t)
-// 	clientMock := NewRPCClientWrapperMock(t)
-// 	factoryMock.CreateWrapperMock.Return(clientMock)
-// 	cryptographyServiceMock := mockCryptographyService(t)
-// 	keyProcessor := mockKeyProcessor(t)
-// 	scheme := platformpolicy.NewPlatformCryptographyScheme()
-//
-// 	result, err := NewPulsar(configuration.Pulsar{
-// 		ConnectionType:      "testType",
-// 		MainListenerAddress: "listedAddress",
-// 	},
-// 		cryptographyServiceMock,
-// 		scheme,
-// 		keyProcessor,
-// 		newPulseDistributor(t),
-// 		storage,
-// 		factoryMock,
-// 		pulsartestutils.MockEntropyGenerator{},
-// 		nil,
-// 		mockListener,
-// 	)
-//
-// 	require.NoError(t, err)
-// 	require.Equal(t, "testType", actualConnectionType)
-// 	require.Equal(t, "listedAddress", actualAddress)
-// 	require.IsType(t, result.Sock, &pulsartestutils.MockListener{})
-//
-// 	require.Equal(t, uint64(0), factoryMock.CreateWrapperCounter)
-// }
+func TestNewPulsar_WithoutNeighbours(t *testing.T) {
+
+	actualConnectionType := ""
+	actualAddress := ""
+
+	mockListener := func(connectionType string, address string) (net.Listener, error) {
+		actualConnectionType = connectionType
+		actualAddress = address
+		return &pulsartestutils.MockListener{}, nil
+	}
+	storage := pulsartestutils.NewPulsarStorageMock(t)
+	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
+
+	factoryMock := NewRPCClientWrapperFactoryMock(t)
+	clientMock := NewRPCClientWrapperMock(t)
+	factoryMock.CreateWrapperMock.Return(clientMock)
+	cryptographyServiceMock := mockCryptographyService(t)
+	keyProcessor := mockKeyProcessor(t)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+
+	result, err := NewPulsar(configuration.Pulsar{
+		ConnectionType:      "testType",
+		MainListenerAddress: "listedAddress",
+	},
+		cryptographyServiceMock,
+		scheme,
+		keyProcessor,
+		testutils.NewPulseDistributorMock(t),
+		storage,
+		factoryMock,
+		pulsartestutils.MockEntropyGenerator{},
+		nil,
+		mockListener,
+	)
+
+	require.NoError(t, err)
+	require.Equal(t, "testType", actualConnectionType)
+	require.Equal(t, "listedAddress", actualAddress)
+	require.IsType(t, result.Sock, &pulsartestutils.MockListener{})
+
+	require.Equal(t, uint64(0), factoryMock.CreateWrapperCounter)
+}
 
 // func TestNewPulsar_WithNeighbours(t *testing.T) {
 // 	requireObj := require.New(t)
