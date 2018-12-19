@@ -69,11 +69,8 @@ type ExecutionState struct {
 	Current   *CurrentExecution
 	Queue     []ExecutionQueueElement
 
-	// pending flag is set to true in OnPulse when next pulse happens
-	// and Current was not nil, i.e. something was executing. Using
-	// this flag we can tell in ProcessExecutionQueue that pulse has
-	// ended.
-	pending              PendingState // TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+	pending              PendingState
 	QueueProcessorActive bool
 }
 
