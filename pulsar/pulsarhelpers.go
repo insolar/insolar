@@ -128,21 +128,6 @@ func checkSignature(
 	return service.Verify(publicKey, core.SignatureFromBytes(signature), b.Bytes()), nil
 }
 
-func signData(service core.CryptographyService, data interface{}) ([]byte, error) {
-	cborH := &codec.CborHandle{}
-	var b bytes.Buffer
-	enc := codec.NewEncoder(&b, cborH)
-	err := enc.Encode(data)
-	if err != nil {
-		return nil, err
-	}
-	signature, err := service.Sign(b.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	return signature.Bytes(), nil
-}
 // func (currentPulsar *Pulsar) checkSignature(
 // 	data interface{},
 // 	pub string,
