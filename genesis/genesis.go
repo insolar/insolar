@@ -439,3 +439,7 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 	}
 	return nil
 }
+
+func (g *Genesis) updateNodeIndex(nodes []genesisNode) error {
+	return nil
+}
