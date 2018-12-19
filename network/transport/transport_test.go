@@ -156,13 +156,6 @@ func TestUTPTransport(t *testing.T) {
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }
 
-func TestKCPTransport(t *testing.T) {
-	cfg1 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17012", BehindNAT: false}
-	cfg2 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17013", BehindNAT: false}
-
-	suite.Run(t, NewSuite(cfg1, cfg2))
-}
-
 func TestUDPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015", BehindNAT: false}
