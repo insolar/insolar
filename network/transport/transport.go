@@ -72,11 +72,6 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 		// TODO: little hack: It's better to change interface for NewConnection
 		conn.Close()
 		return newTCPTransport(conn.LocalAddr().String(), proxy, publicAddress)
-<<<<<<< HEAD
-=======
-	case "UTP":
-		return newUTPTransport(conn, proxy, publicAddress)
->>>>>>> 7e6c9f65465b728b924f8e4f5d83ce82d0c22ca8
 	case "PURE_UDP":
 		return newUDPTransport(conn, proxy, publicAddress)
 	case "QUIC":
