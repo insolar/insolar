@@ -154,6 +154,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
 	ret := <-ch
+	inslogger.FromContext(ctx).Debug("GOT Method results")
 
 	return &reply.CallMethod{
 		Request: r.Request,
@@ -192,24 +193,29 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		return nil, errors.Wrap(err, "couldn't save new object as delegate")
 	}
 
-	r, ok := res.(*reply.CallConstructor)
+	r, ok := res.(*reply.CallMethod)
 	if !ok {
 		return nil, errors.New("Got not reply.CallConstructor in reply for CallConstructor")
 	}
 
 	if async {
-		return r.Object, nil
+		return &r.Request, nil
 	}
 
 	cr.ResultMutex.Lock()
 	ch := make(chan *message.ReturnResults)
-	cr.ResultMap[*r.Object] = ch
+	cr.ResultMap[r.Request] = ch
 	cr.ResultMutex.Unlock()
-	inslogger.FromContext(ctx).Debug("Waiting for constructor results ref=", *r.Object)
+	inslogger.FromContext(ctx).Debug("Waiting for constructor results ref=", r.Request)
 
-	<-ch
+	select {
+	case <-ch:
+	case <-ctx.Done():
+	}
 
-	return r.Object, nil
+	inslogger.FromContext(ctx).Debug("GOT Constructor results")
+
+	return &r.Request, nil
 }
 
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
@@ -220,13 +226,17 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
-
+	log := inslogger.FromContext(ctx)
 	c, ok := cr.ResultMap[msg.Request]
 	if !ok {
-		inslogger.FromContext(ctx).Info("oops unwaited results ref=", msg.Request)
+		log.Info("oops unwaited results ref=", msg.Request)
+		for k := range cr.ResultMap {
+			log.Warnf("RETURNMAP: %s", k)
+		}
+		panic(42)
 		return &reply.OK{}, nil
 	}
-	inslogger.FromContext(ctx).Debug("Got wanted results")
+	inslogger.FromContext(ctx).Debug("Got wanted results ref=", msg.Request)
 
 	c <- msg
 	delete(cr.ResultMap, msg.Request)

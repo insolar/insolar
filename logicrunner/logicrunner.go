@@ -519,6 +519,8 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 
 	es.objectbody.Object = newData
 	if es.Current.ReturnMode == message.ReturnResult {
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
+		core.MessageBusFromContext(ctx, nil)
 		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
 			Request: *es.Current.Request,
 			Result:  result,
@@ -611,7 +613,9 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *es.Current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
-		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
+
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
+		_, err = core.MessageBusFromContext(ctx, nil).Send(ctx, &message.ReturnResults{
 			Request: *es.Current.Request,
 		}, *lr.pulse(ctx), &core.MessageSendOptions{
 			Receiver: es.Current.RequesterNode,
