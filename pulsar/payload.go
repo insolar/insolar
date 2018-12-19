@@ -25,6 +25,8 @@ type Payload struct {
 	PublicKey string
 	Signature []byte
 	Body      interface{}
+type PayloadData interface {
+	Hash(hasher core.Hasher) ([]byte, error)
 }
 
 // HandshakePayload is a struct for handshake step
