@@ -45,3 +45,6 @@ func newUnsafeConnectionHolder() unsafeConnectionHolder {
 	return newUnsafeConnectionHolderImpl()
 }
 
+func NewConnectionPool(connectionFactory connectionFactory) ConnectionPool {
+	return newConnectionPool(connectionFactory)
+}
