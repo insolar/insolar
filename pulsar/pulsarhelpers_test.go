@@ -30,14 +30,25 @@ import (
 func TestPreparePayloadAndCheckIt(t *testing.T) {
 	t.Parallel()
 
-	kp := mockKeyProcessor(t)
+	keyProcessor := platformpolicy.NewKeyProcessor()
+	privateKey, err := keyProcessor.GeneratePrivateKey()
+	require.NoError(t, err)
+	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	for i := 0; i < 20; i++ {
-		testData := (&entropygenerator.StandardEntropyGenerator{}).GenerateEntropy()
+	pulsar, err := NewPulsar(
+		configuration.Pulsar{},
+		cryptoService,
+		scheme,
+		keyProcessor,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 
-		signature, err := signData(cs, testData)
-		require.NoError(t, err)
-		assert.ObjectsAreEqual([]byte("signature"), signature)
 
 		// Act
 		checkSignature, err := checkPayloadSignature(cs, kp, &Payload{PublicKey: "publicKey", Signature: signature, Body: testData})
