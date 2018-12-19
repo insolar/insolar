@@ -402,7 +402,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	}
 
 	if es.QueueProcessorActive {
-		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
+		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
 		return nil
 	}
 
