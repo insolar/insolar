@@ -26,7 +26,7 @@ type ConnectionPool interface {
 	Reset()
 }
 
-type ConnectionFactory interface {
+type connectionFactory interface {
 	CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error)
 }
 
