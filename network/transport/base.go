@@ -23,7 +23,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
@@ -47,6 +46,9 @@ func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, erro
 
 type baseTransport struct {
 	sequenceGenerator sequenceGenerator
+	futureManager     futureManager
+	serializer        transportSerializer
+	proxy             relay.Proxy
 
 	received chan *packet.Packet
 
@@ -55,18 +57,14 @@ type baseTransport struct {
 
 	mutex *sync.RWMutex
 
-	futureMutex *sync.RWMutex
-	futures     map[packet.RequestID]Future
-
-	proxy         relay.Proxy
 	publicAddress string
 	sendFunc      func(recvAddress string, data []byte) error
-	serializer    transportSerializer
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 	return baseTransport{
 		sequenceGenerator: newSequenceGenerator(),
+		futureManager:     newFutureManager(),
 
 		received: make(chan *packet.Packet),
 
@@ -74,9 +72,6 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 		disconnectFinished: make(chan bool, 1),
 
 		mutex: &sync.RWMutex{},
-
-		futureMutex: &sync.RWMutex{},
-		futures:     make(map[packet.RequestID]Future),
 
 		proxy:         proxy,
 		publicAddress: publicAddress,
@@ -88,7 +83,7 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 	msg.RequestID = packet.RequestID(t.sequenceGenerator.Generate())
 
-	future := t.createFuture(msg)
+	future := t.futureManager.Create(msg)
 
 	go func(msg *packet.Packet, f Future) {
 		err := t.SendPacket(msg)
@@ -146,29 +141,6 @@ func (t *baseTransport) getRemoteAddress(conn net.Conn) string {
 	return strings.Split(conn.RemoteAddr().String(), ":")[0]
 }
 
-func (t *baseTransport) createFuture(msg *packet.Packet) Future {
-	newFuture := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
-		t.futureMutex.Lock()
-		defer t.futureMutex.Unlock()
-
-		delete(t.futures, f.Request().RequestID)
-	})
-
-	t.futureMutex.Lock()
-	defer t.futureMutex.Unlock()
-	t.futures[msg.RequestID] = newFuture
-
-	metrics.NetworkFutures.WithLabelValues(msg.Type.String()).Set(float64(len(t.futures)))
-	return newFuture
-}
-
-func (t *baseTransport) getFuture(msg *packet.Packet) Future {
-	t.futureMutex.RLock()
-	defer t.futureMutex.RUnlock()
-
-	return t.futures[msg.RequestID]
-}
-
 func (t *baseTransport) handlePacket(msg *packet.Packet) {
 	if msg.IsResponse {
 		t.processResponse(msg)
@@ -181,7 +153,7 @@ func (t *baseTransport) handlePacket(msg *packet.Packet) {
 func (t *baseTransport) processResponse(msg *packet.Packet) {
 	log.Debugf("[ processResponse ] Process response %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
 
-	future := t.getFuture(msg)
+	future := t.futureManager.Get(msg)
 	if future != nil {
 		if shouldProcessPacket(future, msg) {
 			log.Debugf("[ processResponse ] Processing future with RequestID = %s", msg.RequestID)
