@@ -49,7 +49,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		nil,
 	)
 
-	t.Run("HandshakePayload payload", func(t *testing.T){
+	t.Run("HandshakePayload", func(t *testing.T){
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		handshakePayload := &HandshakePayload{Entropy: entropyGenerator.GenerateEntropy()}
@@ -66,7 +66,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		require.Equal(t, handshakePayload, payload.Body.(*HandshakePayload))
 	})
 
-	t.Run("EntropySignaturePayload payload", func(t *testing.T){
+	t.Run("EntropySignaturePayload", func(t *testing.T){
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		entropySignPayload := &EntropySignaturePayload{EntropySignature: entropyGenerator.GenerateEntropy()[:]}
@@ -83,7 +83,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		require.Equal(t, entropySignPayload, payload.Body.(*EntropySignaturePayload))
 	})
 
-	t.Run("EntropyPayload payload", func(t *testing.T){
+	t.Run("EntropyPayload", func(t *testing.T){
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		entropyPayload := &EntropyPayload{Entropy: entropyGenerator.GenerateEntropy()}
@@ -100,7 +100,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		require.Equal(t, entropyPayload, payload.Body.(*EntropyPayload))
 	})
 
-	t.Run("VectorPayload payload", func(t *testing.T){
+	t.Run("VectorPayload", func(t *testing.T){
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		firstEntropy := entropyGenerator.GenerateEntropy()
@@ -142,7 +142,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		})
 	})
 
-	t.Run("PulsePayload payload", func(t *testing.T){
+	t.Run("PulsePayload", func(t *testing.T){
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		firstEntropy := entropyGenerator.GenerateEntropy()
@@ -192,7 +192,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		})
 	})
 
-	t.Run("PulseSenderConfirmationPayload payload", func(t *testing.T){
+	t.Run("PulseSenderConfirmationPayload", func(t *testing.T){
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		payloadBody := &PulseSenderConfirmationPayload{core.PulseSenderConfirmation{Entropy: entropyGenerator.GenerateEntropy()}}
