@@ -37,7 +37,7 @@ type unsafeConnectionHolder interface {
 	Delete(address net.Addr)
 	Add(address net.Addr, conn net.Conn)
 	Size() int
-	Reset()
+	Clear()
 	Iterate(iterateFunc iterateFunc)
 }
 

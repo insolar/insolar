@@ -109,5 +109,5 @@ func (cp *connectionPool) Reset() {
 	cp.unsafeConnectionsHolder.Iterate(func(conn net.Conn) {
 		utils.CloseVerbose(conn)
 	})
-	cp.unsafeConnectionsHolder.Reset()
+	cp.unsafeConnectionsHolder.Clear()
 }

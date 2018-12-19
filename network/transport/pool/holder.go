@@ -48,7 +48,7 @@ func (uch *unsafeConnectionsHolderImpl) Add(address net.Addr, conn net.Conn) {
 	uch.connections[uch.key(address)] = conn
 }
 
-func (uch *unsafeConnectionsHolderImpl) Reset() {
+func (uch *unsafeConnectionsHolderImpl) Clear() {
 	for key := range uch.connections {
 		delete(uch.connections, key)
 	}

@@ -114,9 +114,9 @@ func (t *quicTransport) Stop() {
 
 	utils.CloseVerbose(t.l)
 
-	err := t.closeConnections()
-	if err != nil {
-		log.Error(err, "[ Stop ] failed to close sessions")
+	for _, conn := range t.connections {
+		utils.CloseVerbose(conn.stream)
+		utils.CloseVerbose(conn.session)
 	}
 
 	utils.CloseVerbose(t.conn)
@@ -136,14 +136,6 @@ func (t *quicTransport) handleAcceptedConnection(session quic.Session) {
 	go t.packetHandler.Handle(context.TODO(), msg)
 
 	utils.CloseVerbose(stream)
-}
-
-func (t *quicTransport) closeConnections() error {
-	for _, conn := range t.connections {
-		utils.CloseVerbose(conn.stream)
-		utils.CloseVerbose(conn.session)
-	}
-	return nil
 }
 
 func createConnection(addr string) (quic.Session, quic.Stream, error) {
