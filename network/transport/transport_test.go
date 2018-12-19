@@ -70,8 +70,8 @@ func (t *transportSuite) SetupTest() {
 
 func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	ctx := context.Background()
-	go t.node1.transport.Start(ctx)
-	go t.node2.transport.Start(ctx)
+	go t.node1.transport.Listen(ctx)
+	go t.node2.transport.Listen(ctx)
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {
@@ -124,7 +124,7 @@ func (t *transportSuite) TestSendBigPacket() {
 	}
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TestPacket)
-	requestMsg := builder.Request(&packet.RequestTest{data}).Build()
+	requestMsg := builder.Request(&packet.RequestTest{Data: data}).Build()
 
 	_, err := t.node1.transport.SendRequest(requestMsg)
 	t.Assert().NoError(err)
@@ -156,13 +156,6 @@ func TestUTPTransport(t *testing.T) {
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }
 
-func TestKCPTransport(t *testing.T) {
-	cfg1 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17012", BehindNAT: false}
-	cfg2 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17013", BehindNAT: false}
-
-	suite.Run(t, NewSuite(cfg1, cfg2))
-}
-
 func TestUDPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015", BehindNAT: false}
@@ -171,8 +164,15 @@ func TestUDPTransport(t *testing.T) {
 }
 
 func TestTCPTransport(t *testing.T) {
-	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17014", BehindNAT: false}
-	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17015", BehindNAT: false}
+	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17016", BehindNAT: false}
+	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17017", BehindNAT: false}
+
+	suite.Run(t, NewSuite(cfg1, cfg2))
+}
+
+func TestQuicTransport(t *testing.T) {
+	cfg1 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17018", BehindNAT: false}
+	cfg2 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17019", BehindNAT: false}
 
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }

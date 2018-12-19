@@ -55,6 +55,16 @@ func RandomID() core.RecordID {
 	return id
 }
 
+// RandomJet generates random jet ID
+func RandomJet() (id core.RecordID) {
+	_, err := rand.Read(id[core.PulseNumberSize:])
+	if err != nil {
+		panic(err)
+	}
+	copy(id[:core.PulseNumberSize], core.PulseNumberJet.Bytes())
+	return id
+}
+
 type cryptographySchemeMock struct{}
 type hasherMock struct {
 	h hash.Hash
@@ -89,7 +99,7 @@ func (m *cryptographySchemeMock) ReferenceHasher() core.Hasher {
 }
 
 func (m *cryptographySchemeMock) IntegrityHasher() core.Hasher {
-	return &hasherMock{}
+	return &hasherMock{h: sha3.New512()}
 }
 
 func (m *cryptographySchemeMock) Signer(privateKey crypto.PrivateKey) core.Signer {

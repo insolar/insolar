@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -86,12 +87,19 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
+	pm.PulseStorage = storage.NewPulseStorage(db)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
-	handler.Recent = recentStorageMock
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	handler.RecentStorageProvider = provideMock
 
 	err := handler.Init(ctx)
 	if err != nil {

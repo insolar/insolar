@@ -136,11 +136,12 @@ func TestDB_CreateDrop(t *testing.T) {
 		db.SetBlob(ctx, jetID, pulse, []byte{byte(i)})
 	}
 
-	drop, messages, err := db.CreateDrop(ctx, jetID, pulse, []byte{4, 5, 6})
-	assert.NoError(t, err)
-	assert.Equal(t, 3, len(messages))
-	assert.Equal(t, pulse, drop.Pulse)
-	assert.Equal(t, "2aCdao6DhZSWQNTrtrxJW7QQZRb6UJ1ssRi9cg", base58.Encode(drop.Hash))
+	drop, messages, dropSize, err := db.CreateDrop(ctx, jetID, pulse, []byte{4, 5, 6})
+	require.NoError(t, err)
+	require.NotEqual(t, 0, dropSize)
+	require.Equal(t, 3, len(messages))
+	require.Equal(t, pulse, drop.Pulse)
+	require.Equal(t, "2aCdao6DhZSWQNTrtrxJW7QQZRb6UJ1ssRi9cg", base58.Encode(drop.Hash))
 
 	for _, rawMessage := range messages {
 		formatedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
@@ -233,4 +234,24 @@ func TestDB_IterateLocalData(t *testing.T) {
 		{k: []byte{1}, v: []byte{1}},
 		{k: []byte{2}, v: []byte{2}},
 	}, results)
+}
+
+func TestDB_Close(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+
+	jetID := testutils.RandomID()
+
+	cleaner()
+
+	rec, err := db.GetRecord(ctx, jetID, &core.RecordID{})
+	assert.Nil(t, rec)
+	assert.Equal(t, err, storage.ErrClosed)
+
+	rec = &record.CallRequest{}
+	gotRef, err := db.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, rec)
+	assert.Nil(t, gotRef)
+	assert.Equal(t, err, storage.ErrClosed)
 }

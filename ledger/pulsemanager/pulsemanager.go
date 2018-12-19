@@ -19,20 +19,20 @@ package pulsemanager
 import (
 	"context"
 	"sync"
-	"time"
 
-	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/heavyclient"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/utils/backoff"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/record"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -42,13 +42,18 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                core.LogicRunner            `inject:""`
-	Bus               core.MessageBus             `inject:""`
-	NodeNet           core.NodeNetwork            `inject:""`
-	JetCoordinator    core.JetCoordinator         `inject:""`
-	GIL               core.GlobalInsolarLock      `inject:""`
-	Recent            recentstorage.RecentStorage `inject:""`
-	ActiveListSwapper ActiveListSwapper           `inject:""`
+	LR                         core.LogicRunner                `inject:""`
+	Bus                        core.MessageBus                 `inject:""`
+	NodeNet                    core.NodeNetwork                `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
+	GIL                        core.GlobalInsolarLock          `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	RecentStorageProvider      recentstorage.Provider          `inject:""`
+	ActiveListSwapper          ActiveListSwapper               `inject:""`
+	PulseStorage               pulseStoragePm                  `inject:""`
+	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
+	syncClientsPool *heavyclient.Pool
 
 	currentPulse core.Pulse
 
@@ -56,80 +61,130 @@ type PulseManager struct {
 	db *storage.DB
 	// setLock locks Set method call.
 	setLock sync.RWMutex
+	// saves PM stopping mode
 	stopped bool
-	stop    chan struct{}
-	// gotpulse signals if there is something to sync to Heavy
-	gotpulse chan struct{}
-	// syncdone closes when sync is over
-	syncdone chan struct{}
-	// sync backoff instance
-	syncbackoff *backoff.Backoff
+
 	// stores pulse manager options
 	options pmOptions
 }
 
 type pmOptions struct {
-	enableSync       bool
-	syncMessageLimit int
-	pulsesDeltaLimit core.PulseNumber
-}
-
-func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
-	return &backoff.Backoff{
-		Jitter: bconf.Jitter,
-		Min:    bconf.Min,
-		Max:    bconf.Max,
-		Factor: bconf.Factor,
-	}
+	enableSync      bool
+	splitThreshold  uint64
+	dropHistorySize int
 }
 
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
+	pmconf := conf.PulseManager
+	heavySyncPool := heavyclient.NewPool(
+		db,
+		heavyclient.Options{
+			SyncMessageLimit: pmconf.HeavySyncMessageLimit,
+			PulsesDeltaLimit: conf.LightChainLimit,
+		},
+	)
 	pm := &PulseManager{
 		db:           db,
-		gotpulse:     make(chan struct{}, 1),
 		currentPulse: *core.GenesisPulse,
+		options: pmOptions{
+			enableSync:      pmconf.HeavySyncEnabled,
+			splitThreshold:  pmconf.SplitThreshold,
+			dropHistorySize: conf.JetSizesHistoryDepth,
+		},
+		syncClientsPool: heavySyncPool,
 	}
-	pmconf := conf.PulseManager
-	pm.options.enableSync = pmconf.HeavySyncEnabled
-	pm.options.syncMessageLimit = pmconf.HeavySyncMessageLimit
-	pm.options.pulsesDeltaLimit = conf.LightChainLimit
-	pm.syncbackoff = backoffFromConfig(pmconf.HeavyBackoff)
+
+	// TODO: untie this circular dependency after moving sync client to separate component - 17.Dec.2018 @nordicdyno
 	return pm
 }
 
-// Current returns copy (for concurrency safety) of current pulse structure.
-func (m *PulseManager) Current(ctx context.Context) (*core.Pulse, error) {
-	m.setLock.RLock()
-	defer m.setLock.RUnlock()
+func (m *PulseManager) processEndPulse(
+	ctx context.Context,
+	prevPulseNumber core.PulseNumber,
+	currentPulse, newPulse *core.Pulse,
+) error {
+	jetIDs, err := m.db.GetJets(ctx)
+	if err != nil {
+		return errors.Wrap(err, "can't get jets from storage")
+	}
+	var g errgroup.Group
+	for jetID := range jetIDs {
+		jetID := jetID
+		g.Go(func() error {
+			drop, dropSerialized, messages, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
+			if err != nil {
+				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
+			}
 
-	p := m.currentPulse
-	return &p, nil
+			msg, hotRecordsError := m.getExecutorData(
+				ctx, jetID, currentPulse.PulseNumber, drop, dropSerialized)
+			if hotRecordsError != nil {
+				return errors.Wrap(err, "processRecentObjects failed")
+			}
+			sendError := m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg)
+			if sendError != nil {
+				return err
+			}
+
+			dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
+			if dropErr != nil {
+				return errors.Wrap(dropErr, "processDrop failed")
+			}
+			return nil
+		})
+	}
+	return g.Wait()
 }
 
-func (m *PulseManager) createDrop(ctx context.Context, lastSlotPulse *storage.Pulse) (
+func (m *PulseManager) createDrop(
+	ctx context.Context,
+	jetID core.RecordID,
+	prevPulse, currentPulse core.PulseNumber,
+) (
 	drop *jet.JetDrop,
 	dropSerialized []byte,
 	messages [][]byte,
 	err error,
 ) {
-	jetID := core.TODOJetID
-	prevDrop, err := m.db.GetDrop(ctx, jetID, *lastSlotPulse.Prev)
+	prevDrop, err := m.db.GetDrop(ctx, jetID, prevPulse)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
-	drop, messages, err = m.db.CreateDrop(ctx, jetID, lastSlotPulse.Pulse.PulseNumber, prevDrop.Hash)
+	drop, messages, dropSize, err := m.db.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
 	err = m.db.SetDrop(ctx, jetID, drop)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
 
 	dropSerialized, err = jet.Encode(drop)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
+	}
+
+	dropSizeData := &jet.DropSize{
+		JetID:    jetID,
+		PulseNo:  currentPulse,
+		DropSize: dropSize,
+	}
+	hasher := m.PlatformCryptographyScheme.IntegrityHasher()
+	_, err = dropSizeData.WriteHashData(hasher)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't WriteHashData")
+	}
+	signature, err := m.CryptographyService.Sign(hasher.Sum(nil))
+	dropSizeData.Signature = signature.Bytes()
+
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Sign")
+	}
+
+	err = m.db.AddDropSize(ctx, dropSizeData)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't AddDropSize")
 	}
 
 	return
@@ -137,37 +192,37 @@ func (m *PulseManager) createDrop(ctx context.Context, lastSlotPulse *storage.Pu
 
 func (m *PulseManager) processDrop(
 	ctx context.Context,
-	lastSlotPulse *storage.Pulse,
-	currentSlotPulse *core.Pulse,
+	jetID core.RecordID,
+	pulse *core.Pulse,
 	dropSerialized []byte,
 	messages [][]byte,
 ) error {
 	msg := &message.JetDrop{
+		JetID:       jetID,
 		Drop:        dropSerialized,
 		Messages:    messages,
-		PulseNumber: *lastSlotPulse.Prev,
+		PulseNumber: pulse.PulseNumber,
 	}
-	_, err := m.Bus.Send(ctx, msg, *currentSlotPulse, nil)
+	_, err := m.Bus.Send(ctx, msg, *pulse, nil)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (m *PulseManager) processRecentObjects(
+func (m *PulseManager) getExecutorData(
 	ctx context.Context,
-	previousSlotPulse *storage.Pulse,
-	currentSlotPulse *core.Pulse,
+	jetID core.RecordID,
+	pulse core.PulseNumber,
 	drop *jet.JetDrop,
 	dropSerialized []byte,
-) error {
+) (*message.HotData, error) {
 	logger := inslogger.FromContext(ctx)
-	m.Recent.ClearZeroTTLObjects()
-	recentObjectsIds := m.Recent.GetObjects()
-	pendingRequestsIds := m.Recent.GetRequests()
-	defer m.Recent.ClearObjects()
-
-	jetID := core.TODOJetID
+	recentStorage := m.RecentStorageProvider.GetStorage(jetID)
+	recentStorage.ClearZeroTTLObjects()
+	recentObjectsIds := recentStorage.GetObjects()
+	pendingRequestsIds := recentStorage.GetRequests()
+	defer recentStorage.ClearObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID][]byte{}
@@ -188,11 +243,11 @@ func (m *PulseManager) processRecentObjects(
 			Index: encoded,
 		}
 
-		if !m.Recent.IsMine(id) {
+		if !recentStorage.IsMine(id) {
 			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
 			if err != nil {
 				logger.Error(err)
-				return err
+				return nil, errors.Wrap(err, "[ processRecentObjects ] Can't RemoveObjectIndex")
 			}
 		}
 	}
@@ -206,21 +261,78 @@ func (m *PulseManager) processRecentObjects(
 		pendingRequests[id] = record.SerializeRecord(pendingRecord)
 	}
 
-	msg := &message.HotData{
-		Drop:            *drop,
-		PulseNumber:     previousSlotPulse.Pulse.PulseNumber,
-		RecentObjects:   recentObjects,
-		PendingRequests: pendingRequests,
-	}
-	_, err := m.Bus.Send(ctx, msg, *currentSlotPulse, nil)
+	dropSizeHistory, err := m.db.GetDropSizeHistory(ctx, jetID)
 	if err != nil {
-		return err
+		return nil, errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeHistory")
 	}
+
+	msg := &message.HotData{
+		Drop:               *drop,
+		PulseNumber:        pulse,
+		RecentObjects:      recentObjects,
+		PendingRequests:    pendingRequests,
+		JetDropSizeHistory: dropSizeHistory,
+	}
+	return msg, nil
+}
+
+func (m *PulseManager) sendExecutorData(
+	ctx context.Context,
+	currentPulse, newPulse *core.Pulse,
+	jetID core.RecordID,
+	msg *message.HotData,
+) error {
+	shouldSplit := func() bool {
+		if len(msg.JetDropSizeHistory) < m.options.dropHistorySize {
+			return false
+		}
+		for _, info := range msg.JetDropSizeHistory {
+			if info.DropSize < m.options.splitThreshold {
+				return false
+			}
+		}
+		return true
+	}
+
+	if shouldSplit() {
+		left, right, err := m.db.SplitJetTree(
+			ctx,
+			currentPulse.PulseNumber,
+			newPulse.PulseNumber,
+			jetID,
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to split jet tree")
+		}
+		err = m.db.AddJets(ctx, *left, *right)
+		if err != nil {
+			return errors.Wrap(err, "failed to add jets")
+		}
+		leftMsg := *msg
+		leftMsg.Jet = *core.NewRecordRef(core.DomainID, *left)
+		rightMsg := *msg
+		rightMsg.Jet = *core.NewRecordRef(core.DomainID, *right)
+		_, err = m.Bus.Send(ctx, &leftMsg, *currentPulse, nil)
+		if err != nil {
+			return errors.Wrap(err, "failed to send executor data")
+		}
+		_, err = m.Bus.Send(ctx, &rightMsg, *currentPulse, nil)
+		if err != nil {
+			return errors.Wrap(err, "failed to send executor data")
+		}
+	} else {
+		msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
+		_, err := m.Bus.Send(ctx, msg, *currentPulse, nil)
+		if err != nil {
+			return errors.Wrap(err, "failed to send executor data")
+		}
+	}
+
 	return nil
 }
 
 // Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) error {
+func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist bool) error {
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -231,29 +343,41 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	var err error
 	m.GIL.Acquire(ctx)
 
-	// swap pulse
-	m.currentPulse = pulse
+	m.PulseStorage.Lock()
 
-	lastSlotPulse, err := m.db.GetLatestPulse(ctx)
+	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
+	storagePulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
+		m.PulseStorage.Unlock()
+		m.GIL.Release(ctx)
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
+	currentPulse := storagePulse.Pulse
+	prevPulseNumber := *storagePulse.Prev
+
+	// swap pulse
+	m.currentPulse = newPulse
 
 	// swap active nodes
 	m.ActiveListSwapper.MoveSyncToActive()
-	if !dry {
-		if err := m.db.AddPulse(ctx, pulse); err != nil {
+	if persist {
+		if err := m.db.AddPulse(ctx, newPulse); err != nil {
+			m.GIL.Release(ctx)
+			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
-		err = m.db.SetActiveNodes(pulse.PulseNumber, m.NodeNet.GetActiveNodes())
+		err = m.db.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
+			m.GIL.Release(ctx)
+			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
 
+	m.PulseStorage.Unlock()
 	m.GIL.Release(ctx)
 
-	if dry {
+	if !persist {
 		return nil
 	}
 
@@ -261,50 +385,46 @@ func (m *PulseManager) Set(ctx context.Context, pulse core.Pulse, dry bool) erro
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-
-		drop, dropSerialized, messages, err := m.createDrop(ctx, lastSlotPulse)
+		err = m.processEndPulse(ctx, prevPulseNumber, &currentPulse, &newPulse)
 		if err != nil {
-			return errors.Wrapf(err, "create drop on pulse %v failed", lastSlotPulse)
+			return err
 		}
-
-		if hotRecordsError := m.processRecentObjects(ctx, lastSlotPulse, &m.currentPulse, drop, dropSerialized); hotRecordsError != nil {
-			return errors.Wrap(err, "processRecentObjects failed")
+		if m.options.enableSync {
+			err := m.AddPulseToSyncClients(ctx, storagePulse.Pulse.PulseNumber)
+			if err != nil {
+				return err
+			}
 		}
-
-		if err = m.processDrop(ctx, lastSlotPulse, &m.currentPulse, dropSerialized, messages); err != nil {
-			return errors.Wrap(err, "processDrop failed")
-		}
-
-		m.SyncToHeavy()
 	}
 
-	return m.LR.OnPulse(ctx, pulse)
+	return m.LR.OnPulse(ctx, newPulse)
 }
 
-// SyncToHeavy signals to sync loop there is something to sync.
-//
-// Should never be called after Stop.
-func (m *PulseManager) SyncToHeavy() {
-	if !m.options.enableSync {
-		return
+// AddPulseToSyncClients add pulse number to all sync clients in pool.
+func (m *PulseManager) AddPulseToSyncClients(ctx context.Context, pn core.PulseNumber) error {
+	// get all jets with drops (required sync)
+	allJets, err := m.db.GetJets(ctx)
+	if err != nil {
+		return err
 	}
-	// TODO: save current pulse as last should be processed
-	if len(m.gotpulse) == 0 {
-		m.gotpulse <- struct{}{}
-		return
+	for jetID := range allJets {
+		_, err := m.db.GetDrop(ctx, jetID, pn)
+		if err == nil {
+			m.syncClientsPool.AddPulsesToSyncClient(ctx, jetID, true, pn)
+		}
 	}
+	return nil
 }
 
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
-	m.syncdone = make(chan struct{})
-	m.stop = make(chan struct{})
 	if m.options.enableSync {
-		synclist, err := m.NextSyncPulses(ctx)
+		m.syncClientsPool.Bus = m.Bus
+		m.syncClientsPool.PulseStorage = m.PulseStorage
+		err := m.initJetSyncState(ctx)
 		if err != nil {
 			return err
 		}
-		go m.syncloop(ctx, synclist)
 	}
 	return nil
 }
@@ -315,105 +435,10 @@ func (m *PulseManager) Stop(ctx context.Context) error {
 	m.setLock.Lock()
 	m.stopped = true
 	m.setLock.Unlock()
-	close(m.stop)
 
 	if m.options.enableSync {
-		close(m.gotpulse)
-		inslogger.FromContext(ctx).Info("waiting finish of replication to heavy node...")
-		<-m.syncdone
+		inslogger.FromContext(ctx).Info("waiting finish of heavy replication client...")
+		m.syncClientsPool.Stop(ctx)
 	}
 	return nil
-}
-
-func (m *PulseManager) syncloop(ctx context.Context, pulses []core.PulseNumber) {
-	defer close(m.syncdone)
-
-	var err error
-	inslog := inslogger.FromContext(ctx)
-	var retrydelay time.Duration
-	attempt := 0
-	// shift synced pulse
-	finishpulse := func() {
-		pulses = pulses[1:]
-		// reset retry variables
-		// TODO: use jitter value for zero 'retrydelay'
-		retrydelay = 0
-		attempt = 0
-	}
-
-	for {
-		select {
-		case <-time.After(retrydelay):
-		case <-m.stop:
-			if len(pulses) == 0 {
-				// fmt.Println("Got stop signal and have nothing to do")
-				return
-			}
-		}
-		for {
-			if len(pulses) != 0 {
-				// TODO: drop too outdated pulses
-				// if (current - start > N) { start = current - N }
-				break
-			}
-			inslog.Info("syncronization waiting next chunk of work")
-			_, ok := <-m.gotpulse
-			if !ok {
-				inslog.Debug("stop is called, so we are should just stop syncronization loop")
-				return
-			}
-			inslog.Infof("syncronization got next chunk of work")
-			// get latest RP
-			pulses, err = m.NextSyncPulses(ctx)
-			if err != nil {
-				err = errors.Wrap(err,
-					"PulseManager syncloop failed on NextSyncPulseNumber call")
-				inslog.Error(err)
-				panic(err)
-			}
-		}
-
-		tosyncPN := pulses[0]
-		if m.pulseIsOutdated(ctx, tosyncPN) {
-			finishpulse()
-			continue
-		}
-		inslog.Infof("start syncronization to heavy for pulse %v", tosyncPN)
-
-		sholdretry := false
-		syncerr := m.HeavySync(ctx, tosyncPN, attempt > 0)
-		if syncerr != nil {
-
-			if heavyerr, ok := syncerr.(HeavyErr); ok {
-				sholdretry = heavyerr.IsRetryable()
-			}
-
-			syncerr = errors.Wrap(syncerr, "HeavySync failed")
-			inslog.Errorf("%v (on attempt=%v, sholdretry=%v)", syncerr.Error(), attempt, sholdretry)
-
-			if sholdretry {
-				retrydelay = m.syncbackoff.ForAttempt(attempt)
-				attempt++
-				continue
-			}
-			// TODO: write some info in dust?
-		}
-
-		err = m.db.SetReplicatedPulse(ctx, tosyncPN)
-		if err != nil {
-			err = errors.Wrap(err, "SetReplicatedPulse failed")
-			inslog.Error(err)
-			panic(err)
-		}
-
-		finishpulse()
-	}
-}
-
-func (m *PulseManager) pulseIsOutdated(ctx context.Context, pn core.PulseNumber) bool {
-	current, err := m.Current(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return current.PulseNumber-pn > m.options.pulsesDeltaLimit
 }

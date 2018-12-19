@@ -25,6 +25,7 @@ import (
 	"runtime"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
@@ -60,18 +61,18 @@ func getContractPath(name string) (string, error) {
 	return filepath.Join(contractDir, name, contractFile), nil
 }
 
-func getContractsMap() (map[string]string, error) {
-	contracts := make(map[string]string)
+func getContractsMap() (map[string]*preprocessor.ParsedFile, error) {
+	contracts := make(map[string]*preprocessor.ParsedFile)
 	for _, name := range contractNames {
 		contractPath, err := getContractPath(name)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ contractsMap ] couldn't get path to contracts: ")
 		}
-		code, err := ioutil.ReadFile(filepath.Clean(contractPath))
+		parsed, err := preprocessor.ParseFile(contractPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ contractsMap ] couldn't read contract: ")
 		}
-		contracts[name] = string(code)
+		contracts[name] = parsed
 	}
 	return contracts, nil
 }

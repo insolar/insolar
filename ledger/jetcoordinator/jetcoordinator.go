@@ -94,7 +94,7 @@ func (jc *JetCoordinator) QueryRole(
 ) ([]core.RecordRef, error) {
 	pulseData, err := jc.db.GetPulse(ctx, pulse)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to fetch pulse data for pulse %v", pulse)
 	}
 	candidates := jc.NodeNet.GetActiveNodesByRole(role)
 	if len(candidates) == 0 {
@@ -110,22 +110,17 @@ func (jc *JetCoordinator) QueryRole(
 		return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
 	}
 
-	objHash := obj.Hash()
 	if role == core.DynamicRoleLightExecutor {
-		jetTree, err := jc.db.GetJetTree(ctx, pulseData.Pulse.PulseNumber)
-		if err == storage.ErrNotFound {
-			return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
-		}
-
+		jetTree, err := jc.db.GetJetTree(ctx, obj.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		id := jetTree.Find(objHash)
+		id := jetTree.Find(*obj)
 		_, prefix := jet.Jet(*id)
 		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, prefix), candidates, count)
 	}
 
-	return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, objHash), candidates, count)
+	return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, obj.Hash()), candidates, count)
 }
 
 // GetActiveNodes return active nodes for specified pulse.

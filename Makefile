@@ -62,7 +62,7 @@ ensure:
 
 build:
 	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK)
 
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
@@ -96,7 +96,7 @@ functest:
 	CGO_ENABLED=1 go test -tags functest ./functest
 
 test:
-	go test -v $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(ALL_PACKAGES)
 
 test_with_coverage:
 	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)
@@ -117,5 +117,3 @@ docker-insgorund:
 
 
 docker: docker-insolard docker-pulsar docker-insgorund
-
-

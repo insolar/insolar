@@ -20,18 +20,19 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/asn1"
+	"fmt"
 	"math/big"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
+const bigIntLength = 32
+const lenBytes = 2
+
 type ecdsaSignature struct {
 	R, S *big.Int
-}
-
-func fromRS(r, s *big.Int) *ecdsaSignature {
-	return &ecdsaSignature{R: r, S: s}
 }
 
 func (p ecdsaSignature) Marshal() ([]byte, error) {
@@ -66,7 +67,7 @@ func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
 
-	ecdsaSignature, err := fromRS(r, s).Marshal()
+	ecdsaSignature := makeSignature(r, s)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
@@ -81,13 +82,58 @@ type ecdsaVerifyWrapper struct {
 }
 
 func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool {
-	var ecdsaSignature ecdsaSignature
-	err := ecdsaSignature.Unmarshal(signature.Bytes())
-	if err != nil {
+	if signature.Bytes() == nil {
 		return false
 	}
-
+	r, s, err := getRSFromBytes(signature.Bytes())
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	ecdsaSignature := ecdsaSignature{r, s}
 	hash := sw.hasher.Hash(data)
 
 	return ecdsa.Verify(sw.publicKey, hash, ecdsaSignature.R, ecdsaSignature.S)
+}
+
+func makeSignature(r, s *big.Int) []byte {
+	if (len(r.Bytes()) > bigIntLength) ||
+		(len(s.Bytes()) > bigIntLength) {
+		err := fmt.Sprintf("[ makeSignature ] wrong r, s length. r: %d; s: %d; needed: %d", len(r.Bytes()), len(s.Bytes()), bigIntLength)
+		panic(err)
+	}
+	rLen := uint8(len(r.Bytes()))
+	sLen := uint8(len(s.Bytes()))
+	res := make([]byte, rLen+sLen+lenBytes)
+	res[0] = rLen
+	copy(res[1:rLen+lenBytes], r.Bytes())
+	res[rLen+1] = sLen
+	copy(res[rLen+lenBytes:], s.Bytes())
+	return res[:]
+}
+
+func getRSFromBytes(data []byte) (*big.Int, *big.Int, error) {
+	if len(data) > (bigIntLength*lenBytes + lenBytes) {
+		err := fmt.Sprintf("[ getRSFromBytes ] wrong data length to get a r, s. recv len: %d", len(data))
+		return nil, nil, errors.New(err)
+	}
+	r := new(big.Int)
+	s := new(big.Int)
+	rLen := data[0]
+	if int(rLen+1) > len(data) {
+		err := fmt.Sprintf("[ getRSFromBytes ] wrong data to parse r, s")
+		return nil, nil, errors.New(err)
+	}
+	sLen := data[rLen+1]
+	if int(rLen+sLen+lenBytes) != len(data) {
+		err := fmt.Sprintf("[ getRSFromBytes ] wrong data to parse r, s")
+		return nil, nil, errors.New(err)
+	}
+	rBytes := make([]byte, rLen)
+	sBytes := make([]byte, sLen)
+	copy(rBytes, data[1:rLen+lenBytes])
+	copy(sBytes, data[rLen+lenBytes:])
+	r.SetBytes(rBytes)
+	s.SetBytes(sBytes)
+	return r, s, nil
 }

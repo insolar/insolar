@@ -58,7 +58,7 @@ var GlobalLogger = func() core.Logger {
 }()
 
 func SetGlobalLogger(logger core.Logger) {
-	GlobalLogger = logger.WithField("GLOBAL_OLD_LOG( Kitty, please, use new one )", "")
+	GlobalLogger = logger.WithField("GLOBAL_OLD_LOG, use inslogger.FromContext(ctx)", "")
 }
 
 // SetLevel lets log level for global logger

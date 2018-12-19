@@ -50,7 +50,7 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 }
 
 // Start starts networking.
-func (t *utpTransport) Start(ctx context.Context) error {
+func (t *utpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start UTP transport")
 	for {
 		conn, err := t.socket.Accept()
@@ -83,7 +83,11 @@ func (t *utpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to socket dial")
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Error("[ send ] Failed to close connection")
+		}
+	}()
 
 	_, err = conn.Write(data)
 	return errors.Wrap(err, "Failed to write data")
