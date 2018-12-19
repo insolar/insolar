@@ -152,7 +152,7 @@ type TestArtifactManager struct {
 	Prototypes map[core.RecordRef]*TestObjectDescriptor
 }
 
-func (t *TestArtifactManager) GetPendingRequests(ctx context.Context, object core.RecordRef) ([]core.RecordID, error) {
+func (t *TestArtifactManager) HasPendingRequests(ctx context.Context, object core.RecordRef) (bool, error) {
 	panic("implement me")
 }
 

@@ -128,7 +128,7 @@ func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
 
 	objectRef := testutils.RandomRef()
 
-	am.GetPendingRequestsMock.Return([]core.RecordID{{}}, nil)
+	am.HasPendingRequestsMock.Return(true, nil)
 	es := &ExecutionState{ArtifactManager: am, Queue: make([]ExecutionQueueElement, 0)}
 	es.Queue = append(es.Queue, ExecutionQueueElement{})
 	err := lr.StartQueueProcessorIfNeeded(
@@ -162,7 +162,7 @@ func TestCheckPendingRequests(
 	require.NoError(t, err)
 	require.Equal(t, NotPending, pending)
 
-	am.GetPendingRequestsMock.Return(nil, nil)
+	am.HasPendingRequestsMock.Return(false, nil)
 	es = &ExecutionState{ArtifactManager: am}
 	pending, err = es.CheckPendingRequests(
 		ctx, &message.CallMethod{
@@ -172,7 +172,7 @@ func TestCheckPendingRequests(
 	require.NoError(t, err)
 	require.Equal(t, NotPending, pending)
 
-	am.GetPendingRequestsMock.Return([]core.RecordID{{}}, nil)
+	am.HasPendingRequestsMock.Return(true, nil)
 	es = &ExecutionState{ArtifactManager: am}
 	pending, err = es.CheckPendingRequests(
 		ctx, &message.CallMethod{
@@ -182,7 +182,7 @@ func TestCheckPendingRequests(
 	require.NoError(t, err)
 	require.Equal(t, InPending, pending)
 
-	am.GetPendingRequestsMock.Return(nil, errors.New("some"))
+	am.HasPendingRequestsMock.Return(false, errors.New("some"))
 	es = &ExecutionState{ArtifactManager: am}
 	pending, err = es.CheckPendingRequests(
 		ctx, &message.CallMethod{

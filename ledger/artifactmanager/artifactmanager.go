@@ -216,25 +216,25 @@ func (m *LedgerArtifactManager) GetObject(
 	return desc, err
 }
 
-// GetPendingRequests returns unclosed requests for provided object.
-func (m *LedgerArtifactManager) GetPendingRequests(
+// HasPendingRequests returns if object has unclosed requests.
+func (m *LedgerArtifactManager) HasPendingRequests(
 	ctx context.Context,
 	object core.RecordRef,
-) ([]core.RecordID, error) {
+) (bool, error) {
 	currentPulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	rep, err := m.bus(ctx).Send(ctx, &message.GetPendingRequests{Object: object}, currentPulse.Pulse, nil)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	requests, ok := rep.(*reply.PendingRequests)
+	requests, ok := rep.(*reply.HasPendingRequests)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		return false, ErrUnexpectedReply
 	}
-	return requests.Requests, nil
+	return requests.Has, nil
 }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.

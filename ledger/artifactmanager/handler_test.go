@@ -456,7 +456,7 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	assert.Equal(t, objectIndex, *decodedIndex)
 }
 
-func TestMessageHandler_HandleGetPendingRequests(t *testing.T) {
+func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -467,8 +467,8 @@ func TestMessageHandler_HandleGetPendingRequests(t *testing.T) {
 		Object: *genRandomRef(0),
 	}
 	pendingRequests := []core.RecordID{
-		*genRandomID(0),
-		*genRandomID(0),
+		*genRandomID(core.FirstPulseNumber),
+		*genRandomID(core.FirstPulseNumber),
 	}
 	sort.Slice(pendingRequests, func(i, j int) bool {
 		return bytes.Compare(pendingRequests[i][:], pendingRequests[j][:]) < 0
@@ -500,12 +500,13 @@ func TestMessageHandler_HandleGetPendingRequests(t *testing.T) {
 	h.RecentStorageProvider = provideMock
 
 	rep, err := h.replayHandlers[core.TypeGetPendingRequests](ctx, &message.Parcel{
-		Msg: &msg,
+		Msg:         &msg,
+		PulseNumber: core.FirstPulseNumber + 1,
 	})
 	require.NoError(t, err)
-	requests, ok := rep.(*reply.PendingRequests)
+	has, ok := rep.(*reply.HasPendingRequests)
 	require.True(t, ok)
-	assert.Equal(t, pendingRequests, requests.Requests)
+	assert.True(t, has.Has)
 }
 
 func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {

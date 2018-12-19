@@ -115,7 +115,7 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 	case TypeJetMiss:
 		return &JetMiss{}, nil
 	case TypePendingRequests:
-		return &PendingRequests{}, nil
+		return &HasPendingRequests{}, nil
 
 	case TypeNodeSign:
 		return &NodeSign{}, nil
@@ -185,5 +185,5 @@ func init() {
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
 	gob.Register(&NodeSign{})
-	gob.Register(&PendingRequests{})
+	gob.Register(&HasPendingRequests{})
 }

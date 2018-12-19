@@ -41,13 +41,17 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	objRef := *genRandomRef(0)
 
 	// Register request
-	reqID, err := am.RegisterRequest(ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}})
+	reqID, err := am.RegisterRequest(ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: core.FirstPulseNumber})
+	require.NoError(t, err)
+
+	// Change pulse.
+	err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
 	require.NoError(t, err)
 
 	// Should have pending request.
-	requests, err := am.GetPendingRequests(ctx, objRef)
+	has, err := am.HasPendingRequests(ctx, objRef)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(requests))
+	assert.True(t, has)
 
 	// Register result.
 	reqRef := *core.NewRecordRef(core.DomainID, *reqID)
@@ -55,7 +59,7 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	// Should not have pending request.
-	requests, err = am.GetPendingRequests(ctx, objRef)
+	has, err = am.HasPendingRequests(ctx, objRef)
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(requests))
+	assert.False(t, has)
 }

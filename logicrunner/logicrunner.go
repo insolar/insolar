@@ -168,13 +168,12 @@ func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.M
 		return NotPending, nil
 	}
 
-	requests, err := es.ArtifactManager.GetPendingRequests(ctx, msg.ObjectRef)
+	has, err := es.ArtifactManager.HasPendingRequests(ctx, msg.ObjectRef)
 	if err != nil {
 		return NotPending, err
 	}
-	if len(requests) != 0 {
-		// FIXME: this hangs functests. Need to call ArtifactManager.RegisterResult to eliminate pending requests.
-		return NotPending, nil
+	if has {
+		return InPending, nil
 	}
 
 	return NotPending, nil
@@ -798,6 +797,10 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *es.Current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
+		_, err = lr.ArtifactManager.RegisterResult(ctx, *es.Current.Request, *es.Current.Request, nil)
+		if err != nil {
+			return nil, es.WrapError(err, "couldn't save results")
+		}
 		return &reply.CallConstructor{Object: es.Current.Request}, err
 	default:
 		return nil, es.WrapError(nil, "unsupported type of save object")

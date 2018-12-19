@@ -75,7 +75,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeRegisterChild] = m.checkJet(h.handleRegisterChild)
 	h.replayHandlers[core.TypeSetBlob] = m.checkJet(h.handleSetBlob)
 	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
-	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleGetPendingRequests)
+	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
 
 	// Validation.
 	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
@@ -97,7 +97,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.saveParcel(h.handleRegisterChild)))
 	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.saveParcel(h.handleSetBlob)))
 	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.saveParcel(h.handleGetObjectIndex)))
-	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.saveParcel(h.handleGetPendingRequests)))
+	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.saveParcel(h.handleHasPendingRequests)))
 
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.saveParcel(h.handleValidateRecord)))
@@ -297,21 +297,24 @@ func (h *MessageHandler) handleGetObject(
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetPendingRequests(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetPendingRequests)
 	jetID := jetFromContext(ctx)
 
 	all := h.RecentStorageProvider.GetStorage(jetID).GetRequests()
 	forObject, ok := all[*msg.Object.Record()]
 	if !ok {
-		return &reply.PendingRequests{}, nil
+		return &reply.HasPendingRequests{}, nil
 	}
 
-	var requests []core.RecordID
 	for reqID := range forObject {
-		requests = append(requests, reqID)
+		p := reqID.Pulse()
+		_ = p
+		if reqID.Pulse() < parcel.Pulse() {
+			return &reply.HasPendingRequests{Has: true}, nil
+		}
 	}
-	return &reply.PendingRequests{Requests: requests}, nil
+	return &reply.HasPendingRequests{Has: false}, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

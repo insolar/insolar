@@ -98,12 +98,12 @@ func (e *JetMiss) Type() core.ReplyType {
 	return TypeJetMiss
 }
 
-// PendingRequests contains unclosed requests for an object.
-type PendingRequests struct {
-	Requests []core.RecordID
+// HasPendingRequests contains unclosed requests for an object.
+type HasPendingRequests struct {
+	Has bool
 }
 
 // Type implementation of Reply interface.
-func (e *PendingRequests) Type() core.ReplyType {
+func (e *HasPendingRequests) Type() core.ReplyType {
 	return TypePendingRequests
 }

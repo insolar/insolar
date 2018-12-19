@@ -70,10 +70,10 @@ type ArtifactManagerMock struct {
 	GetObjectPreCounter uint64
 	GetObjectMock       mArtifactManagerMockGetObject
 
-	GetPendingRequestsFunc       func(p context.Context, p1 core.RecordRef) (r []core.RecordID, r1 error)
-	GetPendingRequestsCounter    uint64
-	GetPendingRequestsPreCounter uint64
-	GetPendingRequestsMock       mArtifactManagerMockGetPendingRequests
+	HasPendingRequestsFunc       func(p context.Context, p1 core.RecordRef) (r bool, r1 error)
+	HasPendingRequestsCounter    uint64
+	HasPendingRequestsPreCounter uint64
+	HasPendingRequestsMock       mArtifactManagerMockHasPendingRequests
 
 	RegisterRequestFunc       func(p context.Context, p1 core.RecordRef, p2 core.Parcel) (r *core.RecordID, r1 error)
 	RegisterRequestCounter    uint64
@@ -124,7 +124,7 @@ func NewArtifactManagerMock(t minimock.Tester) *ArtifactManagerMock {
 	m.GetCodeMock = mArtifactManagerMockGetCode{mock: m}
 	m.GetDelegateMock = mArtifactManagerMockGetDelegate{mock: m}
 	m.GetObjectMock = mArtifactManagerMockGetObject{mock: m}
-	m.GetPendingRequestsMock = mArtifactManagerMockGetPendingRequests{mock: m}
+	m.HasPendingRequestsMock = mArtifactManagerMockHasPendingRequests{mock: m}
 	m.RegisterRequestMock = mArtifactManagerMockRegisterRequest{mock: m}
 	m.RegisterResultMock = mArtifactManagerMockRegisterResult{mock: m}
 	m.RegisterValidationMock = mArtifactManagerMockRegisterValidation{mock: m}
@@ -1648,92 +1648,92 @@ func (m *ArtifactManagerMock) GetObjectFinished() bool {
 	return true
 }
 
-type mArtifactManagerMockGetPendingRequests struct {
+type mArtifactManagerMockHasPendingRequests struct {
 	mock              *ArtifactManagerMock
-	mainExpectation   *ArtifactManagerMockGetPendingRequestsExpectation
-	expectationSeries []*ArtifactManagerMockGetPendingRequestsExpectation
+	mainExpectation   *ArtifactManagerMockHasPendingRequestsExpectation
+	expectationSeries []*ArtifactManagerMockHasPendingRequestsExpectation
 }
 
-type ArtifactManagerMockGetPendingRequestsExpectation struct {
-	input  *ArtifactManagerMockGetPendingRequestsInput
-	result *ArtifactManagerMockGetPendingRequestsResult
+type ArtifactManagerMockHasPendingRequestsExpectation struct {
+	input  *ArtifactManagerMockHasPendingRequestsInput
+	result *ArtifactManagerMockHasPendingRequestsResult
 }
 
-type ArtifactManagerMockGetPendingRequestsInput struct {
+type ArtifactManagerMockHasPendingRequestsInput struct {
 	p  context.Context
 	p1 core.RecordRef
 }
 
-type ArtifactManagerMockGetPendingRequestsResult struct {
-	r  []core.RecordID
+type ArtifactManagerMockHasPendingRequestsResult struct {
+	r  bool
 	r1 error
 }
 
-//Expect specifies that invocation of ArtifactManager.GetPendingRequests is expected from 1 to Infinity times
-func (m *mArtifactManagerMockGetPendingRequests) Expect(p context.Context, p1 core.RecordRef) *mArtifactManagerMockGetPendingRequests {
-	m.mock.GetPendingRequestsFunc = nil
+//Expect specifies that invocation of ArtifactManager.HasPendingRequests is expected from 1 to Infinity times
+func (m *mArtifactManagerMockHasPendingRequests) Expect(p context.Context, p1 core.RecordRef) *mArtifactManagerMockHasPendingRequests {
+	m.mock.HasPendingRequestsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ArtifactManagerMockGetPendingRequestsExpectation{}
+		m.mainExpectation = &ArtifactManagerMockHasPendingRequestsExpectation{}
 	}
-	m.mainExpectation.input = &ArtifactManagerMockGetPendingRequestsInput{p, p1}
+	m.mainExpectation.input = &ArtifactManagerMockHasPendingRequestsInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of ArtifactManager.GetPendingRequests
-func (m *mArtifactManagerMockGetPendingRequests) Return(r []core.RecordID, r1 error) *ArtifactManagerMock {
-	m.mock.GetPendingRequestsFunc = nil
+//Return specifies results of invocation of ArtifactManager.HasPendingRequests
+func (m *mArtifactManagerMockHasPendingRequests) Return(r bool, r1 error) *ArtifactManagerMock {
+	m.mock.HasPendingRequestsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ArtifactManagerMockGetPendingRequestsExpectation{}
+		m.mainExpectation = &ArtifactManagerMockHasPendingRequestsExpectation{}
 	}
-	m.mainExpectation.result = &ArtifactManagerMockGetPendingRequestsResult{r, r1}
+	m.mainExpectation.result = &ArtifactManagerMockHasPendingRequestsResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of ArtifactManager.GetPendingRequests is expected once
-func (m *mArtifactManagerMockGetPendingRequests) ExpectOnce(p context.Context, p1 core.RecordRef) *ArtifactManagerMockGetPendingRequestsExpectation {
-	m.mock.GetPendingRequestsFunc = nil
+//ExpectOnce specifies that invocation of ArtifactManager.HasPendingRequests is expected once
+func (m *mArtifactManagerMockHasPendingRequests) ExpectOnce(p context.Context, p1 core.RecordRef) *ArtifactManagerMockHasPendingRequestsExpectation {
+	m.mock.HasPendingRequestsFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &ArtifactManagerMockGetPendingRequestsExpectation{}
-	expectation.input = &ArtifactManagerMockGetPendingRequestsInput{p, p1}
+	expectation := &ArtifactManagerMockHasPendingRequestsExpectation{}
+	expectation.input = &ArtifactManagerMockHasPendingRequestsInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *ArtifactManagerMockGetPendingRequestsExpectation) Return(r []core.RecordID, r1 error) {
-	e.result = &ArtifactManagerMockGetPendingRequestsResult{r, r1}
+func (e *ArtifactManagerMockHasPendingRequestsExpectation) Return(r bool, r1 error) {
+	e.result = &ArtifactManagerMockHasPendingRequestsResult{r, r1}
 }
 
-//Set uses given function f as a mock of ArtifactManager.GetPendingRequests method
-func (m *mArtifactManagerMockGetPendingRequests) Set(f func(p context.Context, p1 core.RecordRef) (r []core.RecordID, r1 error)) *ArtifactManagerMock {
+//Set uses given function f as a mock of ArtifactManager.HasPendingRequests method
+func (m *mArtifactManagerMockHasPendingRequests) Set(f func(p context.Context, p1 core.RecordRef) (r bool, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetPendingRequestsFunc = f
+	m.mock.HasPendingRequestsFunc = f
 	return m.mock
 }
 
-//GetPendingRequests implements github.com/insolar/insolar/core.ArtifactManager interface
-func (m *ArtifactManagerMock) GetPendingRequests(p context.Context, p1 core.RecordRef) (r []core.RecordID, r1 error) {
-	counter := atomic.AddUint64(&m.GetPendingRequestsPreCounter, 1)
-	defer atomic.AddUint64(&m.GetPendingRequestsCounter, 1)
+//HasPendingRequests implements github.com/insolar/insolar/core.ArtifactManager interface
+func (m *ArtifactManagerMock) HasPendingRequests(p context.Context, p1 core.RecordRef) (r bool, r1 error) {
+	counter := atomic.AddUint64(&m.HasPendingRequestsPreCounter, 1)
+	defer atomic.AddUint64(&m.HasPendingRequestsCounter, 1)
 
-	if len(m.GetPendingRequestsMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetPendingRequestsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ArtifactManagerMock.GetPendingRequests. %v %v", p, p1)
+	if len(m.HasPendingRequestsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.HasPendingRequestsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ArtifactManagerMock.HasPendingRequests. %v %v", p, p1)
 			return
 		}
 
-		input := m.GetPendingRequestsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ArtifactManagerMockGetPendingRequestsInput{p, p1}, "ArtifactManager.GetPendingRequests got unexpected parameters")
+		input := m.HasPendingRequestsMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ArtifactManagerMockHasPendingRequestsInput{p, p1}, "ArtifactManager.HasPendingRequests got unexpected parameters")
 
-		result := m.GetPendingRequestsMock.expectationSeries[counter-1].result
+		result := m.HasPendingRequestsMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the ArtifactManagerMock.GetPendingRequests")
+			m.t.Fatal("No results are set for the ArtifactManagerMock.HasPendingRequests")
 			return
 		}
 
@@ -1743,16 +1743,16 @@ func (m *ArtifactManagerMock) GetPendingRequests(p context.Context, p1 core.Reco
 		return
 	}
 
-	if m.GetPendingRequestsMock.mainExpectation != nil {
+	if m.HasPendingRequestsMock.mainExpectation != nil {
 
-		input := m.GetPendingRequestsMock.mainExpectation.input
+		input := m.HasPendingRequestsMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ArtifactManagerMockGetPendingRequestsInput{p, p1}, "ArtifactManager.GetPendingRequests got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ArtifactManagerMockHasPendingRequestsInput{p, p1}, "ArtifactManager.HasPendingRequests got unexpected parameters")
 		}
 
-		result := m.GetPendingRequestsMock.mainExpectation.result
+		result := m.HasPendingRequestsMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the ArtifactManagerMock.GetPendingRequests")
+			m.t.Fatal("No results are set for the ArtifactManagerMock.HasPendingRequests")
 		}
 
 		r = result.r
@@ -1761,39 +1761,39 @@ func (m *ArtifactManagerMock) GetPendingRequests(p context.Context, p1 core.Reco
 		return
 	}
 
-	if m.GetPendingRequestsFunc == nil {
-		m.t.Fatalf("Unexpected call to ArtifactManagerMock.GetPendingRequests. %v %v", p, p1)
+	if m.HasPendingRequestsFunc == nil {
+		m.t.Fatalf("Unexpected call to ArtifactManagerMock.HasPendingRequests. %v %v", p, p1)
 		return
 	}
 
-	return m.GetPendingRequestsFunc(p, p1)
+	return m.HasPendingRequestsFunc(p, p1)
 }
 
-//GetPendingRequestsMinimockCounter returns a count of ArtifactManagerMock.GetPendingRequestsFunc invocations
-func (m *ArtifactManagerMock) GetPendingRequestsMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetPendingRequestsCounter)
+//HasPendingRequestsMinimockCounter returns a count of ArtifactManagerMock.HasPendingRequestsFunc invocations
+func (m *ArtifactManagerMock) HasPendingRequestsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.HasPendingRequestsCounter)
 }
 
-//GetPendingRequestsMinimockPreCounter returns the value of ArtifactManagerMock.GetPendingRequests invocations
-func (m *ArtifactManagerMock) GetPendingRequestsMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetPendingRequestsPreCounter)
+//HasPendingRequestsMinimockPreCounter returns the value of ArtifactManagerMock.HasPendingRequests invocations
+func (m *ArtifactManagerMock) HasPendingRequestsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.HasPendingRequestsPreCounter)
 }
 
-//GetPendingRequestsFinished returns true if mock invocations count is ok
-func (m *ArtifactManagerMock) GetPendingRequestsFinished() bool {
+//HasPendingRequestsFinished returns true if mock invocations count is ok
+func (m *ArtifactManagerMock) HasPendingRequestsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetPendingRequestsMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetPendingRequestsCounter) == uint64(len(m.GetPendingRequestsMock.expectationSeries))
+	if len(m.HasPendingRequestsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.HasPendingRequestsCounter) == uint64(len(m.HasPendingRequestsMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetPendingRequestsMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetPendingRequestsCounter) > 0
+	if m.HasPendingRequestsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.HasPendingRequestsCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetPendingRequestsFunc != nil {
-		return atomic.LoadUint64(&m.GetPendingRequestsCounter) > 0
+	if m.HasPendingRequestsFunc != nil {
+		return atomic.LoadUint64(&m.HasPendingRequestsCounter) > 0
 	}
 
 	return true
@@ -2745,8 +2745,8 @@ func (m *ArtifactManagerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ArtifactManagerMock.GetObject")
 	}
 
-	if !m.GetPendingRequestsFinished() {
-		m.t.Fatal("Expected call to ArtifactManagerMock.GetPendingRequests")
+	if !m.HasPendingRequestsFinished() {
+		m.t.Fatal("Expected call to ArtifactManagerMock.HasPendingRequests")
 	}
 
 	if !m.RegisterRequestFinished() {
@@ -2830,8 +2830,8 @@ func (m *ArtifactManagerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ArtifactManagerMock.GetObject")
 	}
 
-	if !m.GetPendingRequestsFinished() {
-		m.t.Fatal("Expected call to ArtifactManagerMock.GetPendingRequests")
+	if !m.HasPendingRequestsFinished() {
+		m.t.Fatal("Expected call to ArtifactManagerMock.HasPendingRequests")
 	}
 
 	if !m.RegisterRequestFinished() {
@@ -2882,7 +2882,7 @@ func (m *ArtifactManagerMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetCodeFinished()
 		ok = ok && m.GetDelegateFinished()
 		ok = ok && m.GetObjectFinished()
-		ok = ok && m.GetPendingRequestsFinished()
+		ok = ok && m.HasPendingRequestsFinished()
 		ok = ok && m.RegisterRequestFinished()
 		ok = ok && m.RegisterResultFinished()
 		ok = ok && m.RegisterValidationFinished()
@@ -2937,8 +2937,8 @@ func (m *ArtifactManagerMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to ArtifactManagerMock.GetObject")
 			}
 
-			if !m.GetPendingRequestsFinished() {
-				m.t.Error("Expected call to ArtifactManagerMock.GetPendingRequests")
+			if !m.HasPendingRequestsFinished() {
+				m.t.Error("Expected call to ArtifactManagerMock.HasPendingRequests")
 			}
 
 			if !m.RegisterRequestFinished() {
@@ -3017,7 +3017,7 @@ func (m *ArtifactManagerMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetPendingRequestsFinished() {
+	if !m.HasPendingRequestsFinished() {
 		return false
 	}
 
