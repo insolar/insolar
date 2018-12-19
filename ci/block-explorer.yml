@@ -19,7 +19,25 @@ resource_types:
     repository: nulldriver/maven-resource
     tag: latest
 
+- name: kubernetes
+  type: docker-image
+  source:
+    repository: zlabjp/kubernetes-resource
+    tag: "1.11"
+
 resources:
+- name: adm
+  type: git
+  source:
+    uri: git@github.com:insolar/adm.git
+    branch: master
+    private_key: ((meta.github.adm_key))
+
+- name: deploy
+  type: kubernetes
+  source:
+    kubeconfig: ((meta.kubernetes.dev-config))
+
 - name: nexus
   type: maven-resource
   source:
@@ -68,9 +86,10 @@ resources:
 - name: git-explorer
   type: git
   source:
-    uri: git@github.com:insolar/insolar-io-frontend.git
+    uri: https://git.websecret.by/developers/insolar
     branch: master
-    private_key: ((meta.github.explorer_key))
+    username: ((meta.gitlab.websecret.username))
+    password: ((meta.gitlab.websecret.password))
 
 - name: registry-explorer
   type: docker-image
@@ -245,6 +264,8 @@ jobs:
     trigger: true
   - get: git-db-unloader
     trigger: false
+  - get: adm
+    trigger: false
   - task: pack-unloader
     config:
       platform: linux
@@ -255,6 +276,7 @@ jobs:
       inputs:
       - name: nexus-unloader
       - name: git-db-unloader
+      - name: adm
       outputs:
       - name: artifacts
       run:
@@ -263,9 +285,13 @@ jobs:
           - -exc
           - |
             cp git-db-unloader/.git/short_ref artifacts/docker-tag
+            echo change image tag
+            cp adm/manifests/block-explorer/db-unloader.yaml artifacts/db-unloader.yaml
+            sed -i "s/registry.ins.world\/unloader/registry.ins.world\/unloader:$(cat artifacts/docker-tag)/g" artifacts/db-unloader.yaml
             cp nexus-unloader/*.jar artifacts/unloader.jar
             cat << EOF > artifacts/Dockerfile
             FROM openjdk:8-jdk-alpine
+            RUN apk update && apk add bind-tools
             COPY *.jar /opt/unloader/
             EOF
             ls -alh artifacts/
@@ -273,6 +299,10 @@ jobs:
     params:
       build: artifacts
       tag_file: artifacts/docker-tag
+  - put: deploy
+    params:
+      namespace: block-explorer
+      kubectl: apply -f artifacts/db-unloader.yaml
 
 - name: pack-loader
   plan:
@@ -280,6 +310,8 @@ jobs:
     passed: [build-loader]
     trigger: true
   - get: git-db-loader
+    trigger: false
+  - get: adm
     trigger: false
   - task: pack-loader
     config:
@@ -291,6 +323,7 @@ jobs:
       inputs:
       - name: nexus-loader
       - name: git-db-loader
+      - name: adm
       outputs:
       - name: artifacts
       run:
@@ -299,9 +332,15 @@ jobs:
           - -exc
           - |
             cp git-db-loader/.git/short_ref artifacts/docker-tag
+
+            echo change image tag
+            cp adm/manifests/block-explorer/db-loader.yaml artifacts/db-loader.yaml
+            sed -i "s/registry.ins.world\/loader/registry.ins.world\/loader:$(cat artifacts/docker-tag)/g" artifacts/db-loader.yaml
+
             cp nexus-loader/*.jar artifacts/loader.jar
             cat << EOF > artifacts/Dockerfile
             FROM openjdk:8-jdk-alpine
+            RUN apk update && apk add bind-tools
             COPY *.jar /opt/loader/
             EOF
             ls -alh artifacts/
@@ -309,15 +348,17 @@ jobs:
     params:
       build: artifacts
       tag_file: artifacts/docker-tag
+  - put: deploy
+    params:
+      namespace: block-explorer
+      kubectl: apply -f artifacts/db-loader.yaml
 
 - name: build-explorer
   plan:
     - get: git-explorer
       trigger: true
-      #    - get: registry-explorer
-      #      trigger: false
-      #      params:
-      #        save: true
+    - get: adm
+      trigger: false
     - task: build-explorer
       config:
         platform: linux
@@ -326,6 +367,7 @@ jobs:
           source: {repository: alpine/git}
         inputs:
         - name: git-explorer
+        - name: adm
         outputs:
         - name: artifacts
         run:
@@ -334,6 +376,9 @@ jobs:
             - -exc
             - |
                cp git-explorer/.git/short_ref artifacts/docker-tag
+               echo change image tag
+               cp adm/manifests/block-explorer/explorer.yaml artifacts/explorer.yaml
+               sed -i "s/registry.ins.world\/explorer/registry.ins.world\/explorer:$(cat artifacts/docker-tag)/g" artifacts/explorer.yaml
 
                echo create Dockerfile
                cat << EOF > git-explorer/.env.production
@@ -351,6 +396,7 @@ jobs:
                cat git-explorer/Dockerfile
                rm -Rf git-explorer/site/*
                mv git-explorer/* artifacts/
+               mv git-explorer/.env.production artifacts/
                ls -alh
     - put: registry-explorer
       get_params: {skip_download: true}
@@ -359,6 +405,10 @@ jobs:
         target: site
         tag_file: artifacts/docker-tag
         tag_as_latest: true
+    - put: deploy
+      params:
+        namespace: block-explorer
+        kubectl: apply -f artifacts/explorer.yaml
 
 
 
