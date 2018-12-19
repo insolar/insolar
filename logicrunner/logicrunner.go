@@ -431,18 +431,34 @@ func (lr *LogicRunner) executeOrValidate(
 		CallerPrototype: msg.GetCallerPrototype(),
 	}
 
+	var re core.Reply
+	var err error
 	switch m := msg.(type) {
 	case *message.CallMethod:
-		re, err := lr.executeMethodCall(ctx, es, m)
-		return re, err
+		re, err = lr.executeMethodCall(ctx, es, m)
 
 	case *message.CallConstructor:
-		re, err := lr.executeConstructorCall(ctx, es, m)
-		return re, err
+		re, err = lr.executeConstructorCall(ctx, es, m)
 
 	default:
 		panic("Unknown e type")
 	}
+
+	if es.Current.ReturnMode == message.ReturnResult {
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
+		core.MessageBusFromContext(ctx, nil)
+		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
+			Request: *es.Current.Request,
+			Reply:   re,
+		}, *lr.pulse(ctx), &core.MessageSendOptions{
+			Receiver: es.Current.RequesterNode,
+		})
+		if err != nil {
+			inslogger.FromContext(ctx).Debug("couldn't deliver results")
+		}
+	}
+
+	return re, err
 }
 
 // ObjectBody is an inner representation of object and all it accessory
@@ -518,19 +534,6 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	es.objectbody.Object = newData
-	if es.Current.ReturnMode == message.ReturnResult {
-		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
-		core.MessageBusFromContext(ctx, nil)
-		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
-			Request: *es.Current.Request,
-			Result:  result,
-		}, *lr.pulse(ctx), &core.MessageSendOptions{
-			Receiver: es.Current.RequesterNode,
-		})
-		if err != nil {
-			inslogger.FromContext(ctx).Debug("couldn't deliver results")
-		}
-	}
 
 	return &reply.CallMethod{Result: result, Request: *es.Current.Request}, nil
 }
@@ -613,17 +616,8 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *es.Current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
-
-		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
-		_, err = core.MessageBusFromContext(ctx, nil).Send(ctx, &message.ReturnResults{
-			Request: *es.Current.Request,
-		}, *lr.pulse(ctx), &core.MessageSendOptions{
-			Receiver: es.Current.RequesterNode,
-		})
-		if err != nil {
-			inslogger.FromContext(ctx).Debug("couldn't deliver results")
-		}
 		return &reply.CallConstructor{Object: es.Current.Request}, err
+
 	default:
 		return nil, es.WrapError(nil, "unsupported type of save object")
 	}

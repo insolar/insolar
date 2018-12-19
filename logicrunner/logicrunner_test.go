@@ -240,9 +240,6 @@ func executeMethod(
 	}
 
 	rep, err := rlr.ContractRequester.CallMethod(ctx, &bm, false, &objRef, method, argsSerialized, &proxyPrototype)
-	if err != nil {
-		log.Fatal("OOOPS")
-	}
 	return rep, err
 }
 
@@ -1339,7 +1336,7 @@ func New() (*Two, error) {
 
 	err = signer.UnmarshalParams(resp.(*reply.CallMethod).Result, &result, &contractErr)
 	assert.NoError(t, err, "unmarshal answer")
-	assert.NotNil(t, contractErr)
+	assert.NotNil(t, contractErr, "instead we 'v got '"+result.(string)+"'")
 	assert.Contains(t, contractErr.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil")
 }
 

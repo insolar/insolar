@@ -84,7 +84,7 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 // ReturnResults - push results of methods
 type ReturnResults struct {
 	Request core.RecordRef
-	Result  core.Arguments
+	Reply   core.Reply
 }
 
 func (rr *ReturnResults) Type() core.MessageType {

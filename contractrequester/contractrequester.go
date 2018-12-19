@@ -156,9 +156,14 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	ret := <-ch
 	inslogger.FromContext(ctx).Debug("GOT Method results")
 
+	retReply, ok := ret.Reply.(*reply.CallMethod)
+	if !ok {
+		return nil, errors.New("Reply is not CallMethod")
+
+	}
 	return &reply.CallMethod{
 		Request: r.Request,
-		Result:  ret.Result,
+		Result:  retReply.Result,
 	}, nil
 }
 
