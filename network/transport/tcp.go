@@ -142,6 +142,7 @@ func (tcp *tcpTransport) connectionClosed(conn net.Conn) bool {
 func (tcp *tcpTransport) Listen(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
+	tcp.prepareListen()
 	for {
 		conn, err := tcp.l.Accept()
 		if err != nil {
