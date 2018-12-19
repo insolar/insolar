@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -47,8 +46,9 @@ func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, erro
 }
 
 type baseTransport struct {
+	sequenceGenerator sequenceGenerator
+
 	received chan *packet.Packet
-	sequence *uint64
 
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
@@ -66,8 +66,9 @@ type baseTransport struct {
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 	return baseTransport{
+		sequenceGenerator: newSequenceGenerator(),
+
 		received: make(chan *packet.Packet),
-		sequence: new(uint64),
 
 		disconnectStarted:  make(chan bool, 1),
 		disconnectFinished: make(chan bool, 1),
@@ -85,7 +86,7 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 
 // SendRequest sends request packet and returns future.
 func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
-	msg.RequestID = t.generateID()
+	msg.RequestID = packet.RequestID(t.sequenceGenerator.Generate())
 
 	future := t.createFuture(msg)
 
@@ -139,11 +140,6 @@ func (t *baseTransport) prepareListen() {
 func (t *baseTransport) prepareDisconnect() {
 	t.disconnectStarted <- true
 	close(t.disconnectStarted)
-}
-
-func (t *baseTransport) generateID() packet.RequestID {
-	id := utils.AtomicLoadAndIncrementUint64(t.sequence)
-	return packet.RequestID(id)
 }
 
 func (t *baseTransport) getRemoteAddress(conn net.Conn) string {
