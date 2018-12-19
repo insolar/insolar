@@ -251,27 +251,8 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 		}
 	}
 
-	if parcel.DelegationToken() != nil {
-		valid, err := mb.DelegationTokenFactory.Verify(parcel)
-		if err != nil {
-			return nil, err
-		}
-		if !valid {
-			return nil, errors.New("delegation token is not valid")
-		}
-	} else {
-		sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
-		if sendingObject != nil {
-			validSender, err := mb.JetCoordinator.IsAuthorized(
-				parcelCtx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,
-			)
-			if err != nil {
-				return nil, err
-			}
-			if !validSender {
-				return nil, errors.New("sender is not allowed to act on behalve of that object")
-			}
-		}
+	if err := mb.checkSenderOfParcel(parcelCtx, parcel, sender); err != nil {
+		return nil, err
 	}
 
 	resp, err := mb.doDeliver(parcelCtx, parcel)
@@ -291,6 +272,40 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func (mb *MessageBus) checkSenderOfParcel(ctx context.Context, parcel core.Parcel, sender core.RecordRef) error {
+	if parcel.DelegationToken() == nil {
+		valid, err := mb.DelegationTokenFactory.Verify(parcel)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			return errors.New("delegation token is not valid")
+		}
+		return nil
+	}
+
+	sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
+	if sendingObject == nil {
+		return nil
+	}
+
+	// TODO: temporary solution, this check should be removed after reimplementing token processing on VM side - @nordicdyno 19.Dec.2018
+	if allowedSenderRole.IsVirtualRole() {
+		return nil
+	}
+
+	validSender, err := mb.JetCoordinator.IsAuthorized(
+		ctx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,
+	)
+	if err != nil {
+		return err
+	}
+	if !validSender {
+		return errors.New("sender is not allowed to act on behalve of that object")
+	}
+	return nil
 }
 
 func init() {
