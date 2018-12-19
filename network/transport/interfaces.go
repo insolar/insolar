@@ -45,3 +45,7 @@ type packetHandler interface {
 	Handle(ctx context.Context, msg *packet.Packet)
 	Received() <-chan *packet.Packet
 }
+
+func newPacketHandler(futureManager futureManager) packetHandler {
+	return newPacketHandlerImpl(futureManager)
+}
