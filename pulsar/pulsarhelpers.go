@@ -103,27 +103,18 @@ func checkPayloadSignature(service core.CryptographyService, processor core.KeyP
 	return checkSignature(service, processor, request.Body, request.PublicKey, request.Signature)
 }
 
-func checkSignature(
-	service core.CryptographyService,
-	processor core.KeyProcessor,
-	data interface{},
-	pub string,
-	signature []byte,
-) (bool, error) {
-	cborH := &codec.CborHandle{}
-	var b bytes.Buffer
-	enc := codec.NewEncoder(&b, cborH)
-	err := enc.Encode(data)
+func (currentPulsar *Pulsar) checkPayloadSignature(request *Payload) (bool, error) {
+	publicKey, err := currentPulsar.KeyProcessor.ImportPublicKey([]byte(request.PublicKey))
 	if err != nil {
 		return false, err
 	}
 
-	publicKey, err := processor.ImportPublicKey([]byte(pub))
+	hash, err := request.Body.Hash(currentPulsar.PlatformCryptographyScheme.IntegrityHasher())
 	if err != nil {
 		return false, err
 	}
 
-	return service.Verify(publicKey, core.SignatureFromBytes(signature), b.Bytes()), nil
+	return currentPulsar.CryptographyService.Verify(publicKey, core.SignatureFromBytes(request.Signature), hash), nil
 }
 
 // func (currentPulsar *Pulsar) checkSignature(
