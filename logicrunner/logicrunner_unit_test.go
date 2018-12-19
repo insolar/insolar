@@ -1,7 +1,6 @@
 package logicrunner
 
 import (
-	"context"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -84,26 +83,16 @@ func TestPendingFinished(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	pendingFinishedWasSent := false
-
 	mb := testutils.NewMessageBusMock(t)
-	mb.SendMock.Set(func(ctx context.Context, msg core.Message, pulse core.Pulse, opts *core.MessageSendOptions) (core.Reply, error) {
-		if msg.Type() == core.TypePendingFinished {
-			pendingFinishedWasSent = true
-		}
-		return &reply.ID{}, nil
-	})
+	pulse := core.Pulse{}
+	objectRef := testutils.RandomRef()
 
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 	lr.MessageBus = mb
 
-	pulse := core.Pulse{}
-
 	ps := testutils.NewPulseStorageMock(t)
 	ps.CurrentMock.Return(&pulse, nil)
 	lr.PulseStorage = ps
-
-	objectRef := testutils.RandomRef()
 
 	es := &ExecutionState{
 		Behaviour: &ValidationSaver{},
@@ -113,18 +102,15 @@ func TestPendingFinished(t *testing.T) {
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
 	// doesn't send PendingFinished message and doesn't change ExecutionState.pending
-	pendingFinishedWasSent = false
 	require.False(t, lr.finishPendingIfNeeded(ctx, es, objectRef))
-	require.False(t, pendingFinishedWasSent)
+	require.Zero(t, mb.SendCounter)
 	require.Equal(t, NotPending, es.pending)
-
-	es.pending = InPending
 
 	// make sure that in pending case finishPendingIfNeeded returns true
 	// sends PendingFinished message and sets ExecutionState.pending back to NotPending
-	pendingFinishedWasSent = false
+	es.pending = InPending
+	mb.SendMock.Expect(ctx, &message.PendingFinished{Reference: objectRef}, pulse, nil).Return(&reply.ID{}, nil)
 	require.True(t, lr.finishPendingIfNeeded(ctx, es, objectRef))
-	require.True(t, pendingFinishedWasSent)
 	require.Equal(t, NotPending, es.pending)
 }
 
