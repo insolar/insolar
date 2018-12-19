@@ -481,7 +481,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 			// out that the queue is empty in the beginning of the loop
 			return
 		}
-	} // for
+	}
 }
 
 // finishPendingIfNeeded checks whether last execution was a pending one.
