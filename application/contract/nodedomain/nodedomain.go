@@ -29,13 +29,13 @@ import (
 type NodeDomain struct {
 	foundation.BaseContract
 
-	nodeIndexPK map[string]core.RecordRef
+	nodeIndexPK map[string]string
 }
 
 // NewNodeDomain create new NodeDomain
 func NewNodeDomain() (*NodeDomain, error) {
 	return &NodeDomain{
-		nodeIndexPK: make(map[string]core.RecordRef),
+		nodeIndexPK: make(map[string]string),
 	}, nil
 }
 
@@ -61,19 +61,17 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	}
 
 	newNodeRef := node.GetReference()
-	nd.nodeIndexPK[publicKey] = newNodeRef
+	nd.nodeIndexPK[publicKey] = newNodeRef.String()
 
 	return newNodeRef.String(), err
 }
 
-var INSATTR_GetNodeRefByPK_API = true
-
 func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 	nodeRef, ok := nd.nodeIndexPK[publicKey]
 	if !ok {
-		return nodeRef.String(), fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
+		return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
 	}
-	return nodeRef.String(), nil
+	return nodeRef, nil
 }
 
 // RemoveNode deletes node from registry
