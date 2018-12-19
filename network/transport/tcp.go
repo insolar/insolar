@@ -80,7 +80,9 @@ func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
 				tcp.connMutex.Unlock()
 				return errors.Wrap(err, "[ send ] Failed to create TCP connection")
 			}
-			tcp.conns[conn.RemoteAddr().String()] = conn
+			// TODO: proper fix it in NETD18-85, for now use tcpAddr.String() as key
+			// tcp.conns[conn.RemoteAddr().String()] = conn
+			tcp.conns[tcpAddr.String()] = conn
 			logger.Debugf("[ openTCP ] Added connection for %s. Current pool size: %d", conn.RemoteAddr(), len(tcp.conns))
 		}
 
