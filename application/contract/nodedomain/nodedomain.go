@@ -29,13 +29,13 @@ import (
 type NodeDomain struct {
 	foundation.BaseContract
 
-	nodeIndexPK map[string]string
+	NodeIndexPK map[string]string
 }
 
 // NewNodeDomain create new NodeDomain
 func NewNodeDomain() (*NodeDomain, error) {
 	return &NodeDomain{
-		nodeIndexPK: make(map[string]string),
+		NodeIndexPK: make(map[string]string),
 	}, nil
 }
 
@@ -60,14 +60,14 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 		return "", fmt.Errorf("[ RegisterNode ] Can't save as child: %s", err.Error())
 	}
 
-	newNodeRef := node.GetReference()
-	nd.nodeIndexPK[publicKey] = newNodeRef.String()
+	newNodeRef := node.GetReference().String()
+	nd.NodeIndexPK[publicKey] = newNodeRef
 
-	return newNodeRef.String(), err
+	return newNodeRef, err
 }
 
 func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
-	nodeRef, ok := nd.nodeIndexPK[publicKey]
+	nodeRef, ok := nd.NodeIndexPK[publicKey]
 	if !ok {
 		return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
 	}
@@ -82,6 +82,6 @@ func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 		return err
 	}
 
-	delete(nd.nodeIndexPK, nodePK)
+	delete(nd.NodeIndexPK, nodePK)
 	return node.Destroy()
 }
