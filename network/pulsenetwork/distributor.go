@@ -69,6 +69,7 @@ func (d *distributor) Start(ctx context.Context) error {
 		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
 	}
 	pulsarHost.NodeID = core.RecordRef{}
+
 	d.pulsarHost = pulsarHost
 	return nil
 }
@@ -216,7 +217,6 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, ho
 
 func (d *distributor) pause(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Pause ] Pause distribution, stopping transport")
-
 	go d.Transport.Stop()
 	<-d.Transport.Stopped()
 }
