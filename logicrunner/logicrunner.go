@@ -162,8 +162,9 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	return res
 }
 
-func (es *ExecutionState) CheckPendingRequests(ctx context.Context, msg message.IBaseLogicMessage) (PendingState, error) {
-	if _, ok := msg.(*message.CallMethod); !ok {
+func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.Message) (PendingState, error) {
+	msg, ok := inMsg.(*message.CallMethod)
+	if !ok {
 		return NotPending, nil
 	}
 
@@ -390,7 +391,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 }
 
 func (lr *LogicRunner) StartQueueProcessorIfNeeded(
-	ctx context.Context, es *ExecutionState, msg message.IBaseLogicMessage,
+	ctx context.Context, es *ExecutionState, msg core.Message,
 ) error {
 	es.Lock()
 	defer es.Unlock()
