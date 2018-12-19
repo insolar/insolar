@@ -141,6 +141,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 			require.Equal(t, secondVector, payload.Body.(*VectorPayload))
 		})
 	})
+
 	t.Run("PulsePayload payload", func(t *testing.T){
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
@@ -189,5 +190,23 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 			require.Equal(t, true, isVerified)
 			require.Equal(t, secondPulsePayload, payload.Body.(*PulsePayload))
 		})
+	})
+
+	t.Run("PulseSenderConfirmationPayload payload", func(t *testing.T){
+		// Arrange
+		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
+		payloadBody := &PulseSenderConfirmationPayload{core.PulseSenderConfirmation{Entropy: entropyGenerator.GenerateEntropy()}}
+
+		// Act
+		payload, firstError := pulsar.preparePayload(payloadBody)
+		require.NotNil(t, payload)
+		isVerified, secondError := pulsar.checkPayloadSignature(payload)
+
+		// Assert
+		require.NoError(t, firstError)
+		require.NoError(t, secondError)
+		require.Equal(t, true, isVerified)
+		require.Equal(t, payloadBody, payload.Body.(*PulseSenderConfirmationPayload))
+
 	})
 }
