@@ -172,9 +172,10 @@ func (t *baseTransport) getFuture(msg *packet.Packet) Future {
 func (t *baseTransport) handlePacket(msg *packet.Packet) {
 	if msg.IsResponse {
 		t.processResponse(msg)
-	} else {
-		t.processRequest(msg)
+		return
 	}
+
+	t.processRequest(msg)
 }
 
 func (t *baseTransport) processResponse(msg *packet.Packet) {
