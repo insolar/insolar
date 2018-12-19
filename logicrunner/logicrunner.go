@@ -338,7 +338,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	// ExecutionState should be locked between CheckOurRole and
 	// appending ExecutionQueueElement to the queue to prevent a race condition.
 	// Otherwise it's possible that OnPulse will clean up the queue and set
-	// ExecutionState.Pending to false. Execute will add an element to the
+	// ExecutionState.Pending to NotPending. Execute will add an element to the
 	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
 
