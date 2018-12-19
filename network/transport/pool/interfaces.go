@@ -21,6 +21,11 @@ import (
 	"net"
 )
 
+type ConnectionPool interface {
+	GetConnection(ctx context.Context, address net.Addr) (net.Conn, error)
+	Reset()
+}
+
 type unsafeConnectionHolder interface {
 	Get(address net.Addr) (net.Conn, bool)
 	Delete(address net.Addr)
