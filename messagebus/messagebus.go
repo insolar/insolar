@@ -274,7 +274,7 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 		}
 	}
 
-	if parcel.DelegationToken() == nil {
+	if parcel.DelegationToken() != nil {
 		valid, err := mb.DelegationTokenFactory.Verify(parcel)
 		if err != nil {
 			return err
