@@ -133,7 +133,8 @@ func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
 
 	am.GetObjectMock.Return(od, nil)
 
-	es := &ExecutionState{ArtifactManager: am}
+	es := &ExecutionState{ArtifactManager: am, Queue: make([]ExecutionQueueElement, 0)}
+	es.Queue = append(es.Queue, ExecutionQueueElement{})
 	err := lr.StartQueueProcessorIfNeeded(
 		ctx,
 		es,

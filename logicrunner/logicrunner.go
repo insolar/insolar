@@ -162,8 +162,9 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	return res
 }
 
-func (es *ExecutionState) CheckPendingRequests(ctx context.Context, msg message.IBaseLogicMessage) (PendingState, error) {
-	if _, ok := msg.(*message.CallMethod); !ok {
+func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.Message) (PendingState, error) {
+	msg, ok := inMsg.(*message.CallMethod)
+	if !ok {
 		return NotPending, nil
 	}
 
@@ -390,26 +391,30 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 }
 
 func (lr *LogicRunner) StartQueueProcessorIfNeeded(
-	ctx context.Context, es *ExecutionState, msg message.IBaseLogicMessage,
+	ctx context.Context, es *ExecutionState, msg core.Message,
 ) error {
 	es.Lock()
 	defer es.Unlock()
 
-	startProcessor := !es.QueueProcessorActive
-	if startProcessor {
-		if es.pending == PendingUnknown {
-			pending, err := es.CheckPendingRequests(ctx, msg)
-			if err != nil {
-				return errors.Wrap(err, "couldn't check for pending requests")
-			}
-			es.pending = pending
-		}
-		if es.pending == InPending {
-			startProcessor = false
-		}
+	if len(es.Queue) == 0 {
+		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
+		return nil
 	}
 
-	if !startProcessor {
+	if es.QueueProcessorActive {
+		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
+		return nil
+	}
+
+	if es.pending == PendingUnknown {
+		pending, err := es.CheckPendingRequests(ctx, msg)
+		if err != nil {
+			return errors.Wrap(err, "couldn't check for pending requests")
+		}
+		es.pending = pending
+	}
+	if es.pending == InPending {
+		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
 		return nil
 	}
 
