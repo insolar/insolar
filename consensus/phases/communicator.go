@@ -207,13 +207,8 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 
 func (nc *NaiveCommunicator) convertConsensusPacket(packet packets.ConsensusPacket,
 	packetType types.PacketType) (network.Request, error) {
-
-	packetBuffer, err := packet.Serialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "[convertConsensusPacket] Failed to serialize ConsensusPacket.")
-	}
 	requestBuilder := nc.ConsensusNetwork.NewRequestBuilder()
-	return requestBuilder.Type(packetType).Data(packetBuffer).Build(), nil
+	return requestBuilder.Type(packetType).Data(packet).Build(), nil
 }
 
 // ExchangePhase1 used in first consensus phase to exchange data between participants

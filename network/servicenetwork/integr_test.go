@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -158,8 +157,8 @@ func (ftpm *PartialTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core
 	secondPhaseState, err := ftpm.SecondPhase.Execute(tctx, firstPhaseState)
 	checkError(err)
 
-	fmt.Println(secondPhaseState) // TODO: remove after use
-	checkError(ftpm.ThirdPhase.Execute(ctx, secondPhaseState))
+	_, err = ftpm.ThirdPhase.Execute(ctx, secondPhaseState)
+	checkError(err)
 
 	return nil
 }
