@@ -33,7 +33,7 @@ Usage
         -k rootmemberkeys
                 Path to file with RootMember keys.
 
-        -u apiurl
+        -u apiurl (may be specified multiple times for roundrobin requests)
                 API url for requests (default - http://localhost:19191/api).
 
         -l loglevel

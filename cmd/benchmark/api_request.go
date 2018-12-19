@@ -49,7 +49,7 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
 	check("can not create user config:", err)
 
-	body, err := requester.Send(ctx, apiurl, userCfg, reqCfg)
+	body, err := requester.Send(ctx, apiurls.Next(), userCfg, reqCfg)
 	check("can not send request:", err)
 
 	return body
@@ -100,7 +100,7 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 }
 
 func info() *requester.InfoResponse {
-	info, err := requester.Info(apiurl)
+	info, err := requester.Info(apiurls.Next())
 	check("problem with request to info:", err)
 	return info
 }
