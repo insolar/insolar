@@ -89,55 +89,55 @@ func (q *quicTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (q *quicTransport) Listen(ctx context.Context) error {
+func (t *quicTransport) Listen(ctx context.Context) error {
 	log.Debug("Start QUIC transport")
 	for {
-		session, err := q.l.Accept()
+		session, err := t.l.Accept()
 		if err != nil {
-			<-q.disconnectFinished
+			<-t.disconnectFinished
 			return err
 		}
 
 		log.Debugf("accept from: %s", session.RemoteAddr().String())
-		go q.handleAcceptedConnection(session)
+		go t.handleAcceptedConnection(session)
 	}
 }
 
 // Stop stops networking.
-func (q *quicTransport) Stop() {
-	q.mutex.Lock()
-	defer q.mutex.Unlock()
+func (t *quicTransport) Stop() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 
 	log.Debug("[ Stop ] Stop QUIC transport")
-	q.prepareDisconnect()
+	t.prepareDisconnect()
 
-	err := q.l.Close()
+	err := t.l.Close()
 	if err != nil {
 		log.Errorln("[ Stop ] Failed to close socket:", err.Error())
 	}
 
-	err = q.closeConnections()
+	err = t.closeConnections()
 	if err != nil {
 		log.Error(err, "[ Stop ] failed to close sessions")
 	}
-	err = q.conn.Close()
+	err = t.conn.Close()
 	if err != nil {
 		log.Error(err, "[ Stop ] failed to close a connection")
 	}
 }
 
-func (q *quicTransport) handleAcceptedConnection(session quic.Session) {
+func (t *quicTransport) handleAcceptedConnection(session quic.Session) {
 	stream, err := session.AcceptStream()
 	if err != nil {
 		log.Error(err, "[ handleAcceptedConnection ] failed to get a stream")
 	}
 
-	msg, err := q.serializer.DeserializePacket(stream)
+	msg, err := t.serializer.DeserializePacket(stream)
 	if err != nil {
 		log.Error(err, "[ handleAcceptedConnection ] failed to deserialize a packet")
 	}
 
-	go q.handlePacket(msg)
+	go t.handlePacket(msg)
 
 	err = stream.Close()
 	if err != nil {
