@@ -17,26 +17,18 @@
 package pulsar
 
 import (
-	"crypto"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSingAndVerify(t *testing.T) {
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes([]byte("signature"))
-		return &signature, nil
-	}
-	cs.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
-		require.Equal(t, p, "publicKey")
-		return true
-	}
+func TestPreparePayloadAndCheckIt(t *testing.T) {
+	t.Parallel()
 
 	kp := mockKeyProcessor(t)
 
