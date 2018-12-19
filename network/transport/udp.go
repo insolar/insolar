@@ -107,7 +107,11 @@ func (udpT *udpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "udpTransport.send")
 	}
-	defer udpConn.Close()
+	defer func() {
+		if err := udpConn.Close(); err != nil {
+			log.Error("[ send ] Failed to close connection")
+		}
+	}()
 
 	log.Debug("udpTransport.send: len = ", len(data))
 	_, err = udpConn.Write(data)
