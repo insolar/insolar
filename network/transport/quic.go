@@ -90,12 +90,8 @@ func (t *quicTransport) send(recvAddress string, data []byte) error {
 
 // Start starts networking.
 func (t *quicTransport) Listen(ctx context.Context) error {
-	t.mutex.Lock()
-
 	log.Debug("Start QUIC transport")
 	t.prepareListen()
-
-	t.mutex.Unlock()
 
 	for {
 		session, err := t.l.Accept()

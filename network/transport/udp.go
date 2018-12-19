@@ -34,11 +34,6 @@ import (
 
 const udpMaxPacketSize = 1400
 
-// GetUDPMaxPacketSize returns udp max packet size
-func GetUDPMaxPacketSize() int {
-	return udpMaxPacketSize
-}
-
 type udpTransport struct {
 	baseTransport
 	serverConn net.PacketConn
@@ -107,7 +102,11 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "udpTransport.send")
 	}
-	defer udpConn.Close()
+	defer func() {
+		if err := udpConn.Close(); err != nil {
+			log.Error("[ send ] Failed to close connection")
+		}
+	}()
 
 	log.Debug("udpTransport.send: len = ", len(data))
 	_, err = udpConn.Write(data)
@@ -116,8 +115,11 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 
 // Start starts networking.
 func (t *udpTransport) Listen(ctx context.Context) error {
+<<<<<<< HEAD
 	t.mutex.Lock()
 
+=======
+>>>>>>> 7e6c9f65465b728b924f8e4f5d83ce82d0c22ca8
 	inslogger.FromContext(ctx).Info("Start UDP transport")
 	t.prepareListen()
 
@@ -158,5 +160,9 @@ func (t *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
 	}
 	log.Debug("[ handleAcceptedConnection ] Packet processed. size: ", len(data), ". Address: ", addr)
 
+<<<<<<< HEAD
 	go t.handlePacket(msg)
+=======
+	t.handlePacket(msg)
+>>>>>>> 7e6c9f65465b728b924f8e4f5d83ce82d0c22ca8
 }

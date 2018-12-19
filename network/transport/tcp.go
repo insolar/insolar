@@ -58,7 +58,7 @@ func (t *tcpTransport) send(recvAddress string, data []byte) error {
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", recvAddress)
 	if err != nil {
-		return errors.Wrap(err, "[ send ] Failed to resolve tcp address")
+		return errors.Wrap(err, "[ send ] Failed to resolve t address")
 	}
 
 	t.connMutex.RLock()
@@ -174,7 +174,6 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 	}
 
 	t.prepareListen()
-
 	for {
 		conn, err := t.l.Accept()
 		if err != nil {
