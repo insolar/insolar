@@ -21,11 +21,11 @@ import (
 	"net"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/connection"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/transport/resolver"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -70,7 +70,8 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 	switch cfg.Protocol {
 	case "TCP":
 		// TODO: little hack: It's better to change interface for NewConnection
-		conn.Close()
+		utils.CloseVerbose(conn)
+
 		return newTCPTransport(conn.LocalAddr().String(), proxy, publicAddress)
 	case "UTP":
 		return newUTPTransport(conn, proxy, publicAddress)
@@ -79,7 +80,7 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 	case "QUIC":
 		return newQuicTransport(conn, proxy, publicAddress)
 	default:
-		closeVerbose(conn)
+		utils.CloseVerbose(conn)
 		return nil, errors.New("invalid transport configuration")
 	}
 }
@@ -92,17 +93,10 @@ func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) 
 	}
 	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
 	if err != nil {
-		closeVerbose(conn)
+		utils.CloseVerbose(conn)
 		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create resolver")
 	}
 	return conn, publicAddress, nil
-}
-
-func closeVerbose(conn net.PacketConn) {
-	err := conn.Close()
-	if err != nil {
-		log.Warn(err)
-	}
 }
 
 func createResolver(stun bool) resolver.PublicAddressResolver {
