@@ -38,17 +38,6 @@ const (
 	DynamicRoleHeavyExecutor
 )
 
-// IsVirtualRole checks if node role is virtual (validator or executor).
-func (r DynamicRole) IsVirtualRole() bool {
-	switch r {
-	case DynamicRoleVirtualExecutor:
-		return true
-	case DynamicRoleVirtualValidator:
-		return true
-	}
-	return false
-}
-
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 // FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
 type Ledger interface {
