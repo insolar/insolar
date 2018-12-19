@@ -564,7 +564,7 @@ func init() {
 	gob.Register(&ObjectBody{})
 }
 
-func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.ExecutorResults) {
+func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.ExecutorResults) error {
 	state := lr.UpsertObjectState(msg.GetReference())
 	state.Lock()
 	if state.ExecutionState == nil {
@@ -577,7 +577,6 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 	state.Unlock()
 
 	state.ExecutionState.Lock()
-	defer state.ExecutionState.Unlock()
 
 	// prepare pending
 	if state.ExecutionState.pending == PendingUnknown {
@@ -606,8 +605,16 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 		}
 		state.ExecutionState.Queue = append(queueFromMessage, state.ExecutionState.Queue...)
 
-		// TODO call StartQueueProcessorIfNeeded() , need to wait ruz fixes
 	}
+
+	state.ExecutionState.Unlock()
+
+	err := lr.StartQueueProcessorIfNeeded(ctx, state.ExecutionState, msg)
+	if err != nil {
+		return errors.Wrap(err, "can't start Queue Processor from prepareObjectState")
+	}
+
+	return nil
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (core.Reply, error) {

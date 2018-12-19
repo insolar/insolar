@@ -263,9 +263,16 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 
-	// TODO make it in different goroutines?
+	// now we have 2 different types of data in message.ExecutorResults
+	// one part of it is about consensus
+	// another one is about prepare state on new executor after pulse
+	// TODO make it in different goroutines
+
 	// prepare state after previous executor
-	lr.prepareObjectState(ctx, msg)
+	err := lr.prepareObjectState(ctx, msg)
+	if err != nil {
+		return &reply.Error{}, err
+	}
 
 	// validation things
 	c := lr.GetConsensus(ctx, msg.RecordRef)
