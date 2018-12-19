@@ -28,6 +28,7 @@ import (
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/pkg/errors"
 )
@@ -111,19 +112,14 @@ func (t *quicTransport) Stop() {
 	log.Debug("[ Stop ] Stop QUIC transport")
 	t.prepareDisconnect()
 
-	err := t.l.Close()
-	if err != nil {
-		log.Errorln("[ Stop ] Failed to close socket:", err.Error())
-	}
+	utils.CloseVerbose(t.l)
 
-	err = t.closeConnections()
+	err := t.closeConnections()
 	if err != nil {
 		log.Error(err, "[ Stop ] failed to close sessions")
 	}
-	err = t.conn.Close()
-	if err != nil {
-		log.Error(err, "[ Stop ] failed to close a connection")
-	}
+
+	utils.CloseVerbose(t.conn)
 }
 
 func (t *quicTransport) handleAcceptedConnection(session quic.Session) {
@@ -139,23 +135,13 @@ func (t *quicTransport) handleAcceptedConnection(session quic.Session) {
 
 	go t.handlePacket(msg)
 
-	err = stream.Close()
-	if err != nil {
-		log.Error(err, "[ handleAcceptedConnection ] failed to close a stream")
-	}
+	utils.CloseVerbose(stream)
 }
 
 func (t *quicTransport) closeConnections() error {
-	var err error
 	for _, conn := range t.connections {
-		err = conn.stream.Close()
-		if err != nil {
-			return errors.Wrap(err, "[ closeConnections ] failed to close a stream")
-		}
-		err = conn.session.Close()
-		if err != nil {
-			return errors.Wrap(err, "[ closeConnections ] failed to close a session")
-		}
+		utils.CloseVerbose(conn.stream)
+		utils.CloseVerbose(conn.session)
 	}
 	return nil
 }

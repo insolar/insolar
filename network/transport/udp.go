@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -102,11 +103,7 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "udpTransport.send")
 	}
-	defer func() {
-		if err := udpConn.Close(); err != nil {
-			log.Error("[ send ] Failed to close connection")
-		}
-	}()
+	defer utils.CloseVerbose(udpConn)
 
 	log.Debug("udpTransport.send: len = ", len(data))
 	_, err = udpConn.Write(data)
@@ -136,10 +133,7 @@ func (t *udpTransport) Stop() {
 	log.Info("Stop UDP transport")
 	t.prepareDisconnect()
 
-	err := t.serverConn.Close()
-	if err != nil {
-		log.Errorln("Failed to close socket:", err.Error())
-	}
+	utils.CloseVerbose(t.serverConn)
 }
 
 func (t *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {

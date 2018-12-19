@@ -165,10 +165,7 @@ func (t *tcpTransport) Stop() {
 	log.Info("[ Stop ] Stop TCP transport")
 	t.prepareDisconnect()
 
-	err := t.l.Close()
-	if err != nil {
-		log.Errorln("[ Stop ] Failed to close socket: ", err.Error())
-	}
+	utils.CloseVerbose(t.listener)
 
 	for addr, conn := range t.conns {
 		err := conn.Close()
