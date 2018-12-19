@@ -41,6 +41,14 @@ func registerNodeSignedCall(params ...interface{}) (string, error) {
 	return res.(string), nil
 }
 
+func getNodeRefSignedCall(params ...interface{}) (string, error) {
+	res, err := signedRequest(&root, "GetNodeRef", params...)
+	if err != nil {
+		return "", err
+	}
+	return res.(string), nil
+}
+
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
 	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
@@ -115,4 +123,31 @@ func TestReceiveNodeCert(t *testing.T) {
 			require.True(t, verified)
 		})
 	}
+}
+
+func TestGetNodeRefByPK(t *testing.T) {
+	const testRole = "light_material"
+	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	require.NoError(t, err)
+	require.NotNil(t, ref)
+
+	nodeRef, err := getNodeRefSignedCall(ref)
+	require.NoError(t, err)
+	require.Equal(t, ref, nodeRef)
+}
+
+func TestGetNodeRefByNotExistsPK(t *testing.T) {
+	const testRole = "light_material"
+	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	require.NoError(t, err)
+
+	require.NotNil(t, ref)
+}
+
+func TestGetNodeRefInvalidParams(t *testing.T) {
+	const testRole = "light_material"
+	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	require.NoError(t, err)
+
+	require.NotNil(t, ref)
 }
