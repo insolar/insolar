@@ -229,10 +229,6 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 	c, ok := cr.ResultMap[msg.Request]
 	if !ok {
 		log.Info("oops unwaited results ref=", msg.Request)
-		for k := range cr.ResultMap {
-			log.Warnf("RETURNMAP: %s", k)
-		}
-		panic(42)
 		return &reply.OK{}, nil
 	}
 	inslogger.FromContext(ctx).Debug("Got wanted results ref=", msg.Request)

@@ -52,12 +52,17 @@ func NewContractRequesterMock(t minimock.Tester) *ContractRequesterMock {
 }
 
 type mContractRequesterMockCallConstructor struct {
-	mock             *ContractRequesterMock
-	mockExpectations *ContractRequesterMockCallConstructorParams
+	mock              *ContractRequesterMock
+	mainExpectation   *ContractRequesterMockCallConstructorExpectation
+	expectationSeries []*ContractRequesterMockCallConstructorExpectation
 }
 
-//ContractRequesterMockCallConstructorParams represents input parameters of the ContractRequester.CallConstructor
-type ContractRequesterMockCallConstructorParams struct {
+type ContractRequesterMockCallConstructorExpectation struct {
+	input  *ContractRequesterMockCallConstructorInput
+	result *ContractRequesterMockCallConstructorResult
+}
+
+type ContractRequesterMockCallConstructorInput struct {
 	p  context.Context
 	p1 core.Message
 	p2 bool
@@ -68,46 +73,105 @@ type ContractRequesterMockCallConstructorParams struct {
 	p7 int
 }
 
-//Expect sets up expected params for the ContractRequester.CallConstructor
+type ContractRequesterMockCallConstructorResult struct {
+	r  *core.RecordRef
+	r1 error
+}
+
+//Expect specifies that invocation of ContractRequester.CallConstructor is expected from 1 to Infinity times
 func (m *mContractRequesterMockCallConstructor) Expect(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) *mContractRequesterMockCallConstructor {
-	m.mockExpectations = &ContractRequesterMockCallConstructorParams{p, p1, p2, p3, p4, p5, p6, p7}
+	m.mock.CallConstructorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ContractRequesterMockCallConstructorExpectation{}
+	}
+	m.mainExpectation.input = &ContractRequesterMockCallConstructorInput{p, p1, p2, p3, p4, p5, p6, p7}
 	return m
 }
 
-//Return sets up a mock for ContractRequester.CallConstructor to return Return's arguments
+//Return specifies results of invocation of ContractRequester.CallConstructor
 func (m *mContractRequesterMockCallConstructor) Return(r *core.RecordRef, r1 error) *ContractRequesterMock {
-	m.mock.CallConstructorFunc = func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) (*core.RecordRef, error) {
-		return r, r1
+	m.mock.CallConstructorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ContractRequesterMockCallConstructorExpectation{}
 	}
+	m.mainExpectation.result = &ContractRequesterMockCallConstructorResult{r, r1}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ContractRequester.CallConstructor is expected once
+func (m *mContractRequesterMockCallConstructor) ExpectOnce(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) *ContractRequesterMockCallConstructorExpectation {
+	m.mock.CallConstructorFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ContractRequesterMockCallConstructorExpectation{}
+	expectation.input = &ContractRequesterMockCallConstructorInput{p, p1, p2, p3, p4, p5, p6, p7}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ContractRequesterMockCallConstructorExpectation) Return(r *core.RecordRef, r1 error) {
+	e.result = &ContractRequesterMockCallConstructorResult{r, r1}
 }
 
 //Set uses given function f as a mock of ContractRequester.CallConstructor method
 func (m *mContractRequesterMockCallConstructor) Set(f func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) (r *core.RecordRef, r1 error)) *ContractRequesterMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.CallConstructorFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //CallConstructor implements github.com/insolar/insolar/core.ContractRequester interface
 func (m *ContractRequesterMock) CallConstructor(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) (r *core.RecordRef, r1 error) {
-	atomic.AddUint64(&m.CallConstructorPreCounter, 1)
+	counter := atomic.AddUint64(&m.CallConstructorPreCounter, 1)
 	defer atomic.AddUint64(&m.CallConstructorCounter, 1)
 
-	if m.CallConstructorMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.CallConstructorMock.mockExpectations, ContractRequesterMockCallConstructorParams{p, p1, p2, p3, p4, p5, p6, p7},
-			"ContractRequester.CallConstructor got unexpected parameters")
-
-		if m.CallConstructorFunc == nil {
-
-			m.t.Fatal("No results are set for the ContractRequesterMock.CallConstructor")
-
+	if len(m.CallConstructorMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.CallConstructorMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ContractRequesterMock.CallConstructor. %v %v %v %v %v %v %v %v", p, p1, p2, p3, p4, p5, p6, p7)
 			return
 		}
+
+		input := m.CallConstructorMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ContractRequesterMockCallConstructorInput{p, p1, p2, p3, p4, p5, p6, p7}, "ContractRequester.CallConstructor got unexpected parameters")
+
+		result := m.CallConstructorMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ContractRequesterMock.CallConstructor")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.CallConstructorMock.mainExpectation != nil {
+
+		input := m.CallConstructorMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ContractRequesterMockCallConstructorInput{p, p1, p2, p3, p4, p5, p6, p7}, "ContractRequester.CallConstructor got unexpected parameters")
+		}
+
+		result := m.CallConstructorMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ContractRequesterMock.CallConstructor")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
 	}
 
 	if m.CallConstructorFunc == nil {
-		m.t.Fatal("Unexpected call to ContractRequesterMock.CallConstructor")
+		m.t.Fatalf("Unexpected call to ContractRequesterMock.CallConstructor. %v %v %v %v %v %v %v %v", p, p1, p2, p3, p4, p5, p6, p7)
 		return
 	}
 
@@ -124,13 +188,38 @@ func (m *ContractRequesterMock) CallConstructorMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.CallConstructorPreCounter)
 }
 
-type mContractRequesterMockCallMethod struct {
-	mock             *ContractRequesterMock
-	mockExpectations *ContractRequesterMockCallMethodParams
+//CallConstructorFinished returns true if mock invocations count is ok
+func (m *ContractRequesterMock) CallConstructorFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.CallConstructorMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.CallConstructorCounter) == uint64(len(m.CallConstructorMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.CallConstructorMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.CallConstructorCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.CallConstructorFunc != nil {
+		return atomic.LoadUint64(&m.CallConstructorCounter) > 0
+	}
+
+	return true
 }
 
-//ContractRequesterMockCallMethodParams represents input parameters of the ContractRequester.CallMethod
-type ContractRequesterMockCallMethodParams struct {
+type mContractRequesterMockCallMethod struct {
+	mock              *ContractRequesterMock
+	mainExpectation   *ContractRequesterMockCallMethodExpectation
+	expectationSeries []*ContractRequesterMockCallMethodExpectation
+}
+
+type ContractRequesterMockCallMethodExpectation struct {
+	input  *ContractRequesterMockCallMethodInput
+	result *ContractRequesterMockCallMethodResult
+}
+
+type ContractRequesterMockCallMethodInput struct {
 	p  context.Context
 	p1 core.Message
 	p2 bool
@@ -140,46 +229,105 @@ type ContractRequesterMockCallMethodParams struct {
 	p6 *core.RecordRef
 }
 
-//Expect sets up expected params for the ContractRequester.CallMethod
+type ContractRequesterMockCallMethodResult struct {
+	r  core.Reply
+	r1 error
+}
+
+//Expect specifies that invocation of ContractRequester.CallMethod is expected from 1 to Infinity times
 func (m *mContractRequesterMockCallMethod) Expect(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) *mContractRequesterMockCallMethod {
-	m.mockExpectations = &ContractRequesterMockCallMethodParams{p, p1, p2, p3, p4, p5, p6}
+	m.mock.CallMethodFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ContractRequesterMockCallMethodExpectation{}
+	}
+	m.mainExpectation.input = &ContractRequesterMockCallMethodInput{p, p1, p2, p3, p4, p5, p6}
 	return m
 }
 
-//Return sets up a mock for ContractRequester.CallMethod to return Return's arguments
+//Return specifies results of invocation of ContractRequester.CallMethod
 func (m *mContractRequesterMockCallMethod) Return(r core.Reply, r1 error) *ContractRequesterMock {
-	m.mock.CallMethodFunc = func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (core.Reply, error) {
-		return r, r1
+	m.mock.CallMethodFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ContractRequesterMockCallMethodExpectation{}
 	}
+	m.mainExpectation.result = &ContractRequesterMockCallMethodResult{r, r1}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ContractRequester.CallMethod is expected once
+func (m *mContractRequesterMockCallMethod) ExpectOnce(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) *ContractRequesterMockCallMethodExpectation {
+	m.mock.CallMethodFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ContractRequesterMockCallMethodExpectation{}
+	expectation.input = &ContractRequesterMockCallMethodInput{p, p1, p2, p3, p4, p5, p6}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ContractRequesterMockCallMethodExpectation) Return(r core.Reply, r1 error) {
+	e.result = &ContractRequesterMockCallMethodResult{r, r1}
 }
 
 //Set uses given function f as a mock of ContractRequester.CallMethod method
 func (m *mContractRequesterMockCallMethod) Set(f func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (r core.Reply, r1 error)) *ContractRequesterMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.CallMethodFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //CallMethod implements github.com/insolar/insolar/core.ContractRequester interface
 func (m *ContractRequesterMock) CallMethod(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (r core.Reply, r1 error) {
-	atomic.AddUint64(&m.CallMethodPreCounter, 1)
+	counter := atomic.AddUint64(&m.CallMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.CallMethodCounter, 1)
 
-	if m.CallMethodMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.CallMethodMock.mockExpectations, ContractRequesterMockCallMethodParams{p, p1, p2, p3, p4, p5, p6},
-			"ContractRequester.CallMethod got unexpected parameters")
-
-		if m.CallMethodFunc == nil {
-
-			m.t.Fatal("No results are set for the ContractRequesterMock.CallMethod")
-
+	if len(m.CallMethodMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.CallMethodMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ContractRequesterMock.CallMethod. %v %v %v %v %v %v %v", p, p1, p2, p3, p4, p5, p6)
 			return
 		}
+
+		input := m.CallMethodMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ContractRequesterMockCallMethodInput{p, p1, p2, p3, p4, p5, p6}, "ContractRequester.CallMethod got unexpected parameters")
+
+		result := m.CallMethodMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ContractRequesterMock.CallMethod")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.CallMethodMock.mainExpectation != nil {
+
+		input := m.CallMethodMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ContractRequesterMockCallMethodInput{p, p1, p2, p3, p4, p5, p6}, "ContractRequester.CallMethod got unexpected parameters")
+		}
+
+		result := m.CallMethodMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ContractRequesterMock.CallMethod")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
 	}
 
 	if m.CallMethodFunc == nil {
-		m.t.Fatal("Unexpected call to ContractRequesterMock.CallMethod")
+		m.t.Fatalf("Unexpected call to ContractRequesterMock.CallMethod. %v %v %v %v %v %v %v", p, p1, p2, p3, p4, p5, p6)
 		return
 	}
 
@@ -196,59 +344,143 @@ func (m *ContractRequesterMock) CallMethodMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.CallMethodPreCounter)
 }
 
-type mContractRequesterMockSendRequest struct {
-	mock             *ContractRequesterMock
-	mockExpectations *ContractRequesterMockSendRequestParams
+//CallMethodFinished returns true if mock invocations count is ok
+func (m *ContractRequesterMock) CallMethodFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.CallMethodMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.CallMethodCounter) == uint64(len(m.CallMethodMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.CallMethodMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.CallMethodCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.CallMethodFunc != nil {
+		return atomic.LoadUint64(&m.CallMethodCounter) > 0
+	}
+
+	return true
 }
 
-//ContractRequesterMockSendRequestParams represents input parameters of the ContractRequester.SendRequest
-type ContractRequesterMockSendRequestParams struct {
+type mContractRequesterMockSendRequest struct {
+	mock              *ContractRequesterMock
+	mainExpectation   *ContractRequesterMockSendRequestExpectation
+	expectationSeries []*ContractRequesterMockSendRequestExpectation
+}
+
+type ContractRequesterMockSendRequestExpectation struct {
+	input  *ContractRequesterMockSendRequestInput
+	result *ContractRequesterMockSendRequestResult
+}
+
+type ContractRequesterMockSendRequestInput struct {
 	p  context.Context
 	p1 *core.RecordRef
 	p2 string
 	p3 []interface{}
 }
 
-//Expect sets up expected params for the ContractRequester.SendRequest
+type ContractRequesterMockSendRequestResult struct {
+	r  core.Reply
+	r1 error
+}
+
+//Expect specifies that invocation of ContractRequester.SendRequest is expected from 1 to Infinity times
 func (m *mContractRequesterMockSendRequest) Expect(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) *mContractRequesterMockSendRequest {
-	m.mockExpectations = &ContractRequesterMockSendRequestParams{p, p1, p2, p3}
+	m.mock.SendRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ContractRequesterMockSendRequestExpectation{}
+	}
+	m.mainExpectation.input = &ContractRequesterMockSendRequestInput{p, p1, p2, p3}
 	return m
 }
 
-//Return sets up a mock for ContractRequester.SendRequest to return Return's arguments
+//Return specifies results of invocation of ContractRequester.SendRequest
 func (m *mContractRequesterMockSendRequest) Return(r core.Reply, r1 error) *ContractRequesterMock {
-	m.mock.SendRequestFunc = func(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (core.Reply, error) {
-		return r, r1
+	m.mock.SendRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ContractRequesterMockSendRequestExpectation{}
 	}
+	m.mainExpectation.result = &ContractRequesterMockSendRequestResult{r, r1}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ContractRequester.SendRequest is expected once
+func (m *mContractRequesterMockSendRequest) ExpectOnce(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) *ContractRequesterMockSendRequestExpectation {
+	m.mock.SendRequestFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ContractRequesterMockSendRequestExpectation{}
+	expectation.input = &ContractRequesterMockSendRequestInput{p, p1, p2, p3}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ContractRequesterMockSendRequestExpectation) Return(r core.Reply, r1 error) {
+	e.result = &ContractRequesterMockSendRequestResult{r, r1}
 }
 
 //Set uses given function f as a mock of ContractRequester.SendRequest method
 func (m *mContractRequesterMockSendRequest) Set(f func(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (r core.Reply, r1 error)) *ContractRequesterMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.SendRequestFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //SendRequest implements github.com/insolar/insolar/core.ContractRequester interface
 func (m *ContractRequesterMock) SendRequest(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (r core.Reply, r1 error) {
-	atomic.AddUint64(&m.SendRequestPreCounter, 1)
+	counter := atomic.AddUint64(&m.SendRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.SendRequestCounter, 1)
 
-	if m.SendRequestMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SendRequestMock.mockExpectations, ContractRequesterMockSendRequestParams{p, p1, p2, p3},
-			"ContractRequester.SendRequest got unexpected parameters")
-
-		if m.SendRequestFunc == nil {
-
-			m.t.Fatal("No results are set for the ContractRequesterMock.SendRequest")
-
+	if len(m.SendRequestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SendRequestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequest. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
+
+		input := m.SendRequestMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ContractRequesterMockSendRequestInput{p, p1, p2, p3}, "ContractRequester.SendRequest got unexpected parameters")
+
+		result := m.SendRequestMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ContractRequesterMock.SendRequest")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.SendRequestMock.mainExpectation != nil {
+
+		input := m.SendRequestMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ContractRequesterMockSendRequestInput{p, p1, p2, p3}, "ContractRequester.SendRequest got unexpected parameters")
+		}
+
+		result := m.SendRequestMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ContractRequesterMock.SendRequest")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
 	}
 
 	if m.SendRequestFunc == nil {
-		m.t.Fatal("Unexpected call to ContractRequesterMock.SendRequest")
+		m.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequest. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
@@ -265,19 +497,39 @@ func (m *ContractRequesterMock) SendRequestMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SendRequestPreCounter)
 }
 
+//SendRequestFinished returns true if mock invocations count is ok
+func (m *ContractRequesterMock) SendRequestFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SendRequestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SendRequestCounter) == uint64(len(m.SendRequestMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SendRequestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SendRequestCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SendRequestFunc != nil {
+		return atomic.LoadUint64(&m.SendRequestCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ContractRequesterMock) ValidateCallCounters() {
 
-	if m.CallConstructorFunc != nil && atomic.LoadUint64(&m.CallConstructorCounter) == 0 {
+	if !m.CallConstructorFinished() {
 		m.t.Fatal("Expected call to ContractRequesterMock.CallConstructor")
 	}
 
-	if m.CallMethodFunc != nil && atomic.LoadUint64(&m.CallMethodCounter) == 0 {
+	if !m.CallMethodFinished() {
 		m.t.Fatal("Expected call to ContractRequesterMock.CallMethod")
 	}
 
-	if m.SendRequestFunc != nil && atomic.LoadUint64(&m.SendRequestCounter) == 0 {
+	if !m.SendRequestFinished() {
 		m.t.Fatal("Expected call to ContractRequesterMock.SendRequest")
 	}
 
@@ -298,15 +550,15 @@ func (m *ContractRequesterMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ContractRequesterMock) MinimockFinish() {
 
-	if m.CallConstructorFunc != nil && atomic.LoadUint64(&m.CallConstructorCounter) == 0 {
+	if !m.CallConstructorFinished() {
 		m.t.Fatal("Expected call to ContractRequesterMock.CallConstructor")
 	}
 
-	if m.CallMethodFunc != nil && atomic.LoadUint64(&m.CallMethodCounter) == 0 {
+	if !m.CallMethodFinished() {
 		m.t.Fatal("Expected call to ContractRequesterMock.CallMethod")
 	}
 
-	if m.SendRequestFunc != nil && atomic.LoadUint64(&m.SendRequestCounter) == 0 {
+	if !m.SendRequestFinished() {
 		m.t.Fatal("Expected call to ContractRequesterMock.SendRequest")
 	}
 
@@ -324,9 +576,9 @@ func (m *ContractRequesterMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.CallConstructorFunc == nil || atomic.LoadUint64(&m.CallConstructorCounter) > 0)
-		ok = ok && (m.CallMethodFunc == nil || atomic.LoadUint64(&m.CallMethodCounter) > 0)
-		ok = ok && (m.SendRequestFunc == nil || atomic.LoadUint64(&m.SendRequestCounter) > 0)
+		ok = ok && m.CallConstructorFinished()
+		ok = ok && m.CallMethodFinished()
+		ok = ok && m.SendRequestFinished()
 
 		if ok {
 			return
@@ -335,15 +587,15 @@ func (m *ContractRequesterMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.CallConstructorFunc != nil && atomic.LoadUint64(&m.CallConstructorCounter) == 0 {
+			if !m.CallConstructorFinished() {
 				m.t.Error("Expected call to ContractRequesterMock.CallConstructor")
 			}
 
-			if m.CallMethodFunc != nil && atomic.LoadUint64(&m.CallMethodCounter) == 0 {
+			if !m.CallMethodFinished() {
 				m.t.Error("Expected call to ContractRequesterMock.CallMethod")
 			}
 
-			if m.SendRequestFunc != nil && atomic.LoadUint64(&m.SendRequestCounter) == 0 {
+			if !m.SendRequestFinished() {
 				m.t.Error("Expected call to ContractRequesterMock.SendRequest")
 			}
 
@@ -359,15 +611,15 @@ func (m *ContractRequesterMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ContractRequesterMock) AllMocksCalled() bool {
 
-	if m.CallConstructorFunc != nil && atomic.LoadUint64(&m.CallConstructorCounter) == 0 {
+	if !m.CallConstructorFinished() {
 		return false
 	}
 
-	if m.CallMethodFunc != nil && atomic.LoadUint64(&m.CallMethodCounter) == 0 {
+	if !m.CallMethodFinished() {
 		return false
 	}
 
-	if m.SendRequestFunc != nil && atomic.LoadUint64(&m.SendRequestCounter) == 0 {
+	if !m.SendRequestFinished() {
 		return false
 	}
 

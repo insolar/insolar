@@ -43,31 +43,103 @@ func NewSwitcherWorkAroundMock(t minimock.Tester) *SwitcherWorkAroundMock {
 }
 
 type mSwitcherWorkAroundMockIsBootstrapped struct {
-	mock *SwitcherWorkAroundMock
+	mock              *SwitcherWorkAroundMock
+	mainExpectation   *SwitcherWorkAroundMockIsBootstrappedExpectation
+	expectationSeries []*SwitcherWorkAroundMockIsBootstrappedExpectation
 }
 
-//Return sets up a mock for SwitcherWorkAround.IsBootstrapped to return Return's arguments
-func (m *mSwitcherWorkAroundMockIsBootstrapped) Return(r bool) *SwitcherWorkAroundMock {
-	m.mock.IsBootstrappedFunc = func() bool {
-		return r
+type SwitcherWorkAroundMockIsBootstrappedExpectation struct {
+	result *SwitcherWorkAroundMockIsBootstrappedResult
+}
+
+type SwitcherWorkAroundMockIsBootstrappedResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of SwitcherWorkAround.IsBootstrapped is expected from 1 to Infinity times
+func (m *mSwitcherWorkAroundMockIsBootstrapped) Expect() *mSwitcherWorkAroundMockIsBootstrapped {
+	m.mock.IsBootstrappedFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SwitcherWorkAroundMockIsBootstrappedExpectation{}
 	}
+
+	return m
+}
+
+//Return specifies results of invocation of SwitcherWorkAround.IsBootstrapped
+func (m *mSwitcherWorkAroundMockIsBootstrapped) Return(r bool) *SwitcherWorkAroundMock {
+	m.mock.IsBootstrappedFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SwitcherWorkAroundMockIsBootstrappedExpectation{}
+	}
+	m.mainExpectation.result = &SwitcherWorkAroundMockIsBootstrappedResult{r}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of SwitcherWorkAround.IsBootstrapped is expected once
+func (m *mSwitcherWorkAroundMockIsBootstrapped) ExpectOnce() *SwitcherWorkAroundMockIsBootstrappedExpectation {
+	m.mock.IsBootstrappedFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &SwitcherWorkAroundMockIsBootstrappedExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *SwitcherWorkAroundMockIsBootstrappedExpectation) Return(r bool) {
+	e.result = &SwitcherWorkAroundMockIsBootstrappedResult{r}
 }
 
 //Set uses given function f as a mock of SwitcherWorkAround.IsBootstrapped method
 func (m *mSwitcherWorkAroundMockIsBootstrapped) Set(f func() (r bool)) *SwitcherWorkAroundMock {
-	m.mock.IsBootstrappedFunc = f
+	m.mainExpectation = nil
+	m.expectationSeries = nil
 
+	m.mock.IsBootstrappedFunc = f
 	return m.mock
 }
 
 //IsBootstrapped implements github.com/insolar/insolar/core.SwitcherWorkAround interface
 func (m *SwitcherWorkAroundMock) IsBootstrapped() (r bool) {
-	atomic.AddUint64(&m.IsBootstrappedPreCounter, 1)
+	counter := atomic.AddUint64(&m.IsBootstrappedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsBootstrappedCounter, 1)
 
+	if len(m.IsBootstrappedMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsBootstrappedMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SwitcherWorkAroundMock.IsBootstrapped.")
+			return
+		}
+
+		result := m.IsBootstrappedMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the SwitcherWorkAroundMock.IsBootstrapped")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsBootstrappedMock.mainExpectation != nil {
+
+		result := m.IsBootstrappedMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the SwitcherWorkAroundMock.IsBootstrapped")
+		}
+
+		r = result.r
+
+		return
+	}
+
 	if m.IsBootstrappedFunc == nil {
-		m.t.Fatal("Unexpected call to SwitcherWorkAroundMock.IsBootstrapped")
+		m.t.Fatalf("Unexpected call to SwitcherWorkAroundMock.IsBootstrapped.")
 		return
 	}
 
@@ -84,56 +156,113 @@ func (m *SwitcherWorkAroundMock) IsBootstrappedMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IsBootstrappedPreCounter)
 }
 
-type mSwitcherWorkAroundMockSetIsBootstrapped struct {
-	mock             *SwitcherWorkAroundMock
-	mockExpectations *SwitcherWorkAroundMockSetIsBootstrappedParams
+//IsBootstrappedFinished returns true if mock invocations count is ok
+func (m *SwitcherWorkAroundMock) IsBootstrappedFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsBootstrappedMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsBootstrappedCounter) == uint64(len(m.IsBootstrappedMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsBootstrappedMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsBootstrappedCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsBootstrappedFunc != nil {
+		return atomic.LoadUint64(&m.IsBootstrappedCounter) > 0
+	}
+
+	return true
 }
 
-//SwitcherWorkAroundMockSetIsBootstrappedParams represents input parameters of the SwitcherWorkAround.SetIsBootstrapped
-type SwitcherWorkAroundMockSetIsBootstrappedParams struct {
+type mSwitcherWorkAroundMockSetIsBootstrapped struct {
+	mock              *SwitcherWorkAroundMock
+	mainExpectation   *SwitcherWorkAroundMockSetIsBootstrappedExpectation
+	expectationSeries []*SwitcherWorkAroundMockSetIsBootstrappedExpectation
+}
+
+type SwitcherWorkAroundMockSetIsBootstrappedExpectation struct {
+	input *SwitcherWorkAroundMockSetIsBootstrappedInput
+}
+
+type SwitcherWorkAroundMockSetIsBootstrappedInput struct {
 	p bool
 }
 
-//Expect sets up expected params for the SwitcherWorkAround.SetIsBootstrapped
+//Expect specifies that invocation of SwitcherWorkAround.SetIsBootstrapped is expected from 1 to Infinity times
 func (m *mSwitcherWorkAroundMockSetIsBootstrapped) Expect(p bool) *mSwitcherWorkAroundMockSetIsBootstrapped {
-	m.mockExpectations = &SwitcherWorkAroundMockSetIsBootstrappedParams{p}
+	m.mock.SetIsBootstrappedFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SwitcherWorkAroundMockSetIsBootstrappedExpectation{}
+	}
+	m.mainExpectation.input = &SwitcherWorkAroundMockSetIsBootstrappedInput{p}
 	return m
 }
 
-//Return sets up a mock for SwitcherWorkAround.SetIsBootstrapped to return Return's arguments
+//Return specifies results of invocation of SwitcherWorkAround.SetIsBootstrapped
 func (m *mSwitcherWorkAroundMockSetIsBootstrapped) Return() *SwitcherWorkAroundMock {
-	m.mock.SetIsBootstrappedFunc = func(p bool) {
-		return
+	m.mock.SetIsBootstrappedFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SwitcherWorkAroundMockSetIsBootstrappedExpectation{}
 	}
+
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of SwitcherWorkAround.SetIsBootstrapped is expected once
+func (m *mSwitcherWorkAroundMockSetIsBootstrapped) ExpectOnce(p bool) *SwitcherWorkAroundMockSetIsBootstrappedExpectation {
+	m.mock.SetIsBootstrappedFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &SwitcherWorkAroundMockSetIsBootstrappedExpectation{}
+	expectation.input = &SwitcherWorkAroundMockSetIsBootstrappedInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
 }
 
 //Set uses given function f as a mock of SwitcherWorkAround.SetIsBootstrapped method
 func (m *mSwitcherWorkAroundMockSetIsBootstrapped) Set(f func(p bool)) *SwitcherWorkAroundMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.SetIsBootstrappedFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //SetIsBootstrapped implements github.com/insolar/insolar/core.SwitcherWorkAround interface
 func (m *SwitcherWorkAroundMock) SetIsBootstrapped(p bool) {
-	atomic.AddUint64(&m.SetIsBootstrappedPreCounter, 1)
+	counter := atomic.AddUint64(&m.SetIsBootstrappedPreCounter, 1)
 	defer atomic.AddUint64(&m.SetIsBootstrappedCounter, 1)
 
-	if m.SetIsBootstrappedMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SetIsBootstrappedMock.mockExpectations, SwitcherWorkAroundMockSetIsBootstrappedParams{p},
-			"SwitcherWorkAround.SetIsBootstrapped got unexpected parameters")
-
-		if m.SetIsBootstrappedFunc == nil {
-
-			m.t.Fatal("No results are set for the SwitcherWorkAroundMock.SetIsBootstrapped")
-
+	if len(m.SetIsBootstrappedMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetIsBootstrappedMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SwitcherWorkAroundMock.SetIsBootstrapped. %v", p)
 			return
 		}
+
+		input := m.SetIsBootstrappedMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, SwitcherWorkAroundMockSetIsBootstrappedInput{p}, "SwitcherWorkAround.SetIsBootstrapped got unexpected parameters")
+
+		return
+	}
+
+	if m.SetIsBootstrappedMock.mainExpectation != nil {
+
+		input := m.SetIsBootstrappedMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, SwitcherWorkAroundMockSetIsBootstrappedInput{p}, "SwitcherWorkAround.SetIsBootstrapped got unexpected parameters")
+		}
+
+		return
 	}
 
 	if m.SetIsBootstrappedFunc == nil {
-		m.t.Fatal("Unexpected call to SwitcherWorkAroundMock.SetIsBootstrapped")
+		m.t.Fatalf("Unexpected call to SwitcherWorkAroundMock.SetIsBootstrapped. %v", p)
 		return
 	}
 
@@ -150,15 +279,35 @@ func (m *SwitcherWorkAroundMock) SetIsBootstrappedMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetIsBootstrappedPreCounter)
 }
 
+//SetIsBootstrappedFinished returns true if mock invocations count is ok
+func (m *SwitcherWorkAroundMock) SetIsBootstrappedFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SetIsBootstrappedMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetIsBootstrappedCounter) == uint64(len(m.SetIsBootstrappedMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SetIsBootstrappedMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetIsBootstrappedCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SetIsBootstrappedFunc != nil {
+		return atomic.LoadUint64(&m.SetIsBootstrappedCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *SwitcherWorkAroundMock) ValidateCallCounters() {
 
-	if m.IsBootstrappedFunc != nil && atomic.LoadUint64(&m.IsBootstrappedCounter) == 0 {
+	if !m.IsBootstrappedFinished() {
 		m.t.Fatal("Expected call to SwitcherWorkAroundMock.IsBootstrapped")
 	}
 
-	if m.SetIsBootstrappedFunc != nil && atomic.LoadUint64(&m.SetIsBootstrappedCounter) == 0 {
+	if !m.SetIsBootstrappedFinished() {
 		m.t.Fatal("Expected call to SwitcherWorkAroundMock.SetIsBootstrapped")
 	}
 
@@ -179,11 +328,11 @@ func (m *SwitcherWorkAroundMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *SwitcherWorkAroundMock) MinimockFinish() {
 
-	if m.IsBootstrappedFunc != nil && atomic.LoadUint64(&m.IsBootstrappedCounter) == 0 {
+	if !m.IsBootstrappedFinished() {
 		m.t.Fatal("Expected call to SwitcherWorkAroundMock.IsBootstrapped")
 	}
 
-	if m.SetIsBootstrappedFunc != nil && atomic.LoadUint64(&m.SetIsBootstrappedCounter) == 0 {
+	if !m.SetIsBootstrappedFinished() {
 		m.t.Fatal("Expected call to SwitcherWorkAroundMock.SetIsBootstrapped")
 	}
 
@@ -201,8 +350,8 @@ func (m *SwitcherWorkAroundMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.IsBootstrappedFunc == nil || atomic.LoadUint64(&m.IsBootstrappedCounter) > 0)
-		ok = ok && (m.SetIsBootstrappedFunc == nil || atomic.LoadUint64(&m.SetIsBootstrappedCounter) > 0)
+		ok = ok && m.IsBootstrappedFinished()
+		ok = ok && m.SetIsBootstrappedFinished()
 
 		if ok {
 			return
@@ -211,11 +360,11 @@ func (m *SwitcherWorkAroundMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.IsBootstrappedFunc != nil && atomic.LoadUint64(&m.IsBootstrappedCounter) == 0 {
+			if !m.IsBootstrappedFinished() {
 				m.t.Error("Expected call to SwitcherWorkAroundMock.IsBootstrapped")
 			}
 
-			if m.SetIsBootstrappedFunc != nil && atomic.LoadUint64(&m.SetIsBootstrappedCounter) == 0 {
+			if !m.SetIsBootstrappedFinished() {
 				m.t.Error("Expected call to SwitcherWorkAroundMock.SetIsBootstrapped")
 			}
 
@@ -231,11 +380,11 @@ func (m *SwitcherWorkAroundMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *SwitcherWorkAroundMock) AllMocksCalled() bool {
 
-	if m.IsBootstrappedFunc != nil && atomic.LoadUint64(&m.IsBootstrappedCounter) == 0 {
+	if !m.IsBootstrappedFinished() {
 		return false
 	}
 
-	if m.SetIsBootstrappedFunc != nil && atomic.LoadUint64(&m.SetIsBootstrappedCounter) == 0 {
+	if !m.SetIsBootstrappedFinished() {
 		return false
 	}
 
