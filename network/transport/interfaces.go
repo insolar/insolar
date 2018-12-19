@@ -33,3 +33,6 @@ type futureManager interface {
 	Create(msg *packet.Packet) Future
 }
 
+func newFutureManager() futureManager {
+	return newFutureManagerImpl()
+}
