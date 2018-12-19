@@ -17,16 +17,13 @@
 package pulsar
 
 import (
-	"bytes"
 	"context"
 	"sort"
-
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/utils/entropy"
+	"github.com/pkg/errors"
 )
 
 // FetchNeighbour searches neighbour of the pulsar by pubKey of a neighbout
