@@ -291,8 +291,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.DynamicRole) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := msg.DefaultTarget()
-	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, role, target.Record(), lr.pulse(ctx).PulseNumber, lr.NodeNetwork.GetOrigin().ID(),
+	isAuthorized, err := lr.JetCoordinator.AmI(
+		ctx, role, target.Record(), lr.pulse(ctx).PulseNumber,
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
@@ -338,7 +338,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	// ExecutionState should be locked between CheckOurRole and
 	// appending ExecutionQueueElement to the queue to prevent a race condition.
 	// Otherwise it's possible that OnPulse will clean up the queue and set
-	// ExecutionState.Pending to false. Execute will add an element to the
+	// ExecutionState.Pending to NotPending. Execute will add an element to the
 	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
 
@@ -465,20 +465,13 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 }
 
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
-	// Current == nil indicates that we have no queue processor
-	// and one should be started
-	defer func() {
-		inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
-		es.Lock()
-		es.QueueProcessorActive = false
-		es.Current = nil
-		es.Unlock()
-	}()
-
 	for {
 		es.Lock()
 		q := es.Queue
 		if len(q) == 0 {
+			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
+			es.QueueProcessorActive = false
+			es.Current = nil
 			es.Unlock()
 			return
 		}
@@ -521,11 +514,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		finish()
 
-		if lr.finishPendingIfNeeded(ctx, es, *qe.parcel.Message().DefaultTarget()) {
-			// return right now just to avoid calling es.Lock() once again and figure
-			// out that the queue is empty in the beginning of the loop
-			return
-		}
+		lr.finishPendingIfNeeded(ctx, es, *qe.parcel.Message().DefaultTarget())
 	}
 }
 
@@ -544,12 +533,12 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 	msg := message.PendingFinished{Reference: currentRef}
 	pulse, err := lr.PulseStorage.Current(ctx)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message")
+		inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
 		return true
 	}
 	_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("Unable to send PendingFinished message")
+		inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
 		return true
 	}
 
@@ -813,6 +802,14 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	// send copy for validation
 	for ref, state := range lr.state {
+		// we are executor again - we still working
+		// TODO we need to do something with validation
+		isAuthorized, _ := lr.JetCoordinator.AmI(
+			ctx, core.DynamicRoleVirtualExecutor, ref.Record(), pulse.PulseNumber)
+
+		if isAuthorized {
+			continue
+		}
 		state.Lock()
 
 		// some old stuff
