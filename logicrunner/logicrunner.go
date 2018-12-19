@@ -62,15 +62,16 @@ type ExecutionState struct {
 	ArtifactManager core.ArtifactManager
 
 	objectbody *ObjectBody
-	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
-	pending    PendingState
 	deactivate bool
 	nonce      uint64
 
-	Behaviour            ValidationBehaviour
-	Current              *CurrentExecution
+	Behaviour ValidationBehaviour
+	Current   *CurrentExecution
+	Queue     []ExecutionQueueElement
+
+	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+	pending              PendingState
 	QueueProcessorActive bool
-	Queue                []ExecutionQueueElement
 }
 
 type CurrentExecution struct {
@@ -466,7 +467,6 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
-		// TODO: check pulse change and do different things
 
 		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
 		err = es.Behaviour.Result(res.reply, res.err)
@@ -475,7 +475,40 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		}
 
 		finish()
+
+		if lr.finishPendingIfNeeded(ctx, es, *qe.parcel.Message().DefaultTarget()) {
+			// return right now just to avoid calling es.Lock() once again and figure
+			// out that the queue is empty in the beginning of the loop
+			return
+		}
 	}
+}
+
+// finishPendingIfNeeded checks whether last execution was a pending one.
+// If this is true as a side effect the function sends a PendingFinished
+// message to the current executor
+func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) bool {
+	es.Lock()
+	defer es.Unlock()
+
+	if es.pending != InPending {
+		return false
+	}
+
+	es.pending = NotPending
+	msg := message.PendingFinished{Reference: currentRef}
+	pulse, err := lr.PulseStorage.Current(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message")
+		return true
+	}
+	_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Unable to send PendingFinished message")
+		return true
+	}
+
+	return true
 }
 
 func (lr *LogicRunner) executeOrValidate(
