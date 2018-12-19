@@ -16,6 +16,8 @@
 
 package transport
 
+import "github.com/insolar/insolar/network/transport/packet"
+
 type Sequence uint64
 
 type sequenceGenerator interface {
@@ -25,3 +27,9 @@ type sequenceGenerator interface {
 func newSequenceGenerator() sequenceGenerator {
 	return newSequenceGeneratorImpl()
 }
+
+type futureManager interface {
+	Get(msg *packet.Packet) Future
+	Create(msg *packet.Packet) Future
+}
+
