@@ -16,7 +16,11 @@
 
 package transport
 
-import "github.com/insolar/insolar/network/transport/packet"
+import (
+	"context"
+
+	"github.com/insolar/insolar/network/transport/packet"
+)
 
 type Sequence uint64
 
@@ -35,4 +39,9 @@ type futureManager interface {
 
 func newFutureManager() futureManager {
 	return newFutureManagerImpl()
+}
+
+type packetHandler interface {
+	Handle(ctx context.Context, msg *packet.Packet)
+	Received() <-chan *packet.Packet
 }
