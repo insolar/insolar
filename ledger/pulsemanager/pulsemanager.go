@@ -244,11 +244,12 @@ func (m *PulseManager) getExecutorData(
 		}
 
 		if !recentStorage.IsMine(id) {
-			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
-			if err != nil {
-				logger.Error(err)
-				return nil, errors.Wrap(err, "[ processRecentObjects ] Can't RemoveObjectIndex")
-			}
+			// TODO: fix this ugly hack in INS-1016
+			// err := m.db.RemoveObjectIndex(ctx, jetID, &id)
+			// if err != nil {
+			// 	logger.Error(err)
+			// 	return nil, errors.Wrap(err, "[ processRecentObjects ] Can't RemoveObjectIndex")
+			// }
 		}
 	}
 
