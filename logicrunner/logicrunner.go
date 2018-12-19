@@ -396,21 +396,25 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	es.Lock()
 	defer es.Unlock()
 
-	startProcessor := !es.QueueProcessorActive
-	if startProcessor {
-		if es.pending == PendingUnknown {
-			pending, err := es.CheckPendingRequests(ctx, msg)
-			if err != nil {
-				return errors.Wrap(err, "couldn't check for pending requests")
-			}
-			es.pending = pending
-		}
-		if es.pending == InPending {
-			startProcessor = false
-		}
+	if len(es.Queue) == 0 {
+		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
+		return nil
 	}
 
-	if !startProcessor {
+	if es.QueueProcessorActive {
+		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
+		return nil
+	}
+
+	if es.pending == PendingUnknown {
+		pending, err := es.CheckPendingRequests(ctx, msg)
+		if err != nil {
+			return errors.Wrap(err, "couldn't check for pending requests")
+		}
+		es.pending = pending
+	}
+	if es.pending == InPending {
+		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
 		return nil
 	}
 
