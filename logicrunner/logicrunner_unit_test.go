@@ -200,3 +200,56 @@ func TestCheckPendingRequests(
 	require.Error(t, err)
 	require.Equal(t, NotPending, pending)
 }
+
+func TestPrepareState(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	object := testutils.RandomRef()
+	msg := &message.ExecutorResults{
+		Caller:    testutils.RandomRef(),
+		RecordRef: object,
+	}
+
+	// not pending
+	// it's a first call, it's also initialize lr.state[object].ExecutionState
+	// also check for empty Queue
+	msg.Pending = false
+	lr.prepareObjectState(ctx, msg)
+	require.Equal(t, NotPending, lr.state[object].ExecutionState.pending)
+	require.Equal(t, 0, len(lr.state[object].ExecutionState.Queue))
+
+	// pending without queue
+	lr.state[object].ExecutionState.pending = PendingUnknown
+	msg.Pending = true
+	lr.prepareObjectState(ctx, msg)
+	require.Equal(t, InPending, lr.state[object].ExecutionState.pending)
+
+	// do not change pending status if it isn't unknown
+	lr.state[object].ExecutionState.pending = NotPending
+	msg.Pending = true
+	lr.prepareObjectState(ctx, msg)
+	require.Equal(t, NotPending, lr.state[object].ExecutionState.pending)
+
+	// do not change pending status if it isn't unknown
+	lr.state[object].ExecutionState.pending = InPending
+	msg.Pending = false
+	lr.prepareObjectState(ctx, msg)
+	require.Equal(t, InPending, lr.state[object].ExecutionState.pending)
+
+	// brand new queue from message
+	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{}}
+	lr.prepareObjectState(ctx, msg)
+	require.Equal(t, 1, len(lr.state[object].ExecutionState.Queue))
+
+	// add new element in existing queue
+	queueElementRequest := testutils.RandomRef()
+	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest}}
+	lr.prepareObjectState(ctx, msg)
+	require.Equal(t, 2, len(lr.state[object].ExecutionState.Queue))
+	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
+
+}

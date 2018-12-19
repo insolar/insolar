@@ -262,8 +262,15 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
+
+	// TODO make it in different goroutines?
+	// prepare state after previous executor
+	lr.prepareObjectState(ctx, msg)
+
+	// validation things
 	c := lr.GetConsensus(ctx, msg.RecordRef)
 	c.AddExecutor(ctx, inmsg, msg)
+
 	return &reply.OK{}, nil
 }
 

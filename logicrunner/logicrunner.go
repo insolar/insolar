@@ -559,6 +559,52 @@ func init() {
 	gob.Register(&ObjectBody{})
 }
 
+func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.ExecutorResults) {
+	state := lr.UpsertObjectState(msg.GetReference())
+	state.Lock()
+	if state.ExecutionState == nil {
+		state.ExecutionState = &ExecutionState{
+			ArtifactManager: lr.ArtifactManager,
+			Queue:           make([]ExecutionQueueElement, 0),
+			Behaviour:       &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+		}
+	}
+	state.Unlock()
+
+	state.ExecutionState.Lock()
+	defer state.ExecutionState.Unlock()
+
+	// prepare pending
+	if state.ExecutionState.pending == PendingUnknown {
+		if msg.Pending {
+			state.ExecutionState.pending = InPending
+		} else {
+			state.ExecutionState.pending = NotPending
+		}
+	}
+
+	//prepare Queue
+	if msg.Queue != nil {
+		state := lr.UpsertObjectState(msg.GetReference())
+
+		queueFromMessage := make([]ExecutionQueueElement, 0)
+		for _, qe := range msg.Queue {
+			queueFromMessage = append(
+				queueFromMessage,
+				ExecutionQueueElement{
+					ctx:     qe.Ctx,
+					parcel:  qe.Parcel,
+					request: qe.Request,
+					pulse:   qe.Pulse,
+					result:  make(chan ExecutionQueueResult, 1),
+				})
+		}
+		state.ExecutionState.Queue = append(queueFromMessage, state.ExecutionState.Queue...)
+
+		// TODO call StartQueueProcessorIfNeeded() , need to wait ruz fixes
+	}
+}
+
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (core.Reply, error) {
 	if es.objectbody == nil {
 		objDesc, protoDesc, codeDesc, err := lr.getDescriptorsByObjectRef(ctx, m.ObjectRef)
