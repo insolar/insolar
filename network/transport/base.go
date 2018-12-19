@@ -53,8 +53,10 @@ type baseTransport struct {
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
 
-	mutex   *sync.RWMutex
-	futures map[packet.RequestID]Future
+	mutex *sync.RWMutex
+
+	futureMutex *sync.RWMutex
+	futures     map[packet.RequestID]Future
 
 	proxy         relay.Proxy
 	publicAddress string
@@ -70,8 +72,10 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 		disconnectStarted:  make(chan bool, 1),
 		disconnectFinished: make(chan bool),
 
-		mutex:   &sync.RWMutex{},
-		futures: make(map[packet.RequestID]Future),
+		mutex: &sync.RWMutex{},
+
+		futureMutex: &sync.RWMutex{},
+		futures:     make(map[packet.RequestID]Future),
 
 		proxy:         proxy,
 		publicAddress: publicAddress,
@@ -148,14 +152,14 @@ func (t *baseTransport) getRemoteAddress(conn net.Conn) string {
 
 func (t *baseTransport) createFuture(msg *packet.Packet) Future {
 	newFuture := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
-		t.mutex.Lock()
-		defer t.mutex.Unlock()
+		t.futureMutex.Lock()
+		defer t.futureMutex.Unlock()
 
 		delete(t.futures, f.Request().RequestID)
 	})
 
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
+	t.futureMutex.Lock()
+	defer t.futureMutex.Unlock()
 	t.futures[msg.RequestID] = newFuture
 
 	metrics.NetworkFutures.WithLabelValues(msg.Type.String()).Set(float64(len(t.futures)))
@@ -163,8 +167,8 @@ func (t *baseTransport) createFuture(msg *packet.Packet) Future {
 }
 
 func (t *baseTransport) getFuture(msg *packet.Packet) Future {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
+	t.futureMutex.RLock()
+	defer t.futureMutex.RUnlock()
 
 	return t.futures[msg.RequestID]
 }
