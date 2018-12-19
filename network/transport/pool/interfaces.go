@@ -30,12 +30,15 @@ type ConnectionFactory interface {
 	CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error)
 }
 
+type iterateFunc func(conn net.Conn)
+
 type unsafeConnectionHolder interface {
 	Get(address net.Addr) (net.Conn, bool)
 	Delete(address net.Addr)
 	Add(address net.Addr, conn net.Conn)
 	Size() int
 	Reset()
+	Iterate(iterateFunc iterateFunc)
 }
 
 func newUnsafeConnectionHolder() unsafeConnectionHolder {

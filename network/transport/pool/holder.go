@@ -18,8 +18,6 @@ package pool
 
 import (
 	"net"
-
-	"github.com/insolar/insolar/log"
 )
 
 type unsafeConnectionsHolderImpl struct {
@@ -51,12 +49,14 @@ func (uch *unsafeConnectionsHolderImpl) Add(address net.Addr, conn net.Conn) {
 }
 
 func (uch *unsafeConnectionsHolderImpl) Reset() {
-	for key, conn := range uch.connections {
-		err := conn.Close()
-		if err != nil {
-			log.Errorf("[ Reset ] Failed to close connection %s: %s", key, err.Error())
-		}
+	for key := range uch.connections {
 		delete(uch.connections, key)
+	}
+}
+
+func (uch *unsafeConnectionsHolderImpl) Iterate(iterateFunc iterateFunc) {
+	for _, conn := range uch.connections {
+		iterateFunc(conn)
 	}
 }
 
