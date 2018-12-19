@@ -32,7 +32,10 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
 		return
 	}
 
-	payload, err := currentPulsar.preparePayload(EntropySignaturePayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Signature: currentPulsar.GeneratedEntropySign})
+	payload, err := currentPulsar.preparePayload(&EntropySignaturePayload{
+		PulseNumber: currentPulsar.ProcessingPulseNumber,
+		EntropySignature: currentPulsar.GeneratedEntropySign,
+	})
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
@@ -58,9 +61,10 @@ func (currentPulsar *Pulsar) broadcastVector(ctx context.Context) {
 	if currentPulsar.IsStateFailed() {
 		return
 	}
-	payload, err := currentPulsar.preparePayload(VectorPayload{
+	payload, err := currentPulsar.preparePayload(&VectorPayload{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
-		Vector:      currentPulsar.OwnedBftRow})
+		Vector:      currentPulsar.OwnedBftRow,
+	})
 
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
@@ -86,7 +90,10 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 		return
 	}
 
-	payload, err := currentPulsar.preparePayload(EntropyPayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Entropy: *currentPulsar.GetGeneratedEntropy()})
+	payload, err := currentPulsar.preparePayload(&EntropyPayload{
+			PulseNumber: currentPulsar.ProcessingPulseNumber,
+			Entropy: *currentPulsar.GetGeneratedEntropy(),
+		})
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
@@ -112,7 +119,7 @@ func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context, pulse core.
 	}
 
 	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
-	payload, err := currentPulsar.preparePayload(PulsePayload{Pulse: pulse})
+	payload, err := currentPulsar.preparePayload(&PulsePayload{Pulse: pulse})
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
 	if err != nil {
@@ -180,14 +187,16 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
-	confirmation := core.PulseSenderConfirmation{
-		PulseNumber:     currentPulsar.ProcessingPulseNumber,
-		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
-		Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
-		Signature:       signature,
+	confirmation := PulseSenderConfirmationPayload{
+		core.PulseSenderConfirmation{
+			PulseNumber:     currentPulsar.ProcessingPulseNumber,
+			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+			Signature:       signature,
+		},
 	}
 
-	payload, err := currentPulsar.preparePayload(confirmation)
+	payload, err := currentPulsar.preparePayload(&confirmation)
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
