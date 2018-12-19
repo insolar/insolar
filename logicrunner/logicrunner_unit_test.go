@@ -203,9 +203,9 @@ func TestCheckPendingRequests(
 }
 
 func TestPrepareState(t *testing.T) {
+	t.Parallel()
+
 	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
 
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 
@@ -252,5 +252,39 @@ func TestPrepareState(t *testing.T) {
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, 2, len(lr.state[object].ExecutionState.Queue))
 	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
+
+}
+func TestHandlePendingFinishedMessage(
+	t *testing.T,
+) {
+	ctx := inslogger.TestContext(t)
+
+	objectRef := testutils.RandomRef()
+
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	parcel := testutils.NewParcelMock(t).MessageMock.Return(
+		&message.PendingFinished{Reference: objectRef},
+	)
+
+	re, err := lr.HandlePendingFinishedMessage(ctx, parcel)
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, re)
+
+	st := lr.MustObjectState(objectRef)
+
+	es := st.ExecutionState
+	require.NotNil(t, es)
+	require.Equal(t, NotPending, es.pending)
+
+	es.Current = &CurrentExecution{}
+	re, err = lr.HandlePendingFinishedMessage(ctx, parcel)
+	require.Error(t, err)
+
+	es.Current = nil
+
+	re, err = lr.HandlePendingFinishedMessage(ctx, parcel)
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, re)
 
 }
