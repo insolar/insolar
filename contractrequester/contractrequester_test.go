@@ -69,14 +69,14 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	ref := testutils.RandomRef()
 	testResult := &reply.CallMethod{}
 
-	pm := testutils.NewPulseManagerMock(t)
+	pm := testutils.NewPulseStorageMock(t)
 	pm.CurrentMock.Return(core.GenesisPulse, nil)
 
 	mbm := mockMessageBus(t, testResult)
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
-	cReq.PulseManager = pm
+	cReq.PulseStorage = pm
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
@@ -104,14 +104,14 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ref := testutils.RandomRef()
 
-	pm := testutils.NewPulseManagerMock(t)
+	pm := testutils.NewPulseStorageMock(t)
 	pm.CurrentMock.Return(core.GenesisPulse, nil)
 
 	mbm := mockMessageBus(t, &reply.CallMethod{})
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
-	cReq.PulseManager = pm
+	cReq.PulseStorage = pm
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)

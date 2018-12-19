@@ -150,10 +150,8 @@ func TestBareHelloworld(t *testing.T) {
 	)
 	assert.NoError(t, err, "contract call")
 
-	d := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
-	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	msg = &message.CallMethod{
 		ObjectRef: reqref,
@@ -170,8 +168,6 @@ func TestBareHelloworld(t *testing.T) {
 	)
 	assert.NoError(t, err, "contract call")
 
-	d = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
-	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }

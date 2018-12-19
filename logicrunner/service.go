@@ -24,11 +24,9 @@ import (
 	"net/rpc"
 	"sync/atomic"
 
+	"github.com/insolar/insolar/core/utils"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
-	"github.com/insolar/insolar/core/utils"
-
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"

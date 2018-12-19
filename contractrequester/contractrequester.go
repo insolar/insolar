@@ -108,7 +108,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		msg.ProxyPrototype = *mustPrototype
 	}
 
-	currentSlotPulse, err := cr.PulseManager.Current(ctx)
+	currentSlotPulse, err := cr.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get pulse")
 	}
@@ -178,7 +178,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		SaveAs:           message.SaveAs(saveAs),
 	}
 
-	currentSlotPulse, err := cr.PulseManager.Current(ctx)
+	currentSlotPulse, err := cr.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get pulse")
 	}
