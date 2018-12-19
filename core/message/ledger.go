@@ -377,7 +377,7 @@ type HotData struct {
 	Jet                core.RecordRef
 	Drop               jet.JetDrop
 	RecentObjects      map[core.RecordID]*HotIndex
-	PendingRequests    map[core.RecordID][]byte
+	PendingRequests    map[core.RecordID]map[core.RecordID][]byte
 	PulseNumber        core.PulseNumber
 	JetDropSizeHistory jet.DropSizeHistory
 }
@@ -397,13 +397,13 @@ func (hd *HotData) DefaultTarget() *core.RecordRef {
 	return &hd.Jet
 }
 
+// Type implementation of Message interface.
+func (*HotData) Type() core.MessageType {
+	return core.TypeHotRecords
+}
+
 // HotIndex contains meat about hot-data
 type HotIndex struct {
 	TTL   int
 	Index []byte
-}
-
-// Type implementation of Message interface.
-func (*HotData) Type() core.MessageType {
-	return core.TypeHotRecords
 }

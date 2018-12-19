@@ -87,7 +87,7 @@ type ArtifactManager interface {
 	GenesisRef() *RecordRef
 
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, obj RecordRef, parcel Parcel) (*RecordID, error)
+	RegisterRequest(ctx context.Context, object RecordRef, parcel Parcel) (*RecordID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -95,7 +95,7 @@ type ArtifactManager interface {
 	RegisterValidation(ctx context.Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
 
 	// RegisterResult saves VM method call result.
-	RegisterResult(ctx context.Context, request RecordRef, payload []byte) (*RecordID, error)
+	RegisterResult(ctx context.Context, object, request RecordRef, payload []byte) (*RecordID, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//

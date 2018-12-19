@@ -668,6 +668,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	dropSizeHistory, err = db.GetDropSizeHistory(ctx, jetID)
 	require.NoError(t, err)
 
+	obj := core.RecordID{}
 	hotIndexes := &message.HotData{
 		Jet:         *core.NewRecordRef(core.DomainID, *jet.NewID(0, nil)),
 		PulseNumber: core.FirstPulseNumber,
@@ -677,15 +678,18 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 				TTL:   321,
 			},
 		},
-		PendingRequests: map[core.RecordID][]byte{
-			*secondId: record.SerializeRecord(&record.CodeRecord{}),
+		PendingRequests: map[core.RecordID]map[core.RecordID][]byte{
+			obj: {
+				*secondId: record.SerializeRecord(&record.CodeRecord{}),
+			},
 		},
 		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
 		JetDropSizeHistory: dropSizeHistory,
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.AddPendingRequestFunc = func(p core.RecordID) {
+	recentStorageMock.AddPendingRequestFunc = func(o, p core.RecordID) {
+		require.Equal(t, o, obj)
 		require.Equal(t, p, *secondId)
 	}
 	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int, isMine bool) {

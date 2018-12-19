@@ -228,11 +228,10 @@ func (m *PulseManager) getExecutorData(
 	recentStorage := m.RecentStorageProvider.GetStorage(jetID)
 	recentStorage.ClearZeroTTLObjects()
 	recentObjectsIds := recentStorage.GetObjects()
-	pendingRequestsIds := recentStorage.GetRequests()
 	defer recentStorage.ClearObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
-	pendingRequests := map[core.RecordID][]byte{}
+	pendingRequests := map[core.RecordID]map[core.RecordID][]byte{}
 
 	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.db.GetObjectIndex(ctx, jetID, &id, false)
@@ -259,13 +258,18 @@ func (m *PulseManager) getExecutorData(
 		}
 	}
 
-	for _, id := range pendingRequestsIds {
-		pendingRecord, err := m.db.GetRecord(ctx, jetID, &id)
-		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
-			continue
+	for objID, requests := range recentStorage.GetRequests() {
+		for reqID := range requests {
+			pendingRecord, err := m.db.GetRecord(ctx, jetID, &reqID)
+			if err != nil {
+				inslogger.FromContext(ctx).Error(err)
+				continue
+			}
+			if _, ok := pendingRequests[objID]; !ok {
+				pendingRequests[objID] = map[core.RecordID][]byte{}
+			}
+			pendingRequests[objID][reqID] = record.SerializeRecord(pendingRecord)
 		}
-		pendingRequests[id] = record.SerializeRecord(pendingRecord)
 	}
 
 	dropSizeHistory, err := m.db.GetDropSizeHistory(ctx, jetID)

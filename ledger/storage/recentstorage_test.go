@@ -17,8 +17,6 @@
 package storage
 
 import (
-	"bytes"
-	"sort"
 	"sync"
 	"testing"
 
@@ -59,6 +57,9 @@ func TestRecentObjectsIndex_AddId(t *testing.T) {
 func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
 	s := NewRecentStorage(123)
 
+	obj1 := *core.NewRecordID(0, nil)
+	obj2 := *core.NewRecordID(1, nil)
+
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 
@@ -68,28 +69,34 @@ func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
 		*core.NewRecordID(123, []byte{3}),
 	}
 	go func() {
-		s.AddPendingRequest(expectedIDs[0])
+		s.AddPendingRequest(obj1, expectedIDs[0])
 		wg.Done()
 	}()
 	go func() {
-		s.AddPendingRequest(expectedIDs[1])
+		s.AddPendingRequest(obj1, expectedIDs[1])
 		wg.Done()
 	}()
 	go func() {
-		s.AddPendingRequest(expectedIDs[2])
+		s.AddPendingRequest(obj2, expectedIDs[2])
 		wg.Done()
 	}()
 	wg.Wait()
 
-	actualRequests := s.GetRequests()
-	sort.Slice(actualRequests, func(i, j int) bool {
-		return bytes.Compare(actualRequests[i][:], actualRequests[j][:]) == -1
-	})
-	require.Equal(t, expectedIDs, actualRequests)
+	require.Equal(t, map[core.RecordID]map[core.RecordID]struct{}{
+		obj1: {
+			expectedIDs[0]: struct{}{},
+			expectedIDs[1]: struct{}{},
+		},
+		obj2: {
+			expectedIDs[2]: struct{}{},
+		},
+	}, s.GetRequests())
 }
 
 func TestRecentObjectsIndex_RemovePendingRequest(t *testing.T) {
 	s := NewRecentStorage(123)
+
+	obj := *core.NewRecordID(0, nil)
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
@@ -102,32 +109,34 @@ func TestRecentObjectsIndex_RemovePendingRequest(t *testing.T) {
 		*core.NewRecordID(123, []byte{3}),
 		*core.NewRecordID(123, []byte{4}),
 	}
-	s.pendingRequests = map[core.RecordID]struct{}{
-		expectedIDs[0]: {},
-		extraIDs[0]:    {},
-		extraIDs[1]:    {},
-		extraIDs[2]:    {},
+	s.pendingRequests = map[core.RecordID]map[core.RecordID]struct{}{
+		obj: {
+			expectedIDs[0]: {},
+			extraIDs[0]:    {},
+			extraIDs[1]:    {},
+			extraIDs[2]:    {},
+		},
 	}
 
 	go func() {
-		s.RemovePendingRequest(extraIDs[0])
+		s.RemovePendingRequest(obj, extraIDs[0])
 		wg.Done()
 	}()
 	go func() {
-		s.RemovePendingRequest(extraIDs[1])
+		s.RemovePendingRequest(obj, extraIDs[1])
 		wg.Done()
 	}()
 	go func() {
-		s.RemovePendingRequest(extraIDs[2])
+		s.RemovePendingRequest(obj, extraIDs[2])
 		wg.Done()
 	}()
 	wg.Wait()
 
-	actualRequests := s.GetRequests()
-	sort.Slice(actualRequests, func(i, j int) bool {
-		return bytes.Compare(actualRequests[i][:], actualRequests[j][:]) == -1
-	})
-	require.Equal(t, expectedIDs, actualRequests)
+	require.Equal(t, map[core.RecordID]map[core.RecordID]struct{}{
+		obj: {
+			expectedIDs[0]: struct{}{},
+		},
+	}, s.GetRequests())
 }
 
 func TestRecentObjectsIndex_ClearObjects(t *testing.T) {

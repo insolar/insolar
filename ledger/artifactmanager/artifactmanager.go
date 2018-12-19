@@ -91,7 +91,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 
 	rec := record.RequestRecord{
 		Payload: message.ParcelToBytes(parcel),
-		Object:  obj,
+		Object:  *obj.Record(),
 	}
 	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.Pulse.PulseNumber, &rec)
 	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
@@ -493,7 +493,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 
 // RegisterResult saves VM method call result.
 func (m *LedgerArtifactManager) RegisterResult(
-	ctx context.Context, request core.RecordRef, payload []byte,
+	ctx context.Context, object, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	var err error
 	defer instrument(ctx, "RegisterResult").err(&err).end()
@@ -506,6 +506,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 	recid, err := m.setRecord(
 		ctx,
 		&record.ResultRecord{
+			Object:  *object.Record(),
 			Request: request,
 			Payload: payload,
 		},

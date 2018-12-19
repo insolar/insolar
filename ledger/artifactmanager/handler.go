@@ -122,11 +122,11 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	}
 
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
-	if _, ok := rec.(record.Request); ok {
-		recentStorage.AddPendingRequest(*id)
+	if request, ok := rec.(record.Request); ok {
+		recentStorage.AddPendingRequest(request.GetObject(), *id)
 	}
 	if result, ok := rec.(*record.ResultRecord); ok {
-		recentStorage.RemovePendingRequest(*result.Request.Record())
+		recentStorage.RemovePendingRequest(result.Object, *result.Request.Record())
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -806,17 +806,23 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
-	for id, request := range msg.PendingRequests {
-		newID, err := h.db.SetRecord(ctx, jetID, id.Pulse(), record.DeserializeRecord(request))
-		if err != nil {
-			inslog.Error(err)
-			continue
+	for objID, requests := range msg.PendingRequests {
+		for reqID, request := range requests {
+			newID, err := h.db.SetRecord(ctx, jetID, reqID.Pulse(), record.DeserializeRecord(request))
+			if err != nil {
+				inslog.Error(err)
+				continue
+			}
+			if !bytes.Equal(reqID.Bytes(), newID.Bytes()) {
+				inslog.Errorf(
+					"Problems with saving the pending request, ids don't match - %v  %v",
+					reqID.Bytes(),
+					newID.Bytes(),
+				)
+				continue
+			}
+			recentStorage.AddPendingRequest(objID, reqID)
 		}
-		if !bytes.Equal(id.Bytes(), newID.Bytes()) {
-			inslog.Errorf("Problems with saving the pending request, ids don't match - %v  %v", id.Bytes(), newID.Bytes())
-			continue
-		}
-		recentStorage.AddPendingRequest(id)
 	}
 
 	for id, meta := range msg.RecentObjects {

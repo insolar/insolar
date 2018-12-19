@@ -776,13 +776,18 @@ func TestLedgerArtifactManager_RegisterResult(t *testing.T) {
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
+	objID := core.RecordID{1, 2, 3}
 	request := genRandomRef(0)
-	requestID, err := am.RegisterResult(ctx, *request, []byte{1, 2, 3})
+	requestID, err := am.RegisterResult(ctx, *core.NewRecordRef(core.RecordID{}, objID), *request, []byte{1, 2, 3})
 	assert.NoError(t, err)
 
 	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), requestID)
 	assert.NoError(t, err)
-	assert.Equal(t, record.ResultRecord{Request: *request, Payload: []byte{1, 2, 3}}, *rec.(*record.ResultRecord))
+	assert.Equal(t, record.ResultRecord{
+		Object:  objID,
+		Request: *request,
+		Payload: []byte{1, 2, 3},
+	}, *rec.(*record.ResultRecord))
 }
 
 func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {

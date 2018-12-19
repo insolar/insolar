@@ -26,12 +26,13 @@ import (
 type Request interface {
 	Record
 	GetPayload() []byte
+	GetObject() core.RecordID
 }
 
 // RequestRecord is a contract execution request.
 type RequestRecord struct {
 	Payload []byte
-	Object  core.RecordRef
+	Object  core.RecordID
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
@@ -45,4 +46,9 @@ func (r *RequestRecord) Type() TypeID { return typeCallRequest }
 // GetPayload returns payload. Required for Record interface implementation.
 func (r *RequestRecord) GetPayload() []byte {
 	return r.Payload
+}
+
+// GetObject returns request object.
+func (r *RequestRecord) GetObject() core.RecordID {
+	return r.Object
 }
