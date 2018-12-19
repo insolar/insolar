@@ -28,3 +28,8 @@ type unsafeConnectionHolder interface {
 	Size() int
 	Reset()
 }
+
+func newUnsafeConnectionHolder() unsafeConnectionHolder {
+	return newUnsafeConnectionHolderImpl()
+}
+
