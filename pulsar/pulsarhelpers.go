@@ -83,11 +83,12 @@ func (currentPulsar *Pulsar) clearState() {
 func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
 	e := currentPulsar.EntropyGenerator.GenerateEntropy()
 	currentPulsar.SetGeneratedEntropy(&e)
-	signature, err := signData(currentPulsar.CryptographyService, currentPulsar.GetGeneratedEntropy())
+
+	sign, err := currentPulsar.CryptographyService.Sign(currentPulsar.GetGeneratedEntropy()[:])
 	if err != nil {
 		return err
 	}
-	currentPulsar.GeneratedEntropySign = signature
+	currentPulsar.GeneratedEntropySign = sign.Bytes()
 
 	return nil
 }
