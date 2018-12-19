@@ -66,4 +66,20 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		require.Equal(t, handshakePayload, payload.Body.(*HandshakePayload))
 	})
 
+	t.Run("EntropySignaturePayload payload", func(t *testing.T){
+		// Arrange
+		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
+		entropySignPayload := &EntropySignaturePayload{EntropySignature: entropyGenerator.GenerateEntropy()[:]}
+
+		// Act
+		payload, firstError := pulsar.preparePayload(entropySignPayload)
+		require.NotNil(t, payload)
+		isVerified, secondError := pulsar.checkPayloadSignature(payload)
+
+		// Assert
+		require.NoError(t, firstError)
+		require.NoError(t, secondError)
+		require.Equal(t, true, isVerified)
+		require.Equal(t, entropySignPayload, payload.Body.(*EntropySignaturePayload))
+	})
 }
