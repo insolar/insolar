@@ -132,24 +132,24 @@ func (g *Genesis) activateRootDomain(
 
 func (g *Genesis) activateNodeDomain(
 	ctx context.Context, domain *core.RecordID, cb *ContractsBuilder,
-) error {
+) (core.ObjectDescriptor, error) {
 	nd, err := nodedomain.NewNodeDomain()
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ]")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
 	instanceData, err := serializeInstance(nd)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ]")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
 	contractID, err := g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "NodeDomain"}})
 
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 	contract := core.NewRecordRef(*domain, *contractID)
-	_, err = g.ArtifactManager.ActivateObject(
+	desc, err := g.ArtifactManager.ActivateObject(
 		ctx,
 		core.RecordRef{},
 		*contract,
@@ -159,12 +159,12 @@ func (g *Genesis) activateNodeDomain(
 		instanceData,
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 
 	g.nodeDomainRef = contract
 
-	return nil
+	return desc, nil
 }
 
 func (g *Genesis) activateRootMember(
@@ -446,6 +446,24 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 	return nil
 }
 
-func (g *Genesis) updateNodeIndex(nodes []genesisNode) error {
+func (g *Genesis) updateNodeDomainIndex(ctx context.Context, nodes []genesisNode) error {
+
+	indexMap := make(map[string]string)
+	for _, node := range nodes {
+		indexMap[node.node.PublicKey] = node.ref.String()
+	}
+	updateData, err := serializeInstance(&nodedomain.NodeDomain{NodeIndexPK: indexMap})
+	if err != nil {
+		return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't serialize NodeDomain")
+	}
+
+	g.ArtifactManager.UpdateObject(
+		ctx,
+		g.rootDomainRef,
+		g.nodeDomainRef,
+		,
+		updateData,
+	)
+
 	return nil
 }
