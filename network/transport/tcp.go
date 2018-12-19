@@ -92,18 +92,18 @@ func (t *tcpTransport) send(recvAddress string, data []byte) error {
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
-func (t *tcpTransport) openTCP(ctx context.Context, addr *net.TCPAddr) (net.Conn, error) {
+func (t *tcpTransport) createConnection(ctx context.Context, addr *net.TCPAddr) (net.Conn, error) {
 	logger := inslogger.FromContext(ctx)
 
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
-		logger.Errorf("[ openTCP ] Failed to open connection to %s: %s", addr, err.Error())
-		return nil, errors.Wrap(err, "[ openTCP ] Failed to open connection")
+		logger.Errorf("[ createConnection ] Failed to open connection to %s: %s", addr, err.Error())
+		return nil, errors.Wrap(err, "[ createConnection ] Failed to open connection")
 	}
 
 	err = conn.SetKeepAlive(true)
 	if err != nil {
-		logger.Error("[ openTCP ] Failed to set keep alive")
+		logger.Error("[ createConnection ] Failed to set keep alive")
 	}
 
 	return conn, nil
