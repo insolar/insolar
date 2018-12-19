@@ -94,6 +94,34 @@ type VectorPayload struct {
 	Vector      map[string]*BftCell
 }
 
+func (vp *VectorPayload) Hash(hasher core.Hasher) ([]byte, error) {
+	var sortedKeys []string
+	for key := range  vp.Vector{
+		sortedKeys = append(sortedKeys, key)
+	}
+	sort.Strings(sortedKeys)
+
+	cborH := &codec.CborHandle{}
+	for _, key := range sortedKeys{
+		var b bytes.Buffer
+		enc := codec.NewEncoder(&b, cborH)
+		err := enc.Encode(vp.Vector[key])
+		if err != nil {
+			return nil, err
+		}
+		_, err = hasher.Write(b.Bytes())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err := hasher.Write(vp.PulseNumber.Bytes())
+	if err != nil{
+		return nil, err
+	}
+
+	return hasher.Sum(nil), nil
+}
 // PulsePayload is a struct for sending finished pulse to all pulsars
 type PulsePayload struct {
 	Pulse core.Pulse
