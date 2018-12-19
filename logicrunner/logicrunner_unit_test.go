@@ -78,6 +78,42 @@ func TestOnPulse(t *testing.T) {
 	require.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
 }
 
+func TestPendingFinished(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	mb := testutils.NewMessageBusMock(t)
+	pulse := core.Pulse{}
+	objectRef := testutils.RandomRef()
+
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	lr.MessageBus = mb
+
+	ps := testutils.NewPulseStorageMock(t)
+	ps.CurrentMock.Return(&pulse, nil)
+	lr.PulseStorage = ps
+
+	es := &ExecutionState{
+		Behaviour: &ValidationSaver{},
+		Current:   &CurrentExecution{},
+		pending:   NotPending,
+	}
+
+	// make sure that if there is no pending finishPendingIfNeeded returns false,
+	// doesn't send PendingFinished message and doesn't change ExecutionState.pending
+	require.False(t, lr.finishPendingIfNeeded(ctx, es, objectRef))
+	require.Zero(t, mb.SendCounter)
+	require.Equal(t, NotPending, es.pending)
+
+	// make sure that in pending case finishPendingIfNeeded returns true
+	// sends PendingFinished message and sets ExecutionState.pending back to NotPending
+	es.pending = InPending
+	mb.SendMock.Expect(ctx, &message.PendingFinished{Reference: objectRef}, pulse, nil).Return(&reply.ID{}, nil)
+	require.True(t, lr.finishPendingIfNeeded(ctx, es, objectRef))
+	require.Equal(t, NotPending, es.pending)
+}
+
 func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
 	t *testing.T,
 ) {
