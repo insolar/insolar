@@ -75,6 +75,19 @@ type EntropyPayload struct {
 	Entropy     core.Entropy
 }
 
+func (ep *EntropyPayload) Hash(hasher core.Hasher) ([]byte, error) {
+	_, err := hasher.Write(ep.Entropy[:])
+	if err != nil{
+		return nil, err
+	}
+	_, err = hasher.Write(ep.PulseNumber.Bytes())
+	if err != nil{
+		return nil, err
+	}
+
+	return hasher.Sum(nil), err
+}
+
 // VectorPayload is a struct for sending vector of Entropy step
 type VectorPayload struct {
 	PulseNumber core.PulseNumber
