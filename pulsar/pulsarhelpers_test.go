@@ -141,4 +141,53 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 			require.Equal(t, secondVector, payload.Body.(*VectorPayload))
 		})
 	})
+	t.Run("PulsePayload payload", func(t *testing.T){
+		// Arrange
+		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
+		firstEntropy := entropyGenerator.GenerateEntropy()
+		secondEntropy := entropyGenerator.GenerateEntropy()
+		pulsePayload := &PulsePayload{
+			Pulse : core.Pulse{
+				Entropy: entropyGenerator.GenerateEntropy(),
+				Signs: map[string]core.PulseSenderConfirmation{
+					"first" : core.PulseSenderConfirmation{Entropy:firstEntropy},
+					"second" : core.PulseSenderConfirmation{Entropy:secondEntropy},
+				},
+		}}
+		secondPulsePayload := &PulsePayload{
+			Pulse : core.Pulse{
+				Entropy: entropyGenerator.GenerateEntropy(),
+				Signs: map[string]core.PulseSenderConfirmation{
+					"second" : core.PulseSenderConfirmation{Entropy:secondEntropy},
+					"first" : core.PulseSenderConfirmation{Entropy:firstEntropy},
+				},
+			}}
+
+		t.Run("preparePayload works for PulsePayload", func(t *testing.T){
+			// Act
+			payload, firstError := pulsar.preparePayload(pulsePayload)
+			require.NotNil(t, payload)
+			isVerified, secondError := pulsar.checkPayloadSignature(payload)
+
+			// Assert
+			require.NoError(t, firstError)
+			require.NoError(t, secondError)
+			require.Equal(t, true, isVerified)
+			require.Equal(t, pulsePayload, payload.Body.(*PulsePayload))
+		})
+
+		t.Run("checkPayloadSignature work for maps", func(t *testing.T){
+			// Act
+			payload, firstError := pulsar.preparePayload(pulsePayload)
+			require.NotNil(t, payload)
+			payload.Body = secondPulsePayload
+			isVerified, secondError := pulsar.checkPayloadSignature(payload)
+
+			// Assert
+			require.NoError(t, firstError)
+			require.NoError(t, secondError)
+			require.Equal(t, true, isVerified)
+			require.Equal(t, secondPulsePayload, payload.Body.(*PulsePayload))
+		})
+	})
 }
