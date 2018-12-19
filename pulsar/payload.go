@@ -49,10 +49,24 @@ func (hp *HandshakePayload) Hash(hasher core.Hasher) ([]byte, error) {
 
 	return hasher.Sum(nil), err
 }
+
 // EntropySignaturePayload is a struct for sending Sign of Entropy step
 type EntropySignaturePayload struct {
-	PulseNumber core.PulseNumber
-	Signature   []byte
+	PulseNumber      core.PulseNumber
+	EntropySignature []byte
+}
+
+func (es *EntropySignaturePayload) Hash(hasher core.Hasher) ([]byte, error) {
+	_, err := hasher.Write(es.EntropySignature[:])
+	if err != nil{
+		return nil, err
+	}
+	_, err = hasher.Write(es.PulseNumber.Bytes())
+	if err != nil{
+		return nil, err
+	}
+
+	return hasher.Sum(nil), err
 }
 
 // EntropyPayload is a struct for sending Entropy step
