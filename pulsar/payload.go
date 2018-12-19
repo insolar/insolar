@@ -41,6 +41,14 @@ type HandshakePayload struct {
 	Entropy core.Entropy
 }
 
+func (hp *HandshakePayload) Hash(hasher core.Hasher) ([]byte, error) {
+	_, err := hasher.Write(hp.Entropy[:])
+	if err != nil{
+		return nil, err
+	}
+
+	return hasher.Sum(nil), err
+}
 // EntropySignaturePayload is a struct for sending Sign of Entropy step
 type EntropySignaturePayload struct {
 	PulseNumber core.PulseNumber
