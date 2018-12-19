@@ -70,7 +70,7 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 		sequence: new(uint64),
 
 		disconnectStarted:  make(chan bool, 1),
-		disconnectFinished: make(chan bool),
+		disconnectFinished: make(chan bool, 1),
 
 		mutex: &sync.RWMutex{},
 
