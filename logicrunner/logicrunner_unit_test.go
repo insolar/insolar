@@ -97,73 +97,35 @@ func TestPendingFinished(t *testing.T) {
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 	lr.MessageBus = mb
 
-	// test empty lr
 	pulse := core.Pulse{}
 
 	ps := testutils.NewPulseStorageMock(t)
 	ps.CurrentMock.Return(&pulse, nil)
 	lr.PulseStorage = ps
 
-	err := lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-
 	objectRef := testutils.RandomRef()
 
-	// test empty es
-	lr.state[objectRef] = &ObjectState{ExecutionState: &ExecutionState{Behaviour: &ValidationSaver{}}}
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	require.Nil(t, lr.state[objectRef].ExecutionState)
+	es := &ExecutionState{
+		Behaviour: &ValidationSaver{},
+		Current:   &CurrentExecution{},
+		pending:   NotPending,
+	}
+
+	// make sure that if there is no pending finishPendingIfNeeded returns false,
+	// doesn't send PendingFinished message and doesn't change ExecutionState.pending
+	pendingFinishedWasSent = false
+	require.False(t, lr.finishPendingIfNeeded(ctx, es, objectRef))
 	require.False(t, pendingFinishedWasSent)
+	require.Equal(t, NotPending, es.pending)
 
-	// test empty es with query in current
-	lr.state[objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-		},
-	}
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	///require.True(t, lr.state[objectRef].ExecutionState.pending)
+	es.pending = InPending
 
-	// make sure finishPendingIfNeeded sends PendingFinished message and sets ExecutionState.pending back to false
+	// make sure that in pending case finishPendingIfNeeded returns true
+	// sends PendingFinished message and sets ExecutionState.pending back to NotPending
 	pendingFinishedWasSent = false
-	require.True(t, lr.finishPendingIfNeeded(ctx, lr.state[objectRef].ExecutionState, objectRef))
+	require.True(t, lr.finishPendingIfNeeded(ctx, es, objectRef))
 	require.True(t, pendingFinishedWasSent)
-	///require.False(t, lr.state[objectRef].ExecutionState.pending)
-
-	// test empty es with query in current and query in queue - es.pending true, message.ExecutorResults.Pending = true, message.ExecutorResults.Queue one element
-	result := make(chan ExecutionQueueResult, 1)
-
-	// TODO maybe need do something more stable and easy to debug
-	go func() {
-		<-result
-	}()
-
-	qe := ExecutionQueueElement{
-		result: result,
-	}
-
-	queue := append(make([]ExecutionQueueElement, 0), qe)
-
-	lr.state[objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-			Queue:     queue,
-		},
-	}
-
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	///require.True(t, lr.state[objectRef].ExecutionState.pending)
-
-	// once again, make sure finishPendingIfNeeded sends PendingFinished message and sets ExecutionState.pending back to false
-	pendingFinishedWasSent = false
-	require.True(t, lr.finishPendingIfNeeded(ctx, lr.state[objectRef].ExecutionState, objectRef))
-	require.True(t, pendingFinishedWasSent)
-	///require.False(t, lr.state[objectRef].ExecutionState.pending)
+	require.Equal(t, NotPending, es.pending)
 }
 
 func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
