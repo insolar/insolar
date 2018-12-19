@@ -237,21 +237,11 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	parcelCtx := parcel.Context(ctx)
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
-	sender := parcel.GetSender()
-
 	scope := newReaderScope(&mb.globalLock)
 	scope.Lock(ctx, "Delivering ...")
 	defer scope.Unlock(ctx, "Delivering done")
 
-	senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
-	if mb.signmessages {
-		err := mb.ParcelFactory.Validate(senderKey, parcel)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to check a message sign")
-		}
-	}
-
-	if err := mb.checkSenderOfParcel(parcelCtx, parcel, sender); err != nil {
+	if err := mb.checkParcel(parcelCtx, parcel); err != nil {
 		return nil, err
 	}
 
@@ -274,7 +264,16 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	return buf.Bytes(), nil
 }
 
-func (mb *MessageBus) checkSenderOfParcel(ctx context.Context, parcel core.Parcel, sender core.RecordRef) error {
+func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error {
+	sender := parcel.GetSender()
+
+	if mb.signmessages {
+		senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
+		if err := mb.ParcelFactory.Validate(senderKey, parcel); err != nil {
+			return errors.Wrap(err, "failed to check a message sign")
+		}
+	}
+
 	if parcel.DelegationToken() == nil {
 		valid, err := mb.DelegationTokenFactory.Verify(parcel)
 		if err != nil {
@@ -329,6 +328,7 @@ func (rs *readerScope) Lock(ctx context.Context, info string) {
 	rs.locked = true
 }
 
+// Unlock unlocks scope if it locked. Do nothing if scope already unlocked.
 func (rs *readerScope) Unlock(ctx context.Context, info string) {
 	if rs.locked {
 		rs.locked = false
