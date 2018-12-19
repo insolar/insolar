@@ -122,6 +122,7 @@ func (vp *VectorPayload) Hash(hasher core.Hasher) ([]byte, error) {
 
 	return hasher.Sum(nil), nil
 }
+
 // PulsePayload is a struct for sending finished pulse to all pulsars
 type PulsePayload struct {
 	Pulse core.Pulse
@@ -174,3 +175,28 @@ func (pp *PulsePayload) Hash(hasher core.Hasher) ([]byte, error) {
 
 	return hasher.Sum(nil), nil
 }
+
+type PulseSenderConfirmationPayload struct {
+	core.PulseSenderConfirmation
+}
+
+func (ps *PulseSenderConfirmationPayload) Hash(hasher core.Hasher) ([]byte, error) {
+	_, err := hasher.Write(ps.PulseNumber.Bytes())
+	if err != nil{
+		return nil, err
+	}
+	_, err = hasher.Write([]byte(ps.ChosenPublicKey))
+	if err != nil{
+		return nil, err
+	}
+	_, err = hasher.Write(ps.Entropy[:])
+	if err != nil{
+		return nil, err
+	}
+	_, err = hasher.Write(ps.Signature)
+	if err != nil{
+		return nil, err
+	}
+	return hasher.Sum(nil), nil
+}
+
