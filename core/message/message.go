@@ -210,8 +210,6 @@ func init() {
 	gob.Register(core.RecordRef{})
 	gob.Register(&GetChildren{})
 
-	gob.Register(&core.Arguments{})
-
 	// NodeCert
 	gob.Register(&NodeSignPayload{})
 }
