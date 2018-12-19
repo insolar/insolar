@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -78,7 +79,7 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 		}
 
 		logger.Debugf("[ getOrCreateConnection ] Connection to %s closed by peer, closing it on our side", address)
-		closeConnectionVerbose(conn)
+		utils.CloseVerbose(conn)
 
 		logger.Debugf("[ getOrCreateConnection ] Delete connection to %s from pool: %s", address)
 		cp.unsafeConnectionsHolder.Delete(address)
@@ -105,6 +106,8 @@ func (cp *connectionPool) Reset() {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
-	cp.unsafeConnectionsHolder.Iterate(closeConnectionVerbose)
+	cp.unsafeConnectionsHolder.Iterate(func(conn net.Conn) {
+		utils.CloseVerbose(conn)
+	})
 	cp.unsafeConnectionsHolder.Reset()
 }
