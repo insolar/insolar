@@ -18,7 +18,6 @@ package pulsar
 
 import (
 	"context"
-	"crypto"
 	"net"
 	"testing"
 	"time"
@@ -198,18 +197,35 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
 
-	p7ulseDistributor := testutils.NewPulseDistributorMock(t)
+	pulseDistributor := testutils.NewPulseDistributorMock(t)
 	pulseDistributor.DistributeFunc = func(p context.Context, p1 *core.Pulse) {
 		require.Equal(t, core.FirstPulseNumber+1, int(p1.PulseNumber))
 	}
 
-	keyProcessor := platformpolicy.NewKeyProcessor()
+	keyProcessorFirst := platformpolicy.NewKeyProcessor()
 
-	firstPrivateKey, err := keyProcessor.GeneratePrivateKey()
+	firstPrivateKey, err := keyProcessorFirst.GeneratePrivateKey()
 	require.NoError(t, err)
-	cryptoService := cryptography.NewKeyBoundCryptographyService(firstPrivateKey)
+	firstCryptoService := cryptography.NewKeyBoundCryptographyService(firstPrivateKey)
+	pubFirstKey, err := firstCryptoService.GetPublicKey()
+	require.NoError(t, err)
+	exporteFirstKey, err := keyProcessorFirst.ExportPublicKey(pubFirstKey)
+	require.NoError(t, err)
+	inslogger.FromContext(ctx).Infof("first outside - %v", string(exporteFirstKey))
 
-	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	keyProcessorSecond := platformpolicy.NewKeyProcessor()
+
+	secondPrivateKey, err := keyProcessorSecond.GeneratePrivateKey()
+	require.NoError(t, err)
+	secondCryptoService := cryptography.NewKeyBoundCryptographyService(secondPrivateKey)
+	pubSecondKey, err := secondCryptoService.GetPublicKey()
+	require.NoError(t, err)
+	exportedSecondKey, err := keyProcessorSecond.ExportPublicKey(pubSecondKey)
+	require.NoError(t, err)
+	inslogger.FromContext(ctx).Infof("second outside - %v", string(exportedSecondKey))
+
+	pcsFirst := platformpolicy.NewPlatformCryptographyScheme()
+	pcsSecond := platformpolicy.NewPlatformCryptographyScheme()
 
 	firstStateSwitcher := &StateSwitcherImpl{}
 	firstPulsar, err := NewPulsar(
@@ -217,17 +233,17 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 			ConnectionType:      "tcp",
 			MainListenerAddress: ":1140",
 			Neighbours: []configuration.PulsarNodeAddress{
-				{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: "publicKey"},
+				{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: string(exportedSecondKey)},
 			},
 			ReceivingSignTimeout:           50,
 			ReceivingNumberTimeout:         50,
 			ReceivingSignsForChosenTimeout: 50,
 			ReceivingVectorTimeout:         50,
 		},
-		service,
-		pcs,
-		keyProcessor,
-		newPulseDistributor(t),
+		firstCryptoService,
+		pcsFirst,
+		keyProcessorFirst,
+		pulseDistributor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
@@ -237,23 +253,24 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	firstStateSwitcher.setState(WaitingForStart)
 	firstStateSwitcher.SetPulsar(firstPulsar)
 
+
 	secondStateSwitcher := &StateSwitcherImpl{}
 	secondPulsar, err := NewPulsar(
 		configuration.Pulsar{
 			ConnectionType:      "tcp",
 			MainListenerAddress: ":1641",
 			Neighbours: []configuration.PulsarNodeAddress{
-				{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: "publicKey"},
+				{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: string(exporteFirstKey)},
 			},
 			ReceivingSignTimeout:           50,
 			ReceivingNumberTimeout:         50,
 			ReceivingSignsForChosenTimeout: 50,
 			ReceivingVectorTimeout:         50,
 		},
-		service,
-		pcs,
-		keyProcessor,
-		newPulseDistributor(t),
+		secondCryptoService,
+		pcsSecond,
+		keyProcessorSecond,
+		pulseDistributor,
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
@@ -265,29 +282,33 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	go firstPulsar.StartServer(ctx)
 	go secondPulsar.StartServer(ctx)
-	err = firstPulsar.EstablishConnectionToPulsar(ctx, "publicKey")
+	err = firstPulsar.EstablishConnectionToPulsar(ctx, string(exportedSecondKey))
 	require.NoError(t, err)
 
 	// Act
 	go func() {
-		err := firstPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
+		err = firstPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
 		require.NoError(t, err)
 	}()
 
-	currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
-	require.NoError(t, err)
-	count := 50
-	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-		time.Sleep(50 * time.Millisecond)
-		currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
-		require.NoError(t, err)
-		count--
-	}
-	time.Sleep(200 * time.Millisecond)
+	pulseDistributor.MinimockWait(300000000 * time.Millisecond)
+
+	// currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
+	// require.NoError(t, err)
+	// count := 50
+	// for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
+	// 	time.Sleep(50 * time.Millisecond)
+	// 	currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
+	// 	require.NoError(t, err)
+	// 	count--
+	// }
+	// time.Sleep(200 * time.Millisecond)
 
 	// Assert
 	require.NoError(t, err)
-	require.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
+
+	require.Equal(t, uint64(1), pulseDistributor.DistributeCounter)
+
 	require.Equal(t, WaitingForStart, firstPulsar.StateSwitcher.GetState())
 	require.Equal(t, WaitingForStart, secondPulsar.StateSwitcher.GetState())
 	require.Equal(t, core.GenesisPulse.PulseNumber+1, firstPulsar.GetLastPulse().PulseNumber)
@@ -296,14 +317,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	require.Equal(t, 2, len(secondPulsar.GetLastPulse().Signs))
 
 	defer func() {
-		usualNodeNetwork.Stop(ctx)
-		bootstrapNodeNetwork.Stop(ctx)
-
 		firstPulsar.StopServer(ctx)
 		secondPulsar.StopServer(ctx)
-
-		bootstrapLedgerCleaner()
-		usualLedgerCleaner()
 	}()
 }
 
