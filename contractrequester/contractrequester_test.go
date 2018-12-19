@@ -19,7 +19,12 @@ package contractrequester
 import (
 	"context"
 	"errors"
+	"runtime"
 	"testing"
+
+	"github.com/insolar/insolar/core/message"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
@@ -59,53 +64,6 @@ func TestNew(t *testing.T) {
 	require.Equal(t, pm, contractRequester.PulseManager)
 }
 
-func TestContractRequester_routeCall(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	testResult := &reply.CallMethod{}
-
-	pm := testutils.NewPulseManagerMock(t)
-	pm.CurrentMock.Return(core.GenesisPulse, nil)
-
-	cReq := &ContractRequester{
-		PulseManager: pm,
-		MessageBus:   mockMessageBus(t, testResult),
-	}
-
-	routResult, err := cReq.routeCall(ctx, testutils.RandomRef(), "TestMethod", core.Arguments{})
-
-	require.NoError(t, err)
-	require.Equal(t, testResult, routResult)
-}
-
-func TestContractRequester_routeCall_SendError(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-
-	pm := testutils.NewPulseManagerMock(t)
-	pm.CurrentMock.Return(core.GenesisPulse, nil)
-
-	cReq := &ContractRequester{
-		PulseManager: pm,
-		MessageBus:   mockMessageBusError(t),
-	}
-
-	routResult, err := cReq.routeCall(ctx, testutils.RandomRef(), "TestMethod", core.Arguments{})
-
-	require.Contains(t, err.Error(), "couldn't send message")
-	require.Contains(t, err.Error(), "test error message")
-	require.Nil(t, routResult)
-}
-
-func TestContractRequester_routeCall_MessageBusNil(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-
-	cReq := &ContractRequester{}
-
-	routResult, err := cReq.routeCall(ctx, testutils.RandomRef(), "TestMethod", core.Arguments{})
-
-	require.Contains(t, err.Error(), "message bus was not set during initialization")
-	require.Nil(t, routResult)
-}
-
 func TestContractRequester_SendRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ref := testutils.RandomRef()
@@ -114,11 +72,28 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	pm := testutils.NewPulseManagerMock(t)
 	pm.CurrentMock.Return(core.GenesisPulse, nil)
 
-	cReq := &ContractRequester{
-		PulseManager: pm,
-		MessageBus:   mockMessageBus(t, testResult),
-	}
+	mbm := mockMessageBus(t, testResult)
+	cReq, err := New()
+	assert.NoError(t, err)
+	cReq.MessageBus = mbm
+	cReq.PulseManager = pm
 
+	mbm.MustRegisterMock.Return()
+	cReq.Start(ctx)
+
+	go func() {
+		for len(cReq.ResultMap) == 0 {
+			runtime.Gosched()
+		}
+		cReq.ResultMutex.Lock()
+		for k, v := range cReq.ResultMap {
+			v <- &message.ReturnResults{
+				Request: k,
+				Reply:   &reply.CallMethod{},
+			}
+		}
+		cReq.ResultMutex.Unlock()
+	}()
 	result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
 
 	require.NoError(t, err)
@@ -132,14 +107,30 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	pm := testutils.NewPulseManagerMock(t)
 	pm.CurrentMock.Return(core.GenesisPulse, nil)
 
-	cReq := &ContractRequester{
-		PulseManager: pm,
-		MessageBus:   mockMessageBusError(t),
-	}
+	mbm := mockMessageBus(t, &reply.CallMethod{})
+	cReq, err := New()
+	assert.NoError(t, err)
+	cReq.MessageBus = mbm
+	cReq.PulseManager = pm
+
+	mbm.MustRegisterMock.Return()
+	cReq.Start(ctx)
+
+	go func() {
+		for len(cReq.ResultMap) == 0 {
+			runtime.Gosched()
+
+		}
+		cReq.ResultMutex.Lock()
+		for k, v := range cReq.ResultMap {
+			v <- &message.ReturnResults{
+				Request: k,
+				Reply:   nil,
+			}
+		}
+		cReq.ResultMutex.Unlock()
+	}()
 
 	result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
-
-	require.Contains(t, err.Error(), "Can't route call")
-	require.Contains(t, err.Error(), "test error message")
 	require.Nil(t, result)
 }

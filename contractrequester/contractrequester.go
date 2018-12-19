@@ -60,39 +60,17 @@ func randomUint64() uint64 {
 	return binary.LittleEndian.Uint64(buf)
 }
 
-func (cr *ContractRequester) routeCall(ctx context.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
-	if cr.MessageBus == nil {
-		return nil, errors.New("[ ContractRequester::routeCall ] message bus was not set during initialization")
-	}
-
-	e := &message.CallMethod{
-		BaseLogicMessage: message.BaseLogicMessage{Nonce: randomUint64()},
-		ObjectRef:        ref,
-		Method:           method,
-		Arguments:        args,
-	}
-
-	currentPulse, err := cr.PulseManager.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := cr.MessageBus.Send(ctx, e, *currentPulse, nil)
-	if err != nil {
-		return nil, errors.Wrapf(err, "[ ContractRequester::routeCall ] couldn't send message: %s", ref.String())
-	}
-
-	return res, nil
-}
-
-// SendRequest makes call to method of contract by its ref
+// SendRequest makes synchronously call to method of contract by its ref without additional information
 func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
 	}
 
-	routResult, err := cr.routeCall(ctx, *ref, method, args)
+	bm := &message.BaseLogicMessage{
+		Nonce: randomUint64(),
+	}
+	routResult, err := cr.CallMethod(ctx, bm, false, ref, method, args, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
 	}
@@ -125,7 +103,9 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		ObjectRef:        *ref,
 		Method:           method,
 		Arguments:        argsIn,
-		ProxyPrototype:   *mustPrototype,
+	}
+	if mustPrototype != nil {
+		msg.ProxyPrototype = *mustPrototype
 	}
 
 	currentSlotPulse, err := cr.PulseManager.Current(ctx)
@@ -153,22 +133,27 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	cr.ResultMutex.Unlock()
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
-	ret := <-ch
-	inslogger.FromContext(ctx).Debug("GOT Method results")
+	select {
+	case ret := <-ch:
+		inslogger.FromContext(ctx).Debug("GOT Method results")
+		if ret.Error != "" {
+			return nil, errors.New(ret.Error)
+		}
+		retReply, ok := ret.Reply.(*reply.CallMethod)
+		if !ok {
+			return nil, errors.New("Reply is not CallMethod")
 
-	if ret.Error != "" {
-		return nil, errors.New(ret.Error)
+		}
+		return &reply.CallMethod{
+			Request: r.Request,
+			Result:  retReply.Result,
+		}, nil
+	case <-ctx.Done():
+		cr.ResultMutex.Lock()
+		delete(cr.ResultMap, r.Request)
+		cr.ResultMutex.Unlock()
+		return nil, errors.New("canceled")
 	}
-
-	retReply, ok := ret.Reply.(*reply.CallMethod)
-	if !ok {
-		return nil, errors.New("Reply is not CallMethod")
-
-	}
-	return &reply.CallMethod{
-		Request: r.Request,
-		Result:  retReply.Result,
-	}, nil
 }
 
 func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Message, async bool,
@@ -225,6 +210,9 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		}
 		return &r.Request, nil
 	case <-ctx.Done():
+		cr.ResultMutex.Lock()
+		delete(cr.ResultMap, r.Request)
+		cr.ResultMutex.Unlock()
 		return nil, errors.New("canceled")
 	}
 }

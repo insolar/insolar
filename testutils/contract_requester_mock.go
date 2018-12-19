@@ -20,10 +20,15 @@ import (
 type ContractRequesterMock struct {
 	t minimock.Tester
 
-	CallContractFunc       func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (r core.Reply, r1 error)
-	CallContractCounter    uint64
-	CallContractPreCounter uint64
-	CallContractMock       mContractRequesterMockCallContract
+	CallConstructorFunc       func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) (r *core.RecordRef, r1 error)
+	CallConstructorCounter    uint64
+	CallConstructorPreCounter uint64
+	CallConstructorMock       mContractRequesterMockCallConstructor
+
+	CallMethodFunc       func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (r core.Reply, r1 error)
+	CallMethodCounter    uint64
+	CallMethodPreCounter uint64
+	CallMethodMock       mContractRequesterMockCallMethod
 
 	SendRequestFunc       func(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (r core.Reply, r1 error)
 	SendRequestCounter    uint64
@@ -39,19 +44,93 @@ func NewContractRequesterMock(t minimock.Tester) *ContractRequesterMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.CallContractMock = mContractRequesterMockCallContract{mock: m}
+	m.CallConstructorMock = mContractRequesterMockCallConstructor{mock: m}
+	m.CallMethodMock = mContractRequesterMockCallMethod{mock: m}
 	m.SendRequestMock = mContractRequesterMockSendRequest{mock: m}
 
 	return m
 }
 
-type mContractRequesterMockCallContract struct {
+type mContractRequesterMockCallConstructor struct {
 	mock             *ContractRequesterMock
-	mockExpectations *ContractRequesterMockCallContractParams
+	mockExpectations *ContractRequesterMockCallConstructorParams
 }
 
-//ContractRequesterMockCallContractParams represents input parameters of the ContractRequester.CallMethod
-type ContractRequesterMockCallContractParams struct {
+//ContractRequesterMockCallConstructorParams represents input parameters of the ContractRequester.CallConstructor
+type ContractRequesterMockCallConstructorParams struct {
+	p  context.Context
+	p1 core.Message
+	p2 bool
+	p3 *core.RecordRef
+	p4 *core.RecordRef
+	p5 string
+	p6 core.Arguments
+	p7 int
+}
+
+//Expect sets up expected params for the ContractRequester.CallConstructor
+func (m *mContractRequesterMockCallConstructor) Expect(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) *mContractRequesterMockCallConstructor {
+	m.mockExpectations = &ContractRequesterMockCallConstructorParams{p, p1, p2, p3, p4, p5, p6, p7}
+	return m
+}
+
+//Return sets up a mock for ContractRequester.CallConstructor to return Return's arguments
+func (m *mContractRequesterMockCallConstructor) Return(r *core.RecordRef, r1 error) *ContractRequesterMock {
+	m.mock.CallConstructorFunc = func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) (*core.RecordRef, error) {
+		return r, r1
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of ContractRequester.CallConstructor method
+func (m *mContractRequesterMockCallConstructor) Set(f func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) (r *core.RecordRef, r1 error)) *ContractRequesterMock {
+	m.mock.CallConstructorFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//CallConstructor implements github.com/insolar/insolar/core.ContractRequester interface
+func (m *ContractRequesterMock) CallConstructor(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 *core.RecordRef, p5 string, p6 core.Arguments, p7 int) (r *core.RecordRef, r1 error) {
+	atomic.AddUint64(&m.CallConstructorPreCounter, 1)
+	defer atomic.AddUint64(&m.CallConstructorCounter, 1)
+
+	if m.CallConstructorMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.CallConstructorMock.mockExpectations, ContractRequesterMockCallConstructorParams{p, p1, p2, p3, p4, p5, p6, p7},
+			"ContractRequester.CallConstructor got unexpected parameters")
+
+		if m.CallConstructorFunc == nil {
+
+			m.t.Fatal("No results are set for the ContractRequesterMock.CallConstructor")
+
+			return
+		}
+	}
+
+	if m.CallConstructorFunc == nil {
+		m.t.Fatal("Unexpected call to ContractRequesterMock.CallConstructor")
+		return
+	}
+
+	return m.CallConstructorFunc(p, p1, p2, p3, p4, p5, p6, p7)
+}
+
+//CallConstructorMinimockCounter returns a count of ContractRequesterMock.CallConstructorFunc invocations
+func (m *ContractRequesterMock) CallConstructorMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.CallConstructorCounter)
+}
+
+//CallConstructorMinimockPreCounter returns the value of ContractRequesterMock.CallConstructor invocations
+func (m *ContractRequesterMock) CallConstructorMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.CallConstructorPreCounter)
+}
+
+type mContractRequesterMockCallMethod struct {
+	mock             *ContractRequesterMock
+	mockExpectations *ContractRequesterMockCallMethodParams
+}
+
+//ContractRequesterMockCallMethodParams represents input parameters of the ContractRequester.CallMethod
+type ContractRequesterMockCallMethodParams struct {
 	p  context.Context
 	p1 core.Message
 	p2 bool
@@ -62,36 +141,36 @@ type ContractRequesterMockCallContractParams struct {
 }
 
 //Expect sets up expected params for the ContractRequester.CallMethod
-func (m *mContractRequesterMockCallContract) Expect(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) *mContractRequesterMockCallContract {
-	m.mockExpectations = &ContractRequesterMockCallContractParams{p, p1, p2, p3, p4, p5, p6}
+func (m *mContractRequesterMockCallMethod) Expect(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) *mContractRequesterMockCallMethod {
+	m.mockExpectations = &ContractRequesterMockCallMethodParams{p, p1, p2, p3, p4, p5, p6}
 	return m
 }
 
 //Return sets up a mock for ContractRequester.CallMethod to return Return's arguments
-func (m *mContractRequesterMockCallContract) Return(r core.Reply, r1 error) *ContractRequesterMock {
-	m.mock.CallContractFunc = func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (core.Reply, error) {
+func (m *mContractRequesterMockCallMethod) Return(r core.Reply, r1 error) *ContractRequesterMock {
+	m.mock.CallMethodFunc = func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (core.Reply, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of ContractRequester.CallMethod method
-func (m *mContractRequesterMockCallContract) Set(f func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (r core.Reply, r1 error)) *ContractRequesterMock {
-	m.mock.CallContractFunc = f
+func (m *mContractRequesterMockCallMethod) Set(f func(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (r core.Reply, r1 error)) *ContractRequesterMock {
+	m.mock.CallMethodFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //CallMethod implements github.com/insolar/insolar/core.ContractRequester interface
-func (m *ContractRequesterMock) CallContract(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (r core.Reply, r1 error) {
-	atomic.AddUint64(&m.CallContractPreCounter, 1)
-	defer atomic.AddUint64(&m.CallContractCounter, 1)
+func (m *ContractRequesterMock) CallMethod(p context.Context, p1 core.Message, p2 bool, p3 *core.RecordRef, p4 string, p5 core.Arguments, p6 *core.RecordRef) (r core.Reply, r1 error) {
+	atomic.AddUint64(&m.CallMethodPreCounter, 1)
+	defer atomic.AddUint64(&m.CallMethodCounter, 1)
 
-	if m.CallContractMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.CallContractMock.mockExpectations, ContractRequesterMockCallContractParams{p, p1, p2, p3, p4, p5, p6},
+	if m.CallMethodMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.CallMethodMock.mockExpectations, ContractRequesterMockCallMethodParams{p, p1, p2, p3, p4, p5, p6},
 			"ContractRequester.CallMethod got unexpected parameters")
 
-		if m.CallContractFunc == nil {
+		if m.CallMethodFunc == nil {
 
 			m.t.Fatal("No results are set for the ContractRequesterMock.CallMethod")
 
@@ -99,22 +178,22 @@ func (m *ContractRequesterMock) CallContract(p context.Context, p1 core.Message,
 		}
 	}
 
-	if m.CallContractFunc == nil {
+	if m.CallMethodFunc == nil {
 		m.t.Fatal("Unexpected call to ContractRequesterMock.CallMethod")
 		return
 	}
 
-	return m.CallContractFunc(p, p1, p2, p3, p4, p5, p6)
+	return m.CallMethodFunc(p, p1, p2, p3, p4, p5, p6)
 }
 
-//CallContractMinimockCounter returns a count of ContractRequesterMock.CallContractFunc invocations
-func (m *ContractRequesterMock) CallContractMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.CallContractCounter)
+//CallMethodMinimockCounter returns a count of ContractRequesterMock.CallMethodFunc invocations
+func (m *ContractRequesterMock) CallMethodMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.CallMethodCounter)
 }
 
-//CallContractMinimockPreCounter returns the value of ContractRequesterMock.CallMethod invocations
-func (m *ContractRequesterMock) CallContractMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.CallContractPreCounter)
+//CallMethodMinimockPreCounter returns the value of ContractRequesterMock.CallMethod invocations
+func (m *ContractRequesterMock) CallMethodMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.CallMethodPreCounter)
 }
 
 type mContractRequesterMockSendRequest struct {
@@ -190,7 +269,11 @@ func (m *ContractRequesterMock) SendRequestMinimockPreCounter() uint64 {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ContractRequesterMock) ValidateCallCounters() {
 
-	if m.CallContractFunc != nil && atomic.LoadUint64(&m.CallContractCounter) == 0 {
+	if m.CallConstructorFunc != nil && atomic.LoadUint64(&m.CallConstructorCounter) == 0 {
+		m.t.Fatal("Expected call to ContractRequesterMock.CallConstructor")
+	}
+
+	if m.CallMethodFunc != nil && atomic.LoadUint64(&m.CallMethodCounter) == 0 {
 		m.t.Fatal("Expected call to ContractRequesterMock.CallMethod")
 	}
 
@@ -215,7 +298,11 @@ func (m *ContractRequesterMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ContractRequesterMock) MinimockFinish() {
 
-	if m.CallContractFunc != nil && atomic.LoadUint64(&m.CallContractCounter) == 0 {
+	if m.CallConstructorFunc != nil && atomic.LoadUint64(&m.CallConstructorCounter) == 0 {
+		m.t.Fatal("Expected call to ContractRequesterMock.CallConstructor")
+	}
+
+	if m.CallMethodFunc != nil && atomic.LoadUint64(&m.CallMethodCounter) == 0 {
 		m.t.Fatal("Expected call to ContractRequesterMock.CallMethod")
 	}
 
@@ -237,7 +324,8 @@ func (m *ContractRequesterMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.CallContractFunc == nil || atomic.LoadUint64(&m.CallContractCounter) > 0)
+		ok = ok && (m.CallConstructorFunc == nil || atomic.LoadUint64(&m.CallConstructorCounter) > 0)
+		ok = ok && (m.CallMethodFunc == nil || atomic.LoadUint64(&m.CallMethodCounter) > 0)
 		ok = ok && (m.SendRequestFunc == nil || atomic.LoadUint64(&m.SendRequestCounter) > 0)
 
 		if ok {
@@ -247,7 +335,11 @@ func (m *ContractRequesterMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.CallContractFunc != nil && atomic.LoadUint64(&m.CallContractCounter) == 0 {
+			if m.CallConstructorFunc != nil && atomic.LoadUint64(&m.CallConstructorCounter) == 0 {
+				m.t.Error("Expected call to ContractRequesterMock.CallConstructor")
+			}
+
+			if m.CallMethodFunc != nil && atomic.LoadUint64(&m.CallMethodCounter) == 0 {
 				m.t.Error("Expected call to ContractRequesterMock.CallMethod")
 			}
 
@@ -267,7 +359,11 @@ func (m *ContractRequesterMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ContractRequesterMock) AllMocksCalled() bool {
 
-	if m.CallContractFunc != nil && atomic.LoadUint64(&m.CallContractCounter) == 0 {
+	if m.CallConstructorFunc != nil && atomic.LoadUint64(&m.CallConstructorCounter) == 0 {
+		return false
+	}
+
+	if m.CallMethodFunc != nil && atomic.LoadUint64(&m.CallMethodCounter) == 0 {
 		return false
 	}
 
