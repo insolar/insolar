@@ -108,6 +108,9 @@ type ArtifactManager interface {
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
 
+	// GetPendingRequests returns unclosed requests for provided object.
+	GetPendingRequests(ctx context.Context, object RecordRef) ([]RecordID, error)
+
 	// GetDelegate returns provided object's delegate reference for provided type.
 	//
 	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
@@ -224,12 +227,6 @@ type ObjectDescriptor interface {
 
 	// Parent returns object's parent.
 	Parent() *RecordRef
-
-	// HasPendingRequests returns true if the object has unclosed requests.
-	HasPendingRequests() bool
-
-	// PendingRequests returns unclosed requests.
-	PendingRequests() []RecordID
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.

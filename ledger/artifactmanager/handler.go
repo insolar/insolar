@@ -75,6 +75,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeRegisterChild] = m.checkJet(h.handleRegisterChild)
 	h.replayHandlers[core.TypeSetBlob] = m.checkJet(h.handleSetBlob)
 	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
+	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleGetPendingRequests)
 
 	// Validation.
 	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
@@ -96,6 +97,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.saveParcel(h.handleRegisterChild)))
 	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.saveParcel(h.handleSetBlob)))
 	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.saveParcel(h.handleGetObjectIndex)))
+	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.saveParcel(h.handleGetPendingRequests)))
 
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.saveParcel(h.handleValidateRecord)))
@@ -293,6 +295,23 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	return &rep, nil
+}
+
+func (h *MessageHandler) handleGetPendingRequests(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.GetPendingRequests)
+	jetID := jetFromContext(ctx)
+
+	all := h.RecentStorageProvider.GetStorage(jetID).GetRequests()
+	forObject, ok := all[*msg.Object.Record()]
+	if !ok {
+		return &reply.PendingRequests{}, nil
+	}
+
+	var requests []core.RecordID
+	for reqID := range forObject {
+		requests = append(requests, reqID)
+	}
+	return &reply.PendingRequests{Requests: requests}, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
@@ -692,17 +711,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 		return nil, errors.Wrap(err, "failed to serialize index")
 	}
 
-	pendingRequests := h.RecentStorageProvider.GetStorage(jetID).GetRequests()
-	forObject, ok := pendingRequests[*msg.Object.Record()]
-	if !ok {
-		return &reply.ObjectIndex{Index: buf}, nil
-	}
-	var requestSlice []core.RecordID
-	for reqID := range forObject {
-		requestSlice = append(requestSlice, reqID)
-	}
-
-	return &reply.ObjectIndex{Index: buf, PendingRequests: requestSlice}, nil
+	return &reply.ObjectIndex{Index: buf}, nil
 }
 
 func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

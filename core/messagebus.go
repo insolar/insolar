@@ -189,6 +189,8 @@ const (
 	TypeSetBlob
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
+	// TypeGetPendingRequests fetches pending requests for object.
+	TypeGetPendingRequests
 	// TypeHotRecords saves hot-records in storage.
 	TypeHotRecords
 

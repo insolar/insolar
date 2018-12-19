@@ -80,8 +80,7 @@ func (e *Children) Type() core.ReplyType {
 
 // ObjectIndex contains serialized object index. It can be stored in DB without processing.
 type ObjectIndex struct {
-	Index           []byte
-	PendingRequests []core.RecordID
+	Index []byte
 }
 
 // Type implementation of Reply interface.
@@ -97,4 +96,14 @@ type JetMiss struct {
 // Type implementation of Reply interface.
 func (e *JetMiss) Type() core.ReplyType {
 	return TypeJetMiss
+}
+
+// PendingRequests contains unclosed requests for an object.
+type PendingRequests struct {
+	Requests []core.RecordID
+}
+
+// Type implementation of Reply interface.
+func (e *PendingRequests) Type() core.ReplyType {
+	return TypePendingRequests
 }

@@ -89,10 +89,6 @@ type TestObjectDescriptor struct {
 	ChildrenContainer []core.RecordRef
 }
 
-func (t *TestObjectDescriptor) PendingRequests() []core.RecordID {
-	panic("implement me")
-}
-
 func (t *TestObjectDescriptor) HasPendingRequests() bool {
 	panic("implement me")
 }
@@ -154,6 +150,10 @@ type TestArtifactManager struct {
 	Codes      map[core.RecordRef]*TestCodeDescriptor
 	Objects    map[core.RecordRef]*TestObjectDescriptor
 	Prototypes map[core.RecordRef]*TestObjectDescriptor
+}
+
+func (t *TestArtifactManager) GetPendingRequests(ctx context.Context, object core.RecordRef) ([]core.RecordID, error) {
+	panic("implement me")
 }
 
 // State implementation for tests

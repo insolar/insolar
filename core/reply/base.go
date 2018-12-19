@@ -64,6 +64,8 @@ const (
 	TypeObjectIndex
 	// TypeJetMiss is returned for miscalculated jets due to incomplete jet tree.
 	TypeJetMiss
+	// TypePendingRequests contains unclosed requests for an object.
+	TypePendingRequests
 
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
@@ -112,6 +114,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &GetChildrenRedirect{}, nil
 	case TypeJetMiss:
 		return &JetMiss{}, nil
+	case TypePendingRequests:
+		return &PendingRequests{}, nil
 
 	case TypeNodeSign:
 		return &NodeSign{}, nil
@@ -181,4 +185,5 @@ func init() {
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
 	gob.Register(&NodeSign{})
+	gob.Register(&PendingRequests{})
 }

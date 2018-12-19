@@ -168,12 +168,11 @@ func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.M
 		return NotPending, nil
 	}
 
-	oDesc, err := es.ArtifactManager.GetObject(ctx, msg.GetReference(), nil, false)
+	requests, err := es.ArtifactManager.GetPendingRequests(ctx, msg.ObjectRef)
 	if err != nil {
 		return NotPending, err
 	}
-
-	if oDesc.HasPendingRequests() {
+	if len(requests) != 0 {
 		return InPending, nil
 	}
 

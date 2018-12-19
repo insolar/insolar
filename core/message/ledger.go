@@ -407,3 +407,30 @@ type HotIndex struct {
 	TTL   int
 	Index []byte
 }
+
+// GetPendingRequests fetches pending requests for object.
+type GetPendingRequests struct {
+	ledgerMessage
+
+	Object core.RecordRef
+}
+
+// Type implementation of Message interface.
+func (*GetPendingRequests) Type() core.MessageType {
+	return core.TypeGetPendingRequests
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetPendingRequests) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Object, core.DynamicRoleVirtualExecutor
+}
+
+// DefaultRole returns role for this event
+func (*GetPendingRequests) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetPendingRequests) DefaultTarget() *core.RecordRef {
+	return &m.Object
+}

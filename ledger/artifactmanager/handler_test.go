@@ -417,24 +417,10 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	msg := message.GetObjectIndex{
 		Object: *genRandomRef(0),
 	}
-	pendingRequests := []core.RecordID{
-		*genRandomID(0),
-		*genRandomID(0),
-	}
-	sort.Slice(pendingRequests, func(i, j int) bool {
-		return bytes.Compare(pendingRequests[i][:], pendingRequests[j][:]) < 0
-	})
-
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
-	recentStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{
-		*msg.Object.Record(): {
-			pendingRequests[0]: struct{}{},
-			pendingRequests[1]: struct{}{},
-		},
-	})
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
@@ -465,13 +451,61 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	require.NoError(t, err)
 	indexRep, ok := rep.(*reply.ObjectIndex)
 	require.True(t, ok)
-	sort.Slice(indexRep.PendingRequests, func(i, j int) bool {
-		return bytes.Compare(indexRep.PendingRequests[i][:], indexRep.PendingRequests[j][:]) < 0
-	})
-	assert.Equal(t, pendingRequests, indexRep.PendingRequests)
 	decodedIndex, err := index.DecodeObjectLifeline(indexRep.Index)
 	require.NoError(t, err)
 	assert.Equal(t, objectIndex, *decodedIndex)
+}
+
+func TestMessageHandler_HandleGetPendingRequests(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+	msg := message.GetPendingRequests{
+		Object: *genRandomRef(0),
+	}
+	pendingRequests := []core.RecordID{
+		*genRandomID(0),
+		*genRandomID(0),
+	}
+	sort.Slice(pendingRequests, func(i, j int) bool {
+		return bytes.Compare(pendingRequests[i][:], pendingRequests[j][:]) < 0
+	})
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{
+		*msg.Object.Record(): {
+			pendingRequests[0]: struct{}{},
+			pendingRequests[1]: struct{}{},
+		},
+	})
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
+	jc.AmIMock.Return(true, nil)
+	h := NewMessageHandler(db, &configuration.Ledger{})
+	h.JetCoordinator = jc
+	h.Bus = mb
+	err := h.Init(ctx)
+	require.NoError(t, err)
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	h.RecentStorageProvider = provideMock
+
+	rep, err := h.replayHandlers[core.TypeGetPendingRequests](ctx, &message.Parcel{
+		Msg: &msg,
+	})
+	require.NoError(t, err)
+	requests, ok := rep.(*reply.PendingRequests)
+	require.True(t, ok)
+	assert.Equal(t, pendingRequests, requests.Requests)
 }
 
 func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {

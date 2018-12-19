@@ -34,11 +34,6 @@ type ObjectDescriptorMock struct {
 	CodePreCounter uint64
 	CodeMock       mObjectDescriptorMockCode
 
-	HasPendingRequestsFunc       func() (r bool)
-	HasPendingRequestsCounter    uint64
-	HasPendingRequestsPreCounter uint64
-	HasPendingRequestsMock       mObjectDescriptorMockHasPendingRequests
-
 	HeadRefFunc       func() (r *core.RecordRef)
 	HeadRefCounter    uint64
 	HeadRefPreCounter uint64
@@ -58,11 +53,6 @@ type ObjectDescriptorMock struct {
 	ParentCounter    uint64
 	ParentPreCounter uint64
 	ParentMock       mObjectDescriptorMockParent
-
-	PendingRequestsFunc       func() (r []core.RecordID)
-	PendingRequestsCounter    uint64
-	PendingRequestsPreCounter uint64
-	PendingRequestsMock       mObjectDescriptorMockPendingRequests
 
 	PrototypeFunc       func() (r *core.RecordRef, r1 error)
 	PrototypeCounter    uint64
@@ -86,12 +76,10 @@ func NewObjectDescriptorMock(t minimock.Tester) *ObjectDescriptorMock {
 	m.ChildPointerMock = mObjectDescriptorMockChildPointer{mock: m}
 	m.ChildrenMock = mObjectDescriptorMockChildren{mock: m}
 	m.CodeMock = mObjectDescriptorMockCode{mock: m}
-	m.HasPendingRequestsMock = mObjectDescriptorMockHasPendingRequests{mock: m}
 	m.HeadRefMock = mObjectDescriptorMockHeadRef{mock: m}
 	m.IsPrototypeMock = mObjectDescriptorMockIsPrototype{mock: m}
 	m.MemoryMock = mObjectDescriptorMockMemory{mock: m}
 	m.ParentMock = mObjectDescriptorMockParent{mock: m}
-	m.PendingRequestsMock = mObjectDescriptorMockPendingRequests{mock: m}
 	m.PrototypeMock = mObjectDescriptorMockPrototype{mock: m}
 	m.StateIDMock = mObjectDescriptorMockStateID{mock: m}
 
@@ -514,140 +502,6 @@ func (m *ObjectDescriptorMock) CodeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.CodeFunc != nil {
 		return atomic.LoadUint64(&m.CodeCounter) > 0
-	}
-
-	return true
-}
-
-type mObjectDescriptorMockHasPendingRequests struct {
-	mock              *ObjectDescriptorMock
-	mainExpectation   *ObjectDescriptorMockHasPendingRequestsExpectation
-	expectationSeries []*ObjectDescriptorMockHasPendingRequestsExpectation
-}
-
-type ObjectDescriptorMockHasPendingRequestsExpectation struct {
-	result *ObjectDescriptorMockHasPendingRequestsResult
-}
-
-type ObjectDescriptorMockHasPendingRequestsResult struct {
-	r bool
-}
-
-//Expect specifies that invocation of ObjectDescriptor.HasPendingRequests is expected from 1 to Infinity times
-func (m *mObjectDescriptorMockHasPendingRequests) Expect() *mObjectDescriptorMockHasPendingRequests {
-	m.mock.HasPendingRequestsFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectDescriptorMockHasPendingRequestsExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of ObjectDescriptor.HasPendingRequests
-func (m *mObjectDescriptorMockHasPendingRequests) Return(r bool) *ObjectDescriptorMock {
-	m.mock.HasPendingRequestsFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectDescriptorMockHasPendingRequestsExpectation{}
-	}
-	m.mainExpectation.result = &ObjectDescriptorMockHasPendingRequestsResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of ObjectDescriptor.HasPendingRequests is expected once
-func (m *mObjectDescriptorMockHasPendingRequests) ExpectOnce() *ObjectDescriptorMockHasPendingRequestsExpectation {
-	m.mock.HasPendingRequestsFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ObjectDescriptorMockHasPendingRequestsExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ObjectDescriptorMockHasPendingRequestsExpectation) Return(r bool) {
-	e.result = &ObjectDescriptorMockHasPendingRequestsResult{r}
-}
-
-//Set uses given function f as a mock of ObjectDescriptor.HasPendingRequests method
-func (m *mObjectDescriptorMockHasPendingRequests) Set(f func() (r bool)) *ObjectDescriptorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.HasPendingRequestsFunc = f
-	return m.mock
-}
-
-//HasPendingRequests implements github.com/insolar/insolar/core.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) HasPendingRequests() (r bool) {
-	counter := atomic.AddUint64(&m.HasPendingRequestsPreCounter, 1)
-	defer atomic.AddUint64(&m.HasPendingRequestsCounter, 1)
-
-	if len(m.HasPendingRequestsMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.HasPendingRequestsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ObjectDescriptorMock.HasPendingRequests.")
-			return
-		}
-
-		result := m.HasPendingRequestsMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectDescriptorMock.HasPendingRequests")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.HasPendingRequestsMock.mainExpectation != nil {
-
-		result := m.HasPendingRequestsMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectDescriptorMock.HasPendingRequests")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.HasPendingRequestsFunc == nil {
-		m.t.Fatalf("Unexpected call to ObjectDescriptorMock.HasPendingRequests.")
-		return
-	}
-
-	return m.HasPendingRequestsFunc()
-}
-
-//HasPendingRequestsMinimockCounter returns a count of ObjectDescriptorMock.HasPendingRequestsFunc invocations
-func (m *ObjectDescriptorMock) HasPendingRequestsMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.HasPendingRequestsCounter)
-}
-
-//HasPendingRequestsMinimockPreCounter returns the value of ObjectDescriptorMock.HasPendingRequests invocations
-func (m *ObjectDescriptorMock) HasPendingRequestsMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.HasPendingRequestsPreCounter)
-}
-
-//HasPendingRequestsFinished returns true if mock invocations count is ok
-func (m *ObjectDescriptorMock) HasPendingRequestsFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.HasPendingRequestsMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.HasPendingRequestsCounter) == uint64(len(m.HasPendingRequestsMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.HasPendingRequestsMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.HasPendingRequestsCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.HasPendingRequestsFunc != nil {
-		return atomic.LoadUint64(&m.HasPendingRequestsCounter) > 0
 	}
 
 	return true
@@ -1189,140 +1043,6 @@ func (m *ObjectDescriptorMock) ParentFinished() bool {
 	return true
 }
 
-type mObjectDescriptorMockPendingRequests struct {
-	mock              *ObjectDescriptorMock
-	mainExpectation   *ObjectDescriptorMockPendingRequestsExpectation
-	expectationSeries []*ObjectDescriptorMockPendingRequestsExpectation
-}
-
-type ObjectDescriptorMockPendingRequestsExpectation struct {
-	result *ObjectDescriptorMockPendingRequestsResult
-}
-
-type ObjectDescriptorMockPendingRequestsResult struct {
-	r []core.RecordID
-}
-
-//Expect specifies that invocation of ObjectDescriptor.PendingRequests is expected from 1 to Infinity times
-func (m *mObjectDescriptorMockPendingRequests) Expect() *mObjectDescriptorMockPendingRequests {
-	m.mock.PendingRequestsFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectDescriptorMockPendingRequestsExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of ObjectDescriptor.PendingRequests
-func (m *mObjectDescriptorMockPendingRequests) Return(r []core.RecordID) *ObjectDescriptorMock {
-	m.mock.PendingRequestsFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectDescriptorMockPendingRequestsExpectation{}
-	}
-	m.mainExpectation.result = &ObjectDescriptorMockPendingRequestsResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of ObjectDescriptor.PendingRequests is expected once
-func (m *mObjectDescriptorMockPendingRequests) ExpectOnce() *ObjectDescriptorMockPendingRequestsExpectation {
-	m.mock.PendingRequestsFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ObjectDescriptorMockPendingRequestsExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ObjectDescriptorMockPendingRequestsExpectation) Return(r []core.RecordID) {
-	e.result = &ObjectDescriptorMockPendingRequestsResult{r}
-}
-
-//Set uses given function f as a mock of ObjectDescriptor.PendingRequests method
-func (m *mObjectDescriptorMockPendingRequests) Set(f func() (r []core.RecordID)) *ObjectDescriptorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.PendingRequestsFunc = f
-	return m.mock
-}
-
-//PendingRequests implements github.com/insolar/insolar/core.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) PendingRequests() (r []core.RecordID) {
-	counter := atomic.AddUint64(&m.PendingRequestsPreCounter, 1)
-	defer atomic.AddUint64(&m.PendingRequestsCounter, 1)
-
-	if len(m.PendingRequestsMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.PendingRequestsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ObjectDescriptorMock.PendingRequests.")
-			return
-		}
-
-		result := m.PendingRequestsMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectDescriptorMock.PendingRequests")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.PendingRequestsMock.mainExpectation != nil {
-
-		result := m.PendingRequestsMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectDescriptorMock.PendingRequests")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.PendingRequestsFunc == nil {
-		m.t.Fatalf("Unexpected call to ObjectDescriptorMock.PendingRequests.")
-		return
-	}
-
-	return m.PendingRequestsFunc()
-}
-
-//PendingRequestsMinimockCounter returns a count of ObjectDescriptorMock.PendingRequestsFunc invocations
-func (m *ObjectDescriptorMock) PendingRequestsMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.PendingRequestsCounter)
-}
-
-//PendingRequestsMinimockPreCounter returns the value of ObjectDescriptorMock.PendingRequests invocations
-func (m *ObjectDescriptorMock) PendingRequestsMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.PendingRequestsPreCounter)
-}
-
-//PendingRequestsFinished returns true if mock invocations count is ok
-func (m *ObjectDescriptorMock) PendingRequestsFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.PendingRequestsMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.PendingRequestsCounter) == uint64(len(m.PendingRequestsMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.PendingRequestsMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.PendingRequestsCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.PendingRequestsFunc != nil {
-		return atomic.LoadUint64(&m.PendingRequestsCounter) > 0
-	}
-
-	return true
-}
-
 type mObjectDescriptorMockPrototype struct {
 	mock              *ObjectDescriptorMock
 	mainExpectation   *ObjectDescriptorMockPrototypeExpectation
@@ -1610,10 +1330,6 @@ func (m *ObjectDescriptorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.Code")
 	}
 
-	if !m.HasPendingRequestsFinished() {
-		m.t.Fatal("Expected call to ObjectDescriptorMock.HasPendingRequests")
-	}
-
 	if !m.HeadRefFinished() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.HeadRef")
 	}
@@ -1628,10 +1344,6 @@ func (m *ObjectDescriptorMock) ValidateCallCounters() {
 
 	if !m.ParentFinished() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.Parent")
-	}
-
-	if !m.PendingRequestsFinished() {
-		m.t.Fatal("Expected call to ObjectDescriptorMock.PendingRequests")
 	}
 
 	if !m.PrototypeFinished() {
@@ -1671,10 +1383,6 @@ func (m *ObjectDescriptorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.Code")
 	}
 
-	if !m.HasPendingRequestsFinished() {
-		m.t.Fatal("Expected call to ObjectDescriptorMock.HasPendingRequests")
-	}
-
 	if !m.HeadRefFinished() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.HeadRef")
 	}
@@ -1689,10 +1397,6 @@ func (m *ObjectDescriptorMock) MinimockFinish() {
 
 	if !m.ParentFinished() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.Parent")
-	}
-
-	if !m.PendingRequestsFinished() {
-		m.t.Fatal("Expected call to ObjectDescriptorMock.PendingRequests")
 	}
 
 	if !m.PrototypeFinished() {
@@ -1720,12 +1424,10 @@ func (m *ObjectDescriptorMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ChildPointerFinished()
 		ok = ok && m.ChildrenFinished()
 		ok = ok && m.CodeFinished()
-		ok = ok && m.HasPendingRequestsFinished()
 		ok = ok && m.HeadRefFinished()
 		ok = ok && m.IsPrototypeFinished()
 		ok = ok && m.MemoryFinished()
 		ok = ok && m.ParentFinished()
-		ok = ok && m.PendingRequestsFinished()
 		ok = ok && m.PrototypeFinished()
 		ok = ok && m.StateIDFinished()
 
@@ -1748,10 +1450,6 @@ func (m *ObjectDescriptorMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to ObjectDescriptorMock.Code")
 			}
 
-			if !m.HasPendingRequestsFinished() {
-				m.t.Error("Expected call to ObjectDescriptorMock.HasPendingRequests")
-			}
-
 			if !m.HeadRefFinished() {
 				m.t.Error("Expected call to ObjectDescriptorMock.HeadRef")
 			}
@@ -1766,10 +1464,6 @@ func (m *ObjectDescriptorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ParentFinished() {
 				m.t.Error("Expected call to ObjectDescriptorMock.Parent")
-			}
-
-			if !m.PendingRequestsFinished() {
-				m.t.Error("Expected call to ObjectDescriptorMock.PendingRequests")
 			}
 
 			if !m.PrototypeFinished() {
@@ -1804,10 +1498,6 @@ func (m *ObjectDescriptorMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.HasPendingRequestsFinished() {
-		return false
-	}
-
 	if !m.HeadRefFinished() {
 		return false
 	}
@@ -1821,10 +1511,6 @@ func (m *ObjectDescriptorMock) AllMocksCalled() bool {
 	}
 
 	if !m.ParentFinished() {
-		return false
-	}
-
-	if !m.PendingRequestsFinished() {
 		return false
 	}
 

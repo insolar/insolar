@@ -185,23 +185,12 @@ func (m *LedgerArtifactManager) GetObject(
 		return nil, err
 	}
 
-	var pendingRequests []core.RecordID
-	rep, err := m.bus(ctx).Send(ctx, &message.GetObjectIndex{Object: head}, currentPulse.Pulse, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-	if r, ok := rep.(*reply.ObjectIndex); ok {
-		pendingRequests = r.PendingRequests
-	} else {
-		return nil, ErrUnexpectedReply
-	}
-
 	getObjectMsg := &message.GetObject{
 		Head:     head,
 		State:    state,
 		Approved: approved,
 	}
-	rep, err = sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, currentPulse.Pulse)
+	rep, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, currentPulse.Pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -209,16 +198,15 @@ func (m *LedgerArtifactManager) GetObject(
 	switch r := rep.(type) {
 	case *reply.Object:
 		desc = &ObjectDescriptor{
-			ctx:             ctx,
-			am:              m,
-			head:            r.Head,
-			state:           r.State,
-			prototype:       r.Prototype,
-			isPrototype:     r.IsPrototype,
-			childPointer:    r.ChildPointer,
-			memory:          r.Memory,
-			parent:          r.Parent,
-			pendingRequests: pendingRequests,
+			ctx:          ctx,
+			am:           m,
+			head:         r.Head,
+			state:        r.State,
+			prototype:    r.Prototype,
+			isPrototype:  r.IsPrototype,
+			childPointer: r.ChildPointer,
+			memory:       r.Memory,
+			parent:       r.Parent,
 		}
 	case *reply.Error:
 		err = r.Error()
@@ -226,6 +214,27 @@ func (m *LedgerArtifactManager) GetObject(
 		err = ErrUnexpectedReply
 	}
 	return desc, err
+}
+
+// GetPendingRequests returns unclosed requests for provided object.
+func (m *LedgerArtifactManager) GetPendingRequests(
+	ctx context.Context,
+	object core.RecordRef,
+) ([]core.RecordID, error) {
+	currentPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rep, err := m.bus(ctx).Send(ctx, &message.GetPendingRequests{Object: object}, currentPulse.Pulse, nil)
+	if err != nil {
+		return nil, err
+	}
+	requests, ok := rep.(*reply.PendingRequests)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+	return requests.Requests, nil
 }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.
