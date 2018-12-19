@@ -119,7 +119,7 @@ func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 		} else {
 			log.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
 
-			go t.handlePacket(msg)
+			go t.packetHandler.Handle(context.TODO(), msg)
 		}
 	}
 }

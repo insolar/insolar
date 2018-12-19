@@ -145,5 +145,5 @@ func (t *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
 	}
 	log.Debug("[ handleAcceptedConnection ] Packet processed. size: ", len(data), ". Address: ", addr)
 
-	go t.handlePacket(msg)
+	go t.packetHandler.Handle(context.TODO(), msg)
 }

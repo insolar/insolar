@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
 )
@@ -49,8 +48,7 @@ type baseTransport struct {
 	futureManager     futureManager
 	serializer        transportSerializer
 	proxy             relay.Proxy
-
-	received chan *packet.Packet
+	packetHandler     packetHandler
 
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
@@ -62,20 +60,20 @@ type baseTransport struct {
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
+	futureManager := newFutureManager()
 	return baseTransport{
 		sequenceGenerator: newSequenceGenerator(),
-		futureManager:     newFutureManager(),
+		futureManager:     futureManager,
+		packetHandler:     newPacketHandler(futureManager),
+		proxy:             proxy,
+		serializer:        &baseSerializer{},
 
-		received: make(chan *packet.Packet),
+		mutex: &sync.RWMutex{},
 
 		disconnectStarted:  make(chan bool, 1),
 		disconnectFinished: make(chan bool, 1),
 
-		mutex: &sync.RWMutex{},
-
-		proxy:         proxy,
 		publicAddress: publicAddress,
-		serializer:    &baseSerializer{},
 	}
 }
 
@@ -108,13 +106,12 @@ func (t *baseTransport) Close() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	close(t.received)
 	close(t.disconnectFinished)
 }
 
 // Packets returns incoming packets channel.
 func (t *baseTransport) Packets() <-chan *packet.Packet {
-	return t.received
+	return t.packetHandler.Received()
 }
 
 // Stopped checks if networking is stopped already.
@@ -141,35 +138,6 @@ func (t *baseTransport) getRemoteAddress(conn net.Conn) string {
 	return strings.Split(conn.RemoteAddr().String(), ":")[0]
 }
 
-func (t *baseTransport) handlePacket(msg *packet.Packet) {
-	if msg.IsResponse {
-		t.processResponse(msg)
-		return
-	}
-
-	t.processRequest(msg)
-}
-
-func (t *baseTransport) processResponse(msg *packet.Packet) {
-	log.Debugf("[ processResponse ] Process response %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
-
-	future := t.futureManager.Get(msg)
-	if future != nil {
-		if shouldProcessPacket(future, msg) {
-			log.Debugf("[ processResponse ] Processing future with RequestID = %s", msg.RequestID)
-			future.SetResult(msg)
-		} else {
-			log.Debugf("[ processResponse ] Canceling future with RequestID = %s", msg.RequestID)
-		}
-		future.Cancel()
-	}
-}
-
-func (t *baseTransport) processRequest(msg *packet.Packet) {
-	log.Debugf("[ processRequest ] Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
-	t.received <- msg
-}
-
 // PublicAddress returns transport public ip address
 func (t *baseTransport) PublicAddress() string {
 	return t.publicAddress
@@ -191,11 +159,4 @@ func (t *baseTransport) SendPacket(p *packet.Packet) error {
 
 	log.Debugf("Send packet to %s with RequestID = %d", recvAddress, p.RequestID)
 	return t.sendFunc(recvAddress, data)
-}
-
-func shouldProcessPacket(future Future, msg *packet.Packet) bool {
-	typesShouldBeEqual := msg.Type == future.Request().Type
-	responseIsForRightSender := future.Actor().Equal(*msg.Sender)
-
-	return typesShouldBeEqual && (responseIsForRightSender || msg.Type == types.Ping)
 }

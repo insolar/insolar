@@ -108,6 +108,6 @@ func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 			return
 		}
 		msg.RemoteAddress = t.getRemoteAddress(conn)
-		t.handlePacket(msg)
+		go t.packetHandler.Handle(context.TODO(), msg)
 	}
 }
