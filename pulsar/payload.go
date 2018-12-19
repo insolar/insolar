@@ -126,3 +126,51 @@ func (vp *VectorPayload) Hash(hasher core.Hasher) ([]byte, error) {
 type PulsePayload struct {
 	Pulse core.Pulse
 }
+
+func (pp *PulsePayload) Hash(hasher core.Hasher) ([]byte, error) {
+	var sortedKeys []string
+	for key := range  pp.Pulse.Signs{
+		sortedKeys = append(sortedKeys, key)
+	}
+	sort.Strings(sortedKeys)
+
+	var b bytes.Buffer
+	cborH := &codec.CborHandle{}
+	for _, key := range sortedKeys{
+
+		enc := codec.NewEncoder(&b, cborH)
+		err := enc.Encode(pp.Pulse.Signs[key])
+		if err != nil {
+			return nil, err
+		}
+		_, err = hasher.Write(b.Bytes())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err := hasher.Write(pp.Pulse.Entropy[:])
+	if err != nil{
+		return nil, err
+	}
+	_, err = hasher.Write(pp.Pulse.PulseNumber.Bytes())
+	if err != nil{
+		return nil, err
+	}
+
+	err = binary.Write(&b, binary.LittleEndian, pp.Pulse.EpochPulseNumber)
+	if err != nil{
+		return nil, err
+	}
+	_, err = hasher.Write(b.Bytes())
+	if err != nil{
+		return nil, err
+	}
+
+	_, err = hasher.Write(pp.Pulse.OriginID[:])
+	if err != nil{
+		return nil, err
+	}
+
+	return hasher.Sum(nil), nil
+}
