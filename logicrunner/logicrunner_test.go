@@ -1336,7 +1336,7 @@ func New() (*Two, error) {
 
 	err = signer.UnmarshalParams(resp.(*reply.CallMethod).Result, &result, &contractErr)
 	assert.NoError(t, err, "unmarshal answer")
-	assert.NotNil(t, contractErr, "instead we 'v got '"+result.(string)+"'")
+	assert.NotNil(t, contractErr)
 	assert.Contains(t, contractErr.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil")
 }
 
@@ -1975,7 +1975,7 @@ func (c *First) GetName() (string, error) {
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
-	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: couldn't dispatch event: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
+	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
 }
 
 func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*core.RecordRef, *core.RecordRef) {

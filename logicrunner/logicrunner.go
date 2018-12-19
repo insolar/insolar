@@ -443,13 +443,17 @@ func (lr *LogicRunner) executeOrValidate(
 	default:
 		panic("Unknown e type")
 	}
-
+	errstr := ""
+	if err != nil {
+		errstr = err.Error()
+	}
 	if es.Current.ReturnMode == message.ReturnResult {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
 		core.MessageBusFromContext(ctx, nil)
 		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
 			Request: *es.Current.Request,
 			Reply:   re,
+			Error:   errstr,
 		}, *lr.pulse(ctx), &core.MessageSendOptions{
 			Receiver: es.Current.RequesterNode,
 		})

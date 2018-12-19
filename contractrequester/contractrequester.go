@@ -156,6 +156,10 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	ret := <-ch
 	inslogger.FromContext(ctx).Debug("GOT Method results")
 
+	if ret.Error != "" {
+		return nil, errors.New(ret.Error)
+	}
+
 	retReply, ok := ret.Reply.(*reply.CallMethod)
 	if !ok {
 		return nil, errors.New("Reply is not CallMethod")
@@ -214,13 +218,15 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 	inslogger.FromContext(ctx).Debug("Waiting for constructor results ref=", r.Request)
 
 	select {
-	case <-ch:
+	case ret := <-ch:
+		inslogger.FromContext(ctx).Debug("GOT Constructor results")
+		if ret.Error != "" {
+			return nil, errors.New(ret.Error)
+		}
+		return &r.Request, nil
 	case <-ctx.Done():
+		return nil, errors.New("canceled")
 	}
-
-	inslogger.FromContext(ctx).Debug("GOT Constructor results")
-
-	return &r.Request, nil
 }
 
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

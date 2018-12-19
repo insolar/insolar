@@ -85,6 +85,7 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 type ReturnResults struct {
 	Request core.RecordRef
 	Reply   core.Reply
+	Error   string
 }
 
 func (rr *ReturnResults) Type() core.MessageType {
