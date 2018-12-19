@@ -82,6 +82,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		require.Equal(t, true, isVerified)
 		require.Equal(t, entropySignPayload, payload.Body.(*EntropySignaturePayload))
 	})
+
 	t.Run("EntropyPayload payload", func(t *testing.T){
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
@@ -97,5 +98,47 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		require.NoError(t, secondError)
 		require.Equal(t, true, isVerified)
 		require.Equal(t, entropyPayload, payload.Body.(*EntropyPayload))
+	})
+
+	t.Run("VectorPayload payload", func(t *testing.T){
+		// Arrange
+		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
+		firstEntropy := entropyGenerator.GenerateEntropy()
+		secondEntropy := entropyGenerator.GenerateEntropy()
+		firstVector := &VectorPayload{Vector: map[string]*BftCell{
+			"first" : &BftCell{Entropy:firstEntropy},
+			"second" : &BftCell{Entropy:secondEntropy},
+		}}
+		secondVector := &VectorPayload{Vector: map[string]*BftCell{
+			"first" : &BftCell{Entropy:firstEntropy},
+			"second" : &BftCell{Entropy:secondEntropy},
+		}}
+
+		t.Run("preparePayload works for VectorPayload", func(t *testing.T){
+			// Act
+			payload, firstError := pulsar.preparePayload(firstVector)
+			require.NotNil(t, payload)
+			isVerified, secondError := pulsar.checkPayloadSignature(payload)
+
+			// Assert
+			require.NoError(t, firstError)
+			require.NoError(t, secondError)
+			require.Equal(t, true, isVerified)
+			require.Equal(t, firstVector, payload.Body.(*VectorPayload))
+		})
+
+		t.Run("checkPayloadSignature work for maps", func(t *testing.T){
+			// Act
+			payload, firstError := pulsar.preparePayload(firstVector)
+			require.NotNil(t, payload)
+			payload.Body = secondVector
+			isVerified, secondError := pulsar.checkPayloadSignature(payload)
+
+			// Assert
+			require.NoError(t, firstError)
+			require.NoError(t, secondError)
+			require.Equal(t, true, isVerified)
+			require.Equal(t, secondVector, payload.Body.(*VectorPayload))
+		})
 	})
 }
