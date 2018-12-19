@@ -85,6 +85,8 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 
 // ReturnResults - push results of methods
 type ReturnResults struct {
+	Target  core.RecordRef
+	Caller  core.RecordRef
 	Request core.RecordRef
 	Reply   core.Reply
 	Error   string
@@ -95,11 +97,11 @@ func (rr *ReturnResults) Type() core.MessageType {
 }
 
 func (rr *ReturnResults) GetCaller() *core.RecordRef {
-	panic("Not aplicable")
+	return &rr.Caller
 }
 
 func (rr *ReturnResults) DefaultTarget() *core.RecordRef {
-	panic("Not aplicable")
+	return &rr.Target
 }
 
 func (rr *ReturnResults) DefaultRole() core.DynamicRole {
