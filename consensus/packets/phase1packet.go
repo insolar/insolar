@@ -17,6 +17,8 @@
 package packets
 
 import (
+	"crypto"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -37,6 +39,14 @@ type Phase1Packet struct {
 	// --------------------
 	// signature contains signature of Header + Section 1 + Section 2
 	Signature [SignatureLength]byte
+}
+
+func (p1p *Phase1Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
+	panic("implement me")
+}
+
+func (p1p *Phase1Packet) Sign(crypto core.CryptographyService, key crypto.PublicKey) error {
+	panic("implement me")
 }
 
 func NewPhase1Packet() *Phase1Packet {

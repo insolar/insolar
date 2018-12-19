@@ -17,6 +17,9 @@
 package packets
 
 import (
+	"crypto"
+
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
@@ -27,14 +30,22 @@ type Phase3Packet struct {
 
 	// -------------------- Section 1
 	globuleHashSignature    GlobuleHashSignature
-	deviantBitSet           BitSet
+	bitset                  BitSet
 	SignatureHeaderSection1 [SignatureLength]byte
+}
+
+func (p3p *Phase3Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
+	panic("implement me")
+}
+
+func (p3p *Phase3Packet) Sign(crypto core.CryptographyService, key crypto.PublicKey) error {
+	panic("implement me")
 }
 
 func NewPhase3Packet(globuleHashSignature GlobuleHashSignature, bitSet BitSet) Phase3Packet {
 	return Phase3Packet{
 		globuleHashSignature: globuleHashSignature,
-		deviantBitSet:        bitSet,
+		bitset:               bitSet,
 	}
 }
 
@@ -60,7 +71,7 @@ func (p3p *Phase3Packet) GetPacketHeader() (*RoutingHeader, error) {
 }
 
 func (p3p *Phase3Packet) GetBitset() BitSet {
-	return p3p.deviantBitSet
+	return p3p.bitset
 }
 
 func (p3p *Phase3Packet) GetGlobuleHashSignature() GlobuleHashSignature {

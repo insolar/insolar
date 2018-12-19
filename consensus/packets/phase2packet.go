@@ -17,6 +17,8 @@
 package packets
 
 import (
+	"crypto"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
@@ -36,6 +38,14 @@ type Phase2Packet struct {
 	// -------------------- Section 2 (optional)
 	votesAndAnswers         []ReferendumVote
 	SignatureHeaderSection2 [SignatureLength]byte
+}
+
+func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
+	panic("implement me")
+}
+
+func (p2p *Phase2Packet) Sign(crypto core.CryptographyService, key crypto.PublicKey) error {
+	panic("implement me")
 }
 
 func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {

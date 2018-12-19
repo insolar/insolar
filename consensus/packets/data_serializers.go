@@ -599,7 +599,7 @@ func (p3p *Phase3Packet) RawBytes() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ RawBytes ] failed to serialize p3p header")
 	}
 
-	bitset, err := p3p.deviantBitSet.Serialize()
+	bitset, err := p3p.bitset.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RawBytes ] failed to serialize bitset")
 	}
@@ -642,7 +642,7 @@ func (p3p *Phase3Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 	if err != nil {
 		return errors.Wrap(err, "[ DeserializeWithoutHeader ] failed to deserialize a bitset")
 	}
-	p3p.deviantBitSet = bitset
+	p3p.bitset = bitset
 
 	err = binary.Read(data, defaultByteOrder, &p3p.globuleHashSignature)
 	if err != nil {

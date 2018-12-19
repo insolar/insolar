@@ -17,6 +17,7 @@
 package packets
 
 import (
+	"crypto"
 	"io"
 	"strconv"
 
@@ -48,7 +49,13 @@ type HeaderSkipDeserializer interface {
 	DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error
 }
 
+type SignedPacket interface {
+	Verify(crypto core.CryptographyService, key crypto.PublicKey) error
+	Sign(crypto core.CryptographyService, key crypto.PublicKey) error
+}
+
 type ConsensusPacket interface {
+	SignedPacket
 	HeaderSkipDeserializer
 	Serializer
 	PacketRoutable
