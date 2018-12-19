@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package heavy contains methods for processing synchronization tasks on heavy node.
-package heavy
+// Package heavyserver contains methods for processing synchronization tasks on heavy node.
+package heavyserver

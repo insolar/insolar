@@ -129,6 +129,9 @@ func (t *baseTransport) Stopped() <-chan bool {
 }
 
 func (t *baseTransport) prepareListen() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	t.disconnectStarted = make(chan bool, 1)
 }
 

@@ -173,6 +173,8 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 		return errors.Wrap(err, "[ Listen ] failed to startListen")
 	}
 
+	t.prepareListen()
+
 	for {
 		conn, err := t.l.Accept()
 		if err != nil {
