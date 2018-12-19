@@ -82,9 +82,9 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
 	// Heavy.
-	h.replayHandlers[core.TypeHeavyStartStop] = m.checkJet(h.handleHeavyStartStop)
-	h.replayHandlers[core.TypeHeavyReset] = m.checkJet(h.handleHeavyReset)
-	h.replayHandlers[core.TypeHeavyPayload] = m.checkJet(h.handleHeavyPayload)
+	h.replayHandlers[core.TypeHeavyStartStop] = h.handleHeavyStartStop
+	h.replayHandlers[core.TypeHeavyReset] = h.handleHeavyReset
+	h.replayHandlers[core.TypeHeavyPayload] = h.handleHeavyPayload
 
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, m.checkJet(m.saveParcel(h.handleGetCode)))
@@ -104,9 +104,9 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.
-	h.Bus.MustRegister(core.TypeHeavyStartStop, m.checkJet(m.saveParcel(h.handleHeavyStartStop)))
-	h.Bus.MustRegister(core.TypeHeavyReset, m.checkJet(m.saveParcel(h.handleHeavyReset)))
-	h.Bus.MustRegister(core.TypeHeavyPayload, m.checkJet(m.saveParcel(h.handleHeavyPayload)))
+	h.Bus.MustRegister(core.TypeHeavyStartStop, m.saveParcel(h.handleHeavyStartStop))
+	h.Bus.MustRegister(core.TypeHeavyReset, m.saveParcel(h.handleHeavyReset))
+	h.Bus.MustRegister(core.TypeHeavyPayload, m.saveParcel(h.handleHeavyPayload))
 
 	return nil
 }
