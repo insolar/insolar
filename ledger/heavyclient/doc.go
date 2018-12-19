@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package jet provides methods for working with Jet objects.
-package jet
+// Package heavyclient contains heavy replication client code.
+package heavyclient

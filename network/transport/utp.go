@@ -83,7 +83,11 @@ func (t *utpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to socket dial")
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Error("[ send ] Failed to close connection")
+		}
+	}()
 
 	_, err = conn.Write(data)
 	return errors.Wrap(err, "Failed to write data")
