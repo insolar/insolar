@@ -76,6 +76,7 @@ func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error
 	p.Sender = &host.Host{ShortID: header.OriginID}
 	p.Receiver = &host.Host{ShortID: header.TargetID}
 	p.Type = header.PacketType
+	p.Data = data
 	return p, nil
 }
 
