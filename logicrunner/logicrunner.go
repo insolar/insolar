@@ -421,7 +421,10 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 	}
 	es.Unlock()
 
-	lr.StartQueueProcessorIfNeeded(ctx, es, parcel.Message())
+	err := lr.StartQueueProcessorIfNeeded(ctx, es, parcel.Message())
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't start queue processor")
+	}
 
 	return &reply.OK{}, nil
 }
