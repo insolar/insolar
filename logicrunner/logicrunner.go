@@ -595,7 +595,6 @@ func (lr *LogicRunner) executeOrValidate(
 	}
 	if es.Current.ReturnMode == message.ReturnResult {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
-		core.MessageBusFromContext(ctx, nil)
 		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
 			Caller:  lr.NodeNetwork.GetOrigin().ID(),
 			Target:  *es.Current.RequesterNode,
