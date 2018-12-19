@@ -465,20 +465,13 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 }
 
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
-	// Current == nil indicates that we have no queue processor
-	// and one should be started
-	defer func() {
-		inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
-		es.Lock()
-		es.QueueProcessorActive = false
-		es.Current = nil
-		es.Unlock()
-	}()
-
 	for {
 		es.Lock()
 		q := es.Queue
 		if len(q) == 0 {
+			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
+			es.QueueProcessorActive = false
+			es.Current = nil
 			es.Unlock()
 			return
 		}
@@ -521,11 +514,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		finish()
 
-		if lr.finishPendingIfNeeded(ctx, es, *qe.parcel.Message().DefaultTarget()) {
-			// return right now just to avoid calling es.Lock() once again and figure
-			// out that the queue is empty in the beginning of the loop
-			return
-		}
+		lr.finishPendingIfNeeded(ctx, es, *qe.parcel.Message().DefaultTarget())
 	}
 }
 
