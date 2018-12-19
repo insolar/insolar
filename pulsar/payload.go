@@ -17,14 +17,21 @@
 package pulsar
 
 import (
+	"bytes"
+	"encoding/binary"
+	"sort"
+
 	"github.com/insolar/insolar/core"
+	"github.com/ugorji/go/codec"
 )
 
 // Payload is a base struct for pulsar's rpc-message
 type Payload struct {
 	PublicKey string
 	Signature []byte
-	Body      interface{}
+	Body      PayloadData
+}
+
 type PayloadData interface {
 	Hash(hasher core.Hasher) ([]byte, error)
 }
