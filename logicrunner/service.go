@@ -37,8 +37,8 @@ import (
 )
 
 // StartRPC starts RPC server for isolated executors to use
-func StartRPC(ctx context.Context, lr *LogicRunner, pm core.PulseManager) *RPC {
-	rpcService := &RPC{lr: lr, pm: pm}
+func StartRPC(ctx context.Context, lr *LogicRunner, ps core.PulseStorage) *RPC {
+	rpcService := &RPC{lr: lr, ps: ps}
 
 	rpcServer := rpc.NewServer()
 	err := rpcServer.Register(rpcService)
@@ -64,7 +64,7 @@ func StartRPC(ctx context.Context, lr *LogicRunner, pm core.PulseManager) *RPC {
 // RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
 type RPC struct {
 	lr *LogicRunner
-	pm core.PulseManager
+	ps core.PulseStorage
 }
 
 // GetCode is an RPC retrieving a code by its reference
@@ -132,7 +132,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		ProxyPrototype:   req.ProxyPrototype,
 	}
 
-	currentSlotPulse, err := gpr.pm.Current(ctx)
+	currentSlotPulse, err := gpr.ps.Current(ctx)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 		SaveAs:           message.Child,
 	}
 
-	currentSlotPulse, err := gpr.pm.Current(ctx)
+	currentSlotPulse, err := gpr.ps.Current(ctx)
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 		SaveAs:           message.Delegate,
 	}
 
-	currentSlotPulse, err := gpr.pm.Current(ctx)
+	currentSlotPulse, err := gpr.ps.Current(ctx)
 	if err != nil {
 		return err
 	}

@@ -14,5 +14,17 @@
  *    limitations under the License.
  */
 
-// Package heavy contains methods for processing synchronization tasks on heavy node.
-package heavy
+package pulsemanager
+
+import (
+	"github.com/insolar/insolar/core"
+)
+
+// It's a internal interface of pulse manager, you shouldn't use outside of pm
+//go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.pulseStoragePm -o ./ -s _mock.go
+type pulseStoragePm interface {
+	core.PulseStorage
+
+	Lock()
+	Unlock()
+}

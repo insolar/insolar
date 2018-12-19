@@ -20,10 +20,24 @@ package functest
 
 import (
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
+
+const times = 5
+
+func checkBalanceFewTimes(t *testing.T, caller *user, ref string, expected int) {
+	for i := 0; i < times; i++ {
+		balance := getBalanceNoErr(t, caller, ref)
+		if balance == expected {
+			return
+		}
+		time.Sleep(time.Second)
+	}
+	t.Error("Received balance is not equal expected")
+}
 
 func TestTransferMoney(t *testing.T) {
 	firstMember := createMember(t, "Member1")
@@ -36,10 +50,9 @@ func TestTransferMoney(t *testing.T) {
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
 	require.NoError(t, err)
 
+	checkBalanceFewTimes(t, secondMember, secondMember.ref, oldSecondBalance+amount)
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldFirstBalance-amount, newFirstBalance)
-	require.Equal(t, oldSecondBalance+amount, newSecondBalance)
 }
 
 func TestTransferMoneyFromNotExist(t *testing.T) {
@@ -99,10 +112,9 @@ func TestTransferAllAmount(t *testing.T) {
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
 	require.NoError(t, err)
 
+	checkBalanceFewTimes(t, secondMember, secondMember.ref, oldSecondBalance+oldFirstBalance)
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, 0, newFirstBalance)
-	require.Equal(t, oldSecondBalance+oldFirstBalance, newSecondBalance)
 }
 
 func TestTransferMoreThanAvailableAmount(t *testing.T) {
@@ -151,8 +163,7 @@ func TestTransferTwoTimes(t *testing.T) {
 	_, err = signedRequest(firstMember, "Transfer", amount, secondMember.ref)
 	require.NoError(t, err)
 
+	checkBalanceFewTimes(t, secondMember, secondMember.ref, oldSecondBalance+2*amount)
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldFirstBalance-2*amount, newFirstBalance)
-	require.Equal(t, oldSecondBalance+2*amount, newSecondBalance)
 }

@@ -48,15 +48,29 @@ type ObjectState struct {
 	Consensus      *Consensus
 }
 
+type PendingState int
+
+const (
+	PendingUnknown PendingState = iota
+	NotPending
+	InPending
+)
+
 type ExecutionState struct {
 	sync.Mutex
+
+	ArtifactManager core.ArtifactManager
+
 	objectbody *ObjectBody
+	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+	pending    PendingState
 	deactivate bool
 	nonce      uint64
 
-	Behaviour ValidationBehaviour
-	Current   *CurrentExecution
-	Queue     []ExecutionQueueElement
+	Behaviour            ValidationBehaviour
+	Current              *CurrentExecution
+	QueueProcessorActive bool
+	Queue                []ExecutionQueueElement
 }
 
 type CurrentExecution struct {
@@ -147,10 +161,25 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	return res
 }
 
-func (es *ExecutionState) ReleaseQueue() {
-	es.Lock()
-	defer es.Unlock()
+func (es *ExecutionState) CheckPendingRequests(ctx context.Context, msg message.IBaseLogicMessage) (PendingState, error) {
+	if _, ok := msg.(*message.CallMethod); !ok {
+		return NotPending, nil
+	}
 
+	oDesc, err := es.ArtifactManager.GetObject(ctx, msg.GetReference(), nil, false)
+	if err != nil {
+		return NotPending, err
+	}
+
+	if oDesc.HasPendingRequests() {
+		return InPending, nil
+	}
+
+	return NotPending, nil
+}
+
+// releaseQueue must be calling only with es.Lock
+func (es *ExecutionState) releaseQueue() []ExecutionQueueElement {
 	q := es.Queue
 	es.Queue = make([]ExecutionQueueElement, 0)
 
@@ -158,6 +187,8 @@ func (es *ExecutionState) ReleaseQueue() {
 		qe.result <- ExecutionQueueResult{somebodyElse: true}
 		close(qe.result)
 	}
+
+	return q
 }
 
 // LogicRunner is a general interface of contract executor
@@ -168,7 +199,7 @@ type LogicRunner struct {
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
-	PulseManager               core.PulseManager               `inject:""`
+	PulseStorage               core.PulseStorage               `inject:""`
 	ArtifactManager            core.ArtifactManager            `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
 
@@ -206,7 +237,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 
 	if lr.Cfg.GoPlugin != nil {
 		if lr.Cfg.RPCListen != "" {
-			StartRPC(ctx, lr, lr.PulseManager)
+			StartRPC(ctx, lr, lr.PulseStorage)
 		}
 
 		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
@@ -288,25 +319,32 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
 	ref := msg.GetReference()
-
-	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't play role")
-	}
-
 	os := lr.UpsertObjectState(ref)
 
 	os.Lock()
 	if os.ExecutionState == nil {
 		os.ExecutionState = &ExecutionState{
-			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			ArtifactManager: lr.ArtifactManager,
+			Queue:           make([]ExecutionQueueElement, 0),
+			Behaviour:       &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 		}
 	}
 	es := os.ExecutionState
 	os.Unlock()
 
+	// ExecutionState should be locked between CheckOurRole and
+	// appending ExecutionQueueElement to the queue to prevent a race condition.
+	// Otherwise it's possible that OnPulse will clean up the queue and set
+	// ExecutionState.Pending to false. Execute will add an element to the
+	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
+
+	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
+	if err != nil {
+		es.Unlock()
+		return nil, errors.Wrap(err, "can't play role")
+	}
+
 	if es.Current != nil {
 		// TODO: check no wait call
 		if inslogger.TraceID(es.Current.Context) == inslogger.TraceID(ctx) {
@@ -314,10 +352,10 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 			return nil, os.WrapError(nil, "loop detected")
 		}
 	}
-	es.Unlock()
 
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
+		es.Unlock()
 		return nil, os.WrapError(err, "can't create request")
 	}
 
@@ -329,14 +367,13 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		result:  make(chan ExecutionQueueResult, 1),
 	}
 
-	es.Lock()
 	es.Queue = append(es.Queue, qElement)
-
-	if es.Current == nil {
-		inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-		go lr.ProcessExecutionQueue(ctx, es)
-	}
 	es.Unlock()
+
+	err = lr.StartQueueProcessorIfNeeded(ctx, es, msg)
+	if err != nil {
+		return nil, err
+	}
 
 	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
 		return &reply.CallMethod{}, nil
@@ -351,12 +388,43 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	return res.reply, nil
 }
 
+func (lr *LogicRunner) StartQueueProcessorIfNeeded(
+	ctx context.Context, es *ExecutionState, msg message.IBaseLogicMessage,
+) error {
+	es.Lock()
+	defer es.Unlock()
+
+	startProcessor := !es.QueueProcessorActive
+	if startProcessor {
+		if es.pending == PendingUnknown {
+			pending, err := es.CheckPendingRequests(ctx, msg)
+			if err != nil {
+				return errors.Wrap(err, "couldn't check for pending requests")
+			}
+			es.pending = pending
+		}
+		if es.pending == InPending {
+			startProcessor = false
+		}
+	}
+
+	if !startProcessor {
+		return nil
+	}
+
+	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+	es.QueueProcessorActive = true
+	go lr.ProcessExecutionQueue(ctx, es)
+	return nil
+}
+
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
 	// Current == nil indicates that we have no queue processor
 	// and one should be started
 	defer func() {
 		inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
 		es.Lock()
+		es.QueueProcessorActive = false
 		es.Current = nil
 		es.Unlock()
 	}()
@@ -614,35 +682,69 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	// send copy for validation
 	for ref, state := range lr.state {
+		state.Lock()
+
+		// some old stuff
 		state.RefreshConsensus()
 
 		if es := state.ExecutionState; es != nil {
+			es.Lock()
+
+			if es.Current != nil {
+				es.pending = InPending
+			}
+
+			queue := es.releaseQueue()
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
+			requests := caseBind.getCaseBindForMessage(ctx)
+
 			messages = append(
 				messages,
-				caseBind.ToValidateMessage(ctx, ref, pulse),
-				caseBind.ToExecutorResultsMessage(ref),
+				&message.ValidateCaseBind{
+					RecordRef: ref,
+					Requests:  requests,
+					Pulse:     pulse,
+				},
+				&message.ExecutorResults{
+					RecordRef: ref,
+					Pending:   es.pending == InPending,
+					Requests:  requests,
+					Queue:     convertQueueToMessageQueue(queue),
+				},
 			)
-
-			es.ReleaseQueue()
 
 			// TODO: if Current is not nil then we should request here for a delegation token
 			// to continue execution of the current request
 
-			es.Lock()
 			if es.Current == nil {
 				state.ExecutionState = nil
 			}
 			es.Unlock()
 		}
+
+		state.Unlock()
 	}
 
 	for _, msg := range messages {
 		_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
 		if err != nil {
-			return errors.New("error while sending caseBind data to new executor")
+			return errors.Wrap(err, "error while sending validation data on pulse")
 		}
 	}
 
 	return nil
+}
+
+func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
+	mq := make([]message.ExecutionQueueElement, 0)
+	for _, elem := range queue {
+		mq = append(mq, message.ExecutionQueueElement{
+			Ctx:     elem.ctx,
+			Parcel:  elem.parcel,
+			Request: elem.request,
+			Pulse:   elem.pulse,
+		})
+	}
+
+	return mq
 }
