@@ -204,8 +204,9 @@ func TestCheckPendingRequests(
 
 func TestPrepareState(t *testing.T) {
 	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
 
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 
@@ -257,7 +258,10 @@ func TestPrepareState(t *testing.T) {
 func TestHandlePendingFinishedMessage(
 	t *testing.T,
 ) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
 
 	objectRef := testutils.RandomRef()
 
