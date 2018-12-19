@@ -90,17 +90,19 @@ func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
 	return nil
 }
 
-func (currentPulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
-	sign, err := signData(currentPulsar.CryptographyService, body)
+func (currentPulsar *Pulsar) preparePayload(body PayloadData) (*Payload, error) {
+
+	hashProvider := currentPulsar.PlatformCryptographyScheme.IntegrityHasher()
+	hash, err := body.Hash(hashProvider)
+	if err != nil {
+		return nil, err
+	}
+	sign, err := currentPulsar.CryptographyService.Sign(hash)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Payload{Body: body, PublicKey: currentPulsar.PublicKeyRaw, Signature: sign}, nil
-}
-
-func checkPayloadSignature(service core.CryptographyService, processor core.KeyProcessor, request *Payload) (bool, error) {
-	return checkSignature(service, processor, request.Body, request.PublicKey, request.Signature)
+	return &Payload{Body: body, PublicKey: currentPulsar.PublicKeyRaw, Signature: sign.Bytes()}, nil
 }
 
 func (currentPulsar *Pulsar) checkPayloadSignature(request *Payload) (bool, error) {
