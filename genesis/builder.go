@@ -67,7 +67,7 @@ type ContractsBuilder struct {
 
 	ArtifactManager core.ArtifactManager
 	Prototypes      map[string]*core.RecordRef
-	Codes           map[string]*core.RecordRef
+	//Codes           map[string]*core.RecordRef
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
@@ -79,9 +79,9 @@ func NewContractBuilder(am core.ArtifactManager) *ContractsBuilder {
 	}
 
 	cb := &ContractsBuilder{
-		root:            tmpDir,
-		Prototypes:      make(map[string]*core.RecordRef),
-		Codes:           make(map[string]*core.RecordRef),
+		root:       tmpDir,
+		Prototypes: make(map[string]*core.RecordRef),
+		//Codes:           make(map[string]*core.RecordRef),
 		ArtifactManager: am}
 	return cb
 }
@@ -177,7 +177,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
-		cb.Codes[name] = codeRef
+		//cb.Codes[name] = codeRef
 
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
 		_, err = cb.ArtifactManager.ActivatePrototype(

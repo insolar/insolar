@@ -98,11 +98,58 @@ func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainID
 	return nil
 }
 
+func (g *Genesis) activator(
+	ctx context.Context,
+	contract *core.RecordID,
+	prototype *core.RecordRef,
+	parent *core.RecordRef,
+	asDelegate bool,
+	instance interface{},
+) (*core.RecordRef, core.ObjectDescriptor, error) {
+	instanceData, err := serializeInstance(instance)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ Activator ] Couldn't serialize instance")
+	}
+
+	contractRef := core.NewRecordRef(*g.rootDomainRef.Record(), *contract)
+
+	desc, err := g.ArtifactManager.ActivateObject(
+		ctx,
+		*g.rootDomainRef,
+		*contractRef,
+		*parent,
+		*prototype,
+		asDelegate,
+		instanceData,
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ Activator ] Couldn't activate instance")
+	}
+
+	return contractRef, desc, nil
+}
+
+func (g *Genesis) registerRequest(ctx context.Context, name string) (*core.RecordID, error) {
+	return g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
+}
+
 func (g *Genesis) activateRootDomain(
 	ctx context.Context, cb *ContractsBuilder,
 	contractID *core.RecordID,
 ) (*core.RecordID, core.ObjectDescriptor, error) {
+
+	g.rootDomainRef = core.NewRecordRef(*contractID, *contractID)
 	rd, err := rootdomain.NewRootDomain()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
+	}
+	_, desc, err := g.activator(ctx, contractID, cb.Prototypes[rootDomain], g.ArtifactManager.GenesisRef(), false, rd)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
+	}
+	return contractID, desc, nil
+
+	/*rd, err := rootdomain.NewRootDomain()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
@@ -127,13 +174,22 @@ func (g *Genesis) activateRootDomain(
 	}
 	g.rootDomainRef = contract
 
-	return contractID, desc, nil
+	return contractID, desc, nil*/
 }
 
 func (g *Genesis) activateNodeDomain(
 	ctx context.Context, domain *core.RecordID, cb *ContractsBuilder,
 ) error {
 	nd, err := nodedomain.NewNodeDomain()
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateNodeDomain ]")
+	}
+	contractID, err := g.registerRequest(ctx, "NodeDomain")
+	//g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "NodeDomain"}})
+
+	contract, _, err := g.activator(ctx, contractID, cb.Prototypes[nodeDomain], g.rootDomainRef, false, nd)
+
+	/*nd, err := nodedomain.NewNodeDomain()
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
@@ -162,7 +218,7 @@ func (g *Genesis) activateNodeDomain(
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 
-	g.nodeDomainRef = contract
+	*/g.nodeDomainRef = contract
 
 	return nil
 }
@@ -172,6 +228,14 @@ func (g *Genesis) activateRootMember(
 ) error {
 
 	m, err := member.New("RootMember", rootPubKey)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootMember ]")
+	}
+	contractID, err := g.registerRequest(ctx, "RootMember")
+	//g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootMember"}})
+
+	contract, _, err := g.activator(ctx, contractID, cb.Prototypes[memberContract], g.rootDomainRef, false, m)
+	/*m, err := member.New("RootMember", rootPubKey)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
@@ -199,7 +263,7 @@ func (g *Genesis) activateRootMember(
 
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
-	}
+	}*/
 	g.rootMemberRef = contract
 	return nil
 }
@@ -233,6 +297,18 @@ func (g *Genesis) activateRootMemberWallet(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
+	contractID, err := g.registerRequest(ctx, "RootWallet")
+	g.ArtifactManager.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "RootWallet"}})
+
+	_, _, err = g.activator(ctx, contractID, cb.Prototypes[walletContract], g.rootMemberRef, true, w)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootWallet ]")
+	}
+
+	/*w, err := wallet.New(g.config.RootBalance)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootWallet ]")
+	}
 
 	instanceData, err := serializeInstance(w)
 	if err != nil {
@@ -256,7 +332,7 @@ func (g *Genesis) activateRootMemberWallet(
 	)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
-	}
+	}*/
 
 	return nil
 }
