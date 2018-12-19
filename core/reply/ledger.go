@@ -80,7 +80,8 @@ func (e *Children) Type() core.ReplyType {
 
 // ObjectIndex contains serialized object index. It can be stored in DB without processing.
 type ObjectIndex struct {
-	Index []byte
+	Index           []byte
+	PendingRequests []core.RecordID
 }
 
 // Type implementation of Reply interface.

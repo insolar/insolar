@@ -82,13 +82,14 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf: &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
+	recentStorageMock.GetRequestsMock.Return(nil)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -448,18 +449,26 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	nodeRef := genRandomRef(0)
 	mb.SendFunc = func(c context.Context, m core.Message, _ core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
-		if o.Receiver == nil {
-			return &reply.GetObjectRedirect{
-				Receiver: nodeRef,
-				Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
-			}, nil
-		}
 
-		token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
-		assert.True(t, ok)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, nodeRef, o.Receiver)
-		return &reply.Object{}, nil
+		switch m.(type) {
+		case *message.GetObjectIndex:
+			return &reply.ObjectIndex{}, nil
+		case *message.GetObject:
+			if o.Receiver == nil {
+				return &reply.GetObjectRedirect{
+					Receiver: nodeRef,
+					Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
+				}, nil
+			}
+
+			token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
+			assert.True(t, ok)
+			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+			assert.Equal(t, nodeRef, o.Receiver)
+			return &reply.Object{}, nil
+		default:
+			panic("unexpected call")
+		}
 	}
 	am.DefaultBus = mb
 	am.db = db
@@ -688,12 +697,13 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.GetRequestsMock.Return(nil)
 
 	handler := MessageHandler{
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf: &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb

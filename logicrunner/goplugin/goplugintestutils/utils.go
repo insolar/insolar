@@ -89,6 +89,10 @@ type TestObjectDescriptor struct {
 	ChildrenContainer []core.RecordRef
 }
 
+func (t *TestObjectDescriptor) PendingRequests() []core.RecordID {
+	panic("implement me")
+}
+
 func (t *TestObjectDescriptor) HasPendingRequests() bool {
 	panic("implement me")
 }
@@ -182,7 +186,7 @@ func (t *TestArtifactManager) RegisterRequest(ctx context.Context, obj core.Reco
 
 // RegisterResult saves VM method call result.
 func (t *TestArtifactManager) RegisterResult(
-	ctx context.Context, request core.RecordRef, payload []byte,
+	ctx context.Context, object, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	panic("implement me")
 }

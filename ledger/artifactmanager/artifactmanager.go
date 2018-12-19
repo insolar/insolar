@@ -185,28 +185,40 @@ func (m *LedgerArtifactManager) GetObject(
 		return nil, err
 	}
 
+	var pendingRequests []core.RecordID
+	rep, err := m.bus(ctx).Send(ctx, &message.GetObjectIndex{Object: head}, currentPulse.Pulse, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+	if r, ok := rep.(*reply.ObjectIndex); ok {
+		pendingRequests = r.PendingRequests
+	} else {
+		return nil, ErrUnexpectedReply
+	}
+
 	getObjectMsg := &message.GetObject{
 		Head:     head,
 		State:    state,
 		Approved: approved,
 	}
-	genericReact, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, currentPulse.Pulse)
+	rep, err = sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, currentPulse.Pulse)
 	if err != nil {
 		return nil, err
 	}
 
-	switch r := genericReact.(type) {
+	switch r := rep.(type) {
 	case *reply.Object:
 		desc = &ObjectDescriptor{
-			ctx:          ctx,
-			am:           m,
-			head:         r.Head,
-			state:        r.State,
-			prototype:    r.Prototype,
-			isPrototype:  r.IsPrototype,
-			childPointer: r.ChildPointer,
-			memory:       r.Memory,
-			parent:       r.Parent,
+			ctx:             ctx,
+			am:              m,
+			head:            r.Head,
+			state:           r.State,
+			prototype:       r.Prototype,
+			isPrototype:     r.IsPrototype,
+			childPointer:    r.ChildPointer,
+			memory:          r.Memory,
+			parent:          r.Parent,
+			pendingRequests: pendingRequests,
 		}
 	case *reply.Error:
 		err = r.Error()

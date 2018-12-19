@@ -1,7 +1,9 @@
 package artifactmanager
 
 import (
+	"bytes"
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -412,11 +414,27 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
+	msg := message.GetObjectIndex{
+		Object: *genRandomRef(0),
+	}
+	pendingRequests := []core.RecordID{
+		*genRandomID(0),
+		*genRandomID(0),
+	}
+	sort.Slice(pendingRequests, func(i, j int) bool {
+		return bytes.Compare(pendingRequests[i][:], pendingRequests[j][:]) < 0
+	})
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
+	recentStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{
+		*msg.Object.Record(): {
+			pendingRequests[0]: struct{}{},
+			pendingRequests[1]: struct{}{},
+		},
+	})
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
@@ -437,9 +455,6 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 
 	h.RecentStorageProvider = provideMock
 
-	msg := message.GetObjectIndex{
-		Object: *genRandomRef(0),
-	}
 	objectIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 	err = db.SetObjectIndex(ctx, jetID, msg.Object.Record(), &objectIndex)
 	require.NoError(t, err)
@@ -450,6 +465,10 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	require.NoError(t, err)
 	indexRep, ok := rep.(*reply.ObjectIndex)
 	require.True(t, ok)
+	sort.Slice(indexRep.PendingRequests, func(i, j int) bool {
+		return bytes.Compare(indexRep.PendingRequests[i][:], indexRep.PendingRequests[j][:]) < 0
+	})
+	assert.Equal(t, pendingRequests, indexRep.PendingRequests)
 	decodedIndex, err := index.DecodeObjectLifeline(indexRep.Index)
 	require.NoError(t, err)
 	assert.Equal(t, objectIndex, *decodedIndex)

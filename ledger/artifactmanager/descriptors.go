@@ -55,13 +55,14 @@ type ObjectDescriptor struct {
 	ctx context.Context
 	am  *LedgerArtifactManager
 
-	head         core.RecordRef
-	state        core.RecordID
-	prototype    *core.RecordRef
-	isPrototype  bool
-	childPointer *core.RecordID // can be nil.
-	memory       []byte
-	parent       core.RecordRef
+	head            core.RecordRef
+	state           core.RecordID
+	prototype       *core.RecordRef
+	isPrototype     bool
+	childPointer    *core.RecordID // can be nil.
+	memory          []byte
+	parent          core.RecordRef
+	pendingRequests []core.RecordID
 }
 
 // IsPrototype determines if the object is a prototype.
@@ -123,7 +124,12 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 
 // HasPendingRequests returns true if the object has unclosed requests.
 func (d *ObjectDescriptor) HasPendingRequests() bool {
-	return false
+	return len(d.pendingRequests) != 0
+}
+
+// PendingRequests returns unclosed requests.
+func (d *ObjectDescriptor) PendingRequests() []core.RecordID {
+	return d.pendingRequests
 }
 
 // ChildIterator is used to iterate over objects children. During iteration children refs will be fetched from remote

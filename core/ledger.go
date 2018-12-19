@@ -227,6 +227,9 @@ type ObjectDescriptor interface {
 
 	// HasPendingRequests returns true if the object has unclosed requests.
 	HasPendingRequests() bool
+
+	// PendingRequests returns unclosed requests.
+	PendingRequests() []RecordID
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.

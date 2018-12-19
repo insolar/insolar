@@ -692,7 +692,17 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 		return nil, errors.Wrap(err, "failed to serialize index")
 	}
 
-	return &reply.ObjectIndex{Index: buf}, nil
+	pendingRequests := h.RecentStorageProvider.GetStorage(jetID).GetRequests()
+	forObject, ok := pendingRequests[*msg.Object.Record()]
+	if !ok {
+		return &reply.ObjectIndex{Index: buf}, nil
+	}
+	var requestSlice []core.RecordID
+	for reqID := range forObject {
+		requestSlice = append(requestSlice, reqID)
+	}
+
+	return &reply.ObjectIndex{Index: buf, PendingRequests: requestSlice}, nil
 }
 
 func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

@@ -511,7 +511,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't update object")
 	}
-	_, err = am.RegisterResult(ctx, *es.Current.Request, result)
+	_, err = am.RegisterResult(ctx, m.ObjectRef, *es.Current.Request, result)
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't save results")
 	}
