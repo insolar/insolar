@@ -133,7 +133,8 @@ func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
 
 	am.GetObjectMock.Return(od, nil)
 
-	es := &ExecutionState{ArtifactManager: am}
+	es := &ExecutionState{ArtifactManager: am, Queue: make([]ExecutionQueueElement, 0)}
+	es.Queue = append(es.Queue, ExecutionQueueElement{})
 	err := lr.StartQueueProcessorIfNeeded(
 		ctx,
 		es,
@@ -199,4 +200,95 @@ func TestCheckPendingRequests(
 	)
 	require.Error(t, err)
 	require.Equal(t, NotPending, pending)
+}
+
+func TestPrepareState(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	object := testutils.RandomRef()
+	msg := &message.ExecutorResults{
+		Caller:    testutils.RandomRef(),
+		RecordRef: object,
+	}
+
+	// not pending
+	// it's a first call, it's also initialize lr.state[object].ExecutionState
+	// also check for empty Queue
+	msg.Pending = false
+	_ = lr.prepareObjectState(ctx, msg)
+	require.Equal(t, NotPending, lr.state[object].ExecutionState.pending)
+	require.Equal(t, 0, len(lr.state[object].ExecutionState.Queue))
+
+	// pending without queue
+	lr.state[object].ExecutionState.pending = PendingUnknown
+	msg.Pending = true
+	_ = lr.prepareObjectState(ctx, msg)
+	require.Equal(t, InPending, lr.state[object].ExecutionState.pending)
+
+	// do not change pending status if it isn't unknown
+	lr.state[object].ExecutionState.pending = NotPending
+	msg.Pending = true
+	_ = lr.prepareObjectState(ctx, msg)
+	require.Equal(t, NotPending, lr.state[object].ExecutionState.pending)
+
+	// do not change pending status if it isn't unknown
+	lr.state[object].ExecutionState.pending = InPending
+	msg.Pending = false
+	_ = lr.prepareObjectState(ctx, msg)
+	require.Equal(t, InPending, lr.state[object].ExecutionState.pending)
+
+	// brand new queue from message
+	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{}}
+	_ = lr.prepareObjectState(ctx, msg)
+	require.Equal(t, 1, len(lr.state[object].ExecutionState.Queue))
+
+	// add new element in existing queue
+	queueElementRequest := testutils.RandomRef()
+	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest}}
+	_ = lr.prepareObjectState(ctx, msg)
+	require.Equal(t, 2, len(lr.state[object].ExecutionState.Queue))
+	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
+
+}
+func TestHandlePendingFinishedMessage(
+	t *testing.T,
+) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	objectRef := testutils.RandomRef()
+
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	parcel := testutils.NewParcelMock(t).MessageMock.Return(
+		&message.PendingFinished{Reference: objectRef},
+	)
+
+	re, err := lr.HandlePendingFinishedMessage(ctx, parcel)
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, re)
+
+	st := lr.MustObjectState(objectRef)
+
+	es := st.ExecutionState
+	require.NotNil(t, es)
+	require.Equal(t, NotPending, es.pending)
+
+	es.Current = &CurrentExecution{}
+	re, err = lr.HandlePendingFinishedMessage(ctx, parcel)
+	require.Error(t, err)
+
+	es.Current = nil
+
+	re, err = lr.HandlePendingFinishedMessage(ctx, parcel)
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, re)
+
 }

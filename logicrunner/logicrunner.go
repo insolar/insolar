@@ -162,8 +162,9 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	return res
 }
 
-func (es *ExecutionState) CheckPendingRequests(ctx context.Context, msg message.IBaseLogicMessage) (PendingState, error) {
-	if _, ok := msg.(*message.CallMethod); !ok {
+func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.Message) (PendingState, error) {
+	msg, ok := inMsg.(*message.CallMethod)
+	if !ok {
 		return NotPending, nil
 	}
 
@@ -262,6 +263,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(core.TypeExecutorResults, lr.ExecutorResults)
 	lr.MessageBus.MustRegister(core.TypeValidateCaseBind, lr.ValidateCaseBind)
 	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.ProcessValidationResults)
+	lr.MessageBus.MustRegister(core.TypePendingFinished, lr.HandlePendingFinishedMessage)
 }
 
 // Stop stops logic runner component and its executors
@@ -389,27 +391,70 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	return res.reply, nil
 }
 
+func (lr *LogicRunner) HandlePendingFinishedMessage(
+	ctx context.Context, parcel core.Parcel,
+) (
+	core.Reply, error,
+) {
+	msg := parcel.Message().(*message.PendingFinished)
+	ref := msg.DefaultTarget()
+	os := lr.UpsertObjectState(*ref)
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		// we are first, strange, soon ExecuteResults message should come
+		os.ExecutionState = &ExecutionState{
+			Queue:     make([]ExecutionQueueElement, 0),
+			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			pending:   NotPending,
+		}
+		os.Unlock()
+		return &reply.OK{}, nil
+	}
+	es := os.ExecutionState
+	es.pending = NotPending
+	os.Unlock()
+
+	es.Lock()
+	if es.Current != nil {
+		es.Unlock()
+		return nil, errors.New("received PendingFinished when we are already executing")
+	}
+	es.Unlock()
+
+	err := lr.StartQueueProcessorIfNeeded(ctx, es, parcel.Message())
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't start queue processor")
+	}
+
+	return &reply.OK{}, nil
+}
+
 func (lr *LogicRunner) StartQueueProcessorIfNeeded(
-	ctx context.Context, es *ExecutionState, msg message.IBaseLogicMessage,
+	ctx context.Context, es *ExecutionState, msg core.Message,
 ) error {
 	es.Lock()
 	defer es.Unlock()
 
-	startProcessor := !es.QueueProcessorActive
-	if startProcessor {
-		if es.pending == PendingUnknown {
-			pending, err := es.CheckPendingRequests(ctx, msg)
-			if err != nil {
-				return errors.Wrap(err, "couldn't check for pending requests")
-			}
-			es.pending = pending
-		}
-		if es.pending == InPending {
-			startProcessor = false
-		}
+	if len(es.Queue) == 0 {
+		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
+		return nil
 	}
 
-	if !startProcessor {
+	if es.QueueProcessorActive {
+		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
+		return nil
+	}
+
+	if es.pending == PendingUnknown {
+		pending, err := es.CheckPendingRequests(ctx, msg)
+		if err != nil {
+			return errors.Wrap(err, "couldn't check for pending requests")
+		}
+		es.pending = pending
+	}
+	if es.pending == InPending {
+		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
 		return nil
 	}
 
@@ -557,6 +602,59 @@ type ObjectBody struct {
 
 func init() {
 	gob.Register(&ObjectBody{})
+}
+
+func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.ExecutorResults) error {
+	state := lr.UpsertObjectState(msg.GetReference())
+	state.Lock()
+	if state.ExecutionState == nil {
+		state.ExecutionState = &ExecutionState{
+			ArtifactManager: lr.ArtifactManager,
+			Queue:           make([]ExecutionQueueElement, 0),
+			Behaviour:       &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+		}
+	}
+	state.Unlock()
+
+	state.ExecutionState.Lock()
+
+	// prepare pending
+	if state.ExecutionState.pending == PendingUnknown {
+		if msg.Pending {
+			state.ExecutionState.pending = InPending
+		} else {
+			state.ExecutionState.pending = NotPending
+		}
+	}
+
+	//prepare Queue
+	if msg.Queue != nil {
+		state := lr.UpsertObjectState(msg.GetReference())
+
+		queueFromMessage := make([]ExecutionQueueElement, 0)
+		for _, qe := range msg.Queue {
+			queueFromMessage = append(
+				queueFromMessage,
+				ExecutionQueueElement{
+					ctx:     qe.Ctx,
+					parcel:  qe.Parcel,
+					request: qe.Request,
+					pulse:   qe.Pulse,
+					result:  make(chan ExecutionQueueResult, 1),
+				})
+		}
+		state.ExecutionState.Queue = append(queueFromMessage, state.ExecutionState.Queue...)
+
+	}
+
+	state.ExecutionState.Unlock()
+
+	err := lr.StartQueueProcessorIfNeeded(ctx, state.ExecutionState, msg)
+	if err != nil {
+		return errors.Wrap(err, "can't start Queue Processor from prepareObjectState")
+	}
+
+	return nil
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (core.Reply, error) {
