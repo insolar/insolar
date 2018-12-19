@@ -18,7 +18,10 @@ package transport
 
 import (
 	"context"
+	"io"
 	"net"
+	"sync"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -28,8 +31,10 @@ import (
 
 type tcpTransport struct {
 	baseTransport
-	l       net.Listener
-	maxChan chan bool
+	l net.Listener
+
+	conns     map[string]net.Conn
+	connMutex sync.RWMutex
 }
 
 func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
@@ -42,7 +47,7 @@ func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcp
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
 		l:             listener,
-		maxChan:       make(chan bool, 1000),
+		conns:         make(map[string]net.Conn),
 	}
 
 	transport.sendFunc = transport.send
@@ -50,67 +55,144 @@ func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcp
 	return transport, nil
 }
 
-func (tcp *tcpTransport) send(recvAddress string, data []byte) error {
+func (t *tcpTransport) send(recvAddress string, data []byte) error {
+	ctx := context.Background()
+	logger := inslogger.FromContext(ctx)
+
 	tcpAddr, err := net.ResolveTCPAddr("tcp", recvAddress)
 	if err != nil {
-		return errors.Wrap(err, "tcpTransport.send")
+		return errors.Wrap(err, "[ send ] Failed to resolve t address")
 	}
 
-	tcpConn, err := net.DialTCP("tcp", nil, tcpAddr)
+	t.connMutex.RLock()
+	conn, ok := t.conns[tcpAddr.String()]
+	t.connMutex.RUnlock()
 
+	if !ok || t.connectionClosed(conn) {
+		t.connMutex.Lock()
+
+		conn, ok = t.conns[tcpAddr.String()]
+		if !ok || t.connectionClosed(conn) {
+			logger.Debugf("[ send ] Failed to retrieve connection to %s", tcpAddr)
+
+			conn, err = t.openTCP(ctx, tcpAddr)
+			if err != nil {
+				t.connMutex.Unlock()
+				return errors.Wrap(err, "[ send ] Failed to create TCP connection")
+			}
+			t.conns[conn.RemoteAddr().String()] = conn
+			logger.Debugf("[ openTCP ] Added connection for %s. Current pool size: %d", conn.RemoteAddr(), len(t.conns))
+		}
+
+		t.connMutex.Unlock()
+	}
+
+	log.Debug("[ send ] len = ", len(data))
+	_, err = conn.Write(data)
+	return errors.Wrap(err, "[ send ] Failed to write data")
+}
+
+func (t *tcpTransport) openTCP(ctx context.Context, addr *net.TCPAddr) (net.Conn, error) {
+	logger := inslogger.FromContext(ctx)
+
+	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
-		return errors.Wrap(err, "tcpTransport.send")
+		logger.Warnf("[ openTCP ] Failed to open connection to %s", addr)
+		return nil, errors.Wrap(err, "[ openTCP ] Failed to open connection")
 	}
-	tcp.maxChan <- true
-	defer func() { <-tcp.maxChan }()
-	defer tcpConn.Close()
 
-	log.Debug("tcpTransport.send: len = ", len(data))
-	_, err = tcpConn.Write(data)
-	return errors.Wrap(err, "Failed to write data")
+	err = conn.SetKeepAlive(true)
+	if err != nil {
+		logger.Error("[ openTCP ] Failed to set keep alive")
+	}
+
+	return conn, nil
+}
+
+// Consuming 1 byte; only usable for outgoing connections.
+func (t *tcpTransport) connectionClosed(conn net.Conn) bool {
+	err := conn.SetReadDeadline(time.Now())
+	if err != nil {
+		log.Errorln("[ connectionClosed ] Failed to set connection deadline: ", err.Error())
+	}
+
+	n, err := conn.Read(make([]byte, 1))
+
+	if err == io.EOF || n > 0 {
+		err := conn.Close()
+		if err != nil {
+			log.Errorln("[ connectionClosed ] Failed to close connection: ", err.Error())
+		} else {
+			log.Debug("[ connectionClosed ] Close connection to %s", conn.RemoteAddr())
+		}
+
+		delete(t.conns, conn.RemoteAddr().String())
+		return true
+	}
+
+	err = conn.SetReadDeadline(time.Time{})
+	if err != nil {
+		log.Errorln("[ connectionClosed ] Failed to set connection deadline: ", err.Error())
+	}
+
+	return false
 }
 
 // Start starts networking.
-func (tcp *tcpTransport) Listen(ctx context.Context) error {
-	inslogger.FromContext(ctx).Info("Start TCP transport")
+func (t *tcpTransport) Listen(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("[ Listen ] Start TCP transport")
+	t.prepareListen()
 	for {
-
-		tcp.maxChan <- true
-
-		conn, err := tcp.l.Accept()
+		conn, err := t.l.Accept()
 		if err != nil {
-			<-tcp.maxChan
-			<-tcp.disconnectFinished
-			return errors.Wrap(err, "[ Start ]")
+			<-t.disconnectFinished
+			logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
+			return errors.Wrap(err, "[ Listen ] Failed to accept connection")
 		}
 
-		go tcp.handleAcceptedConnection(conn)
+		logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
+
+		go t.handleAcceptedConnection(conn)
 	}
 }
 
 // Stop stops networking.
-func (tcp *tcpTransport) Stop() {
-	tcp.mutex.Lock()
-	defer tcp.mutex.Unlock()
+func (t *tcpTransport) Stop() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 
-	log.Info("Stop TCP transport")
-	tcp.prepareDisconnect()
+	log.Info("[ Stop ] Stop TCP transport")
+	t.prepareDisconnect()
 
-	err := tcp.l.Close()
+	err := t.l.Close()
 	if err != nil {
-		log.Errorln("Failed to close socket:", err.Error())
+		log.Errorln("[ Stop ] Failed to close socket: ", err.Error())
+	}
+
+	for addr, conn := range t.conns {
+		err := conn.Close()
+		if err != nil {
+			log.Errorln("[ Stop ] Failed to close outgoing connection: ", err.Error())
+		}
+		delete(t.conns, addr)
 	}
 }
 
-func (tcp *tcpTransport) handleAcceptedConnection(conn net.Conn) {
-	defer conn.Close()
-	msg, err := tcp.serializer.DeserializePacket(conn)
-	if err != nil {
-		log.Error("[ handleAcceptedConnection ] ", err)
-		return
+func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
+	for {
+		msg, err := t.serializer.DeserializePacket(conn)
+
+		if err != nil {
+			if err == io.EOF {
+				log.Warn("[ handleAcceptedConnection ] Connection closed by sender")
+				return
+			}
+
+			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
+		} else {
+			log.Info("[ handleAcceptedConnection ] Handling packet")
+			t.handlePacket(msg)
+		}
 	}
-
-	tcp.handlePacket(msg)
-
-	<-tcp.maxChan
 }

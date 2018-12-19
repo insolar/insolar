@@ -33,7 +33,7 @@ import (
 // ContractRequester helps to call contracts
 type ContractRequester struct {
 	MessageBus   core.MessageBus   `inject:""`
-	PulseManager core.PulseManager `inject:""`
+	PulseStorage core.PulseStorage `inject:""`
 	ResultMutex  sync.Mutex
 	ResultMap    map[core.RecordRef]chan *message.ReturnResults
 }

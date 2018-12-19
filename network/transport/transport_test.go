@@ -124,7 +124,7 @@ func (t *transportSuite) TestSendBigPacket() {
 	}
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TestPacket)
-	requestMsg := builder.Request(&packet.RequestTest{data}).Build()
+	requestMsg := builder.Request(&packet.RequestTest{Data: data}).Build()
 
 	_, err := t.node1.transport.SendRequest(requestMsg)
 	t.Assert().NoError(err)
@@ -152,13 +152,6 @@ func (t *transportSuite) TestSendPacketConsensus() {
 func TestUTPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17010", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17011", BehindNAT: false}
-
-	suite.Run(t, NewSuite(cfg1, cfg2))
-}
-
-func TestKCPTransport(t *testing.T) {
-	cfg1 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17012", BehindNAT: false}
-	cfg2 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17013", BehindNAT: false}
 
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }

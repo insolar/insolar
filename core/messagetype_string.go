@@ -5,8 +5,10 @@ package core
 import "strconv"
 
 const _MessageType_name = "TypeCallMethodTypeCallConstructorTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeJetDropTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeHotRecordsTypeValidationCheckTypeHeavyStartStopTypeHeavyPayloadTypeHeavyResetTypeBootstrapRequestTypeNodeSignRequest"
+const _MessageType_name = "TypeCallMethodTypeCallConstructorTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeJetDropTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeHotRecordsTypeValidationCheckTypeHeavyStartStopTypeHeavyPayloadTypeHeavyResetTypeBootstrapRequestTypeNodeSignRequest"
 
 var _MessageType_index = [...]uint16{0, 14, 33, 50, 69, 89, 110, 121, 134, 149, 164, 180, 197, 208, 221, 239, 250, 268, 282, 301, 319, 335, 349, 369, 388}
+var _MessageType_index = [...]uint16{0, 14, 33, 52, 72, 93, 112, 123, 136, 151, 166, 182, 199, 210, 223, 241, 252, 270, 284, 303, 321, 337, 351, 371, 390}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {

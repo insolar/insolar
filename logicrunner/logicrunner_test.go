@@ -29,6 +29,7 @@ import (
 
 	"github.com/insolar/insolar/contractrequester"
 
+	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 
@@ -133,6 +134,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		},
 	)
 
+	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
 	recentMock := recentstorage.NewProviderMock(t)
 
 	parcelFactory := messagebus.NewParcelFactory()
@@ -142,7 +144,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
 
-	cm.Inject(nk, recentMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(pulseStorage, nk, recentMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
@@ -151,7 +153,16 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
 
-	newTestPulse(ctx, lr, mb)
+	currentPulse, _ := pulseStorage.Current(ctx)
+	newPulseNumber := currentPulse.PulseNumber + 1
+	err = lr.Ledger.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
+		true,
+	)
+	require.NoError(t, err)
+
+	mb.PulseNumber = newPulseNumber
 
 	assert.NoError(t, err)
 	if err != nil {
@@ -177,18 +188,6 @@ func mockCryptographyService(t *testing.T) core.CryptographyService {
 		return true
 	}
 	return mock
-}
-
-func newTestPulse(ctx context.Context, lr *LogicRunner, mb *testmessagebus.TestMessageBus) {
-	currentPulse, _ := lr.Ledger.GetPulseManager().Current(ctx)
-	newPulseNumber := currentPulse.PulseNumber + 1
-	lr.Ledger.GetPulseManager().Set(
-		ctx,
-		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
-		true,
-	)
-
-	mb.PulseNumber = newPulseNumber
 }
 
 func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, mustfail ...core.RecordRef) {

@@ -197,7 +197,7 @@ func (db *DB) Init(ctx context.Context) error {
 	}
 
 	// TODO: required for test passing, need figure out how to do init jets properly
-	return db.SaveJet(ctx, jetID)
+	return db.AddJets(ctx, jetID)
 }
 
 // GenesisRef returns the genesis record reference.
@@ -430,7 +430,7 @@ func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber c
 
 	return db.set(
 		ctx,
-		prefixkeyany(scopeIDMessage, jetID[:], pulseNumber.Bytes(), hw.Sum(nil)),
+		prefixkey(scopeIDMessage, jetID[:], pulseNumber.Bytes(), hw.Sum(nil)),
 		messageBytes,
 	)
 }
@@ -472,7 +472,7 @@ func (db *DB) IterateRecords(
 	pulse core.PulseNumber,
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
-	prefix := prefixkeyany(scopeIDRecord, jetID[:], pulse.Bytes())
+	prefix := prefixkey(scopeIDRecord, jetID[:], pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := core.NewRecordID(pulse, k)

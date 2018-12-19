@@ -38,6 +38,17 @@ const (
 	DynamicRoleHeavyExecutor
 )
 
+// IsVirtualRole checks if node role is virtual (validator or executor).
+func (r DynamicRole) IsVirtualRole() bool {
+	switch r {
+	case DynamicRoleVirtualExecutor:
+		return true
+	case DynamicRoleVirtualValidator:
+		return true
+	}
+	return false
+}
+
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 // FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
 type Ledger interface {
@@ -57,9 +68,6 @@ type Ledger interface {
 // PulseManager provides Ledger's methods related to Pulse.
 //go:generate minimock -i github.com/insolar/insolar/core.PulseManager -o ../testutils -s _mock.go
 type PulseManager interface {
-	// Current returns current pulse structure.
-	Current(context.Context) (*Pulse, error)
-
 	// Set set's new pulse and closes current jet drop. If dry is true, nothing will be saved to storage.
 	Set(ctx context.Context, pulse Pulse, persist bool) error
 }
@@ -199,6 +207,7 @@ type CodeDescriptor interface {
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
+//go:generate minimock -i github.com/insolar/insolar/core.ObjectDescriptor -o ../testutils -s _mock.go
 type ObjectDescriptor interface {
 	// HeadRef returns head reference to represented object record.
 	HeadRef() *RecordRef
@@ -226,6 +235,9 @@ type ObjectDescriptor interface {
 
 	// Parent returns object's parent.
 	Parent() *RecordRef
+
+	// HasPendingRequests returns true if the object has unclosed requests.
+	HasPendingRequests() bool
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.
@@ -273,3 +285,9 @@ var (
 	TODOJetID = *NewRecordID(PulseNumberJet, nil)
 	DomainID  = *NewRecordID(0, nil)
 )
+
+// PulseStorage provides the interface for fetching current pulse of the system
+//go:generate minimock -i github.com/insolar/insolar/core.PulseStorage -o ../testutils -s _mock.go
+type PulseStorage interface {
+	Current(ctx context.Context) (*Pulse, error)
+}

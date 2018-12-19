@@ -237,41 +237,12 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	parcelCtx := parcel.Context(ctx)
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
-	sender := parcel.GetSender()
-
 	scope := newReaderScope(&mb.globalLock)
 	scope.Lock(ctx, "Delivering ...")
 	defer scope.Unlock(ctx, "Delivering done")
 
-	senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
-	if mb.signmessages {
-		err := mb.ParcelFactory.Validate(senderKey, parcel)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to check a message sign")
-		}
-	}
-
-	if parcel.DelegationToken() != nil {
-		valid, err := mb.DelegationTokenFactory.Verify(parcel)
-		if err != nil {
-			return nil, err
-		}
-		if !valid {
-			return nil, errors.New("delegation token is not valid")
-		}
-	} else {
-		sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
-		if sendingObject != nil {
-			validSender, err := mb.JetCoordinator.IsAuthorized(
-				parcelCtx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,
-			)
-			if err != nil {
-				return nil, err
-			}
-			if !validSender {
-				return nil, errors.New("sender is not allowed to act on behalve of that object")
-			}
-		}
+	if err := mb.checkParcel(parcelCtx, parcel); err != nil {
+		return nil, err
 	}
 
 	resp, err := mb.doDeliver(parcelCtx, parcel)
@@ -291,6 +262,49 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error {
+	sender := parcel.GetSender()
+
+	if mb.signmessages {
+		senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
+		if err := mb.ParcelFactory.Validate(senderKey, parcel); err != nil {
+			return errors.Wrap(err, "failed to check a message sign")
+		}
+	}
+
+	if parcel.DelegationToken() != nil {
+		valid, err := mb.DelegationTokenFactory.Verify(parcel)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			return errors.New("delegation token is not valid")
+		}
+		return nil
+	}
+
+	sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
+	if sendingObject == nil {
+		return nil
+	}
+
+	// TODO: temporary solution, this check should be removed after reimplementing token processing on VM side - @nordicdyno 19.Dec.2018
+	if allowedSenderRole.IsVirtualRole() {
+		return nil
+	}
+
+	validSender, err := mb.JetCoordinator.IsAuthorized(
+		ctx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,
+	)
+	if err != nil {
+		return err
+	}
+	if !validSender {
+		return errors.New("sender is not allowed to act on behalve of that object")
+	}
+	return nil
 }
 
 func init() {
@@ -314,6 +328,7 @@ func (rs *readerScope) Lock(ctx context.Context, info string) {
 	rs.locked = true
 }
 
+// Unlock unlocks scope if it locked. Do nothing if scope already unlocked.
 func (rs *readerScope) Unlock(ctx context.Context, info string) {
 	if rs.locked {
 		rs.locked = false

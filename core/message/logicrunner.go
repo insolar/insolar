@@ -17,6 +17,8 @@
 package message
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -186,23 +188,34 @@ func (cc *CallConstructor) DefaultTarget() *core.RecordRef {
 	return genRequest(cc.PulseNum, MustSerializeBytes(cc))
 }
 
-func (m *CallConstructor) GetReference() core.RecordRef {
-	return *genRequest(m.PulseNum, MustSerializeBytes(m))
+func (cc *CallConstructor) GetReference() core.RecordRef {
+	return *genRequest(cc.PulseNum, MustSerializeBytes(cc))
 }
 
 // Type returns TypeCallConstructor.
-func (m *CallConstructor) Type() core.MessageType {
+func (cc *CallConstructor) Type() core.MessageType {
 	return core.TypeCallConstructor
 }
 
+// TODO rename to executorObjectResult (results?)
 type ExecutorResults struct {
 	Caller    core.RecordRef
 	RecordRef core.RecordRef
 	Requests  []CaseBindRequest
+	Queue     []ExecutionQueueElement
+	Pending   bool
+}
+
+type ExecutionQueueElement struct {
+	Ctx     context.Context
+	Parcel  core.Parcel
+	Request *core.RecordRef
+	Pulse   core.PulseNumber
 }
 
 // AllowedSenderObjectAndRole implements interface method
 func (er *ExecutorResults) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	// TODO need to think - this message can send only Executor of Previous Pulse, this function
 	return nil, 0
 }
 
@@ -216,17 +229,17 @@ func (er *ExecutorResults) DefaultTarget() *core.RecordRef {
 	return &er.RecordRef
 }
 
-func (m *ExecutorResults) Type() core.MessageType {
+func (er *ExecutorResults) Type() core.MessageType {
 	return core.TypeExecutorResults
 }
 
 // TODO change after changing pulsar
-func (m *ExecutorResults) GetCaller() *core.RecordRef {
-	return &m.Caller
+func (er *ExecutorResults) GetCaller() *core.RecordRef {
+	return &er.Caller
 }
 
-func (m *ExecutorResults) GetReference() core.RecordRef {
-	return m.RecordRef
+func (er *ExecutorResults) GetReference() core.RecordRef {
+	return er.RecordRef
 }
 
 type ValidateCaseBind struct {
@@ -259,21 +272,21 @@ func (vcb *ValidateCaseBind) DefaultTarget() *core.RecordRef {
 	return &vcb.RecordRef
 }
 
-func (m *ValidateCaseBind) Type() core.MessageType {
+func (vcb *ValidateCaseBind) Type() core.MessageType {
 	return core.TypeValidateCaseBind
 }
 
 // TODO change after changing pulsar
-func (m *ValidateCaseBind) GetCaller() *core.RecordRef {
-	return &m.Caller // TODO actually it's not right. There is no caller.
+func (vcb *ValidateCaseBind) GetCaller() *core.RecordRef {
+	return &vcb.Caller // TODO actually it's not right. There is no caller.
 }
 
-func (m *ValidateCaseBind) GetReference() core.RecordRef {
-	return m.RecordRef
+func (vcb *ValidateCaseBind) GetReference() core.RecordRef {
+	return vcb.RecordRef
 }
 
-func (m *ValidateCaseBind) GetPulse() core.Pulse {
-	return m.Pulse
+func (vcb *ValidateCaseBind) GetPulse() core.Pulse {
+	return vcb.Pulse
 }
 
 type ValidationResults struct {
@@ -320,4 +333,32 @@ func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
 		*core.NewRecordID(pn, hasher.Hash(payload)),
 	)
 	return ref
+}
+
+// PendingFinished is sent by the old executor to the current executor
+// when pending execution finishes.
+type PendingFinished struct {
+	Reference core.RecordRef // object pended in executor
+}
+
+func (pf *PendingFinished) GetCaller() *core.RecordRef {
+	// Contract that initiated this call
+	return &pf.Reference
+}
+
+func (pf *PendingFinished) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	// This type of message currently can be send from any node todo: rethink it
+	return nil, 0
+}
+
+func (pf *PendingFinished) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+func (pf *PendingFinished) DefaultTarget() *core.RecordRef {
+	return &pf.Reference
+}
+
+func (pf *PendingFinished) Type() core.MessageType {
+	return core.TypePendingFinished
 }

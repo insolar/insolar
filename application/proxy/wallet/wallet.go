@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("111124YnRDsqTTetymaRDU7fFH6oJqrUrjdMqsYqK3v.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("111134yTwYTYwjs1VLsAd6K1BFM7HNK2LytMfVUAQz8.11111111111111111111111111111111")
 
 // Wallet holds proxy type
 type Wallet struct {

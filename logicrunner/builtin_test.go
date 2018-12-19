@@ -21,8 +21,6 @@ import (
 	"crypto"
 	"testing"
 
-	"github.com/insolar/insolar/contractrequester"
-
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -106,9 +104,7 @@ func TestBareHelloworld(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Register(scheme)
 	cm.Register(l.GetPulseManager(), l.GetArtifactManager(), l.GetJetCoordinator())
-	cr, err := contractrequester.New()
-
-	cm.Inject(nk, recent, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
@@ -154,8 +150,10 @@ func TestBareHelloworld(t *testing.T) {
 	)
 	assert.NoError(t, err, "contract call")
 
+	d := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
+	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	msg = &message.CallMethod{
 		ObjectRef: reqref,
@@ -172,6 +170,8 @@ func TestBareHelloworld(t *testing.T) {
 	)
 	assert.NoError(t, err, "contract call")
 
+	d = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
+	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }
