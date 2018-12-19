@@ -26,6 +26,10 @@ type ConnectionPool interface {
 	Reset()
 }
 
+type ConnectionFactory interface {
+	CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error)
+}
+
 type unsafeConnectionHolder interface {
 	Get(address net.Addr) (net.Conn, bool)
 	Delete(address net.Addr)
