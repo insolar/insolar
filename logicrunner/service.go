@@ -122,7 +122,10 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	if err != nil {
 		return err
 	}
-	rep.Result = res.(*reply.CallMethod).Result
+
+	if req.Wait {
+		rep.Result = res.(*reply.CallMethod).Result
+	}
 
 	return nil
 }

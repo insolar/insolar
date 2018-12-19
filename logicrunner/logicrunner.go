@@ -385,7 +385,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, err
 	}
 
-	return &reply.CallMethod{
+	return &reply.RegisterRequest{
 		Request: *request,
 	}, nil
 }

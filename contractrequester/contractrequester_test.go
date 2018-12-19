@@ -67,12 +67,11 @@ func TestNew(t *testing.T) {
 func TestContractRequester_SendRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ref := testutils.RandomRef()
-	testResult := &reply.CallMethod{}
 
 	pm := testutils.NewPulseStorageMock(t)
 	pm.CurrentMock.Return(core.GenesisPulse, nil)
 
-	mbm := mockMessageBus(t, testResult)
+	mbm := mockMessageBus(t, &reply.RegisterRequest{})
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
@@ -97,7 +96,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
 
 	require.NoError(t, err)
-	require.Equal(t, testResult, result)
+	require.Equal(t, &reply.CallMethod{}, result)
 }
 
 func TestContractRequester_SendRequest_RouteError(t *testing.T) {

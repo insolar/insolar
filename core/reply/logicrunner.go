@@ -39,3 +39,12 @@ type CallConstructor struct {
 func (r *CallConstructor) Type() core.ReplyType {
 	return TypeCallConstructor
 }
+
+type RegisterRequest struct {
+	Request core.RecordRef
+}
+
+// Type returns type of the reply
+func (r *RegisterRequest) Type() core.ReplyType {
+	return TypeRegisterRequest
+}

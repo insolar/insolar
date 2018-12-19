@@ -118,9 +118,9 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	r, ok := res.(*reply.CallMethod)
+	r, ok := res.(*reply.RegisterRequest)
 	if !ok {
-		return nil, errors.New("Got not reply.CallMethod in reply for CallMethod")
+		return nil, errors.New("Got not reply.RegisterRequest in reply for CallMethod")
 	}
 
 	if async {
@@ -187,7 +187,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		return nil, errors.Wrap(err, "couldn't save new object as delegate")
 	}
 
-	r, ok := res.(*reply.CallMethod)
+	r, ok := res.(*reply.RegisterRequest)
 	if !ok {
 		return nil, errors.New("Got not reply.CallConstructor in reply for CallConstructor")
 	}
