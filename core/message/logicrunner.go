@@ -50,6 +50,26 @@ type BaseLogicMessage struct {
 	Nonce           uint64
 }
 
+func (m *BaseLogicMessage) Type() core.MessageType {
+	panic("Virtual")
+}
+
+func (m *BaseLogicMessage) DefaultTarget() *core.RecordRef {
+	panic("Virtual")
+}
+
+func (m *BaseLogicMessage) DefaultRole() core.DynamicRole {
+	panic("implement me")
+}
+
+func (m *BaseLogicMessage) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	panic("implement me")
+}
+
+func (m *BaseLogicMessage) GetReference() core.RecordRef {
+	panic("implement me")
+}
+
 func (m *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &m.Caller
 }
@@ -61,6 +81,35 @@ func (m *BaseLogicMessage) GetCallerPrototype() *core.RecordRef {
 // GetRequest returns DynamicRoleVirtualExecutor as routing target role.
 func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 	return m.Request
+}
+
+// ReturnResults - push results of methods
+type ReturnResults struct {
+	Target  core.RecordRef
+	Caller  core.RecordRef
+	Request core.RecordRef
+	Reply   core.Reply
+	Error   string
+}
+
+func (rr *ReturnResults) Type() core.MessageType {
+	return core.TypeReturnResults
+}
+
+func (rr *ReturnResults) GetCaller() *core.RecordRef {
+	return &rr.Caller
+}
+
+func (rr *ReturnResults) DefaultTarget() *core.RecordRef {
+	return &rr.Target
+}
+
+func (rr *ReturnResults) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+func (rr *ReturnResults) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleVirtualExecutor
 }
 
 // CallMethod - Simply call method and return result

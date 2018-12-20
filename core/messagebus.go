@@ -152,10 +152,12 @@ type MessageHandler func(context.Context, Parcel) (Reply, error)
 const (
 	// Logicrunner
 
-	// TypeCallMethod calls method and returns result
+	// TypeCallMethod calls method and returns request
 	TypeCallMethod MessageType = iota
 	// TypeCallConstructor is a message for calling constructor and obtain its reply
 	TypeCallConstructor
+	// TypePutResults when execution finishes, tell results to requester
+	TypeReturnResults
 	// TypeExecutorResults message that goes to new Executor to validate previous Executor actions through CaseBind
 	TypeExecutorResults
 	// TypeValidateCaseBind sends CaseBind form Executor to Validators for redo all actions

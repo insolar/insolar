@@ -22,8 +22,8 @@ import (
 
 // CallMethod - the most common reply
 type CallMethod struct {
-	Data   []byte
-	Result []byte
+	Request core.RecordRef
+	Result  []byte
 }
 
 // Type returns type of the reply
@@ -38,4 +38,13 @@ type CallConstructor struct {
 // Type returns type of the reply
 func (r *CallConstructor) Type() core.ReplyType {
 	return TypeCallConstructor
+}
+
+type RegisterRequest struct {
+	Request core.RecordRef
+}
+
+// Type returns type of the reply
+func (r *RegisterRequest) Type() core.ReplyType {
+	return TypeRegisterRequest
 }
