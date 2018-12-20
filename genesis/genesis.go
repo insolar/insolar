@@ -127,7 +127,7 @@ func (g *Genesis) activateRootDomain(
 	}
 	_, err = g.ArtifactManager.RegisterResult(ctx, *g.ArtifactManager.GenesisRef(), *contract, nil)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	g.rootDomainRef = contract
 
@@ -167,7 +167,7 @@ func (g *Genesis) activateNodeDomain(
 	}
 	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 
 	g.nodeDomainRef = contract
