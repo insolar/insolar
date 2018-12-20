@@ -66,7 +66,8 @@ func TestOnPulse(t *testing.T) {
 	}()
 
 	qe := ExecutionQueueElement{
-		result: result,
+		result:     result,
+		returnMode: message.ReturnNoWait,
 	}
 
 	queue := append(make([]ExecutionQueueElement, 0), qe)
@@ -272,10 +273,11 @@ func TestPrepareState(t *testing.T) {
 
 	// add new element in existing queue
 	queueElementRequest := testutils.RandomRef()
-	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest}}
+	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest, ReturnMode: message.ReturnNoWait}}
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, 2, len(lr.state[object].ExecutionState.Queue))
 	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
+	require.Equal(t, message.ReturnNoWait, lr.state[object].ExecutionState.Queue[0].returnMode)
 
 }
 func TestHandlePendingFinishedMessage(
