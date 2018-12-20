@@ -26,9 +26,7 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/suite"
@@ -69,11 +67,8 @@ func (s *communicatorSuite) SetupTest() {
 		return true
 	}
 
-	s.consensusNetworkMock.RegisterRequestHandlerMock.Set(func(p types.PacketType, p1 network.ConsensusRequestHandler) {
-	})
+	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
 
-	s.consensusNetworkMock.NewRequestBuilderMock.Set(func() (r network.RequestBuilder) {
-		return &hostnetwork.Builder{}
 	})
 
 	s.consensusNetworkMock.GetNodeIDMock.Set(func() (r core.RecordRef) {

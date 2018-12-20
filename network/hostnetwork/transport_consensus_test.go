@@ -22,15 +22,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/consensus/packets"
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
+
+type consensusTransportSuite struct {
+	suite.Suite
+	crypto core.CryptographyService
+}
 
 func createTwoConsensusNetworks(id1, id2 core.ShortNodeID) (t1, t2 network.ConsensusNetwork, err error) {
 	m := newMockResolver()
@@ -66,20 +74,22 @@ func createTwoConsensusNetworks(id1, id2 core.ShortNodeID) (t1, t2 network.Conse
 	return cn1, cn2, nil
 }
 
-func TestTransportConsensus_SendRequest(t *testing.T) {
+func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) (bool, error) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
-	require.NoError(t, err)
+	if err != nil {
+		return false, err
+	}
 	ctx := context.Background()
 	ctx2 := context.Background()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(r network.Request) {
+	handler := func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef) {
 		log.Info("handler triggered")
 		wg.Done()
 	}
-	cn2.RegisterRequestHandler(types.Phase1, handler)
+	cn2.RegisterPacketHandler(packet.GetType(), handler)
 
 	cn2.Start(ctx)
 	cn1.Start(ctx2)
@@ -88,26 +98,162 @@ func TestTransportConsensus_SendRequest(t *testing.T) {
 		cn2.Stop()
 	}()
 
-	packet := packets.NewPhase1Packet()
-	request := cn1.NewRequestBuilder().Type(types.Phase1).Data(packet).Build()
-	err = cn1.SendRequest(request, cn2.GetNodeID())
-	require.NoError(t, err)
-	success := utils.WaitTimeout(&wg, time.Second)
-	require.True(t, success)
+	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
+	if err != nil {
+		return false, err
+	}
+	return utils.WaitTimeout(&wg, time.Second), nil
 }
 
-func TestTransportConsensus_RegisterPacketHandler(t *testing.T) {
+func newPhase1Packet() *consensus.Phase1Packet {
+	return consensus.NewPhase1Packet()
+}
+
+func newPhase2Packet() (*consensus.Phase2Packet, error) {
+	var ghs consensus.GlobuleHashSignature
+	bitset, err := consensus.NewBitSet(10)
+	if err != nil {
+		return nil, err
+	}
+	return consensus.NewPhase2Packet(ghs, bitset), nil
+}
+
+func newPhase3Packet() (*consensus.Phase3Packet, error) {
+	var ghs consensus.GlobuleHashSignature
+	bitset, err := consensus.NewBitSet(10)
+	if err != nil {
+		return nil, err
+	}
+	return consensus.NewPhase3Packet(ghs, bitset), nil
+}
+
+func (t *consensusTransportSuite) TestSendPacketPhase1() {
+	packet := newPhase1Packet()
+	success, err := t.sendPacket(packet)
+	require.NoError(t.T(), err)
+	assert.True(t.T(), success)
+}
+
+func (t *consensusTransportSuite) TestSendPacketPhase2() {
+	packet, err := newPhase2Packet()
+	require.NoError(t.T(), err)
+	success, err := t.sendPacket(packet)
+	require.NoError(t.T(), err)
+	assert.True(t.T(), success)
+}
+
+func (t *consensusTransportSuite) TestSendPacketPhase3() {
+	packet, err := newPhase3Packet()
+	require.NoError(t.T(), err)
+	success, err := t.sendPacket(packet)
+	require.NoError(t.T(), err)
+	assert.True(t.T(), success)
+}
+
+func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.ConsensusPacket) (bool, error) {
+	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
+	if err != nil {
+		return false, err
+	}
+	ctx := context.Background()
+	ctx2 := context.Background()
+
+	result := make(chan bool, 1)
+
+	handler := func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef) {
+		log.Info("handler triggered")
+		pk, err := t.crypto.GetPublicKey()
+		if err != nil {
+			log.Error("handler get public key error: " + err.Error())
+			result <- false
+			return
+		}
+		err = incomingPacket.Verify(t.crypto, pk)
+		if err != nil {
+			log.Error("verify signature error: " + err.Error())
+			result <- false
+			return
+		}
+		result <- true
+	}
+	cn2.RegisterPacketHandler(packet.GetType(), handler)
+
+	cn2.Start(ctx)
+	cn1.Start(ctx2)
+	defer func() {
+		cn1.Stop()
+		cn2.Stop()
+	}()
+
+	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
+	if err != nil {
+		return false, err
+	}
+
+	r := false
+	select {
+	case r = <-result:
+		return r, nil
+	case <-time.After(time.Second):
+		return r, nil
+	}
+}
+
+func (t *consensusTransportSuite) TestVerifySignPhase1() {
+	packet := newPhase1Packet()
+	success, err := t.sendPacketAndVerify(packet)
+	require.NoError(t.T(), err)
+	assert.True(t.T(), success)
+}
+
+func (t *consensusTransportSuite) TestVerifySignPhase2() {
+	packet, err := newPhase2Packet()
+	require.NoError(t.T(), err)
+	success, err := t.sendPacketAndVerify(packet)
+	require.NoError(t.T(), err)
+	assert.True(t.T(), success)
+}
+
+func (t *consensusTransportSuite) TestVerifySignPhase3() {
+	packet, err := newPhase3Packet()
+	require.NoError(t.T(), err)
+	success, err := t.sendPacketAndVerify(packet)
+	require.NoError(t.T(), err)
+	assert.True(t.T(), success)
+}
+
+func (t *consensusTransportSuite) TestRegisterPacketHandler() {
 	m := newMockResolver()
 
 	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, 0, m)
-	require.NoError(t, err)
+	require.NoError(t.T(), err)
 	defer cn.Stop()
-	handler := func(request network.Request) {
+	handler := func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef) {
 		// do nothing
 	}
 	f := func() {
-		cn.RegisterRequestHandler(types.Phase1, handler)
+		cn.RegisterPacketHandler(consensus.Phase1, handler)
 	}
-	require.NotPanics(t, f, "first request handler register should not panic")
-	require.Panics(t, f, "second request handler register should panic because it is already registered")
+	assert.NotPanics(t.T(), f, "first request handler register should not panic")
+	assert.Panics(t.T(), f, "second request handler register should panic because it is already registered")
+}
+
+func NewSuite() (*consensusTransportSuite, error) {
+	kp := platformpolicy.NewKeyProcessor()
+	sk, err := kp.GeneratePrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	cryptoService := cryptography.NewKeyBoundCryptographyService(sk)
+
+	return &consensusTransportSuite{
+		Suite:  suite.Suite{},
+		crypto: cryptoService,
+	}, nil
+}
+
+func TestConsensusTransport(t *testing.T) {
+	s, err := NewSuite()
+	require.NoError(t, err)
+	suite.Run(t, s)
 }

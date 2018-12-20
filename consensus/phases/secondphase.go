@@ -66,7 +66,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to generate bitset for Phase2Packet")
 	}
 	packet.SetBitSet(bitset)
-	err = sp.signPhase2Packet(&packet)
+	err = packet.Sign(sp.Cryptography)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to sign a packet")
 	}
@@ -80,13 +80,9 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	stateMatrix := NewStateMatrix(state.UnsyncList)
 
 	for ref, packet := range packets {
-		signIsCorrect, err := sp.isSignPhase2PacketRight(packet, ref)
+		err = sp.checkPacketSignature(packet, ref)
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to check phase2 packet signature from %s: %s", ref, err.Error())
-			continue
-		}
-		if !signIsCorrect {
-			inslogger.FromContext(ctx).Warnf("Received phase2 packet from %s with bad signature", ref)
 			continue
 		}
 		ghs := packet.GetGlobuleHashSignature()
@@ -130,10 +126,6 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to set pulse proof in Phase2Packet.")
 	}
 	packet.SetBitSet(state.BitSet)
-	err = sp.signPhase2Packet(&packet)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to sign a packet")
-	}
 
 	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, &packet, additionalRequests)
 	if err != nil {
@@ -249,28 +241,11 @@ func (sp *SecondPhase) generatePhase2Bitset(list network.UnsyncList, proofs map[
 	return bitset, nil
 }
 
-func (sp *SecondPhase) signPhase2Packet(p *packets.Phase2Packet) error {
-	data, err := p.RawFirstPart()
-	if err != nil {
-		return errors.Wrap(err, "failed to get raw bytes")
+func (sp *SecondPhase) checkPacketSignature(packet *packets.Phase2Packet, recordRef core.RecordRef) error {
+	activeNode := sp.NodeKeeper.GetActiveNode(recordRef)
+	if activeNode == nil {
+		return errors.New("failed to get active node")
 	}
-	sign, err := sp.Cryptography.Sign(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a phase 2 packet")
-	}
-
-	copy(p.SignatureHeaderSection1[:], sign.Bytes())
-	// TODO: sign a second part after claim addition
-	return nil
-}
-
-func (sp *SecondPhase) isSignPhase2PacketRight(packet *packets.Phase2Packet, recordRef core.RecordRef) (bool, error) {
-	key := sp.NodeKeeper.GetActiveNode(recordRef).PublicKey()
-
-	raw, err := packet.RawFirstPart()
-	if err != nil {
-		return false, errors.Wrap(err, "failed to serialize")
-	}
-
-	return sp.Cryptography.Verify(key, core.SignatureFromBytes(packet.SignatureHeaderSection1[:]), raw), nil
+	key := activeNode.PublicKey()
+	return packet.Verify(sp.Cryptography, key)
 }

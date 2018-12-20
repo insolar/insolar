@@ -44,11 +44,4 @@ const (
 	Challenge2
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
-
-	// Phase1 is packet type for phase 1
-	Phase1
-	// Phase1 is packet type for phase 2
-	Phase2
-	// Phase3Pulse is packet type for phase 3 ( pulse )
-	Phase3
 )

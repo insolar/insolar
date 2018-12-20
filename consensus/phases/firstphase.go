@@ -106,10 +106,6 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
-	err = fp.signPhase1Packet(&packet)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ FirstPhase ] failed to sign a packet")
-	}
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results.")
@@ -119,13 +115,9 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
 	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for ref, packet := range resultPackets {
-		signIsCorrect, err := fp.isSignPhase1PacketRight(packet, ref)
+		err = fp.checkPacketSignature(packet, ref)
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to check phase1 packet signature from %s: %s", ref, err.Error())
-			continue
-		}
-		if !signIsCorrect {
-			inslogger.FromContext(ctx).Warnf("Received phase1 packet from %s with bad signature", ref)
 			continue
 		}
 		rawProof := packet.GetPulseProof()
@@ -170,32 +162,13 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}, nil
 }
 
-func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
-	data, err := packet.RawBytes()
-	if err != nil {
-		return errors.Wrap(err, "failed to get raw bytes")
-	}
-	sign, err := fp.Cryptography.Sign(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a phase 2 packet")
-	}
-	copy(packet.Signature[:], sign.Bytes())
-	return nil
-}
-
-func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
+func (fp *FirstPhase) checkPacketSignature(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
 	activeNode := fp.NodeNetwork.GetActiveNode(recordRef)
 	if activeNode == nil {
-		return false, errors.New("failed to get active node")
+		return errors.New("failed to get active node")
 	}
-
 	key := activeNode.PublicKey()
-	raw, err := packet.RawBytes()
-
-	if err != nil {
-		return false, errors.Wrap(err, "failed to serialize packet")
-	}
-	return fp.Cryptography.Verify(key, core.SignatureFromBytes(packet.Signature[:]), raw), nil
+	return packet.Verify(fp.Cryptography, key)
 }
 
 func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {

@@ -364,7 +364,7 @@ func getPhase3Packet(t *testing.T) *Phase3Packet {
 	packet.globuleHashSignature = randomArray71()
 	packet.SignatureHeaderSection1 = randomArray71()
 	var err error
-	packet.deviantBitSet, err = NewBitSet(100)
+	packet.bitset, err = NewBitSet(100)
 	assert.NoError(t, err)
 
 	count := 70
@@ -373,7 +373,7 @@ func getPhase3Packet(t *testing.T) *Phase3Packet {
 	bitset, err := NewBitSet(len(cells))
 	assert.NoError(t, err)
 
-	packet.deviantBitSet = bitset
+	packet.bitset = bitset
 
 	return packet
 }

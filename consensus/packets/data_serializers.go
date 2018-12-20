@@ -87,13 +87,6 @@ func (ph *PacketHeader) compactPulseAndCustomFlags() uint32 {
 }
 
 func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
-	if header == nil {
-		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
-	}
-	if header.PacketT != Phase1 {
-		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Wrong packet type")
-	}
-
 	p1p.packetHeader = *header
 
 	err := p1p.pulseData.Deserialize(data)
@@ -147,19 +140,25 @@ func (p1p *Phase1Packet) Serialize() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 
 	if !p1p.hasSection2() && len(p1p.claims) > 0 {
-		return nil, errors.New("invalid Phase1Packet")
+		return nil, errors.New("[ Phase1Packet.Serialize ] Invalid Phase1Packet")
 	}
 
-	raw, err := p1p.RawBytes()
+	raw, err := p1p.rawBytes()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get raw bytes")
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Failed to get raw bytes")
 	}
 	result.Write(raw)
+
+	// serializing of signature
+	err = binary.Write(result, defaultByteOrder, p1p.Signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't write signature")
+	}
 
 	return result.Bytes(), nil
 }
 
-func (p1p *Phase1Packet) RawBytes() ([]byte, error) {
+func (p1p *Phase1Packet) rawBytes() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 
 	// serializing of  packetHeader
@@ -200,12 +199,6 @@ func (p1p *Phase1Packet) RawBytes() ([]byte, error) {
 	_, err = result.Write(claimRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
-	}
-
-	// serializing of signature
-	err = binary.Write(result, defaultByteOrder, p1p.Signature)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't write signature")
 	}
 
 	return result.Bytes(), nil
@@ -415,13 +408,6 @@ func (npp *NodePulseProof) Serialize() ([]byte, error) {
 // ----------------------------------PHASE 2--------------------------------
 
 func (p2p *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
-	if header == nil {
-		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
-	}
-	if header.PacketT != Phase2 {
-		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Wrong packet type")
-	}
-
 	p2p.packetHeader = *header
 
 	err := binary.Read(data, defaultByteOrder, &p2p.globuleHashSignature)
@@ -484,7 +470,7 @@ func (p2p *Phase2Packet) Deserialize(data io.Reader) error {
 func (p2p *Phase2Packet) Serialize() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 
-	raw1, err := p2p.RawFirstPart()
+	raw1, err := p2p.rawFirstPart()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] failed to serialize first part")
 	}
@@ -501,7 +487,7 @@ func (p2p *Phase2Packet) Serialize() ([]byte, error) {
 		return result.Bytes(), nil
 	}
 
-	raw2, err := p2p.RawSecondPart()
+	raw2, err := p2p.rawSecondPart()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] failed to serialize second part")
 	}
@@ -517,7 +503,7 @@ func (p2p *Phase2Packet) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (p2p *Phase2Packet) RawFirstPart() ([]byte, error) {
+func (p2p *Phase2Packet) rawFirstPart() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 
 	packetHeaderRaw, err := p2p.packetHeader.Serialize()
@@ -546,7 +532,7 @@ func (p2p *Phase2Packet) RawFirstPart() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (p2p *Phase2Packet) RawSecondPart() ([]byte, error) {
+func (p2p *Phase2Packet) rawSecondPart() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 	for _, vote := range p2p.votesAndAnswers {
 		voteHeader := makeVoteHeader(vote)
@@ -574,7 +560,7 @@ func (p2p *Phase2Packet) RawSecondPart() ([]byte, error) {
 // ----------------------------------PHASE 3--------------------------------
 
 func (p3p *Phase3Packet) Serialize() ([]byte, error) {
-	rawBytes, err := p3p.RawBytes()
+	rawBytes, err := p3p.rawBytes()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Serialize ] failed to get a raw bytes")
 	}
@@ -593,13 +579,13 @@ func (p3p *Phase3Packet) Serialize() ([]byte, error) {
 	return data.Bytes(), nil
 }
 
-func (p3p *Phase3Packet) RawBytes() ([]byte, error) {
+func (p3p *Phase3Packet) rawBytes() ([]byte, error) {
 	header, err := p3p.packetHeader.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RawBytes ] failed to serialize p3p header")
 	}
 
-	bitset, err := p3p.deviantBitSet.Serialize()
+	bitset, err := p3p.bitset.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RawBytes ] failed to serialize bitset")
 	}
@@ -638,11 +624,13 @@ func (p3p *Phase3Packet) Deserialize(data io.Reader) error {
 }
 
 func (p3p *Phase3Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+	p3p.packetHeader = *header
+
 	bitset, err := DeserializeBitSet(data)
 	if err != nil {
 		return errors.Wrap(err, "[ DeserializeWithoutHeader ] failed to deserialize a bitset")
 	}
-	p3p.deviantBitSet = bitset
+	p3p.bitset = bitset
 
 	err = binary.Read(data, defaultByteOrder, &p3p.globuleHashSignature)
 	if err != nil {
