@@ -81,6 +81,7 @@ type CurrentExecution struct {
 	Request       *Ref
 	RequesterNode *Ref
 	ReturnMode    message.MethodReturnMode
+	SentResult    bool
 }
 
 type ExecutionQueueResult struct {
@@ -346,6 +347,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
+		es.Unlock()
 		return nil, os.WrapError(nil, "loop detected")
 	}
 
@@ -382,6 +384,10 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
+	if es.Current.SentResult {
+		return false
+	}
+
 	if es.Current.ReturnMode == message.ReturnNoWait {
 		return false
 	}
@@ -394,6 +400,8 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	if inslogger.TraceID(es.Current.Context) != inslogger.TraceID(ctx) {
 		return false
 	}
+
+	inslogger.FromContext(ctx).Debug("loop detected")
 
 	return true
 }
@@ -419,10 +427,10 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 		return &reply.OK{}, nil
 	}
 	es := os.ExecutionState
-	es.pending = NotPending
 	os.Unlock()
 
 	es.Lock()
+	es.pending = NotPending
 	if es.Current != nil {
 		es.Unlock()
 		return nil, errors.New("received PendingFinished when we are already executing")
@@ -527,28 +535,28 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 // finishPendingIfNeeded checks whether last execution was a pending one.
 // If this is true as a side effect the function sends a PendingFinished
 // message to the current executor
-func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) bool {
+func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) {
 	es.Lock()
 	defer es.Unlock()
 
 	if es.pending != InPending {
-		return false
+		return
 	}
 
 	es.pending = NotPending
-	msg := message.PendingFinished{Reference: currentRef}
-	pulse, err := lr.PulseStorage.Current(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
-		return true
-	}
-	_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
-		return true
-	}
 
-	return true
+	go func() {
+		pulse, err := lr.PulseStorage.Current(ctx)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
+			return
+		}
+		msg := message.PendingFinished{Reference: currentRef}
+		_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
+		}
+	}()
 }
 
 func (lr *LogicRunner) executeOrValidate(
@@ -586,21 +594,39 @@ func (lr *LogicRunner) executeOrValidate(
 	if err != nil {
 		errstr = err.Error()
 	}
-	if es.Current.ReturnMode == message.ReturnResult {
-		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
-		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
-			Caller:  lr.NodeNetwork.GetOrigin().ID(),
-			Target:  *es.Current.RequesterNode,
-			Request: *es.Current.Request,
-			Reply:   re,
-			Error:   errstr,
-		}, *lr.pulse(ctx), &core.MessageSendOptions{
-			Receiver: es.Current.RequesterNode,
-		})
-		if err != nil {
-			inslogger.FromContext(ctx).Debug("couldn't deliver results")
-		}
+
+	es.Lock()
+	defer es.Unlock()
+
+	es.Current.SentResult = true
+	if es.Current.ReturnMode != message.ReturnResult {
+		return re, err
 	}
+
+	target := *es.Current.RequesterNode
+	request := *es.Current.Request
+
+	go func() {
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
+
+		_, err = core.MessageBusFromContext(ctx, nil).Send(
+			ctx,
+			&message.ReturnResults{
+				Caller:  lr.NodeNetwork.GetOrigin().ID(),
+				Target:  target,
+				Request: request,
+				Reply:   re,
+				Error:   errstr,
+			},
+			*lr.pulse(ctx),
+			&core.MessageSendOptions{
+				Receiver: &target,
+			},
+		)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
+		}
+	}()
 
 	return re, err
 }

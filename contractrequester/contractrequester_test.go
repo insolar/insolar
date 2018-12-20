@@ -81,7 +81,11 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	cReq.Start(ctx)
 
 	go func() {
-		for len(cReq.ResultMap) == 0 {
+		resLen := 0
+		for resLen == 0 {
+			cReq.ResultMutex.Lock()
+			resLen = len(cReq.ResultMap)
+			cReq.ResultMutex.Unlock()
 			runtime.Gosched()
 		}
 		cReq.ResultMutex.Lock()

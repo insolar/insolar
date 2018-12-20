@@ -79,7 +79,7 @@ type DB struct {
 
 	addJetLock       sync.RWMutex
 	addBlockSizeLock sync.RWMutex
-	jetTreeLock      sync.Mutex
+	jetTreeLock      sync.RWMutex
 
 	closeLock sync.RWMutex
 	isClosed  bool

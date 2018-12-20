@@ -169,12 +169,13 @@ func NewPulsar(
 	}
 
 	gob.Register(Payload{})
-	gob.Register(HandshakePayload{})
-	gob.Register(EntropySignaturePayload{})
-	gob.Register(EntropyPayload{})
-	gob.Register(VectorPayload{})
+	gob.Register(&HandshakePayload{})
+	gob.Register(&EntropySignaturePayload{})
+	gob.Register(&EntropyPayload{})
+	gob.Register(&VectorPayload{})
 	gob.Register(core.PulseSenderConfirmation{})
-	gob.Register(PulsePayload{})
+	gob.Register(&PulsePayload{})
+	gob.Register(&PulseSenderConfirmationPayload{})
 
 	return pulsar, nil
 }
@@ -184,7 +185,7 @@ func (currentPulsar *Pulsar) StartServer(ctx context.Context) {
 	inslogger.FromContext(ctx).Debugf("[StartServer] address - %v", currentPulsar.Config.MainListenerAddress)
 	server := rpc.NewServer()
 
-	err := server.RegisterName("Pulsar", &Handler{Pulsar: currentPulsar})
+	err := server.RegisterName("Pulsar", NewHandler(currentPulsar))
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 	}
@@ -230,7 +231,7 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pu
 	}
 
 	var rep Payload
-	message, err := currentPulsar.preparePayload(HandshakePayload{Entropy: currentPulsar.EntropyGenerator.GenerateEntropy()})
+	message, err := currentPulsar.preparePayload(&HandshakePayload{Entropy: currentPulsar.EntropyGenerator.GenerateEntropy()})
 	if err != nil {
 		return err
 	}
@@ -241,7 +242,7 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pu
 	}
 	casted := reply.Reply.(*Payload)
 
-	result, err := checkPayloadSignature(currentPulsar.CryptographyService, currentPulsar.KeyProcessor, casted)
+	result, err := currentPulsar.checkPayloadSignature(casted)
 	if err != nil {
 		return err
 	}
