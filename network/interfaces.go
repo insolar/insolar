@@ -67,7 +67,7 @@ type HostNetwork interface {
 	BuildResponse(request Request, responseData interface{}) Response
 }
 
-type ConsensusRequestHandler func(Request)
+type ConsensusRequestHandler func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef)
 
 //go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
 type ConsensusNetwork interface {
@@ -81,11 +81,9 @@ type ConsensusNetwork interface {
 	GetNodeID() core.RecordRef
 
 	// SendRequest send request to a remote node.
-	SendRequest(request Request, receiver core.RecordRef) error
+	SendRequest(packet consensus.ConsensusPacket, receiver core.RecordRef, service core.CryptographyService) error
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
-	RegisterRequestHandler(t types.PacketType, handler ConsensusRequestHandler)
-	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
-	NewRequestBuilder() RequestBuilder
+	RegisterRequestHandler(t consensus.PacketType, handler ConsensusRequestHandler)
 }
 
 // Packet is a packet that is transported via network by HostNetwork.

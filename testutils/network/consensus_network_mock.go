@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	packets "github.com/insolar/insolar/consensus/packets"
 	core "github.com/insolar/insolar/core"
 	network "github.com/insolar/insolar/network"
-	types "github.com/insolar/insolar/network/transport/packet/types"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -27,22 +27,17 @@ type ConsensusNetworkMock struct {
 	GetNodeIDPreCounter uint64
 	GetNodeIDMock       mConsensusNetworkMockGetNodeID
 
-	NewRequestBuilderFunc       func() (r network.RequestBuilder)
-	NewRequestBuilderCounter    uint64
-	NewRequestBuilderPreCounter uint64
-	NewRequestBuilderMock       mConsensusNetworkMockNewRequestBuilder
-
 	PublicAddressFunc       func() (r string)
 	PublicAddressCounter    uint64
 	PublicAddressPreCounter uint64
 	PublicAddressMock       mConsensusNetworkMockPublicAddress
 
-	RegisterRequestHandlerFunc       func(p types.PacketType, p1 network.ConsensusRequestHandler)
+	RegisterRequestHandlerFunc       func(p packets.PacketType, p1 network.ConsensusRequestHandler)
 	RegisterRequestHandlerCounter    uint64
 	RegisterRequestHandlerPreCounter uint64
 	RegisterRequestHandlerMock       mConsensusNetworkMockRegisterRequestHandler
 
-	SendRequestFunc       func(p network.Request, p1 core.RecordRef) (r error)
+	SendRequestFunc       func(p packets.ConsensusPacket, p1 core.RecordRef, p2 core.CryptographyService) (r error)
 	SendRequestCounter    uint64
 	SendRequestPreCounter uint64
 	SendRequestMock       mConsensusNetworkMockSendRequest
@@ -67,7 +62,6 @@ func NewConsensusNetworkMock(t minimock.Tester) *ConsensusNetworkMock {
 	}
 
 	m.GetNodeIDMock = mConsensusNetworkMockGetNodeID{mock: m}
-	m.NewRequestBuilderMock = mConsensusNetworkMockNewRequestBuilder{mock: m}
 	m.PublicAddressMock = mConsensusNetworkMockPublicAddress{mock: m}
 	m.RegisterRequestHandlerMock = mConsensusNetworkMockRegisterRequestHandler{mock: m}
 	m.SendRequestMock = mConsensusNetworkMockSendRequest{mock: m}
@@ -206,140 +200,6 @@ func (m *ConsensusNetworkMock) GetNodeIDFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetNodeIDFunc != nil {
 		return atomic.LoadUint64(&m.GetNodeIDCounter) > 0
-	}
-
-	return true
-}
-
-type mConsensusNetworkMockNewRequestBuilder struct {
-	mock              *ConsensusNetworkMock
-	mainExpectation   *ConsensusNetworkMockNewRequestBuilderExpectation
-	expectationSeries []*ConsensusNetworkMockNewRequestBuilderExpectation
-}
-
-type ConsensusNetworkMockNewRequestBuilderExpectation struct {
-	result *ConsensusNetworkMockNewRequestBuilderResult
-}
-
-type ConsensusNetworkMockNewRequestBuilderResult struct {
-	r network.RequestBuilder
-}
-
-//Expect specifies that invocation of ConsensusNetwork.NewRequestBuilder is expected from 1 to Infinity times
-func (m *mConsensusNetworkMockNewRequestBuilder) Expect() *mConsensusNetworkMockNewRequestBuilder {
-	m.mock.NewRequestBuilderFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ConsensusNetworkMockNewRequestBuilderExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of ConsensusNetwork.NewRequestBuilder
-func (m *mConsensusNetworkMockNewRequestBuilder) Return(r network.RequestBuilder) *ConsensusNetworkMock {
-	m.mock.NewRequestBuilderFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ConsensusNetworkMockNewRequestBuilderExpectation{}
-	}
-	m.mainExpectation.result = &ConsensusNetworkMockNewRequestBuilderResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of ConsensusNetwork.NewRequestBuilder is expected once
-func (m *mConsensusNetworkMockNewRequestBuilder) ExpectOnce() *ConsensusNetworkMockNewRequestBuilderExpectation {
-	m.mock.NewRequestBuilderFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ConsensusNetworkMockNewRequestBuilderExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ConsensusNetworkMockNewRequestBuilderExpectation) Return(r network.RequestBuilder) {
-	e.result = &ConsensusNetworkMockNewRequestBuilderResult{r}
-}
-
-//Set uses given function f as a mock of ConsensusNetwork.NewRequestBuilder method
-func (m *mConsensusNetworkMockNewRequestBuilder) Set(f func() (r network.RequestBuilder)) *ConsensusNetworkMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.NewRequestBuilderFunc = f
-	return m.mock
-}
-
-//NewRequestBuilder implements github.com/insolar/insolar/network.ConsensusNetwork interface
-func (m *ConsensusNetworkMock) NewRequestBuilder() (r network.RequestBuilder) {
-	counter := atomic.AddUint64(&m.NewRequestBuilderPreCounter, 1)
-	defer atomic.AddUint64(&m.NewRequestBuilderCounter, 1)
-
-	if len(m.NewRequestBuilderMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.NewRequestBuilderMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ConsensusNetworkMock.NewRequestBuilder.")
-			return
-		}
-
-		result := m.NewRequestBuilderMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ConsensusNetworkMock.NewRequestBuilder")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.NewRequestBuilderMock.mainExpectation != nil {
-
-		result := m.NewRequestBuilderMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ConsensusNetworkMock.NewRequestBuilder")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.NewRequestBuilderFunc == nil {
-		m.t.Fatalf("Unexpected call to ConsensusNetworkMock.NewRequestBuilder.")
-		return
-	}
-
-	return m.NewRequestBuilderFunc()
-}
-
-//NewRequestBuilderMinimockCounter returns a count of ConsensusNetworkMock.NewRequestBuilderFunc invocations
-func (m *ConsensusNetworkMock) NewRequestBuilderMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.NewRequestBuilderCounter)
-}
-
-//NewRequestBuilderMinimockPreCounter returns the value of ConsensusNetworkMock.NewRequestBuilder invocations
-func (m *ConsensusNetworkMock) NewRequestBuilderMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.NewRequestBuilderPreCounter)
-}
-
-//NewRequestBuilderFinished returns true if mock invocations count is ok
-func (m *ConsensusNetworkMock) NewRequestBuilderFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.NewRequestBuilderMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.NewRequestBuilderCounter) == uint64(len(m.NewRequestBuilderMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.NewRequestBuilderMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.NewRequestBuilderCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.NewRequestBuilderFunc != nil {
-		return atomic.LoadUint64(&m.NewRequestBuilderCounter) > 0
 	}
 
 	return true
@@ -490,12 +350,12 @@ type ConsensusNetworkMockRegisterRequestHandlerExpectation struct {
 }
 
 type ConsensusNetworkMockRegisterRequestHandlerInput struct {
-	p  types.PacketType
+	p  packets.PacketType
 	p1 network.ConsensusRequestHandler
 }
 
 //Expect specifies that invocation of ConsensusNetwork.RegisterRequestHandler is expected from 1 to Infinity times
-func (m *mConsensusNetworkMockRegisterRequestHandler) Expect(p types.PacketType, p1 network.ConsensusRequestHandler) *mConsensusNetworkMockRegisterRequestHandler {
+func (m *mConsensusNetworkMockRegisterRequestHandler) Expect(p packets.PacketType, p1 network.ConsensusRequestHandler) *mConsensusNetworkMockRegisterRequestHandler {
 	m.mock.RegisterRequestHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -519,7 +379,7 @@ func (m *mConsensusNetworkMockRegisterRequestHandler) Return() *ConsensusNetwork
 }
 
 //ExpectOnce specifies that invocation of ConsensusNetwork.RegisterRequestHandler is expected once
-func (m *mConsensusNetworkMockRegisterRequestHandler) ExpectOnce(p types.PacketType, p1 network.ConsensusRequestHandler) *ConsensusNetworkMockRegisterRequestHandlerExpectation {
+func (m *mConsensusNetworkMockRegisterRequestHandler) ExpectOnce(p packets.PacketType, p1 network.ConsensusRequestHandler) *ConsensusNetworkMockRegisterRequestHandlerExpectation {
 	m.mock.RegisterRequestHandlerFunc = nil
 	m.mainExpectation = nil
 
@@ -530,7 +390,7 @@ func (m *mConsensusNetworkMockRegisterRequestHandler) ExpectOnce(p types.PacketT
 }
 
 //Set uses given function f as a mock of ConsensusNetwork.RegisterRequestHandler method
-func (m *mConsensusNetworkMockRegisterRequestHandler) Set(f func(p types.PacketType, p1 network.ConsensusRequestHandler)) *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockRegisterRequestHandler) Set(f func(p packets.PacketType, p1 network.ConsensusRequestHandler)) *ConsensusNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -539,7 +399,7 @@ func (m *mConsensusNetworkMockRegisterRequestHandler) Set(f func(p types.PacketT
 }
 
 //RegisterRequestHandler implements github.com/insolar/insolar/network.ConsensusNetwork interface
-func (m *ConsensusNetworkMock) RegisterRequestHandler(p types.PacketType, p1 network.ConsensusRequestHandler) {
+func (m *ConsensusNetworkMock) RegisterRequestHandler(p packets.PacketType, p1 network.ConsensusRequestHandler) {
 	counter := atomic.AddUint64(&m.RegisterRequestHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterRequestHandlerCounter, 1)
 
@@ -615,8 +475,9 @@ type ConsensusNetworkMockSendRequestExpectation struct {
 }
 
 type ConsensusNetworkMockSendRequestInput struct {
-	p  network.Request
+	p  packets.ConsensusPacket
 	p1 core.RecordRef
+	p2 core.CryptographyService
 }
 
 type ConsensusNetworkMockSendRequestResult struct {
@@ -624,14 +485,14 @@ type ConsensusNetworkMockSendRequestResult struct {
 }
 
 //Expect specifies that invocation of ConsensusNetwork.SendRequest is expected from 1 to Infinity times
-func (m *mConsensusNetworkMockSendRequest) Expect(p network.Request, p1 core.RecordRef) *mConsensusNetworkMockSendRequest {
+func (m *mConsensusNetworkMockSendRequest) Expect(p packets.ConsensusPacket, p1 core.RecordRef, p2 core.CryptographyService) *mConsensusNetworkMockSendRequest {
 	m.mock.SendRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ConsensusNetworkMockSendRequestExpectation{}
 	}
-	m.mainExpectation.input = &ConsensusNetworkMockSendRequestInput{p, p1}
+	m.mainExpectation.input = &ConsensusNetworkMockSendRequestInput{p, p1, p2}
 	return m
 }
 
@@ -648,12 +509,12 @@ func (m *mConsensusNetworkMockSendRequest) Return(r error) *ConsensusNetworkMock
 }
 
 //ExpectOnce specifies that invocation of ConsensusNetwork.SendRequest is expected once
-func (m *mConsensusNetworkMockSendRequest) ExpectOnce(p network.Request, p1 core.RecordRef) *ConsensusNetworkMockSendRequestExpectation {
+func (m *mConsensusNetworkMockSendRequest) ExpectOnce(p packets.ConsensusPacket, p1 core.RecordRef, p2 core.CryptographyService) *ConsensusNetworkMockSendRequestExpectation {
 	m.mock.SendRequestFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ConsensusNetworkMockSendRequestExpectation{}
-	expectation.input = &ConsensusNetworkMockSendRequestInput{p, p1}
+	expectation.input = &ConsensusNetworkMockSendRequestInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -663,7 +524,7 @@ func (e *ConsensusNetworkMockSendRequestExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of ConsensusNetwork.SendRequest method
-func (m *mConsensusNetworkMockSendRequest) Set(f func(p network.Request, p1 core.RecordRef) (r error)) *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockSendRequest) Set(f func(p packets.ConsensusPacket, p1 core.RecordRef, p2 core.CryptographyService) (r error)) *ConsensusNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -672,18 +533,18 @@ func (m *mConsensusNetworkMockSendRequest) Set(f func(p network.Request, p1 core
 }
 
 //SendRequest implements github.com/insolar/insolar/network.ConsensusNetwork interface
-func (m *ConsensusNetworkMock) SendRequest(p network.Request, p1 core.RecordRef) (r error) {
+func (m *ConsensusNetworkMock) SendRequest(p packets.ConsensusPacket, p1 core.RecordRef, p2 core.CryptographyService) (r error) {
 	counter := atomic.AddUint64(&m.SendRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.SendRequestCounter, 1)
 
 	if len(m.SendRequestMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SendRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ConsensusNetworkMock.SendRequest. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to ConsensusNetworkMock.SendRequest. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.SendRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ConsensusNetworkMockSendRequestInput{p, p1}, "ConsensusNetwork.SendRequest got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ConsensusNetworkMockSendRequestInput{p, p1, p2}, "ConsensusNetwork.SendRequest got unexpected parameters")
 
 		result := m.SendRequestMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -700,7 +561,7 @@ func (m *ConsensusNetworkMock) SendRequest(p network.Request, p1 core.RecordRef)
 
 		input := m.SendRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ConsensusNetworkMockSendRequestInput{p, p1}, "ConsensusNetwork.SendRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ConsensusNetworkMockSendRequestInput{p, p1, p2}, "ConsensusNetwork.SendRequest got unexpected parameters")
 		}
 
 		result := m.SendRequestMock.mainExpectation.result
@@ -714,11 +575,11 @@ func (m *ConsensusNetworkMock) SendRequest(p network.Request, p1 core.RecordRef)
 	}
 
 	if m.SendRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to ConsensusNetworkMock.SendRequest. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to ConsensusNetworkMock.SendRequest. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.SendRequestFunc(p, p1)
+	return m.SendRequestFunc(p, p1, p2)
 }
 
 //SendRequestMinimockCounter returns a count of ConsensusNetworkMock.SendRequestFunc invocations
@@ -992,10 +853,6 @@ func (m *ConsensusNetworkMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ConsensusNetworkMock.GetNodeID")
 	}
 
-	if !m.NewRequestBuilderFinished() {
-		m.t.Fatal("Expected call to ConsensusNetworkMock.NewRequestBuilder")
-	}
-
 	if !m.PublicAddressFinished() {
 		m.t.Fatal("Expected call to ConsensusNetworkMock.PublicAddress")
 	}
@@ -1037,10 +894,6 @@ func (m *ConsensusNetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ConsensusNetworkMock.GetNodeID")
 	}
 
-	if !m.NewRequestBuilderFinished() {
-		m.t.Fatal("Expected call to ConsensusNetworkMock.NewRequestBuilder")
-	}
-
 	if !m.PublicAddressFinished() {
 		m.t.Fatal("Expected call to ConsensusNetworkMock.PublicAddress")
 	}
@@ -1076,7 +929,6 @@ func (m *ConsensusNetworkMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetNodeIDFinished()
-		ok = ok && m.NewRequestBuilderFinished()
 		ok = ok && m.PublicAddressFinished()
 		ok = ok && m.RegisterRequestHandlerFinished()
 		ok = ok && m.SendRequestFinished()
@@ -1092,10 +944,6 @@ func (m *ConsensusNetworkMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetNodeIDFinished() {
 				m.t.Error("Expected call to ConsensusNetworkMock.GetNodeID")
-			}
-
-			if !m.NewRequestBuilderFinished() {
-				m.t.Error("Expected call to ConsensusNetworkMock.NewRequestBuilder")
 			}
 
 			if !m.PublicAddressFinished() {
@@ -1131,10 +979,6 @@ func (m *ConsensusNetworkMock) MinimockWait(timeout time.Duration) {
 func (m *ConsensusNetworkMock) AllMocksCalled() bool {
 
 	if !m.GetNodeIDFinished() {
-		return false
-	}
-
-	if !m.NewRequestBuilderFinished() {
 		return false
 	}
 

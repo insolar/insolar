@@ -21,12 +21,13 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/configuration"
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
 )
@@ -34,11 +35,11 @@ import (
 type transportConsensus struct {
 	transportBase
 	resolver network.RoutingTable
-	handlers map[types.PacketType]network.ConsensusRequestHandler
+	handlers map[consensus.PacketType]network.ConsensusRequestHandler
 }
 
 // RegisterRequestHandler register a handler function to process incoming requests of a specific type.
-func (tc *transportConsensus) RegisterRequestHandler(t types.PacketType, handler network.ConsensusRequestHandler) {
+func (tc *transportConsensus) RegisterRequestHandler(t consensus.PacketType, handler network.ConsensusRequestHandler) {
 	_, exists := tc.handlers[t]
 	if exists {
 		panic(fmt.Sprintf("multiple handlers for packet type %s are not supported!", t.String()))
@@ -46,34 +47,51 @@ func (tc *transportConsensus) RegisterRequestHandler(t types.PacketType, handler
 	tc.handlers[t] = handler
 }
 
-func (tc *transportConsensus) SendRequest(request network.Request, receiver core.RecordRef) error {
-	log.Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
+func (tc *transportConsensus) SendRequest(packet consensus.ConsensusPacket,
+	receiver core.RecordRef, service core.CryptographyService) error {
+
+	log.Debugf("Send %s request to host %s", packet.GetType(), receiver.String())
 	receiverHost, err := tc.resolver.ResolveConsensusRef(receiver)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to send %s request to node %s",
-			request.GetType().String(), receiver.String())
+		return errors.Wrapf(err, "Failed to resolve %s request to node %s", packet.GetType(), receiver.String())
 	}
-	p := tc.buildRequest(request, receiverHost)
+	packet.SetRouting(tc.origin.ShortID, receiverHost.ShortID)
+	err = packet.Sign(service)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to sign %s request to node %s", packet.GetType(), receiver.String())
+	}
+	p := tc.buildPacket(packet, receiverHost)
 	return tc.transport.SendPacket(p)
 }
 
+func (tc *transportConsensus) buildPacket(p consensus.ConsensusPacket, receiver *host.Host) *packet.Packet {
+	return packet.NewBuilder(tc.origin).Receiver(receiver).Request(p).Build()
+}
+
 func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Packet) {
-	log.Debugf("Got %s request from host, shortID: %d", msg.Type.String(), msg.Sender.ShortID)
-	sender, err := tc.resolver.ResolveConsensus(msg.Sender.ShortID)
+	p, ok := msg.Data.(consensus.ConsensusPacket)
+	if !ok {
+		log.Error("Error processing incoming message: failed to convert to ConsensusPacket")
+		return
+	}
+	log.Debugf("Got %s request from host, shortID: %d", p.GetType(), p.GetOrigin())
+	if p.GetTarget() != tc.origin.ShortID {
+		log.Error("Error processing incoming message: target ID %d differs from origin %d", p.GetTarget(), tc.origin.ShortID)
+		return
+	}
+	sender, err := tc.resolver.ResolveConsensus(p.GetOrigin())
 	// TODO: NETD18-79
 	// special case for Phase1 because we can get a valid packet from a node we don't know yet (first consensus case)
-	if err != nil && msg.Type != types.Phase1 {
+	if err != nil && p.GetType() != consensus.Phase1 {
 		log.Errorf("Error processing incoming message: failed to resolve ShortID (%d) -> NodeID", msg.Sender.ShortID)
 		return
 	}
-	msg.Sender = sender
-	handler, exist := tc.handlers[msg.Type]
+	handler, exist := tc.handlers[p.GetType()]
 	if !exist {
-		log.Errorf("No handler set for packet type %s from node %d, %s",
-			msg.Type.String(), msg.Sender.ShortID, msg.Sender.NodeID)
+		log.Errorf("No handler set for packet type %s from node %d, %s", p.GetType(), sender.ShortID, sender.NodeID)
 		return
 	}
-	handler((*packetWrapper)(msg))
+	handler(p, sender.NodeID)
 }
 
 func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
@@ -96,7 +114,7 @@ func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 		return nil, errors.Wrap(err, "error getting origin")
 	}
 	origin.ShortID = shortID
-	result := &transportConsensus{handlers: make(map[types.PacketType]network.ConsensusRequestHandler)}
+	result := &transportConsensus{handlers: make(map[consensus.PacketType]network.ConsensusRequestHandler)}
 
 	result.transport = tp
 	result.resolver = resolver
