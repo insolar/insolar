@@ -69,9 +69,10 @@ type PulseManager struct {
 }
 
 type pmOptions struct {
-	enableSync      bool
-	splitThreshold  uint64
-	dropHistorySize int
+	enableSync       bool
+	splitThreshold   uint64
+	dropHistorySize  int
+	storeLightPulses core.PulseNumber
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -88,9 +89,10 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 		db:           db,
 		currentPulse: *core.GenesisPulse,
 		options: pmOptions{
-			enableSync:      pmconf.HeavySyncEnabled,
-			splitThreshold:  pmconf.SplitThreshold,
-			dropHistorySize: conf.JetSizesHistoryDepth,
+			enableSync:       pmconf.HeavySyncEnabled,
+			splitThreshold:   pmconf.SplitThreshold,
+			dropHistorySize:  conf.JetSizesHistoryDepth,
+			storeLightPulses: conf.LightChainLimit,
 		},
 		syncClientsPool: heavySyncPool,
 	}
@@ -143,7 +145,14 @@ func (m *PulseManager) processEndPulse(
 	if err != nil {
 		return errors.Wrap(err, "got error on jets sync")
 	}
-	// TODO: remove outdated indexes here
+
+	// TODO: maybe move cleanup in the above cycle or process removal in separate job - 20.Dec.2018 @nordicdyno
+	untilPN := currentPulse.PulseNumber - m.options.storeLightPulses
+	for jetID := range jetIDs {
+		if err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
