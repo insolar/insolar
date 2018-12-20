@@ -278,6 +278,7 @@ func TestPrepareState(t *testing.T) {
 	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
 
 }
+
 func TestHandlePendingFinishedMessage(
 	t *testing.T,
 ) {
@@ -314,4 +315,60 @@ func TestHandlePendingFinishedMessage(
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, re)
 
+}
+
+func TestLogicRunner_CheckExecutionLoop(
+	t *testing.T,
+) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	es := &ExecutionState{
+		Current: nil,
+	}
+
+	loop := lr.CheckExecutionLoop(ctx, es, nil)
+	require.False(t, loop)
+
+	ctxA, _ := inslogger.WithTraceField(ctx, "a")
+	ctxB, _ := inslogger.WithTraceField(ctx, "b")
+
+	parcel := testutils.NewParcelMock(t).MessageMock.Return(
+		&message.CallMethod{ReturnMode: message.ReturnResult},
+	)
+	es.Current = &CurrentExecution{
+		ReturnMode: message.ReturnResult,
+		Context:    ctxA,
+	}
+
+	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
+	require.True(t, loop)
+
+	loop = lr.CheckExecutionLoop(ctxB, es, parcel)
+	require.False(t, loop)
+
+	parcel = testutils.NewParcelMock(t).MessageMock.Return(
+		&message.CallMethod{ReturnMode: message.ReturnNoWait},
+	)
+	es.Current = &CurrentExecution{
+		ReturnMode: message.ReturnResult,
+		Context:    ctxA,
+	}
+	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
+	require.False(t, loop)
+
+	parcel = testutils.NewParcelMock(t).MessageMock.Return(
+		&message.CallMethod{ReturnMode: message.ReturnResult},
+	)
+	es.Current = &CurrentExecution{
+		ReturnMode: message.ReturnNoWait,
+		Context:    ctxA,
+	}
+	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
+	require.False(t, loop)
 }

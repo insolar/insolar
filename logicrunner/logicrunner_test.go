@@ -1836,9 +1836,7 @@ package main
 	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)), "Compare Code Prototypes")
 }
 
-// TODO - unskip when we decide how to work with NotificationCalls (NoWaitMethods)
 func TestNoLoopsWhileNotificationCall(t *testing.T) {
-	t.Skip()
 	if parallel {
 		t.Parallel()
 	}

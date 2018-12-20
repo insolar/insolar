@@ -352,12 +352,8 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, errors.Wrap(err, "can't play role")
 	}
 
-	if es.Current != nil {
-		// TODO: check no wait call
-		if inslogger.TraceID(es.Current.Context) == inslogger.TraceID(ctx) {
-			es.Unlock()
-			return nil, os.WrapError(nil, "loop detected")
-		}
+	if loop := lr.CheckExecutionLoop(ctx, es, parcel); loop {
+		return nil, os.WrapError(nil, "loop detected")
 	}
 
 	request, err := lr.RegisterRequest(ctx, parcel)
@@ -388,6 +384,31 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	return &reply.RegisterRequest{
 		Request: *request,
 	}, nil
+}
+
+func (lr *LogicRunner) CheckExecutionLoop(
+	ctx context.Context, es *ExecutionState, parcel core.Parcel,
+) (
+	bool,
+) {
+	if es.Current == nil {
+		return false
+	}
+
+	if es.Current.ReturnMode == message.ReturnNoWait {
+		return false
+	}
+
+	msg, ok := parcel.Message().(*message.CallMethod)
+	if ok && msg.ReturnMode == message.ReturnNoWait {
+		return false
+	}
+
+	if inslogger.TraceID(es.Current.Context) != inslogger.TraceID(ctx) {
+		return false
+	}
+
+	return true
 }
 
 func (lr *LogicRunner) HandlePendingFinishedMessage(
