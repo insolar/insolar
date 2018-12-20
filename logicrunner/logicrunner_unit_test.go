@@ -66,8 +66,7 @@ func TestOnPulse(t *testing.T) {
 	}()
 
 	qe := ExecutionQueueElement{
-		result:     result,
-		returnMode: message.ReturnNoWait,
+		result: result,
 	}
 
 	queue := append(make([]ExecutionQueueElement, 0), qe)
@@ -262,13 +261,16 @@ func TestPrepareState(t *testing.T) {
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, 1, len(lr.state[object].ExecutionState.Queue))
 
-	// add new element in existing queue
+	testMsg := message.CallMethod{ReturnMode: message.ReturnNoWait}
+	parcel := testutils.NewParcelMock(t)
+	parcel.MessageMock.Return(&testMsg) // mock message that returns NoWait
+
 	queueElementRequest := testutils.RandomRef()
-	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest, ReturnMode: message.ReturnNoWait}}
+	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest, Parcel: parcel}}
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, 2, len(lr.state[object].ExecutionState.Queue))
 	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
-	require.Equal(t, message.ReturnNoWait, lr.state[object].ExecutionState.Queue[0].returnMode)
+	require.Equal(t, &testMsg, lr.state[object].ExecutionState.Queue[0].parcel.Message())
 
 }
 func TestHandlePendingFinishedMessage(
