@@ -207,13 +207,13 @@ func (m *Member) getNodeRef(ref core.RecordRef, params []byte) (interface{}, err
 	rootDomain := rootdomain.GetObject(ref)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ getNodeRef ] %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRef ] Can't get nodeDmainRef: %s", err.Error())
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
 	nodeRef, err := nd.GetNodeRefByPK(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("[ getNodeRef ] %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRef ] Node not found: %s", err.Error())
 	}
 
 	return nodeRef, nil

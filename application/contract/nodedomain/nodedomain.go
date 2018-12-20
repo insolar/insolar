@@ -80,7 +80,7 @@ func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 	node := nd.getNodeRecord(nodeRef)
 	nodePK, err := node.GetPublicKey()
 	if err != nil {
-		return err
+		return fmt.Errorf("[ RemoveNode ] Node not found by PK: %s", nodePK)
 	}
 
 	delete(nd.NodeIndexPK, nodePK)
