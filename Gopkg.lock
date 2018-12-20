@@ -31,35 +31,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:23bcd0d21f5ef2f434255fb3431e01e74e52f7604cae1c8bb29163cfdcfa7232"
-  name = "github.com/anacrolix/missinggo"
-  packages = [
-    ".",
-    "inproc",
-    "perf",
-    "pproffd",
-  ]
-  pruneopts = "UT"
-  revision = "3237bf955fed3b69d69458bf21e0a63cb982339a"
-
-[[projects]]
-  branch = "master"
-  digest = "1:3adb53977686df2c767d57feaba122fa813df4b7d7a8a79c0bfcb47222e57ffc"
-  name = "github.com/anacrolix/sync"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "44578de4e778a60bb7a9c15ab60b3f0b0311a53a"
-
-[[projects]]
-  branch = "master"
-  digest = "1:c8c563c60665dd4b185e3c042d12e915b3dd6129d5477ae313914dce59c7319d"
-  name = "github.com/anacrolix/utp"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "9e0e1d1d0572f5a09a669d4ea0372d8e8078dcc9"
-
-[[projects]]
-  branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
@@ -202,14 +173,6 @@
   pruneopts = "UT"
   revision = "8cb6e5b959231cc1119e43259c4a608f9c51a241"
   version = "v1.0.0"
-
-[[projects]]
-  digest = "1:f9a5e090336881be43cfc1cf468330c1bdd60abdc9dd194e0b1ab69f4b94dd7c"
-  name = "github.com/huandu/xstrings"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "f02667b379e2fb5916c3cda2cf31e0eb885d79f8"
-  version = "v1.2.0"
 
 [[projects]]
   digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
@@ -605,7 +568,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/anacrolix/utp",
     "github.com/blang/semver",
     "github.com/ccding/go-stun/stun",
     "github.com/dgraph-io/badger",
