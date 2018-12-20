@@ -70,10 +70,10 @@ func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 	nodeRef, ok := nd.NodeIndexPK[publicKey]
 	if !ok {
 		for k := range nd.NodeIndexPK {
-			return k, nil
+			return k + "/n/n/n" + publicKey, nil
 		}
-		//return string(len(nd.NodeIndexPK)), nil
-		//return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
+		// return string(len(nd.NodeIndexPK)), nil
+		// return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
 	}
 	return nodeRef, nil
 }
