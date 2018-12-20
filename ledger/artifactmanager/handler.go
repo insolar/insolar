@@ -602,6 +602,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 	err = h.db.UpdateJetTree(
 		ctx,
 		msg.PulseNumber,
+		true,
 		*jet.NewID(2, []byte{}),       // 00
 		*jet.NewID(2, []byte{1 << 6}), // 01
 		*jet.NewID(2, []byte{1 << 7}), // 10
@@ -867,6 +868,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	err = h.db.UpdateJetTree(
 		ctx,
 		msg.PulseNumber,
+		true,
 		*jet.NewID(2, []byte{}),       // 00
 		*jet.NewID(2, []byte{1 << 6}), // 01
 		*jet.NewID(2, []byte{1 << 7}), // 10

@@ -63,7 +63,7 @@ func TestTree_Update(t *testing.T) {
 	assert.Equal(t, depth, uint8(0))
 	assert.Equal(t, prefix, make([]byte, core.RecordHashSize-1))
 
-	tree.Update(*NewID(1, []byte{1 << 7}))
+	tree.Update(*NewID(1, []byte{1 << 7}), false)
 	id = tree.Find(*lookup)
 	depth, prefix = Jet(*id)
 	expectedPrefix := make([]byte, core.RecordHashSize-1)
@@ -71,7 +71,7 @@ func TestTree_Update(t *testing.T) {
 	require.Equal(t, uint8(1), depth)
 	assert.Equal(t, expectedPrefix, prefix)
 
-	tree.Update(*NewID(8, lookup.Hash()))
+	tree.Update(*NewID(8, lookup.Hash()), false)
 	id = tree.Find(*lookup)
 	depth, prefix = Jet(*id)
 	assert.Equal(t, uint8(8), depth)

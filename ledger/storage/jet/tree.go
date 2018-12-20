@@ -25,8 +25,9 @@ import (
 )
 
 type jet struct {
-	Left  *jet
-	Right *jet
+	Left   *jet
+	Right  *jet
+	Actual bool
 }
 
 // Find returns jet for provided reference.
@@ -48,21 +49,36 @@ func (j *jet) Find(val []byte, depth uint8) (*jet, uint8) {
 }
 
 // Update add missing tree branches for provided prefix.
-func (j *jet) Update(prefix []byte, maxDepth, depth uint8) {
+func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
 	if depth >= maxDepth {
 		return
+	}
+
+	if setActual {
+		j.Actual = true
 	}
 
 	if getBit(prefix, depth) {
 		if j.Right == nil {
 			j.Right = &jet{}
 		}
-		j.Right.Update(prefix, maxDepth, depth+1)
+		j.Right.Update(prefix, setActual, maxDepth, depth+1)
 	} else {
 		if j.Left == nil {
 			j.Left = &jet{}
 		}
-		j.Left.Update(prefix, maxDepth, depth+1)
+		j.Left.Update(prefix, setActual, maxDepth, depth+1)
+	}
+}
+
+// ResetActual resets actual mark, which will signify uncertain state on nodes and require actualization.
+func (j *jet) ResetActual() {
+	if j.Left != nil {
+		j.Left.ResetActual()
+	}
+	j.Actual = false
+	if j.Right != nil {
+		j.Right.ResetActual()
 	}
 }
 
@@ -85,10 +101,11 @@ func (t *Tree) Find(id core.RecordID) *core.RecordID {
 	return NewID(uint8(depth), resetBits(id.Hash(), depth))
 }
 
-// Update add missing tree branches for provided prefix.
-func (t *Tree) Update(id core.RecordID) {
+// Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
+// actual.
+func (t *Tree) Update(id core.RecordID, setActual bool) {
 	maxDepth, prefix := Jet(id)
-	t.Head.Update(prefix, maxDepth, 0)
+	t.Head.Update(prefix, setActual, maxDepth, 0)
 }
 
 // Bytes serializes pulse.
@@ -113,6 +130,11 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 	rightPrefix := resetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	return NewID(depth+1, leftPrefix), NewID(depth+1, rightPrefix), nil
+}
+
+// ResetActual resets actual mark, which will signify uncertain state on nodes and require actualization.
+func (t *Tree) ResetActual() {
+	t.Head.ResetActual()
 }
 
 func getBit(value []byte, index uint8) bool {

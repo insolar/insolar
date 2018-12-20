@@ -871,7 +871,7 @@ func sendAndRetryJet(
 		return nil, err
 	}
 	if r, ok := rep.(*reply.JetMiss); ok {
-		err := db.UpdateJetTree(ctx, pulse.PulseNumber, r.JetID)
+		err := db.UpdateJetTree(ctx, pulse.PulseNumber, true, r.JetID)
 		if err != nil {
 			return nil, err
 		}

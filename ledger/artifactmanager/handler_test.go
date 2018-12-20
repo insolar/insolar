@@ -997,7 +997,7 @@ func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
 			Record:    record.SerializeRecord(&rec),
 			TargetRef: *core.NewRecordRef(core.RecordID{}, *record.NewRecordIDFromRecord(cs, 2, &rec)),
 		}
-		err := db.UpdateJetTree(ctx, 2, *jet.NewID(4, recID.Hash()))
+		err := db.UpdateJetTree(ctx, 2, false, *jet.NewID(4, recID.Hash()))
 		require.NoError(t, err)
 		jc.AmIMock.Return(false, nil)
 		rep, err := h.replayHandlers[core.TypeSetRecord](ctx, &message.Parcel{
