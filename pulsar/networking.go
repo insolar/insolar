@@ -34,6 +34,12 @@ type Handler struct {
 	Pulsar *Pulsar
 }
 
+func NewHandler(pulsar *Pulsar) *Handler {
+	return &Handler{Pulsar: pulsar}
+}
+
+
+
 func (handler *Handler) isRequestValid(ctx context.Context, request *Payload) (success bool, neighbour *Neighbour, err error) {
 	if handler.Pulsar.IsStateFailed() {
 		return false, nil, nil
