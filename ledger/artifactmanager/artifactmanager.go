@@ -216,7 +216,7 @@ func (m *LedgerArtifactManager) GetObject(
 	return desc, err
 }
 
-// HasPendingRequests returns if object has unclosed requests.
+// HasPendingRequests returns true if object has unclosed requests.
 func (m *LedgerArtifactManager) HasPendingRequests(
 	ctx context.Context,
 	object core.RecordRef,
