@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -226,4 +227,89 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	err = pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(3), mbMock.SendMinimockCounter()) // 1 validator drop + 2 executors (split)
+}
+
+func TestPulseManager_Set_SendsPendingRequests(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	objID := *core.NewRecordID(0, []byte{1, 2, 3})
+	reqID := *core.NewRecordID(0, []byte{42})
+
+	lr := testutils.NewLogicRunnerMock(t)
+	lr.OnPulseMock.Return(nil)
+
+	db, dbcancel := storagetest.TmpDB(ctx, t)
+	defer dbcancel()
+
+	recentMock := recentstorage.NewRecentStorageMock(t)
+	recentMock.ClearZeroTTLObjectsMock.Return()
+	recentMock.ClearObjectsMock.Return()
+	recentMock.GetObjectsMock.Return(nil)
+	recentMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{
+		objID: {
+			reqID: struct{}{},
+		},
+	})
+	recentMock.IsMineMock.Return(true)
+
+	providerMock := recentstorage.NewProviderMock(t)
+	providerMock.GetStorageMock.Return(recentMock)
+
+	mbMock := testutils.NewMessageBusMock(t)
+
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
+	pulseStorage := pulsemanager.NewpulseStoragePmMock(t)
+	pulseStorage.LockMock.Return()
+	pulseStorage.UnlockMock.Return()
+
+	pm := pulsemanager.NewPulseManager(db, configuration.Ledger{
+		PulseManager: configuration.PulseManager{SplitThreshold: 0},
+	})
+
+	gil := testutils.NewGlobalInsolarLockMock(t)
+	gil.AcquireMock.Return()
+	gil.ReleaseMock.Return()
+
+	alsMock := testutils.NewActiveListSwapperMock(t)
+	alsMock.MoveSyncToActiveFunc = func() {}
+
+	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
+	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+
+	pm.LR = lr
+	pm.RecentStorageProvider = providerMock
+	pm.Bus = mbMock
+	pm.NodeNet = nodeNetworkMock
+	pm.GIL = gil
+	pm.ActiveListSwapper = alsMock
+	pm.CryptographyService = cryptoServiceMock
+	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
+	pm.PulseStorage = pulseStorage
+
+	pendingRequestsCalled := false
+	mbMock.SendFunc = func(
+		c context.Context, m core.Message, p core.Pulse, o *core.MessageSendOptions,
+	) (r core.Reply, r1 error) {
+		msg, ok := m.(*message.PendingRequestsNotification)
+		if !ok {
+			return nil, nil
+		}
+
+		assert.Equal(t, []core.RecordID{reqID}, msg.Requests)
+		assert.Equal(t, objID, msg.Object)
+		pendingRequestsCalled = true
+
+		return &reply.OK{}, nil
+	}
+	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber}, true)
+	require.NoError(t, err)
+	assert.True(t, pendingRequestsCalled)
 }
