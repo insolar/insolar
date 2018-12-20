@@ -125,7 +125,7 @@ func (m *PulseManager) processEndPulse(
 			msg, hotRecordsError := m.getExecutorData(
 				ctx, jetID, currentPulse.PulseNumber, drop, dropSerialized)
 			if hotRecordsError != nil {
-				return errors.Wrap(err, "processRecentObjects failed")
+				return errors.Wrapf(err, "getExecutorData failed for jet id %v", jetID)
 			}
 			sendError := m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg)
 			if sendError != nil {
@@ -139,7 +139,12 @@ func (m *PulseManager) processEndPulse(
 			return nil
 		})
 	}
-	return g.Wait()
+	err = g.Wait()
+	if err != nil {
+		return errors.Wrap(err, "got error on jets sync")
+	}
+	// TODO: remove outdated indexes here
+	return nil
 }
 
 func (m *PulseManager) createDrop(
@@ -245,14 +250,6 @@ func (m *PulseManager) getExecutorData(
 		recentObjects[id] = &message.HotIndex{
 			TTL:   ttl,
 			Index: encoded,
-		}
-
-		if !recentStorage.IsMine(id) {
-			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
-			if err != nil {
-				logger.Error(err)
-				return nil, errors.Wrap(err, "[ processRecentObjects ] Can't RemoveObjectIndex")
-			}
 		}
 	}
 

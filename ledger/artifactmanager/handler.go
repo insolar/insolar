@@ -847,12 +847,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 			continue
 		}
 
-		savedIndex, err := h.db.GetObjectIndex(ctx, jetID, &id, false)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ handleHotRecords ] Can't GetObjectIndex")
-		}
-		isMine := savedIndex != nil
-
 		err = h.db.SetObjectIndex(ctx, jetID, &id, decodedIndex)
 		if err != nil {
 			inslog.Error(err)
@@ -860,7 +854,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 
 		meta.TTL--
-		recentStorage.AddObjectWithTLL(id, meta.TTL, isMine)
+		recentStorage.AddObjectWithTLL(id, meta.TTL)
 	}
 
 	// TODO: temporary hardcoded tree. Remove after split is functional.
