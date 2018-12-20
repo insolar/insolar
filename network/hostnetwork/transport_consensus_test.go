@@ -105,29 +105,119 @@ func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) (
 	return utils.WaitTimeout(&wg, time.Second), nil
 }
 
+func newPhase1Packet() *consensus.Phase1Packet {
+	return consensus.NewPhase1Packet()
+}
+
+func newPhase2Packet() (*consensus.Phase2Packet, error) {
+	var ghs consensus.GlobuleHashSignature
+	bitset, err := consensus.NewBitSet(10)
+	if err != nil {
+		return nil, err
+	}
+	return consensus.NewPhase2Packet(ghs, bitset), nil
+}
+
+func newPhase3Packet() (*consensus.Phase3Packet, error) {
+	var ghs consensus.GlobuleHashSignature
+	bitset, err := consensus.NewBitSet(10)
+	if err != nil {
+		return nil, err
+	}
+	return consensus.NewPhase3Packet(ghs, bitset), nil
+}
+
 func (t *consensusTransportSuite) TestSendPacketPhase1() {
-	packet := consensus.NewPhase1Packet()
+	packet := newPhase1Packet()
 	success, err := t.sendPacket(packet)
 	require.NoError(t.T(), err)
 	assert.True(t.T(), success)
 }
 
 func (t *consensusTransportSuite) TestSendPacketPhase2() {
-	var ghs consensus.GlobuleHashSignature
-	bitset, err := consensus.NewBitSet(10)
+	packet, err := newPhase2Packet()
 	require.NoError(t.T(), err)
-	packet := consensus.NewPhase2Packet(ghs, bitset)
 	success, err := t.sendPacket(packet)
 	require.NoError(t.T(), err)
 	assert.True(t.T(), success)
 }
 
 func (t *consensusTransportSuite) TestSendPacketPhase3() {
-	var ghs consensus.GlobuleHashSignature
-	bitset, err := consensus.NewBitSet(10)
+	packet, err := newPhase3Packet()
 	require.NoError(t.T(), err)
-	packet := consensus.NewPhase3Packet(ghs, bitset)
 	success, err := t.sendPacket(packet)
+	require.NoError(t.T(), err)
+	assert.True(t.T(), success)
+}
+
+func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.ConsensusPacket) (bool, error) {
+	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
+	if err != nil {
+		return false, err
+	}
+	ctx := context.Background()
+	ctx2 := context.Background()
+
+	result := make(chan bool, 1)
+
+	handler := func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef) {
+		log.Info("handler triggered")
+		pk, err := t.crypto.GetPublicKey()
+		if err != nil {
+			log.Error("handler get public key error: " + err.Error())
+			result <- false
+			return
+		}
+		err = incomingPacket.Verify(t.crypto, pk)
+		if err != nil {
+			log.Error("verify signature error: " + err.Error())
+			result <- false
+			return
+		}
+		result <- true
+	}
+	cn2.RegisterPacketHandler(packet.GetType(), handler)
+
+	cn2.Start(ctx)
+	cn1.Start(ctx2)
+	defer func() {
+		cn1.Stop()
+		cn2.Stop()
+	}()
+
+	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
+	if err != nil {
+		return false, err
+	}
+
+	r := false
+	select {
+	case r = <-result:
+		return r, nil
+	case <-time.After(time.Second):
+		return r, nil
+	}
+}
+
+func (t *consensusTransportSuite) TestVerifySignPhase1() {
+	packet := newPhase1Packet()
+	success, err := t.sendPacketAndVerify(packet)
+	require.NoError(t.T(), err)
+	assert.True(t.T(), success)
+}
+
+func (t *consensusTransportSuite) TestVerifySignPhase2() {
+	packet, err := newPhase2Packet()
+	require.NoError(t.T(), err)
+	success, err := t.sendPacketAndVerify(packet)
+	require.NoError(t.T(), err)
+	assert.True(t.T(), success)
+}
+
+func (t *consensusTransportSuite) TestVerifySignPhase3() {
+	packet, err := newPhase3Packet()
+	require.NoError(t.T(), err)
+	success, err := t.sendPacketAndVerify(packet)
 	require.NoError(t.T(), err)
 	assert.True(t.T(), success)
 }

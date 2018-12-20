@@ -67,7 +67,7 @@ func (p2p *Phase2Packet) SetRouting(origin, target core.ShortNodeID) {
 }
 
 func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
-	panic("implement me")
+	return errors.New("implement me")
 }
 
 func (p2p *Phase2Packet) Sign(crypto core.CryptographyService) error {

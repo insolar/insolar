@@ -20,6 +20,7 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
 type Phase3Packet struct {
@@ -51,7 +52,7 @@ func (p3p *Phase3Packet) SetRouting(origin, target core.ShortNodeID) {
 }
 
 func (p3p *Phase3Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
-	panic("implement me")
+	return errors.New("implement me")
 }
 
 func (p3p *Phase3Packet) Sign(crypto core.CryptographyService) error {

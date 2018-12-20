@@ -59,7 +59,7 @@ func (p1p *Phase1Packet) GetType() PacketType {
 }
 
 func (p1p *Phase1Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
-	panic("implement me")
+	return errors.New("implement me")
 }
 
 func (p1p *Phase1Packet) Sign(crypto core.CryptographyService) error {
