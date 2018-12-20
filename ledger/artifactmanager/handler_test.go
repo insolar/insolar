@@ -1,7 +1,25 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package artifactmanager
 
 import (
+	"bytes"
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -412,7 +430,9 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
-
+	msg := message.GetObjectIndex{
+		Object: *genRandomRef(0),
+	}
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
@@ -437,9 +457,6 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 
 	h.RecentStorageProvider = provideMock
 
-	msg := message.GetObjectIndex{
-		Object: *genRandomRef(0),
-	}
 	objectIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 	err = db.SetObjectIndex(ctx, jetID, msg.Object.Record(), &objectIndex)
 	require.NoError(t, err)
@@ -453,6 +470,59 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	decodedIndex, err := index.DecodeObjectLifeline(indexRep.Index)
 	require.NoError(t, err)
 	assert.Equal(t, objectIndex, *decodedIndex)
+}
+
+func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+	msg := message.GetPendingRequests{
+		Object: *genRandomRef(0),
+	}
+	pendingRequests := []core.RecordID{
+		*genRandomID(core.FirstPulseNumber),
+		*genRandomID(core.FirstPulseNumber),
+	}
+	sort.Slice(pendingRequests, func(i, j int) bool {
+		return bytes.Compare(pendingRequests[i][:], pendingRequests[j][:]) < 0
+	})
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{
+		*msg.Object.Record(): {
+			pendingRequests[0]: struct{}{},
+			pendingRequests[1]: struct{}{},
+		},
+	})
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
+	jc.AmIMock.Return(true, nil)
+	h := NewMessageHandler(db, &configuration.Ledger{})
+	h.JetCoordinator = jc
+	h.Bus = mb
+	err := h.Init(ctx)
+	require.NoError(t, err)
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	h.RecentStorageProvider = provideMock
+
+	rep, err := h.replayHandlers[core.TypeGetPendingRequests](ctx, &message.Parcel{
+		Msg:         &msg,
+		PulseNumber: core.FirstPulseNumber + 1,
+	})
+	require.NoError(t, err)
+	has, ok := rep.(*reply.HasPendingRequests)
+	require.True(t, ok)
+	assert.True(t, has.Has)
 }
 
 func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
@@ -668,6 +738,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	dropSizeHistory, err = db.GetDropSizeHistory(ctx, jetID)
 	require.NoError(t, err)
 
+	obj := core.RecordID{}
 	hotIndexes := &message.HotData{
 		Jet:         *core.NewRecordRef(core.DomainID, *jet.NewID(0, nil)),
 		PulseNumber: core.FirstPulseNumber,
@@ -677,15 +748,18 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 				TTL:   321,
 			},
 		},
-		PendingRequests: map[core.RecordID][]byte{
-			*secondId: record.SerializeRecord(&record.CodeRecord{}),
+		PendingRequests: map[core.RecordID]map[core.RecordID][]byte{
+			obj: {
+				*secondId: record.SerializeRecord(&record.CodeRecord{}),
+			},
 		},
 		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
 		JetDropSizeHistory: dropSizeHistory,
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.AddPendingRequestFunc = func(p core.RecordID) {
+	recentStorageMock.AddPendingRequestFunc = func(o, p core.RecordID) {
+		require.Equal(t, o, obj)
 		require.Equal(t, p, *secondId)
 	}
 	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int, isMine bool) {

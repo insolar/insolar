@@ -29,7 +29,7 @@ type RecentStorageMock struct {
 	AddObjectWithTLLPreCounter uint64
 	AddObjectWithTLLMock       mRecentStorageMockAddObjectWithTLL
 
-	AddPendingRequestFunc       func(p core.RecordID)
+	AddPendingRequestFunc       func(p core.RecordID, p1 core.RecordID)
 	AddPendingRequestCounter    uint64
 	AddPendingRequestPreCounter uint64
 	AddPendingRequestMock       mRecentStorageMockAddPendingRequest
@@ -49,7 +49,8 @@ type RecentStorageMock struct {
 	GetObjectsPreCounter uint64
 	GetObjectsMock       mRecentStorageMockGetObjects
 
-	GetRequestsFunc       func() (r []core.RecordID)
+	GetRequestsFunc func() (r map[core.RecordID]map[core.RecordID]struct {
+	})
 	GetRequestsCounter    uint64
 	GetRequestsPreCounter uint64
 	GetRequestsMock       mRecentStorageMockGetRequests
@@ -59,7 +60,7 @@ type RecentStorageMock struct {
 	IsMinePreCounter uint64
 	IsMineMock       mRecentStorageMockIsMine
 
-	RemovePendingRequestFunc       func(p core.RecordID)
+	RemovePendingRequestFunc       func(p core.RecordID, p1 core.RecordID)
 	RemovePendingRequestCounter    uint64
 	RemovePendingRequestPreCounter uint64
 	RemovePendingRequestMock       mRecentStorageMockRemovePendingRequest
@@ -346,18 +347,19 @@ type RecentStorageMockAddPendingRequestExpectation struct {
 }
 
 type RecentStorageMockAddPendingRequestInput struct {
-	p core.RecordID
+	p  core.RecordID
+	p1 core.RecordID
 }
 
 //Expect specifies that invocation of RecentStorage.AddPendingRequest is expected from 1 to Infinity times
-func (m *mRecentStorageMockAddPendingRequest) Expect(p core.RecordID) *mRecentStorageMockAddPendingRequest {
+func (m *mRecentStorageMockAddPendingRequest) Expect(p core.RecordID, p1 core.RecordID) *mRecentStorageMockAddPendingRequest {
 	m.mock.AddPendingRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &RecentStorageMockAddPendingRequestExpectation{}
 	}
-	m.mainExpectation.input = &RecentStorageMockAddPendingRequestInput{p}
+	m.mainExpectation.input = &RecentStorageMockAddPendingRequestInput{p, p1}
 	return m
 }
 
@@ -374,18 +376,18 @@ func (m *mRecentStorageMockAddPendingRequest) Return() *RecentStorageMock {
 }
 
 //ExpectOnce specifies that invocation of RecentStorage.AddPendingRequest is expected once
-func (m *mRecentStorageMockAddPendingRequest) ExpectOnce(p core.RecordID) *RecentStorageMockAddPendingRequestExpectation {
+func (m *mRecentStorageMockAddPendingRequest) ExpectOnce(p core.RecordID, p1 core.RecordID) *RecentStorageMockAddPendingRequestExpectation {
 	m.mock.AddPendingRequestFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &RecentStorageMockAddPendingRequestExpectation{}
-	expectation.input = &RecentStorageMockAddPendingRequestInput{p}
+	expectation.input = &RecentStorageMockAddPendingRequestInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of RecentStorage.AddPendingRequest method
-func (m *mRecentStorageMockAddPendingRequest) Set(f func(p core.RecordID)) *RecentStorageMock {
+func (m *mRecentStorageMockAddPendingRequest) Set(f func(p core.RecordID, p1 core.RecordID)) *RecentStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -394,18 +396,18 @@ func (m *mRecentStorageMockAddPendingRequest) Set(f func(p core.RecordID)) *Rece
 }
 
 //AddPendingRequest implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
-func (m *RecentStorageMock) AddPendingRequest(p core.RecordID) {
+func (m *RecentStorageMock) AddPendingRequest(p core.RecordID, p1 core.RecordID) {
 	counter := atomic.AddUint64(&m.AddPendingRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.AddPendingRequestCounter, 1)
 
 	if len(m.AddPendingRequestMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.AddPendingRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RecentStorageMock.AddPendingRequest. %v", p)
+			m.t.Fatalf("Unexpected call to RecentStorageMock.AddPendingRequest. %v %v", p, p1)
 			return
 		}
 
 		input := m.AddPendingRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RecentStorageMockAddPendingRequestInput{p}, "RecentStorage.AddPendingRequest got unexpected parameters")
+		testify_assert.Equal(m.t, *input, RecentStorageMockAddPendingRequestInput{p, p1}, "RecentStorage.AddPendingRequest got unexpected parameters")
 
 		return
 	}
@@ -414,18 +416,18 @@ func (m *RecentStorageMock) AddPendingRequest(p core.RecordID) {
 
 		input := m.AddPendingRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RecentStorageMockAddPendingRequestInput{p}, "RecentStorage.AddPendingRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RecentStorageMockAddPendingRequestInput{p, p1}, "RecentStorage.AddPendingRequest got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.AddPendingRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to RecentStorageMock.AddPendingRequest. %v", p)
+		m.t.Fatalf("Unexpected call to RecentStorageMock.AddPendingRequest. %v %v", p, p1)
 		return
 	}
 
-	m.AddPendingRequestFunc(p)
+	m.AddPendingRequestFunc(p, p1)
 }
 
 //AddPendingRequestMinimockCounter returns a count of RecentStorageMock.AddPendingRequestFunc invocations
@@ -823,7 +825,8 @@ type RecentStorageMockGetRequestsExpectation struct {
 }
 
 type RecentStorageMockGetRequestsResult struct {
-	r []core.RecordID
+	r map[core.RecordID]map[core.RecordID]struct {
+	}
 }
 
 //Expect specifies that invocation of RecentStorage.GetRequests is expected from 1 to Infinity times
@@ -839,7 +842,8 @@ func (m *mRecentStorageMockGetRequests) Expect() *mRecentStorageMockGetRequests 
 }
 
 //Return specifies results of invocation of RecentStorage.GetRequests
-func (m *mRecentStorageMockGetRequests) Return(r []core.RecordID) *RecentStorageMock {
+func (m *mRecentStorageMockGetRequests) Return(r map[core.RecordID]map[core.RecordID]struct {
+}) *RecentStorageMock {
 	m.mock.GetRequestsFunc = nil
 	m.expectationSeries = nil
 
@@ -861,12 +865,14 @@ func (m *mRecentStorageMockGetRequests) ExpectOnce() *RecentStorageMockGetReques
 	return expectation
 }
 
-func (e *RecentStorageMockGetRequestsExpectation) Return(r []core.RecordID) {
+func (e *RecentStorageMockGetRequestsExpectation) Return(r map[core.RecordID]map[core.RecordID]struct {
+}) {
 	e.result = &RecentStorageMockGetRequestsResult{r}
 }
 
 //Set uses given function f as a mock of RecentStorage.GetRequests method
-func (m *mRecentStorageMockGetRequests) Set(f func() (r []core.RecordID)) *RecentStorageMock {
+func (m *mRecentStorageMockGetRequests) Set(f func() (r map[core.RecordID]map[core.RecordID]struct {
+})) *RecentStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -875,7 +881,8 @@ func (m *mRecentStorageMockGetRequests) Set(f func() (r []core.RecordID)) *Recen
 }
 
 //GetRequests implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
-func (m *RecentStorageMock) GetRequests() (r []core.RecordID) {
+func (m *RecentStorageMock) GetRequests() (r map[core.RecordID]map[core.RecordID]struct {
+}) {
 	counter := atomic.AddUint64(&m.GetRequestsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRequestsCounter, 1)
 
@@ -1104,18 +1111,19 @@ type RecentStorageMockRemovePendingRequestExpectation struct {
 }
 
 type RecentStorageMockRemovePendingRequestInput struct {
-	p core.RecordID
+	p  core.RecordID
+	p1 core.RecordID
 }
 
 //Expect specifies that invocation of RecentStorage.RemovePendingRequest is expected from 1 to Infinity times
-func (m *mRecentStorageMockRemovePendingRequest) Expect(p core.RecordID) *mRecentStorageMockRemovePendingRequest {
+func (m *mRecentStorageMockRemovePendingRequest) Expect(p core.RecordID, p1 core.RecordID) *mRecentStorageMockRemovePendingRequest {
 	m.mock.RemovePendingRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &RecentStorageMockRemovePendingRequestExpectation{}
 	}
-	m.mainExpectation.input = &RecentStorageMockRemovePendingRequestInput{p}
+	m.mainExpectation.input = &RecentStorageMockRemovePendingRequestInput{p, p1}
 	return m
 }
 
@@ -1132,18 +1140,18 @@ func (m *mRecentStorageMockRemovePendingRequest) Return() *RecentStorageMock {
 }
 
 //ExpectOnce specifies that invocation of RecentStorage.RemovePendingRequest is expected once
-func (m *mRecentStorageMockRemovePendingRequest) ExpectOnce(p core.RecordID) *RecentStorageMockRemovePendingRequestExpectation {
+func (m *mRecentStorageMockRemovePendingRequest) ExpectOnce(p core.RecordID, p1 core.RecordID) *RecentStorageMockRemovePendingRequestExpectation {
 	m.mock.RemovePendingRequestFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &RecentStorageMockRemovePendingRequestExpectation{}
-	expectation.input = &RecentStorageMockRemovePendingRequestInput{p}
+	expectation.input = &RecentStorageMockRemovePendingRequestInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of RecentStorage.RemovePendingRequest method
-func (m *mRecentStorageMockRemovePendingRequest) Set(f func(p core.RecordID)) *RecentStorageMock {
+func (m *mRecentStorageMockRemovePendingRequest) Set(f func(p core.RecordID, p1 core.RecordID)) *RecentStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1152,18 +1160,18 @@ func (m *mRecentStorageMockRemovePendingRequest) Set(f func(p core.RecordID)) *R
 }
 
 //RemovePendingRequest implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
-func (m *RecentStorageMock) RemovePendingRequest(p core.RecordID) {
+func (m *RecentStorageMock) RemovePendingRequest(p core.RecordID, p1 core.RecordID) {
 	counter := atomic.AddUint64(&m.RemovePendingRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RemovePendingRequestCounter, 1)
 
 	if len(m.RemovePendingRequestMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.RemovePendingRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RecentStorageMock.RemovePendingRequest. %v", p)
+			m.t.Fatalf("Unexpected call to RecentStorageMock.RemovePendingRequest. %v %v", p, p1)
 			return
 		}
 
 		input := m.RemovePendingRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RecentStorageMockRemovePendingRequestInput{p}, "RecentStorage.RemovePendingRequest got unexpected parameters")
+		testify_assert.Equal(m.t, *input, RecentStorageMockRemovePendingRequestInput{p, p1}, "RecentStorage.RemovePendingRequest got unexpected parameters")
 
 		return
 	}
@@ -1172,18 +1180,18 @@ func (m *RecentStorageMock) RemovePendingRequest(p core.RecordID) {
 
 		input := m.RemovePendingRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RecentStorageMockRemovePendingRequestInput{p}, "RecentStorage.RemovePendingRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RecentStorageMockRemovePendingRequestInput{p, p1}, "RecentStorage.RemovePendingRequest got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.RemovePendingRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to RecentStorageMock.RemovePendingRequest. %v", p)
+		m.t.Fatalf("Unexpected call to RecentStorageMock.RemovePendingRequest. %v %v", p, p1)
 		return
 	}
 
-	m.RemovePendingRequestFunc(p)
+	m.RemovePendingRequestFunc(p, p1)
 }
 
 //RemovePendingRequestMinimockCounter returns a count of RecentStorageMock.RemovePendingRequestFunc invocations

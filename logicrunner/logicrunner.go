@@ -171,12 +171,11 @@ func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.M
 		return NotPending, nil
 	}
 
-	oDesc, err := es.ArtifactManager.GetObject(ctx, msg.GetReference(), nil, false)
+	has, err := es.ArtifactManager.HasPendingRequests(ctx, msg.ObjectRef)
 	if err != nil {
 		return NotPending, err
 	}
-
-	if oDesc.HasPendingRequests() {
+	if has {
 		return InPending, nil
 	}
 
@@ -308,7 +307,8 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 }
 
 func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) (*Ref, error) {
-	id, err := lr.ArtifactManager.RegisterRequest(ctx, parcel)
+	obj := parcel.Message().(message.IBaseLogicMessage).GetReference()
+	id, err := lr.ArtifactManager.RegisterRequest(ctx, obj, parcel)
 	if err != nil {
 		return nil, err
 	}
@@ -722,7 +722,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't update object")
 	}
-	_, err = am.RegisterResult(ctx, *es.Current.Request, result)
+	_, err = am.RegisterResult(ctx, m.ObjectRef, *es.Current.Request, result)
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't save results")
 	}
@@ -810,6 +810,10 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *es.Current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
+		_, err = lr.ArtifactManager.RegisterResult(ctx, *es.Current.Request, *es.Current.Request, nil)
+		if err != nil {
+			return nil, es.WrapError(err, "couldn't save results")
+		}
 		return &reply.CallConstructor{Object: es.Current.Request}, err
 
 	default:

@@ -68,7 +68,7 @@ func TestExporter_Export(t *testing.T) {
 		IsDelegate: true,
 	})
 	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest", Msg: &message.CallConstructor{}})
-	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.CallRequest{
+	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.RequestRecord{
 		Payload: pl,
 	})
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestExporter_Export(t *testing.T) {
 	request, ok := records[base58.Encode(requestID[:])]
 	if assert.True(t, ok, "request not found by ID") {
 		assert.Equal(t, "TypeCallRequest", request.Type)
-		assert.Equal(t, pl, request.Data.(*record.CallRequest).Payload)
+		assert.Equal(t, pl, request.Data.(*record.RequestRecord).Payload)
 		assert.Equal(t, "callRequest", request.Payload["Payload"].(*message.Parcel).LogTraceID)
 		assert.Equal(t, core.TypeCallConstructor.String(), request.Payload["Type"])
 	}
