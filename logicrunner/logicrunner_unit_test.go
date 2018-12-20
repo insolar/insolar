@@ -66,7 +66,8 @@ func TestOnPulse(t *testing.T) {
 	}()
 
 	qe := ExecutionQueueElement{
-		result: result,
+		result:     result,
+		returnMode: message.ReturnNoWait,
 	}
 
 	queue := append(make([]ExecutionQueueElement, 0), qe)
@@ -151,11 +152,7 @@ func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
 
 	objectRef := testutils.RandomRef()
 
-	od := testutils.NewObjectDescriptorMock(t)
-	od.HasPendingRequestsMock.Expect().Return(true)
-
-	am.GetObjectMock.Return(od, nil)
-
+	am.HasPendingRequestsMock.Return(true, nil)
 	es := &ExecutionState{ArtifactManager: am, Queue: make([]ExecutionQueueElement, 0)}
 	es.Queue = append(es.Queue, ExecutionQueueElement{})
 	err := lr.StartQueueProcessorIfNeeded(
@@ -182,9 +179,6 @@ func TestCheckPendingRequests(
 
 	am := testutils.NewArtifactManagerMock(t)
 
-	od := testutils.NewObjectDescriptorMock(t)
-	am.GetObjectMock.Return(od, nil)
-
 	es := &ExecutionState{ArtifactManager: am}
 	pending, err := es.CheckPendingRequests(
 		ctx, &message.CallConstructor{},
@@ -192,8 +186,7 @@ func TestCheckPendingRequests(
 	require.NoError(t, err)
 	require.Equal(t, NotPending, pending)
 
-	od.HasPendingRequestsMock.Expect().Return(false)
-	am.GetObjectMock.Return(od, nil)
+	am.HasPendingRequestsMock.Return(false, nil)
 	es = &ExecutionState{ArtifactManager: am}
 	pending, err = es.CheckPendingRequests(
 		ctx, &message.CallMethod{
@@ -203,8 +196,7 @@ func TestCheckPendingRequests(
 	require.NoError(t, err)
 	require.Equal(t, NotPending, pending)
 
-	od.HasPendingRequestsMock.Expect().Return(true)
-	am.GetObjectMock.Return(od, nil)
+	am.HasPendingRequestsMock.Return(true, nil)
 	es = &ExecutionState{ArtifactManager: am}
 	pending, err = es.CheckPendingRequests(
 		ctx, &message.CallMethod{
@@ -214,7 +206,7 @@ func TestCheckPendingRequests(
 	require.NoError(t, err)
 	require.Equal(t, InPending, pending)
 
-	am.GetObjectMock.Return(nil, errors.New("some"))
+	am.HasPendingRequestsMock.Return(false, errors.New("some"))
 	es = &ExecutionState{ArtifactManager: am}
 	pending, err = es.CheckPendingRequests(
 		ctx, &message.CallMethod{
@@ -272,10 +264,11 @@ func TestPrepareState(t *testing.T) {
 
 	// add new element in existing queue
 	queueElementRequest := testutils.RandomRef()
-	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest}}
+	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest, ReturnMode: message.ReturnNoWait}}
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, 2, len(lr.state[object].ExecutionState.Queue))
 	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
+	require.Equal(t, message.ReturnNoWait, lr.state[object].ExecutionState.Queue[0].returnMode)
 
 }
 func TestHandlePendingFinishedMessage(

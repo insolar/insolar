@@ -121,11 +121,6 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 	return &d.parent
 }
 
-// HasPendingRequests returns true if the object has unclosed requests.
-func (d *ObjectDescriptor) HasPendingRequests() bool {
-	return false
-}
-
 // ChildIterator is used to iterate over objects children. During iteration children refs will be fetched from remote
 // source (parent object).
 //

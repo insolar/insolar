@@ -76,9 +76,11 @@ type ExecutionState struct {
 
 type CurrentExecution struct {
 	sync.Mutex
-	Context      context.Context
-	LogicContext *core.LogicCallContext
-	Request      *Ref
+	Context       context.Context
+	LogicContext  *core.LogicCallContext
+	Request       *Ref
+	RequesterNode *Ref
+	ReturnMode    message.MethodReturnMode
 }
 
 type ExecutionQueueResult struct {
@@ -88,11 +90,12 @@ type ExecutionQueueResult struct {
 }
 
 type ExecutionQueueElement struct {
-	ctx     context.Context
-	parcel  core.Parcel
-	request *Ref
-	pulse   core.PulseNumber
-	result  chan ExecutionQueueResult
+	ctx        context.Context
+	parcel     core.Parcel
+	request    *Ref
+	pulse      core.PulseNumber
+	result     chan ExecutionQueueResult
+	returnMode message.MethodReturnMode
 }
 
 type Error struct {
@@ -168,12 +171,11 @@ func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.M
 		return NotPending, nil
 	}
 
-	oDesc, err := es.ArtifactManager.GetObject(ctx, msg.GetReference(), nil, false)
+	has, err := es.ArtifactManager.HasPendingRequests(ctx, msg.ObjectRef)
 	if err != nil {
 		return NotPending, err
 	}
-
-	if oDesc.HasPendingRequests() {
+	if has {
 		return InPending, nil
 	}
 
@@ -197,6 +199,7 @@ func (es *ExecutionState) releaseQueue() []ExecutionQueueElement {
 type LogicRunner struct {
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	MessageBus                 core.MessageBus                 `inject:""`
+	ContractRequester          core.ContractRequester          `inject:""`
 	Ledger                     core.Ledger                     `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
@@ -304,7 +307,8 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 }
 
 func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) (*Ref, error) {
-	id, err := lr.ArtifactManager.RegisterRequest(ctx, parcel)
+	obj := parcel.Message().(message.IBaseLogicMessage).GetReference()
+	id, err := lr.ArtifactManager.RegisterRequest(ctx, obj, parcel)
 	if err != nil {
 		return nil, err
 	}
@@ -369,6 +373,9 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		pulse:   lr.pulse(ctx).PulseNumber,
 		result:  make(chan ExecutionQueueResult, 1),
 	}
+	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
+		qElement.returnMode = msg.ReturnMode
+	}
 
 	es.Queue = append(es.Queue, qElement)
 	es.Unlock()
@@ -378,17 +385,9 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, err
 	}
 
-	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
-		return &reply.CallMethod{}, nil
-	}
-
-	res := <-qElement.result
-	if res.err != nil {
-		return nil, res.err
-	} else if res.somebodyElse {
-		panic("not implemented, should be implemented as part of async contract calls")
-	}
-	return res.reply, nil
+	return &reply.RegisterRequest{
+		Request: *request,
+	}, nil
 }
 
 func (lr *LogicRunner) HandlePendingFinishedMessage(
@@ -478,8 +477,11 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		qe, q := q[0], q[1:]
 		es.Queue = q
 
+		sender := qe.parcel.GetSender()
 		es.Current = &CurrentExecution{
-			Request: qe.request,
+			Request:       qe.request,
+			RequesterNode: &sender,
+			ReturnMode:    qe.returnMode,
 		}
 		es.Unlock()
 
@@ -564,18 +566,39 @@ func (lr *LogicRunner) executeOrValidate(
 		CallerPrototype: msg.GetCallerPrototype(),
 	}
 
+	var re core.Reply
+	var err error
 	switch m := msg.(type) {
 	case *message.CallMethod:
-		re, err := lr.executeMethodCall(ctx, es, m)
-		return re, err
+		re, err = lr.executeMethodCall(ctx, es, m)
 
 	case *message.CallConstructor:
-		re, err := lr.executeConstructorCall(ctx, es, m)
-		return re, err
+		re, err = lr.executeConstructorCall(ctx, es, m)
 
 	default:
 		panic("Unknown e type")
 	}
+	errstr := ""
+	if err != nil {
+		errstr = err.Error()
+	}
+	if es.Current.ReturnMode == message.ReturnResult {
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
+		_, err = lr.MessageBus.Send(ctx, &message.ReturnResults{
+			Caller:  lr.NodeNetwork.GetOrigin().ID(),
+			Target:  *es.Current.RequesterNode,
+			Request: *es.Current.Request,
+			Reply:   re,
+			Error:   errstr,
+		}, *lr.pulse(ctx), &core.MessageSendOptions{
+			Receiver: es.Current.RequesterNode,
+		})
+		if err != nil {
+			inslogger.FromContext(ctx).Debug("couldn't deliver results")
+		}
+	}
+
+	return re, err
 }
 
 // ObjectBody is an inner representation of object and all it accessory
@@ -625,11 +648,12 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 			queueFromMessage = append(
 				queueFromMessage,
 				ExecutionQueueElement{
-					ctx:     qe.Ctx,
-					parcel:  qe.Parcel,
-					request: qe.Request,
-					pulse:   qe.Pulse,
-					result:  make(chan ExecutionQueueResult, 1),
+					ctx:        qe.Ctx,
+					parcel:     qe.Parcel,
+					request:    qe.Request,
+					pulse:      qe.Pulse,
+					result:     make(chan ExecutionQueueResult, 1),
+					returnMode: qe.ReturnMode,
 				})
 		}
 		state.ExecutionState.Queue = append(queueFromMessage, state.ExecutionState.Queue...)
@@ -698,14 +722,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't update object")
 	}
-	_, err = am.RegisterResult(ctx, *es.Current.Request, result)
+	_, err = am.RegisterResult(ctx, m.ObjectRef, *es.Current.Request, result)
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't save results")
 	}
 
 	es.objectbody.Object = newData
 
-	return &reply.CallMethod{Data: newData, Result: result}, nil
+	return &reply.CallMethod{Result: result, Request: *es.Current.Request}, nil
 }
 
 func (lr *LogicRunner) getDescriptorsByPrototypeRef(
@@ -786,7 +810,12 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *es.Current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
+		_, err = lr.ArtifactManager.RegisterResult(ctx, *es.Current.Request, *es.Current.Request, nil)
+		if err != nil {
+			return nil, es.WrapError(err, "couldn't save results")
+		}
 		return &reply.CallConstructor{Object: es.Current.Request}, err
+
 	default:
 		return nil, es.WrapError(nil, "unsupported type of save object")
 	}
@@ -867,10 +896,11 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 	mq := make([]message.ExecutionQueueElement, 0)
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			Ctx:     elem.ctx,
-			Parcel:  elem.parcel,
-			Request: elem.request,
-			Pulse:   elem.pulse,
+			Ctx:        elem.ctx,
+			Parcel:     elem.parcel,
+			Request:    elem.request,
+			Pulse:      elem.pulse,
+			ReturnMode: elem.returnMode,
 		})
 	}
 
