@@ -63,7 +63,7 @@ func NewMessageHandler(
 
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
-	m := middleware{db: h.db, jetCoordinator: h.JetCoordinator}
+	m := middleware{db: h.db, jetCoordinator: h.JetCoordinator, messageBus: h.Bus}
 
 	// Generic.
 	h.replayHandlers[core.TypeGetCode] = m.checkJet(h.handleGetCode)
@@ -76,6 +76,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeSetBlob] = m.checkJet(h.handleSetBlob)
 	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
 	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
+	h.replayHandlers[core.TypeGetJet] = h.handleGetJet
 
 	// Validation.
 	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
@@ -98,6 +99,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.saveParcel(h.handleSetBlob)))
 	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.saveParcel(h.handleGetObjectIndex)))
 	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.saveParcel(h.handleHasPendingRequests)))
+	h.Bus.MustRegister(core.TypeGetJet, m.saveParcel(h.handleGetJet))
 
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.saveParcel(h.handleValidateRecord)))
@@ -162,22 +164,12 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
 	if err == storage.ErrNotFound {
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
-		var nodes []core.RecordRef
-		if parcel.Pulse()-msg.Code.Record().Pulse() < h.conf.LightChainLimit {
-			// Find light executor that saved the code.
-			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.DynamicRoleLightExecutor, msg.Code.Record(), msg.Code.Record().Pulse(),
-			)
-		} else {
-			// Find heavy that has this code.
-			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.DynamicRoleHeavyExecutor, msg.Code.Record(), parcel.Pulse(),
-			)
-		}
+		var node *core.RecordRef
+		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {
 			return nil, err
 		}
-		return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
+		return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, node)
 	}
 	if err != nil {
 		return nil, err
@@ -209,7 +201,7 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err = h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		heavy, err := h.findHeavy(ctx, msg.Head.Record(), parcel.Pulse())
+		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -246,22 +238,11 @@ func (h *MessageHandler) handleGetObject(
 	rec, err := h.db.GetRecord(ctx, jetID, stateID)
 	if err == storage.ErrNotFound {
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
-		var nodes []core.RecordRef
-		if stateID != nil && parcel.Pulse()-stateID.Pulse() < h.conf.LightChainLimit {
-			// Find light executor that saved the state.
-			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.DynamicRoleLightExecutor, msg.Head.Record(), stateID.Pulse(),
-			)
-		} else {
-			// Find heavy that has this object.
-			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.DynamicRoleHeavyExecutor, msg.Head.Record(), parcel.Pulse(),
-			)
-		}
+		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, &nodes[0], stateID)
+		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 	}
 	if err != nil {
 		return nil, err
@@ -310,6 +291,20 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 	return &reply.HasPendingRequests{Has: false}, nil
 }
 
+func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.GetJet)
+	tree, err := h.db.GetJetTree(ctx, msg.Object.Pulse())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch jet tree")
+	}
+	jetID, actual := tree.Find(msg.Object)
+	if err != nil {
+		return nil, err
+	}
+
+	return &reply.Jet{ID: *jetID, Actual: actual}, nil
+}
+
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
@@ -321,7 +316,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 
 	idx, err = h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		heavy, err := h.findHeavy(ctx, msg.Head.Record(), parcel.Pulse())
+		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -355,7 +350,7 @@ func (h *MessageHandler) handleGetChildren(
 
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
-		heavy, err := h.findHeavy(ctx, msg.Parent.Record(), parcel.Pulse())
+		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -384,22 +379,11 @@ func (h *MessageHandler) handleGetChildren(
 
 	// We don't have this child reference.
 	if currentChild != nil && currentChild.Pulse() != parcel.Pulse() {
-		var nodes []core.RecordRef
-		if parcel.Pulse()-currentChild.Pulse() < h.conf.LightChainLimit {
-			// Find light executor that saved the state.
-			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.DynamicRoleLightExecutor, msg.Parent.Record(), currentChild.Pulse(),
-			)
-		} else {
-			// Find heavy that has this object.
-			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.DynamicRoleHeavyExecutor, msg.Parent.Record(), parcel.Pulse(),
-			)
-		}
+		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, &nodes[0])
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node)
 	}
 
 	counter := 0
@@ -458,7 +442,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
 				// We are updating object. Index should be on the heavy executor.
-				heavy, err := h.findHeavy(ctx, msg.Object.Record(), parcel.Pulse())
+				heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 				if err != nil {
 					return err
 				}
@@ -527,7 +511,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 		if err == storage.ErrNotFound {
-			heavy, err := h.findHeavy(ctx, msg.Parent.Record(), parcel.Pulse())
+			heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 			if err != nil {
 				return err
 			}
@@ -627,7 +611,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		if err == storage.ErrNotFound {
-			heavy, err := h.findHeavy(ctx, msg.Object.Record(), parcel.Pulse())
+			heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 			if err != nil {
 				return err
 			}
@@ -640,18 +624,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 		}
 
 		// Find node that has this state.
-		var nodes []core.RecordRef
-		if parcel.Pulse()-msg.State.Pulse() < h.conf.LightChainLimit {
-			// Find light executor that saved the state.
-			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.DynamicRoleLightExecutor, msg.Object.Record(), msg.State.Pulse(),
-			)
-		} else {
-			// Find heavy that has this object.
-			nodes, err = h.JetCoordinator.QueryRole(
-				ctx, core.DynamicRoleHeavyExecutor, msg.Object.Record(), parcel.Pulse(),
-			)
-		}
+		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.TargetPulse())
 		if err != nil {
 			return err
 		}
@@ -662,7 +635,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 			ValidatedState:      msg.State,
 			LatestStateApproved: idx.LatestStateApproved,
 		}, currentPulse.Pulse, &core.MessageSendOptions{
-			Receiver: &nodes[0],
+			Receiver: node,
 		})
 		if err != nil {
 			return err
@@ -758,17 +731,6 @@ func validateState(old record.State, new record.State) error {
 		return errors.New("object is already activated")
 	}
 	return nil
-}
-
-func (h *MessageHandler) findHeavy(ctx context.Context, obj *core.RecordID, pulse core.PulseNumber) (*core.RecordRef, error) {
-	nodes, err := h.JetCoordinator.QueryRole(
-		ctx, core.DynamicRoleHeavyExecutor, obj, pulse,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &nodes[0], nil
 }
 
 func (h *MessageHandler) saveIndexFromHeavy(
@@ -889,4 +851,16 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	return &reply.OK{}, nil
+}
+
+func (h *MessageHandler) nodeForJet(
+	ctx context.Context, jetID core.RecordID, parcelPulse, targetPulse core.PulseNumber,
+) (*core.RecordRef, error) {
+	if targetPulse == core.PulseNumberCurrent {
+		targetPulse = parcelPulse
+	}
+	if parcelPulse-targetPulse < h.conf.LightChainLimit {
+		return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
+	}
+	return h.JetCoordinator.Heavy(ctx, parcelPulse)
 }

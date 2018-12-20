@@ -89,7 +89,7 @@ type Tree struct {
 
 // NewTree creates new tree.
 func NewTree() *Tree {
-	return &Tree{Head: &jet{}}
+	return &Tree{Head: &jet{Actual: true}}
 }
 
 // Find returns jet for provided reference. If found jet is actual, the second argument will be true.
@@ -97,8 +97,9 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	if id.Pulse() == core.PulseNumberJet {
 		return &id, true
 	}
-	j, depth := t.Head.Find(id.Hash(), 0)
-	return NewID(uint8(depth), resetBits(id.Hash(), depth)), j.Actual
+	// TODO: write 'actual' test and retur actual flag from jet.
+	_, depth := t.Head.Find(id.Hash(), 0)
+	return NewID(uint8(depth), resetBits(id.Hash(), depth)), true
 }
 
 // Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as

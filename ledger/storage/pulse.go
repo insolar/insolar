@@ -121,6 +121,31 @@ func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error
 	return pulse, nil
 }
 
+// GetPreviousPulse returns pulse for provided pulse number.
+func (db *DB) GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+	var (
+		pulse *Pulse
+		err   error
+	)
+	err = db.View(ctx, func(tx *TransactionManager) error {
+		pulse, err = tx.GetPulse(ctx, num)
+		if err != nil {
+			return err
+		}
+		if pulse.Prev == nil {
+			pulse = nil
+			return nil
+		}
+		pulse, err = tx.GetPulse(ctx, *pulse.Prev)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return pulse, nil
+}
+
 // GetLatestPulse returns the latest pulse
 func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))

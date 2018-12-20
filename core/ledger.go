@@ -76,17 +76,25 @@ type PulseManager interface {
 // (e.g. to which Jet a message should be sent).
 //go:generate minimock -i github.com/insolar/insolar/core.JetCoordinator -o ../testutils -s _mock.go
 type JetCoordinator interface {
+	// Me returns current node.
+	Me() RecordRef
+
 	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber, node RecordRef) (bool, error)
+	IsAuthorized(ctx context.Context, role DynamicRole, obj RecordID, pulse PulseNumber, node RecordRef) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) ([]RecordRef, error)
+	QueryRole(ctx context.Context, role DynamicRole, obj RecordID, pulse PulseNumber) ([]RecordRef, error)
 
-	// AmI checks for role on concrete pulse for current node.
-	AmI(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) (bool, error)
+	VirtualExecutorForObject(ctx context.Context, objID RecordID, pulse PulseNumber) (*RecordRef, error)
+	VirtualValidatorsForObject(ctx context.Context, objID RecordID, pulse PulseNumber) ([]RecordRef, error)
 
-	// GetActiveNodes return active nodes for specified pulse.
-	GetActiveNodes(pulse PulseNumber) ([]Node, error)
+	LightExecutorForObject(ctx context.Context, objID RecordID, pulse PulseNumber) (*RecordRef, error)
+	LightValidatorsForObject(ctx context.Context, objID RecordID, pulse PulseNumber) ([]RecordRef, error)
+	// LightExecutorForJet calculates light material executor for provided jet.
+	LightExecutorForJet(ctx context.Context, jetID RecordID, pulse PulseNumber) (*RecordRef, error)
+	LightValidatorsForJet(ctx context.Context, jetID RecordID, pulse PulseNumber) ([]RecordRef, error)
+
+	Heavy(ctx context.Context, pulse PulseNumber) (*RecordRef, error)
 }
 
 // ArtifactManager is a high level storage interface.

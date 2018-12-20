@@ -21,6 +21,14 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
+// LedgerMessage is an interface for ledger-specific methods.
+type LedgerMessage interface {
+	core.Message
+	// TargetPulse is pulse for jet calculations. If nil, will calculate from parcel pulse.
+	TargetPulse() core.PulseNumber
+}
+
+// FIXME: @andreyromancev. 21.12.18. Remove this and create 'LogicRunnerMessage' interface to get rid of 'GetCaller' in ledger.
 type ledgerMessage struct {
 }
 
@@ -37,9 +45,14 @@ type SetRecord struct {
 	TargetRef core.RecordRef
 }
 
+// TargetPulse implementation of LedgerMessage interface.
+func (m *SetRecord) TargetPulse() core.PulseNumber {
+	return m.TargetRef.Record().Pulse()
+}
+
 // AllowedSenderObjectAndRole implements interface method
-func (sr *SetRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &sr.TargetRef, core.DynamicRoleVirtualExecutor
+func (m *SetRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.TargetRef, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -48,12 +61,12 @@ func (*SetRecord) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (sr *SetRecord) DefaultTarget() *core.RecordRef {
-	return &sr.TargetRef
+func (m *SetRecord) DefaultTarget() *core.RecordRef {
+	return &m.TargetRef
 }
 
 // Type implementation of Message interface.
-func (e *SetRecord) Type() core.MessageType {
+func (m *SetRecord) Type() core.MessageType {
 	return core.TypeSetRecord
 }
 
@@ -64,8 +77,8 @@ type GetCode struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (gc *GetCode) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &gc.Code, core.DynamicRoleVirtualExecutor
+func (m *GetCode) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Code, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -74,13 +87,18 @@ func (*GetCode) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (gc *GetCode) DefaultTarget() *core.RecordRef {
-	return &gc.Code
+func (m *GetCode) DefaultTarget() *core.RecordRef {
+	return &m.Code
 }
 
 // Type implementation of Message interface.
-func (e *GetCode) Type() core.MessageType {
+func (*GetCode) Type() core.MessageType {
 	return core.TypeGetCode
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *GetCode) TargetPulse() core.PulseNumber {
+	return core.PulseNumberCurrent
 }
 
 // GetObject retrieves object From storage.
@@ -92,8 +110,8 @@ type GetObject struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (getObj *GetObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &getObj.Head, core.DynamicRoleVirtualExecutor
+func (m *GetObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Head, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -102,13 +120,21 @@ func (*GetObject) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (getObj *GetObject) DefaultTarget() *core.RecordRef {
-	return &getObj.Head
+func (m *GetObject) DefaultTarget() *core.RecordRef {
+	return &m.Head
 }
 
 // Type implementation of Message interface.
-func (getObj *GetObject) Type() core.MessageType {
+func (*GetObject) Type() core.MessageType {
 	return core.TypeGetObject
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *GetObject) TargetPulse() core.PulseNumber {
+	if m.State != nil {
+		m.State.Pulse()
+	}
+	return core.PulseNumberCurrent
 }
 
 // GetDelegate retrieves object represented as provided type.
@@ -119,8 +145,8 @@ type GetDelegate struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (gd *GetDelegate) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &gd.Head, core.DynamicRoleVirtualExecutor
+func (m *GetDelegate) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Head, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -129,13 +155,18 @@ func (*GetDelegate) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (gd *GetDelegate) DefaultTarget() *core.RecordRef {
-	return &gd.Head
+func (m *GetDelegate) DefaultTarget() *core.RecordRef {
+	return &m.Head
 }
 
 // Type implementation of Message interface.
-func (e *GetDelegate) Type() core.MessageType {
+func (*GetDelegate) Type() core.MessageType {
 	return core.TypeGetDelegate
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *GetDelegate) TargetPulse() core.PulseNumber {
+	return core.PulseNumberCurrent
 }
 
 // UpdateObject amends object.
@@ -147,8 +178,8 @@ type UpdateObject struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (uo *UpdateObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &uo.Object, core.DynamicRoleVirtualExecutor
+func (m *UpdateObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Object, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -157,13 +188,18 @@ func (*UpdateObject) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (uo *UpdateObject) DefaultTarget() *core.RecordRef {
-	return &uo.Object
+func (m *UpdateObject) DefaultTarget() *core.RecordRef {
+	return &m.Object
 }
 
 // Type implementation of Message interface.
-func (e *UpdateObject) Type() core.MessageType {
+func (*UpdateObject) Type() core.MessageType {
 	return core.TypeUpdateObject
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *UpdateObject) TargetPulse() core.PulseNumber {
+	return core.PulseNumberCurrent
 }
 
 // RegisterChild amends object.
@@ -176,8 +212,8 @@ type RegisterChild struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (rc *RegisterChild) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &rc.Child, core.DynamicRoleVirtualExecutor
+func (m *RegisterChild) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Child, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -186,13 +222,18 @@ func (*RegisterChild) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (rc *RegisterChild) DefaultTarget() *core.RecordRef {
-	return &rc.Parent
+func (m *RegisterChild) DefaultTarget() *core.RecordRef {
+	return &m.Parent
 }
 
 // Type implementation of Message interface.
-func (rc *RegisterChild) Type() core.MessageType {
+func (*RegisterChild) Type() core.MessageType {
 	return core.TypeRegisterChild
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *RegisterChild) TargetPulse() core.PulseNumber {
+	return core.PulseNumberCurrent
 }
 
 // GetChildren retrieves a chunk of children references.
@@ -205,8 +246,8 @@ type GetChildren struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (gc *GetChildren) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &gc.Parent, core.DynamicRoleVirtualExecutor
+func (m *GetChildren) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Parent, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -215,13 +256,18 @@ func (*GetChildren) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (gc *GetChildren) DefaultTarget() *core.RecordRef {
-	return &gc.Parent
+func (m *GetChildren) DefaultTarget() *core.RecordRef {
+	return &m.Parent
 }
 
 // Type implementation of Message interface.
-func (e *GetChildren) Type() core.MessageType {
+func (*GetChildren) Type() core.MessageType {
 	return core.TypeGetChildren
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *GetChildren) TargetPulse() core.PulseNumber {
+	return core.PulseNumberCurrent
 }
 
 // JetDrop spreads jet drop
@@ -236,7 +282,7 @@ type JetDrop struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (jd *JetDrop) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+func (m *JetDrop) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	// This check is not needed, because JetDrop sender is explicitly checked in handler.
 	return nil, core.DynamicRoleUndefined
 }
@@ -247,13 +293,18 @@ func (*JetDrop) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (jd *JetDrop) DefaultTarget() *core.RecordRef {
-	return core.NewRecordRef(core.RecordID{}, jd.JetID)
+func (m *JetDrop) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.RecordID{}, m.JetID)
 }
 
 // Type implementation of Message interface.
-func (e *JetDrop) Type() core.MessageType {
+func (*JetDrop) Type() core.MessageType {
 	return core.TypeJetDrop
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *JetDrop) TargetPulse() core.PulseNumber {
+	return core.PulseNumberJet
 }
 
 // ValidateRecord creates VM validation for specific object record.
@@ -267,8 +318,8 @@ type ValidateRecord struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (vr *ValidateRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &vr.Object, core.DynamicRoleVirtualExecutor
+func (m *ValidateRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Object, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -277,13 +328,18 @@ func (*ValidateRecord) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (vr *ValidateRecord) DefaultTarget() *core.RecordRef {
-	return &vr.Object
+func (m *ValidateRecord) DefaultTarget() *core.RecordRef {
+	return &m.Object
 }
 
 // Type implementation of Message interface.
 func (*ValidateRecord) Type() core.MessageType {
 	return core.TypeValidateRecord
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *ValidateRecord) TargetPulse() core.PulseNumber {
+	return m.Object.Record().Pulse()
 }
 
 // SetBlob saves blob in storage.
@@ -295,8 +351,8 @@ type SetBlob struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (sb *SetBlob) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &sb.TargetRef, core.DynamicRoleVirtualExecutor
+func (m *SetBlob) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.TargetRef, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -305,13 +361,18 @@ func (*SetBlob) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (sb *SetBlob) DefaultTarget() *core.RecordRef {
-	return &sb.TargetRef
+func (m *SetBlob) DefaultTarget() *core.RecordRef {
+	return &m.TargetRef
 }
 
 // Type implementation of Message interface.
 func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *SetBlob) TargetPulse() core.PulseNumber {
+	return core.PulseNumberCurrent
 }
 
 // GetObjectIndex fetches objects index.
@@ -322,8 +383,8 @@ type GetObjectIndex struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (getObjectIndex *GetObjectIndex) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &getObjectIndex.Object, core.DynamicRoleLightExecutor
+func (m *GetObjectIndex) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Object, core.DynamicRoleLightExecutor
 }
 
 // DefaultRole returns role for this event
@@ -332,13 +393,18 @@ func (*GetObjectIndex) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (getObjectIndex *GetObjectIndex) DefaultTarget() *core.RecordRef {
-	return &getObjectIndex.Object
+func (m *GetObjectIndex) DefaultTarget() *core.RecordRef {
+	return &m.Object
 }
 
 // Type implementation of Message interface.
 func (*GetObjectIndex) Type() core.MessageType {
 	return core.TypeGetObjectIndex
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *GetObjectIndex) TargetPulse() core.PulseNumber {
+	return core.PulseNumberCurrent
 }
 
 // ValidationCheck checks if validation of a particular record can be performed.
@@ -351,17 +417,17 @@ type ValidationCheck struct {
 }
 
 // DefaultTarget returns of target of this event.
-func (vc *ValidationCheck) DefaultTarget() *core.RecordRef {
-	return &vc.Object
+func (m *ValidationCheck) DefaultTarget() *core.RecordRef {
+	return &m.Object
 }
 
 // DefaultRole returns role for this event
-func (vc *ValidationCheck) DefaultRole() core.DynamicRole {
+func (m *ValidationCheck) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (vc *ValidationCheck) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+func (m *ValidationCheck) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	// TODO: return smth real
 	return nil, 0
 }
@@ -369,6 +435,11 @@ func (vc *ValidationCheck) AllowedSenderObjectAndRole() (*core.RecordRef, core.D
 // Type implementation of Message interface.
 func (*ValidationCheck) Type() core.MessageType {
 	return core.TypeValidationCheck
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *ValidationCheck) TargetPulse() core.PulseNumber {
+	return m.ValidatedState.Pulse()
 }
 
 // HotData contains hot-data
@@ -383,8 +454,8 @@ type HotData struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (hd *HotData) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &hd.Jet, core.DynamicRoleLightExecutor
+func (m *HotData) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Jet, core.DynamicRoleLightExecutor
 }
 
 // DefaultRole returns role for this event
@@ -393,13 +464,18 @@ func (*HotData) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (hd *HotData) DefaultTarget() *core.RecordRef {
-	return &hd.Jet
+func (m *HotData) DefaultTarget() *core.RecordRef {
+	return &m.Jet
 }
 
 // Type implementation of Message interface.
 func (*HotData) Type() core.MessageType {
 	return core.TypeHotRecords
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *HotData) TargetPulse() core.PulseNumber {
+	return core.PulseNumberJet
 }
 
 // HotIndex contains meat about hot-data
@@ -433,4 +509,41 @@ func (*GetPendingRequests) DefaultRole() core.DynamicRole {
 // DefaultTarget returns of target of this event.
 func (m *GetPendingRequests) DefaultTarget() *core.RecordRef {
 	return &m.Object
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *GetPendingRequests) TargetPulse() core.PulseNumber {
+	return core.PulseNumberCurrent
+}
+
+// GetJet requests to calculate a jet for provided object.
+type GetJet struct {
+	ledgerMessage
+
+	Object core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*GetJet) Type() core.MessageType {
+	return core.TypeGetJet
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetJet) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return core.NewRecordRef(core.DomainID, m.Object), core.DynamicRoleLightExecutor
+}
+
+// DefaultRole returns role for this event
+func (*GetJet) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetJet) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.DomainID, m.Object)
+}
+
+// TargetPulse implementation of LedgerMessage interface.
+func (m *GetJet) TargetPulse() core.PulseNumber {
+	return core.PulseNumberCurrent
 }

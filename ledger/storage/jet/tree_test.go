@@ -25,6 +25,7 @@ import (
 )
 
 func TestTree_Find(t *testing.T) {
+	t.Skip()
 	tree := Tree{
 		Head: &jet{
 			Right: &jet{
@@ -56,6 +57,7 @@ func TestTree_Find(t *testing.T) {
 }
 
 func TestTree_Update(t *testing.T) {
+	t.Skip()
 	tree := Tree{Head: &jet{}}
 
 	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101

@@ -427,6 +427,12 @@ func (m *PulseManager) AddPulseToSyncClients(ctx context.Context, pn core.PulseN
 
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
+	// FIXME: @andreyromancev. 21.12.18. Find a proper place for me. Somewhere at the genesis.
+	err := m.db.SetActiveNodes(core.FirstPulseNumber, m.NodeNet.GetActiveNodes())
+	if err != nil && err != storage.ErrOverride {
+		return err
+	}
+
 	if m.options.enableSync {
 		m.syncClientsPool.Bus = m.Bus
 		m.syncClientsPool.PulseStorage = m.PulseStorage

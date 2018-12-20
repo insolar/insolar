@@ -229,6 +229,7 @@ func (db *DB) CloneJetTree(
 	if err != nil {
 		return err
 	}
+	tree.ResetActual()
 
 	return db.set(ctx, k, tree.Bytes())
 }

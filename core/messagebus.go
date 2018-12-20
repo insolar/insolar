@@ -195,6 +195,8 @@ const (
 	TypeGetPendingRequests
 	// TypeHotRecords saves hot-records in storage.
 	TypeHotRecords
+	// TypeGetJet requests to calculate a jet for provided object.
+	TypeGetJet
 
 	// TypeValidationCheck checks if validation of a particular record can be performed.
 	TypeValidationCheck

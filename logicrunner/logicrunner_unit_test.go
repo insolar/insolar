@@ -30,7 +30,8 @@ func TestOnPulse(t *testing.T) {
 	lr.MessageBus = mb
 	lr.JetCoordinator = jc
 
-	jc.AmIMock.Return(false, nil)
+	jc.IsAuthorizedMock.Return(false, nil)
+	jc.MeMock.Return(core.RecordRef{})
 
 	// test empty lr
 	pulse := core.Pulse{}
@@ -73,7 +74,7 @@ func TestOnPulse(t *testing.T) {
 	require.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
 
 	// Executor in new pulse is same node
-	jc.AmIMock.Return(true, nil)
+	jc.IsAuthorizedMock.Return(true, nil)
 	lr.state[objectRef].ExecutionState.pending = PendingUnknown
 
 	lr.state[objectRef] = &ObjectState{

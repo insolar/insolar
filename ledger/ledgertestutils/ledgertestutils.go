@@ -58,8 +58,9 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm := pulsemanager.NewPulseManager(db, conf)
 	ls := localstorage.NewLocalStorage(db)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.AmIMock.Return(true, nil)
 	jc.IsAuthorizedMock.Return(true, nil)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 
 	// Init components.
 	if c.MessageBus == nil {

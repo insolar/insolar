@@ -71,6 +71,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &ValidationCheck{}, nil
 	case core.TypeGetPendingRequests:
 		return &GetPendingRequests{}, nil
+	case core.TypeGetJet:
+		return &GetJet{}, nil
 
 	// heavy sync
 	case core.TypeHeavyStartStop:
@@ -205,6 +207,7 @@ func init() {
 	gob.Register(&ValidateRecord{})
 	gob.Register(&ValidationCheck{})
 	gob.Register(&GetPendingRequests{})
+	gob.Register(&GetJet{})
 
 	// heavy
 	gob.Register(&HeavyStartStop{})

@@ -43,7 +43,8 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.AmIMock.Return(true, nil)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 	am := NewArtifactManger(db)
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb

@@ -76,13 +76,15 @@ func getTestData(t *testing.T) (
 	mc := minimock.NewController(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 	mb := testmessagebus.NewTestMessageBus(t)
 	db.PlatformCryptographyScheme = scheme
 	handler := MessageHandler{
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf: &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -97,8 +99,6 @@ func getTestData(t *testing.T) (
 	}
 
 	handler.RecentStorageProvider = provideMock
-
-	jc.AmIMock.Return(true, nil)
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
@@ -692,6 +692,8 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	mb := testmessagebus.NewTestMessageBus(t)
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -703,7 +705,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf: &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -724,9 +726,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
 	}
-
-	jc.QueryRoleMock.Return([]core.RecordRef{*genRandomRef(0)}, nil)
-	jc.AmIMock.Return(true, nil)
 
 	objID, err := am.RegisterRequest(
 		ctx,
@@ -838,6 +837,6 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 		require.NoError(t, err)
 		jetID, actual := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
 		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
-		assert.False(t, actual)
+		assert.True(t, actual)
 	})
 }

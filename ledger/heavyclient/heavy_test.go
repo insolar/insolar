@@ -89,8 +89,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(t)
-	// always return true
-	jcMock.IsAuthorizedMock.Return(true, nil)
+	jcMock.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jcMock.MeMock.Return(core.RecordRef{})
 
 	// Mock N7: GIL mock
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
