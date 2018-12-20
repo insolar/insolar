@@ -218,14 +218,14 @@ func (h *MessageHandler) handleGetObject(
 			return nil, err
 		}
 		// Add requested object to recent.
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record(), false)
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, heavy, msg.State)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	// Add requested object to recent.
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record(), false)
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
 
 	// Determine object state id.
 	var stateID *core.RecordID
@@ -333,7 +333,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record(), false)
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -368,7 +368,7 @@ func (h *MessageHandler) handleGetChildren(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record(), false)
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
 
 	var (
 		refs         []core.RecordRef
@@ -478,7 +478,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return errors.New("invalid state record")
 		}
 
-		recentStorage.AddObject(*msg.Object.Record(), true)
+		recentStorage.AddObject(*msg.Object.Record())
 
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 		if err != nil {
@@ -498,7 +498,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, err
 	}
 
-	recentStorage.AddObject(*msg.Object.Record(), true)
+	recentStorage.AddObject(*msg.Object.Record())
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -538,7 +538,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		} else if err != nil {
 			return err
 		}
-		recentStorage.AddObject(*msg.Parent.Record(), true)
+		recentStorage.AddObject(*msg.Parent.Record())
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -565,7 +565,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, err
 	}
 
-	recentStorage.AddObject(*msg.Parent.Record(), true)
+	recentStorage.AddObject(*msg.Parent.Record())
 
 	return &reply.ID{ID: *child}, nil
 }
