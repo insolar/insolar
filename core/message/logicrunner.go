@@ -209,10 +209,11 @@ type ExecutorResults struct {
 }
 
 type ExecutionQueueElement struct {
-	Ctx     context.Context
-	Parcel  core.Parcel
-	Request *core.RecordRef
-	Pulse   core.PulseNumber
+	Ctx        context.Context
+	Parcel     core.Parcel
+	Request    *core.RecordRef
+	Pulse      core.PulseNumber
+	ReturnMode MethodReturnMode
 }
 
 // AllowedSenderObjectAndRole implements interface method
