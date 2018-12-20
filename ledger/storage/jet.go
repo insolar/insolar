@@ -153,7 +153,7 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, ids ...
 	defer db.jetTreeLock.Unlock()
 
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
-	tree, err := db.GetJetTree(ctx, pulse)
+	tree, err := db.getJetTree(ctx, pulse)
 	if err != nil {
 		return err
 	}
@@ -166,6 +166,13 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, ids ...
 
 // GetJetTree fetches tree for specified pulse.
 func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
+	db.jetTreeLock.RLock()
+	defer db.jetTreeLock.RUnlock()
+	return db.getJetTree(ctx, pulse)
+}
+
+// GetJetTree fetches tree for specified pulse.
+func (db *DB) getJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	buff, err := db.get(ctx, k)
 	if err == ErrNotFound {
@@ -193,7 +200,7 @@ func (db *DB) SplitJetTree(
 	defer db.jetTreeLock.Unlock()
 
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
-	tree, err := db.GetJetTree(ctx, from)
+	tree, err := db.getJetTree(ctx, from)
 	if err != nil {
 		return nil, nil, err
 	}
