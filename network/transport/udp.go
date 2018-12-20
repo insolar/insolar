@@ -29,15 +29,11 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
 const udpMaxPacketSize = 1400
-
-// GetUDPMaxPacketSize returns udp max packet size
-func GetUDPMaxPacketSize() int {
-	return udpMaxPacketSize
-}
 
 type udpTransport struct {
 	baseTransport
@@ -89,7 +85,7 @@ func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 	return transport, nil
 }
 
-func (udpT *udpTransport) send(recvAddress string, data []byte) error {
+func (t *udpTransport) send(recvAddress string, data []byte) error {
 	log.Debug("Sending PURE_UDP request")
 	if len(data) > udpMaxPacketSize {
 		return errors.New(fmt.Sprintf("udpTransport.send: too big input data. Maximum: %d. Current: %d",
@@ -107,7 +103,7 @@ func (udpT *udpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "udpTransport.send")
 	}
-	defer udpConn.Close()
+	defer utils.CloseVerbose(udpConn)
 
 	log.Debug("udpTransport.send: len = ", len(data))
 	_, err = udpConn.Write(data)
@@ -115,42 +111,39 @@ func (udpT *udpTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (udpT *udpTransport) Listen(ctx context.Context) error {
+func (t *udpTransport) Listen(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Start UDP transport")
 	for {
 		buf := make([]byte, udpMaxPacketSize)
-		n, addr, err := udpT.serverConn.ReadFrom(buf)
+		n, addr, err := t.serverConn.ReadFrom(buf)
 		if err != nil {
-			<-udpT.disconnectFinished
+			<-t.disconnectFinished
 			return err
 		}
 
-		go udpT.handleAcceptedConnection(buf[:n], addr)
+		go t.handleAcceptedConnection(buf[:n], addr)
 	}
 }
 
 // Stop stops networking.
-func (udpT *udpTransport) Stop() {
-	udpT.mutex.Lock()
-	defer udpT.mutex.Unlock()
+func (t *udpTransport) Stop() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 
 	log.Info("Stop UDP transport")
-	udpT.prepareDisconnect()
+	t.prepareDisconnect()
 
-	err := udpT.serverConn.Close()
-	if err != nil {
-		log.Errorln("Failed to close socket:", err.Error())
-	}
+	utils.CloseVerbose(t.serverConn)
 }
 
-func (udpT *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
+func (t *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
 	r := bytes.NewReader(data)
-	msg, err := udpT.serializer.DeserializePacket(r)
+	msg, err := t.serializer.DeserializePacket(r)
 	if err != nil {
 		log.Error("[ handleAcceptedConnection ] ", err)
 		return
 	}
 	log.Debug("[ handleAcceptedConnection ] Packet processed. size: ", len(data), ". Address: ", addr)
 
-	udpT.handlePacket(msg)
+	go t.packetHandler.Handle(context.TODO(), msg)
 }

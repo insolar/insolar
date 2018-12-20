@@ -22,7 +22,6 @@ Package exports simple interfaces for easily defining new transports.
 
 For now we provide two implementations of transport.
 The default is UTPTransport which using BitTorrent µTP protocol.
-The second one is KCPTransport based on KCP protocol and supports packet level encryption.
 
 Usage:
 

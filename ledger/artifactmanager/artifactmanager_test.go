@@ -82,13 +82,14 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf: &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
+	recentStorageMock.GetRequestsMock.Return(nil)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -119,11 +120,11 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	defer cleaner()
 
 	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"}}
-	id, err := am.RegisterRequest(ctx, &parcel)
+	id, err := am.RegisterRequest(ctx, *am.GenesisRef(), &parcel)
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
-	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.CallRequest).Payload)
+	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.RequestRecord).Payload)
 }
 
 func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
@@ -448,18 +449,26 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	nodeRef := genRandomRef(0)
 	mb.SendFunc = func(c context.Context, m core.Message, _ core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
-		if o.Receiver == nil {
-			return &reply.GetObjectRedirect{
-				Receiver: nodeRef,
-				Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
-			}, nil
-		}
 
-		token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
-		assert.True(t, ok)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, nodeRef, o.Receiver)
-		return &reply.Object{}, nil
+		switch m.(type) {
+		case *message.GetObjectIndex:
+			return &reply.ObjectIndex{}, nil
+		case *message.GetObject:
+			if o.Receiver == nil {
+				return &reply.GetObjectRedirect{
+					Receiver: nodeRef,
+					Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
+				}, nil
+			}
+
+			token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
+			assert.True(t, ok)
+			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+			assert.Equal(t, nodeRef, o.Receiver)
+			return &reply.Object{}, nil
+		default:
+			panic("unexpected call")
+		}
 	}
 	am.DefaultBus = mb
 	am.db = db
@@ -688,12 +697,13 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.GetRequestsMock.Return(nil)
 
 	handler := MessageHandler{
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf: &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -720,6 +730,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	objID, err := am.RegisterRequest(
 		ctx,
+		*am.GenesisRef(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
@@ -775,13 +786,18 @@ func TestLedgerArtifactManager_RegisterResult(t *testing.T) {
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
+	objID := core.RecordID{1, 2, 3}
 	request := genRandomRef(0)
-	requestID, err := am.RegisterResult(ctx, *request, []byte{1, 2, 3})
+	requestID, err := am.RegisterResult(ctx, *core.NewRecordRef(core.RecordID{}, objID), *request, []byte{1, 2, 3})
 	assert.NoError(t, err)
 
 	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), requestID)
 	assert.NoError(t, err)
-	assert.Equal(t, record.ResultRecord{Request: *request, Payload: []byte{1, 2, 3}}, *rec.(*record.ResultRecord))
+	assert.Equal(t, record.ResultRecord{
+		Object:  objID,
+		Request: *request,
+		Payload: []byte{1, 2, 3},
+	}, *rec.(*record.ResultRecord))
 }
 
 func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
@@ -800,7 +816,7 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
 		mb.SendMock.Return(&reply.JetMiss{JetID: *jet.NewID(5, []byte{1, 2, 3})}, nil)
-		_, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallMethod{}})
+		_, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.Error(t, err)
 	})
 
@@ -815,7 +831,7 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 			retries--
 			return &reply.JetMiss{JetID: *jet.NewID(4, []byte{0xD5})}, nil
 		}
-		_, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallMethod{}})
+		_, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
 
 		tree, err := db.GetJetTree(ctx, core.FirstPulseNumber)

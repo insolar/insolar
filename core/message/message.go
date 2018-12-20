@@ -37,12 +37,16 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &CallMethod{}, nil
 	case core.TypeCallConstructor:
 		return &CallConstructor{}, nil
+	case core.TypeReturnResults:
+		return &ReturnResults{}, nil
 	case core.TypeExecutorResults:
 		return &ExecutorResults{}, nil
 	case core.TypeValidateCaseBind:
 		return &ValidateCaseBind{}, nil
 	case core.TypeValidationResults:
 		return &ValidationResults{}, nil
+	case core.TypePendingFinished:
+		return &PendingFinished{}, nil
 
 	// Ledger
 	case core.TypeGetCode:
@@ -65,6 +69,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &GetObjectIndex{}, nil
 	case core.TypeValidationCheck:
 		return &ValidationCheck{}, nil
+	case core.TypeGetPendingRequests:
+		return &GetPendingRequests{}, nil
 
 	// heavy sync
 	case core.TypeHeavyStartStop:
@@ -180,9 +186,11 @@ func init() {
 	// Logicrunner
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
+	gob.Register(&ReturnResults{})
 	gob.Register(&ExecutorResults{})
 	gob.Register(&ValidateCaseBind{})
 	gob.Register(&ValidationResults{})
+	gob.Register(&PendingFinished{})
 
 	// Ledger
 	gob.Register(&GetCode{})
@@ -196,6 +204,8 @@ func init() {
 	gob.Register(&SetBlob{})
 	gob.Register(&ValidateRecord{})
 	gob.Register(&ValidationCheck{})
+	gob.Register(&GetPendingRequests{})
+
 	// heavy
 	gob.Register(&HeavyStartStop{})
 	gob.Register(&HeavyPayload{})

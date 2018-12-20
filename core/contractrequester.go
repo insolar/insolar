@@ -16,10 +16,18 @@
 
 package core
 
-import "context"
+import (
+	"context"
+)
 
 //go:generate minimock -i github.com/insolar/insolar/core.ContractRequester -o ../testutils -s _mock.go
 // ContractRequester is the global contract requester handler. Other system parts communicate with contract requester through it.
 type ContractRequester interface {
 	SendRequest(ctx context.Context, ref *RecordRef, method string, argsIn []interface{}) (Reply, error)
+	// CallMethod - low level calls contract
+	CallMethod(ctx context.Context, base Message, async bool,
+		ref *RecordRef, method string, argsIn Arguments,
+		mustPrototype *RecordRef) (Reply, error)
+	CallConstructor(ctx context.Context, base Message, async bool,
+		prototype *RecordRef, to *RecordRef, method string, argsIn Arguments, saveType int) (*RecordRef, error)
 }

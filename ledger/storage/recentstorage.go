@@ -53,8 +53,8 @@ func (p *RecentStorageProvider) GetStorage(jetID core.RecordID) recentstorage.Re
 type RecentStorage struct {
 	recentObjects   map[core.RecordID]*recentObjectMeta
 	objectLock      sync.Mutex
-	pendingRequests map[core.RecordID]struct{}
-	requestLock     sync.Mutex
+	pendingRequests map[core.RecordID]map[core.RecordID]struct{}
+	requestLock     sync.RWMutex
 	DefaultTTL      int
 }
 
@@ -67,7 +67,7 @@ type recentObjectMeta struct {
 func NewRecentStorage(defaultTTL int) *RecentStorage {
 	return &RecentStorage{
 		recentObjects:   map[core.RecordID]*recentObjectMeta{},
-		pendingRequests: map[core.RecordID]struct{}{},
+		pendingRequests: map[core.RecordID]map[core.RecordID]struct{}{},
 		DefaultTTL:      defaultTTL,
 		objectLock:      sync.Mutex{},
 	}
@@ -86,22 +86,28 @@ func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int, isMine bool)
 }
 
 // AddPendingRequest adds request to cache.
-func (r *RecentStorage) AddPendingRequest(id core.RecordID) {
+func (r *RecentStorage) AddPendingRequest(obj, req core.RecordID) {
 	r.requestLock.Lock()
 	defer r.requestLock.Unlock()
 
-	if _, ok := r.pendingRequests[id]; !ok {
-		r.pendingRequests[id] = struct{}{}
-		return
+	if _, ok := r.pendingRequests[obj]; !ok {
+		r.pendingRequests[obj] = map[core.RecordID]struct{}{}
 	}
+	r.pendingRequests[obj][req] = struct{}{}
 }
 
 // RemovePendingRequest removes request from cache.
-func (r *RecentStorage) RemovePendingRequest(id core.RecordID) {
+func (r *RecentStorage) RemovePendingRequest(obj, req core.RecordID) {
 	r.requestLock.Lock()
 	defer r.requestLock.Unlock()
 
-	delete(r.pendingRequests, id)
+	if _, ok := r.pendingRequests[obj]; !ok {
+		return
+	}
+	delete(r.pendingRequests[obj], req)
+	if len(r.pendingRequests[obj]) == 0 {
+		delete(r.pendingRequests, obj)
+	}
 }
 
 // IsMine checks mine-status of an object
@@ -127,16 +133,28 @@ func (r *RecentStorage) GetObjects() map[core.RecordID]int {
 }
 
 // GetRequests returns request hot-indexes.
-func (r *RecentStorage) GetRequests() []core.RecordID {
-	r.requestLock.Lock()
-	defer r.requestLock.Unlock()
+func (r *RecentStorage) GetRequests() map[core.RecordID]map[core.RecordID]struct{} {
+	r.requestLock.RLock()
+	defer r.requestLock.RUnlock()
 
-	requests := make([]core.RecordID, 0, len(r.pendingRequests))
-	for id := range r.pendingRequests {
-		requests = append(requests, id)
+	return r.pendingRequests
+}
+
+// GetRequestsForObject returns request hot-indexes for object.
+func (r *RecentStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID {
+	r.requestLock.RLock()
+	defer r.requestLock.RUnlock()
+
+	forObject, ok := r.pendingRequests[obj]
+	if !ok {
+		return nil
+	}
+	results := make([]core.RecordID, 0, len(forObject))
+	for reqID := range forObject {
+		results = append(results, reqID)
 	}
 
-	return requests
+	return results
 }
 
 // ClearZeroTTLObjects clears objects with zero TTL
@@ -157,5 +175,5 @@ func (r *RecentStorage) ClearObjects() {
 	defer r.objectLock.Unlock()
 
 	r.recentObjects = map[core.RecordID]*recentObjectMeta{}
-	r.pendingRequests = map[core.RecordID]struct{}{}
+	r.pendingRequests = map[core.RecordID]map[core.RecordID]struct{}{}
 }

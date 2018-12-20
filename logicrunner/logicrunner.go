@@ -48,8 +48,19 @@ type ObjectState struct {
 	Consensus      *Consensus
 }
 
+type PendingState int
+
+const (
+	PendingUnknown PendingState = iota
+	NotPending
+	InPending
+)
+
 type ExecutionState struct {
 	sync.Mutex
+
+	ArtifactManager core.ArtifactManager
+
 	objectbody *ObjectBody
 	deactivate bool
 	nonce      uint64
@@ -57,13 +68,19 @@ type ExecutionState struct {
 	Behaviour ValidationBehaviour
 	Current   *CurrentExecution
 	Queue     []ExecutionQueueElement
+
+	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+	pending              PendingState
+	QueueProcessorActive bool
 }
 
 type CurrentExecution struct {
 	sync.Mutex
-	Context      context.Context
-	LogicContext *core.LogicCallContext
-	Request      *Ref
+	Context       context.Context
+	LogicContext  *core.LogicCallContext
+	Request       *Ref
+	RequesterNode *Ref
+	ReturnMode    message.MethodReturnMode
 }
 
 type ExecutionQueueResult struct {
@@ -77,7 +94,6 @@ type ExecutionQueueElement struct {
 	parcel  core.Parcel
 	request *Ref
 	pulse   core.PulseNumber
-	result  chan ExecutionQueueResult
 }
 
 type Error struct {
@@ -147,23 +163,36 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	return res
 }
 
-func (es *ExecutionState) ReleaseQueue() {
-	es.Lock()
-	defer es.Unlock()
+func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.Message) (PendingState, error) {
+	msg, ok := inMsg.(*message.CallMethod)
+	if !ok {
+		return NotPending, nil
+	}
 
+	has, err := es.ArtifactManager.HasPendingRequests(ctx, msg.ObjectRef)
+	if err != nil {
+		return NotPending, err
+	}
+	if has {
+		return InPending, nil
+	}
+
+	return NotPending, nil
+}
+
+// releaseQueue must be calling only with es.Lock
+func (es *ExecutionState) releaseQueue() []ExecutionQueueElement {
 	q := es.Queue
 	es.Queue = make([]ExecutionQueueElement, 0)
 
-	for _, qe := range q {
-		qe.result <- ExecutionQueueResult{somebodyElse: true}
-		close(qe.result)
-	}
+	return q
 }
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	MessageBus                 core.MessageBus                 `inject:""`
+	ContractRequester          core.ContractRequester          `inject:""`
 	Ledger                     core.Ledger                     `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
@@ -230,6 +259,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(core.TypeExecutorResults, lr.ExecutorResults)
 	lr.MessageBus.MustRegister(core.TypeValidateCaseBind, lr.ValidateCaseBind)
 	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.ProcessValidationResults)
+	lr.MessageBus.MustRegister(core.TypePendingFinished, lr.HandlePendingFinishedMessage)
 }
 
 // Stop stops logic runner component and its executors
@@ -257,8 +287,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.DynamicRole) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := msg.DefaultTarget()
-	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, role, target.Record(), lr.pulse(ctx).PulseNumber, lr.NodeNetwork.GetOrigin().ID(),
+	isAuthorized, err := lr.JetCoordinator.AmI(
+		ctx, role, target.Record(), lr.pulse(ctx).PulseNumber,
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
@@ -270,7 +300,8 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 }
 
 func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) (*Ref, error) {
-	id, err := lr.ArtifactManager.RegisterRequest(ctx, parcel)
+	obj := parcel.Message().(message.IBaseLogicMessage).GetReference()
+	id, err := lr.ArtifactManager.RegisterRequest(ctx, obj, parcel)
 	if err != nil {
 		return nil, err
 	}
@@ -288,36 +319,39 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
 	ref := msg.GetReference()
-
-	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't play role")
-	}
-
 	os := lr.UpsertObjectState(ref)
 
 	os.Lock()
 	if os.ExecutionState == nil {
 		os.ExecutionState = &ExecutionState{
-			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			ArtifactManager: lr.ArtifactManager,
+			Queue:           make([]ExecutionQueueElement, 0),
+			Behaviour:       &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 		}
 	}
 	es := os.ExecutionState
 	os.Unlock()
 
+	// ExecutionState should be locked between CheckOurRole and
+	// appending ExecutionQueueElement to the queue to prevent a race condition.
+	// Otherwise it's possible that OnPulse will clean up the queue and set
+	// ExecutionState.Pending to NotPending. Execute will add an element to the
+	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
-	if es.Current != nil {
-		// TODO: check no wait call
-		if inslogger.TraceID(es.Current.Context) == inslogger.TraceID(ctx) {
-			es.Unlock()
-			return nil, os.WrapError(nil, "loop detected")
-		}
+
+	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
+	if err != nil {
+		es.Unlock()
+		return nil, errors.Wrap(err, "can't play role")
 	}
-	es.Unlock()
+
+	if lr.CheckExecutionLoop(ctx, es, parcel) {
+		return nil, os.WrapError(nil, "loop detected")
+	}
 
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
+		es.Unlock()
 		return nil, os.WrapError(err, "can't create request")
 	}
 
@@ -326,67 +360,148 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		parcel:  parcel,
 		request: request,
 		pulse:   lr.pulse(ctx).PulseNumber,
-		result:  make(chan ExecutionQueueResult, 1),
 	}
 
-	es.Lock()
 	es.Queue = append(es.Queue, qElement)
+	es.Unlock()
 
+	err = lr.StartQueueProcessorIfNeeded(ctx, es, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &reply.RegisterRequest{
+		Request: *request,
+	}, nil
+}
+
+func (lr *LogicRunner) CheckExecutionLoop(
+	ctx context.Context, es *ExecutionState, parcel core.Parcel,
+) bool {
 	if es.Current == nil {
-		inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-		go lr.ProcessExecutionQueue(ctx, es)
+		return false
+	}
+
+	if es.Current.ReturnMode == message.ReturnNoWait {
+		return false
+	}
+
+	msg, ok := parcel.Message().(*message.CallMethod)
+	if ok && msg.ReturnMode == message.ReturnNoWait {
+		return false
+	}
+
+	if inslogger.TraceID(es.Current.Context) != inslogger.TraceID(ctx) {
+		return false
+	}
+
+	return true
+}
+
+func (lr *LogicRunner) HandlePendingFinishedMessage(
+	ctx context.Context, parcel core.Parcel,
+) (
+	core.Reply, error,
+) {
+	msg := parcel.Message().(*message.PendingFinished)
+	ref := msg.DefaultTarget()
+	os := lr.UpsertObjectState(*ref)
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		// we are first, strange, soon ExecuteResults message should come
+		os.ExecutionState = &ExecutionState{
+			Queue:     make([]ExecutionQueueElement, 0),
+			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			pending:   NotPending,
+		}
+		os.Unlock()
+		return &reply.OK{}, nil
+	}
+	es := os.ExecutionState
+	es.pending = NotPending
+	os.Unlock()
+
+	es.Lock()
+	if es.Current != nil {
+		es.Unlock()
+		return nil, errors.New("received PendingFinished when we are already executing")
 	}
 	es.Unlock()
 
-	if msg, ok := parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
-		return &reply.CallMethod{}, nil
+	err := lr.StartQueueProcessorIfNeeded(ctx, es, parcel.Message())
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't start queue processor")
 	}
 
-	res := <-qElement.result
-	if res.err != nil {
-		return nil, res.err
-	} else if res.somebodyElse {
-		panic("not implemented, should be implemented as part of async contract calls")
+	return &reply.OK{}, nil
+}
+
+func (lr *LogicRunner) StartQueueProcessorIfNeeded(
+	ctx context.Context, es *ExecutionState, msg core.Message,
+) error {
+	es.Lock()
+	defer es.Unlock()
+
+	if len(es.Queue) == 0 {
+		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
+		return nil
 	}
-	return res.reply, nil
+
+	if es.QueueProcessorActive {
+		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
+		return nil
+	}
+
+	if es.pending == PendingUnknown {
+		pending, err := es.CheckPendingRequests(ctx, msg)
+		if err != nil {
+			return errors.Wrap(err, "couldn't check for pending requests")
+		}
+		es.pending = pending
+	}
+	if es.pending == InPending {
+		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
+		return nil
+	}
+
+	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+	es.QueueProcessorActive = true
+	go lr.ProcessExecutionQueue(ctx, es)
+	return nil
 }
 
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
-	// Current == nil indicates that we have no queue processor
-	// and one should be started
-	defer func() {
-		inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
-		es.Lock()
-		es.Current = nil
-		es.Unlock()
-	}()
-
 	for {
 		es.Lock()
 		q := es.Queue
 		if len(q) == 0 {
+			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
+			es.QueueProcessorActive = false
+			es.Current = nil
 			es.Unlock()
 			return
 		}
 		qe, q := q[0], q[1:]
 		es.Queue = q
 
+		sender := qe.parcel.GetSender()
 		es.Current = &CurrentExecution{
-			Request: qe.request,
+			Request:       qe.request,
+			RequesterNode: &sender,
 		}
+
+		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
+			es.Current.ReturnMode = msg.ReturnMode
+		}
+
 		es.Unlock()
 
 		res := ExecutionQueueResult{}
 
-		finish := func() {
-			qe.result <- res
-			close(qe.result)
-		}
-
 		recordingBus, err := lr.MessageBus.NewRecorder(qe.ctx, *lr.pulse(qe.ctx))
 		if err != nil {
 			res.err = err
-			finish()
 			continue
 		}
 
@@ -398,7 +513,6 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
-		// TODO: check pulse change and do different things
 
 		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
 		err = es.Behaviour.Result(res.reply, res.err)
@@ -406,8 +520,35 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 			res.err = err
 		}
 
-		finish()
+		lr.finishPendingIfNeeded(ctx, es, *qe.parcel.Message().DefaultTarget())
 	}
+}
+
+// finishPendingIfNeeded checks whether last execution was a pending one.
+// If this is true as a side effect the function sends a PendingFinished
+// message to the current executor
+func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) {
+	es.Lock()
+	defer es.Unlock()
+
+	if es.pending != InPending {
+		return
+	}
+
+	es.pending = NotPending
+
+	go func() {
+		pulse, err := lr.PulseStorage.Current(ctx)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
+			return
+		}
+		msg := message.PendingFinished{Reference: currentRef}
+		_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
+		}
+	}()
 }
 
 func (lr *LogicRunner) executeOrValidate(
@@ -429,18 +570,40 @@ func (lr *LogicRunner) executeOrValidate(
 		CallerPrototype: msg.GetCallerPrototype(),
 	}
 
+	var re core.Reply
+	var err error
 	switch m := msg.(type) {
 	case *message.CallMethod:
-		re, err := lr.executeMethodCall(ctx, es, m)
-		return re, err
+		re, err = lr.executeMethodCall(ctx, es, m)
 
 	case *message.CallConstructor:
-		re, err := lr.executeConstructorCall(ctx, es, m)
-		return re, err
+		re, err = lr.executeConstructorCall(ctx, es, m)
 
 	default:
 		panic("Unknown e type")
 	}
+	errstr := ""
+	if err != nil {
+		errstr = err.Error()
+	}
+	if es.Current.ReturnMode == message.ReturnResult {
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
+
+		_, err = core.MessageBusFromContext(ctx, nil).Send(ctx, &message.ReturnResults{
+			Caller:  lr.NodeNetwork.GetOrigin().ID(),
+			Target:  *es.Current.RequesterNode,
+			Request: *es.Current.Request,
+			Reply:   re,
+			Error:   errstr,
+		}, *lr.pulse(ctx), &core.MessageSendOptions{
+			Receiver: es.Current.RequesterNode,
+		})
+		if err != nil {
+			inslogger.FromContext(ctx).Debug("couldn't deliver results")
+		}
+	}
+
+	return re, err
 }
 
 // ObjectBody is an inner representation of object and all it accessory
@@ -456,6 +619,58 @@ type ObjectBody struct {
 
 func init() {
 	gob.Register(&ObjectBody{})
+}
+
+func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.ExecutorResults) error {
+	state := lr.UpsertObjectState(msg.GetReference())
+	state.Lock()
+	if state.ExecutionState == nil {
+		state.ExecutionState = &ExecutionState{
+			ArtifactManager: lr.ArtifactManager,
+			Queue:           make([]ExecutionQueueElement, 0),
+			Behaviour:       &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+		}
+	}
+	state.Unlock()
+
+	state.ExecutionState.Lock()
+
+	// prepare pending
+	if state.ExecutionState.pending == PendingUnknown {
+		if msg.Pending {
+			state.ExecutionState.pending = InPending
+		} else {
+			state.ExecutionState.pending = NotPending
+		}
+	}
+
+	//prepare Queue
+	if msg.Queue != nil {
+		state := lr.UpsertObjectState(msg.GetReference())
+
+		queueFromMessage := make([]ExecutionQueueElement, 0)
+		for _, qe := range msg.Queue {
+			queueFromMessage = append(
+				queueFromMessage,
+				ExecutionQueueElement{
+					ctx:     qe.Ctx,
+					parcel:  qe.Parcel,
+					request: qe.Request,
+					pulse:   qe.Pulse,
+				})
+		}
+		state.ExecutionState.Queue = append(queueFromMessage, state.ExecutionState.Queue...)
+
+	}
+
+	state.ExecutionState.Unlock()
+
+	err := lr.StartQueueProcessorIfNeeded(ctx, state.ExecutionState, msg)
+	if err != nil {
+		return errors.Wrap(err, "can't start Queue Processor from prepareObjectState")
+	}
+
+	return nil
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (core.Reply, error) {
@@ -510,14 +725,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't update object")
 	}
-	_, err = am.RegisterResult(ctx, *es.Current.Request, result)
+	_, err = am.RegisterResult(ctx, m.ObjectRef, *es.Current.Request, result)
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't save results")
 	}
 
 	es.objectbody.Object = newData
 
-	return &reply.CallMethod{Data: newData, Result: result}, nil
+	return &reply.CallMethod{Result: result, Request: *es.Current.Request}, nil
 }
 
 func (lr *LogicRunner) getDescriptorsByPrototypeRef(
@@ -598,7 +813,12 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *es.Current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
+		_, err = lr.ArtifactManager.RegisterResult(ctx, *es.Current.Request, *es.Current.Request, nil)
+		if err != nil {
+			return nil, es.WrapError(err, "couldn't save results")
+		}
 		return &reply.CallConstructor{Object: es.Current.Request}, err
+
 	default:
 		return nil, es.WrapError(nil, "unsupported type of save object")
 	}
@@ -614,35 +834,77 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	// send copy for validation
 	for ref, state := range lr.state {
+		// we are executor again - we still working
+		// TODO we need to do something with validation
+		isAuthorized, _ := lr.JetCoordinator.AmI(
+			ctx, core.DynamicRoleVirtualExecutor, ref.Record(), pulse.PulseNumber)
+
+		if isAuthorized {
+			continue
+		}
+		state.Lock()
+
+		// some old stuff
 		state.RefreshConsensus()
 
 		if es := state.ExecutionState; es != nil {
+			es.Lock()
+
+			if es.Current != nil {
+				es.pending = InPending
+			}
+
+			queue := es.releaseQueue()
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
+			requests := caseBind.getCaseBindForMessage(ctx)
+
 			messages = append(
 				messages,
-				caseBind.ToValidateMessage(ctx, ref, pulse),
-				caseBind.ToExecutorResultsMessage(ref),
+				&message.ValidateCaseBind{
+					RecordRef: ref,
+					Requests:  requests,
+					Pulse:     pulse,
+				},
+				&message.ExecutorResults{
+					RecordRef: ref,
+					Pending:   es.pending == InPending,
+					Requests:  requests,
+					Queue:     convertQueueToMessageQueue(queue),
+				},
 			)
-
-			es.ReleaseQueue()
 
 			// TODO: if Current is not nil then we should request here for a delegation token
 			// to continue execution of the current request
 
-			es.Lock()
 			if es.Current == nil {
 				state.ExecutionState = nil
 			}
 			es.Unlock()
 		}
+
+		state.Unlock()
 	}
 
 	for _, msg := range messages {
 		_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
 		if err != nil {
-			return errors.New("error while sending caseBind data to new executor")
+			return errors.Wrap(err, "error while sending validation data on pulse")
 		}
 	}
 
 	return nil
+}
+
+func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
+	mq := make([]message.ExecutionQueueElement, 0)
+	for _, elem := range queue {
+		mq = append(mq, message.ExecutionQueueElement{
+			Ctx:     elem.ctx,
+			Parcel:  elem.parcel,
+			Request: elem.request,
+			Pulse:   elem.pulse,
+		})
+	}
+
+	return mq
 }

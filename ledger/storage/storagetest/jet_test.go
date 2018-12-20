@@ -77,7 +77,7 @@ func TestAddAndGetDropSize(t *testing.T) {
 		addDropSizeToDB(ctx, t, db, jetID, s)
 	}
 
-	dropSizeHistory, err := db.GetDropSizeHistory(ctx)
+	dropSizeHistory, err := db.GetDropSizeHistory(ctx, jetID)
 	require.NoError(t, err)
 
 	dropSizeArray := []jet.DropSize(dropSizeHistory)
@@ -102,7 +102,7 @@ func TestAddDropSizeAndIncreaseLimit(t *testing.T) {
 		addDropSizeToDB(ctx, t, db, jetID, uint64(i))
 	}
 
-	dropSizeHistory, err := db.GetDropSizeHistory(ctx)
+	dropSizeHistory, err := db.GetDropSizeHistory(ctx, jetID)
 	require.NoError(t, err)
 
 	dropSizeArray := []jet.DropSize(dropSizeHistory)

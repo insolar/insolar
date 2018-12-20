@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package jetdrop represents Jet Drops (Blocks) of a blockchain.
+// Package jet provides methods for working with Jet objects.
 package jet

@@ -38,6 +38,17 @@ const (
 	DynamicRoleHeavyExecutor
 )
 
+// IsVirtualRole checks if node role is virtual (validator or executor).
+func (r DynamicRole) IsVirtualRole() bool {
+	switch r {
+	case DynamicRoleVirtualExecutor:
+		return true
+	case DynamicRoleVirtualValidator:
+		return true
+	}
+	return false
+}
+
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 // FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
 type Ledger interface {
@@ -87,7 +98,7 @@ type ArtifactManager interface {
 	GenesisRef() *RecordRef
 
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, parcel Parcel) (*RecordID, error)
+	RegisterRequest(ctx context.Context, object RecordRef, parcel Parcel) (*RecordID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -95,7 +106,7 @@ type ArtifactManager interface {
 	RegisterValidation(ctx context.Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
 
 	// RegisterResult saves VM method call result.
-	RegisterResult(ctx context.Context, request RecordRef, payload []byte) (*RecordID, error)
+	RegisterResult(ctx context.Context, object, request RecordRef, payload []byte) (*RecordID, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
@@ -107,6 +118,9 @@ type ArtifactManager interface {
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
+
+	// HasPendingRequests returns true if object has unclosed requests.
+	HasPendingRequests(ctx context.Context, object RecordRef) (bool, error)
 
 	// GetDelegate returns provided object's delegate reference for provided type.
 	//
@@ -224,9 +238,6 @@ type ObjectDescriptor interface {
 
 	// Parent returns object's parent.
 	Parent() *RecordRef
-
-	// HasPendingRequests returns true if the object has unclosed requests.
-	HasPendingRequests() bool
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.

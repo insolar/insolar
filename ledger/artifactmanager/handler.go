@@ -75,16 +75,17 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeRegisterChild] = m.checkJet(h.handleRegisterChild)
 	h.replayHandlers[core.TypeSetBlob] = m.checkJet(h.handleSetBlob)
 	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
+	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
 
 	// Validation.
 	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
 	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
-	h.replayHandlers[core.TypeHotRecords] = m.checkJet(h.handleHotRecords)
+	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
 	// Heavy.
-	h.replayHandlers[core.TypeHeavyStartStop] = m.checkJet(h.handleHeavyStartStop)
-	h.replayHandlers[core.TypeHeavyReset] = m.checkJet(h.handleHeavyReset)
-	h.replayHandlers[core.TypeHeavyPayload] = m.checkJet(h.handleHeavyPayload)
+	h.replayHandlers[core.TypeHeavyStartStop] = h.handleHeavyStartStop
+	h.replayHandlers[core.TypeHeavyReset] = h.handleHeavyReset
+	h.replayHandlers[core.TypeHeavyPayload] = h.handleHeavyPayload
 
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, m.checkJet(m.saveParcel(h.handleGetCode)))
@@ -96,6 +97,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.saveParcel(h.handleRegisterChild)))
 	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.saveParcel(h.handleSetBlob)))
 	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.saveParcel(h.handleGetObjectIndex)))
+	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.saveParcel(h.handleHasPendingRequests)))
 
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.saveParcel(h.handleValidateRecord)))
@@ -104,9 +106,9 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.
-	h.Bus.MustRegister(core.TypeHeavyStartStop, m.checkJet(m.saveParcel(h.handleHeavyStartStop)))
-	h.Bus.MustRegister(core.TypeHeavyReset, m.checkJet(m.saveParcel(h.handleHeavyReset)))
-	h.Bus.MustRegister(core.TypeHeavyPayload, m.checkJet(m.saveParcel(h.handleHeavyPayload)))
+	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
+	h.Bus.MustRegister(core.TypeHeavyReset, h.handleHeavyReset)
+	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
 
 	return nil
 }
@@ -122,11 +124,11 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	}
 
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
-	if _, ok := rec.(record.Request); ok {
-		recentStorage.AddPendingRequest(*id)
+	if request, ok := rec.(record.Request); ok {
+		recentStorage.AddPendingRequest(request.GetObject(), *id)
 	}
 	if result, ok := rec.(*record.ResultRecord); ok {
-		recentStorage.RemovePendingRequest(*result.Request.Record())
+		recentStorage.RemovePendingRequest(result.Object, *result.Request.Record())
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -293,6 +295,19 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	return &rep, nil
+}
+
+func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	msg := parcel.Message().(*message.GetPendingRequests)
+	jetID := jetFromContext(ctx)
+
+	for _, reqID := range h.RecentStorageProvider.GetStorage(jetID).GetRequestsForObject(*msg.Object.Record()) {
+		if reqID.Pulse() < parcel.Pulse() {
+			return &reply.HasPendingRequests{Has: true}, nil
+		}
+	}
+
+	return &reply.HasPendingRequests{Has: false}, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
@@ -578,7 +593,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		}
 	}
 
-	err := h.db.SaveJet(ctx, msg.JetID)
+	err := h.db.AddJets(ctx, msg.JetID)
 	if err != nil {
 		return nil, err
 	}
@@ -797,7 +812,8 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	msg := parcel.Message().(*message.HotData)
-	jetID := jetFromContext(ctx)
+	// FIXME: check split signatures.
+	jetID := *msg.Jet.Record()
 
 	err := h.db.SetDrop(ctx, jetID, &msg.Drop)
 	if err != nil {
@@ -805,17 +821,23 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
-	for id, request := range msg.PendingRequests {
-		newID, err := h.db.SetRecord(ctx, jetID, id.Pulse(), record.DeserializeRecord(request))
-		if err != nil {
-			inslog.Error(err)
-			continue
+	for objID, requests := range msg.PendingRequests {
+		for reqID, request := range requests {
+			newID, err := h.db.SetRecord(ctx, jetID, reqID.Pulse(), record.DeserializeRecord(request))
+			if err != nil {
+				inslog.Error(err)
+				continue
+			}
+			if !bytes.Equal(reqID.Bytes(), newID.Bytes()) {
+				inslog.Errorf(
+					"Problems with saving the pending request, ids don't match - %v  %v",
+					reqID.Bytes(),
+					newID.Bytes(),
+				)
+				continue
+			}
+			recentStorage.AddPendingRequest(objID, reqID)
 		}
-		if !bytes.Equal(id.Bytes(), newID.Bytes()) {
-			inslog.Errorf("Problems with saving the pending request, ids don't match - %v  %v", id.Bytes(), newID.Bytes())
-			continue
-		}
-		recentStorage.AddPendingRequest(id)
 	}
 
 	for id, meta := range msg.RecentObjects {
@@ -848,20 +870,20 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		*jet.NewID(2, []byte{}),       // 00
 		*jet.NewID(2, []byte{1 << 6}), // 01
 		*jet.NewID(2, []byte{1 << 7}), // 10
-		*msg.Jet.Record(),             // Don't delete this.
+		jetID,                         // Don't delete this.
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.db.SaveJet(ctx, *msg.Jet.Record())
+	err = h.db.AddJets(ctx, jetID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.db.ResetDropSizeHistory(ctx, msg.JetDropSizeHistory)
+	err = h.db.SetDropSizeHistory(ctx, jetID, msg.JetDropSizeHistory)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't ResetDropSizeHistory")
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
 	return &reply.OK{}, nil

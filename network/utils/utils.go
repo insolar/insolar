@@ -18,11 +18,13 @@ package utils
 
 import (
 	"hash/crc32"
+	"io"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 )
 
 func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
@@ -63,4 +65,11 @@ func OriginIsDiscovery(cert core.Certificate) bool {
 		}
 	}
 	return false
+}
+
+func CloseVerbose(closer io.Closer) {
+	err := closer.Close()
+	if err != nil {
+		log.Errorf("[ CloseVerbose ] Failed to close: %s", err.Error())
+	}
 }

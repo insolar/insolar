@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package pulsemanager_test
+package heavyclient_test
 
 import (
 	"bytes"
@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,21 +35,23 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/heavy"
+	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
 
-func _TestPulseManager_SendToHeavyHappyPath(t *testing.T) {
+func TestPulseManager_SendToHeavyHappyPath(t *testing.T) {
 	sendToHeavy(t, false)
 }
 
-func _TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
+func TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
 	sendToHeavy(t, true)
 }
 
@@ -58,7 +59,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
-	jetID := core.TODOJetID
+	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
+	jetID := jet.ZeroJetID
 
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(t)
@@ -81,8 +83,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// Mock5: RecentStorageMock
 	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.ClearZeroTTLObjectsMock.Return()
-	recentMock.GetObjectsMock.Return(map[core.RecordID]int{})
-	recentMock.GetRequestsMock.Return([]core.RecordID{})
+	recentMock.GetObjectsMock.Return(nil)
+	recentMock.GetRequestsMock.Return(nil)
 	recentMock.ClearObjectsMock.Return()
 
 	// Mock6: JetCoordinatorMock
@@ -117,10 +119,11 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	syncmessagesPerMessage := map[int]*messageStat{}
 	var bussendfailed int32
 	busMock.SendFunc = func(ctx context.Context, msg core.Message, _ core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
+		// fmt.Printf("got msg: %T (%s)\n", msg, msg.Type())
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
-				return heavy.ErrSyncInProgress,
+				return heavyserver.ErrSyncInProgress,
 					errors.New("BusMock one send should be failed (test retry)")
 			}
 
@@ -153,6 +156,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 			Max:    minretry * 2,
 			Factor: 2,
 		},
+		SplitThreshold: 10 * 1000 * 1000,
 	}
 	pm := pulsemanager.NewPulseManager(
 		db,
@@ -166,6 +170,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
+	pm.PulseStorage = storage.NewPulseStorage(db)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -230,8 +235,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// printkeys(synckeys, "  ")
 	// fmt.Println("getallkeys")
 	// printkeys(recs, "  ")
+	require.Equal(t, len(recs), len(synckeys), "synced keys count are the same as records count in storage")
 	assert.Equal(t, recs, synckeys, "synced keys are the same as records in storage")
-	// assert.Equal(t, len(recs), len(synckeys), "synced keys count are the same as records count in storage")
 }
 
 func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {
