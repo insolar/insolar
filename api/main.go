@@ -128,7 +128,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	return &ar, nil
 }
 
-// IsAPIRunner is implementation of APIRunner interface
+// IsAPIRunner is implementation of APIRunner interface for component manager
 func (ar *Runner) IsAPIRunner() bool {
 	return true
 }

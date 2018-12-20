@@ -81,6 +81,7 @@ type CurrentExecution struct {
 	Request       *Ref
 	RequesterNode *Ref
 	ReturnMode    message.MethodReturnMode
+	SentResult    bool
 }
 
 type ExecutionQueueResult struct {
@@ -383,6 +384,10 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
+	if es.Current.SentResult {
+		return false
+	}
+
 	if es.Current.ReturnMode == message.ReturnNoWait {
 		return false
 	}
@@ -395,6 +400,8 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	if inslogger.TraceID(es.Current.Context) != inslogger.TraceID(ctx) {
 		return false
 	}
+
+	inslogger.FromContext(ctx).Debug("loop detected")
 
 	return true
 }
@@ -587,22 +594,39 @@ func (lr *LogicRunner) executeOrValidate(
 	if err != nil {
 		errstr = err.Error()
 	}
-	if es.Current.ReturnMode == message.ReturnResult {
-		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
 
-		_, err = core.MessageBusFromContext(ctx, nil).Send(ctx, &message.ReturnResults{
-			Caller:  lr.NodeNetwork.GetOrigin().ID(),
-			Target:  *es.Current.RequesterNode,
-			Request: *es.Current.Request,
-			Reply:   re,
-			Error:   errstr,
-		}, *lr.pulse(ctx), &core.MessageSendOptions{
-			Receiver: es.Current.RequesterNode,
-		})
-		if err != nil {
-			inslogger.FromContext(ctx).Debug("couldn't deliver results")
-		}
+	es.Lock()
+	defer es.Unlock()
+
+	es.Current.SentResult = true
+	if es.Current.ReturnMode != message.ReturnResult {
+		return re, err
 	}
+
+	target := *es.Current.RequesterNode
+	request := *es.Current.Request
+
+	go func() {
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
+
+		_, err = core.MessageBusFromContext(ctx, nil).Send(
+			ctx,
+			&message.ReturnResults{
+				Caller:  lr.NodeNetwork.GetOrigin().ID(),
+				Target:  target,
+				Request: request,
+				Reply:   re,
+				Error:   errstr,
+			},
+			*lr.pulse(ctx),
+			&core.MessageSendOptions{
+				Receiver: &target,
+			},
+		)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
+		}
+	}()
 
 	return re, err
 }
