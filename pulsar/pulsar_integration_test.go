@@ -18,6 +18,7 @@ package pulsar
 
 import (
 	"context"
+	"crypto"
 	"net"
 	"testing"
 	"time"
@@ -299,151 +300,168 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	}()
 }
 
-// func TestSevenPulsars_Full_Consensus(t *testing.T) {
-// 	ctx := inslogger.TestContext(t)
-// 	// Arrange
-//
-// 	storage := pulsartestutils.NewPulsarStorageMock(t)
-// 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
-// 	pcs := platformpolicy.NewPlatformCryptographyScheme()
-// 	keyProcessor := platformpolicy.NewKeyProcessor()
-//
-// 	pulsars := [7]*Pulsar{}
-// 	mainAddresses := []string{
-// 		"127.0.0.1:1641",
-// 		"127.0.0.1:1642",
-// 		"127.0.0.1:1643",
-// 		"127.0.0.1:1644",
-// 		"127.0.0.1:1645",
-// 		"127.0.0.1:1646",
-// 		"127.0.0.1:1647",
-// 	}
-//
-// 	pulsarsPrivateKeys := [7]crypto.PrivateKey{}
-// 	for pkIndex := 0; pkIndex < 7; pkIndex++ {
-// 		privateKey, err := keyProcessor.GeneratePrivateKey()
-// 		require.NoError(t, err)
-// 		pulsarsPrivateKeys[pkIndex] = privateKey
-// 	}
-//
-// 	pulseDistMock := testutils.NewPulseDistributorMock(t)
-// 	pulseDistMock.DistributeFunc = func(p context.Context, p1 *core.Pulse) {
-// 		require.Equal(t, core.FirstPulseNumber+1, p1.PulseNumber)
-// 	}
-//
-// 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
-// 		conf := configuration.Configuration{
-// 			Pulsar: configuration.Pulsar{
-// 				ConnectionType:                 "tcp",
-// 				MainListenerAddress:            mainAddresses[pulsarIndex],
-// 				Neighbours:                     []configuration.PulsarNodeAddress{},
-// 				ReceivingSignTimeout:           50,
-// 				ReceivingNumberTimeout:         50,
-// 				ReceivingSignsForChosenTimeout: 50,
-// 				ReceivingVectorTimeout:         50,
-// 			}}
-//
-// 		for configIndex := 0; configIndex < 7; configIndex++ {
-// 			if configIndex == pulsarIndex {
-// 				continue
-// 			}
-// 			publicKey := keyProcessor.ExtractPublicKey(pulsarsPrivateKeys[configIndex])
-// 			publicKeyBytes, err := keyProcessor.ExportPublicKey(publicKey)
-// 			require.NoError(t, err)
-// 			conf.Pulsar.Neighbours = append(conf.Pulsar.Neighbours, configuration.PulsarNodeAddress{
-// 				ConnectionType: "tcp",
-// 				Address:        mainAddresses[configIndex],
-// 				PublicKey:      string(publicKeyBytes),
-// 			})
-// 		}
-//
-// 		service := cryptography.NewKeyBoundCryptographyService(pulsarsPrivateKeys[pulsarIndex])
-//
-// 		switcher := &StateSwitcherImpl{}
-// 		pulsar, err := NewPulsar(
-// 			conf.Pulsar,
-// 			service,
-// 			pcs,
-// 			keyProcessor,
-// 			pulseDistMock,
-// 			storage,
-// 			&RPCClientWrapperFactoryImpl{},
-// 			&entropygenerator.StandardEntropyGenerator{},
-// 			switcher,
-// 			net.Listen,
-// 		)
-// 		switcher.setState(WaitingForStart)
-// 		switcher.SetPulsar(pulsar)
-// 		require.NoError(t, err)
-// 		pulsars[pulsarIndex] = pulsar
-// 		go pulsar.StartServer(ctx)
-// 	}
-//
-// 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
-// 		for neighbourIndex := pulsarIndex + 1; neighbourIndex < 7; neighbourIndex++ {
-// 			publicKey := keyProcessor.ExtractPublicKey(pulsarsPrivateKeys[neighbourIndex])
-// 			publicKeyBytes, err := keyProcessor.ExportPublicKey(publicKey)
-// 			require.NoError(t, err)
-// 			err = pulsars[pulsarIndex].EstablishConnectionToPulsar(ctx, string(publicKeyBytes))
-// 			require.NoError(t, err)
-// 		}
-// 	}
-//
-// 	// Assert connected nodes
-// 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
-// 		connectedNeighbours := 0
-// 		for _, neighbour := range pulsars[pulsarIndex].Neighbours {
-// 			if neighbour.OutgoingClient.IsInitialised() {
-// 				connectedNeighbours++
-// 			}
-// 		}
-// 		require.Equal(t, 6, connectedNeighbours)
-// 	}
-//
-// 	// Main act
-// 	go pulsars[0].StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
-//
-// 	// // Need to wait for the moment of brodcasting pulse in the network
-// 	// currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
-// 	// require.NoError(t, err)
-// 	// count := 50
-// 	// for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-// 	// 	time.Sleep(50 * time.Millisecond)
-// 	// 	currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
-// 	// 	require.NoError(t, err)
-// 	// 	count--
-// 	// }
-// 	// // Final sleep for 100% receiving of pulse by all nodes (pulsars and nodes)
-// 	// time.Sleep(200 * time.Millisecond)
-//
-// 	// Assert
-//
-// 	// pulseDistMock.MinimockWait(2000 * time.Millisecond)
-//
-// 	time.Sleep(20000 * time.Millisecond)
-//
-// 	for _, pulsar := range pulsars {
-// 		require.Equal(t, WaitingForStart, pulsar.StateSwitcher.GetState())
-// 		pulsar.lastPulseLock.RLock()
-// 		require.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.GetLastPulse().PulseNumber)
-// 		require.Equal(t, 7, len(pulsar.GetLastPulse().Signs))
-//
-// 		for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
-// 			sign := pulsar.GetLastPulse().Signs["publicKey"]
-// 			isOk, err := checkSignature(pulsar.CryptographyService, keyProcessor, core.PulseSenderConfirmation{
-// 				PulseNumber:     sign.PulseNumber,
-// 				ChosenPublicKey: sign.ChosenPublicKey,
-// 				Entropy:         sign.Entropy,
-// 			}, "publicKey", sign.Signature)
-// 			require.Equal(t, true, isOk)
-// 			require.NoError(t, err)
-// 		}
-// 		pulsar.lastPulseLock.RUnlock()
-// 	}
-//
-// 	defer func() {
-// 		for _, pulsar := range pulsars {
-// 			pulsar.StopServer(ctx)
-// 		}
-// 	}()
-// }
+func TestSevenPulsars_Full_Consensus(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	// Arrange
+
+	storage := pulsartestutils.NewPulsarStorageMock(t)
+	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
+	storage.SavePulseFunc = func(p *core.Pulse) (r error) {
+		require.Equal(t, core.FirstPulseNumber+1, int(p.PulseNumber))
+		return nil
+	}
+	storage.SetLastPulseFunc = func(p *core.Pulse) (r error) {
+		require.Equal(t, core.FirstPulseNumber+1, int(p.PulseNumber))
+		return nil
+	}
+
+	pulsars := [7]*Pulsar{}
+	mainAddresses := []string{
+		"127.0.0.1:1641",
+		"127.0.0.1:1642",
+		"127.0.0.1:1643",
+		"127.0.0.1:1644",
+		"127.0.0.1:1645",
+		"127.0.0.1:1646",
+		"127.0.0.1:1647",
+	}
+
+	// keyGenerator := func() (crypto.PrivateKey, crypto.PublicKey, string) {
+	// 	kp := platformpolicy.NewKeyProcessor()
+	// 	key, _ := kp.GeneratePrivateKey()
+	// 	publicKey := kp.ExtractPublicKey(key)
+	// 	pubKeyString, _ := kp.ExportPublicKey(publicKey)
+	//
+	// 	return key, publicKey, string(pubKeyString)
+	// }
+
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	pulsarsPrivateKeys := [7]crypto.PrivateKey{}
+	for pkIndex := 0; pkIndex < 7; pkIndex++ {
+		privateKey, err := keyProcessor.GeneratePrivateKey()
+		require.NoError(t, err)
+		pulsarsPrivateKeys[pkIndex] = privateKey
+	}
+
+	pulseDistributorMock := testutils.NewPulseDistributorMock(t)
+	pulseDistributorMock.DistributeFunc = func(p context.Context, p1 *core.Pulse) {
+		require.Equal(t, core.FirstPulseNumber+1, int(p1.PulseNumber))
+	}
+
+	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
+		conf := configuration.Configuration{
+			Pulsar: configuration.Pulsar{
+				ConnectionType:                 "tcp",
+				MainListenerAddress:            mainAddresses[pulsarIndex],
+				Neighbours:                     []configuration.PulsarNodeAddress{},
+				ReceivingSignTimeout:           50,
+				ReceivingNumberTimeout:         50,
+				ReceivingSignsForChosenTimeout: 50,
+				ReceivingVectorTimeout:         50,
+			}}
+
+		for configIndex := 0; configIndex < 7; configIndex++ {
+			if configIndex == pulsarIndex {
+				continue
+			}
+			publicKeyBytes, err := keyProcessor.ExportPublicKey(keyProcessor.ExtractPublicKey(pulsarsPrivateKeys[configIndex]))
+			require.NoError(t, err)
+			conf.Pulsar.Neighbours = append(conf.Pulsar.Neighbours, configuration.PulsarNodeAddress{
+				ConnectionType: "tcp",
+				Address:        mainAddresses[configIndex],
+				PublicKey:      string(publicKeyBytes),
+			})
+		}
+
+		service := cryptography.NewKeyBoundCryptographyService(pulsarsPrivateKeys[pulsarIndex])
+		scheme := platformpolicy.NewPlatformCryptographyScheme()
+
+		switcher := &StateSwitcherImpl{}
+		pulsar, err := NewPulsar(
+			conf.Pulsar,
+			service,
+			scheme,
+			keyProcessor,
+			pulseDistributorMock,
+			storage,
+			&RPCClientWrapperFactoryImpl{},
+			&entropygenerator.StandardEntropyGenerator{},
+			switcher,
+			net.Listen,
+		)
+		switcher.setState(WaitingForStart)
+		switcher.SetPulsar(pulsar)
+		require.NoError(t, err)
+		pulsars[pulsarIndex] = pulsar
+		go pulsar.StartServer(ctx)
+	}
+
+	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
+		for neighbourIndex := pulsarIndex + 1; neighbourIndex < 7; neighbourIndex++ {
+			publicKey := keyProcessor.ExtractPublicKey(pulsarsPrivateKeys[neighbourIndex])
+			publicKeyBytes, err := keyProcessor.ExportPublicKey(publicKey)
+			require.NoError(t, err)
+			err = pulsars[pulsarIndex].EstablishConnectionToPulsar(ctx, string(publicKeyBytes))
+			require.NoError(t, err)
+		}
+	}
+
+	// Assert connected nodes
+	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
+		connectedNeighbours := 0
+		for _, neighbour := range pulsars[pulsarIndex].Neighbours {
+			if neighbour.OutgoingClient.IsInitialised() {
+				connectedNeighbours++
+			}
+		}
+		require.Equal(t, 6, connectedNeighbours)
+	}
+
+	// Main act
+	go func() {
+		err := pulsars[0].StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
+		require.NoError(t, err)
+	}()
+
+	time.Sleep(500 * time.Millisecond)
+
+	pulseDistributorMock.MinimockFinish()
+
+	for _, pulsar := range pulsars {
+		require.Equal(t, WaitingForStart, pulsar.StateSwitcher.GetState())
+
+		pulsar.lastPulseLock.RLock()
+
+		require.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.GetLastPulse().PulseNumber)
+		require.Equal(t, 7, len(pulsar.GetLastPulse().Signs))
+
+		pulsar.lastPulseLock.RUnlock()
+
+		for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
+			pubKey := keyProcessor.ExtractPublicKey(pulsarsPrivateKeys[pulsarIndex])
+			publicKeyBytes, _ := keyProcessor.ExportPublicKey(pubKey)
+			pulseSenderConfirmation := pulsar.GetLastPulse().Signs[string(publicKeyBytes)]
+
+			confirmationForCheck := PulseSenderConfirmationPayload{
+				core.PulseSenderConfirmation{
+					PulseNumber:     pulseSenderConfirmation.PulseNumber,
+					ChosenPublicKey: pulseSenderConfirmation.ChosenPublicKey,
+					Entropy:         pulseSenderConfirmation.Entropy,
+				},
+			}
+
+			hashProvider := pulsar.PlatformCryptographyScheme.IntegrityHasher()
+			hash, _ := confirmationForCheck.Hash(hashProvider)
+
+			isOk := pulsar.CryptographyService.Verify(pubKey, core.SignatureFromBytes(pulseSenderConfirmation.Signature),hash)
+			require.Equal(t, true, isOk)
+		}
+	}
+
+	defer func() {
+		for _, pulsar := range pulsars {
+			pulsar.StopServer(ctx)
+		}
+	}()
+}
