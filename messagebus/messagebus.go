@@ -47,7 +47,6 @@ type MessageBus struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	pm                         core.PulseManager
 
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
@@ -55,7 +54,6 @@ type MessageBus struct {
 	globalLock sync.RWMutex
 
 	waitingChan chan interface{}
-	waitingLock sync.RWMutex
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
