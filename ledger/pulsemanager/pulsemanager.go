@@ -143,8 +143,12 @@ func (m *PulseManager) processEndPulse(
 
 func (m *PulseManager) sendPendingRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) {
 	pendingRequests := m.RecentStorageProvider.GetStorage(jetID).GetRequests()
+	wg := sync.WaitGroup{}
+	wg.Add(len(pendingRequests))
 	for objID, requests := range pendingRequests {
 		go func() {
+			defer wg.Done()
+
 			var toSend []core.RecordID
 			for reqID := range requests {
 				toSend = append(toSend, reqID)
@@ -162,6 +166,8 @@ func (m *PulseManager) sendPendingRequests(ctx context.Context, pulse *core.Puls
 			}
 		}()
 	}
+
+	wg.Wait()
 }
 
 func (m *PulseManager) createDrop(
