@@ -583,28 +583,34 @@ func (lr *LogicRunner) executeOrValidate(
 	default:
 		panic("Unknown e type")
 	}
+
+	if es.Current.ReturnMode == message.ReturnResult {
+		go lr.sendResults(ctx, *es, re, err)
+	}
+
+	return re, err
+}
+
+func (lr *LogicRunner) sendResults(ctx context.Context, es ExecutionState, re core.Reply, err error) {
 	errstr := ""
 	if err != nil {
 		errstr = err.Error()
 	}
-	if es.Current.ReturnMode == message.ReturnResult {
-		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
 
-		_, err = core.MessageBusFromContext(ctx, nil).Send(ctx, &message.ReturnResults{
-			Caller:  lr.NodeNetwork.GetOrigin().ID(),
-			Target:  *es.Current.RequesterNode,
-			Request: *es.Current.Request,
-			Reply:   re,
-			Error:   errstr,
-		}, *lr.pulse(ctx), &core.MessageSendOptions{
-			Receiver: es.Current.RequesterNode,
-		})
-		if err != nil {
-			inslogger.FromContext(ctx).Debug("couldn't deliver results")
-		}
+	inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
+
+	_, err = core.MessageBusFromContext(ctx, nil).Send(ctx, &message.ReturnResults{
+		Caller:  lr.NodeNetwork.GetOrigin().ID(),
+		Target:  *es.Current.RequesterNode,
+		Request: *es.Current.Request,
+		Reply:   re,
+		Error:   errstr,
+	}, *lr.pulse(ctx), &core.MessageSendOptions{
+		Receiver: es.Current.RequesterNode,
+	})
+	if err != nil {
+		inslogger.FromContext(ctx).Debug("couldn't deliver results")
 	}
-
-	return re, err
 }
 
 // ObjectBody is an inner representation of object and all it accessory
