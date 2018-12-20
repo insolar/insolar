@@ -20,8 +20,6 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
 )
 
 type Phase3Packet struct {
@@ -38,6 +36,20 @@ func (p3p *Phase3Packet) GetType() PacketType {
 	return p3p.packetHeader.PacketT
 }
 
+func (p3p *Phase3Packet) GetOrigin() core.ShortNodeID {
+	return p3p.packetHeader.OriginNodeID
+}
+
+func (p3p *Phase3Packet) GetTarget() core.ShortNodeID {
+	return p3p.packetHeader.TargetNodeID
+}
+
+func (p3p *Phase3Packet) SetRouting(origin, target core.ShortNodeID) {
+	p3p.packetHeader.OriginNodeID = origin
+	p3p.packetHeader.TargetNodeID = target
+	p3p.packetHeader.HasRouting = true
+}
+
 func (p3p *Phase3Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
 	panic("implement me")
 }
@@ -51,27 +63,6 @@ func NewPhase3Packet(globuleHashSignature GlobuleHashSignature, bitSet BitSet) P
 		globuleHashSignature: globuleHashSignature,
 		bitset:               bitSet,
 	}
-}
-
-// SetPacketHeader set routing information for transport level.
-func (p3p *Phase3Packet) SetPacketHeader(header *RoutingHeader) error {
-	if header.PacketType != types.Phase3 {
-		return errors.New("[ Phase3Packet.SetPacketHeader ] wrong packet type")
-	}
-
-	p3p.packetHeader.setRoutingFields(header, Phase3)
-	return nil
-}
-
-// GetPacketHeader get routing information from transport level.
-func (p3p *Phase3Packet) GetPacketHeader() (*RoutingHeader, error) {
-	header := &RoutingHeader{}
-
-	header.PacketType = types.Phase3
-	header.OriginID = p3p.packetHeader.OriginNodeID
-	header.TargetID = p3p.packetHeader.TargetNodeID
-
-	return header, nil
 }
 
 func (p3p *Phase3Packet) GetBitset() BitSet {

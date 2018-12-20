@@ -20,7 +20,6 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
 
@@ -44,6 +43,20 @@ func (p2p *Phase2Packet) GetType() PacketType {
 	return p2p.packetHeader.PacketT
 }
 
+func (p2p *Phase2Packet) GetOrigin() core.ShortNodeID {
+	return p2p.packetHeader.OriginNodeID
+}
+
+func (p2p *Phase2Packet) GetTarget() core.ShortNodeID {
+	return p2p.packetHeader.TargetNodeID
+}
+
+func (p2p *Phase2Packet) SetRouting(origin, target core.ShortNodeID) {
+	p2p.packetHeader.OriginNodeID = origin
+	p2p.packetHeader.TargetNodeID = target
+	p2p.packetHeader.HasRouting = true
+}
+
 func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
 	panic("implement me")
 }
@@ -62,30 +75,6 @@ func (p2p *Phase2Packet) isPhase3Needed() bool {
 
 func (p2p *Phase2Packet) hasSection2() bool {
 	return p2p.packetHeader.f01
-}
-
-func (p2p *Phase2Packet) SetPacketHeader(header *RoutingHeader) error {
-	if header.PacketType != types.Phase2 {
-		return errors.New("Phase2Packet.SetPacketHeader: wrong packet type")
-	}
-
-	p2p.packetHeader.setRoutingFields(header, Phase2)
-
-	return nil
-}
-
-func (p2p *Phase2Packet) GetPacketHeader() (*RoutingHeader, error) {
-	header := &RoutingHeader{}
-
-	if p2p.packetHeader.PacketT != Phase2 {
-		return nil, errors.New("Phase2Packet.GetPacketHeader: wrong packet type")
-	}
-
-	header.PacketType = types.Phase2
-	header.OriginID = p2p.packetHeader.OriginNodeID
-	header.TargetID = p2p.packetHeader.TargetNodeID
-
-	return header, nil
 }
 
 func (p2p *Phase2Packet) GetGlobuleHashSignature() GlobuleHashSignature {

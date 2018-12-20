@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
 
@@ -39,6 +38,20 @@ type Phase1Packet struct {
 	// --------------------
 	// signature contains signature of Header + Section 1 + Section 2
 	Signature [SignatureLength]byte
+}
+
+func (p1p *Phase1Packet) GetOrigin() core.ShortNodeID {
+	return p1p.packetHeader.OriginNodeID
+}
+
+func (p1p *Phase1Packet) GetTarget() core.ShortNodeID {
+	return p1p.packetHeader.TargetNodeID
+}
+
+func (p1p *Phase1Packet) SetRouting(origin, target core.ShortNodeID) {
+	p1p.packetHeader.OriginNodeID = origin
+	p1p.packetHeader.TargetNodeID = target
+	p1p.packetHeader.HasRouting = true
 }
 
 func (p1p *Phase1Packet) GetType() PacketType {
@@ -65,15 +78,6 @@ func (p1p *Phase1Packet) hasSection2() bool {
 	return p1p.packetHeader.f01
 }
 
-func (p1p *Phase1Packet) SetPacketHeader(header *RoutingHeader) error {
-	if header.PacketType != types.Phase1 {
-		return errors.New("Phase1Packet.SetPacketHeader: wrong packet type")
-	}
-	p1p.packetHeader.setRoutingFields(header, Phase1)
-
-	return nil
-}
-
 func (p1p *Phase1Packet) GetPulseNumber() core.PulseNumber {
 	return core.PulseNumber(p1p.packetHeader.Pulse)
 }
@@ -88,20 +92,6 @@ func (p1p *Phase1Packet) GetPulse() core.Pulse {
 
 func (p1p *Phase1Packet) GetPulseProof() *NodePulseProof {
 	return &p1p.proofNodePulse
-}
-
-func (p1p *Phase1Packet) GetPacketHeader() (*RoutingHeader, error) {
-	header := &RoutingHeader{}
-
-	if p1p.packetHeader.PacketT != Phase1 {
-		return nil, errors.New("Phase1Packet.GetPacketHeader: wrong packet type")
-	}
-
-	header.PacketType = types.Phase1
-	header.OriginID = p1p.packetHeader.OriginNodeID
-	header.TargetID = p1p.packetHeader.TargetNodeID
-
-	return header, nil
 }
 
 // SetPulseProof sets PulseProof and check struct fields len, returns error if invalid len
@@ -164,11 +154,4 @@ func (p1p *Phase1Packet) GetAnnounceClaim() *NodeAnnounceClaim {
 
 func (p1p *Phase1Packet) GetClaims() []ReferendumClaim {
 	return p1p.claims
-}
-
-func (ph *PacketHeader) setRoutingFields(header *RoutingHeader, packetType PacketType) {
-	ph.TargetNodeID = header.TargetID
-	ph.OriginNodeID = header.OriginID
-	ph.HasRouting = true
-	ph.PacketT = packetType
 }
