@@ -94,7 +94,6 @@ type ExecutionQueueElement struct {
 	parcel  core.Parcel
 	request *Ref
 	pulse   core.PulseNumber
-	result  chan ExecutionQueueResult
 }
 
 type Error struct {
@@ -378,9 +377,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 
 func (lr *LogicRunner) CheckExecutionLoop(
 	ctx context.Context, es *ExecutionState, parcel core.Parcel,
-) (
-	bool,
-) {
+) bool {
 	if es.Current == nil {
 		return false
 	}
