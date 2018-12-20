@@ -352,7 +352,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, errors.Wrap(err, "can't play role")
 	}
 
-	if loop := lr.CheckExecutionLoop(ctx, es, parcel); loop {
+	if lr.CheckExecutionLoop(ctx, es, parcel) {
 		return nil, os.WrapError(nil, "loop detected")
 	}
 
