@@ -56,18 +56,7 @@ func TestOnPulse(t *testing.T) {
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	assert.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
-
-	// test empty es with query in current and query in queue - es.pending true, message.ExecutorResults.Pending = true, message.ExecutorResults.Queue one element
-	result := make(chan ExecutionQueueResult, 1)
-
-	// TODO maybe need do something more stable and easy to debug
-	go func() {
-		<-result
-	}()
-
-	qe := ExecutionQueueElement{
-		result: result,
-	}
+	qe := ExecutionQueueElement{}
 
 	queue := append(make([]ExecutionQueueElement, 0), qe)
 

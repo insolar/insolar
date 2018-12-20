@@ -186,11 +186,6 @@ func (es *ExecutionState) releaseQueue() []ExecutionQueueElement {
 	q := es.Queue
 	es.Queue = make([]ExecutionQueueElement, 0)
 
-	for _, qe := range q {
-		qe.result <- ExecutionQueueResult{somebodyElse: true}
-		close(qe.result)
-	}
-
 	return q
 }
 
@@ -370,7 +365,6 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		parcel:  parcel,
 		request: request,
 		pulse:   lr.pulse(ctx).PulseNumber,
-		result:  make(chan ExecutionQueueResult, 1),
 	}
 
 	es.Queue = append(es.Queue, qElement)
@@ -487,15 +481,9 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		res := ExecutionQueueResult{}
 
-		finish := func() {
-			qe.result <- res
-			close(qe.result)
-		}
-
 		recordingBus, err := lr.MessageBus.NewRecorder(qe.ctx, *lr.pulse(qe.ctx))
 		if err != nil {
 			res.err = err
-			finish()
 			continue
 		}
 
@@ -513,8 +501,6 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		if err != nil {
 			res.err = err
 		}
-
-		finish()
 
 		lr.finishPendingIfNeeded(ctx, es, *qe.parcel.Message().DefaultTarget())
 	}
@@ -652,7 +638,6 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 					parcel:  qe.Parcel,
 					request: qe.Request,
 					pulse:   qe.Pulse,
-					result:  make(chan ExecutionQueueResult, 1),
 				})
 		}
 		state.ExecutionState.Queue = append(queueFromMessage, state.ExecutionState.Queue...)
