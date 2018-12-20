@@ -55,6 +55,8 @@ type SignedPacket interface {
 }
 
 type ConsensusPacket interface {
+	GetType() PacketType
+
 	SignedPacket
 	HeaderSkipDeserializer
 	Serializer

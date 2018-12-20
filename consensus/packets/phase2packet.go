@@ -40,6 +40,10 @@ type Phase2Packet struct {
 	SignatureHeaderSection2 [SignatureLength]byte
 }
 
+func (p2p *Phase2Packet) GetType() PacketType {
+	return p2p.packetHeader.PacketT
+}
+
 func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
 	panic("implement me")
 }

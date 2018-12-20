@@ -34,6 +34,10 @@ type Phase3Packet struct {
 	SignatureHeaderSection1 [SignatureLength]byte
 }
 
+func (p3p *Phase3Packet) GetType() PacketType {
+	return p3p.packetHeader.PacketT
+}
+
 func (p3p *Phase3Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
 	panic("implement me")
 }

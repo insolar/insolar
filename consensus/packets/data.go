@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+//go:generate stringer -type=PacketType
 type PacketType uint8
 
 const (
