@@ -104,6 +104,11 @@ func (m *PulseManager) processEndPulse(
 	prevPulseNumber core.PulseNumber,
 	currentPulse, newPulse *core.Pulse,
 ) error {
+	err := m.db.CloneJetTree(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to clone jet tree into a new pulse")
+	}
+
 	jetIDs, err := m.db.GetJets(ctx)
 	if err != nil {
 		return errors.Wrap(err, "can't get jets from storage")
