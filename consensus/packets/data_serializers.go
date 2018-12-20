@@ -560,7 +560,7 @@ func (p2p *Phase2Packet) RawSecondPart() ([]byte, error) {
 // ----------------------------------PHASE 3--------------------------------
 
 func (p3p *Phase3Packet) Serialize() ([]byte, error) {
-	rawBytes, err := p3p.RawBytes()
+	rawBytes, err := p3p.rawBytes()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Serialize ] failed to get a raw bytes")
 	}
@@ -579,7 +579,7 @@ func (p3p *Phase3Packet) Serialize() ([]byte, error) {
 	return data.Bytes(), nil
 }
 
-func (p3p *Phase3Packet) RawBytes() ([]byte, error) {
+func (p3p *Phase3Packet) rawBytes() ([]byte, error) {
 	header, err := p3p.packetHeader.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RawBytes ] failed to serialize p3p header")

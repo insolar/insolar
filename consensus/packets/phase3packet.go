@@ -52,10 +52,27 @@ func (p3p *Phase3Packet) SetRouting(origin, target core.ShortNodeID) {
 }
 
 func (p3p *Phase3Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
-	return errors.New("implement me")
+	raw, err := p3p.rawBytes()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get raw part of phase 3 packet")
+	}
+	valid := crypto.Verify(key, core.SignatureFromBytes(p3p.SignatureHeaderSection1[:]), raw)
+	if !valid {
+		return errors.New("bad signature")
+	}
+	return nil
 }
 
 func (p3p *Phase3Packet) Sign(crypto core.CryptographyService) error {
+	raw, err := p3p.rawBytes()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get raw part of phase 3 packet")
+	}
+	signature, err := crypto.Sign(raw)
+	if err != nil {
+		return errors.Wrap(err, "Failed to sign phase 3 packet")
+	}
+	copy(p3p.SignatureHeaderSection1[:], signature.Bytes()[:SignatureLength])
 	return nil
 }
 
