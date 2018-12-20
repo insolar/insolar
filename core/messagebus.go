@@ -195,8 +195,8 @@ const (
 	TypeGetPendingRequests
 	// TypeHotRecords saves hot-records in storage.
 	TypeHotRecords
-	// TypePendingRequestsNotification informs virtual node about unclosed requests.
-	TypePendingRequestsNotification
+	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
+	TypeAbandonedRequestsNotification
 
 	// TypeValidationCheck checks if validation of a particular record can be performed.
 	TypeValidationCheck

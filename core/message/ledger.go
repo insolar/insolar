@@ -435,8 +435,8 @@ func (m *GetPendingRequests) DefaultTarget() *core.RecordRef {
 	return &m.Object
 }
 
-// PendingRequestsNotification informs virtual node about unclosed requests.
-type PendingRequestsNotification struct {
+// AbandonedRequestsNotification informs virtual node about unclosed requests.
+type AbandonedRequestsNotification struct {
 	ledgerMessage
 
 	Object   core.RecordID
@@ -444,21 +444,21 @@ type PendingRequestsNotification struct {
 }
 
 // Type implementation of Message interface.
-func (*PendingRequestsNotification) Type() core.MessageType {
-	return core.TypePendingRequestsNotification
+func (*AbandonedRequestsNotification) Type() core.MessageType {
+	return core.TypeAbandonedRequestsNotification
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *PendingRequestsNotification) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+func (m *AbandonedRequestsNotification) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return nil, core.DynamicRoleUndefined
 }
 
 // DefaultRole returns role for this event
-func (*PendingRequestsNotification) DefaultRole() core.DynamicRole {
+func (*AbandonedRequestsNotification) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleVirtualExecutor
 }
 
 // DefaultTarget returns of target of this event.
-func (m *PendingRequestsNotification) DefaultTarget() *core.RecordRef {
+func (m *AbandonedRequestsNotification) DefaultTarget() *core.RecordRef {
 	return core.NewRecordRef(core.DomainID, m.Object)
 }

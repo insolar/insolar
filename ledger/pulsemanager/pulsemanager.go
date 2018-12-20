@@ -133,7 +133,7 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
-			// m.sendPendingRequests(ctx, newPulse, jetID)
+			// m.sendAbandonedRequests(ctx, newPulse, jetID)
 
 			return nil
 		})
@@ -142,7 +142,7 @@ func (m *PulseManager) processEndPulse(
 }
 
 // TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
-// func (m *PulseManager) sendPendingRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) {
+// func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) {
 // 	pendingRequests := m.RecentStorageProvider.GetStorage(jetID).GetRequests()
 // 	wg := sync.WaitGroup{}
 // 	wg.Add(len(pendingRequests))
@@ -154,7 +154,7 @@ func (m *PulseManager) processEndPulse(
 // 			for reqID := range objectRequests {
 // 				toSend = append(toSend, reqID)
 // 			}
-// 			rep, err := m.Bus.Send(ctx, &message.PendingRequestsNotification{
+// 			rep, err := m.Bus.Send(ctx, &message.AbandonedRequestsNotification{
 // 				Object:   object,
 // 				Requests: toSend,
 // 			}, *pulse, nil)
