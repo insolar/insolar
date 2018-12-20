@@ -33,24 +33,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// func initCrypto(t *testing.T) (*certificate.CertificateManager, core.CryptographyService) {
-// 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-// 	require.NotNil(t, key)
-// 	cs := cryptography.NewKeyBoundCryptographyService(key)
-// 	kp := platformpolicy.NewKeyProcessor()
-// 	pk, _ := cs.GetPublicKey()
-// 	certManager, err := certificate.NewManagerCertificateWithKeys(pk, kp)
-// 	require.NoError(t, err)
-//
-// 	return certManager, cs
-// }
-//
-// func newPulseDistributor(t *testing.T) core.PulseDistributor {
-// 	mock := testutils.NewPulseDistributorMock(t)
-// 	mock.DistributeFunc = func(p context.Context, p1 *core.Pulse) {}
-// 	return mock
-// }
-
 func TestTwoPulsars_Handshake(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
@@ -137,7 +119,6 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 
 func TestPulsar_SendPulseToNode(t *testing.T) {
 	// Arrange
-	t.Skip()
 	ctx := inslogger.TestContext(t)
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
@@ -185,19 +166,26 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	}()
 
 	// Assert
-	pulseDistributor.MinimockWait(1000 * time.Millisecond)
+	pulseDistributor.MinimockWait(100 * time.Millisecond)
 	require.Equal(t, 1, int(pulseDistributor.DistributeCounter))
 
 	defer newPulsar.StopServer(ctx)
 }
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
-	t.Skip()
 	ctx := inslogger.TestContext(t)
 
 	// Arrange
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
+	storage.SavePulseFunc = func(p *core.Pulse) (r error) {
+		require.Equal(t, core.FirstPulseNumber+1, int(p.PulseNumber))
+		return nil
+	}
+	storage.SetLastPulseFunc = func(p *core.Pulse) (r error) {
+		require.Equal(t, core.FirstPulseNumber+1, int(p.PulseNumber))
+		return nil
+	}
 
 	pulseDistributor := testutils.NewPulseDistributorMock(t)
 	pulseDistributor.DistributeFunc = func(p context.Context, p1 *core.Pulse) {
@@ -292,23 +280,10 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		err = firstPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
 		require.NoError(t, err)
 	}()
-
-	pulseDistributor.MinimockWait(300000000 * time.Millisecond)
-
-	// currentPulse, err := usualLedger.GetPulseManager().Current(ctx)
-	// require.NoError(t, err)
-	// count := 50
-	// for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-	// 	time.Sleep(50 * time.Millisecond)
-	// 	currentPulse, err = usualLedger.GetPulseManager().Current(ctx)
-	// 	require.NoError(t, err)
-	// 	count--
-	// }
-	// time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	// Assert
-	require.NoError(t, err)
-
+	pulseDistributor.MinimockWait(100 * time.Millisecond)
 	require.Equal(t, uint64(1), pulseDistributor.DistributeCounter)
 
 	require.Equal(t, WaitingForStart, firstPulsar.StateSwitcher.GetState())
