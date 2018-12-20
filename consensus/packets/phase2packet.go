@@ -123,7 +123,7 @@ func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {
 	return core.PulseNumber(p2p.packetHeader.Pulse)
 }
 
-func (p2p *Phase2Packet) isPhase3Needed() bool {
+func (p2p *Phase2Packet) IsPhase3Needed() bool {
 	return p2p.packetHeader.f00
 }
 

@@ -115,7 +115,7 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet
 func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.NodeAnnounceClaim,
 	participants []core.Node, packet *packets.Phase1Packet) error {
 
-	requests := make(map[core.RecordRef]packets.ConsensusPacket, 0)
+	requests := make(map[core.RecordRef]packets.ConsensusPacket)
 	for _, participant := range participants {
 		err := originClaim.Update(participant.ID(), nc.Cryptography)
 		if err != nil {
