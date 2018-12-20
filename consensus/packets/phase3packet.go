@@ -63,12 +63,12 @@ func (p3p *Phase3Packet) Verify(crypto core.CryptographyService, key crypto.Publ
 	return nil
 }
 
-func (p3p *Phase3Packet) Sign(crypto core.CryptographyService) error {
+func (p3p *Phase3Packet) Sign(cryptographyService core.CryptographyService) error {
 	raw, err := p3p.rawBytes()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw part of phase 3 packet")
 	}
-	signature, err := crypto.Sign(raw)
+	signature, err := cryptographyService.Sign(raw)
 	if err != nil {
 		return errors.Wrap(err, "Failed to sign phase 3 packet")
 	}

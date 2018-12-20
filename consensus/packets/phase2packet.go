@@ -91,12 +91,12 @@ func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.Publ
 	return nil
 }
 
-func (p2p *Phase2Packet) Sign(crypto core.CryptographyService) error {
+func (p2p *Phase2Packet) Sign(cryptographyService core.CryptographyService) error {
 	raw, err := p2p.rawFirstPart()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw first part of phase 2 packet")
 	}
-	signature, err := crypto.Sign(raw)
+	signature, err := cryptographyService.Sign(raw)
 	if err != nil {
 		return errors.Wrap(err, "Failed to sign first part of phase 2 packet")
 	}
@@ -110,7 +110,7 @@ func (p2p *Phase2Packet) Sign(crypto core.CryptographyService) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw second part of phase 2 packet")
 	}
-	signature, err = crypto.Sign(raw)
+	signature, err = cryptographyService.Sign(raw)
 	if err != nil {
 		return errors.Wrap(err, "Failed to sign second part of phase 2 packet")
 	}

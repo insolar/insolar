@@ -70,12 +70,12 @@ func (p1p *Phase1Packet) Verify(crypto core.CryptographyService, key crypto.Publ
 	return nil
 }
 
-func (p1p *Phase1Packet) Sign(crypto core.CryptographyService) error {
+func (p1p *Phase1Packet) Sign(cryptographyService core.CryptographyService) error {
 	raw, err := p1p.rawBytes()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw part of phase 1 packet")
 	}
-	signature, err := crypto.Sign(raw)
+	signature, err := cryptographyService.Sign(raw)
 	if err != nil {
 		return errors.Wrap(err, "Failed to sign phase 1 packet")
 	}

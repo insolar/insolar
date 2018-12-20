@@ -42,8 +42,8 @@ type HeaderSkipDeserializer interface {
 }
 
 type SignedPacket interface {
-	Verify(crypto core.CryptographyService, key crypto.PublicKey) error
-	Sign(crypto core.CryptographyService) error
+	Verify(cryptographyService core.CryptographyService, key crypto.PublicKey) error
+	Sign(core.CryptographyService) error
 }
 
 type ConsensusPacket interface {
