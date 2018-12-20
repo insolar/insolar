@@ -133,7 +133,7 @@ func (m *PulseManager) processEndPulse(
 				return errors.Wrap(dropErr, "processDrop failed")
 			}
 
-			m.sendPendingRequests(ctx, currentPulse, jetID)
+			m.sendPendingRequests(ctx, newPulse, jetID)
 
 			return nil
 		})
