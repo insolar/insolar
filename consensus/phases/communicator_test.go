@@ -67,7 +67,7 @@ func (s *communicatorSuite) SetupTest() {
 		return true
 	}
 
-	s.consensusNetworkMock.RegisterRequestHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusRequestHandler) {
+	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
 
 	})
 

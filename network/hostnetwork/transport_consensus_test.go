@@ -63,7 +63,7 @@ package hostnetwork
 // 		log.Info("handler triggered")
 // 		wg.Done()
 // 	}
-// 	cn2.RegisterRequestHandler(types.Phase1, handler)
+// 	cn2.RegisterPacketHandler(types.Phase1, handler)
 //
 // 	cn2.Start(ctx)
 // 	cn1.Start(ctx2)
@@ -74,7 +74,7 @@ package hostnetwork
 //
 // 	packet := packets.NewPhase1Packet()
 // 	request := cn1.NewRequestBuilder().Type(types.Phase1).Data(packet).Build()
-// 	err = cn1.SendRequest(request, cn2.GetNodeID())
+// 	err = cn1.SignAndSendPacket(request, cn2.GetNodeID())
 // 	require.NoError(t, err)
 // 	success := utils.WaitTimeout(&wg, time.Second)
 // 	require.True(t, success)
@@ -90,7 +90,7 @@ package hostnetwork
 // 		// do nothing
 // 	}
 // 	f := func() {
-// 		cn.RegisterRequestHandler(types.Phase1, handler)
+// 		cn.RegisterPacketHandler(types.Phase1, handler)
 // 	}
 // 	require.NotPanics(t, f, "first request handler register should not panic")
 // 	require.Panics(t, f, "second request handler register should panic because it is already registered")

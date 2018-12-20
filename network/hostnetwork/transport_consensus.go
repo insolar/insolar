@@ -35,11 +35,11 @@ import (
 type transportConsensus struct {
 	transportBase
 	resolver network.RoutingTable
-	handlers map[consensus.PacketType]network.ConsensusRequestHandler
+	handlers map[consensus.PacketType]network.ConsensusPacketHandler
 }
 
-// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
-func (tc *transportConsensus) RegisterRequestHandler(t consensus.PacketType, handler network.ConsensusRequestHandler) {
+// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
+func (tc *transportConsensus) RegisterPacketHandler(t consensus.PacketType, handler network.ConsensusPacketHandler) {
 	_, exists := tc.handlers[t]
 	if exists {
 		panic(fmt.Sprintf("multiple handlers for packet type %s are not supported!", t.String()))
@@ -47,7 +47,7 @@ func (tc *transportConsensus) RegisterRequestHandler(t consensus.PacketType, han
 	tc.handlers[t] = handler
 }
 
-func (tc *transportConsensus) SendRequest(packet consensus.ConsensusPacket,
+func (tc *transportConsensus) SignAndSendPacket(packet consensus.ConsensusPacket,
 	receiver core.RecordRef, service core.CryptographyService) error {
 
 	log.Debugf("Send %s request to host %s", packet.GetType(), receiver.String())
@@ -114,7 +114,7 @@ func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 		return nil, errors.Wrap(err, "error getting origin")
 	}
 	origin.ShortID = shortID
-	result := &transportConsensus{handlers: make(map[consensus.PacketType]network.ConsensusRequestHandler)}
+	result := &transportConsensus{handlers: make(map[consensus.PacketType]network.ConsensusPacketHandler)}
 
 	result.transport = tp
 	result.resolver = resolver
