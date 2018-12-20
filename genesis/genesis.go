@@ -101,15 +101,15 @@ func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainID
 func (g *Genesis) activateRootDomain(
 	ctx context.Context, cb *ContractsBuilder,
 	contractID *core.RecordID,
-) (*core.RecordID, core.ObjectDescriptor, error) {
+) (core.ObjectDescriptor, error) {
 	rd, err := rootdomain.NewRootDomain()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
+		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
 	instanceData, err := serializeInstance(rd)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
+		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
 	contract := core.NewRecordRef(*contractID, *contractID)
@@ -123,37 +123,37 @@ func (g *Genesis) activateRootDomain(
 		instanceData,
 	)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	_, err = g.ArtifactManager.RegisterResult(ctx, *g.ArtifactManager.GenesisRef(), *contract, nil)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	g.rootDomainRef = contract
 
-	return contractID, desc, nil
+	return desc, nil
 }
 
 func (g *Genesis) activateNodeDomain(
 	ctx context.Context, domain *core.RecordID, cb *ContractsBuilder,
-) error {
+) (core.ObjectDescriptor, error) {
 	nd, err := nodedomain.NewNodeDomain()
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ]")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
 	instanceData, err := serializeInstance(nd)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ]")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
 	contractID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: "NodeDomain"}})
 
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 	contract := core.NewRecordRef(*domain, *contractID)
-	_, err = g.ArtifactManager.ActivateObject(
+	desc, err := g.ArtifactManager.ActivateObject(
 		ctx,
 		core.RecordRef{},
 		*contract,
@@ -163,16 +163,16 @@ func (g *Genesis) activateNodeDomain(
 		instanceData,
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 
 	g.nodeDomainRef = contract
 
-	return nil
+	return desc, nil
 }
 
 func (g *Genesis) activateRootMember(
@@ -217,7 +217,7 @@ func (g *Genesis) activateRootMember(
 
 // TODO: this is not required since we refer by request id.
 func (g *Genesis) updateRootDomain(
-	ctx context.Context, cb *ContractsBuilder, domainDesc core.ObjectDescriptor,
+	ctx context.Context, domainDesc core.ObjectDescriptor,
 ) error {
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *g.rootMemberRef, NodeDomainRef: *g.nodeDomainRef})
 	if err != nil {
@@ -240,6 +240,7 @@ func (g *Genesis) updateRootDomain(
 func (g *Genesis) activateRootMemberWallet(
 	ctx context.Context, domain *core.RecordID, cb *ContractsBuilder,
 ) error {
+
 	w, err := wallet.New(g.config.RootBalance)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
@@ -276,31 +277,42 @@ func (g *Genesis) activateRootMemberWallet(
 	return nil
 }
 
-func (g *Genesis) activateSmartContracts(ctx context.Context, cb *ContractsBuilder, rootPubKey string, rootDomainID *core.RecordID) error {
-	domain, domainDesc, err := g.activateRootDomain(ctx, cb, rootDomainID)
+func (g *Genesis) activateSmartContracts(
+	ctx context.Context, cb *ContractsBuilder, rootPubKey string, rootDomainID *core.RecordID,
+) ([]genesisNode, error) {
+
+	rootDomainDesc, err := g.activateRootDomain(ctx, cb, rootDomainID)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
-		return errors.Wrap(err, errMsg)
+		return nil, errors.Wrap(err, errMsg)
 	}
-	err = g.activateNodeDomain(ctx, domain, cb)
+	nodeDomainDesc, err := g.activateNodeDomain(ctx, rootDomainID, cb)
 	if err != nil {
-		return errors.Wrap(err, errMsg)
+		return nil, errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMember(ctx, domain, cb, rootPubKey)
+	err = g.activateRootMember(ctx, rootDomainID, cb, rootPubKey)
 	if err != nil {
-		return errors.Wrap(err, errMsg)
+		return nil, errors.Wrap(err, errMsg)
 	}
 	// TODO: this is not required since we refer by request id.
-	err = g.updateRootDomain(ctx, cb, domainDesc)
+	err = g.updateRootDomain(ctx, rootDomainDesc)
 	if err != nil {
-		return errors.Wrap(err, errMsg)
+		return nil, errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMemberWallet(ctx, domain, cb)
+	err = g.activateRootMemberWallet(ctx, rootDomainID, cb)
 	if err != nil {
-		return errors.Wrap(err, errMsg)
+		return nil, errors.Wrap(err, errMsg)
+	}
+	nodes, err := g.activateDiscoveryNodes(ctx, cb)
+	if err != nil {
+		return nil, errors.Wrap(err, errMsg)
+	}
+	err = g.updateNodeDomainIndex(ctx, nodeDomainDesc, nodes)
+	if err != nil {
+		return nil, errors.Wrap(err, errMsg)
 	}
 
-	return nil
+	return nodes, nil
 }
 
 type genesisNode struct {
@@ -310,7 +322,7 @@ type genesisNode struct {
 	role    string
 }
 
-func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *ContractsBuilder) ([]genesisNode, error) {
+func (g *Genesis) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuilder) ([]genesisNode, error) {
 
 	nodes := make([]genesisNode, len(g.config.DiscoveryNodes))
 
@@ -328,12 +340,12 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *ContractsBuild
 		}
 		nodeData, err := serializeInstance(nodeState)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't serialize discovery node instance")
+			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't serialize discovery node instance")
 		}
 
 		nodeID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)}})
 		if err != nil {
-			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Couldn't register request to artifact manager")
+			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't register request to artifact manager")
 		}
 		contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
 		_, err = g.ArtifactManager.ActivateObject(
@@ -346,7 +358,7 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *ContractsBuild
 			nodeData,
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Could'n activate discovery node object")
+			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Could'n activate discovery node object")
 		}
 		_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
 		if err != nil {
@@ -398,12 +410,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 	}
 
-	err = g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ]")
-	}
-
-	nodes, err := g.registerDiscoveryNodes(ctx, cb)
+	nodes, err := g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ]")
 	}
@@ -462,5 +469,30 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 			return errors.Wrap(err, "[ makeCertificates ]")
 		}
 	}
+	return nil
+}
+
+func (g *Genesis) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc core.ObjectDescriptor, nodes []genesisNode) error {
+
+	indexMap := make(map[string]string)
+	for _, node := range nodes {
+		indexMap[node.node.PublicKey] = node.ref.String()
+	}
+	updateData, err := serializeInstance(&nodedomain.NodeDomain{NodeIndexPK: indexMap})
+	if err != nil {
+		return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't serialize NodeDomain")
+	}
+
+	_, err = g.ArtifactManager.UpdateObject(
+		ctx,
+		*g.rootDomainRef,
+		*g.nodeDomainRef,
+		nodeDomainDesc,
+		updateData,
+	)
+	if err != nil {
+		return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't update NodeDomain")
+	}
+
 	return nil
 }
