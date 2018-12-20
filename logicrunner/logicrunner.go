@@ -529,19 +529,24 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 // message to the current executor
 func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) bool {
 	es.Lock()
-	defer es.Unlock()
 
 	if es.pending != InPending {
+		es.Unlock()
 		return false
 	}
 
 	es.pending = NotPending
-	msg := message.PendingFinished{Reference: currentRef}
+
 	pulse, err := lr.PulseStorage.Current(ctx)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
+		es.Unlock()
 		return true
 	}
+
+	es.Unlock()
+
+	msg := message.PendingFinished{Reference: currentRef}
 	_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
