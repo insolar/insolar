@@ -152,5 +152,10 @@ func (*tcpConnectionFactory) CreateConnection(ctx context.Context, address net.A
 		logger.Errorln("[ createConnection ] Failed to set connection read deadline: ", err.Error())
 	}
 
+	err = conn.SetNoDelay(true)
+	if err != nil {
+		logger.Errorln("[ createConnection ] Failed to set connection no delay: ", err.Error())
+	}
+
 	return conn, nil
 }
