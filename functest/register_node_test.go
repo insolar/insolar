@@ -132,7 +132,7 @@ func TestGetNodeRefByPK(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	nodeRef, err := getNodeRefSignedCall(ref)
+	nodeRef, err := getNodeRefSignedCall(TESTPUBLICKEY)
 	require.NoError(t, err)
 	require.Equal(t, ref, nodeRef)
 }
