@@ -106,10 +106,6 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
-	err = packet.Sign(fp.Cryptography)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ FirstPhase ] failed to sign a packet")
-	}
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, &packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results.")

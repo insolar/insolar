@@ -41,12 +41,6 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(gSign, state.BitSet)
 
-	err := packet.Sign(tp.Cryptography)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 3 ] Failed to sign phase 3 packet")
-	}
-
 	nodes := state.FirstPhaseState.UnsyncList.GetActiveNodes()
 	responses, err := tp.Communicator.ExchangePhase3(ctx, nodes, &packet)
 	if err != nil {

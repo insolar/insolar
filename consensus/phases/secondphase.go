@@ -126,10 +126,6 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to set pulse proof in Phase2Packet.")
 	}
 	packet.SetBitSet(state.BitSet)
-	err = packet.Sign(sp.Cryptography)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to sign a packet")
-	}
 
 	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, &packet, additionalRequests)
 	if err != nil {
