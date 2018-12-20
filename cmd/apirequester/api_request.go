@@ -30,8 +30,9 @@ import (
 )
 
 type response struct {
-	Error  string
-	Result interface{}
+	Error   string
+	Result  interface{}
+	TraceID string
 }
 
 func getResponse(body []byte) *response {
@@ -93,9 +94,10 @@ func createMember() (*memberInfo, error) {
 
 	memberResponse := getResponse(body)
 	if memberResponse.Error != "" {
-		return nil, errors.New(memberResponse.Error)
+		return nil, errors.New(memberResponse.Error + ". TraceId: " + memberResponse.TraceID)
 	}
 	member.ref = memberResponse.Result.(string)
+	member.traceId = memberResponse.TraceID
 
 	return &member, nil
 }

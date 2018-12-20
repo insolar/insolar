@@ -63,7 +63,7 @@ func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
 func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
 	res := lr.GetObjectState(ref)
 	if res == nil {
-		panic("No requested object state")
+		panic("No requested object state. ref: " + ref.String())
 	}
 	return res
 }
