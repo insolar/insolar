@@ -146,15 +146,15 @@ func (m *PulseManager) sendPendingRequests(ctx context.Context, pulse *core.Puls
 	wg := sync.WaitGroup{}
 	wg.Add(len(pendingRequests))
 	for objID, requests := range pendingRequests {
-		go func() {
+		go func(object core.RecordID, objectRequests map[core.RecordID]struct{}) {
 			defer wg.Done()
 
 			var toSend []core.RecordID
-			for reqID := range requests {
+			for reqID := range objectRequests {
 				toSend = append(toSend, reqID)
 			}
 			rep, err := m.Bus.Send(ctx, &message.PendingRequestsNotification{
-				Object:   objID,
+				Object:   object,
 				Requests: toSend,
 			}, *pulse, nil)
 			if err != nil {
@@ -164,7 +164,7 @@ func (m *PulseManager) sendPendingRequests(ctx context.Context, pulse *core.Puls
 			if _, ok := rep.(*reply.OK); !ok {
 				inslogger.FromContext(ctx).Error("received unexpected reply on pending notification")
 			}
-		}()
+		}(objID, requests)
 	}
 
 	wg.Wait()
