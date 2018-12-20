@@ -20,6 +20,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -143,6 +144,12 @@ func (*tcpConnectionFactory) CreateConnection(ctx context.Context, address net.A
 	err = conn.SetKeepAlive(true)
 	if err != nil {
 		logger.Error("[ createConnection ] Failed to set keep alive")
+	}
+
+	// We don't wanna read from this connection
+	err = conn.SetReadDeadline(time.Now())
+	if err != nil {
+		logger.Errorln("[ createConnection ] Failed to set connection read deadline: ", err.Error())
 	}
 
 	return conn, nil
