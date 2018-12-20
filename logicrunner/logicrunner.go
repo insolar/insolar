@@ -537,13 +537,12 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 
 	es.pending = NotPending
 
-	pulse, err := lr.PulseStorage.Current(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
-		return
-	}
-
 	go func() {
+		pulse, err := lr.PulseStorage.Current(ctx)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
+			return
+		}
 		msg := message.PendingFinished{Reference: currentRef}
 		_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
 		if err != nil {
