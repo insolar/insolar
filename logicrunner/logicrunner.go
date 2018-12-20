@@ -419,10 +419,10 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 		return &reply.OK{}, nil
 	}
 	es := os.ExecutionState
-	es.pending = NotPending
 	os.Unlock()
 
 	es.Lock()
+	es.pending = NotPending
 	if es.Current != nil {
 		es.Unlock()
 		return nil, errors.New("received PendingFinished when we are already executing")
