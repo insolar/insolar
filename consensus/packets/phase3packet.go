@@ -38,7 +38,7 @@ func (p3p *Phase3Packet) Verify(crypto core.CryptographyService, key crypto.Publ
 	panic("implement me")
 }
 
-func (p3p *Phase3Packet) Sign(crypto core.CryptographyService, key crypto.PublicKey) error {
+func (p3p *Phase3Packet) Sign(crypto core.CryptographyService) error {
 	panic("implement me")
 }
 

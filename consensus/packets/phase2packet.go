@@ -44,7 +44,7 @@ func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.Publ
 	panic("implement me")
 }
 
-func (p2p *Phase2Packet) Sign(crypto core.CryptographyService, key crypto.PublicKey) error {
+func (p2p *Phase2Packet) Sign(crypto core.CryptographyService) error {
 	panic("implement me")
 }
 

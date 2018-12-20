@@ -41,7 +41,7 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(gSign, state.BitSet)
 
-	err := tp.signPhase3Packet(&packet)
+	err := packet.Sign(tp.Cryptography)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 3 ] Failed to sign phase 3 packet")
@@ -54,12 +54,9 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	}
 
 	for ref, packet := range responses {
-		signed, err := tp.isSignPhase3PacketRight(packet, ref)
+		err = tp.checkPacketSignature(packet, ref)
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to check phase3 packet signature from %s: %s", ref, err.Error())
-			continue
-		} else if !signed {
-			inslogger.FromContext(ctx).Warnf("Received phase3 packet from %s with bad signature", ref)
 			continue
 		}
 		// not needed until we implement fraud detection
@@ -101,27 +98,11 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	}, nil
 }
 
-func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
-	data, err := p.RawBytes()
-	if err != nil {
-		return errors.Wrap(err, "failed to get raw bytes")
+func (tp *ThirdPhase) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef) error {
+	activeNode := tp.NodeNetwork.GetActiveNode(recordRef)
+	if activeNode == nil {
+		return errors.New("failed to get active node")
 	}
-	sign, err := tp.Cryptography.Sign(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a phase 2 packet")
-	}
-
-	copy(p.SignatureHeaderSection1[:], sign.Bytes())
-	return nil
-}
-
-func (tp *ThirdPhase) isSignPhase3PacketRight(packet *packets.Phase3Packet, recordRef core.RecordRef) (bool, error) {
-	key := tp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
-
-	raw, err := packet.RawBytes()
-	if err != nil {
-		return false, errors.Wrap(err, "failed to serialize")
-	}
-
-	return tp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+	key := activeNode.PublicKey()
+	return packet.Verify(tp.Cryptography, key)
 }
