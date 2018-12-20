@@ -14,37 +14,38 @@
  *    limitations under the License.
  */
 
-package reply
+package transport
 
 import (
-	"github.com/insolar/insolar/core"
+	"context"
+
+	"github.com/insolar/insolar/network/transport/packet"
 )
 
-// CallMethod - the most common reply
-type CallMethod struct {
-	Request core.RecordRef
-	Result  []byte
+type Sequence uint64
+
+type sequenceGenerator interface {
+	Generate() Sequence
 }
 
-// Type returns type of the reply
-func (r *CallMethod) Type() core.ReplyType {
-	return TypeCallMethod
+func newSequenceGenerator() sequenceGenerator {
+	return newSequenceGeneratorImpl()
 }
 
-type CallConstructor struct {
-	Object *core.RecordRef
+type futureManager interface {
+	Get(msg *packet.Packet) Future
+	Create(msg *packet.Packet) Future
 }
 
-// Type returns type of the reply
-func (r *CallConstructor) Type() core.ReplyType {
-	return TypeCallConstructor
+func newFutureManager() futureManager {
+	return newFutureManagerImpl()
 }
 
-type RegisterRequest struct {
-	Request core.RecordRef
+type packetHandler interface {
+	Handle(ctx context.Context, msg *packet.Packet)
+	Received() <-chan *packet.Packet
 }
 
-// Type returns type of the reply
-func (r *RegisterRequest) Type() core.ReplyType {
-	return TypeRegisterRequest
+func newPacketHandler(futureManager futureManager) packetHandler {
+	return newPacketHandlerImpl(futureManager)
 }

@@ -106,9 +106,9 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.
-	h.Bus.MustRegister(core.TypeHeavyStartStop, m.saveParcel(h.handleHeavyStartStop))
-	h.Bus.MustRegister(core.TypeHeavyReset, m.saveParcel(h.handleHeavyReset))
-	h.Bus.MustRegister(core.TypeHeavyPayload, m.saveParcel(h.handleHeavyPayload))
+	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
+	h.Bus.MustRegister(core.TypeHeavyReset, h.handleHeavyReset)
+	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
 
 	return nil
 }

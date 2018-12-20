@@ -47,6 +47,8 @@ const (
 	TypeCallMethod
 	// TypeCallConstructor - reference on created object
 	TypeCallConstructor
+	// TypeRegisterRequest - request for execution was registered
+	TypeRegisterRequest
 
 	// Ledger
 
@@ -88,6 +90,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &CallMethod{}, nil
 	case TypeCallConstructor:
 		return &CallConstructor{}, nil
+	case TypeRegisterRequest:
+		return &RegisterRequest{}, nil
 	case TypeCode:
 		return &Code{}, nil
 	case TypeObject:
@@ -171,6 +175,7 @@ func ToBytes(rep core.Reply) []byte {
 func init() {
 	gob.Register(&CallMethod{})
 	gob.Register(&CallConstructor{})
+	gob.Register(&RegisterRequest{})
 	gob.Register(&Code{})
 	gob.Register(&Object{})
 	gob.Register(&Delegate{})

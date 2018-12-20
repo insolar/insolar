@@ -5,6 +5,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
@@ -16,15 +17,20 @@ import (
 )
 
 func TestOnPulse(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
 	mb := testutils.NewMessageBusMock(t)
 	mb.SendMock.Return(&reply.ID{}, nil)
+	jc := testutils.NewJetCoordinatorMock(mc)
 
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 	lr.MessageBus = mb
+	lr.JetCoordinator = jc
+
+	jc.AmIMock.Return(false, nil)
 
 	// test empty lr
 	pulse := core.Pulse{}
@@ -38,7 +44,7 @@ func TestOnPulse(t *testing.T) {
 	lr.state[objectRef] = &ObjectState{ExecutionState: &ExecutionState{Behaviour: &ValidationSaver{}}}
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
-	require.Nil(t, lr.state[objectRef].ExecutionState)
+	assert.Nil(t, lr.state[objectRef].ExecutionState)
 
 	// test empty es with query in current
 	lr.state[objectRef] = &ObjectState{
@@ -49,7 +55,7 @@ func TestOnPulse(t *testing.T) {
 	}
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
-	require.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
+	assert.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
 
 	// test empty es with query in current and query in queue - es.pending true, message.ExecutorResults.Pending = true, message.ExecutorResults.Queue one element
 	result := make(chan ExecutionQueueResult, 1)
@@ -60,7 +66,8 @@ func TestOnPulse(t *testing.T) {
 	}()
 
 	qe := ExecutionQueueElement{
-		result: result,
+		result:     result,
+		returnMode: message.ReturnNoWait,
 	}
 
 	queue := append(make([]ExecutionQueueElement, 0), qe)
@@ -76,9 +83,26 @@ func TestOnPulse(t *testing.T) {
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	require.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
+
+	// Executor in new pulse is same node
+	jc.AmIMock.Return(true, nil)
+	lr.state[objectRef].ExecutionState.pending = PendingUnknown
+
+	lr.state[objectRef] = &ObjectState{
+		ExecutionState: &ExecutionState{
+			Behaviour: &ValidationSaver{},
+			Current:   &CurrentExecution{},
+			Queue:     queue,
+		},
+	}
+
+	err = lr.OnPulse(ctx, pulse)
+	require.NoError(t, err)
+	require.Equal(t, PendingUnknown, lr.state[objectRef].ExecutionState.pending)
 }
 
 func TestPendingFinished(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -240,10 +264,11 @@ func TestPrepareState(t *testing.T) {
 
 	// add new element in existing queue
 	queueElementRequest := testutils.RandomRef()
-	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest}}
+	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest, ReturnMode: message.ReturnNoWait}}
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, 2, len(lr.state[object].ExecutionState.Queue))
 	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
+	require.Equal(t, message.ReturnNoWait, lr.state[object].ExecutionState.Queue[0].returnMode)
 
 }
 func TestHandlePendingFinishedMessage(

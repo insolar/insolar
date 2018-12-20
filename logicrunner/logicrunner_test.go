@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/contractrequester"
+
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -140,8 +142,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
+	cr, err := contractrequester.New()
 
-	cm.Inject(pulseStorage, nk, recentMock, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(pulseStorage, nk, recentMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
@@ -188,6 +191,7 @@ func mockCryptographyService(t *testing.T) core.CryptographyService {
 }
 
 func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, mustfail ...core.RecordRef) {
+	return // TODO REMOVE
 	failmap := make(map[core.RecordRef]struct{})
 	for _, r := range mustfail {
 		failmap[r] = struct{}{}
@@ -220,31 +224,22 @@ func executeMethod(
 ) (
 	core.Reply, error,
 ) {
+	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
+
 	argsSerialized, err := core.Serialize(arguments)
 	if err != nil {
 		return nil, err
 	}
 
-	msg := &message.CallMethod{
-		ObjectRef:      objRef,
-		Method:         method,
-		Arguments:      argsSerialized,
-		ProxyPrototype: proxyPrototype,
-	}
-	msg.Caller = testutils.RandomRef()
-	if nonce != 0 {
-		msg.Nonce = nonce
+	rlr := lr.(*LogicRunner)
+
+	bm := message.BaseLogicMessage{
+		Caller: testutils.RandomRef(),
+		Nonce:  nonce,
 	}
 
-	pf := lr.(*LogicRunner).ParcelFactory
-	parcel, _ := pf.Create(ctx, msg, testutils.RandomRef(), nil, *core.GenesisPulse)
-	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
-	resp, err := lr.Execute(
-		ctx,
-		parcel,
-	)
-
-	return resp, err
+	rep, err := rlr.ContractRequester.CallMethod(ctx, &bm, false, &objRef, method, argsSerialized, &proxyPrototype)
+	return rep, err
 }
 
 func firstMethodRes(t *testing.T, resp core.Reply) interface{} {
@@ -1982,7 +1977,7 @@ func (c *First) GetName() (string, error) {
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
-	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: couldn't dispatch event: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
+	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
 }
 
 func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*core.RecordRef, *core.RecordRef) {
