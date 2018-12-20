@@ -18,28 +18,37 @@ package record
 
 import (
 	"io"
+
+	"github.com/insolar/insolar/core"
 )
 
 // Request extends Record interface with GetPayload method.
 type Request interface {
 	Record
 	GetPayload() []byte
+	GetObject() core.RecordID
 }
 
-// CallRequest is a contract execution request.
-type CallRequest struct {
+// RequestRecord is a contract execution request.
+type RequestRecord struct {
 	Payload []byte
+	Object  core.RecordID
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *CallRequest) WriteHashData(w io.Writer) (int, error) {
+func (r *RequestRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(r.Payload)
 }
 
 // Type implementation of Record interface.
-func (r *CallRequest) Type() TypeID { return typeCallRequest }
+func (r *RequestRecord) Type() TypeID { return typeCallRequest }
 
 // GetPayload returns payload. Required for Record interface implementation.
-func (r *CallRequest) GetPayload() []byte {
+func (r *RequestRecord) GetPayload() []byte {
 	return r.Payload
+}
+
+// GetObject returns request object.
+func (r *RequestRecord) GetObject() core.RecordID {
+	return r.Object
 }

@@ -16,13 +16,14 @@ type RecentStorage interface {
 	AddObject(id core.RecordID, isMine bool)
 	AddObjectWithTLL(id core.RecordID, ttl int, isMine bool)
 
-	AddPendingRequest(id core.RecordID)
-	RemovePendingRequest(id core.RecordID)
+	AddPendingRequest(obj, req core.RecordID)
+	RemovePendingRequest(obj, req core.RecordID)
 
 	IsMine(id core.RecordID) bool
 
 	GetObjects() map[core.RecordID]int
-	GetRequests() []core.RecordID
+	GetRequests() map[core.RecordID]map[core.RecordID]struct{}
+	GetRequestsForObject(obj core.RecordID) []core.RecordID
 
 	ClearZeroTTLObjects()
 	ClearObjects()

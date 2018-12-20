@@ -30,7 +30,7 @@ type recordgen func() Record
 
 var emptyRecordsGens = []recordgen{
 	// request records
-	func() Record { return &CallRequest{} },
+	func() Record { return &RequestRecord{} },
 	// result records
 	func() Record { return &ObjectActivateRecord{} },
 	func() Record { return &CodeRecord{} },

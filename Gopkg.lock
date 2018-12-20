@@ -228,22 +228,6 @@
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
-  digest = "1:2d643962fac133904694fffa959bc3c5dcfdcee38c6f5ffdd99a3c93eb9c835c"
-  name = "github.com/klauspost/cpuid"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "e7e905edc00ea8827e58662220139109efea09db"
-  version = "v1.2.0"
-
-[[projects]]
-  digest = "1:a7d924d9d0cdb636e4750f9e99f6ec9e159ac458d1d5040c412fdf84c22b4d84"
-  name = "github.com/klauspost/reedsolomon"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "278ba25f43b885a3fd8da55cff33fc8c6a957960"
-  version = "v1.7.0"
-
-[[projects]]
   digest = "1:0a69a1c0db3591fcefb47f115b224592c8dfa4368b7ba9fae509d5e16cdc95c8"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
@@ -476,30 +460,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f10bb2efe706eea8e386fa5021281e302a58e8fa0ba9f2e31ad9ca2cb234b282"
-  name = "github.com/templexxx/cpufeat"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "cef66df7f161dee20f4d650da7268d77eaaec82d"
-
-[[projects]]
-  digest = "1:a0a269bea865974fc4d583373c984a5aa60cf98b5aa4f3e1b5de527891d37845"
-  name = "github.com/templexxx/xor"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0af8e873c554da75f37f2049cdffda804533d44c"
-  version = "0.1.2"
-
-[[projects]]
-  digest = "1:97293f3bd0b9f81484da18dba66a20de340307b43835a91157aaaee484c80e9b"
-  name = "github.com/tjfoc/gmsm"
-  packages = ["sm4"]
-  pruneopts = "UT"
-  revision = "98aa888b79d8de04afe0fccf45ed10594efc858b"
-  version = "v1.1"
-
-[[projects]]
-  branch = "master"
   digest = "1:4262ea367f180f3865bad721123c6eefb389762190b3c90de6f7723fbe5ca6f2"
   name = "github.com/tylerb/gls"
   packages = ["."]
@@ -512,14 +472,6 @@
   packages = ["codec"]
   pruneopts = "UT"
   revision = "587a7e6ca264903eb19416288533bea8ff898ec0"
-
-[[projects]]
-  digest = "1:46aa9ebe575d7c951ccde88e83a15ac715275791482a0f27053900893ce04bdf"
-  name = "github.com/xtaci/kcp-go"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "02d11d20c5864d980168568741c0d52a50379512"
-  version = "v4.3.2"
 
 [[projects]]
   digest = "1:cd0a556f7c6e6946fbe39b1bbc61db209967c64cbbf0aed5e4108081cd43aea0"
@@ -550,37 +502,24 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d60c73ef877351e0902e0bfe0b2300a5673e70f4b7c202ede44cccc55d31194b"
+  digest = "1:10f320bfc014e9e6ac51f810271aa955ad3307cb3c0776d91e5595b4503af78b"
   name = "golang.org/x/crypto"
   packages = [
-    "blowfish",
-    "cast5",
     "curve25519",
     "hkdf",
-    "internal/subtle",
-    "pbkdf2",
-    "salsa20",
-    "salsa20/salsa",
     "sha3",
     "ssh/terminal",
-    "tea",
-    "twofish",
-    "xtea",
   ]
   pruneopts = "UT"
   revision = "eb0de9b17e854e9b1ccd9963efafc79862359959"
 
 [[projects]]
   branch = "master"
-  digest = "1:6d87c625924fcd8083de502b34c4878dd7162ca05a5903c91ced8c4b5641f002"
+  digest = "1:370d49f91099ce70df877098123f6b59b1c1e54770b3443da352fab7bca01f8b"
   name = "golang.org/x/net"
   packages = [
-    "bpf",
     "context",
-    "internal/iana",
-    "internal/socket",
     "internal/timeseries",
-    "ipv4",
     "trace",
   ]
   pruneopts = "UT"
@@ -691,7 +630,6 @@
     "github.com/stretchr/testify/suite",
     "github.com/tylerb/gls",
     "github.com/ugorji/go/codec",
-    "github.com/xtaci/kcp-go",
     "go.opencensus.io/exporter/jaeger",
     "go.opencensus.io/exporter/prometheus",
     "go.opencensus.io/stats",

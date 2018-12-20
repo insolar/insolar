@@ -19,6 +19,7 @@ package keystore
 import (
 	"context"
 	"crypto"
+	"sync"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
@@ -44,9 +45,66 @@ func (ks *keyStore) Start(ctx context.Context) error {
 	return nil
 }
 
+type cachedKeyStore struct {
+	keyStore core.KeyStore
+
+	mutex      sync.RWMutex
+	privateKey crypto.PrivateKey
+}
+
+func (ks *cachedKeyStore) getCachedPrivateKey(identifier string) crypto.PublicKey {
+	ks.mutex.RLock()
+	defer ks.mutex.RUnlock()
+
+	if ks.privateKey != nil {
+		return ks.privateKey
+	}
+
+	return nil
+}
+
+func (ks *cachedKeyStore) loadPrivateKey(identifier string) (crypto.PrivateKey, error) {
+	ks.mutex.Lock()
+	defer ks.mutex.Unlock()
+
+	if ks.privateKey != nil {
+		return ks.privateKey, nil
+	}
+
+	privateKey, err := ks.keyStore.GetPrivateKey(identifier)
+	if err != nil {
+		return nil, err
+	}
+
+	ks.privateKey = privateKey
+	return privateKey, nil
+}
+
+func (ks *cachedKeyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) {
+	privateKey := ks.getCachedPrivateKey(identifier)
+	if privateKey != nil {
+		return privateKey, nil
+	}
+
+	return ks.loadPrivateKey(identifier)
+}
+
+func (ks *cachedKeyStore) Start(ctx context.Context) error {
+	// TODO: ugly hack; do proper checks
+	if _, err := ks.GetPrivateKey(""); err != nil {
+		return errors.Wrap(err, "[ Start ] Failed to start keyStore")
+	}
+
+	return nil
+}
+
 func NewKeyStore(path string) (core.KeyStore, error) {
 	keyStore := &keyStore{
 		path: path,
+	}
+
+	cachedKeyStore := &cachedKeyStore{
+		keyStore: keyStore,
 	}
 
 	manager := component.Manager{}
@@ -59,5 +117,5 @@ func NewKeyStore(path string) (core.KeyStore, error) {
 		return nil, errors.Wrap(err, "[ NewKeyStore ] Failed to create keyStore")
 	}
 
-	return keyStore, nil
+	return cachedKeyStore, nil
 }

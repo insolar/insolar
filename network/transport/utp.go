@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 
 	"github.com/anacrolix/utp"
@@ -83,7 +84,7 @@ func (t *utpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to socket dial")
 	}
-	defer conn.Close()
+	defer utils.CloseVerbose(conn)
 
 	_, err = conn.Write(data)
 	return errors.Wrap(err, "Failed to write data")
@@ -107,6 +108,6 @@ func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 			return
 		}
 		msg.RemoteAddress = t.getRemoteAddress(conn)
-		t.handlePacket(msg)
+		go t.packetHandler.Handle(context.TODO(), msg)
 	}
 }

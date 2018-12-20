@@ -17,8 +17,11 @@
 package index
 
 import (
+	"bytes"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/ugorji/go/codec"
 )
 
 // ObjectLifeline represents meta information for record object.
@@ -29,4 +32,26 @@ type ObjectLifeline struct {
 	Parent              core.RecordRef
 	Delegates           map[core.RecordRef]core.RecordRef
 	State               record.State
+}
+
+// EncodeObjectLifeline converts lifeline index into binary format.
+func EncodeObjectLifeline(index *ObjectLifeline) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+	err := enc.Encode(index)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// DecodeObjectLifeline converts byte array into lifeline index struct.
+func DecodeObjectLifeline(buf []byte) (*ObjectLifeline, error) {
+	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
+	var index ObjectLifeline
+	err := dec.Decode(&index)
+	if err != nil {
+		return nil, err
+	}
+	return &index, nil
 }

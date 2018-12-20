@@ -28,6 +28,7 @@ import (
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/pkg/errors"
 )
@@ -61,8 +62,8 @@ func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress stri
 	return transport, nil
 }
 
-func (q *quicTransport) send(recvAddress string, data []byte) error {
-	conn, ok := q.connections[recvAddress]
+func (t *quicTransport) send(recvAddress string, data []byte) error {
+	conn, ok := t.connections[recvAddress]
 	var stream quic.Stream
 	var err error
 	if !ok {
@@ -71,7 +72,7 @@ func (q *quicTransport) send(recvAddress string, data []byte) error {
 		if err != nil {
 			return errors.Wrap(err, "[ send ] failed to create a connection")
 		}
-		q.connections[recvAddress] = quicConnection{session, stream}
+		t.connections[recvAddress] = quicConnection{session, stream}
 	} else {
 		stream = conn.stream
 	}
@@ -89,75 +90,52 @@ func (q *quicTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (q *quicTransport) Listen(ctx context.Context) error {
+func (t *quicTransport) Listen(ctx context.Context) error {
 	log.Debug("Start QUIC transport")
 	for {
-		session, err := q.l.Accept()
+		session, err := t.l.Accept()
 		if err != nil {
-			<-q.disconnectFinished
+			<-t.disconnectFinished
 			return err
 		}
 
 		log.Debugf("accept from: %s", session.RemoteAddr().String())
-		go q.handleAcceptedConnection(session)
+		go t.handleAcceptedConnection(session)
 	}
 }
 
 // Stop stops networking.
-func (q *quicTransport) Stop() {
-	q.mutex.Lock()
-	defer q.mutex.Unlock()
+func (t *quicTransport) Stop() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 
 	log.Debug("[ Stop ] Stop QUIC transport")
-	q.prepareDisconnect()
+	t.prepareDisconnect()
 
-	err := q.l.Close()
-	if err != nil {
-		log.Errorln("[ Stop ] Failed to close socket:", err.Error())
+	utils.CloseVerbose(t.l)
+
+	for _, conn := range t.connections {
+		utils.CloseVerbose(conn.stream)
+		utils.CloseVerbose(conn.session)
 	}
 
-	err = q.closeConnections()
-	if err != nil {
-		log.Error(err, "[ Stop ] failed to close sessions")
-	}
-	err = q.conn.Close()
-	if err != nil {
-		log.Error(err, "[ Stop ] failed to close a connection")
-	}
+	utils.CloseVerbose(t.conn)
 }
 
-func (q *quicTransport) handleAcceptedConnection(session quic.Session) {
+func (t *quicTransport) handleAcceptedConnection(session quic.Session) {
 	stream, err := session.AcceptStream()
 	if err != nil {
 		log.Error(err, "[ handleAcceptedConnection ] failed to get a stream")
 	}
 
-	msg, err := q.serializer.DeserializePacket(stream)
+	msg, err := t.serializer.DeserializePacket(stream)
 	if err != nil {
 		log.Error(err, "[ handleAcceptedConnection ] failed to deserialize a packet")
 	}
 
-	go q.handlePacket(msg)
+	go t.packetHandler.Handle(context.TODO(), msg)
 
-	err = stream.Close()
-	if err != nil {
-		log.Error(err, "[ handleAcceptedConnection ] failed to close a stream")
-	}
-}
-
-func (q *quicTransport) closeConnections() error {
-	var err error
-	for _, conn := range q.connections {
-		err = conn.stream.Close()
-		if err != nil {
-			return errors.Wrap(err, "[ closeConnections ] failed to close a stream")
-		}
-		err = conn.session.Close()
-		if err != nil {
-			return errors.Wrap(err, "[ closeConnections ] failed to close a session")
-		}
-	}
-	return nil
+	utils.CloseVerbose(stream)
 }
 
 func createConnection(addr string) (quic.Session, quic.Stream, error) {

@@ -35,7 +35,7 @@ var type2idTests = []struct {
 	id  TypeID
 }{
 	// request records
-	{"CallRequest", &CallRequest{}, typeCallRequest},
+	{"RequestRecord", &RequestRecord{}, typeCallRequest},
 
 	// result records
 	{"ObjectActivateRecord", &ObjectActivateRecord{}, typeActivate},

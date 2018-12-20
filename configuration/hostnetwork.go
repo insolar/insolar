@@ -18,7 +18,7 @@ package configuration
 
 // Transport holds transport protocol configuration for HostNetwork
 type Transport struct {
-	// protocol type UTP or KCP
+	// protocol type
 	Protocol string
 	// Address to listen
 	Address string

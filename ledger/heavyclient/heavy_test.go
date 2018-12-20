@@ -83,8 +83,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// Mock5: RecentStorageMock
 	recentMock := recentstorage.NewRecentStorageMock(t)
 	recentMock.ClearZeroTTLObjectsMock.Return()
-	recentMock.GetObjectsMock.Return(map[core.RecordID]int{})
-	recentMock.GetRequestsMock.Return([]core.RecordID{})
+	recentMock.GetObjectsMock.Return(nil)
+	recentMock.GetRequestsMock.Return(nil)
 	recentMock.ClearObjectsMock.Return()
 
 	// Mock6: JetCoordinatorMock
@@ -99,7 +99,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock N8: Active List Swapper mock
 	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock.MoveSyncToActiveFunc = func() error { return nil }
 
 	// Mock N8: Crypto things mock
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)

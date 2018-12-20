@@ -151,7 +151,10 @@ func (mb *TestMessageBus) Send(
 
 	reply, err := handler(ctx, parcel)
 	if mb.WritingTape != nil {
-		inslogger.FromContext(ctx).Debugf("Writing message %+v on the tape", m)
+		// WARNING! The following commented line of code is cursed.
+		// It makes some test (e.g. TestNilResults) hang under the debugger, and we have no idea why.
+		// Don't uncomment unless you solved this mystery.
+		// inslogger.FromContext(ctx).Debugf("Writing message %+v on the tape", m)
 		mb.WritingTape = append(mb.WritingTape, TapeRecord{Message: m, Reply: reply, Error: err})
 	}
 

@@ -52,6 +52,7 @@ type ObjectState interface {
 
 // ResultRecord represents result of a VM method.
 type ResultRecord struct {
+	Object  core.RecordID
 	Request core.RecordRef
 	Payload []byte
 }

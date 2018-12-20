@@ -102,7 +102,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 
 	for name := range contracts {
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
+			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -160,7 +160,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
+			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -176,6 +176,10 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}
+		_, err = cb.ArtifactManager.RegisterResult(ctx, *domainRef, *codeRef, nil)
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] Can't SetRecord")
+		}
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
 
@@ -188,6 +192,10 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			*codeRef,
 			nil,
 		)
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] Can't ActivatePrototype")
+		}
+		_, err = cb.ArtifactManager.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ActivatePrototype")
 		}

@@ -107,17 +107,6 @@ func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.P
 	return res
 }
 
-func (cb *CaseBind) ToExecutorResultsMessage(ctx context.Context, ref Ref, pending bool, queue []message.ExecutionQueueElement) *message.ExecutorResults {
-	res := &message.ExecutorResults{
-		RecordRef: ref,
-		Pending:   pending,
-		Requests:  cb.getCaseBindForMessage(ctx),
-		Queue:     queue,
-	}
-
-	return res
-}
-
 func (cb *CaseBind) NewRequest(msg core.Message, request Ref, mb core.MessageBus) *CaseRequest {
 	res := CaseRequest{
 		Message:    msg,
@@ -164,6 +153,7 @@ func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byt
 func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb CaseBind) (int, error) {
 	os := lr.UpsertObjectState(ref)
 	vs := os.StartValidation()
+	vs.ArtifactManager = lr.ArtifactManager
 
 	vs.Lock()
 	defer vs.Unlock()
@@ -261,8 +251,22 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
+
+	// now we have 2 different types of data in message.ExecutorResults
+	// one part of it is about consensus
+	// another one is about prepare state on new executor after pulse
+	// TODO make it in different goroutines
+
+	// prepare state after previous executor
+	err := lr.prepareObjectState(ctx, msg)
+	if err != nil {
+		return &reply.Error{}, err
+	}
+
+	// validation things
 	c := lr.GetConsensus(ctx, msg.RecordRef)
 	c.AddExecutor(ctx, inmsg, msg)
+
 	return &reply.OK{}, nil
 }
 

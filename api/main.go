@@ -47,6 +47,7 @@ type Runner struct {
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
 	NodeNetwork         core.NodeNetwork         `inject:""`
+	PulseStorage        core.PulseStorage        `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
@@ -128,7 +129,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	return &ar, nil
 }
 
-// IsAPIRunner is implementation of APIRunner interface
+// IsAPIRunner is implementation of APIRunner interface for component manager
 func (ar *Runner) IsAPIRunner() bool {
 	return true
 }

@@ -13,7 +13,7 @@ pulsar:
   numberofrandomhosts: 1
   numberdelta: 10
   distributiontransport:
-    protocol: UTP
+    protocol: TCP
     address: 0.0.0.0:58091
     behindnat: false
   pulsedistributor:

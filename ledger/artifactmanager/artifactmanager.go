@@ -78,7 +78,7 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *LedgerArtifactManager) RegisterRequest(
-	ctx context.Context, parcel core.Parcel,
+	ctx context.Context, obj core.RecordRef, parcel core.Parcel,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.RegisterRequest starts ...")
 	var err error
@@ -89,8 +89,9 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		return nil, err
 	}
 
-	rec := record.CallRequest{
+	rec := record.RequestRecord{
 		Payload: message.ParcelToBytes(parcel),
+		Object:  *obj.Record(),
 	}
 	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.Pulse.PulseNumber, &rec)
 	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
@@ -189,12 +190,12 @@ func (m *LedgerArtifactManager) GetObject(
 		State:    state,
 		Approved: approved,
 	}
-	genericReact, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, currentPulse.Pulse)
+	rep, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, currentPulse.Pulse)
 	if err != nil {
 		return nil, err
 	}
 
-	switch r := genericReact.(type) {
+	switch r := rep.(type) {
 	case *reply.Object:
 		desc = &ObjectDescriptor{
 			ctx:          ctx,
@@ -213,6 +214,27 @@ func (m *LedgerArtifactManager) GetObject(
 		err = ErrUnexpectedReply
 	}
 	return desc, err
+}
+
+// HasPendingRequests returns true if object has unclosed requests.
+func (m *LedgerArtifactManager) HasPendingRequests(
+	ctx context.Context,
+	object core.RecordRef,
+) (bool, error) {
+	currentPulse, err := m.db.GetLatestPulse(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	rep, err := m.bus(ctx).Send(ctx, &message.GetPendingRequests{Object: object}, currentPulse.Pulse, nil)
+	if err != nil {
+		return false, err
+	}
+	requests, ok := rep.(*reply.HasPendingRequests)
+	if !ok {
+		return false, ErrUnexpectedReply
+	}
+	return requests.Has, nil
 }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.
@@ -492,7 +514,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 
 // RegisterResult saves VM method call result.
 func (m *LedgerArtifactManager) RegisterResult(
-	ctx context.Context, request core.RecordRef, payload []byte,
+	ctx context.Context, object, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	var err error
 	defer instrument(ctx, "RegisterResult").err(&err).end()
@@ -505,6 +527,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 	recid, err := m.setRecord(
 		ctx,
 		&record.ResultRecord{
+			Object:  *object.Record(),
 			Request: request,
 			Payload: payload,
 		},
