@@ -118,7 +118,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	gil.ReleaseMock.Return()
 
 	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock.MoveSyncToActiveFunc = func() error { return nil }
 
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
 	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
@@ -205,7 +205,7 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	gil.ReleaseMock.Return()
 
 	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock.MoveSyncToActiveFunc = func() error { return nil }
 
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
 	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
