@@ -20,6 +20,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
@@ -131,10 +132,36 @@ func (m *PulseManager) processEndPulse(
 			if dropErr != nil {
 				return errors.Wrap(dropErr, "processDrop failed")
 			}
+
+			m.sendPendingRequests(ctx, currentPulse, jetID)
+
 			return nil
 		})
 	}
 	return g.Wait()
+}
+
+func (m *PulseManager) sendPendingRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) {
+	pendingRequests := m.RecentStorageProvider.GetStorage(jetID).GetRequests()
+	for objID, requests := range pendingRequests {
+		go func() {
+			var toSend []core.RecordID
+			for reqID := range requests {
+				toSend = append(toSend, reqID)
+			}
+			rep, err := m.Bus.Send(ctx, &message.PendingRequestsNotification{
+				Object:   objID,
+				Requests: toSend,
+			}, *pulse, nil)
+			if err != nil {
+				inslogger.FromContext(ctx).Error("failed to notify about pending requests")
+				return
+			}
+			if _, ok := rep.(*reply.OK); !ok {
+				inslogger.FromContext(ctx).Error("received unexpected reply on pending notification")
+			}
+		}()
+	}
 }
 
 func (m *PulseManager) createDrop(

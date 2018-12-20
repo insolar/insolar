@@ -434,3 +434,31 @@ func (*GetPendingRequests) DefaultRole() core.DynamicRole {
 func (m *GetPendingRequests) DefaultTarget() *core.RecordRef {
 	return &m.Object
 }
+
+// PendingRequestsNotification informs virtual node about unclosed requests.
+type PendingRequestsNotification struct {
+	ledgerMessage
+
+	Object   core.RecordID
+	Requests []core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*PendingRequestsNotification) Type() core.MessageType {
+	return core.TypePendingRequestsNotification
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *PendingRequestsNotification) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleUndefined
+}
+
+// DefaultRole returns role for this event
+func (*PendingRequestsNotification) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *PendingRequestsNotification) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.DomainID, m.Object)
+}
