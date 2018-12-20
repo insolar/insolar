@@ -47,36 +47,6 @@ func capture(f func()) string {
 	return buf.String()
 }
 
-// func mockCryptographyServiceWithResult(t *testing.T, result bool) *testutils.CryptographyServiceMock {
-// 	cryptographyServiceMock := testutils.NewCryptographyServiceMock(t)
-// 	cryptographyServiceMock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
-// 		return "publicKey", nil
-// 	}
-// 	cryptographyServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-// 		signature := core.SignatureFromBytes([]byte("signature"))
-// 		return &signature, nil
-// 	}
-// 	cryptographyServiceMock.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
-// 		return result
-// 	}
-// 	return cryptographyServiceMock
-// }
-//
-// func mockCryptographyService(t *testing.T) *testutils.CryptographyServiceMock {
-// 	return mockCryptographyServiceWithResult(t, true)
-// }
-//
-// func mockKeyProcessor(t *testing.T) *testutils.KeyProcessorMock {
-// 	keyProcessor := testutils.NewKeyProcessorMock(t)
-// 	keyProcessor.ExportPublicKeyFunc = func(p crypto.PublicKey) (r []byte, r1 error) {
-// 		return []byte("publicKey"), nil
-// 	}
-// 	keyProcessor.ImportPublicKeyFunc = func(p []byte) (r crypto.PublicKey, r1 error) {
-// 		return "publicKey", nil
-// 	}
-// 	return keyProcessor
-// }
-
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	actualConnectionType := ""
 	actualAddress := ""
@@ -753,9 +723,9 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	pulsar := Pulsar{
-		Neighbours:          map[string]*Neighbour{},
-		CryptographyService: cryptoService,
-		OwnedBftRow:         map[string]*BftCell{},
+		Neighbours:                 map[string]*Neighbour{},
+		CryptographyService:        cryptoService,
+		OwnedBftRow:                map[string]*BftCell{},
 		PlatformCryptographyScheme: scheme,
 	}
 	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
@@ -824,8 +794,8 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 		OwnedBftRow:         map[string]*BftCell{},
 		bftGrid:             map[string]map[string]*BftCell{},
 		Neighbours: map[string]*Neighbour{
-			"1": &Neighbour{},
-			"2": &Neighbour{},
+			"1": {},
+			"2": {},
 		},
 	}
 
@@ -871,14 +841,14 @@ func TestPulsar_verify_Success(t *testing.T) {
 	clientMock := pulsartestutils.MockRPCClientWrapper{}
 	clientMock.On("IsInitialised").Return(true)
 
-	pulsarCryptoService :=  cryptography.NewKeyBoundCryptographyService(pulsarPrivate)
+	pulsarCryptoService := cryptography.NewKeyBoundCryptographyService(pulsarPrivate)
 	secondCryptoService := cryptography.NewKeyBoundCryptographyService(secondPrivate)
 	thirdCryptoService := cryptography.NewKeyBoundCryptographyService(thirdPrivate)
 
 	pulsar := &Pulsar{
 		KeyProcessor:                   platformpolicy.NewKeyProcessor(),
 		StateSwitcher:                  mockSwitcher,
-		CryptographyService:           pulsarCryptoService,
+		CryptographyService:            pulsarCryptoService,
 		PlatformCryptographyScheme:     platformpolicy.NewPlatformCryptographyScheme(),
 		PublicKeyRaw:                   currentPulsarPublicKey,
 		OwnedBftRow:                    map[string]*BftCell{},

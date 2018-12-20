@@ -32,8 +32,9 @@ type Payload struct {
 	Body      PayloadData
 }
 
+// PayloadData is a body of Payload
 type PayloadData interface {
-	Hash(hasher core.Hasher) ([]byte, error)
+	Hash(hashProvider core.Hasher) ([]byte, error)
 }
 
 // HandshakePayload is a struct for handshake step
@@ -41,13 +42,14 @@ type HandshakePayload struct {
 	Entropy core.Entropy
 }
 
-func (hp *HandshakePayload) Hash(hasher core.Hasher) ([]byte, error) {
-	_, err := hasher.Write(hp.Entropy[:])
-	if err != nil{
+// Hash calculates hash of payload
+func (hp *HandshakePayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+	_, err := hashProvider.Write(hp.Entropy[:])
+	if err != nil {
 		return nil, err
 	}
 
-	return hasher.Sum(nil), err
+	return hashProvider.Sum(nil), err
 }
 
 // EntropySignaturePayload is a struct for sending Sign of Entropy step
@@ -56,17 +58,18 @@ type EntropySignaturePayload struct {
 	EntropySignature []byte
 }
 
-func (es *EntropySignaturePayload) Hash(hasher core.Hasher) ([]byte, error) {
-	_, err := hasher.Write(es.EntropySignature[:])
-	if err != nil{
+// Hash calculates hash of payload
+func (es *EntropySignaturePayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+	_, err := hashProvider.Write(es.EntropySignature[:])
+	if err != nil {
 		return nil, err
 	}
-	_, err = hasher.Write(es.PulseNumber.Bytes())
-	if err != nil{
+	_, err = hashProvider.Write(es.PulseNumber.Bytes())
+	if err != nil {
 		return nil, err
 	}
 
-	return hasher.Sum(nil), err
+	return hashProvider.Sum(nil), err
 }
 
 // EntropyPayload is a struct for sending Entropy step
@@ -75,17 +78,18 @@ type EntropyPayload struct {
 	Entropy     core.Entropy
 }
 
-func (ep *EntropyPayload) Hash(hasher core.Hasher) ([]byte, error) {
-	_, err := hasher.Write(ep.Entropy[:])
-	if err != nil{
+// Hash calculates hash of payload
+func (ep *EntropyPayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+	_, err := hashProvider.Write(ep.Entropy[:])
+	if err != nil {
 		return nil, err
 	}
-	_, err = hasher.Write(ep.PulseNumber.Bytes())
-	if err != nil{
+	_, err = hashProvider.Write(ep.PulseNumber.Bytes())
+	if err != nil {
 		return nil, err
 	}
 
-	return hasher.Sum(nil), err
+	return hashProvider.Sum(nil), err
 }
 
 // VectorPayload is a struct for sending vector of Entropy step
@@ -94,22 +98,23 @@ type VectorPayload struct {
 	Vector      map[string]*BftCell
 }
 
-func (vp *VectorPayload) Hash(hasher core.Hasher) ([]byte, error) {
+// Hash calculates hash of payload
+func (vp *VectorPayload) Hash(hashProvider core.Hasher) ([]byte, error) {
 	var sortedKeys []string
-	for key := range  vp.Vector{
+	for key := range vp.Vector {
 		sortedKeys = append(sortedKeys, key)
 	}
 	sort.Strings(sortedKeys)
 
 	cborH := &codec.CborHandle{}
-	for _, key := range sortedKeys{
+	for _, key := range sortedKeys {
 		var b bytes.Buffer
 		enc := codec.NewEncoder(&b, cborH)
 
 		threadUnsafeCell := vp.Vector[key]
 		threadSaveCell := &BftCell{
-			Sign: threadUnsafeCell.GetSign(),
-			Entropy: threadUnsafeCell.GetEntropy(),
+			Sign:              threadUnsafeCell.GetSign(),
+			Entropy:           threadUnsafeCell.GetEntropy(),
 			IsEntropyReceived: threadUnsafeCell.GetIsEntropyReceived(),
 		}
 
@@ -117,18 +122,18 @@ func (vp *VectorPayload) Hash(hasher core.Hasher) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		_, err = hasher.Write(b.Bytes())
+		_, err = hashProvider.Write(b.Bytes())
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	_, err := hasher.Write(vp.PulseNumber.Bytes())
-	if err != nil{
+	_, err := hashProvider.Write(vp.PulseNumber.Bytes())
+	if err != nil {
 		return nil, err
 	}
 
-	return hasher.Sum(nil), nil
+	return hashProvider.Sum(nil), nil
 }
 
 // PulsePayload is a struct for sending finished pulse to all pulsars
@@ -136,71 +141,73 @@ type PulsePayload struct {
 	Pulse core.Pulse
 }
 
-func (pp *PulsePayload) Hash(hasher core.Hasher) ([]byte, error) {
+// Hash calculates hash of payload
+func (pp *PulsePayload) Hash(hashProvider core.Hasher) ([]byte, error) {
 	var sortedKeys []string
-	for key := range  pp.Pulse.Signs{
+	for key := range pp.Pulse.Signs {
 		sortedKeys = append(sortedKeys, key)
 	}
 	sort.Strings(sortedKeys)
 
 	var b bytes.Buffer
 	cborH := &codec.CborHandle{}
-	for _, key := range sortedKeys{
+	for _, key := range sortedKeys {
 
 		enc := codec.NewEncoder(&b, cborH)
 		err := enc.Encode(pp.Pulse.Signs[key])
 		if err != nil {
 			return nil, err
 		}
-		_, err = hasher.Write(b.Bytes())
+		_, err = hashProvider.Write(b.Bytes())
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	_, err := hasher.Write(pp.Pulse.Entropy[:])
-	if err != nil{
+	_, err := hashProvider.Write(pp.Pulse.Entropy[:])
+	if err != nil {
 		return nil, err
 	}
-	_, err = hasher.Write(pp.Pulse.PulseNumber.Bytes())
-	if err != nil{
-		return nil, err
-	}
-
-	_, err = hasher.Write([]byte(strconv.Itoa(pp.Pulse.EpochPulseNumber)))
-	if err != nil{
+	_, err = hashProvider.Write(pp.Pulse.PulseNumber.Bytes())
+	if err != nil {
 		return nil, err
 	}
 
-	_, err = hasher.Write(pp.Pulse.OriginID[:])
-	if err != nil{
+	_, err = hashProvider.Write([]byte(strconv.Itoa(pp.Pulse.EpochPulseNumber)))
+	if err != nil {
 		return nil, err
 	}
 
-	return hasher.Sum(nil), nil
+	_, err = hashProvider.Write(pp.Pulse.OriginID[:])
+	if err != nil {
+		return nil, err
+	}
+
+	return hashProvider.Sum(nil), nil
 }
 
+// PulseSenderConfirmationPayload is a struct with info about pulse's confirmations
 type PulseSenderConfirmationPayload struct {
 	core.PulseSenderConfirmation
 }
 
-func (ps *PulseSenderConfirmationPayload) Hash(hasher core.Hasher) ([]byte, error) {
-	_, err := hasher.Write(ps.PulseNumber.Bytes())
-	if err != nil{
+// Hash calculates hash of payload
+func (ps *PulseSenderConfirmationPayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+	_, err := hashProvider.Write(ps.PulseNumber.Bytes())
+	if err != nil {
 		return nil, err
 	}
-	_, err = hasher.Write([]byte(ps.ChosenPublicKey))
-	if err != nil{
+	_, err = hashProvider.Write([]byte(ps.ChosenPublicKey))
+	if err != nil {
 		return nil, err
 	}
-	_, err = hasher.Write(ps.Entropy[:])
-	if err != nil{
+	_, err = hashProvider.Write(ps.Entropy[:])
+	if err != nil {
 		return nil, err
 	}
-	_, err = hasher.Write(ps.Signature)
-	if err != nil{
+	_, err = hashProvider.Write(ps.Signature)
+	if err != nil {
 		return nil, err
 	}
-	return hasher.Sum(nil), nil
+	return hashProvider.Sum(nil), nil
 }
-

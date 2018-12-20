@@ -34,11 +34,10 @@ type Handler struct {
 	Pulsar *Pulsar
 }
 
+// NewHandler is a constructor of Handler
 func NewHandler(pulsar *Pulsar) *Handler {
 	return &Handler{Pulsar: pulsar}
 }
-
-
 
 func (handler *Handler) isRequestValid(ctx context.Context, request *Payload) (success bool, neighbour *Neighbour, err error) {
 	if handler.Pulsar.IsStateFailed() {
