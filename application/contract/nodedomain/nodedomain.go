@@ -66,14 +66,11 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	return newNodeRef, err
 }
 
+// GetNodeRefByPK returns node ref
 func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 	nodeRef, ok := nd.NodeIndexPK[publicKey]
 	if !ok {
-		for k := range nd.NodeIndexPK {
-			return k + "/n/n/n" + publicKey, nil
-		}
-		// return string(len(nd.NodeIndexPK)), nil
-		// return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
+		return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
 	}
 	return nodeRef, nil
 }
