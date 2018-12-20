@@ -87,13 +87,6 @@ func (ph *PacketHeader) compactPulseAndCustomFlags() uint32 {
 }
 
 func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
-	if header == nil {
-		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
-	}
-	if header.PacketT != Phase1 {
-		return errors.New("[ Phase1Packet.DeserializeWithoutHeader ] Wrong packet type")
-	}
-
 	p1p.packetHeader = *header
 
 	err := p1p.pulseData.Deserialize(data)
@@ -415,13 +408,6 @@ func (npp *NodePulseProof) Serialize() ([]byte, error) {
 // ----------------------------------PHASE 2--------------------------------
 
 func (p2p *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
-	if header == nil {
-		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
-	}
-	if header.PacketT != Phase2 {
-		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Wrong packet type")
-	}
-
 	p2p.packetHeader = *header
 
 	err := binary.Read(data, defaultByteOrder, &p2p.globuleHashSignature)
@@ -638,6 +624,8 @@ func (p3p *Phase3Packet) Deserialize(data io.Reader) error {
 }
 
 func (p3p *Phase3Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
+	p3p.packetHeader = *header
+
 	bitset, err := DeserializeBitSet(data)
 	if err != nil {
 		return errors.Wrap(err, "[ DeserializeWithoutHeader ] failed to deserialize a bitset")

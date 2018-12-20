@@ -63,11 +63,13 @@ func (p1p *Phase1Packet) Verify(crypto core.CryptographyService, key crypto.Publ
 }
 
 func (p1p *Phase1Packet) Sign(crypto core.CryptographyService) error {
-	panic("implement me")
+	return nil
 }
 
 func NewPhase1Packet() *Phase1Packet {
-	return &Phase1Packet{}
+	result := &Phase1Packet{}
+	result.packetHeader.PacketT = Phase1
+	return result
 }
 
 func (p1p *Phase1Packet) hasPulseDataExt() bool { // nolint: megacheck

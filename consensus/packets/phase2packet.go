@@ -39,6 +39,15 @@ type Phase2Packet struct {
 	SignatureHeaderSection2 [SignatureLength]byte
 }
 
+func NewPhase2Packet(globuleHashSignature GlobuleHashSignature, bitSet BitSet) *Phase2Packet {
+	result := &Phase2Packet{
+		globuleHashSignature: globuleHashSignature,
+		bitSet:               bitSet,
+	}
+	result.packetHeader.PacketT = Phase2
+	return result
+}
+
 func (p2p *Phase2Packet) GetType() PacketType {
 	return p2p.packetHeader.PacketT
 }
@@ -62,7 +71,7 @@ func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.Publ
 }
 
 func (p2p *Phase2Packet) Sign(crypto core.CryptographyService) error {
-	panic("implement me")
+	return nil
 }
 
 func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {

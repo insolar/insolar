@@ -76,7 +76,7 @@ func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Pa
 	}
 	log.Debugf("Got %s request from host, shortID: %d", p.GetType(), p.GetOrigin())
 	if p.GetTarget() != tc.origin.ShortID {
-		log.Error("Error processing incoming message: target ID %d differs from origin %d", p.GetTarget(), tc.origin.ShortID)
+		log.Errorf("Error processing incoming message: target ID %d differs from origin %d", p.GetTarget(), tc.origin.ShortID)
 		return
 	}
 	sender, err := tc.resolver.ResolveConsensus(p.GetOrigin())

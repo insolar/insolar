@@ -42,7 +42,7 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	packet := packets.NewPhase3Packet(gSign, state.BitSet)
 
 	nodes := state.FirstPhaseState.UnsyncList.GetActiveNodes()
-	responses, err := tp.Communicator.ExchangePhase3(ctx, nodes, &packet)
+	responses, err := tp.Communicator.ExchangePhase3(ctx, nodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 3 ] Failed exchange packets on phase 3")
 	}

@@ -55,14 +55,16 @@ func (p3p *Phase3Packet) Verify(crypto core.CryptographyService, key crypto.Publ
 }
 
 func (p3p *Phase3Packet) Sign(crypto core.CryptographyService) error {
-	panic("implement me")
+	return nil
 }
 
-func NewPhase3Packet(globuleHashSignature GlobuleHashSignature, bitSet BitSet) Phase3Packet {
-	return Phase3Packet{
+func NewPhase3Packet(globuleHashSignature GlobuleHashSignature, bitSet BitSet) *Phase3Packet {
+	result := &Phase3Packet{
 		globuleHashSignature: globuleHashSignature,
 		bitset:               bitSet,
 	}
+	result.packetHeader.PacketT = Phase3
+	return result
 }
 
 func (p3p *Phase3Packet) GetBitset() BitSet {
