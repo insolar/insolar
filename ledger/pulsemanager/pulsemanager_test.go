@@ -146,7 +146,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	// Act
 	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop + 1 executor (no split)
+	assert.Equal(t, uint64(3), mbMock.SendMinimockCounter()) // 1 validator drop + 1 executor (no split) + 1 vm pending notify
 	savedIndex, err := db.GetObjectIndex(ctx, jetID, firstID, false)
 	require.NoError(t, err)
 
