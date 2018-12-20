@@ -47,6 +47,7 @@ type Runner struct {
 	GenesisDataProvider core.GenesisDataProvider `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
 	NodeNetwork         core.NodeNetwork         `inject:""`
+	PulseStorage        core.PulseStorage        `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
