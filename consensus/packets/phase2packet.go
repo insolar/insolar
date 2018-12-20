@@ -67,10 +67,55 @@ func (p2p *Phase2Packet) SetRouting(origin, target core.ShortNodeID) {
 }
 
 func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
-	return errors.New("implement me")
+	raw, err := p2p.rawFirstPart()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get raw first part of phase 2 packet")
+	}
+	valid := crypto.Verify(key, core.SignatureFromBytes(p2p.SignatureHeaderSection1[:]), raw)
+	if !valid {
+		return errors.New("first part bad signature")
+	}
+
+	if !p2p.hasSection2() {
+		return nil
+	}
+
+	raw, err = p2p.rawSecondPart()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get raw second part of phase 2 packet")
+	}
+	valid = crypto.Verify(key, core.SignatureFromBytes(p2p.SignatureHeaderSection2[:]), raw)
+	if !valid {
+		return errors.New("second part bad signature")
+	}
+	return nil
 }
 
 func (p2p *Phase2Packet) Sign(crypto core.CryptographyService) error {
+	raw, err := p2p.rawFirstPart()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get raw first part of phase 2 packet")
+	}
+	signature, err := crypto.Sign(raw)
+	if err != nil {
+		return errors.Wrap(err, "Failed to sign first part of phase 2 packet")
+	}
+	copy(p2p.SignatureHeaderSection1[:], signature.Bytes()[:SignatureLength])
+
+	if !p2p.hasSection2() {
+		return nil
+	}
+
+	raw, err = p2p.rawSecondPart()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get raw second part of phase 2 packet")
+	}
+	signature, err = crypto.Sign(raw)
+	if err != nil {
+		return errors.Wrap(err, "Failed to sign second part of phase 2 packet")
+	}
+	copy(p2p.SignatureHeaderSection2[:], signature.Bytes()[:SignatureLength])
+
 	return nil
 }
 

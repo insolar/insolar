@@ -470,7 +470,7 @@ func (p2p *Phase2Packet) Deserialize(data io.Reader) error {
 func (p2p *Phase2Packet) Serialize() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 
-	raw1, err := p2p.RawFirstPart()
+	raw1, err := p2p.rawFirstPart()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] failed to serialize first part")
 	}
@@ -487,7 +487,7 @@ func (p2p *Phase2Packet) Serialize() ([]byte, error) {
 		return result.Bytes(), nil
 	}
 
-	raw2, err := p2p.RawSecondPart()
+	raw2, err := p2p.rawSecondPart()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] failed to serialize second part")
 	}
@@ -503,7 +503,7 @@ func (p2p *Phase2Packet) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (p2p *Phase2Packet) RawFirstPart() ([]byte, error) {
+func (p2p *Phase2Packet) rawFirstPart() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 
 	packetHeaderRaw, err := p2p.packetHeader.Serialize()
@@ -532,7 +532,7 @@ func (p2p *Phase2Packet) RawFirstPart() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (p2p *Phase2Packet) RawSecondPart() ([]byte, error) {
+func (p2p *Phase2Packet) rawSecondPart() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 	for _, vote := range p2p.votesAndAnswers {
 		voteHeader := makeVoteHeader(vote)
