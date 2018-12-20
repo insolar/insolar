@@ -105,7 +105,15 @@ func (vp *VectorPayload) Hash(hasher core.Hasher) ([]byte, error) {
 	for _, key := range sortedKeys{
 		var b bytes.Buffer
 		enc := codec.NewEncoder(&b, cborH)
-		err := enc.Encode(vp.Vector[key])
+
+		threadUnsafeCell := vp.Vector[key]
+		threadSaveCell := &BftCell{
+			Sign: threadUnsafeCell.GetSign(),
+			Entropy: threadUnsafeCell.GetEntropy(),
+			IsEntropyReceived: threadUnsafeCell.GetIsEntropyReceived(),
+		}
+
+		err := enc.Encode(threadSaveCell)
 		if err != nil {
 			return nil, err
 		}
