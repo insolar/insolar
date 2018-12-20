@@ -17,35 +17,27 @@
 package pool
 
 import (
+	"context"
 	"io"
 	"net"
-	"time"
 
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // Consuming 1 byte; only usable for outgoing connections.
-func connectionClosedByPeer(conn net.Conn) bool {
-	err := conn.SetReadDeadline(time.Now())
-	if err != nil {
-		log.Errorln("[ connectionClosedByPeer ] Failed to set connection deadline: ", err.Error())
-	}
+func connectionClosedByPeer(ctx context.Context, conn net.Conn) bool {
+	logger := inslogger.FromContext(ctx)
 
 	n, err := conn.Read(make([]byte, 1))
 
 	if err == io.EOF || n > 0 {
 		if err != nil {
-			log.Errorln("[ connectionClosedByPeer ] Failed to close connection: ", err.Error())
+			logger.Errorln("[ connectionClosedByPeer ] Failed to close connection: ", err.Error())
 		} else {
-			log.Debug("[ connectionClosedByPeer ] Close connection to %s", conn.RemoteAddr())
+			logger.Debug("[ connectionClosedByPeer ] Close connection to %s", conn.RemoteAddr())
 		}
 
 		return true
-	}
-
-	err = conn.SetReadDeadline(time.Time{})
-	if err != nil {
-		log.Errorln("[ connectionClosedByPeer ] Failed to set connection deadline: ", err.Error())
 	}
 
 	return false
