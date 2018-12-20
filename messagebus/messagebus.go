@@ -46,11 +46,16 @@ type MessageBus struct {
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
+	PulseStorage               core.PulseStorage               `inject:""`
+	pm                         core.PulseManager
 
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
 
 	globalLock sync.RWMutex
+
+	waitingChan chan interface{}
+	waitingLock sync.RWMutex
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
@@ -59,6 +64,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	mb := &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
 		signmessages: config.Host.SignMessages,
+		waitingChan:  make(chan interface{}),
 	}
 	mb.globalLock.Lock()
 	return mb, nil
@@ -204,7 +210,23 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
+func (mb *MessageBus) OnPulse() {
+	tmp := mb.waitingChan
+	mb.waitingChan = make(chan interface{})
+	close(tmp)
+}
+
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+
+	pulse, err := mb.PulseStorage.Current(ctx)
+	if msg.Pulse() == pulse.NextPulseNumber {
+		<-mb.waitingChan
+	}
+
+	if msg.Pulse() != pulse.PulseNumber {
+		return nil, errors.New("incorrect pulse")
+	}
+
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {

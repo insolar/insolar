@@ -381,6 +381,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.PulseStorage.Unlock()
 	m.GIL.Release(ctx)
 
+	e, f := m.Bus.(interface{ OnPulse() })
+	if f {
+		e.OnPulse()
+	}
+
 	if !persist {
 		return nil
 	}
