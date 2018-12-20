@@ -19,7 +19,6 @@ package pulsar
 import (
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/platformpolicy"
@@ -36,18 +35,17 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	pulsar, err := NewPulsar(
-		configuration.Pulsar{},
-		cryptoService,
-		scheme,
-		keyProcessor,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	pubKey, err := cryptoService.GetPublicKey()
+	require.NoError(t, err)
+	pubKeyRaw, err := keyProcessor.ExportPublicKey(pubKey)
+	require.NoError(t, err)
+
+	pulsar := Pulsar{
+		CryptographyService:cryptoService,
+		PlatformCryptographyScheme:scheme,
+		KeyProcessor:keyProcessor,
+		PublicKeyRaw : string(pubKeyRaw),
+	}
 
 	t.Run("HandshakePayload", func(t *testing.T){
 		// Arrange
@@ -56,12 +54,12 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 
 		// Act
 		payload, firstError := pulsar.preparePayload(handshakePayload)
+		require.NoError(t, firstError)
 		require.NotNil(t, payload)
 		isVerified, secondError := pulsar.checkPayloadSignature(payload)
+		require.NoError(t, secondError)
 
 		// Assert
-		require.NoError(t, firstError)
-		require.NoError(t, secondError)
 		require.Equal(t, true, isVerified)
 		require.Equal(t, handshakePayload, payload.Body.(*HandshakePayload))
 	})
@@ -69,16 +67,17 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 	t.Run("EntropySignaturePayload", func(t *testing.T){
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
-		entropySignPayload := &EntropySignaturePayload{EntropySignature: entropyGenerator.GenerateEntropy()[:]}
+		entropy := entropyGenerator.GenerateEntropy()
+		entropySignPayload := &EntropySignaturePayload{EntropySignature: entropy[:]}
 
 		// Act
 		payload, firstError := pulsar.preparePayload(entropySignPayload)
+		require.NoError(t, firstError)
 		require.NotNil(t, payload)
 		isVerified, secondError := pulsar.checkPayloadSignature(payload)
+		require.NoError(t, secondError)
 
 		// Assert
-		require.NoError(t, firstError)
-		require.NoError(t, secondError)
 		require.Equal(t, true, isVerified)
 		require.Equal(t, entropySignPayload, payload.Body.(*EntropySignaturePayload))
 	})
@@ -90,12 +89,12 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 
 		// Act
 		payload, firstError := pulsar.preparePayload(entropyPayload)
+		require.NoError(t, firstError)
 		require.NotNil(t, payload)
 		isVerified, secondError := pulsar.checkPayloadSignature(payload)
+		require.NoError(t, secondError)
 
 		// Assert
-		require.NoError(t, firstError)
-		require.NoError(t, secondError)
 		require.Equal(t, true, isVerified)
 		require.Equal(t, entropyPayload, payload.Body.(*EntropyPayload))
 	})
@@ -117,12 +116,12 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		t.Run("preparePayload works for VectorPayload", func(t *testing.T){
 			// Act
 			payload, firstError := pulsar.preparePayload(firstVector)
+			require.NoError(t, firstError)
 			require.NotNil(t, payload)
 			isVerified, secondError := pulsar.checkPayloadSignature(payload)
+			require.NoError(t, secondError)
 
 			// Assert
-			require.NoError(t, firstError)
-			require.NoError(t, secondError)
 			require.Equal(t, true, isVerified)
 			require.Equal(t, firstVector, payload.Body.(*VectorPayload))
 		})
@@ -130,13 +129,13 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		t.Run("checkPayloadSignature work for maps", func(t *testing.T){
 			// Act
 			payload, firstError := pulsar.preparePayload(firstVector)
+			require.NoError(t, firstError)
 			require.NotNil(t, payload)
 			payload.Body = secondVector
 			isVerified, secondError := pulsar.checkPayloadSignature(payload)
+			require.NoError(t, secondError)
 
 			// Assert
-			require.NoError(t, firstError)
-			require.NoError(t, secondError)
 			require.Equal(t, true, isVerified)
 			require.Equal(t, secondVector, payload.Body.(*VectorPayload))
 		})
@@ -147,9 +146,10 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		firstEntropy := entropyGenerator.GenerateEntropy()
 		secondEntropy := entropyGenerator.GenerateEntropy()
+		pulseEntropy := entropyGenerator.GenerateEntropy()
 		pulsePayload := &PulsePayload{
 			Pulse : core.Pulse{
-				Entropy: entropyGenerator.GenerateEntropy(),
+				Entropy: pulseEntropy,
 				Signs: map[string]core.PulseSenderConfirmation{
 					"first" : core.PulseSenderConfirmation{Entropy:firstEntropy},
 					"second" : core.PulseSenderConfirmation{Entropy:secondEntropy},
@@ -157,7 +157,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		}}
 		secondPulsePayload := &PulsePayload{
 			Pulse : core.Pulse{
-				Entropy: entropyGenerator.GenerateEntropy(),
+				Entropy: pulseEntropy,
 				Signs: map[string]core.PulseSenderConfirmation{
 					"second" : core.PulseSenderConfirmation{Entropy:secondEntropy},
 					"first" : core.PulseSenderConfirmation{Entropy:firstEntropy},
@@ -167,12 +167,12 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		t.Run("preparePayload works for PulsePayload", func(t *testing.T){
 			// Act
 			payload, firstError := pulsar.preparePayload(pulsePayload)
+			require.NoError(t, firstError)
 			require.NotNil(t, payload)
 			isVerified, secondError := pulsar.checkPayloadSignature(payload)
+			require.NoError(t, secondError)
 
 			// Assert
-			require.NoError(t, firstError)
-			require.NoError(t, secondError)
 			require.Equal(t, true, isVerified)
 			require.Equal(t, pulsePayload, payload.Body.(*PulsePayload))
 		})
@@ -180,13 +180,13 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		t.Run("checkPayloadSignature work for maps", func(t *testing.T){
 			// Act
 			payload, firstError := pulsar.preparePayload(pulsePayload)
+			require.NoError(t, firstError)
 			require.NotNil(t, payload)
 			payload.Body = secondPulsePayload
 			isVerified, secondError := pulsar.checkPayloadSignature(payload)
+			require.NoError(t, secondError)
 
 			// Assert
-			require.NoError(t, firstError)
-			require.NoError(t, secondError)
 			require.Equal(t, true, isVerified)
 			require.Equal(t, secondPulsePayload, payload.Body.(*PulsePayload))
 		})
@@ -199,12 +199,12 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 
 		// Act
 		payload, firstError := pulsar.preparePayload(payloadBody)
+		require.NoError(t, firstError)
 		require.NotNil(t, payload)
 		isVerified, secondError := pulsar.checkPayloadSignature(payload)
+		require.NoError(t, secondError)
 
 		// Assert
-		require.NoError(t, firstError)
-		require.NoError(t, secondError)
 		require.Equal(t, true, isVerified)
 		require.Equal(t, payloadBody, payload.Body.(*PulseSenderConfirmationPayload))
 
