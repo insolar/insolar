@@ -18,8 +18,8 @@ package pulsar
 
 import (
 	"bytes"
-	"encoding/binary"
 	"sort"
+	"strconv"
 
 	"github.com/insolar/insolar/core"
 	"github.com/ugorji/go/codec"
@@ -159,11 +159,7 @@ func (pp *PulsePayload) Hash(hasher core.Hasher) ([]byte, error) {
 		return nil, err
 	}
 
-	err = binary.Write(&b, binary.LittleEndian, pp.Pulse.EpochPulseNumber)
-	if err != nil{
-		return nil, err
-	}
-	_, err = hasher.Write(b.Bytes())
+	_, err = hasher.Write([]byte(strconv.Itoa(pp.Pulse.EpochPulseNumber)))
 	if err != nil{
 		return nil, err
 	}
