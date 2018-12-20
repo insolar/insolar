@@ -217,6 +217,22 @@ func (db *DB) SplitJetTree(
 	return left, right, nil
 }
 
+// CloneJetTree copies tree from one pulse to another. Use it to copy past tree into new pulse.
+func (db *DB) CloneJetTree(
+	ctx context.Context, from, to core.PulseNumber,
+) error {
+	db.jetTreeLock.Lock()
+	defer db.jetTreeLock.Unlock()
+
+	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
+	tree, err := db.getJetTree(ctx, from)
+	if err != nil {
+		return err
+	}
+
+	return db.set(ctx, k, tree.Bytes())
+}
+
 // AddJets stores a list of jets of the current node.
 func (db *DB) AddJets(ctx context.Context, jetIDs ...core.RecordID) error {
 	db.addJetLock.Lock()
