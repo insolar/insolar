@@ -346,6 +346,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
+		es.Unlock()
 		return nil, os.WrapError(nil, "loop detected")
 	}
 
@@ -419,10 +420,10 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 		return &reply.OK{}, nil
 	}
 	es := os.ExecutionState
-	es.pending = NotPending
 	os.Unlock()
 
 	es.Lock()
+	es.pending = NotPending
 	if es.Current != nil {
 		es.Unlock()
 		return nil, errors.New("received PendingFinished when we are already executing")
