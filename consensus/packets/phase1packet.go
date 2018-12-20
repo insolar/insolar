@@ -59,10 +59,27 @@ func (p1p *Phase1Packet) GetType() PacketType {
 }
 
 func (p1p *Phase1Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
-	return errors.New("implement me")
+	raw, err := p1p.rawBytes()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get raw part of phase 1 packet")
+	}
+	valid := crypto.Verify(key, core.SignatureFromBytes(p1p.Signature[:]), raw)
+	if !valid {
+		return errors.New("bad signature")
+	}
+	return nil
 }
 
 func (p1p *Phase1Packet) Sign(crypto core.CryptographyService) error {
+	raw, err := p1p.rawBytes()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get raw part of phase 1 packet")
+	}
+	signature, err := crypto.Sign(raw)
+	if err != nil {
+		return errors.Wrap(err, "Failed to sign phase 1 packet")
+	}
+	copy(p1p.Signature[:], signature.Bytes()[:SignatureLength])
 	return nil
 }
 

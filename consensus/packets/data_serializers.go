@@ -140,19 +140,25 @@ func (p1p *Phase1Packet) Serialize() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 
 	if !p1p.hasSection2() && len(p1p.claims) > 0 {
-		return nil, errors.New("invalid Phase1Packet")
+		return nil, errors.New("[ Phase1Packet.Serialize ] Invalid Phase1Packet")
 	}
 
-	raw, err := p1p.RawBytes()
+	raw, err := p1p.rawBytes()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get raw bytes")
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Failed to get raw bytes")
 	}
 	result.Write(raw)
+
+	// serializing of signature
+	err = binary.Write(result, defaultByteOrder, p1p.Signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't write signature")
+	}
 
 	return result.Bytes(), nil
 }
 
-func (p1p *Phase1Packet) RawBytes() ([]byte, error) {
+func (p1p *Phase1Packet) rawBytes() ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 
 	// serializing of  packetHeader
@@ -193,12 +199,6 @@ func (p1p *Phase1Packet) RawBytes() ([]byte, error) {
 	_, err = result.Write(claimRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
-	}
-
-	// serializing of signature
-	err = binary.Write(result, defaultByteOrder, p1p.Signature)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't write signature")
 	}
 
 	return result.Bytes(), nil
