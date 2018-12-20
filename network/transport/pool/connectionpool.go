@@ -48,7 +48,7 @@ func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (
 
 	logger.Debugf("[ GetConnection ] Finding connection to %s in pool: %s", address, ok)
 
-	if ok && !connectionClosedByPeer(conn) {
+	if ok && !connectionClosedByPeer(ctx, conn) {
 		return conn, nil
 	}
 
@@ -74,7 +74,7 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 	logger.Debugf("[ getOrCreateConnection ] Finding connection to %s in pool: %s", address, ok)
 
 	if ok {
-		if !connectionClosedByPeer(conn) {
+		if !connectionClosedByPeer(ctx, conn) {
 			return conn, nil
 		}
 

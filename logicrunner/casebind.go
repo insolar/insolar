@@ -107,17 +107,6 @@ func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.P
 	return res
 }
 
-func (cb *CaseBind) ToExecutorResultsMessage(ctx context.Context, ref Ref, pending bool, queue []message.ExecutionQueueElement) *message.ExecutorResults {
-	res := &message.ExecutorResults{
-		RecordRef: ref,
-		Pending:   pending,
-		Requests:  cb.getCaseBindForMessage(ctx),
-		Queue:     queue,
-	}
-
-	return res
-}
-
 func (cb *CaseBind) NewRequest(msg core.Message, request Ref, mb core.MessageBus) *CaseRequest {
 	res := CaseRequest{
 		Message:    msg,

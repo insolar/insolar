@@ -41,6 +41,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	jetID := core.TODOJetID
+	objID := core.RecordID{}
 
 	lr := testutils.NewLogicRunnerMock(t)
 	lr.OnPulseMock.Return(nil)
@@ -70,7 +71,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	recentMock.GetObjectsMock.Return(map[core.RecordID]int{
 		*firstID: 1,
 	})
-	recentMock.GetRequestsMock.Return([]core.RecordID{*secondID})
+	recentMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{objID: {*secondID: struct{}{}}})
 	recentMock.IsMineFunc = func(inputID core.RecordID) (r bool) {
 		return bytes.Equal(firstID.Bytes(), inputID.Bytes())
 	}
@@ -87,7 +88,10 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 		// Assert
 		require.Equal(t, 1, len(val.PendingRequests))
-		require.Equal(t, codeRecord, record.DeserializeRecord(val.PendingRequests[*secondID]))
+		requests, ok := val.PendingRequests[objID]
+		require.True(t, ok)
+		require.Equal(t, 1, len(requests))
+		require.Equal(t, codeRecord, record.DeserializeRecord(requests[*secondID]))
 
 		require.Equal(t, 1, len(val.RecentObjects))
 		decodedIndex, err := index.DecodeObjectLifeline(val.RecentObjects[*firstID].Index)

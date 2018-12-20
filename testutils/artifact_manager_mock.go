@@ -70,12 +70,17 @@ type ArtifactManagerMock struct {
 	GetObjectPreCounter uint64
 	GetObjectMock       mArtifactManagerMockGetObject
 
-	RegisterRequestFunc       func(p context.Context, p1 core.Parcel) (r *core.RecordID, r1 error)
+	HasPendingRequestsFunc       func(p context.Context, p1 core.RecordRef) (r bool, r1 error)
+	HasPendingRequestsCounter    uint64
+	HasPendingRequestsPreCounter uint64
+	HasPendingRequestsMock       mArtifactManagerMockHasPendingRequests
+
+	RegisterRequestFunc       func(p context.Context, p1 core.RecordRef, p2 core.Parcel) (r *core.RecordID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
 	RegisterRequestMock       mArtifactManagerMockRegisterRequest
 
-	RegisterResultFunc       func(p context.Context, p1 core.RecordRef, p2 []byte) (r *core.RecordID, r1 error)
+	RegisterResultFunc       func(p context.Context, p1 core.RecordRef, p2 core.RecordRef, p3 []byte) (r *core.RecordID, r1 error)
 	RegisterResultCounter    uint64
 	RegisterResultPreCounter uint64
 	RegisterResultMock       mArtifactManagerMockRegisterResult
@@ -119,6 +124,7 @@ func NewArtifactManagerMock(t minimock.Tester) *ArtifactManagerMock {
 	m.GetCodeMock = mArtifactManagerMockGetCode{mock: m}
 	m.GetDelegateMock = mArtifactManagerMockGetDelegate{mock: m}
 	m.GetObjectMock = mArtifactManagerMockGetObject{mock: m}
+	m.HasPendingRequestsMock = mArtifactManagerMockHasPendingRequests{mock: m}
 	m.RegisterRequestMock = mArtifactManagerMockRegisterRequest{mock: m}
 	m.RegisterResultMock = mArtifactManagerMockRegisterResult{mock: m}
 	m.RegisterValidationMock = mArtifactManagerMockRegisterValidation{mock: m}
@@ -1642,6 +1648,157 @@ func (m *ArtifactManagerMock) GetObjectFinished() bool {
 	return true
 }
 
+type mArtifactManagerMockHasPendingRequests struct {
+	mock              *ArtifactManagerMock
+	mainExpectation   *ArtifactManagerMockHasPendingRequestsExpectation
+	expectationSeries []*ArtifactManagerMockHasPendingRequestsExpectation
+}
+
+type ArtifactManagerMockHasPendingRequestsExpectation struct {
+	input  *ArtifactManagerMockHasPendingRequestsInput
+	result *ArtifactManagerMockHasPendingRequestsResult
+}
+
+type ArtifactManagerMockHasPendingRequestsInput struct {
+	p  context.Context
+	p1 core.RecordRef
+}
+
+type ArtifactManagerMockHasPendingRequestsResult struct {
+	r  bool
+	r1 error
+}
+
+//Expect specifies that invocation of ArtifactManager.HasPendingRequests is expected from 1 to Infinity times
+func (m *mArtifactManagerMockHasPendingRequests) Expect(p context.Context, p1 core.RecordRef) *mArtifactManagerMockHasPendingRequests {
+	m.mock.HasPendingRequestsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ArtifactManagerMockHasPendingRequestsExpectation{}
+	}
+	m.mainExpectation.input = &ArtifactManagerMockHasPendingRequestsInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of ArtifactManager.HasPendingRequests
+func (m *mArtifactManagerMockHasPendingRequests) Return(r bool, r1 error) *ArtifactManagerMock {
+	m.mock.HasPendingRequestsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ArtifactManagerMockHasPendingRequestsExpectation{}
+	}
+	m.mainExpectation.result = &ArtifactManagerMockHasPendingRequestsResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ArtifactManager.HasPendingRequests is expected once
+func (m *mArtifactManagerMockHasPendingRequests) ExpectOnce(p context.Context, p1 core.RecordRef) *ArtifactManagerMockHasPendingRequestsExpectation {
+	m.mock.HasPendingRequestsFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ArtifactManagerMockHasPendingRequestsExpectation{}
+	expectation.input = &ArtifactManagerMockHasPendingRequestsInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ArtifactManagerMockHasPendingRequestsExpectation) Return(r bool, r1 error) {
+	e.result = &ArtifactManagerMockHasPendingRequestsResult{r, r1}
+}
+
+//Set uses given function f as a mock of ArtifactManager.HasPendingRequests method
+func (m *mArtifactManagerMockHasPendingRequests) Set(f func(p context.Context, p1 core.RecordRef) (r bool, r1 error)) *ArtifactManagerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.HasPendingRequestsFunc = f
+	return m.mock
+}
+
+//HasPendingRequests implements github.com/insolar/insolar/core.ArtifactManager interface
+func (m *ArtifactManagerMock) HasPendingRequests(p context.Context, p1 core.RecordRef) (r bool, r1 error) {
+	counter := atomic.AddUint64(&m.HasPendingRequestsPreCounter, 1)
+	defer atomic.AddUint64(&m.HasPendingRequestsCounter, 1)
+
+	if len(m.HasPendingRequestsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.HasPendingRequestsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ArtifactManagerMock.HasPendingRequests. %v %v", p, p1)
+			return
+		}
+
+		input := m.HasPendingRequestsMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ArtifactManagerMockHasPendingRequestsInput{p, p1}, "ArtifactManager.HasPendingRequests got unexpected parameters")
+
+		result := m.HasPendingRequestsMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ArtifactManagerMock.HasPendingRequests")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.HasPendingRequestsMock.mainExpectation != nil {
+
+		input := m.HasPendingRequestsMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ArtifactManagerMockHasPendingRequestsInput{p, p1}, "ArtifactManager.HasPendingRequests got unexpected parameters")
+		}
+
+		result := m.HasPendingRequestsMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ArtifactManagerMock.HasPendingRequests")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.HasPendingRequestsFunc == nil {
+		m.t.Fatalf("Unexpected call to ArtifactManagerMock.HasPendingRequests. %v %v", p, p1)
+		return
+	}
+
+	return m.HasPendingRequestsFunc(p, p1)
+}
+
+//HasPendingRequestsMinimockCounter returns a count of ArtifactManagerMock.HasPendingRequestsFunc invocations
+func (m *ArtifactManagerMock) HasPendingRequestsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.HasPendingRequestsCounter)
+}
+
+//HasPendingRequestsMinimockPreCounter returns the value of ArtifactManagerMock.HasPendingRequests invocations
+func (m *ArtifactManagerMock) HasPendingRequestsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.HasPendingRequestsPreCounter)
+}
+
+//HasPendingRequestsFinished returns true if mock invocations count is ok
+func (m *ArtifactManagerMock) HasPendingRequestsFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.HasPendingRequestsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.HasPendingRequestsCounter) == uint64(len(m.HasPendingRequestsMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.HasPendingRequestsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.HasPendingRequestsCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.HasPendingRequestsFunc != nil {
+		return atomic.LoadUint64(&m.HasPendingRequestsCounter) > 0
+	}
+
+	return true
+}
+
 type mArtifactManagerMockRegisterRequest struct {
 	mock              *ArtifactManagerMock
 	mainExpectation   *ArtifactManagerMockRegisterRequestExpectation
@@ -1655,7 +1812,8 @@ type ArtifactManagerMockRegisterRequestExpectation struct {
 
 type ArtifactManagerMockRegisterRequestInput struct {
 	p  context.Context
-	p1 core.Parcel
+	p1 core.RecordRef
+	p2 core.Parcel
 }
 
 type ArtifactManagerMockRegisterRequestResult struct {
@@ -1664,14 +1822,14 @@ type ArtifactManagerMockRegisterRequestResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.RegisterRequest is expected from 1 to Infinity times
-func (m *mArtifactManagerMockRegisterRequest) Expect(p context.Context, p1 core.Parcel) *mArtifactManagerMockRegisterRequest {
+func (m *mArtifactManagerMockRegisterRequest) Expect(p context.Context, p1 core.RecordRef, p2 core.Parcel) *mArtifactManagerMockRegisterRequest {
 	m.mock.RegisterRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ArtifactManagerMockRegisterRequestExpectation{}
 	}
-	m.mainExpectation.input = &ArtifactManagerMockRegisterRequestInput{p, p1}
+	m.mainExpectation.input = &ArtifactManagerMockRegisterRequestInput{p, p1, p2}
 	return m
 }
 
@@ -1688,12 +1846,12 @@ func (m *mArtifactManagerMockRegisterRequest) Return(r *core.RecordID, r1 error)
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.RegisterRequest is expected once
-func (m *mArtifactManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 core.Parcel) *ArtifactManagerMockRegisterRequestExpectation {
+func (m *mArtifactManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 core.RecordRef, p2 core.Parcel) *ArtifactManagerMockRegisterRequestExpectation {
 	m.mock.RegisterRequestFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ArtifactManagerMockRegisterRequestExpectation{}
-	expectation.input = &ArtifactManagerMockRegisterRequestInput{p, p1}
+	expectation.input = &ArtifactManagerMockRegisterRequestInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -1703,7 +1861,7 @@ func (e *ArtifactManagerMockRegisterRequestExpectation) Return(r *core.RecordID,
 }
 
 //Set uses given function f as a mock of ArtifactManager.RegisterRequest method
-func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 core.Parcel) (r *core.RecordID, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 core.RecordRef, p2 core.Parcel) (r *core.RecordID, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1712,18 +1870,18 @@ func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 c
 }
 
 //RegisterRequest implements github.com/insolar/insolar/core.ArtifactManager interface
-func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.Parcel) (r *core.RecordID, r1 error) {
+func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.RecordRef, p2 core.Parcel) (r *core.RecordID, r1 error) {
 	counter := atomic.AddUint64(&m.RegisterRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterRequestCounter, 1)
 
 	if len(m.RegisterRequestMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.RegisterRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterRequest. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterRequest. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.RegisterRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterRequestInput{p, p1}, "ArtifactManager.RegisterRequest got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterRequestInput{p, p1, p2}, "ArtifactManager.RegisterRequest got unexpected parameters")
 
 		result := m.RegisterRequestMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -1741,7 +1899,7 @@ func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.Parcel)
 
 		input := m.RegisterRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterRequestInput{p, p1}, "ArtifactManager.RegisterRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterRequestInput{p, p1, p2}, "ArtifactManager.RegisterRequest got unexpected parameters")
 		}
 
 		result := m.RegisterRequestMock.mainExpectation.result
@@ -1756,11 +1914,11 @@ func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 core.Parcel)
 	}
 
 	if m.RegisterRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterRequest. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterRequest. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.RegisterRequestFunc(p, p1)
+	return m.RegisterRequestFunc(p, p1, p2)
 }
 
 //RegisterRequestMinimockCounter returns a count of ArtifactManagerMock.RegisterRequestFunc invocations
@@ -1807,7 +1965,8 @@ type ArtifactManagerMockRegisterResultExpectation struct {
 type ArtifactManagerMockRegisterResultInput struct {
 	p  context.Context
 	p1 core.RecordRef
-	p2 []byte
+	p2 core.RecordRef
+	p3 []byte
 }
 
 type ArtifactManagerMockRegisterResultResult struct {
@@ -1816,14 +1975,14 @@ type ArtifactManagerMockRegisterResultResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.RegisterResult is expected from 1 to Infinity times
-func (m *mArtifactManagerMockRegisterResult) Expect(p context.Context, p1 core.RecordRef, p2 []byte) *mArtifactManagerMockRegisterResult {
+func (m *mArtifactManagerMockRegisterResult) Expect(p context.Context, p1 core.RecordRef, p2 core.RecordRef, p3 []byte) *mArtifactManagerMockRegisterResult {
 	m.mock.RegisterResultFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ArtifactManagerMockRegisterResultExpectation{}
 	}
-	m.mainExpectation.input = &ArtifactManagerMockRegisterResultInput{p, p1, p2}
+	m.mainExpectation.input = &ArtifactManagerMockRegisterResultInput{p, p1, p2, p3}
 	return m
 }
 
@@ -1840,12 +1999,12 @@ func (m *mArtifactManagerMockRegisterResult) Return(r *core.RecordID, r1 error) 
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.RegisterResult is expected once
-func (m *mArtifactManagerMockRegisterResult) ExpectOnce(p context.Context, p1 core.RecordRef, p2 []byte) *ArtifactManagerMockRegisterResultExpectation {
+func (m *mArtifactManagerMockRegisterResult) ExpectOnce(p context.Context, p1 core.RecordRef, p2 core.RecordRef, p3 []byte) *ArtifactManagerMockRegisterResultExpectation {
 	m.mock.RegisterResultFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ArtifactManagerMockRegisterResultExpectation{}
-	expectation.input = &ArtifactManagerMockRegisterResultInput{p, p1, p2}
+	expectation.input = &ArtifactManagerMockRegisterResultInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -1855,7 +2014,7 @@ func (e *ArtifactManagerMockRegisterResultExpectation) Return(r *core.RecordID, 
 }
 
 //Set uses given function f as a mock of ArtifactManager.RegisterResult method
-func (m *mArtifactManagerMockRegisterResult) Set(f func(p context.Context, p1 core.RecordRef, p2 []byte) (r *core.RecordID, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockRegisterResult) Set(f func(p context.Context, p1 core.RecordRef, p2 core.RecordRef, p3 []byte) (r *core.RecordID, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1864,18 +2023,18 @@ func (m *mArtifactManagerMockRegisterResult) Set(f func(p context.Context, p1 co
 }
 
 //RegisterResult implements github.com/insolar/insolar/core.ArtifactManager interface
-func (m *ArtifactManagerMock) RegisterResult(p context.Context, p1 core.RecordRef, p2 []byte) (r *core.RecordID, r1 error) {
+func (m *ArtifactManagerMock) RegisterResult(p context.Context, p1 core.RecordRef, p2 core.RecordRef, p3 []byte) (r *core.RecordID, r1 error) {
 	counter := atomic.AddUint64(&m.RegisterResultPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterResultCounter, 1)
 
 	if len(m.RegisterResultMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.RegisterResultMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterResult. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterResult. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.RegisterResultMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterResultInput{p, p1, p2}, "ArtifactManager.RegisterResult got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterResultInput{p, p1, p2, p3}, "ArtifactManager.RegisterResult got unexpected parameters")
 
 		result := m.RegisterResultMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -1893,7 +2052,7 @@ func (m *ArtifactManagerMock) RegisterResult(p context.Context, p1 core.RecordRe
 
 		input := m.RegisterResultMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterResultInput{p, p1, p2}, "ArtifactManager.RegisterResult got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ArtifactManagerMockRegisterResultInput{p, p1, p2, p3}, "ArtifactManager.RegisterResult got unexpected parameters")
 		}
 
 		result := m.RegisterResultMock.mainExpectation.result
@@ -1908,11 +2067,11 @@ func (m *ArtifactManagerMock) RegisterResult(p context.Context, p1 core.RecordRe
 	}
 
 	if m.RegisterResultFunc == nil {
-		m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterResult. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to ArtifactManagerMock.RegisterResult. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.RegisterResultFunc(p, p1, p2)
+	return m.RegisterResultFunc(p, p1, p2, p3)
 }
 
 //RegisterResultMinimockCounter returns a count of ArtifactManagerMock.RegisterResultFunc invocations
@@ -2586,6 +2745,10 @@ func (m *ArtifactManagerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ArtifactManagerMock.GetObject")
 	}
 
+	if !m.HasPendingRequestsFinished() {
+		m.t.Fatal("Expected call to ArtifactManagerMock.HasPendingRequests")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ArtifactManagerMock.RegisterRequest")
 	}
@@ -2667,6 +2830,10 @@ func (m *ArtifactManagerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ArtifactManagerMock.GetObject")
 	}
 
+	if !m.HasPendingRequestsFinished() {
+		m.t.Fatal("Expected call to ArtifactManagerMock.HasPendingRequests")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ArtifactManagerMock.RegisterRequest")
 	}
@@ -2715,6 +2882,7 @@ func (m *ArtifactManagerMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetCodeFinished()
 		ok = ok && m.GetDelegateFinished()
 		ok = ok && m.GetObjectFinished()
+		ok = ok && m.HasPendingRequestsFinished()
 		ok = ok && m.RegisterRequestFinished()
 		ok = ok && m.RegisterResultFinished()
 		ok = ok && m.RegisterValidationFinished()
@@ -2767,6 +2935,10 @@ func (m *ArtifactManagerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetObjectFinished() {
 				m.t.Error("Expected call to ArtifactManagerMock.GetObject")
+			}
+
+			if !m.HasPendingRequestsFinished() {
+				m.t.Error("Expected call to ArtifactManagerMock.HasPendingRequests")
 			}
 
 			if !m.RegisterRequestFinished() {
@@ -2842,6 +3014,10 @@ func (m *ArtifactManagerMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetObjectFinished() {
+		return false
+	}
+
+	if !m.HasPendingRequestsFinished() {
 		return false
 	}
 

@@ -54,7 +54,7 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 	switch id {
 	// request records
 	case typeCallRequest:
-		return &CallRequest{}
+		return &RequestRecord{}
 	case typeActivate:
 		return &ObjectActivateRecord{}
 	case typeCode:

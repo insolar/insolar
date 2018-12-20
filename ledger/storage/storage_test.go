@@ -55,7 +55,7 @@ func TestDB_SetRecord(t *testing.T) {
 	defer cleaner()
 	jet := testutils.RandomID()
 
-	rec := &record.CallRequest{}
+	rec := &record.RequestRecord{}
 	gotRef, err := db.SetRecord(ctx, jet, core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(t, err)
 
@@ -250,7 +250,7 @@ func TestDB_Close(t *testing.T) {
 	assert.Nil(t, rec)
 	assert.Equal(t, err, storage.ErrClosed)
 
-	rec = &record.CallRequest{}
+	rec = &record.RequestRecord{}
 	gotRef, err := db.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(t, gotRef)
 	assert.Equal(t, err, storage.ErrClosed)
