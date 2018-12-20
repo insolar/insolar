@@ -178,11 +178,22 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 		return
 	}
 
-	signature, err := signData(currentPulsar.CryptographyService, core.PulseSenderConfirmation{
-		Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
-		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
-		PulseNumber:     currentPulsar.ProcessingPulseNumber,
-	})
+	payload := PulseSenderConfirmationPayload{
+		core.PulseSenderConfirmation{
+			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+			PulseNumber:     currentPulsar.ProcessingPulseNumber,
+		},
+	}
+	hashProvider := currentPulsar.PlatformCryptographyScheme.IntegrityHasher()
+	hash, err := payload.Hash(hashProvider)
+	if err != nil {
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+		return
+	}
+
+
+	signature, err := currentPulsar.CryptographyService.Sign(hash)
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
@@ -192,17 +203,17 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
-			Signature:       signature,
+			Signature:       signature.Bytes(),
 		},
 	}
 
-	payload, err := currentPulsar.preparePayload(&confirmation)
+	message, err := currentPulsar.preparePayload(&confirmation)
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
-	call := currentPulsar.Neighbours[currentPulsar.CurrentSlotPulseSender].OutgoingClient.Go(ReceiveChosenSignature.String(), payload, nil, nil)
+	call := currentPulsar.Neighbours[currentPulsar.CurrentSlotPulseSender].OutgoingClient.Go(ReceiveChosenSignature.String(), message, nil, nil)
 	reply := <-call.Done
 	if reply.Error != nil {
 		// Here should be retry
