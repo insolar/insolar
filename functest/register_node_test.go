@@ -32,6 +32,7 @@ var scheme = platformpolicy.NewPlatformCryptographyScheme()
 var keyProcessor = platformpolicy.NewKeyProcessor()
 
 const TESTPUBLICKEY = "some_fancy_public_key"
+const NOTEXISTINGPUBLICKEY = "not_existing_public_key"
 
 func registerNodeSignedCall(params ...interface{}) (string, error) {
 	res, err := signedRequest(&root, "RegisterNode", params...)
@@ -141,14 +142,20 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	const testRole = "light_material"
 	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
 	require.NoError(t, err)
-
 	require.NotNil(t, ref)
+
+	nodeRef, err := getNodeRefSignedCall(NOTEXISTINGPUBLICKEY)
+	require.Equal(t, "", nodeRef)
+	require.Contains(t, err.Error(), "[ GetNodeRefByPK ] Node not found by PK: ")
 }
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
 	const testRole = "light_material"
 	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
 	require.NoError(t, err)
-
 	require.NotNil(t, ref)
+
+	nodeRef, err := getNodeRefSignedCall(123)
+	require.Equal(t, "", nodeRef)
+	require.Contains(t, err.Error(), "[ GetNodeRefByPK ] Node not found by PK: ")
 }
