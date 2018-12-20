@@ -84,7 +84,7 @@ func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 	caller := *rd.GetContext().Caller
 	ref, err := core.NewRefFromBase58(reference)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ DumpUserInfo ] Failed to parse reference: %s", err.Error())
 	}
 	if *ref != caller && caller != rd.RootMember {
 		return nil, fmt.Errorf("[ DumpUserInfo ] You can dump only yourself")
