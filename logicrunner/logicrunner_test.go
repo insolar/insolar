@@ -1767,14 +1767,14 @@ func (r *One) EmptyMethod() (error) {
 	client.Go("RPC.CallMethod", req, res, nil)
 
 	// emulate death
-	rlr.sock.Close()
-
+	err = rlr.sock.Close()
+	require.NoError(t, err)
 	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 
 	// ping to goPlugin, it has to be dead
 	_, err = rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
-	assert.Error(t, err, "rpc Dial")
+	require.Error(t, err, "rpc Dial")
 	assert.Contains(t, err.Error(), "connect: connection refused")
 }
 
@@ -1839,9 +1839,7 @@ package main
 	assert.Equal(t, *cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(t, resp).([]byte)), "Compare Code Prototypes")
 }
 
-// TODO - unskip when we decide how to work with NotificationCalls (NoWaitMethods)
 func TestNoLoopsWhileNotificationCall(t *testing.T) {
-	t.Skip()
 	if parallel {
 		t.Parallel()
 	}
