@@ -157,5 +157,17 @@ func TestGetNodeRefInvalidParams(t *testing.T) {
 
 	nodeRef, err := getNodeRefSignedCall(123)
 	require.Equal(t, "", nodeRef)
-	require.Contains(t, err.Error(), "[ GetNodeRefByPK ] Node not found by PK: ")
+	require.Contains(t, err.Error(), "[ getNodeRef ] Can't unmarshal params: ")
+}
+
+func TestGetNodeRefDiscovery(t *testing.T) {
+	// const testRole = "light_material"
+	// ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	// require.NoError(t, err)
+	// require.NotNil(t, ref)
+
+	_, err := getNodeRefSignedCall("-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjvIRm05/SvuFGSY20HBS7+jrB/kR\nMeE2zWK5mjys54+b/90DT6FkeZIBw6zpu+KOOgMyl5KzbeqrJ2QReRlmNA==\n-----END PUBLIC KEY-----\n")
+	//require.Equal(t, "asd", nodeRef)
+	require.Contains(t, err.Error(), "---------")
+
 }

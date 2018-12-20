@@ -201,19 +201,19 @@ func (m *Member) registerNodeCall(ref core.RecordRef, params []byte) (interface{
 func (m *Member) getNodeRef(ref core.RecordRef, params []byte) (interface{}, error) {
 	var publicKey string
 	if err := signer.UnmarshalParams(params, &publicKey); err != nil {
-		return nil, fmt.Errorf("[ GetNodeRef ] Can't unmarshal params: %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRef ] Can't unmarshal params: %s", err.Error())
 	}
 
 	rootDomain := rootdomain.GetObject(ref)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ GetNodeRef ] %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRef ] %s", err.Error())
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
 	nodeRef, err := nd.GetNodeRefByPK(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("[ GetNodeRef ] %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRef ] %s", err.Error())
 	}
 
 	return nodeRef, nil
