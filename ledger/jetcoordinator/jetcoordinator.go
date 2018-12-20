@@ -115,7 +115,7 @@ func (jc *JetCoordinator) QueryRole(
 		if err != nil {
 			return nil, err
 		}
-		id := jetTree.Find(*obj)
+		id, _ := jetTree.Find(*obj)
 		_, prefix := jet.Jet(*id)
 		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, prefix), candidates, count)
 	}

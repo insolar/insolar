@@ -44,13 +44,15 @@ func TestTree_Find(t *testing.T) {
 	expectedPrefix := make([]byte, core.RecordIDSize-core.PulseNumberSize-1)
 	expectedPrefix[0] = 0xD0 // 11010000
 
-	id := tree.Find(*lookup)
+	id, actual := tree.Find(*lookup)
 	depth, prefix := Jet(*id)
 	assert.Equal(t, depth, uint8(4))
 	assert.Equal(t, expectedPrefix, prefix)
+	assert.Equal(t, false, actual)
 
-	jetID := tree.Find(*jetLookup)
+	jetID, actual := tree.Find(*jetLookup)
 	assert.Equal(t, jetLookup, jetID)
+	assert.Equal(t, true, actual)
 }
 
 func TestTree_Update(t *testing.T) {
@@ -58,24 +60,27 @@ func TestTree_Update(t *testing.T) {
 
 	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
 
-	id := tree.Find(*lookup)
+	id, actual := tree.Find(*lookup)
 	depth, prefix := Jet(*id)
 	assert.Equal(t, depth, uint8(0))
 	assert.Equal(t, prefix, make([]byte, core.RecordHashSize-1))
+	assert.Equal(t, false, actual)
 
 	tree.Update(*NewID(1, []byte{1 << 7}), false)
-	id = tree.Find(*lookup)
+	id, actual = tree.Find(*lookup)
 	depth, prefix = Jet(*id)
 	expectedPrefix := make([]byte, core.RecordHashSize-1)
 	expectedPrefix[0] = 0x80
 	require.Equal(t, uint8(1), depth)
 	assert.Equal(t, expectedPrefix, prefix)
+	assert.Equal(t, false, actual)
 
 	tree.Update(*NewID(8, lookup.Hash()), false)
-	id = tree.Find(*lookup)
+	id, actual = tree.Find(*lookup)
 	depth, prefix = Jet(*id)
 	assert.Equal(t, uint8(8), depth)
 	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
+	assert.Equal(t, false, actual)
 }
 
 func TestTree_Split(t *testing.T) {

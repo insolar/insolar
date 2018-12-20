@@ -92,13 +92,13 @@ func NewTree() *Tree {
 	return &Tree{Head: &jet{}}
 }
 
-// Find returns jet for provided reference.
-func (t *Tree) Find(id core.RecordID) *core.RecordID {
+// Find returns jet for provided reference. If found jet is actual, the second argument will be true.
+func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	if id.Pulse() == core.PulseNumberJet {
-		return &id
+		return &id, true
 	}
-	_, depth := t.Head.Find(id.Hash(), 0)
-	return NewID(uint8(depth), resetBits(id.Hash(), depth))
+	j, depth := t.Head.Find(id.Hash(), 0)
+	return NewID(uint8(depth), resetBits(id.Hash(), depth)), j.Actual
 }
 
 // Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as

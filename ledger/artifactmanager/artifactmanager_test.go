@@ -82,7 +82,7 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -703,7 +703,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -836,7 +836,8 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 
 		tree, err := db.GetJetTree(ctx, core.FirstPulseNumber)
 		require.NoError(t, err)
-		jetID := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
+		jetID, actual := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
 		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
+		assert.False(t, actual)
 	})
 }
