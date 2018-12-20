@@ -17,9 +17,7 @@
 package artifactmanager
 
 import (
-	"bytes"
 	"context"
-	"sort"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -486,17 +484,9 @@ func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
 		*genRandomID(core.FirstPulseNumber),
 		*genRandomID(core.FirstPulseNumber),
 	}
-	sort.Slice(pendingRequests, func(i, j int) bool {
-		return bytes.Compare(pendingRequests[i][:], pendingRequests[j][:]) < 0
-	})
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{
-		*msg.Object.Record(): {
-			pendingRequests[0]: struct{}{},
-			pendingRequests[1]: struct{}{},
-		},
-	})
+	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)

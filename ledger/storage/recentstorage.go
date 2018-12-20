@@ -54,7 +54,7 @@ type RecentStorage struct {
 	recentObjects   map[core.RecordID]*recentObjectMeta
 	objectLock      sync.Mutex
 	pendingRequests map[core.RecordID]map[core.RecordID]struct{}
-	requestLock     sync.Mutex
+	requestLock     sync.RWMutex
 	DefaultTTL      int
 }
 
@@ -134,10 +134,27 @@ func (r *RecentStorage) GetObjects() map[core.RecordID]int {
 
 // GetRequests returns request hot-indexes.
 func (r *RecentStorage) GetRequests() map[core.RecordID]map[core.RecordID]struct{} {
-	r.requestLock.Lock()
-	defer r.requestLock.Unlock()
+	r.requestLock.RLock()
+	defer r.requestLock.RUnlock()
 
 	return r.pendingRequests
+}
+
+// GetRequestsForObject returns request hot-indexes for object.
+func (r *RecentStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID {
+	r.requestLock.RLock()
+	defer r.requestLock.RUnlock()
+
+	forObject, ok := r.pendingRequests[obj]
+	if !ok {
+		return nil
+	}
+	results := make([]core.RecordID, 0, len(forObject))
+	for reqID := range forObject {
+		results = append(results, reqID)
+	}
+
+	return results
 }
 
 // ClearZeroTTLObjects clears objects with zero TTL

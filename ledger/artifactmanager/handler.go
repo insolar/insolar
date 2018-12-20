@@ -301,19 +301,12 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 	msg := parcel.Message().(*message.GetPendingRequests)
 	jetID := jetFromContext(ctx)
 
-	all := h.RecentStorageProvider.GetStorage(jetID).GetRequests()
-	forObject, ok := all[*msg.Object.Record()]
-	if !ok {
-		return &reply.HasPendingRequests{}, nil
-	}
-
-	for reqID := range forObject {
-		p := reqID.Pulse()
-		_ = p
+	for _, reqID := range h.RecentStorageProvider.GetStorage(jetID).GetRequestsForObject(*msg.Object.Record()) {
 		if reqID.Pulse() < parcel.Pulse() {
 			return &reply.HasPendingRequests{Has: true}, nil
 		}
 	}
+
 	return &reply.HasPendingRequests{Has: false}, nil
 }
 

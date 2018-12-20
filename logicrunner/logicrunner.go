@@ -346,6 +346,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
+		es.Unlock()
 		return nil, os.WrapError(nil, "loop detected")
 	}
 
@@ -419,10 +420,10 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 		return &reply.OK{}, nil
 	}
 	es := os.ExecutionState
-	es.pending = NotPending
 	os.Unlock()
 
 	es.Lock()
+	es.pending = NotPending
 	if es.Current != nil {
 		es.Unlock()
 		return nil, errors.New("received PendingFinished when we are already executing")
@@ -527,28 +528,28 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 // finishPendingIfNeeded checks whether last execution was a pending one.
 // If this is true as a side effect the function sends a PendingFinished
 // message to the current executor
-func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) bool {
+func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState, currentRef core.RecordRef) {
 	es.Lock()
 	defer es.Unlock()
 
 	if es.pending != InPending {
-		return false
+		return
 	}
 
 	es.pending = NotPending
-	msg := message.PendingFinished{Reference: currentRef}
-	pulse, err := lr.PulseStorage.Current(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
-		return true
-	}
-	_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
-		return true
-	}
 
-	return true
+	go func() {
+		pulse, err := lr.PulseStorage.Current(ctx)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
+			return
+		}
+		msg := message.PendingFinished{Reference: currentRef}
+		_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
+		}
+	}()
 }
 
 func (lr *LogicRunner) executeOrValidate(

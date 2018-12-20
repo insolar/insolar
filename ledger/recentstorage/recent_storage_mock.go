@@ -55,6 +55,11 @@ type RecentStorageMock struct {
 	GetRequestsPreCounter uint64
 	GetRequestsMock       mRecentStorageMockGetRequests
 
+	GetRequestsForObjectFunc       func(p core.RecordID) (r []core.RecordID)
+	GetRequestsForObjectCounter    uint64
+	GetRequestsForObjectPreCounter uint64
+	GetRequestsForObjectMock       mRecentStorageMockGetRequestsForObject
+
 	IsMineFunc       func(p core.RecordID) (r bool)
 	IsMineCounter    uint64
 	IsMinePreCounter uint64
@@ -81,6 +86,7 @@ func NewRecentStorageMock(t minimock.Tester) *RecentStorageMock {
 	m.ClearZeroTTLObjectsMock = mRecentStorageMockClearZeroTTLObjects{mock: m}
 	m.GetObjectsMock = mRecentStorageMockGetObjects{mock: m}
 	m.GetRequestsMock = mRecentStorageMockGetRequests{mock: m}
+	m.GetRequestsForObjectMock = mRecentStorageMockGetRequestsForObject{mock: m}
 	m.IsMineMock = mRecentStorageMockIsMine{mock: m}
 	m.RemovePendingRequestMock = mRecentStorageMockRemovePendingRequest{mock: m}
 
@@ -953,6 +959,153 @@ func (m *RecentStorageMock) GetRequestsFinished() bool {
 	return true
 }
 
+type mRecentStorageMockGetRequestsForObject struct {
+	mock              *RecentStorageMock
+	mainExpectation   *RecentStorageMockGetRequestsForObjectExpectation
+	expectationSeries []*RecentStorageMockGetRequestsForObjectExpectation
+}
+
+type RecentStorageMockGetRequestsForObjectExpectation struct {
+	input  *RecentStorageMockGetRequestsForObjectInput
+	result *RecentStorageMockGetRequestsForObjectResult
+}
+
+type RecentStorageMockGetRequestsForObjectInput struct {
+	p core.RecordID
+}
+
+type RecentStorageMockGetRequestsForObjectResult struct {
+	r []core.RecordID
+}
+
+//Expect specifies that invocation of RecentStorage.GetRequestsForObject is expected from 1 to Infinity times
+func (m *mRecentStorageMockGetRequestsForObject) Expect(p core.RecordID) *mRecentStorageMockGetRequestsForObject {
+	m.mock.GetRequestsForObjectFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RecentStorageMockGetRequestsForObjectExpectation{}
+	}
+	m.mainExpectation.input = &RecentStorageMockGetRequestsForObjectInput{p}
+	return m
+}
+
+//Return specifies results of invocation of RecentStorage.GetRequestsForObject
+func (m *mRecentStorageMockGetRequestsForObject) Return(r []core.RecordID) *RecentStorageMock {
+	m.mock.GetRequestsForObjectFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RecentStorageMockGetRequestsForObjectExpectation{}
+	}
+	m.mainExpectation.result = &RecentStorageMockGetRequestsForObjectResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of RecentStorage.GetRequestsForObject is expected once
+func (m *mRecentStorageMockGetRequestsForObject) ExpectOnce(p core.RecordID) *RecentStorageMockGetRequestsForObjectExpectation {
+	m.mock.GetRequestsForObjectFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &RecentStorageMockGetRequestsForObjectExpectation{}
+	expectation.input = &RecentStorageMockGetRequestsForObjectInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *RecentStorageMockGetRequestsForObjectExpectation) Return(r []core.RecordID) {
+	e.result = &RecentStorageMockGetRequestsForObjectResult{r}
+}
+
+//Set uses given function f as a mock of RecentStorage.GetRequestsForObject method
+func (m *mRecentStorageMockGetRequestsForObject) Set(f func(p core.RecordID) (r []core.RecordID)) *RecentStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetRequestsForObjectFunc = f
+	return m.mock
+}
+
+//GetRequestsForObject implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
+func (m *RecentStorageMock) GetRequestsForObject(p core.RecordID) (r []core.RecordID) {
+	counter := atomic.AddUint64(&m.GetRequestsForObjectPreCounter, 1)
+	defer atomic.AddUint64(&m.GetRequestsForObjectCounter, 1)
+
+	if len(m.GetRequestsForObjectMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetRequestsForObjectMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RecentStorageMock.GetRequestsForObject. %v", p)
+			return
+		}
+
+		input := m.GetRequestsForObjectMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, RecentStorageMockGetRequestsForObjectInput{p}, "RecentStorage.GetRequestsForObject got unexpected parameters")
+
+		result := m.GetRequestsForObjectMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the RecentStorageMock.GetRequestsForObject")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRequestsForObjectMock.mainExpectation != nil {
+
+		input := m.GetRequestsForObjectMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, RecentStorageMockGetRequestsForObjectInput{p}, "RecentStorage.GetRequestsForObject got unexpected parameters")
+		}
+
+		result := m.GetRequestsForObjectMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the RecentStorageMock.GetRequestsForObject")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRequestsForObjectFunc == nil {
+		m.t.Fatalf("Unexpected call to RecentStorageMock.GetRequestsForObject. %v", p)
+		return
+	}
+
+	return m.GetRequestsForObjectFunc(p)
+}
+
+//GetRequestsForObjectMinimockCounter returns a count of RecentStorageMock.GetRequestsForObjectFunc invocations
+func (m *RecentStorageMock) GetRequestsForObjectMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRequestsForObjectCounter)
+}
+
+//GetRequestsForObjectMinimockPreCounter returns the value of RecentStorageMock.GetRequestsForObject invocations
+func (m *RecentStorageMock) GetRequestsForObjectMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRequestsForObjectPreCounter)
+}
+
+//GetRequestsForObjectFinished returns true if mock invocations count is ok
+func (m *RecentStorageMock) GetRequestsForObjectFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetRequestsForObjectMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetRequestsForObjectCounter) == uint64(len(m.GetRequestsForObjectMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetRequestsForObjectMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetRequestsForObjectCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetRequestsForObjectFunc != nil {
+		return atomic.LoadUint64(&m.GetRequestsForObjectCounter) > 0
+	}
+
+	return true
+}
+
 type mRecentStorageMockIsMine struct {
 	mock              *RecentStorageMock
 	mainExpectation   *RecentStorageMockIsMineExpectation
@@ -1256,6 +1409,10 @@ func (m *RecentStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RecentStorageMock.GetRequests")
 	}
 
+	if !m.GetRequestsForObjectFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.GetRequestsForObject")
+	}
+
 	if !m.IsMineFinished() {
 		m.t.Fatal("Expected call to RecentStorageMock.IsMine")
 	}
@@ -1309,6 +1466,10 @@ func (m *RecentStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RecentStorageMock.GetRequests")
 	}
 
+	if !m.GetRequestsForObjectFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.GetRequestsForObject")
+	}
+
 	if !m.IsMineFinished() {
 		m.t.Fatal("Expected call to RecentStorageMock.IsMine")
 	}
@@ -1338,6 +1499,7 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ClearZeroTTLObjectsFinished()
 		ok = ok && m.GetObjectsFinished()
 		ok = ok && m.GetRequestsFinished()
+		ok = ok && m.GetRequestsForObjectFinished()
 		ok = ok && m.IsMineFinished()
 		ok = ok && m.RemovePendingRequestFinished()
 
@@ -1374,6 +1536,10 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetRequestsFinished() {
 				m.t.Error("Expected call to RecentStorageMock.GetRequests")
+			}
+
+			if !m.GetRequestsForObjectFinished() {
+				m.t.Error("Expected call to RecentStorageMock.GetRequestsForObject")
 			}
 
 			if !m.IsMineFinished() {
@@ -1421,6 +1587,10 @@ func (m *RecentStorageMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetRequestsFinished() {
+		return false
+	}
+
+	if !m.GetRequestsForObjectFinished() {
 		return false
 	}
 
