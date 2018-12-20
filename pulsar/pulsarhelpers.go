@@ -91,7 +91,6 @@ func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
 }
 
 func (currentPulsar *Pulsar) preparePayload(body PayloadData) (*Payload, error) {
-
 	hashProvider := currentPulsar.PlatformCryptographyScheme.IntegrityHasher()
 	hash, err := body.Hash(hashProvider)
 	if err != nil {
