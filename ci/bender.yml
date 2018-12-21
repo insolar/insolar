@@ -8,18 +8,18 @@ resources:
   #    branch: master
   #    pool: builds
   #    private_key: ((meta.github.lock_key))
-- name: branches
-  type: smuggler
-  source:
-    commands:
-      check: |
-        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' | md5sum > ${SMUGGLER_OUTPUT_DIR}/versions
-      in: |
-        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' > ${SMUGGLER_DESTINATION_DIR}/${SMUGGLER_target_file}
-        echo "date=$(date)" > ${SMUGGLER_OUTPUT_DIR}/metadata
-        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' >> ${SMUGGLER_OUTPUT_DIR}/metadata
-    smuggler_debug: false
-    target_file: branches.json
+  #- name: branches
+  #  type: smuggler
+  #  source:
+  #    commands:
+  #      check: |
+  #        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' | md5sum > ${SMUGGLER_OUTPUT_DIR}/versions
+  #      in: |
+  #        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' > ${SMUGGLER_DESTINATION_DIR}/${SMUGGLER_target_file}
+  #        echo "date=$(date)" > ${SMUGGLER_OUTPUT_DIR}/metadata
+  #        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' >> ${SMUGGLER_OUTPUT_DIR}/metadata
+  #    smuggler_debug: false
+  #    target_file: branches.json
 - name: pull-requests
   webhook_token: helloinsolar
   type: smuggler
@@ -44,10 +44,10 @@ resources:
     paths:
     - ci
     uri: https://github.com/insolar/insolar.git
-- name: slack
-  type: slack
-  source:
-    url: ((meta.slack.url))
+    #- name: slack
+    #  type: slack
+    #  source:
+    #    url: ((meta.slack.url))
     
 resource_types:
 - name: smuggler
@@ -59,69 +59,69 @@ resource_types:
   type: docker-image
   source:
     repository: chemist/concourse-pipeline-resource
-- name: slack
-  type: docker-image
-  source:
-    repository: cfcommunity/slack-notification-resource
-    tag: latest
+    #- name: slack
+    #  type: docker-image
+    #  source:
+    #    repository: cfcommunity/slack-notification-resource
+    #    tag: latest
 
 jobs:
-- name: branches
-  plan:
-  - get: branches
-    trigger: true
-    #  - put: lock
-    #    params: {acquire: true}
-  - get: insolar
-  - task: generate_pipelines
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: chemist/alpine-jinja-cli
-      run:
-        path: sh
-        args:
-        - -ec
-        - |
-          echo Generate pipelines
-          echo "Input: $(cat branches/branches.json)"
-          jinja2 insolar/ci/templates/branches.yml.j2 branches/branches.json > pipelines/branches.yml
-          echo "Output: "
-          cat pipelines/branches.yml
-          cat << EOF > pipelines/vars.yml
-          ((meta.concourse.vars))
-          EOF
-      inputs:
-      - name: branches
-      - name: insolar
-      outputs:
-      - name: pipelines
-    on_failure:
-      put: slack
-      params:
-        icon_emoji: ':new_moon_with_face:'
-        silent: true
-        text: brake branches
-    on_success:
-      put: slack
-      params:
-        icon_emoji: ':sun_with_face:'
-        silent: true
-        text: rebuild branches
-        #    ensure:
-        #      put: lock
-        #      params: {release: lock}
-  - put: deploy
-    params:
-      pipelines:
-      - config_file: pipelines/branches.yml
-        name: branches
-        team: insolar
-        unpaused: true
-        vars_files:
-        - pipelines/vars.yml
+  #- name: branches
+  #  plan:
+  #  - get: branches
+  #    trigger: true
+  #    #  - put: lock
+  #    #    params: {acquire: true}
+  #  - get: insolar
+  #  - task: generate_pipelines
+  #    config:
+  #      platform: linux
+  #      image_resource:
+  #        type: docker-image
+  #        source:
+  #          repository: chemist/alpine-jinja-cli
+  #      run:
+  #        path: sh
+  #        args:
+  #        - -ec
+  #        - |
+  #          echo Generate pipelines
+  #          echo "Input: $(cat branches/branches.json)"
+  #          jinja2 insolar/ci/templates/branches.yml.j2 branches/branches.json > pipelines/branches.yml
+  #          echo "Output: "
+  #          cat pipelines/branches.yml
+  #          cat << EOF > pipelines/vars.yml
+  #          ((meta.concourse.vars))
+  #          EOF
+  #      inputs:
+  #      - name: branches
+  #      - name: insolar
+  #      outputs:
+  #      - name: pipelines
+  #    on_failure:
+  #      put: slack
+  #      params:
+  #        icon_emoji: ':new_moon_with_face:'
+  #        silent: true
+  #        text: brake branches
+  #    on_success:
+  #      put: slack
+  #      params:
+  #        icon_emoji: ':sun_with_face:'
+  #        silent: true
+  #        text: rebuild branches
+  #        #    ensure:
+  #        #      put: lock
+  #        #      params: {release: lock}
+  #  - put: deploy
+  #    params:
+  #      pipelines:
+  #      - config_file: pipelines/branches.yml
+  #        name: branches
+  #        team: insolar
+  #        unpaused: true
+  #        vars_files:
+  #        - pipelines/vars.yml
 - name: pull-requests
   plan:
   - get: pull-requests
