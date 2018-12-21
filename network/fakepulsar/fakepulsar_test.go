@@ -32,6 +32,16 @@ func TestGetFakePulse(t *testing.T) {
 	pulsar := NewFakePulsar(onPulse, 1000)
 	pulse := pulsar.GetFakePulse()
 	assert.NotNil(t, pulse)
+	pulsar.pulseNum++
+	pulse2 := pulsar.GetFakePulse()
+	assert.NotNil(t, pulse2)
+	assert.NotEqual(t, pulse, pulse2)
+
+	pulsar2 := NewFakePulsar(onPulse, 1000)
+	pulsar2.pulseNum = pulsar.pulseNum
+	pulse3 := pulsar2.GetFakePulse()
+	assert.NotNil(t, pulse3)
+	assert.Equal(t, pulse3, pulse2)
 }
 
 func TestFakePulsar_Start(t *testing.T) {
