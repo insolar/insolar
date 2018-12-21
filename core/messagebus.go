@@ -37,6 +37,18 @@ type Message interface {
 
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
+
+	// DefaultTarget returns of target of this event.
+	DefaultTarget() *RecordRef
+
+	// DefaultRole returns role for this event
+	DefaultRole() DynamicRole
+
+	// AllowedSenderObjectAndRole extracts information from message
+	// verify sender required to 's "caller" for sender
+	// verification purpose. If nil then check of sender's role is not
+	// provided by the message bus
+	AllowedSenderObjectAndRole() (*RecordRef, DynamicRole)
 }
 
 type MessageSignature interface {
@@ -45,12 +57,15 @@ type MessageSignature interface {
 }
 
 // Parcel by senders private key.
+//go:generate minimock -i github.com/insolar/insolar/core.Parcel -o ../testutils -s _mock.go
 type Parcel interface {
 	Message
 	MessageSignature
 
 	Message() Message
 	Context(context.Context) context.Context
+
+	Pulse() PulseNumber
 
 	DelegationToken() DelegationToken
 }
@@ -89,7 +104,7 @@ func (o *MessageSendOptions) Safe() *MessageSendOptions {
 //go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(context.Context, Message, *MessageSendOptions) (Reply, error)
+	Send(context.Context, Message, Pulse, *MessageSendOptions) (Reply, error)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.
@@ -103,16 +118,10 @@ type MessageBus interface {
 	// NewRecorder creates a new recorder with unique tape that can be used to store message replies.
 	//
 	// Recorder can be created from MessageBus and passed as MessageBus instance.s
-	NewRecorder(ctx context.Context) (MessageBus, error)
+	NewRecorder(ctx context.Context, currentPulse Pulse) (MessageBus, error)
 
 	// WriteTape writes recorder's tape to the provided writer.
 	WriteTape(ctx context.Context, writer io.Writer) error
-}
-
-//go:generate minimock -i github.com/insolar/insolar/core.GlobalInsolarLock -o ../testutils -s _mock.go
-type GlobalInsolarLock interface {
-	Acquire(context.Context)
-	Release(context.Context)
 }
 
 type messageBusKey struct{}
@@ -143,16 +152,20 @@ type MessageHandler func(context.Context, Parcel) (Reply, error)
 const (
 	// Logicrunner
 
-	// TypeCallMethod calls method and returns result
+	// TypeCallMethod calls method and returns request
 	TypeCallMethod MessageType = iota
 	// TypeCallConstructor is a message for calling constructor and obtain its reply
 	TypeCallConstructor
+	// TypePutResults when execution finishes, tell results to requester
+	TypeReturnResults
 	// TypeExecutorResults message that goes to new Executor to validate previous Executor actions through CaseBind
 	TypeExecutorResults
 	// TypeValidateCaseBind sends CaseBind form Executor to Validators for redo all actions
 	TypeValidateCaseBind
 	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
 	TypeValidationResults
+	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
+	TypePendingFinished
 
 	// Ledger
 
@@ -178,6 +191,8 @@ const (
 	TypeSetBlob
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
+	// TypeGetPendingRequests fetches pending requests for object.
+	TypeGetPendingRequests
 	// TypeHotRecords saves hot-records in storage.
 	TypeHotRecords
 
@@ -200,8 +215,8 @@ const (
 
 	// NetworkCoordinator
 
-	// NetworkCoordinatorNodeSignRequest used to request signature for new node
-	NetworkCoordinatorNodeSignRequest
+	// TypeNodeSignRequest used to request sign for new node
+	TypeNodeSignRequest
 )
 
 // DelegationTokenType is an enum type of delegation token

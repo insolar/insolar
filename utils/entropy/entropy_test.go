@@ -25,7 +25,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -88,6 +90,46 @@ func TestSelectByEntropy(t *testing.T) {
 	if !assert.Equal(t, 0, len(seencount), "values should not repeat") {
 		fmt.Printf("repeats: %#v\n", seencount)
 	}
+}
+
+func TestSelectByEntropy_SelectsCorrectElement(t *testing.T) {
+	scheme := testutils.NewPlatformCryptographyScheme()
+	entropy := []byte{1, 2, 3, 4, 6}
+
+	var values []core.RecordRef
+	for i := 0; i < 100; i++ {
+		values = append(values, testutils.RandomRef())
+	}
+	in := make([]interface{}, len(values))
+	for i, v := range values {
+		in[i] = v
+	}
+
+	t.Run("selecting 1 value", func(t *testing.T) {
+		out, err := SelectByEntropy(scheme, entropy, in, 1)
+		require.NoError(t, err)
+		var selected []core.RecordRef
+		for _, v := range out {
+			selected = append(selected, v.(core.RecordRef))
+		}
+
+		assert.Equal(t, 1, len(out))
+		// Indexes are hard-coded from previously calculated values.
+		assert.Equal(t, []core.RecordRef{values[37]}, selected)
+	})
+
+	t.Run("selecting 3 values", func(t *testing.T) {
+		out, err := SelectByEntropy(scheme, entropy, in, 3)
+		require.NoError(t, err)
+		var selected []core.RecordRef
+		for _, v := range out {
+			selected = append(selected, v.(core.RecordRef))
+		}
+
+		assert.Equal(t, 3, len(out))
+		// Indexes are hard-coded from previously calculated values.
+		assert.Equal(t, []core.RecordRef{values[37], values[22], values[53]}, selected)
+	})
 }
 
 // go test -v ./utils/entropy/ -bench=. -cpu=1 -benchmem -run=NONE > ./utils/entropy/benchresults/$(git rev-parse --short HEAD).txt

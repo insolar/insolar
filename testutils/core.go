@@ -17,10 +17,13 @@
 package testutils
 
 import (
+	"crypto"
 	"crypto/rand"
+	"hash"
 
 	"github.com/insolar/insolar/core"
 	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/sha3"
 )
 
 // RandomString generates random uuid and return it as a string
@@ -50,4 +53,63 @@ func RandomID() core.RecordID {
 		panic(err)
 	}
 	return id
+}
+
+// RandomJet generates random jet ID
+func RandomJet() (id core.RecordID) {
+	_, err := rand.Read(id[core.PulseNumberSize:])
+	if err != nil {
+		panic(err)
+	}
+	copy(id[:core.PulseNumberSize], core.PulseNumberJet.Bytes())
+	return id
+}
+
+type cryptographySchemeMock struct{}
+type hasherMock struct {
+	h hash.Hash
+}
+
+func (m *hasherMock) Write(p []byte) (n int, err error) {
+	return m.h.Write(p)
+}
+
+func (m *hasherMock) Sum(b []byte) []byte {
+	return m.h.Sum(b)
+}
+
+func (m *hasherMock) Reset() {
+	m.h.Reset()
+}
+
+func (m *hasherMock) Size() int {
+	return m.h.Size()
+}
+
+func (m *hasherMock) BlockSize() int {
+	return m.h.BlockSize()
+}
+
+func (m *hasherMock) Hash(val []byte) []byte {
+	panic("not implemented")
+}
+
+func (m *cryptographySchemeMock) ReferenceHasher() core.Hasher {
+	return &hasherMock{h: sha3.New512()}
+}
+
+func (m *cryptographySchemeMock) IntegrityHasher() core.Hasher {
+	return &hasherMock{h: sha3.New512()}
+}
+
+func (m *cryptographySchemeMock) Signer(privateKey crypto.PrivateKey) core.Signer {
+	panic("not implemented")
+}
+
+func (m *cryptographySchemeMock) Verifier(publicKey crypto.PublicKey) core.Verifier {
+	panic("not implemented")
+}
+
+func NewPlatformCryptographyScheme() core.PlatformCryptographyScheme {
+	return &cryptographySchemeMock{}
 }

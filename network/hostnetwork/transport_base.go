@@ -34,7 +34,7 @@ type transportBase struct {
 	started          uint32
 	transport        transport.Transport
 	origin           *host.Host
-	messageProcessor func(msg *packet.Packet)
+	messageProcessor func(ctx context.Context, msg *packet.Packet)
 }
 
 // Listen start listening to network requests, should be started in goroutine.
@@ -43,16 +43,16 @@ func (h *transportBase) Start(ctx context.Context) {
 		inslogger.FromContext(ctx).Warn("double listen initiated")
 		return
 	}
-	go h.listen()
+	go h.listen(ctx)
 	go func(ctx context.Context) {
-		err := h.transport.Start(ctx)
+		err := h.transport.Listen(ctx)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 		}
 	}(ctx)
 }
 
-func (h *transportBase) listen() {
+func (h *transportBase) listen(ctx context.Context) {
 	for {
 		select {
 		case msg := <-h.transport.Packets():
@@ -63,7 +63,7 @@ func (h *transportBase) listen() {
 			if msg.Error != nil {
 				log.Warnf("Received error response: %s", msg.Error.Error())
 			}
-			go h.messageProcessor(msg)
+			go h.messageProcessor(ctx, msg)
 		case <-h.transport.Stopped():
 			if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
 				h.transport.Close()
@@ -107,10 +107,10 @@ func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving address")
 	}
-	nodeID := core.NewRefFromBase58(id)
-	if nodeID.Equal(core.RecordRef{}) {
-		return nil, errors.New("error parsing NodeID from string (NodeID is zero)")
+	nodeID, err := core.NewRefFromBase58(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "error parsing NodeID from string")
 	}
-	origin := &host.Host{NodeID: nodeID, Address: address}
+	origin := &host.Host{NodeID: *nodeID, Address: address}
 	return origin, nil
 }

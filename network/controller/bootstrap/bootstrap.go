@@ -222,7 +222,7 @@ func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryN
 	for _, discoveryNode := range discoveryNodes {
 		go func(ctx context.Context, address string, ch chan<- *host.Host) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
-			bootstrapHost, err := bc.bootstrap(address)
+			bootstrapHost, err := bootstrap(address, bc.options, bc.startBootstrap)
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return
@@ -261,8 +261,25 @@ func (bc *Bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *h
 	}
 }
 
-func (bc *Bootstrapper) bootstrap(address string) (*host.Host, error) {
-	// TODO: add infinite bootstrap option
+func bootstrap(address string, options *common.Options, bootstrapF func(string) (*host.Host, error)) (*host.Host, error) {
+	minTO := options.MinTimeout
+	if !options.InfinityBootstrap {
+		return bootstrapF(address)
+	}
+	for {
+		result, err := bootstrapF(address)
+		if err == nil {
+			return result, nil
+		}
+		time.Sleep(minTO)
+		minTO *= options.TimeoutMult
+		if minTO > options.MaxTimeout {
+			minTO = options.MaxTimeout
+		}
+	}
+}
+
+func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
 	bootstrapHost, err := bc.pinger.Ping(address, bc.options.PingTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
@@ -281,12 +298,12 @@ func (bc *Bootstrapper) bootstrap(address string) (*host.Host, error) {
 		return nil, errors.New("Rejected: " + data.RejectReason)
 	}
 	if data.Code == Redirected {
-		return bc.bootstrap(data.RedirectHost)
+		return bootstrap(data.RedirectHost, bc.options, bc.startBootstrap)
 	}
 	return response.GetSenderHost(), nil
 }
 
-func (bc *Bootstrapper) processBootstrap(request network.Request) (network.Response, error) {
+func (bc *Bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	// TODO: redirect logic
 	return bc.transport.BuildResponse(request, &NodeBootstrapResponse{Code: Accepted}), nil
 }
@@ -296,9 +313,9 @@ func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) err
 	return nil
 }
 
-func (bc *Bootstrapper) processGenesis(request network.Request) (network.Response, error) {
+func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*GenesisRequest)
-	genesisCert, err := certificate.Deserialize(data.Certificate)
+	genesisCert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
 		return bc.transport.BuildResponse(request, &GenesisResponse{Error: err.Error()}), nil
 	}

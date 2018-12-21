@@ -31,6 +31,9 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/network/pulsenetwork"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -86,19 +89,21 @@ func main() {
 	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
+	defer func() {
+		pulseTicker.Stop()
+		refreshTicker.Stop()
+		err = storage.Close()
+		if err != nil {
+			inslog.Error(err)
+		}
+		server.StopServer(ctx)
+	}()
+
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
 
 	<-gracefulStop
-	pulseTicker.Stop()
-	refreshTicker.Stop()
-	err = storage.Close()
-	if err != nil {
-		inslog.Error(err)
-	}
-	server.StopServer(ctx)
-
 }
 
 func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
@@ -108,15 +113,32 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
-		panic(err)
 	}
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 	cryptographyService := cryptography.NewCryptographyService()
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
+	tp, err := transport.NewTransport(cfg.Pulsar.DistributionTransport, relay.NewProxy())
+	if err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
+	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor)
+	if err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
 	cm := &component.Manager{}
-	cm.Register(cryptographyScheme, keyStore, keyProcessor)
-	cm.Inject(cryptographyService)
+	cm.Register(cryptographyScheme, keyStore, keyProcessor, tp)
+	cm.Inject(cryptographyService, pulseDistributor)
+
+	if err = cm.Init(ctx); err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
+	if err = cm.Start(ctx); err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
 
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
@@ -129,6 +151,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 		cryptographyService,
 		cryptographyScheme,
 		keyProcessor,
+		pulseDistributor,
 		storage,
 		&pulsar.RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},

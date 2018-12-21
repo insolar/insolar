@@ -19,6 +19,7 @@ package packets
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -143,7 +144,7 @@ func (p1p *Phase1Packet) Deserialize(data io.Reader) error {
 }
 
 func (p1p *Phase1Packet) Serialize() ([]byte, error) {
-	result := allocateBuffer(phase1PacketMaxSize)
+	result := allocateBuffer(packetMaxSize)
 
 	if !p1p.hasSection2() && len(p1p.claims) > 0 {
 		return nil, errors.New("invalid Phase1Packet")
@@ -159,7 +160,7 @@ func (p1p *Phase1Packet) Serialize() ([]byte, error) {
 }
 
 func (p1p *Phase1Packet) RawBytes() ([]byte, error) {
-	result := allocateBuffer(2048)
+	result := allocateBuffer(packetMaxSize)
 
 	// serializing of  packetHeader
 	packetHeaderRaw, err := p1p.packetHeader.Serialize()
@@ -351,9 +352,6 @@ func (pd *PulseData) Deserialize(data io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "[ PulseData.Deserialize ] Can't read PulseNumer")
 	}
-
-	pd.Data = &PulseDataExt{}
-
 	err = pd.Data.Deserialize(data)
 	if err != nil {
 		return errors.Wrap(err, "[ PulseData.Deserialize ] Can't read PulseDataExt")
@@ -428,24 +426,41 @@ func (p2p *Phase2Packet) DeserializeWithoutHeader(data io.Reader, header *Packet
 
 	err := binary.Read(data, defaultByteOrder, &p2p.globuleHashSignature)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read globuleHashSignature")
+		return errors.Wrap(err, "[ Phase2Packet.DeserializeWithoutHeader ] Can't read globuleHashSignature")
 	}
 
-	// err = p2p.bitSet.Deserialize(data)
-	// if err != nil {
-	// 	return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't deserialize bitSet")
-	// }
+	p2p.bitSet, err = DeserializeBitSet(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase2Packet.DeserializeWithoutHeader ] Can't deserialize bitSet")
+	}
 
 	err = binary.Read(data, defaultByteOrder, &p2p.SignatureHeaderSection1)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read SignatureHeaderSection1")
+		return errors.Wrap(err, "[ Phase2Packet.DeserializeWithoutHeader ] Can't read SignatureHeaderSection1")
 	}
 
-	// TODO: add reading Referendum vote
+	if !p2p.hasSection2() {
+		return nil
+	}
+
+	votesBuf, err := ioutil.ReadAll(data)
+	if err != nil {
+		return errors.Wrap(err, "[ Phase2Packet.DeserializeWithoutHeader ] Can't read Section 2")
+	}
+	votesSize := len(votesBuf) - SignatureLength
+	if votesSize < 0 {
+		return errors.New("[ Phase2Packet.DeserializeWithoutHeader ] Section 2 has incorrect size")
+	}
+
+	p2p.votesAndAnswers, err = parseReferendumVotes(votesBuf[:votesSize])
+	if err != nil {
+		return errors.Wrap(err, "[ Phase2Packet.DeserializeWithoutHeader ] Can't parseReferendumVotes")
+	}
+	data = bytes.NewReader(votesBuf[votesSize:])
 
 	err = binary.Read(data, defaultByteOrder, &p2p.SignatureHeaderSection2)
 	if err != nil {
-		return errors.Wrap(err, "[ Phase2Packet.Deserialize ] Can't read SignatureHeaderSection2")
+		return errors.Wrap(err, "[ Phase2Packet.DeserializeWithoutHeader ] Can't read SignatureHeaderSection2")
 	}
 
 	return nil
@@ -467,39 +482,43 @@ func (p2p *Phase2Packet) Deserialize(data io.Reader) error {
 }
 
 func (p2p *Phase2Packet) Serialize() ([]byte, error) {
-	result := allocateBuffer(2048)
+	result := allocateBuffer(packetMaxSize)
 
 	raw1, err := p2p.RawFirstPart()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize")
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] failed to serialize first part")
 	}
-
-	result.Write(raw1)
-
+	_, err = result.Write(raw1)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] failed to write first part")
+	}
 	err = binary.Write(result, defaultByteOrder, p2p.SignatureHeaderSection1)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't write SignatureHeaderSection1")
 	}
 
+	if !p2p.hasSection2() {
+		return result.Bytes(), nil
+	}
+
+	raw2, err := p2p.RawSecondPart()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] failed to serialize second part")
+	}
+	_, err = result.Write(raw2)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] failed to write second part")
+	}
 	err = binary.Write(result, defaultByteOrder, p2p.SignatureHeaderSection2)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't write SignatureHeaderSection2")
 	}
 
-	// bitSetRaw, err := p2p.bitSet.Serialize()
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize bitSet")
-	// }
-	// _, err = result.Write(bitSetRaw)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append bitSet")
-	// }
-
 	return result.Bytes(), nil
 }
 
 func (p2p *Phase2Packet) RawFirstPart() ([]byte, error) {
-	result := allocateBuffer(2048)
+	result := allocateBuffer(packetMaxSize)
 
 	packetHeaderRaw, err := p2p.packetHeader.Serialize()
 	if err != nil {
@@ -515,12 +534,41 @@ func (p2p *Phase2Packet) RawFirstPart() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't write globuleHashSignature")
 	}
 
+	bitSetRaw, err := p2p.bitSet.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't serialize bitSet")
+	}
+	_, err = result.Write(bitSetRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase2Packet.Serialize ] Can't append bitSet")
+	}
+
 	return result.Bytes(), nil
 }
 
 func (p2p *Phase2Packet) RawSecondPart() ([]byte, error) {
-	// TODO: add serialising Referendum vote
-	return nil, nil
+	result := allocateBuffer(packetMaxSize)
+	for _, vote := range p2p.votesAndAnswers {
+		voteHeader := makeVoteHeader(vote)
+		err := binary.Write(result, defaultByteOrder, voteHeader)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("[ RawSecondPart ] "+
+				"Can't write vote header. Type: %d. Length: %d", vote.Type(), getVoteSize(vote)))
+		}
+
+		rawVote, err := vote.Serialize()
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("[ RawSecondPart ] "+
+				"Can't serialize vote. Type: %d. Length: %d", vote.Type(), getVoteSize(vote)))
+		}
+		_, err = result.Write(rawVote)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("[ RawSecondPart ] "+
+				"Can't write vote. Type: %d. Length: %d", vote.Type(), getVoteSize(vote)))
+		}
+	}
+
+	return result.Bytes(), nil
 }
 
 // ----------------------------------PHASE 3--------------------------------

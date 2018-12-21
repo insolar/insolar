@@ -47,6 +47,8 @@ const (
 	TypeCallMethod
 	// TypeCallConstructor - reference on created object
 	TypeCallConstructor
+	// TypeRegisterRequest - request for execution was registered
+	TypeRegisterRequest
 
 	// Ledger
 
@@ -62,6 +64,10 @@ const (
 	TypeChildren
 	// TypeObjectIndex contains serialized object index. It can be stored in DB without processing.
 	TypeObjectIndex
+	// TypeJetMiss is returned for miscalculated jets due to incomplete jet tree.
+	TypeJetMiss
+	// TypePendingRequests contains unclosed requests for an object.
+	TypePendingRequests
 
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
@@ -84,6 +90,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &CallMethod{}, nil
 	case TypeCallConstructor:
 		return &CallConstructor{}, nil
+	case TypeRegisterRequest:
+		return &RegisterRequest{}, nil
 	case TypeCode:
 		return &Code{}, nil
 	case TypeObject:
@@ -108,6 +116,14 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &GetObjectRedirect{}, nil
 	case TypeGetChildrenRedirect:
 		return &GetChildrenRedirect{}, nil
+	case TypeJetMiss:
+		return &JetMiss{}, nil
+	case TypePendingRequests:
+		return &HasPendingRequests{}, nil
+
+	case TypeNodeSign:
+		return &NodeSign{}, nil
+
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -159,6 +175,7 @@ func ToBytes(rep core.Reply) []byte {
 func init() {
 	gob.Register(&CallMethod{})
 	gob.Register(&CallConstructor{})
+	gob.Register(&RegisterRequest{})
 	gob.Register(&Code{})
 	gob.Register(&Object{})
 	gob.Register(&Delegate{})
@@ -171,4 +188,7 @@ func init() {
 	gob.Register(&GetObjectRedirect{})
 	gob.Register(&GetChildrenRedirect{})
 	gob.Register(&HeavyError{})
+	gob.Register(&JetMiss{})
+	gob.Register(&NodeSign{})
+	gob.Register(&HasPendingRequests{})
 }

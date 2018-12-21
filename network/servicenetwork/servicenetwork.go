@@ -49,6 +49,7 @@ type ServiceNetwork struct {
 	CertificateManager  core.CertificateManager         `inject:""`
 	NodeNetwork         core.NodeNetwork                `inject:""`
 	PulseManager        core.PulseManager               `inject:""`
+	PulseStorage        core.PulseStorage               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
 	ArtifactManager     core.ArtifactManager            `inject:""`
@@ -70,21 +71,6 @@ type ServiceNetwork struct {
 func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme}
 	return serviceNetwork, nil
-}
-
-// GetAddress returns host public address.
-func (n *ServiceNetwork) GetAddress() string {
-	return n.hostNetwork.PublicAddress()
-}
-
-// GetNodeID returns current node id.
-func (n *ServiceNetwork) GetNodeID() core.RecordRef {
-	return n.NodeNetwork.GetOrigin().ID()
-}
-
-// GetGlobuleID returns current globule id.
-func (n *ServiceNetwork) GetGlobuleID() core.GlobuleID {
-	return 0
 }
 
 // SendMessage sends a message from MessageBus.
@@ -163,7 +149,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
 
 	cm.Inject(n.NodeKeeper,
-		n.PhaseManager,
 		n.MerkleCalculator,
 		n.ConsensusNetwork,
 		n.Communicator,
@@ -200,7 +185,12 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 
 // Stop implements core.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+
+	logger.Info("Stopping host network")
 	n.hostNetwork.Stop()
+	logger.Info("Stopping consensus network")
+	n.ConsensusNetwork.Stop()
 	return nil
 }
 
@@ -215,20 +205,19 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		logger.Error("PulseManager is not initialized")
 		return
 	}
-	currentPulse, err := n.PulseManager.Current(ctx)
+	currentPulse, err := n.PulseStorage.Current(ctx)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "Could not get current pulse"))
 		return
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = n.PulseManager.Set(ctx, pulse, false)
+		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to set pulse"))
 			return
 		}
 
-		// TODO: I don't know why I put it here. If you know better place for that, move it there please
 		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
@@ -244,11 +233,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			if err != nil {
 				logger.Warn("Error writing active nodes to ledger: " + err.Error())
 			}
-			// TODO: make PhaseManager works and uncomment this
-			// err = n.PhaseManager.OnPulse(ctx, &pulse)
-			// if err != nil {
-			// 	logger.Warn("phase manager fail: " + err.Error())
-			// }
+			err = n.PhaseManager.OnPulse(ctx, &pulse)
+			if err != nil {
+				logger.Warn("phase manager fail: " + err.Error())
+			}
 		}(logger, n)
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)

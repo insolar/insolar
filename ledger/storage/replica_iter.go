@@ -52,7 +52,7 @@ type ReplicaIter struct {
 	lastpulse  core.PulseNumber
 }
 
-// NewReplicaIter creates ReplicaIter what iterates over records
+// NewReplicaIter creates ReplicaIter what iterates over records on jet,
 // required for heavy material replication.
 //
 // Params 'start' and 'end' defines pulses from which scan should happen,
@@ -63,17 +63,22 @@ type ReplicaIter struct {
 func NewReplicaIter(
 	ctx context.Context,
 	db *DB,
+	jetID core.RecordID,
 	start core.PulseNumber,
 	end core.PulseNumber,
 	limit int,
 ) *ReplicaIter {
-	newit := func(prefixbyte byte, start, end core.PulseNumber) *iterstate {
+	newit := func(prefixbyte byte, jet *core.RecordID, start, end core.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
-		return &iterstate{
-			prefix: prefix,
-			start:  bytes.Join([][]byte{prefix, start.Bytes()}, nil),
-			end:    bytes.Join([][]byte{prefix, end.Bytes()}, nil),
+		iter := &iterstate{prefix: prefix}
+		if jet == nil {
+			iter.start = bytes.Join([][]byte{prefix, start.Bytes()}, nil)
+			iter.end = bytes.Join([][]byte{prefix, end.Bytes()}, nil)
+		} else {
+			iter.start = bytes.Join([][]byte{prefix, jet[:], start.Bytes()}, nil)
+			iter.end = bytes.Join([][]byte{prefix, jet[:], end.Bytes()}, nil)
 		}
+		return iter
 	}
 
 	return &ReplicaIter{
@@ -82,10 +87,10 @@ func NewReplicaIter(
 		limitBytes: limit,
 		// record iterators (order matters for heavy node consistency)
 		istates: []*iterstate{
-			newit(scopeIDRecord, start, end),
-			newit(scopeIDBlob, start, end),
-			newit(scopeIDLifeline, core.FirstPulseNumber, end),
-			newit(scopeIDJetDrop, start, end),
+			newit(scopeIDRecord, &jetID, start, end),
+			newit(scopeIDBlob, &jetID, start, end),
+			newit(scopeIDLifeline, &jetID, core.FirstPulseNumber, end),
+			newit(scopeIDJetDrop, &jetID, start, end),
 		},
 	}
 }

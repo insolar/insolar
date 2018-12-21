@@ -170,7 +170,8 @@ func main() {
 	}
 	cmdImports.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
 
-
+	// PLEASE NOTE that `insgocc compile` is in fact not used for compiling contracts by insolard.
+	// Instead contracts are compiled when `insolard genesis` is executed without using `insgocc`.
 	keepTemp := false
 	var cmdCompile = &cobra.Command{
 		Use:   "compile [flags] <file name to compile>",

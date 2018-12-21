@@ -82,11 +82,14 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, 
 // DumpUserInfo processes dump user info request
 func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 	caller := *rd.GetContext().Caller
-	ref := core.NewRefFromBase58(reference)
-	if ref != caller && caller != rd.RootMember {
+	ref, err := core.NewRefFromBase58(reference)
+	if err != nil {
+		return nil, fmt.Errorf("[ DumpUserInfo ] Failed to parse reference: %s", err.Error())
+	}
+	if *ref != caller && caller != rd.RootMember {
 		return nil, fmt.Errorf("[ DumpUserInfo ] You can dump only yourself")
 	}
-	m := member.GetObject(ref)
+	m := member.GetObject(*ref)
 
 	res, err := rd.getUserInfoMap(m)
 	if err != nil {
@@ -99,14 +102,20 @@ func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 // DumpAllUsers processes dump all users request
 func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
-		return nil, fmt.Errorf("[ DumpUserInfo ] Only root can call this method")
+		return nil, fmt.Errorf("[ DumpAllUsers ] Only root can call this method")
 	}
 	res := []map[string]interface{}{}
-	crefs, err := rd.GetChildrenTyped(member.PrototypeReference)
+	iterator, err := rd.NewChildrenTypedIterator(member.GetPrototype())
 	if err != nil {
-		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get children: %s", err.Error())
+		return nil, fmt.Errorf("[ DumpAllUsers ] Can't get children: %s", err.Error())
 	}
-	for _, cref := range crefs {
+
+	for iterator.HasNext() {
+		cref, err := iterator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("[ DumpAllUsers ] Can't get next child: %s", err.Error())
+		}
+
 		if cref == rd.RootMember {
 			continue
 		}

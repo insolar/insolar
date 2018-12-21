@@ -25,8 +25,8 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -62,11 +62,17 @@ type recordsData map[string]recordData
 type pulseData struct {
 	Records recordsData
 	Pulse   core.Pulse
+	JetID   core.RecordID
 }
 
 // Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
 	result := core.StorageExportResult{Data: map[string]interface{}{}}
+
+	jetIDs, err := e.db.GetJets(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	counter := 0
 	currentPN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
@@ -74,13 +80,19 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	for current != nil && counter < size {
 		pulse, err := e.db.GetPulse(ctx, *current)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch pulse data 22222")
+			return nil, errors.Wrap(err, "failed to fetch pulse data")
 		}
-		data, err := e.exportPulse(ctx, &pulse.Pulse)
-		if err != nil {
-			return nil, err
+
+		var data []*pulseData
+		for jetID := range jetIDs {
+			fetchedData, err := e.exportPulse(ctx, jetID, &pulse.Pulse)
+			if err != nil {
+				return nil, err
+			}
+			data = append(data, fetchedData)
 		}
-		result.Data[strconv.FormatUint(uint64(pulse.Pulse.PulseNumber), 10)] = *data
+
+		result.Data[strconv.FormatUint(uint64(pulse.Pulse.PulseNumber), 10)] = data
 
 		current = pulse.Next
 		counter++
@@ -92,9 +104,9 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	return &result, nil
 }
 
-func (e *Exporter) exportPulse(ctx context.Context, pulse *core.Pulse) (*pulseData, error) {
+func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.db.IterateRecords(ctx, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
+	err := e.db.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
 		pl, err := e.getPayload(ctx, rec)
 		if err != nil {
 			return err
@@ -113,18 +125,20 @@ func (e *Exporter) exportPulse(ctx context.Context, pulse *core.Pulse) (*pulseDa
 	data := pulseData{
 		Records: records,
 		Pulse:   *pulse,
+		JetID:   jetID,
 	}
 
 	return &data, nil
 }
 
 func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, error) {
+	jetID := core.TODOJetID
 	switch r := rec.(type) {
 	case record.ObjectState:
 		if r.GetMemory() == nil {
 			break
 		}
-		blob, err := e.db.GetBlob(ctx, r.GetMemory())
+		blob, err := e.db.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +156,7 @@ func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, 
 		if err != nil {
 			return payload{"PayloadBinary": r.GetPayload()}, nil
 		}
-		return payload{"Payload": parcel}, nil
+		return payload{"Payload": parcel, "Type": parcel.Type().String()}, nil
 	}
 
 	return nil, nil

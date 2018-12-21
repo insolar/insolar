@@ -30,10 +30,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/anacrolix/utp"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/ccding/go-stun"
 
 [[constraint]]
@@ -67,3 +63,7 @@
 [[constraint]]
   name = "go.opencensus.io"
   version = "0.18.0"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/sync"

@@ -19,6 +19,7 @@ package artifactmanager
 import (
 	"context"
 	"math/rand"
+	"sync"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -28,10 +29,11 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -71,11 +73,14 @@ func getTestData(t *testing.T) (
 ) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
+	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testmessagebus.NewTestMessageBus(t)
+	db.PlatformCryptographyScheme = scheme
 	handler := MessageHandler{
 		db:                         db,
-		jetDropHandlers:            map[core.MessageType]internalHandler{},
+		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
@@ -84,9 +89,19 @@ func getTestData(t *testing.T) (
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
-	handler.Recent = recentStorageMock
+	recentStorageMock.GetRequestsMock.Return(nil)
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	handler.RecentStorageProvider = provideMock
+
+	jc.AmIMock.Return(true, nil)
 
 	handler.Bus = mb
+	handler.JetCoordinator = jc
 	err := handler.Init(ctx)
 	require.NoError(t, err)
 	am := LedgerArtifactManager{
@@ -104,12 +119,53 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
-	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "my little message"}}
-	id, err := am.RegisterRequest(ctx, &parcel)
+	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"}}
+	id, err := am.RegisterRequest(ctx, *am.GenesisRef(), &parcel)
 	assert.NoError(t, err)
-	rec, err := db.GetRecord(ctx, id)
+	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
-	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.CallRequest).Payload)
+	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.RequestRecord).Payload)
+}
+
+func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
+	t.Parallel()
+
+	code := []byte("test_code")
+	ctx := context.Background()
+	codeRef := testutils.RandomRef()
+
+	mb := testutils.NewMessageBusMock(t)
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		return &reply.Code{
+			Code: code,
+		}, nil
+	}
+
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	am := LedgerArtifactManager{
+		DefaultBus:    mb,
+		db:            db,
+		codeCacheLock: &sync.Mutex{},
+		codeCache:     make(map[core.RecordRef]*cacheEntry),
+	}
+
+	desc, err := am.GetCode(ctx, codeRef)
+	receivedCode, err := desc.Code()
+	require.NoError(t, err)
+	require.Equal(t, code, receivedCode)
+
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		t.Fatal("Func must not be called here")
+		return nil, nil
+	}
+
+	desc, err = am.GetCode(ctx, codeRef)
+	receivedCode, err = desc.Code()
+	require.NoError(t, err)
+	require.Equal(t, code, receivedCode)
+
 }
 
 func TestLedgerArtifactManager_DeclareType(t *testing.T) {
@@ -120,7 +176,7 @@ func TestLedgerArtifactManager_DeclareType(t *testing.T) {
 	typeDec := []byte{1, 2, 3}
 	id, err := am.DeclareType(ctx, domainRef, requestRef, typeDec)
 	assert.NoError(t, err)
-	typeRec, err := db.GetRecord(ctx, id)
+	typeRec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
 	assert.Equal(t, &record.TypeRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -144,7 +200,7 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 		core.MachineTypeBuiltin,
 	)
 	assert.NoError(t, err)
-	codeRec, err := db.GetRecord(ctx, id)
+	codeRec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
 	assert.Equal(t, codeRec, &record.CodeRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -160,11 +216,13 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
+	jetID := *jet.NewID(0, nil)
 
 	memory := []byte{1, 2, 3}
 	codeRef := genRandomRef(0)
 	parentID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -172,7 +230,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 			},
 		},
 	)
-	err := db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)
@@ -188,7 +246,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		memory,
 	)
 	assert.Nil(t, err)
-	activateRec, err := db.GetRecord(ctx, objDesc.StateID())
+	activateRec, err := db.GetRecord(ctx, jetID, objDesc.StateID())
 	assert.Nil(t, err)
 	assert.Equal(t, activateRec, &record.ObjectActivateRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -204,13 +262,13 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		IsDelegate: false,
 	})
 
-	idx, err := db.GetObjectIndex(ctx, parentID, false)
+	idx, err := db.GetObjectIndex(ctx, jetID, parentID, false)
 	assert.NoError(t, err)
-	childRec, err := db.GetRecord(ctx, idx.ChildPointer)
+	childRec, err := db.GetRecord(ctx, jetID, idx.ChildPointer)
 	assert.NoError(t, err)
 	assert.Equal(t, objRef, childRec.(*record.ChildRecord).Ref)
 
-	idx, err = db.GetObjectIndex(ctx, objRef.Record(), false)
+	idx, err = db.GetObjectIndex(ctx, jetID, objRef.Record(), false)
 	assert.NoError(t, err)
 	assert.Equal(t, *objDesc.StateID(), *idx.LatestState)
 	assert.Equal(t, *objDesc.Parent(), idx.Parent)
@@ -220,9 +278,11 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
+	jetID := *jet.NewID(0, nil)
 
 	objID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -230,7 +290,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 			},
 		},
 	)
-	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, jetID, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
@@ -246,7 +306,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 		},
 	)
 	assert.Nil(t, err)
-	deactivateRec, err := db.GetRecord(ctx, deactivateID)
+	deactivateRec, err := db.GetRecord(ctx, jetID, deactivateID)
 	assert.Nil(t, err)
 	assert.Equal(t, deactivateRec, &record.DeactivationRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -261,9 +321,11 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
+	jetID := *jet.NewID(0, nil)
 
 	objID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -271,7 +333,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 			},
 		},
 	)
-	err := db.SetObjectIndex(ctx, objID, &index.ObjectLifeline{
+	err := db.SetObjectIndex(ctx, jetID, objID, &index.ObjectLifeline{
 		State:       record.StateActivation,
 		LatestState: objID,
 	})
@@ -291,7 +353,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 		memory,
 	)
 	assert.Nil(t, err)
-	updateRec, err := db.GetRecord(ctx, obj.StateID())
+	updateRec, err := db.GetRecord(ctx, jetID, obj.StateID())
 	assert.Nil(t, err)
 	assert.Equal(t, updateRec, &record.ObjectAmendRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -311,12 +373,14 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
+	jetID := *jet.NewID(0, nil)
 
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
 	objRef := genRandomRef(0)
 	_, err := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -329,9 +393,9 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		},
 	)
 	require.NoError(t, err)
-	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{3})
+	_, err = db.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{3})
 	require.NoError(t, err)
-	objectAmendID, _ := db.SetRecord(ctx, core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
+	objectAmendID, _ := db.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
 		SideEffectRecord: record.SideEffectRecord{
 			Domain: domainRef,
 		},
@@ -340,7 +404,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 			Image:  *prototypeRef,
 		},
 	})
-	_, err = db.SetBlob(ctx, core.GenesisPulse.PulseNumber, []byte{4})
+	_, err = db.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{4})
 	require.NoError(t, err)
 
 	objectIndex := index.ObjectLifeline{
@@ -348,7 +412,10 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		ChildPointer: genRandomID(0),
 		Parent:       *parentRef,
 	}
-	db.SetObjectIndex(ctx, objRef.Record(), &objectIndex)
+	require.NoError(
+		t,
+		db.SetObjectIndex(ctx, jetID, objRef.Record(), &objectIndex),
+	)
 
 	objDesc, err := am.GetObject(ctx, *objRef, nil, false)
 	assert.NoError(t, err)
@@ -375,27 +442,39 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	am := NewArtifactManger(nil)
 	mb := testutils.NewMessageBusMock(mc)
 
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, m core.Message, _ core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
-		if o.Receiver == nil {
-			return &reply.GetObjectRedirect{
-				Receiver: nodeRef,
-				Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
-			}, nil
-		} else {
+
+		switch m.(type) {
+		case *message.GetObjectIndex:
+			return &reply.ObjectIndex{}, nil
+		case *message.GetObject:
+			if o.Receiver == nil {
+				return &reply.GetObjectRedirect{
+					Receiver: nodeRef,
+					Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
+				}, nil
+			}
+
 			token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
 			assert.True(t, ok)
 			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 			assert.Equal(t, nodeRef, o.Receiver)
+			return &reply.Object{}, nil
+		default:
+			panic("unexpected call")
 		}
-
-		return &reply.Object{}, nil
 	}
 	am.DefaultBus = mb
+	am.db = db
 
 	_, err := am.GetObject(ctx, *objRef, nil, false)
+
 	require.NoError(t, err)
 }
 
@@ -403,9 +482,11 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
+	jetID := *jet.NewID(0, nil)
 
 	parentID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -421,12 +502,14 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 
 	childMeta1, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ChildRecord{
 			Ref: *child1Ref,
 		})
 	childMeta2, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ChildRecord{
 			PrevChild: childMeta1,
@@ -434,6 +517,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 		})
 	childMeta3, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ChildRecord{
 			PrevChild: childMeta2,
@@ -444,11 +528,14 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 		LatestState:  parentID,
 		ChildPointer: childMeta3,
 	}
-	db.SetObjectIndex(ctx, parentID, &parentIndex)
+	require.NoError(
+		t,
+		db.SetObjectIndex(ctx, jetID, parentID, &parentIndex),
+	)
 
 	t.Run("returns correct children without pulse", func(t *testing.T) {
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
 		assert.Equal(t, *child3Ref, *child)
@@ -467,7 +554,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Run("returns correct children with pulse", func(t *testing.T) {
 		pn := core.PulseNumber(1)
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), &pn)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
 		assert.Equal(t, *child2Ref, *child)
@@ -484,7 +571,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Run("returns correct children in many chunks", func(t *testing.T) {
 		am.getChildrenChunkSize = 1
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
 		assert.Equal(t, *child3Ref, *child)
@@ -505,7 +592,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 		am.getChildrenChunkSize = 1
 		pn := core.PulseNumber(3)
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), &pn)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
 		assert.Equal(t, *child3Ref, *child)
@@ -530,22 +617,26 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	am := NewArtifactManger(nil)
 	mb := testutils.NewMessageBusMock(mc)
 
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	am.db = db
+
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, m core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
 			return &reply.GetChildrenRedirect{
 				Receiver: nodeRef,
 				Token:    &delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}},
 			}, nil
-		} else {
-			token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
-			assert.True(t, ok)
-			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-			assert.Equal(t, nodeRef, o.Receiver)
 		}
 
+		token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
+		assert.True(t, ok)
+		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
+		assert.Equal(t, nodeRef, o.Receiver)
 		return &reply.Children{}, nil
 	}
 	am.DefaultBus = mb
@@ -562,32 +653,31 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	codeRecord := record.CodeRecord{
 		Code: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
 	}
-	recHash := am.PlatformCryptographyScheme.ReferenceHasher()
-	_, err := codeRecord.WriteHashData(recHash)
-	assert.NoError(t, err)
-	latestPulse, err := db.GetLatestPulseNumber(ctx)
-	assert.NoError(t, err)
-	id := core.NewRecordID(latestPulse, recHash.Sum(nil))
 
 	setRecordMessage := message.SetRecord{
 		Record: record.SerializeRecord(&codeRecord),
 	}
 
+	jetID := *jet.NewID(0, nil)
+
 	rep, err := am.DefaultBus.Send(
 		ctx,
 		&message.JetDrop{
+			JetID: jetID,
 			Messages: [][]byte{
 				message.ToBytes(&setRecordMessage),
 			},
 			PulseNumber: core.GenesisPulse.PulseNumber,
 		},
+		*core.GenesisPulse,
 		nil,
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
 
-	rec, err := db.GetRecord(ctx, id)
-	assert.NoError(t, err)
+	id := record.NewRecordIDFromRecord(db.PlatformCryptographyScheme, 0, &codeRecord)
+	rec, err := db.GetRecord(ctx, jetID, id)
+	require.NoError(t, err)
 	assert.Equal(t, codeRecord, *rec.(*record.CodeRecord))
 }
 
@@ -607,17 +697,24 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.GetRequestsMock.Return(nil)
 
 	handler := MessageHandler{
 		db:                         db,
-		jetDropHandlers:            map[core.MessageType]internalHandler{},
+		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
-	handler.Recent = recentStorageMock
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	handler.RecentStorageProvider = provideMock
 
 	err := handler.Init(ctx)
 	require.NoError(t, err)
@@ -629,8 +726,17 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	}
 
 	jc.QueryRoleMock.Return([]core.RecordRef{*genRandomRef(0)}, nil)
+	jc.AmIMock.Return(true, nil)
 
-	objID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.GenesisRequest{Name: "object"}})
+	objID, err := am.RegisterRequest(
+		ctx,
+		*am.GenesisRef(),
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
+			},
+		},
+	)
 	require.NoError(t, err)
 	objRef := genRefWithID(objID)
 
@@ -680,11 +786,57 @@ func TestLedgerArtifactManager_RegisterResult(t *testing.T) {
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
 
+	objID := core.RecordID{1, 2, 3}
 	request := genRandomRef(0)
-	requestID, err := am.RegisterResult(ctx, *request, []byte{1, 2, 3})
+	requestID, err := am.RegisterResult(ctx, *core.NewRecordRef(core.RecordID{}, objID), *request, []byte{1, 2, 3})
 	assert.NoError(t, err)
 
-	rec, err := db.GetRecord(ctx, requestID)
+	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), requestID)
 	assert.NoError(t, err)
-	assert.Equal(t, record.ResultRecord{Request: *request, Payload: []byte{1, 2, 3}}, *rec.(*record.ResultRecord))
+	assert.Equal(t, record.ResultRecord{
+		Object:  objID,
+		Request: *request,
+		Payload: []byte{1, 2, 3},
+	}, *rec.(*record.ResultRecord))
+}
+
+func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	cs := testutils.NewPlatformCryptographyScheme()
+	am := NewArtifactManger(db)
+	am.PlatformCryptographyScheme = cs
+
+	t.Run("returns error on exceeding retry limit", func(t *testing.T) {
+		mb := testutils.NewMessageBusMock(mc)
+		am.DefaultBus = mb
+		mb.SendMock.Return(&reply.JetMiss{JetID: *jet.NewID(5, []byte{1, 2, 3})}, nil)
+		_, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
+		require.Error(t, err)
+	})
+
+	t.Run("returns no error and updates tree when jet miss", func(t *testing.T) {
+		mb := testutils.NewMessageBusMock(mc)
+		am.DefaultBus = mb
+		retries := 3
+		mb.SendFunc = func(c context.Context, m core.Message, p core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+			if retries == 0 {
+				return &reply.ID{}, nil
+			}
+			retries--
+			return &reply.JetMiss{JetID: *jet.NewID(4, []byte{0xD5})}, nil
+		}
+		_, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
+		require.NoError(t, err)
+
+		tree, err := db.GetJetTree(ctx, core.FirstPulseNumber)
+		require.NoError(t, err)
+		jetID := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
+		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
+	})
 }

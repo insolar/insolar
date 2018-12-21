@@ -66,7 +66,8 @@ func checkBadDataSerializationDeserialization(t *testing.T, orig Serializer, msg
 	data := serializeData(t, orig)
 	r := bytes.NewReader(data[:len(data)-1])
 	err := newObj.(Serializer).Deserialize(r)
-	require.EqualError(t, err, msg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), msg)
 }
 
 func TestPacketHeaderReadWrite(t *testing.T) {
@@ -74,12 +75,11 @@ func TestPacketHeaderReadWrite(t *testing.T) {
 }
 
 func TestPacketHeaderReadWrite_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(Phase1),
-		"[ PacketHeader.Deserialize ] Can't read TargetNodeID: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makeDefaultPacketHeader(Phase1), "unexpected EOF")
 }
 
-func makeDefaultPulseDataExt() *PulseDataExt {
-	pulseDataExt := &PulseDataExt{}
+func makeDefaultPulseDataExt() PulseDataExt {
+	pulseDataExt := PulseDataExt{}
 	pulseDataExt.NextPulseDelta = uint16(11)
 	pulseDataExt.PrevPulseDelta = uint16(12)
 	pulseDataExt.Entropy = core.Entropy{}
@@ -92,12 +92,13 @@ func makeDefaultPulseDataExt() *PulseDataExt {
 }
 
 func TestPulseDataExtReadWrite(t *testing.T) {
-	checkSerializationDeserialization(t, makeDefaultPulseDataExt())
+	pulseDataExt := makeDefaultPulseDataExt()
+	checkSerializationDeserialization(t, &pulseDataExt)
 }
 
 func TestPulseDataExtReadWrite_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeDefaultPulseDataExt(),
-		"[ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+	pulseDataExt := makeDefaultPulseDataExt()
+	checkBadDataSerializationDeserialization(t, &pulseDataExt, "unexpected EOF")
 }
 
 func TestPulseDataReadWrite(t *testing.T) {
@@ -112,8 +113,7 @@ func TestPulseDataReadWrite_BadData(t *testing.T) {
 	pulseData := &PulseData{}
 	pulseData.PulseNumber = uint32(32)
 	pulseData.Data = makeDefaultPulseDataExt()
-	checkBadDataSerializationDeserialization(t, pulseData,
-		"[ PulseData.Deserialize ] Can't read PulseDataExt: [ PulseDataExt.Deserialize ] Can't read Entropy: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, pulseData, "unexpected EOF")
 }
 
 func genRandomSlice(n int) []byte {
@@ -158,8 +158,7 @@ func TestNodePulseProofReadWrite(t *testing.T) {
 }
 
 func TestNodePulseProofReadWrite_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makeNodePulseProof(),
-		"[ NodePulseProof.Deserialize ] Can't read NodeSignature: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makeNodePulseProof(), "unexpected EOF")
 }
 
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
@@ -254,7 +253,7 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 func makePhase1Packet() *Phase1Packet {
 	phase1Packet := NewPhase1Packet()
 	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
-	phase1Packet.pulseData = *makeDefaultPulseDataExt()
+	phase1Packet.pulseData = makeDefaultPulseDataExt()
 	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray71(), NodeStateHash: randomArray64()}
 
 	phase1Packet.AddClaim(makeNodeJoinClaim())
@@ -276,10 +275,11 @@ func makePhase2Packet() *Phase2Packet {
 	phase2Packet.globuleHashSignature = randomArray64()
 	phase2Packet.SignatureHeaderSection1 = randomArray71()
 	phase2Packet.SignatureHeaderSection2 = randomArray71()
+	phase2Packet.bitSet, _ = NewTriStateBitSet(134)
 
-	// TODO: uncomment when support ser\deser of ReferendumVote
-	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
-	// phase2Packet.votesAndAnswers = append(phase2Packet.votesAndAnswers,*makeReferendumVote())
+	vote := &MissingNode{NodeIndex: 25}
+
+	phase2Packet.AddVote(vote)
 
 	return phase2Packet
 }
@@ -289,9 +289,7 @@ func TestPhase2Packet_Deserialize(t *testing.T) {
 }
 
 func TestPhase2Packet_BadData(t *testing.T) {
-	checkBadDataSerializationDeserialization(t, makePhase2Packet(),
-		"[ Phase2Packet.Deserialize ] Can't deserialize body: [ Phase2Packet.Deserialize ] "+
-			"Can't read SignatureHeaderSection2: unexpected EOF")
+	checkBadDataSerializationDeserialization(t, makePhase2Packet(), "unexpected EOF")
 
 }
 
@@ -369,7 +367,8 @@ func getPhase3Packet(t *testing.T) *Phase3Packet {
 	packet.deviantBitSet, err = NewBitSet(100)
 	assert.NoError(t, err)
 
-	refs := initRefs()
+	count := 70
+	refs := initRefs(count)
 	cells := initBitCells(refs)
 	bitset, err := NewBitSet(len(cells))
 	assert.NoError(t, err)

@@ -28,8 +28,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const apiurl = "http://localhost:19191/api"
-
 type response struct {
 	Error  string
 	Result interface{}
@@ -51,7 +49,7 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
 	check("can not create user config:", err)
 
-	body, err := requester.Send(ctx, apiurl, userCfg, reqCfg)
+	body, err := requester.Send(ctx, apiurls.Next(), userCfg, reqCfg)
 	check("can not send request:", err)
 
 	return body
@@ -69,9 +67,9 @@ func transfer(ctx context.Context, amount float64, from memberInfo, to memberInf
 	return "success"
 }
 
-func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
+func createMembers(concurrent int) ([]memberInfo, error) {
 	var members []memberInfo
-	for i := 0; i < concurrent*repetitions*2; i++ {
+	for i := 0; i < concurrent*2; i++ {
 		memberName := testutils.RandomString()
 
 		ks := platformpolicy.NewKeyProcessor()
@@ -102,7 +100,7 @@ func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 }
 
 func info() *requester.InfoResponse {
-	info, err := requester.Info(apiurl)
+	info, err := requester.Info(apiurls.Next())
 	check("problem with request to info:", err)
 	return info
 }

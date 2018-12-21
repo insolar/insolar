@@ -20,8 +20,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"strings"
 
 	"github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -31,6 +33,8 @@ const (
 	RecordIDSize = PulseNumberSize + RecordHashSize
 	// RecordRefSize is absolute records address (including domain ID).
 	RecordRefSize = RecordIDSize * 2
+	// RecordRefIDSeparator is character that separates RecordID from DomainID in serialized RecordRef
+	RecordRefIDSeparator = "."
 )
 
 // RecordID is a unified record ID.
@@ -75,12 +79,23 @@ func (id *RecordID) Equal(other *RecordID) bool {
 	return *id == *other
 }
 
+// NewIDFromBase58 deserializes RecordID from base58 encoded string.
+func NewIDFromBase58(str string) (*RecordID, error) {
+	decoded := base58.Decode(str)
+	if len(decoded) != RecordIDSize {
+		return nil, errors.New("bad RecordID size")
+	}
+	var id RecordID
+	copy(id[:], decoded)
+	return &id, nil
+}
+
 // MarshalJSON serializes ID into JSON.
 func (id *RecordID) MarshalJSON() ([]byte, error) {
 	if id == nil {
 		return json.Marshal(nil)
 	}
-	return json.Marshal(base58.Encode(id[:]))
+	return json.Marshal(id.String())
 }
 
 // RecordRef is a unified record reference.
@@ -113,6 +128,9 @@ func (ref RecordRef) Domain() *RecordID {
 
 // Record returns record's RecordID.
 func (ref *RecordRef) Record() *RecordID {
+	if ref == nil {
+		return nil
+	}
 	var id RecordID
 	copy(id[:], ref[:RecordIDSize])
 	return &id
@@ -120,7 +138,7 @@ func (ref *RecordRef) Record() *RecordID {
 
 // String outputs base58 RecordRef representation.
 func (ref RecordRef) String() string {
-	return base58.Encode(ref[:])
+	return ref.Record().String() + RecordRefIDSeparator + ref.Domain().String()
 }
 
 // FromSlice : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
@@ -152,12 +170,20 @@ func (ref RecordRef) Compare(other RecordRef) int {
 }
 
 // NewRefFromBase58 deserializes reference from base58 encoded string.
-func NewRefFromBase58(str string) RecordRef {
-	// TODO: if str < 20 bytes, always returns 0. need to check this.
-	decoded := base58.Decode(str)
-	var ref RecordRef
-	copy(ref[:], decoded)
-	return ref
+func NewRefFromBase58(str string) (*RecordRef, error) {
+	parts := strings.SplitN(str, RecordRefIDSeparator, 2)
+	if len(parts) < 2 {
+		return nil, errors.New("bad reference format")
+	}
+	recordID, err := NewIDFromBase58(parts[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "bad record part")
+	}
+	domainID, err := NewIDFromBase58(parts[1])
+	if err != nil {
+		return nil, errors.Wrap(err, "bad domain part")
+	}
+	return NewRecordRef(*domainID, *recordID), nil
 }
 
 // MarshalJSON serializes reference into JSON.
@@ -165,13 +191,5 @@ func (ref *RecordRef) MarshalJSON() ([]byte, error) {
 	if ref == nil {
 		return json.Marshal(nil)
 	}
-	rec, err := ref.Record().MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	domain, err := ref.Domain().MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(bytes.Join([][]byte{rec, domain}, nil))
+	return json.Marshal(ref.String())
 }

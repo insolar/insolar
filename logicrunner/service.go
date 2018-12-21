@@ -19,23 +19,25 @@
 package logicrunner
 
 import (
-	"bytes"
 	"context"
 	"net"
 	"net/rpc"
 	"sync/atomic"
+
+	"github.com/insolar/insolar/core/utils"
+	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/pkg/errors"
 )
 
 // StartRPC starts RPC server for isolated executors to use
-func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
-	rpcService := &RPC{lr: lr}
+func StartRPC(ctx context.Context, lr *LogicRunner, ps core.PulseStorage) *RPC {
+	rpcService := &RPC{lr: lr, ps: ps}
 
 	rpcServer := rpc.NewServer()
 	err := rpcServer.Register(rpcService)
@@ -61,15 +63,26 @@ func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
 // RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
 type RPC struct {
 	lr *LogicRunner
+	ps core.PulseStorage
 }
 
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
+	// we don't want to record GetCode messages because of cache
+	ctx = core.ContextWithMessageBus(ctx, gpr.lr.MessageBus)
+	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
-	codeDescriptor, err := am.GetCode(ctx, req.Code)
+	var (
+		codeDescriptor core.CodeDescriptor
+		err            error
+	)
+	utils.MeasureExecutionTime(ctx, "service.GetCode am.GetCode", func() {
+		codeDescriptor, err = am.GetCode(ctx, req.Code)
+	})
 	if err != nil {
 		return err
 	}
@@ -80,254 +93,151 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	return nil
 }
 
-var serial uint64 = 1
-
 // MakeBaseMessage makes base of logicrunner event from base of up request
-func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
+func MakeBaseMessage(req rpctypes.UpBaseReq, es *ExecutionState) message.BaseLogicMessage {
+	es.nonce++
 	return message.BaseLogicMessage{
 		Caller:          req.Callee,
 		CallerPrototype: req.Prototype,
 		Request:         req.Request,
-		Nonce:           atomicLoadAndIncrementUint64(&serial),
+		Nonce:           es.nonce,
 	}
 }
 
 // RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeRouteCall != cr.Type {
-			return errors.New("wrong validation type on RouteCall")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on RouteCall")
-		}
-
-		rep.Result = cr.Resp.(core.Arguments)
-		return nil
-	}
-
-	var mode message.MethodReturnMode
-	if req.Wait {
-		mode = message.ReturnResult
-	} else {
-		mode = message.ReturnNoWait
-	}
-
-	msg := &message.CallMethod{
-		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		ReturnMode:       mode,
-		ObjectRef:        req.Object,
-		Method:           req.Method,
-		Arguments:        req.Arguments,
-	}
-
-	res, err := gpr.lr.MessageBus.Send(ctx, msg, nil)
+	bm := MakeBaseMessage(req.UpBaseReq, es)
+	res, err := gpr.lr.ContractRequester.CallMethod(ctx,
+		&bm,
+		!req.Wait,
+		&req.Object,
+		req.Method,
+		req.Arguments,
+		&req.ProxyPrototype,
+	)
 	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
+		return err
 	}
 
-	rep.Result = res.(*reply.CallMethod).Result
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeRouteCall,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Result,
-	})
+	if req.Wait {
+		rep.Result = res.(*reply.CallMethod).Result
+	}
 
 	return nil
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
-	if gpr.lr.MessageBus == nil {
-		return errors.New("event bus was not set during initialization")
-	}
+	bm := MakeBaseMessage(req.UpBaseReq, es)
+	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, &bm, false, &req.Prototype, &req.Parent, req.ConstructorName, req.ArgsSerialized, int(message.Child))
 
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeSaveAsChild != cr.Type {
-			return errors.New("wrong validation type on SaveAsChild")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on SaveAsChild")
-		}
+	rep.Reference = ref
 
-		rep.Reference = cr.Resp.(*core.RecordRef)
-		return nil
-	}
-
-	msg := &message.CallConstructor{
-		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		PrototypeRef:     req.Prototype,
-		ParentRef:        req.Parent,
-		Name:             req.ConstructorName,
-		Arguments:        req.ArgsSerialized,
-		SaveAs:           message.Child,
-	}
-
-	res, err := gpr.lr.MessageBus.Send(ctx, msg, nil)
-	if err != nil {
-		return errors.Wrap(err, "couldn't save new object as child")
-	}
-
-	rep.Reference = res.(*reply.CallConstructor).Object
-
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeSaveAsChild,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Reference,
-	})
-
-	return nil
-}
-
-// GetObjChildren is an RPC returns set of object children
-func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.UpGetObjChildrenResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
-
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeGetObjChildren != cr.Type {
-			return errors.New("wrong validation type on GetObjChildren")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on GetObjChildren")
-		}
-
-		rep.Children = cr.Resp.([]core.RecordRef)
-		return nil
-	}
-
-	am := gpr.lr.ArtifactManager
-	i, err := am.GetChildren(ctx, req.Obj, nil)
-	if err != nil {
-		return errors.Wrap(err, "[ GetObjChildren ] Can't get children")
-	}
-	for i.HasNext() {
-		r, err := i.Next()
-		if err != nil {
-			return errors.Wrap(err, "[ GetObjChildren ] Can't get Next")
-		}
-		o, err := am.GetObject(ctx, *r, nil, false)
-		if err != nil {
-			if err == core.ErrDeactivated {
-				continue
-			}
-			return errors.Wrap(err, "[ GetObjChildren ] Can't get Next")
-		}
-		protoRef, err := o.Prototype()
-		if err != nil {
-			return errors.Wrap(err, "[ GetObjChildren ] Can't get prototype reference")
-		}
-
-		if protoRef.Equal(req.Prototype) {
-			rep.Children = append(rep.Children, *r)
-		}
-	}
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{ // bad idea, we can store gadzillion of children
-		Type:   core.CaseRecordTypeGetObjChildren,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Children,
-	})
-	return nil
+	return err
 }
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeSaveAsDelegate != cr.Type {
-			return errors.New("wrong validation type on SaveAsDelegate")
+	bm := MakeBaseMessage(req.UpBaseReq, es)
+	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, &bm, false, &req.Prototype, &req.Into, req.ConstructorName, req.ArgsSerialized, int(message.Delegate))
+
+	rep.Reference = ref
+	return err
+}
+
+var iteratorMap = make(map[string]*core.RefIterator)
+var iteratorBuffSize = 1000
+
+// GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
+func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq, rep *rpctypes.UpGetObjChildrenIteratorResp) error {
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
+
+	am := gpr.lr.ArtifactManager
+	iteratorID := req.IteratorID
+	if _, ok := iteratorMap[iteratorID]; !ok {
+		i, err := am.GetChildren(ctx, req.Obj, nil)
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get children")
 		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on SaveAsDelegate")
+
+		id, err := uuid.NewV4()
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't generate UUID")
 		}
 
-		rep.Reference = cr.Resp.(*core.RecordRef)
-		return nil
+		iteratorID = id.String()
+		iteratorMap[iteratorID] = &i
 	}
 
-	msg := &message.CallConstructor{
-		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		PrototypeRef:     req.Prototype,
-		ParentRef:        req.Into,
-		Name:             req.ConstructorName,
-		Arguments:        req.ArgsSerialized,
-		SaveAs:           message.Delegate,
+	i := *iteratorMap[iteratorID]
+	rep.Iterator.ID = iteratorID
+	rep.Iterator.CanFetch = i.HasNext()
+	for len(rep.Iterator.Buff) < iteratorBuffSize && i.HasNext() {
+		r, err := i.Next()
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get Next")
+		}
+		rep.Iterator.CanFetch = i.HasNext()
+
+		o, err := am.GetObject(ctx, *r, nil, false)
+
+		if err != nil {
+			if err == core.ErrDeactivated {
+				continue
+			}
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't call GetObject on Next")
+		}
+		protoRef, err := o.Prototype()
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get prototype reference")
+		}
+
+		if protoRef.Equal(req.Prototype) {
+			rep.Iterator.Buff = append(rep.Iterator.Buff, *r)
+		}
 	}
 
-	res, err := gpr.lr.MessageBus.Send(ctx, msg, nil)
-
-	if err != nil {
-		return errors.Wrap(err, "couldn't save new object as delegate")
+	if !i.HasNext() {
+		delete(iteratorMap, rep.Iterator.ID)
 	}
-
-	rep.Reference = res.(*reply.CallConstructor).Object
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeSaveAsDelegate,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Reference,
-	})
 
 	return nil
 }
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
-	es := gpr.lr.UpsertExecution(req.Callee)
-	ctx := es.insContext
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	ctx := es.Current.Context
 
-	cr, step := gpr.lr.nextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeGetDelegate != cr.Type {
-			return errors.New("wrong validation type on RouteCall")
-		}
-		sig := HashInterface(gpr.lr.PlatformCryptographyScheme, req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("wrong validation sig on RouteCall")
-		}
-
-		rep.Object = cr.Resp.(core.RecordRef)
-		return nil
-	}
 	am := gpr.lr.ArtifactManager
 	ref, err := am.GetDelegate(ctx, req.Object, req.OfType)
 	if err != nil {
 		return err
 	}
 	rep.Object = *ref
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeGetDelegate,
-		ReqSig: HashInterface(gpr.lr.PlatformCryptographyScheme, req),
-		Resp:   rep.Object,
-	})
 	return nil
 }
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
-	state := gpr.lr.GetExecution(req.Callee)
-	if state == nil {
-		return errors.New("no execution state, impossible, shouldn't be")
-	}
-
-	// TODO: is it race? make sure it's not!
-	state.deactivate = true
-
+	os := gpr.lr.MustObjectState(req.Callee)
+	es := os.MustModeState(req.Mode)
+	es.deactivate = true
 	return nil
 }
 

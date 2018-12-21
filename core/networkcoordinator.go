@@ -24,7 +24,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/core.NetworkCoordinator -o ../testutils -s _mock.go
 type NetworkCoordinator interface {
 	// GetCert returns certificate object by node reference, using discovery nodes for signing
-	GetCert(context.Context, RecordRef) (Certificate, error)
+	GetCert(context.Context, *RecordRef) (Certificate, error)
 
 	// ValidateCert checks certificate signature
 	ValidateCert(context.Context, AuthorizationCertificate) (bool, error)

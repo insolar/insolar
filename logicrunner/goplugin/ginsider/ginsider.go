@@ -292,6 +292,7 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 	}
 
 	return rpctypes.UpBaseReq{
+		Mode:      callCtx.Mode,
 		Callee:    *callCtx.Callee,
 		Prototype: *callCtx.Prototype,
 		Request:   *callCtx.Request,
@@ -299,17 +300,18 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 }
 
 // RouteCall ...
-func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error) {
+func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, args []byte, proxyPrototype core.RecordRef) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
 	}
 	req := rpctypes.UpRouteReq{
-		UpBaseReq: MakeUpBaseReq(),
-		Wait:      wait,
-		Object:    ref,
-		Method:    method,
-		Arguments: args,
+		UpBaseReq:      MakeUpBaseReq(),
+		Wait:           wait,
+		Object:         ref,
+		Method:         method,
+		Arguments:      args,
+		ProxyPrototype: proxyPrototype,
 	}
 
 	res := rpctypes.UpRouteResp{}
@@ -329,7 +331,7 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, arg
 func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return core.NewRefFromBase58(""), err
+		return core.RecordRef{}, err
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
@@ -347,42 +349,52 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsChild ] on calling main API")
+		return core.RecordRef{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
 	return *res.Reference, nil
 }
 
-// GetObjChildren ...
-func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([]core.RecordRef, error) {
+// GetObjChildrenIterator rpc call to insolard service, returns iterator over children of object with specified prototype
+// at first time call it without iteratorID
+// iteratorID is a cache key on service side, use it in all calls, except first
+func (gi *GoInsider) GetObjChildrenIterator(obj core.RecordRef, prototype core.RecordRef, iteratorID string) (*proxyctx.ChildrenTypedIterator, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return nil, err
+		return &proxyctx.ChildrenTypedIterator{}, err
 	}
 
-	res := rpctypes.UpGetObjChildrenResp{}
-	req := rpctypes.UpGetObjChildrenReq{
+	res := rpctypes.UpGetObjChildrenIteratorResp{}
+	req := rpctypes.UpGetObjChildrenIteratorReq{
 		UpBaseReq: MakeUpBaseReq(),
-		Obj:       obj,
-		Prototype: class,
+
+		IteratorID: iteratorID,
+		Obj:        obj,
+		Prototype:  prototype,
 	}
-	err = client.Call("RPC.GetObjChildren", req, &res)
+	err = client.Call("RPC.GetObjChildrenIterator", req, &res)
 	if err != nil {
 		if err == rpc.ErrShutdown {
-			log.Error("Insgorund can't connect to Insolard")
+			log.Fatal("GetObjChildrenIterator: ginsider can't connect to insgocc, shutdown")
 			os.Exit(0)
 		}
-		return nil, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
+		return &proxyctx.ChildrenTypedIterator{}, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
 	}
 
-	return res.Children, nil
+	return &proxyctx.ChildrenTypedIterator{
+		Parent:         obj,
+		ChildPrototype: prototype,
+		IteratorID:     res.Iterator.ID,
+		Buff:           res.Iterator.Buff,
+		CanFetch:       res.Iterator.CanFetch,
+	}, nil
 }
 
 // SaveAsDelegate ...
 func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return core.NewRefFromBase58(""), err
+		return core.RecordRef{}, err
 	}
 
 	req := rpctypes.UpSaveAsDelegateReq{
@@ -400,7 +412,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
+		return core.RecordRef{}, errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -410,7 +422,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return core.NewRefFromBase58(""), err
+		return core.RecordRef{}, err
 	}
 
 	req := rpctypes.UpGetDelegateReq{
@@ -426,7 +438,7 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return core.NewRefFromBase58(""), errors.Wrap(err, "[ GetDelegate ] on calling main API")
+		return core.RecordRef{}, errors.Wrap(err, "[ GetDelegate ] on calling main API")
 	}
 
 	return res.Object, nil

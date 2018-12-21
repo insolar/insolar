@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
@@ -36,6 +36,7 @@ func TestExporter_Export(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, clean := storagetest.TmpDB(ctx, t)
 	defer clean()
+	jetID := core.TODOJetID
 
 	exporter := NewExporter(db)
 
@@ -56,18 +57,18 @@ func TestExporter_Export(t *testing.T) {
 	blobData := testData{Field: "objectValue"}
 	blobData.Data.Field = "anotherValue"
 	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
-	blobID, err := db.SetBlob(ctx, core.FirstPulseNumber+1, mem)
+	blobID, err := db.SetBlob(ctx, jetID, core.FirstPulseNumber+1, mem)
 	require.NoError(t, err)
-	_, err = db.SetRecord(ctx, core.FirstPulseNumber+1, &record.GenesisRecord{})
+	_, err = db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.GenesisRecord{})
 	require.NoError(t, err)
-	objectID, err := db.SetRecord(ctx, core.FirstPulseNumber+1, &record.ObjectActivateRecord{
+	objectID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.ObjectActivateRecord{
 		ObjectStateRecord: record.ObjectStateRecord{
 			Memory: blobID,
 		},
 		IsDelegate: true,
 	})
-	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest"})
-	requestID, err := db.SetRecord(ctx, core.FirstPulseNumber+1, &record.CallRequest{
+	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest", Msg: &message.CallConstructor{}})
+	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.RequestRecord{
 		Payload: pl,
 	})
 	require.NoError(t, err)
@@ -86,21 +87,26 @@ func TestExporter_Export(t *testing.T) {
 	_, err = json.Marshal(result)
 	assert.NoError(t, err)
 
-	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].(pulseData).Pulse
+	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber, int(pulse.PulseNumber))
 	assert.Equal(t, int64(1), pulse.PulseTimestamp)
-	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].(pulseData).Pulse
+	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber+1, int(pulse.PulseNumber))
 	assert.Equal(t, int64(2), pulse.PulseTimestamp)
 
-	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].(pulseData).Records
-	object := records[base58.Encode(objectID[:])]
-	assert.Equal(t, "TypeActivate", object.Type)
-	assert.Equal(t, true, object.Data.(*record.ObjectActivateRecord).IsDelegate)
-	assert.Equal(t, "objectValue", object.Payload["Memory"].(payload)["Field"])
+	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Records
+	object, ok := records[base58.Encode(objectID[:])]
+	if assert.True(t, ok, "object not found by ID") {
+		assert.Equal(t, "TypeActivate", object.Type)
+		assert.Equal(t, true, object.Data.(*record.ObjectActivateRecord).IsDelegate)
+		assert.Equal(t, "objectValue", object.Payload["Memory"].(payload)["Field"])
+	}
 
-	request := records[base58.Encode(requestID[:])]
-	assert.Equal(t, "TypeCallRequest", request.Type)
-	assert.Equal(t, pl, request.Data.(*record.CallRequest).Payload)
-	assert.Equal(t, "callRequest", request.Payload["Payload"].(*message.Parcel).LogTraceID)
+	request, ok := records[base58.Encode(requestID[:])]
+	if assert.True(t, ok, "request not found by ID") {
+		assert.Equal(t, "TypeCallRequest", request.Type)
+		assert.Equal(t, pl, request.Data.(*record.RequestRecord).Payload)
+		assert.Equal(t, "callRequest", request.Payload["Payload"].(*message.Parcel).LogTraceID)
+		assert.Equal(t, core.TypeCallConstructor.String(), request.Payload["Type"])
+	}
 }

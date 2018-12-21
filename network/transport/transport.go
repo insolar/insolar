@@ -21,11 +21,11 @@ import (
 	"net"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/connection"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/transport/resolver"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -40,8 +40,8 @@ type Transport interface {
 	// SendPacket low-level send packet without requestId and without spawning a waiting future
 	SendPacket(p *packet.Packet) error
 
-	// Start starts thread to listen incoming packets.
-	Start(ctx context.Context) error
+	// Listen starts thread to listen incoming packets.
+	Listen(ctx context.Context) error
 
 	// Stop gracefully stops listening.
 	Stop()
@@ -61,24 +61,24 @@ type Transport interface {
 
 // NewTransport creates new Transport with particular configuration
 func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
+	// TODO: let each transport creates connection in their constructor
 	conn, publicAddress, err := NewConnection(cfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create connection.")
+		return nil, errors.Wrap(err, "[ NewTransport ] Failed to create connection.")
 	}
 
 	switch cfg.Protocol {
 	case "TCP":
 		// TODO: little hack: It's better to change interface for NewConnection
-		conn.Close()
+		utils.CloseVerbose(conn)
+
 		return newTCPTransport(conn.LocalAddr().String(), proxy, publicAddress)
-	case "UTP":
-		return newUTPTransport(conn, proxy, publicAddress)
-	case "KCP":
-		return newKCPTransport(conn, proxy, publicAddress)
 	case "PURE_UDP":
 		return newUDPTransport(conn, proxy, publicAddress)
+	case "QUIC":
+		return newQuicTransport(conn, proxy, publicAddress)
 	default:
-		closeVerbose(conn)
+		utils.CloseVerbose(conn)
 		return nil, errors.New("invalid transport configuration")
 	}
 }
@@ -87,21 +87,14 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) {
 	conn, err := connection.NewConnectionFactory().Create(cfg.Address)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "Failed to create connection")
+		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create connection")
 	}
 	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
 	if err != nil {
-		closeVerbose(conn)
-		return nil, "", errors.Wrap(err, "Failed to create resolver")
+		utils.CloseVerbose(conn)
+		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create resolver")
 	}
 	return conn, publicAddress, nil
-}
-
-func closeVerbose(conn net.PacketConn) {
-	err := conn.Close()
-	if err != nil {
-		log.Warn(err)
-	}
 }
 
 func createResolver(stun bool) resolver.PublicAddressResolver {

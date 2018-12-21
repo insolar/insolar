@@ -119,7 +119,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 
 func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID string) configuration.Configuration {
 	cfg := configuration.NewConfiguration()
-	transport := configuration.Transport{Protocol: "UTP", Address: host, BehindNAT: false}
+	transport := configuration.Transport{Protocol: "TCP", Address: host, BehindNAT: false}
 	h := configuration.HostNetwork{
 		Transport:      transport,
 		IsRelay:        false,

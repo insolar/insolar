@@ -27,9 +27,7 @@ import (
 
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor struct {
-	cache struct {
-		code []byte
-	}
+	code        []byte
 	machineType core.MachineType
 	ref         core.RecordRef
 
@@ -49,19 +47,7 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 
 // Code returns code data.
 func (d *CodeDescriptor) Code() ([]byte, error) {
-	if d.cache.code == nil {
-		desc, err := d.am.GetCode(d.ctx, d.ref)
-		if err != nil {
-			return nil, err
-		}
-		code, err := desc.Code()
-		if err != nil {
-			return nil, err
-		}
-		d.cache.code = code
-	}
-
-	return d.cache.code, nil
+	return d.code, nil
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
@@ -155,15 +141,16 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 // 9. R (get children 6 ...) -> H
 // 10. H (children 6 ... 15 EOF) -> R
 type ChildIterator struct {
-	ctx        context.Context
-	messageBus core.MessageBus
-	parent     core.RecordRef
-	chunkSize  int
-	fromPulse  *core.PulseNumber
-	fromChild  *core.RecordID
-	buff       []core.RecordRef
-	buffIndex  int
-	canFetch   bool
+	ctx          context.Context
+	messageBus   core.MessageBus
+	currentPulse core.Pulse
+	parent       core.RecordRef
+	chunkSize    int
+	fromPulse    *core.PulseNumber
+	fromChild    *core.RecordID
+	buff         []core.RecordRef
+	buffIndex    int
+	canFetch     bool
 }
 
 // NewChildIterator creates new child iterator.
@@ -173,14 +160,16 @@ func NewChildIterator(
 	parent core.RecordRef,
 	fromPulse *core.PulseNumber,
 	chunkSize int,
+	currentPulse core.Pulse,
 ) (*ChildIterator, error) {
 	iter := ChildIterator{
-		ctx:        ctx,
-		messageBus: mb,
-		parent:     parent,
-		fromPulse:  fromPulse,
-		chunkSize:  chunkSize,
-		canFetch:   true,
+		ctx:          ctx,
+		messageBus:   mb,
+		parent:       parent,
+		fromPulse:    fromPulse,
+		chunkSize:    chunkSize,
+		canFetch:     true,
+		currentPulse: currentPulse,
 	}
 	err := iter.fetch()
 	if err != nil {
@@ -233,6 +222,7 @@ func (i *ChildIterator) fetch() error {
 			FromChild: i.fromChild,
 			Amount:    i.chunkSize,
 		},
+		i.currentPulse,
 	)
 	if err != nil {
 		return err
@@ -256,8 +246,8 @@ func (i *ChildIterator) hasInBuffer() bool {
 	return i.buffIndex < len(i.buff)
 }
 
-func (i *ChildIterator) sendAndFollowRedirect(ctx context.Context, msg core.Message) (core.Reply, error) {
-	rep, err := i.messageBus.Send(ctx, msg, nil)
+func (i *ChildIterator) sendAndFollowRedirect(ctx context.Context, msg core.Message, currentPulse core.Pulse) (core.Reply, error) {
+	rep, err := i.messageBus.Send(ctx, msg, currentPulse, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -267,6 +257,7 @@ func (i *ChildIterator) sendAndFollowRedirect(ctx context.Context, msg core.Mess
 		rep, err = i.messageBus.Send(
 			ctx,
 			redirected,
+			currentPulse,
 			&core.MessageSendOptions{
 				Token:    redirect.GetToken(),
 				Receiver: redirect.GetReceiver(),

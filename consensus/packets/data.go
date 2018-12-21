@@ -29,7 +29,7 @@ const (
 )
 
 const HashLength = 64
-const SignatureLength = 71
+const SignatureLength = 66
 const ReferenceLength = 64
 const PublicKeyLength = 64
 
@@ -62,7 +62,7 @@ type PulseDataExt struct {
 // PulseData is a pulse data.
 type PulseData struct {
 	PulseNumber uint32
-	Data        *PulseDataExt
+	Data        PulseDataExt
 }
 
 type NodePulseProof struct {

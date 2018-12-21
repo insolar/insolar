@@ -23,8 +23,24 @@ import (
 // HeavyPayload carries Key/Value records and pulse number
 // that replicates to Heavy Material node.
 type HeavyPayload struct {
+	JetID    core.RecordID
 	PulseNum core.PulseNumber
 	Records  []core.KV
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (*HeavyPayload) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+// DefaultRole returns role for this event
+func (*HeavyPayload) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleHeavyExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (hp *HeavyPayload) DefaultTarget() *core.RecordRef {
+	return &core.RecordRef{}
 }
 
 // GetCaller implementation of Message interface.
@@ -39,8 +55,24 @@ func (e *HeavyPayload) Type() core.MessageType {
 
 // HeavyStartStop carries heavy replication start/stop signal with pulse number.
 type HeavyStartStop struct {
+	JetID    core.RecordID
 	PulseNum core.PulseNumber
 	Finished bool
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (*HeavyStartStop) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+// DefaultTarget returns of target of this event.
+func (*HeavyStartStop) DefaultTarget() *core.RecordRef {
+	return &core.RecordRef{}
+}
+
+// DefaultRole returns role for this event
+func (*HeavyStartStop) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleHeavyExecutor
 }
 
 // GetCaller implementation of Message interface.
@@ -55,7 +87,23 @@ func (e *HeavyStartStop) Type() core.MessageType {
 
 // HeavyReset carries heavy replication start/stop signal with pulse number.
 type HeavyReset struct {
+	JetID    core.RecordID
 	PulseNum core.PulseNumber
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (*HeavyReset) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+// DefaultTarget returns of target of this event.
+func (*HeavyReset) DefaultTarget() *core.RecordRef {
+	return &core.RecordRef{}
+}
+
+// DefaultRole returns role for this event
+func (*HeavyReset) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleHeavyExecutor
 }
 
 // GetCaller implementation of Message interface.

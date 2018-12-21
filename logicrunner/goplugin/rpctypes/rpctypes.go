@@ -55,6 +55,7 @@ type DownCallConstructorResp struct {
 
 // UpBaseReq  is a base type for all insgorund -> logicrunner requests
 type UpBaseReq struct {
+	Mode      string
 	Callee    core.RecordRef
 	Prototype core.RecordRef
 	Request   core.RecordRef
@@ -78,10 +79,11 @@ type UpGetCodeResp struct {
 // UpRouteReq is a set of arguments for Send RPC in goplugin
 type UpRouteReq struct {
 	UpBaseReq
-	Wait      bool
-	Object    core.RecordRef
-	Method    string
-	Arguments core.Arguments
+	Wait           bool
+	Object         core.RecordRef
+	Method         string
+	Arguments      core.Arguments
+	ProxyPrototype core.RecordRef
 }
 
 // UpRouteResp is response from Send RPC in goplugin
@@ -103,16 +105,24 @@ type UpSaveAsChildResp struct {
 	Reference *core.RecordRef
 }
 
-// UpGetObjChildrenReq is a set of arguments for GetObjChildren RPC in goplugin
-type UpGetObjChildrenReq struct {
+// UpGetObjChildrenIteratorReq is a set of arguments for GetObjChildrenIterator RPC in goplugin
+type UpGetObjChildrenIteratorReq struct {
 	UpBaseReq
-	Obj       core.RecordRef
-	Prototype core.RecordRef
+	IteratorID string
+	Obj        core.RecordRef
+	Prototype  core.RecordRef
 }
 
-// UpGetObjChildrenResp is response from GetObjChildren RPC in goplugin
-type UpGetObjChildrenResp struct {
-	Children []core.RecordRef
+// UpGetObjChildrenIteratorResp is response from GetObjChildren RPC in goplugin
+type UpGetObjChildrenIteratorResp struct {
+	Iterator ChildIterator
+}
+
+// ChildIterator hold an iterator data of GetObjChildrenIterator method
+type ChildIterator struct {
+	ID       string
+	Buff     []core.RecordRef
+	CanFetch bool
 }
 
 // UpSaveAsDelegateReq is a set of arguments for SaveAsDelegate RPC in goplugin

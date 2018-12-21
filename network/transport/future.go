@@ -72,7 +72,7 @@ type future struct {
 // NewFuture creates new Future.
 func NewFuture(requestID packet.RequestID, actor *host.Host, msg *packet.Packet, cancelCallback CancelCallback) Future {
 	return &future{
-		result:         make(chan *packet.Packet),
+		result:         make(chan *packet.Packet, 1),
 		actor:          actor,
 		request:        msg,
 		requestID:      requestID,

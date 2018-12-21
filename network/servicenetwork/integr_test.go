@@ -17,7 +17,10 @@
 package servicenetwork
 
 import (
+	"bytes"
 	"context"
+	"crypto"
+	"encoding/json"
 	"strconv"
 	"testing"
 	"time"
@@ -53,12 +56,23 @@ func NewTestSuite() *testSuite {
 		networkPort:  10001,
 	}
 }
-
-func (s *testSuite) StartNodes() {
+func (s *testSuite) InitNodes() {
 	for _, n := range s.bootstrapNodes {
 		err := n.componentManager.Init(s.ctx)
 		s.NoError(err)
-		err = n.componentManager.Start(s.ctx)
+	}
+	log.Info("========== Bootstrap nodes inited")
+	<-time.After(time.Second * 1)
+
+	if s.testNode.componentManager != nil {
+		err := s.testNode.componentManager.Init(s.ctx)
+		s.NoError(err)
+	}
+}
+
+func (s *testSuite) StartNodes() {
+	for _, n := range s.bootstrapNodes {
+		err := n.componentManager.Start(s.ctx)
 		s.NoError(err)
 	}
 	log.Info("========== Bootstrap nodes started")
@@ -90,25 +104,48 @@ type networkNode struct {
 	serviceNetwork   *ServiceNetwork
 }
 
-func initCrypto(t *testing.T) (*certificate.CertificateManager, core.CryptographyService) {
-	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	require.NotNil(t, key)
-	cs := cryptography.NewKeyBoundCryptographyService(key)
-	kp := platformpolicy.NewKeyProcessor()
-	pk, _ := cs.GetPublicKey()
-	certManager, err := certificate.NewManagerCertificateWithKeys(pk, kp)
-	require.NoError(t, err)
+func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey, ref core.RecordRef) *certificate.CertificateManager {
+	proc := platformpolicy.NewKeyProcessor()
+	publicKey, err := proc.ExportPublicKey(key)
+	assert.NoError(t, err)
+	bytes.NewReader(publicKey)
 
-	return certManager, cs
+	type сertInfo map[string]interface{}
+	j := сertInfo{
+		"public_key": string(publicKey[:]),
+	}
+
+	data, err := json.Marshal(j)
+
+	cert, err := certificate.ReadCertificateFromReader(key, proc, bytes.NewReader(data))
+	cert.Reference = ref.String()
+	assert.NoError(t, err)
+	cert.BootstrapNodes = nodes
+	mngr := certificate.NewCertificateManager(cert)
+	return mngr
 }
 
-func (s *testSuite) getBootstrapNodes() []certificate.BootstrapNode {
-	result := make([]certificate.BootstrapNode, len(s.bootstrapNodes))
+func initCrypto(t *testing.T, nodes []certificate.BootstrapNode, ref core.RecordRef) (*certificate.CertificateManager, core.CryptographyService) {
+	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	assert.NoError(t, err)
+	require.NotNil(t, key)
+	cs := cryptography.NewKeyBoundCryptographyService(key)
+	pubKey, err := cs.GetPublicKey()
+	assert.NoError(t, err)
+	mngr := initCertificate(t, nodes, pubKey, ref)
+
+	return mngr, cs
+}
+
+func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode {
+	result := make([]certificate.BootstrapNode, 0)
 	for _, b := range s.bootstrapNodes {
-		result = append(result, certificate.BootstrapNode{
-			Host:      b.serviceNetwork.cfg.Host.Transport.Address,
-			PublicKey: b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey,
-		})
+		node := certificate.NewBootstrapNode(
+			b.serviceNetwork.CertificateManager.GetCertificate().GetPublicKey(),
+			b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey,
+			b.serviceNetwork.cfg.Host.Transport.Address,
+			b.serviceNetwork.NodeNetwork.GetOrigin().ID().String())
+		result = append(result, *node)
 	}
 	return result
 }
@@ -123,7 +160,6 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 		address,
 		"",
 	)
-	keeper := nodenetwork.NewNodeKeeper(origin)
 
 	cfg := configuration.NewConfiguration()
 	cfg.Host.Transport.Address = address
@@ -140,38 +176,18 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 
 	amMock := testutils.NewArtifactManagerMock(t)
 
-	certManager, cryptographyService := initCrypto(t)
-	certManager.GetCertificate().(*certificate.Certificate).BootstrapNodes = s.getBootstrapNodes()
+	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t), origin.ID())
 	netSwitcher := testutils.NewNetworkSwitcherMock(t)
 
+	realKeeper := nodenetwork.NewNodeKeeper(origin)
+	keeper := &nodeKeeperWrapper{realKeeper}
+
 	cm := &component.Manager{}
-	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock)
+	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
 	cm.Register(certManager, cryptographyService)
 	cm.Inject(serviceNetwork, netSwitcher)
 
 	serviceNetwork.NodeKeeper = keeper
 
 	return networkNode{cm, serviceNetwork}
-}
-
-func (s *testSuite) TestNodeConnect() {
-	s.T().Skip("fix me")
-	s.StartNodes()
-
-	<-time.After(time.Second * 5)
-	s.StopNodes()
-
-	//activeNodes := s.networkNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	//s.Equal(1, len(activeNodes))
-}
-
-func TestServiceNetworkIntegration(t *testing.T) {
-	s := NewTestSuite()
-	bootstrapNode1 := s.createNetworkNode(t)
-	s.bootstrapNodes = append(s.bootstrapNodes, bootstrapNode1)
-
-	s.testNode = s.createNetworkNode(t)
-
-	suite.Run(t, s)
-
 }

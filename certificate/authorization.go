@@ -20,6 +20,7 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -40,8 +41,12 @@ func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
 
 // GetNodeRef returns reference from node certificate
 func (authCert *AuthorizationCertificate) GetNodeRef() *core.RecordRef {
-	ref := core.NewRefFromBase58(authCert.Reference)
-	return &ref
+	ref, err := core.NewRefFromBase58(authCert.Reference)
+	if err != nil {
+		log.Errorf("Invalid node reference in auth cert: %s\n", authCert.Reference)
+		return nil
+	}
+	return ref
 }
 
 // GetRole returns role from node certificate
@@ -70,13 +75,23 @@ func (authCert *AuthorizationCertificate) SignNodePart(key crypto.PrivateKey) ([
 }
 
 // Deserialize deserializes data to AuthorizationCertificate interface
-func Deserialize(data []byte) (core.AuthorizationCertificate, error) {
-	cert := AuthorizationCertificate{}
-	err := core.Deserialize(data, &cert)
+func Deserialize(data []byte, keyProc core.KeyProcessor) (core.AuthorizationCertificate, error) {
+	cert := &AuthorizationCertificate{}
+	err := core.Deserialize(data, cert)
+
 	if err != nil {
-		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ]")
+		return nil, errors.Wrap(err, "[ AuthorizatonCertificate::Deserialize ] failed to deserialize a data")
 	}
-	return &cert, nil
+
+	key, err := keyProc.ImportPublicKey([]byte(cert.PublicKey))
+
+	if err != nil {
+		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ] failed to import a public key")
+	}
+
+	cert.nodePublicKey = key
+
+	return cert, nil
 }
 
 // Serialize serializes AuthorizationCertificate interface

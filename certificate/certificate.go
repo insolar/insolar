@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -44,10 +45,23 @@ type BootstrapNode struct {
 	nodePublicKey crypto.PublicKey
 }
 
+func NewBootstrapNode(pubKey crypto.PublicKey, publicKey, host, noderef string) *BootstrapNode {
+	return &BootstrapNode{
+		PublicKey:     publicKey,
+		Host:          host,
+		NodeRef:       noderef,
+		nodePublicKey: pubKey,
+	}
+}
+
 // GetNodeRef returns reference of bootstrap node
 func (bn *BootstrapNode) GetNodeRef() *core.RecordRef {
-	ref := core.NewRefFromBase58(bn.NodeRef)
-	return &ref
+	ref, err := core.NewRefFromBase58(bn.NodeRef)
+	if err != nil {
+		log.Errorf("Invalid bootstrap node reference: %s\n", bn.NodeRef)
+		return nil
+	}
+	return ref
 }
 
 // GetPublicKey returns public key reference of bootstrap node
@@ -113,20 +127,19 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 	return &cert, nil
 }
 
-func (cert *Certificate) serializeNetworkPart() []byte {
+func (cert *Certificate) SerializeNetworkPart() []byte {
 	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
 		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +
 		cert.RootDomainReference
 
 	sort.Strings(cert.PulsarPublicKeys)
 	out += strings.Join(cert.PulsarPublicKeys, "")
-	sort.Slice(cert.BootstrapNodes, func(i, j int) bool {
-		return strings.Compare(cert.BootstrapNodes[i].PublicKey, cert.BootstrapNodes[j].PublicKey) == -1
-	})
-
-	for _, node := range cert.BootstrapNodes {
-		out += node.PublicKey + node.Host
+	nodes := make([]string, len(cert.BootstrapNodes))
+	for i, node := range cert.BootstrapNodes {
+		nodes[i] = node.PublicKey + node.NodeRef + node.Host
 	}
+	sort.Strings(nodes)
+	out += strings.Join(nodes, "")
 
 	return []byte(out)
 }
@@ -134,7 +147,7 @@ func (cert *Certificate) serializeNetworkPart() []byte {
 // SignNetworkPart signs network part in certificate
 func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) {
 	signer := scheme.Signer(key)
-	sign, err := signer.Sign(cert.serializeNetworkPart())
+	sign, err := signer.Sign(cert.SerializeNetworkPart())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignNetworkPart ] Can't Sign")
 	}
@@ -170,8 +183,12 @@ func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 
 // GetRootDomainReference returns RootDomain reference
 func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
-	ref := core.NewRefFromBase58(cert.RootDomainReference)
-	return &ref
+	ref, err := core.NewRefFromBase58(cert.RootDomainReference)
+	if err != nil {
+		log.Errorf("Invalid domain reference in cert: %s\n", cert.Reference)
+		return nil
+	}
+	return ref
 }
 
 // GetDiscoveryNodes return bootstrap nodes array

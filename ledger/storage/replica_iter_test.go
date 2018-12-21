@@ -30,9 +30,9 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 )
@@ -42,6 +42,7 @@ func pulseDelta(n int) core.PulseNumber { return core.PulseNumber(core.FirstPuls
 func Test_StoreKeyValues(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
+	jetID := testutils.RandomID()
 
 	var (
 		expectedrecs []key
@@ -55,13 +56,13 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cleaner()
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := core.PulseNumber(pulseDelta(n))
-			addRecords(ctx, t, db, lastPulse)
-			setDrop(ctx, t, db, lastPulse)
+			addRecords(ctx, t, db, jetID, lastPulse)
+			setDrop(ctx, t, db, jetID, lastPulse)
 		}
 
 		for n := 0; n < pulsescount; n++ {
 			start, end := pulseDelta(n), pulseDelta(n+1)
-			replicator := storage.NewReplicaIter(ctx, db, start, end, 99)
+			replicator := storage.NewReplicaIter(ctx, db, jetID, start, end, 99)
 
 			for i := 0; ; i++ {
 				recs, err := replicator.NextRecords()
@@ -99,9 +100,10 @@ func Test_ReplicaIter_FirstPulse(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	addRecords(ctx, t, db, core.FirstPulseNumber)
+	jetID := core.TODOJetID
+	addRecords(ctx, t, db, jetID, core.FirstPulseNumber)
 
-	replicator := storage.NewReplicaIter(ctx, db, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
+	replicator := storage.NewReplicaIter(ctx, db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
 	var got []key
 	for i := 0; ; i++ {
 		if i > 50 {
@@ -142,6 +144,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	var lastPulse core.PulseNumber
 	pulsescount := 2
+	jetID := core.TODOJetID
 
 	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
 	require.Nil(t, recsBefore)
@@ -154,8 +157,8 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	for i := 0; i < pulsescount; i++ {
 		lastPulse = pulseDelta(i)
 
-		addRecords(ctx, t, db, lastPulse)
-		setDrop(ctx, t, db, lastPulse)
+		addRecords(ctx, t, db, jetID, lastPulse)
+		setDrop(ctx, t, db, jetID, lastPulse)
 
 		recs, _ := getallkeys(db.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
@@ -184,7 +187,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
-		replicator := storage.NewReplicaIter(ctx, db, p, p+1, maxsize)
+		replicator := storage.NewReplicaIter(ctx, db, jetID, p, p+1, maxsize)
 		var got []key
 
 		iterations := 1
@@ -217,11 +220,11 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	lastPulse = lastPulse + 1
 	// addRecords here is for purpose:
 	// new records on +1 pulse should not affect iterator result on previous pulse range
-	addRecords(ctx, t, db, lastPulse)
+	addRecords(ctx, t, db, jetID, lastPulse)
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
 
-		replicator := storage.NewReplicaIter(ctx, db, p, lastPulse, maxsize)
+		replicator := storage.NewReplicaIter(ctx, db, jetID, p, lastPulse, maxsize)
 		var got []key
 		for {
 			recs, err := replicator.NextRecords()
@@ -248,20 +251,22 @@ func setDrop(
 	ctx context.Context,
 	t *testing.T,
 	db *storage.DB,
+	jetID core.RecordID,
 	pulsenum core.PulseNumber,
 ) {
-	prevDrop, err := db.GetDrop(ctx, pulsenum-1)
+	prevDrop, err := db.GetDrop(ctx, jetID, pulsenum-1)
 	var prevhash []byte
 	if err == nil {
 		prevhash = prevDrop.Hash
 	} else if err != storage.ErrNotFound {
 		require.NoError(t, err)
 	}
-	drop, _, err := db.CreateDrop(ctx, pulsenum, prevhash)
+	drop, _, dropSize, err := db.CreateDrop(ctx, jetID, pulsenum, prevhash)
 	if err != nil {
 		require.NoError(t, err)
 	}
-	err = db.SetDrop(ctx, drop)
+	require.NotEqual(t, 0, dropSize)
+	err = db.SetDrop(ctx, jetID, drop)
 	require.NoError(t, err)
 }
 
@@ -269,11 +274,13 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	db *storage.DB,
+	jetID core.RecordID,
 	pulsenum core.PulseNumber,
 ) {
 	// set record
 	parentID, err := db.SetRecord(
 		ctx,
+		jetID,
 		pulsenum,
 		&record.ObjectActivateRecord{
 			SideEffectRecord: record.SideEffectRecord{
@@ -284,11 +291,11 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set blob
-	_, err = db.SetBlob(ctx, pulsenum, []byte("100500"))
+	_, err = db.SetBlob(ctx, jetID, pulsenum, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
-	err = db.SetObjectIndex(ctx, parentID, &index.ObjectLifeline{
+	err = db.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)
@@ -347,7 +354,20 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 type key []byte
 
 func (b key) pulse() core.PulseNumber {
-	return core.NewPulseNumber(b[1 : 1+core.PulseNumberSize])
+	pulseStartsAt := 1
+	pulseEndsAt := 1 + core.PulseNumberSize
+	// if jet defined for record type
+	switch b[0] {
+	case
+		scopeIDRecord,
+		scopeIDBlob,
+		scopeIDJetDrop,
+		scopeIDLifeline:
+
+		pulseStartsAt += core.RecordIDSize
+		pulseEndsAt += core.RecordIDSize
+	}
+	return core.NewPulseNumber(b[pulseStartsAt:pulseEndsAt])
 }
 
 func (b key) String() string {

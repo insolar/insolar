@@ -46,5 +46,5 @@ func TestReadUserConfigFromFile(t *testing.T) {
 	conf, err := ReadUserConfigFromFile("testdata/userConfig.json")
 	require.NoError(t, err)
 	require.Contains(t, conf.PrivateKey, "MHcCAQEEIPOsF3ujjM7jnb7V")
-	require.Equal(t, "VGVzdA==", conf.Caller)
+	require.Equal(t, "4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa.4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu", conf.Caller)
 }

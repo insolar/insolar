@@ -18,6 +18,11 @@ import (
 type NodeMock struct {
 	t minimock.Tester
 
+	GetGlobuleIDFunc       func() (r core.GlobuleID)
+	GetGlobuleIDCounter    uint64
+	GetGlobuleIDPreCounter uint64
+	GetGlobuleIDMock       mNodeMockGetGlobuleID
+
 	IDFunc       func() (r core.RecordRef)
 	IDCounter    uint64
 	IDPreCounter uint64
@@ -32,11 +37,6 @@ type NodeMock struct {
 	PublicKeyCounter    uint64
 	PublicKeyPreCounter uint64
 	PublicKeyMock       mNodeMockPublicKey
-
-	PulseFunc       func() (r core.PulseNumber)
-	PulseCounter    uint64
-	PulsePreCounter uint64
-	PulseMock       mNodeMockPulse
 
 	RoleFunc       func() (r core.StaticRole)
 	RoleCounter    uint64
@@ -62,15 +62,149 @@ func NewNodeMock(t minimock.Tester) *NodeMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.GetGlobuleIDMock = mNodeMockGetGlobuleID{mock: m}
 	m.IDMock = mNodeMockID{mock: m}
 	m.PhysicalAddressMock = mNodeMockPhysicalAddress{mock: m}
 	m.PublicKeyMock = mNodeMockPublicKey{mock: m}
-	m.PulseMock = mNodeMockPulse{mock: m}
 	m.RoleMock = mNodeMockRole{mock: m}
 	m.ShortIDMock = mNodeMockShortID{mock: m}
 	m.VersionMock = mNodeMockVersion{mock: m}
 
 	return m
+}
+
+type mNodeMockGetGlobuleID struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockGetGlobuleIDExpectation
+	expectationSeries []*NodeMockGetGlobuleIDExpectation
+}
+
+type NodeMockGetGlobuleIDExpectation struct {
+	result *NodeMockGetGlobuleIDResult
+}
+
+type NodeMockGetGlobuleIDResult struct {
+	r core.GlobuleID
+}
+
+//Expect specifies that invocation of Node.GetGlobuleID is expected from 1 to Infinity times
+func (m *mNodeMockGetGlobuleID) Expect() *mNodeMockGetGlobuleID {
+	m.mock.GetGlobuleIDFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockGetGlobuleIDExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.GetGlobuleID
+func (m *mNodeMockGetGlobuleID) Return(r core.GlobuleID) *NodeMock {
+	m.mock.GetGlobuleIDFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockGetGlobuleIDExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockGetGlobuleIDResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.GetGlobuleID is expected once
+func (m *mNodeMockGetGlobuleID) ExpectOnce() *NodeMockGetGlobuleIDExpectation {
+	m.mock.GetGlobuleIDFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockGetGlobuleIDExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockGetGlobuleIDExpectation) Return(r core.GlobuleID) {
+	e.result = &NodeMockGetGlobuleIDResult{r}
+}
+
+//Set uses given function f as a mock of Node.GetGlobuleID method
+func (m *mNodeMockGetGlobuleID) Set(f func() (r core.GlobuleID)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetGlobuleIDFunc = f
+	return m.mock
+}
+
+//GetGlobuleID implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) GetGlobuleID() (r core.GlobuleID) {
+	counter := atomic.AddUint64(&m.GetGlobuleIDPreCounter, 1)
+	defer atomic.AddUint64(&m.GetGlobuleIDCounter, 1)
+
+	if len(m.GetGlobuleIDMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetGlobuleIDMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.GetGlobuleID.")
+			return
+		}
+
+		result := m.GetGlobuleIDMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.GetGlobuleID")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetGlobuleIDMock.mainExpectation != nil {
+
+		result := m.GetGlobuleIDMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.GetGlobuleID")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetGlobuleIDFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.GetGlobuleID.")
+		return
+	}
+
+	return m.GetGlobuleIDFunc()
+}
+
+//GetGlobuleIDMinimockCounter returns a count of NodeMock.GetGlobuleIDFunc invocations
+func (m *NodeMock) GetGlobuleIDMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetGlobuleIDCounter)
+}
+
+//GetGlobuleIDMinimockPreCounter returns the value of NodeMock.GetGlobuleID invocations
+func (m *NodeMock) GetGlobuleIDMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetGlobuleIDPreCounter)
+}
+
+//GetGlobuleIDFinished returns true if mock invocations count is ok
+func (m *NodeMock) GetGlobuleIDFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetGlobuleIDMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetGlobuleIDCounter) == uint64(len(m.GetGlobuleIDMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetGlobuleIDMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetGlobuleIDCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetGlobuleIDFunc != nil {
+		return atomic.LoadUint64(&m.GetGlobuleIDCounter) > 0
+	}
+
+	return true
 }
 
 type mNodeMockID struct {
@@ -470,140 +604,6 @@ func (m *NodeMock) PublicKeyFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.PublicKeyFunc != nil {
 		return atomic.LoadUint64(&m.PublicKeyCounter) > 0
-	}
-
-	return true
-}
-
-type mNodeMockPulse struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockPulseExpectation
-	expectationSeries []*NodeMockPulseExpectation
-}
-
-type NodeMockPulseExpectation struct {
-	result *NodeMockPulseResult
-}
-
-type NodeMockPulseResult struct {
-	r core.PulseNumber
-}
-
-//Expect specifies that invocation of Node.Pulse is expected from 1 to Infinity times
-func (m *mNodeMockPulse) Expect() *mNodeMockPulse {
-	m.mock.PulseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockPulseExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.Pulse
-func (m *mNodeMockPulse) Return(r core.PulseNumber) *NodeMock {
-	m.mock.PulseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockPulseExpectation{}
-	}
-	m.mainExpectation.result = &NodeMockPulseResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.Pulse is expected once
-func (m *mNodeMockPulse) ExpectOnce() *NodeMockPulseExpectation {
-	m.mock.PulseFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockPulseExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockPulseExpectation) Return(r core.PulseNumber) {
-	e.result = &NodeMockPulseResult{r}
-}
-
-//Set uses given function f as a mock of Node.Pulse method
-func (m *mNodeMockPulse) Set(f func() (r core.PulseNumber)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.PulseFunc = f
-	return m.mock
-}
-
-//Pulse implements github.com/insolar/insolar/core.Node interface
-func (m *NodeMock) Pulse() (r core.PulseNumber) {
-	counter := atomic.AddUint64(&m.PulsePreCounter, 1)
-	defer atomic.AddUint64(&m.PulseCounter, 1)
-
-	if len(m.PulseMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.PulseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.Pulse.")
-			return
-		}
-
-		result := m.PulseMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.Pulse")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.PulseMock.mainExpectation != nil {
-
-		result := m.PulseMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.Pulse")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.PulseFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.Pulse.")
-		return
-	}
-
-	return m.PulseFunc()
-}
-
-//PulseMinimockCounter returns a count of NodeMock.PulseFunc invocations
-func (m *NodeMock) PulseMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.PulseCounter)
-}
-
-//PulseMinimockPreCounter returns the value of NodeMock.Pulse invocations
-func (m *NodeMock) PulseMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.PulsePreCounter)
-}
-
-//PulseFinished returns true if mock invocations count is ok
-func (m *NodeMock) PulseFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.PulseMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.PulseCounter) == uint64(len(m.PulseMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.PulseMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.PulseCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.PulseFunc != nil {
-		return atomic.LoadUint64(&m.PulseCounter) > 0
 	}
 
 	return true
@@ -1015,6 +1015,10 @@ func (m *NodeMock) VersionFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NodeMock) ValidateCallCounters() {
 
+	if !m.GetGlobuleIDFinished() {
+		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
+	}
+
 	if !m.IDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
@@ -1025,10 +1029,6 @@ func (m *NodeMock) ValidateCallCounters() {
 
 	if !m.PublicKeyFinished() {
 		m.t.Fatal("Expected call to NodeMock.PublicKey")
-	}
-
-	if !m.PulseFinished() {
-		m.t.Fatal("Expected call to NodeMock.Pulse")
 	}
 
 	if !m.RoleFinished() {
@@ -1060,6 +1060,10 @@ func (m *NodeMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *NodeMock) MinimockFinish() {
 
+	if !m.GetGlobuleIDFinished() {
+		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
+	}
+
 	if !m.IDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
@@ -1070,10 +1074,6 @@ func (m *NodeMock) MinimockFinish() {
 
 	if !m.PublicKeyFinished() {
 		m.t.Fatal("Expected call to NodeMock.PublicKey")
-	}
-
-	if !m.PulseFinished() {
-		m.t.Fatal("Expected call to NodeMock.Pulse")
 	}
 
 	if !m.RoleFinished() {
@@ -1102,10 +1102,10 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.GetGlobuleIDFinished()
 		ok = ok && m.IDFinished()
 		ok = ok && m.PhysicalAddressFinished()
 		ok = ok && m.PublicKeyFinished()
-		ok = ok && m.PulseFinished()
 		ok = ok && m.RoleFinished()
 		ok = ok && m.ShortIDFinished()
 		ok = ok && m.VersionFinished()
@@ -1117,6 +1117,10 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
+			if !m.GetGlobuleIDFinished() {
+				m.t.Error("Expected call to NodeMock.GetGlobuleID")
+			}
+
 			if !m.IDFinished() {
 				m.t.Error("Expected call to NodeMock.ID")
 			}
@@ -1127,10 +1131,6 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 
 			if !m.PublicKeyFinished() {
 				m.t.Error("Expected call to NodeMock.PublicKey")
-			}
-
-			if !m.PulseFinished() {
-				m.t.Error("Expected call to NodeMock.Pulse")
 			}
 
 			if !m.RoleFinished() {
@@ -1157,6 +1157,10 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *NodeMock) AllMocksCalled() bool {
 
+	if !m.GetGlobuleIDFinished() {
+		return false
+	}
+
 	if !m.IDFinished() {
 		return false
 	}
@@ -1166,10 +1170,6 @@ func (m *NodeMock) AllMocksCalled() bool {
 	}
 
 	if !m.PublicKeyFinished() {
-		return false
-	}
-
-	if !m.PulseFinished() {
 		return false
 	}
 

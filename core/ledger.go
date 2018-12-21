@@ -38,6 +38,17 @@ const (
 	DynamicRoleHeavyExecutor
 )
 
+// IsVirtualRole checks if node role is virtual (validator or executor).
+func (r DynamicRole) IsVirtualRole() bool {
+	switch r {
+	case DynamicRoleVirtualExecutor:
+		return true
+	case DynamicRoleVirtualValidator:
+		return true
+	}
+	return false
+}
+
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 // FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
 type Ledger interface {
@@ -57,11 +68,8 @@ type Ledger interface {
 // PulseManager provides Ledger's methods related to Pulse.
 //go:generate minimock -i github.com/insolar/insolar/core.PulseManager -o ../testutils -s _mock.go
 type PulseManager interface {
-	// Current returns current pulse structure.
-	Current(context.Context) (*Pulse, error)
-
 	// Set set's new pulse and closes current jet drop. If dry is true, nothing will be saved to storage.
-	Set(ctx context.Context, pulse Pulse, dry bool) error
+	Set(ctx context.Context, pulse Pulse, persist bool) error
 }
 
 // JetCoordinator provides methods for calculating Jet affinity
@@ -69,10 +77,13 @@ type PulseManager interface {
 //go:generate minimock -i github.com/insolar/insolar/core.JetCoordinator -o ../testutils -s _mock.go
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
+	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber, node RecordRef) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
+	QueryRole(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) ([]RecordRef, error)
+
+	// AmI checks for role on concrete pulse for current node.
+	AmI(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) (bool, error)
 
 	// GetActiveNodes return active nodes for specified pulse.
 	GetActiveNodes(pulse PulseNumber) ([]Node, error)
@@ -87,7 +98,7 @@ type ArtifactManager interface {
 	GenesisRef() *RecordRef
 
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, parcel Parcel) (*RecordID, error)
+	RegisterRequest(ctx context.Context, object RecordRef, parcel Parcel) (*RecordID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -95,7 +106,7 @@ type ArtifactManager interface {
 	RegisterValidation(ctx context.Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
 
 	// RegisterResult saves VM method call result.
-	RegisterResult(ctx context.Context, request RecordRef, payload []byte) (*RecordID, error)
+	RegisterResult(ctx context.Context, object, request RecordRef, payload []byte) (*RecordID, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
@@ -107,6 +118,9 @@ type ArtifactManager interface {
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
+
+	// HasPendingRequests returns true if object has unclosed requests.
+	HasPendingRequests(ctx context.Context, object RecordRef) (bool, error)
 
 	// GetDelegate returns provided object's delegate reference for provided type.
 	//
@@ -196,6 +210,7 @@ type CodeDescriptor interface {
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
+//go:generate minimock -i github.com/insolar/insolar/core.ObjectDescriptor -o ../testutils -s _mock.go
 type ObjectDescriptor interface {
 	// HeadRef returns head reference to represented object record.
 	HeadRef() *RecordRef
@@ -261,4 +276,18 @@ type StorageExportResult struct {
 type StorageExporter interface {
 	// Export returns data view from storage.
 	Export(ctx context.Context, fromPulse PulseNumber, size int) (*StorageExportResult, error)
+}
+
+var (
+	// TODOJetID temporary stub for passing jet ID in ledger functions
+	// on period Jet ID full implementation
+	// TODO: remove it after jets support readyness - @nordicdyno 5.Dec.2018
+	TODOJetID = *NewRecordID(PulseNumberJet, nil)
+	DomainID  = *NewRecordID(0, nil)
+)
+
+// PulseStorage provides the interface for fetching current pulse of the system
+//go:generate minimock -i github.com/insolar/insolar/core.PulseStorage -o ../testutils -s _mock.go
+type PulseStorage interface {
+	Current(ctx context.Context) (*Pulse, error)
 }

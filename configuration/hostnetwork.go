@@ -18,7 +18,7 @@ package configuration
 
 // Transport holds transport protocol configuration for HostNetwork
 type Transport struct {
-	// protocol type UTP or KCP
+	// protocol type
 	Protocol string
 	// Address to listen
 	Address string
@@ -28,23 +28,29 @@ type Transport struct {
 
 // HostNetwork holds configuration for HostNetwork
 type HostNetwork struct {
-	Transport         Transport
-	IsRelay           bool // set if node must be relay explicit
-	InfinityBootstrap bool // set true for infinity tries to bootstrap
-	Timeout           int  // bootstrap reconnect timeout
-	SignMessages      bool // signing a messages if true
+	Transport           Transport
+	IsRelay             bool  // set if node must be relay explicit
+	InfinityBootstrap   bool  // set true for infinity tries to bootstrap
+	MinTimeout          int   // bootstrap timeout min
+	MaxTimeout          int   // bootstrap timeout max
+	TimeoutMult         int   // bootstrap timout multiplier
+	SignMessages        bool  // signing a messages if true
+	HandshakeSessionTTL int32 // ms
 }
 
 // NewHostNetwork creates new default HostNetwork configuration
 func NewHostNetwork() HostNetwork {
 	// IP address should not be 0.0.0.0!!!
-	transport := Transport{Protocol: "UTP", Address: "127.0.0.1:0", BehindNAT: false}
+	transport := Transport{Protocol: "TCP", Address: "127.0.0.1:0", BehindNAT: false}
 
 	return HostNetwork{
-		Transport:         transport,
-		IsRelay:           false,
-		Timeout:           4,
-		InfinityBootstrap: false,
-		SignMessages:      false,
+		Transport:           transport,
+		IsRelay:             false,
+		MinTimeout:          1,
+		MaxTimeout:          60,
+		TimeoutMult:         2,
+		InfinityBootstrap:   false,
+		SignMessages:        false,
+		HandshakeSessionTTL: 5000,
 	}
 }

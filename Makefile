@@ -45,9 +45,9 @@ clean:
 	./scripts/insolard/launchnet.sh -l
 
 install-deps:
-	go get -u github.com/golang/dep/cmd/dep
+	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep 22125cfaa6ddc71e145b1535d4b7ee9744fefff2
 	go get -u golang.org/x/tools/cmd/stringer
-	go get -u github.com/gojuno/minimock/cmd/minimock
+	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
 
 pre-build: ensure generate
 
@@ -62,7 +62,7 @@ ensure:
 
 build:
 	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK)
 
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
@@ -96,7 +96,7 @@ functest:
 	CGO_ENABLED=1 go test -tags functest ./functest
 
 test:
-	go test -v $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(ALL_PACKAGES)
 
 test_fast:
 	go test -count 1 -v $(ALL_PACKAGES)

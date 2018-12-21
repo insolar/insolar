@@ -89,6 +89,10 @@ type TestObjectDescriptor struct {
 	ChildrenContainer []core.RecordRef
 }
 
+func (t *TestObjectDescriptor) HasPendingRequests() bool {
+	panic("implement me")
+}
+
 // Parent implementation for tests
 func (t *TestObjectDescriptor) Parent() *core.RecordRef {
 	panic("implement me")
@@ -148,6 +152,10 @@ type TestArtifactManager struct {
 	Prototypes map[core.RecordRef]*TestObjectDescriptor
 }
 
+func (t *TestArtifactManager) HasPendingRequests(ctx context.Context, object core.RecordRef) (bool, error) {
+	panic("implement me")
+}
+
 // State implementation for tests
 func (t *TestArtifactManager) State() ([]byte, error) {
 	panic("implement me")
@@ -171,14 +179,14 @@ func NewTestArtifactManager() *TestArtifactManager {
 func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx context.Context, parcel core.Parcel) (*core.RecordID, error) {
+func (t *TestArtifactManager) RegisterRequest(ctx context.Context, obj core.RecordRef, parcel core.Parcel) (*core.RecordID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
 
 // RegisterResult saves VM method call result.
 func (t *TestArtifactManager) RegisterResult(
-	ctx context.Context, request core.RecordRef, payload []byte,
+	ctx context.Context, object, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	panic("implement me")
 }
@@ -386,7 +394,7 @@ func AMPublishCode(
 	codeRef.SetRecord(*codeID)
 
 	nonce := testutils.RandomRef()
-	protoID, err := am.RegisterRequest(ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}})
+	protoID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}})
 	assert.NoError(t, err)
 	protoRef = &core.RecordRef{}
 	protoRef.SetRecord(*protoID)
@@ -439,7 +447,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+			ctx, *cb.ArtifactManager.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -480,11 +488,18 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
+		nonce := testutils.RandomRef()
+		codeReq, err := cb.ArtifactManager.RegisterRequest(
+			ctx, *cb.ArtifactManager.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+		)
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+		}
 
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
-			core.RecordRef{}, core.RecordRef{},
+			core.RecordRef{}, *core.NewRecordRef(core.RecordID{}, *codeReq),
 			pluginBinary, core.MachineTypeGoPlugin,
 		)
 		codeRef := &core.RecordRef{}

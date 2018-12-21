@@ -74,12 +74,12 @@ func (rpc *RPCController) RemoteProcedureRegister(name string, method core.Remot
 	rpc.methodTable[name] = method
 }
 
-func (rpc *RPCController) invoke(name string, data [][]byte) ([]byte, error) {
+func (rpc *RPCController) invoke(ctx context.Context, name string, data [][]byte) ([]byte, error) {
 	method, exists := rpc.methodTable[name]
 	if !exists {
 		return nil, errors.New(fmt.Sprintf("RPC with name %s is not registered", name))
 	}
-	return method(data)
+	return method(ctx, data)
 }
 
 func (rpc *RPCController) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
@@ -171,7 +171,7 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 	start := time.Now()
 	ctx := msg.Context(context.Background())
 	inslogger.FromContext(ctx).Debugf("SendParcel with nodeID = %s method = %s, message reference = %s", nodeID.String(),
-		name, message.ExtractTarget(msg).String())
+		name, msg.DefaultTarget().String())
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
 		Data:   [][]byte{message.ParcelToBytes(msg)},
@@ -186,28 +186,28 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 	}
 	data := response.GetData().(*ResponseRPC)
 	inslogger.FromContext(ctx).Debugf("Inside SendParcel: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
-		msg.Type(), message.ExtractTarget(msg), msg.GetCaller(), message.ExtractRole(msg), time.Since(start))
+		msg.Type(), msg.DefaultTarget(), msg.GetCaller(), msg.DefaultRole(), time.Since(start))
 	if !data.Success {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
 	return data.Result, nil
 }
 
-func (rpc *RPCController) processMessage(request network.Request) (network.Response, error) {
+func (rpc *RPCController) processMessage(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestRPC)
-	result, err := rpc.invoke(payload.Method, payload.Data)
+	result, err := rpc.invoke(ctx, payload.Method, payload.Data)
 	if err != nil {
 		return rpc.hostNetwork.BuildResponse(request, &ResponseRPC{Success: false, Error: err.Error()}), nil
 	}
 	return rpc.hostNetwork.BuildResponse(request, &ResponseRPC{Success: true, Result: result}), nil
 }
 
-func (rpc *RPCController) processCascade(request network.Request) (network.Response, error) {
+func (rpc *RPCController) processCascade(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestCascade)
-	ctx, logger := inslogger.WithTraceField(context.Background(), payload.TraceID)
+	ctx, logger := inslogger.WithTraceField(ctx, payload.TraceID)
 
 	generalError := ""
-	_, invokeErr := rpc.invoke(payload.RPC.Method, payload.RPC.Data)
+	_, invokeErr := rpc.invoke(ctx, payload.RPC.Method, payload.RPC.Data)
 	if invokeErr != nil {
 		logger.Debugf("failed to invoke RPC: %s", invokeErr.Error())
 		generalError += invokeErr.Error() + "; "

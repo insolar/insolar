@@ -36,9 +36,7 @@ logicrunner:
 pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
-  nodesaddresses: []
 genesis:
   rootkeys: "scripts/insolard/configs/root_member_keys.json"
   rootbalance: 10000
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"
-certificatepath: "scripts/insolard/configs/certificate.json"

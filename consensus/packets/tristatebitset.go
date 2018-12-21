@@ -29,6 +29,7 @@ const lastBitMask = 0x01
 const lowLengthSize = 6
 const firstBitMask = 0x80
 const lowBitLengthSize = 6
+const lastTwoBitsMask = 0x3
 
 // TriStateBitSet bitset implementation.
 type TriStateBitSet struct {
@@ -142,6 +143,10 @@ func (dbs *TriStateBitSet) serializeWithLLength(
 func DeserializeBitSet(data io.Reader) (BitSet, error) {
 	firstbyte := uint8(0)
 	err := binary.Read(data, defaultByteOrder, &firstbyte)
+	if firstbyte == 0 {
+		return nil, errors.New("[ DeserializeBitSet ] failed to deserialize: wrong data")
+	}
+
 	var array *bitArray
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Deserialize ] failed to read first byte")
@@ -198,13 +203,13 @@ func (dbs *TriStateBitSet) parseCells(mapper BitSetMapper) ([]BitSetCell, error)
 }
 
 func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
-	count := uint8(0)
+	count := uint16(0)
 	value := uint8(0)
 	var payload []uint8
 	blockSize := 0
 	block := uint8(0)
 	var err error
-	for i := 0; i < size; i = i + 2 {
+	for i := 1; i < size; i = i + 3 { // i := 1 to skip first byte which was read at prev func
 		err = binary.Read(data, binary.BigEndian, &count)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
@@ -213,18 +218,21 @@ func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
 		}
-		for j := uint8(0); j < count; j++ {
+		for j := uint16(0); j < count; j++ {
 			block += value
 			blockSize += 2
-			if (blockSize >= sizeOfBlock) || (j+1 >= count) {
-				if j+1 >= count {
-					block = block << uint(sizeOfBlock-blockSize)
-				}
+			if blockSize >= sizeOfBlock {
 				payload = append(payload, block)
 				blockSize = 0
 			}
 			block = block << 2
 		}
+	}
+	if (blockSize != 0) && (blockSize < sizeOfBlock) {
+		block += value
+		blockSize += 2
+		block = block << uint(sizeOfBlock-blockSize)
+		payload = append(payload, block)
 	}
 	return parseBitArray(payload)
 }
@@ -236,11 +244,23 @@ func parseState(array *bitArray, index int) (TriState, error) {
 
 func parseBitArray(payload []uint8) (*bitArray, error) {
 	len := len(payload)
-	array := newBitArray(len*sizeOfBlock - 4) // bits count from bytes size
+	lastByte := payload[len-1]
+	array := newBitArray(len*sizeOfBlock - getEmptyBitsCount(lastByte))
 	for i := 0; i < len; i++ {
 		array.array[i] = payload[i]
 	}
 	return array, nil
+}
+
+func getEmptyBitsCount(byte uint8) int {
+	emptyStates := 0
+	for i := 0; i < 4; i++ {
+		if (byte & lastTwoBitsMask) == 0 {
+			emptyStates++
+			byte >>= 2
+		}
+	}
+	return emptyStates * 2 // cuz calculated
 }
 
 func (dbs *TriStateBitSet) changeBucketState(index int, newState TriState) error {

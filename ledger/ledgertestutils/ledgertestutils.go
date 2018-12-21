@@ -20,15 +20,16 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -44,22 +45,21 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	mc := minimock.NewController(t)
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
-	handler := artifactmanager.NewMessageHandler(db, nil)
-	handler.PlatformCryptographyScheme = pcs
-
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
-	jc := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
-	jc.PlatformCryptographyScheme = pcs
 	conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager(db, conf)
 	ls := localstorage.NewLocalStorage(db)
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.AmIMock.Return(true, nil)
+	jc.IsAuthorizedMock.Return(true, nil)
 
 	// Init components.
 	if c.MessageBus == nil {
@@ -69,23 +69,38 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", ""))
 	}
 
+	handler := artifactmanager.NewMessageHandler(db, nil)
+	handler.PlatformCryptographyScheme = pcs
+	handler.JetCoordinator = jc
+
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
 	gilMock.AcquireFunc = func(context.Context) {}
 	gilMock.ReleaseFunc = func(context.Context) {}
 
+	alsMock := testutils.NewActiveListSwapperMock(t)
+	alsMock.MoveSyncToActiveFunc = func() {}
+
 	handler.Bus = c.MessageBus
 	am.DefaultBus = c.MessageBus
-	jc.NodeNet = c.NodeNetwork
 	pm.NodeNet = c.NodeNetwork
 	pm.GIL = gilMock
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
+	pm.ActiveListSwapper = alsMock
+	pm.PulseStorage = storage.NewPulseStorage(db)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
-	handler.Recent = recentStorageMock
+	recentStorageMock.GetRequestsForObjectMock.Return(nil)
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	handler.RecentStorageProvider = provideMock
 
 	err := handler.Init(ctx)
 	if err != nil {

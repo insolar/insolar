@@ -14,74 +14,77 @@
  *    limitations under the License.
  */
 
-package jetcoordinator_test
+package jetcoordinator
 
 import (
-	"sort"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
+	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-func newActiveNode(ref core.RecordRef, role core.StaticRole) core.Node {
-	// key, _ := ecdsa.GeneratePrivateKey()
-	return nodenetwork.NewNode(
-		ref,
-		role,
-		nil, // TODO publicKey
-		"",
-		"",
-	)
-}
 
 func TestJetCoordinator_QueryRole(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: &configuration.BuiltIn{},
-	})
-	assert.NoError(t, err)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
 
-	keeper := nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", ""))
-	c := core.Components{LogicRunner: lr, NodeNetwork: keeper}
-	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
-
-	am := ledger.GetArtifactManager()
-	pm := ledger.GetPulseManager()
-	jc := ledger.GetJetCoordinator()
-
-	pulse, err := pm.Current(ctx)
-	assert.NoError(t, err)
-
-	ref := func(r string) core.RecordRef { return core.NewRefFromBase58(r) }
-
-	keeper.AddActiveNodes([]core.Node{
-		newActiveNode(ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"), core.StaticRoleVirtual),
-		newActiveNode(ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"), core.StaticRoleLightMaterial),
-	})
-
-	sorted := func(list []core.RecordRef) []core.RecordRef {
-		sort.Slice(list, func(i, j int) bool {
-			return list[i].Compare(list[j]) < 0
-		})
-		return list
+	nodeNet := network.NewNodeNetworkMock(mc)
+	jc := JetCoordinator{
+		db:                         db,
+		NodeNet:                    nodeNet,
+		PlatformCryptographyScheme: testutils.NewPlatformCryptographyScheme(),
+	}
+	err := db.AddPulse(ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
+	require.NoError(t, err)
+	var nodes []core.RecordRef
+	for i := 0; i < 100; i++ {
+		nodes = append(nodes, testutils.RandomRef())
 	}
 
-	selected, err := jc.QueryRole(ctx, core.DynamicRoleVirtualExecutor, am.GenesisRef(), pulse.PulseNumber)
-	assert.NoError(t, err)
-	assert.Equal(t, []core.RecordRef{ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf")}, selected)
+	t.Run("without object returns correct nodes", func(t *testing.T) {
+		jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleVirtualExecutor: 3}
+		nodeNet.GetActiveNodesByRoleMock.Expect(core.DynamicRoleVirtualExecutor).Return(nodes)
 
-	selected, err = jc.QueryRole(ctx, core.DynamicRoleLightValidator, am.GenesisRef(), pulse.PulseNumber)
-	assert.NoError(t, err)
-	assert.Equal(t, sorted([]core.RecordRef{ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")}), sorted(selected))
+		selected, err := jc.QueryRole(ctx, core.DynamicRoleVirtualExecutor, nil, 0)
+		require.NoError(t, err)
+		assert.Equal(t, 3, len(selected))
+		// Indexes are hard-coded from previously calculated values.
+		assert.Equal(t, []core.RecordRef{nodes[25], nodes[78], nodes[36]}, selected)
+	})
 
-	selected, err = jc.QueryRole(ctx, core.DynamicRoleHeavyExecutor, am.GenesisRef(), pulse.PulseNumber)
-	assert.Error(t, err)
+	t.Run("virtual returns correct nodes", func(t *testing.T) {
+		jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleVirtualExecutor: 1}
+		obj := core.RecordRef{}
+		obj.SetRecord(*core.NewRecordID(0, []byte{3, 14, 15, 92}))
+		nodeNet.GetActiveNodesByRoleMock.Expect(core.DynamicRoleVirtualExecutor).Return(nodes)
+
+		selected, err := jc.QueryRole(ctx, core.DynamicRoleVirtualExecutor, obj.Record(), 0)
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(selected))
+		// Indexes are hard-coded from previously calculated values.
+		assert.Equal(t, []core.RecordRef{nodes[22]}, selected)
+	})
+
+	t.Run("material returns correct nodes", func(t *testing.T) {
+		objID := core.NewRecordID(0, []byte{1, 42, 123})
+		jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleLightExecutor: 1}
+		err := db.UpdateJetTree(ctx, 0, *jet.NewID(1, []byte{1, 42, 123}))
+		require.NoError(t, err)
+		nodeNet.GetActiveNodesByRoleMock.Expect(core.DynamicRoleLightExecutor).Return(nodes)
+
+		selected, err := jc.QueryRole(ctx, core.DynamicRoleLightExecutor, objID, 0)
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(selected))
+		// Indexes are hard-coded from previously calculated values.
+		assert.Equal(t, []core.RecordRef{nodes[25]}, selected)
+	})
 }

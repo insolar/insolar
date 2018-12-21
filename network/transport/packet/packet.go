@@ -69,10 +69,12 @@ func SerializePacket(q *Packet) ([]byte, error) {
 func DeserializePacket(conn io.Reader) (*Packet, error) {
 
 	lengthBytes := make([]byte, 8)
-	_, err := conn.Read(lengthBytes)
+	n, err := conn.Read(lengthBytes)
 	if err != nil {
 		return nil, err
 	}
+
+	log.Debugf("[ DeserializePacket ] read %d bytes", n)
 
 	lengthReader := bytes.NewBuffer(lengthBytes)
 	length, err := binary.ReadUvarint(lengthReader)
@@ -80,16 +82,22 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 		return nil, errors.Wrap(err, "Failed to read variant")
 	}
 
-	var reader bytes.Buffer
-	for uint64(reader.Len()) < length {
-		n, err := reader.ReadFrom(conn)
+	log.Debugf("[ DeserializePacket ] packet length %d", length)
+
+	buf := make([]byte, length)
+
+	var readLength int
+	for readLength < int(length) {
+		n, err = conn.Read(buf[readLength:])
+		readLength = readLength + n
+		log.Debugf("read %d bytes", n)
 		if err != nil && n == 0 {
 			log.Debugln(err.Error())
 		}
 	}
 
 	msg := &Packet{}
-	dec := gob.NewDecoder(&reader)
+	dec := gob.NewDecoder(bytes.NewReader(buf))
 
 	err = dec.Decode(msg)
 	if err != nil {

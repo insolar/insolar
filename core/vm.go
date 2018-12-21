@@ -18,7 +18,6 @@ package core
 
 import (
 	"context"
-	"encoding/gob"
 	"time"
 )
 
@@ -59,12 +58,12 @@ type LogicRunner interface {
 	ValidateCaseBind(context.Context, Parcel) (res Reply, err error)
 	ProcessValidationResults(context.Context, Parcel) (res Reply, err error)
 	ExecutorResults(context.Context, Parcel) (res Reply, err error)
-	Validate(ctx context.Context, ref RecordRef, p Pulse, cb CaseBind) (int, error) // TODO hide?
 	OnPulse(context.Context, Pulse) error
 }
 
 // LogicCallContext is a context of contract execution
 type LogicCallContext struct {
+	Mode            string     // either "execution" or "validation"
 	Callee          *RecordRef // Contract that was called
 	Request         *RecordRef // ref of request
 	Prototype       *RecordRef // Image of the callee
@@ -75,87 +74,4 @@ type LogicCallContext struct {
 	Time            time.Time  // Time when call was made
 	Pulse           Pulse      // Number of the pulse
 	TraceID         string
-}
-
-// CaseRecordType is a type of caserecord
-type CaseRecordType int
-
-// Types of records
-const (
-	caseRecordTypeUnexistent CaseRecordType = iota
-	CaseRecordTypeStart
-	CaseRecordTypeTraceID
-	CaseRecordTypeResult
-	CaseRecordTypeRequest
-	CaseRecordTypeGetObject
-	CaseRecordTypeSignObject
-	CaseRecordTypeRouteCall
-	CaseRecordTypeSaveAsChild
-	CaseRecordTypeGetObjChildren
-	CaseRecordTypeSaveAsDelegate
-	CaseRecordTypeGetDelegate
-	CaseRecordTypeDeactivateObject
-)
-
-// CaseRecord is one record of validateable object calling history
-type CaseRecord struct {
-	Type   CaseRecordType
-	ReqSig []byte
-	Resp   interface{}
-}
-
-type CaseRequest struct {
-	Request interface{}
-	Records []CaseRecord
-}
-
-// CaseBinder is a whole result of executor efforts on every object it seen on this pulse
-type CaseBind struct {
-	Requests []CaseRequest
-}
-
-type CaseBindReplay struct {
-	Pulse    Pulse
-	CaseBind CaseBind
-	Request  int
-	Record   int
-	Steps    int
-	Fail     int
-}
-
-func (r *CaseBindReplay) NextStep() (*CaseRecord, int) {
-	if r.Request >= len(r.CaseBind.Requests) {
-		return nil, r.Steps
-	}
-
-	request := r.CaseBind.Requests[r.Request]
-
-	if r.Record < 0 {
-		r.Record = 0
-		r.Steps++
-		res := request.Request.(CaseRecord)
-		return &res, r.Steps
-	}
-
-	if r.Record >= len(request.Records) {
-		r.Record = -1
-		r.Request++
-		if r.Request >= len(r.CaseBind.Requests) {
-			return nil, r.Steps
-		}
-		r.Record = 0
-		r.Steps++
-		res := r.CaseBind.Requests[r.Request].Request.(CaseRecord)
-		return &res, r.Steps
-	}
-	res := request.Records[r.Record]
-	r.Record++
-	r.Steps++
-	return &res, r.Steps
-}
-
-func init() {
-	gob.Register(&CaseRecord{})
-	gob.Register(&CaseRequest{})
-	gob.Register(&CaseBind{})
 }

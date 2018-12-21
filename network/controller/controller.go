@@ -62,7 +62,7 @@ func (c *Controller) Bootstrap(ctx context.Context) error {
 func (c *Controller) Inject(cryptographyService core.CryptographyService,
 	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
 
-	c.network.RegisterRequestHandler(types.Ping, func(request network.Request) (network.Response, error) {
+	c.network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Request) (network.Response, error) {
 		return c.network.BuildResponse(request, nil), nil
 	})
 	c.bootstrapper.Start(cryptographyService, networkCoordinator, nodeKeeper)
@@ -72,17 +72,16 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 
 // ConfigureOptions convert daemon configuration to controller options
 func ConfigureOptions(config configuration.HostNetwork) *common.Options {
-	options := &common.Options{}
-	if options.PingTimeout == 0 {
-		options.PingTimeout = time.Second * 1
+	return &common.Options{
+		InfinityBootstrap:   config.InfinityBootstrap,
+		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Second,
+		MinTimeout:          time.Duration(config.MinTimeout) * time.Second,
+		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Second,
+		PingTimeout:         1 * time.Second,
+		PacketTimeout:       10 * time.Second,
+		BootstrapTimeout:    10 * time.Second,
+		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
 	}
-	if options.PacketTimeout == 0 {
-		options.PacketTimeout = time.Second * 10
-	}
-	if options.BootstrapTimeout == 0 {
-		options.BootstrapTimeout = time.Second * 10
-	}
-	return options
 }
 
 // NewNetworkController create new network controller.

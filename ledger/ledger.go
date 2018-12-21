@@ -19,17 +19,18 @@ package ledger
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/exporter"
-	"github.com/insolar/insolar/ledger/heavy"
+	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
@@ -71,7 +72,7 @@ func NewTestLedger(
 	db *storage.DB,
 	am *artifactmanager.LedgerArtifactManager,
 	pm *pulsemanager.PulseManager,
-	jc *jetcoordinator.JetCoordinator,
+	jc core.JetCoordinator,
 	ls *localstorage.LocalStorage,
 ) *Ledger {
 	return &Ledger{
@@ -89,15 +90,17 @@ func GetLedgerComponents(conf configuration.Ledger) []interface{} {
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
+
 	return []interface{}{
 		db,
-		storage.NewRecentStorage(conf.RecentStorage.DefaultTTL),
+		storage.NewPulseStorage(db),
+		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewArtifactManger(db),
 		jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator),
 		pulsemanager.NewPulseManager(db, conf),
 		artifactmanager.NewMessageHandler(db, &conf),
 		localstorage.NewLocalStorage(db),
-		heavy.NewSync(db),
+		heavyserver.NewSync(db),
 		exporter.NewExporter(db),
 	}
 }

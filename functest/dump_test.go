@@ -55,7 +55,7 @@ func TestDumpUser(t *testing.T) {
 }
 
 func TestDumpUserWrongRef(t *testing.T) {
-	_, err := signedRequest(&root, "DumpUserInfo", testutils.RandomRef())
+	_, err := signedRequest(&root, "DumpUserInfo", testutils.RandomRef().String())
 	require.Contains(t, err.Error(), "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation")
 }
 
@@ -63,7 +63,7 @@ func TestDumpAllUsersNoRoot(t *testing.T) {
 	member := createMember(t, "Member")
 
 	_, err := signedRequest(member, "DumpAllUsers")
-	require.Contains(t, err.Error(), "[ DumpUserInfo ] Only root can call this method")
+	require.Contains(t, err.Error(), "[ DumpAllUsers ] Only root can call this method")
 }
 
 // todo fix this deadlock

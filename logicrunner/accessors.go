@@ -41,98 +41,79 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
-func (lr *LogicRunner) GetExecution(ref Ref) *ExecutionState {
-	lr.executionMutex.Lock()
-	defer lr.executionMutex.Unlock()
-	res, ok := lr.execution[ref]
+func (lr *LogicRunner) GetObjectState(ref Ref) *ObjectState {
+	lr.stateMutex.Lock()
+	defer lr.stateMutex.Unlock()
+	res, ok := lr.state[ref]
 	if !ok {
 		return nil
 	}
 	return res
 }
 
-func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
-	lr.executionMutex.Lock()
-	defer lr.executionMutex.Unlock()
-	if _, ok := lr.execution[ref]; !ok {
-		lr.execution[ref] = &ExecutionState{
-			Ref: &ref,
-			caseBind: core.CaseBind{
-				Requests: make([]core.CaseRequest, 0),
-			},
-		}
+func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
+	lr.stateMutex.Lock()
+	defer lr.stateMutex.Unlock()
+	if _, ok := lr.state[ref]; !ok {
+		lr.state[ref] = &ObjectState{Ref: &ref}
 	}
-	return lr.execution[ref]
+	return lr.state[ref]
 }
 
-func (lr *LogicRunner) MustExecutionState(ref Ref) *ExecutionState {
-	lr.executionMutex.Lock()
-	defer lr.executionMutex.Unlock()
-	res, ok := lr.execution[ref]
-	if !ok {
-		panic("No requested execution state")
+func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
+	res := lr.GetObjectState(ref)
+	if res == nil {
+		panic("No requested object state")
 	}
 	return res
 }
 
-func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
-	lr.MustExecutionState(ref).AddCaseRecord(cr)
-}
-
-func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
-	lr.caseBindReplaysMutex.Lock()
-	defer lr.caseBindReplaysMutex.Unlock()
-
-	r, ok := lr.caseBindReplays[ref]
-	if !ok {
-		return nil, -1
-	}
-	record, step := r.NextStep()
-	lr.caseBindReplays[ref] = r
-	return record, step
-}
-
 func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {
-	pulse, err := lr.PulseManager.Current(ctx)
+	pulse, err := lr.PulseStorage.Current(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return pulse
 }
 
-func (lr *LogicRunner) GetConsensus(ctx context.Context, r Ref) (*Consensus, bool) {
-	lr.consensusMutex.Lock()
-	defer lr.consensusMutex.Unlock()
-	c, ok := lr.consensus[r]
-	if !ok {
+func (lr *LogicRunner) GetConsensus(ctx context.Context, ref Ref) *Consensus {
+	state := lr.UpsertObjectState(ref)
+
+	state.Lock()
+	defer state.Unlock()
+
+	if state.Consensus == nil {
 		validators, err := lr.JetCoordinator.QueryRole(
 			ctx,
 			core.DynamicRoleVirtualValidator,
-			&r,
+			ref.Record(),
 			lr.pulse(ctx).PulseNumber,
 		)
 		if err != nil {
 			panic("cannot QueryRole")
 		}
 		// TODO INS-732 check pulse of message and ensure we deal with right validator
-		c = newConsensus(lr, validators)
-		lr.consensus[r] = c
+		state.Consensus = newConsensus(lr, validators)
 	}
-	return c, ok
+	return state.Consensus
 }
 
-func (lr *LogicRunner) RefreshConsensus() {
-	lr.consensusMutex.Lock()
-	defer lr.consensusMutex.Unlock()
-	if lr.consensus == nil {
-		lr.consensus = make(map[Ref]*Consensus)
+func (st *ObjectState) RefreshConsensus() {
+	if st.Consensus == nil {
 		return
 	}
-	for k, c := range lr.consensus {
-		if c.ready {
-			delete(lr.consensus, k)
-		} else {
-			c.ready = true
-		}
+
+	st.Consensus.ready = true
+	st.Consensus = nil
+}
+
+func (st *ObjectState) StartValidation() *ExecutionState {
+	st.Lock()
+	defer st.Unlock()
+
+	if st.Validation != nil {
+		panic("Unexpected. Validation already in progress")
 	}
+	st.Validation = &ExecutionState{}
+	return st.Validation
 }

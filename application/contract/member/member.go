@@ -95,7 +95,9 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 	case "DumpAllUsers":
 		return m.dumpAllUsersCall(rootDomain)
 	case "RegisterNode":
-		return m.RegisterNodeCall(rootDomain, params)
+		return m.registerNodeCall(rootDomain, params)
+	case "GetNodeRef":
+		return m.getNodeRef(rootDomain, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -124,7 +126,11 @@ func (m *Member) getBalance(params []byte) (interface{}, error) {
 	if err := signer.UnmarshalParams(params, &member); err != nil {
 		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
-	w, err := wallet.GetImplementationFrom(core.NewRefFromBase58(member))
+	memberRef, err := core.NewRefFromBase58(member)
+	if err != nil {
+		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
+	}
+	w, err := wallet.GetImplementationFrom(*memberRef)
 	if err != nil {
 		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
@@ -141,8 +147,11 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 	if amount <= 0 {
 		return nil, fmt.Errorf("[ transferCall ] Amount must be positive")
 	}
-	to := core.NewRefFromBase58(toStr)
-	if m.GetReference() == to {
+	to, err := core.NewRefFromBase58(toStr)
+	if err != nil {
+		return nil, fmt.Errorf("[ transferCall ] Failed to parse 'to' param: %s", err.Error())
+	}
+	if m.GetReference() == *to {
 		return nil, fmt.Errorf("[ transferCall ] Recipient must be different from the sender")
 	}
 	w, err := wallet.GetImplementationFrom(m.GetReference())
@@ -150,7 +159,7 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ transferCall ] Can't get implementation: %s", err.Error())
 	}
 
-	return nil, w.Transfer(uint(amount), &to)
+	return nil, w.Transfer(uint(amount), to)
 }
 
 func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{}, error) {
@@ -167,7 +176,7 @@ func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
 	return rootDomain.DumpAllUsers()
 }
 
-func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) registerNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
 	var publicKey string
 	var role string
 	if err := signer.UnmarshalParams(params, &publicKey, &role); err != nil {
@@ -187,4 +196,25 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	return string(cert), nil
+}
+
+func (m *Member) getNodeRef(ref core.RecordRef, params []byte) (interface{}, error) {
+	var publicKey string
+	if err := signer.UnmarshalParams(params, &publicKey); err != nil {
+		return nil, fmt.Errorf("[ getNodeRef ] Can't unmarshal params: %s", err.Error())
+	}
+
+	rootDomain := rootdomain.GetObject(ref)
+	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
+	if err != nil {
+		return nil, fmt.Errorf("[ getNodeRef ] Can't get nodeDmainRef: %s", err.Error())
+	}
+
+	nd := nodedomain.GetObject(nodeDomainRef)
+	nodeRef, err := nd.GetNodeRefByPK(publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("[ getNodeRef ] Node not found: %s", err.Error())
+	}
+
+	return nodeRef, nil
 }
