@@ -203,7 +203,7 @@ func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certific
 
 	for _, b := range s.bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
-		pubKeyBuf, err := proc.ExportPublicKey(pubKey)
+		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
 		s.NoError(err)
 
 		bootstrapNode := certificate.NewBootstrapNode(

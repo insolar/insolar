@@ -31,8 +31,8 @@ const (
 
 const HashLength = 64
 const SignatureLength = 66
+const PublicKeyLength = 66
 const ReferenceLength = 64
-const PublicKeyLength = 64
 
 // ------------------------------PACKET HEADER------------------------------
 

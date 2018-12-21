@@ -78,7 +78,7 @@ type NodeStruct struct {
 }
 
 func newNode(n *NodeStruct) (core.Node, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyPEM(n.PK)
+	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
 	if err != nil {
 		return nil, errors.Wrap(err, "error deserializing node public key")
 	}
@@ -90,7 +90,7 @@ func newNode(n *NodeStruct) (core.Node, error) {
 }
 
 func newNodeStruct(node core.Node) (*NodeStruct, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyPEM(node.PublicKey())
+	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "error serializing node public key")
 	}

@@ -45,7 +45,7 @@ func calculateNodeHash(scheme core.PlatformCryptographyScheme, processor core.Ke
 	binary.LittleEndian.PutUint32(b[:4], uint32(node.Role()))
 
 	hashWriteChecked(h, b[:4])
-	pk, err := processor.ExportPublicKeyPEM(node.PublicKey())
+	pk, err := processor.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		panic(err)
 	}

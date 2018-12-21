@@ -120,7 +120,7 @@ func init() {
 
 func ClaimToNode(version string, claim *packets.NodeJoinClaim) (core.Node, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
+	key, err := keyProc.ImportPublicKeyBinary(claim.NodePK[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
 	}

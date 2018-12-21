@@ -131,7 +131,7 @@ func (njc *NodeJoinClaim) GetNodeID() core.RecordRef {
 
 func (njc *NodeJoinClaim) GetPublicKey() (crypto.PublicKey, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
-	return keyProc.ImportPublicKey(njc.NodePK[:])
+	return keyProc.ImportPublicKeyBinary(njc.NodePK[:])
 }
 
 func (njc *NodeJoinClaim) GetSignature() []byte {
@@ -183,7 +183,7 @@ func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
 
 func NodeToClaim(node core.Node) (*NodeJoinClaim, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
-	exportedKey, err := keyProc.ExportPublicKey(node.PublicKey())
+	exportedKey, err := keyProc.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to export a public key")
 	}
