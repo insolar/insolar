@@ -30,10 +30,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/anacrolix/utp"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/ccding/go-stun"
 
 [[constraint]]
