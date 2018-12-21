@@ -31,7 +31,7 @@ func TestGetFakePulse(t *testing.T) {
 	handler := network.PulseHandlerMock{}
 	handler.HandlePulseFunc = func(p context.Context, p1 core.Pulse) {}
 	pulsar := NewFakePulsar(&handler, 1000)
-	pulse := pulsar.GetFakePulse()
+	pulse := pulsar.newPulse()
 	assert.NotNil(t, pulse)
 }
 

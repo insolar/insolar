@@ -18,6 +18,7 @@ package fakepulsar
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -29,14 +30,17 @@ import (
 // Fakepulsar needed when the network starts and can't receive a real pulse.
 
 // onPulse is a callbaback for pulse recv.
-//type callbackOnPulse func(ctx context.Context, pulse core.Pulse)
+// type callbackOnPulse func(ctx context.Context, pulse core.Pulse)
 
 // FakePulsar is a struct which uses at void network state.
 type FakePulsar struct {
 	onPulse   network.PulseHandler
 	stop      chan bool
 	timeoutMs int32 // ms
-	running   bool
+	pulse     int
+
+	mutex   sync.RWMutex
+	running bool
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
@@ -49,19 +53,17 @@ func NewFakePulsar(callback network.PulseHandler, timeoutMs int32) *FakePulsar {
 	}
 }
 
-// GetFakePulse creates and returns a fake pulse.
-func (fp *FakePulsar) GetFakePulse() *core.Pulse {
-	return fp.newPulse()
-}
-
 // Start starts sending a fake pulse.
 func (fp *FakePulsar) Start(ctx context.Context) {
+	fp.mutex.Lock()
+	defer fp.mutex.Unlock()
+
 	fp.running = true
 	go func(fp *FakePulsar) {
 		for {
 			select {
 			case <-time.After(time.Millisecond * time.Duration(fp.timeoutMs)):
-				fp.onPulse.HandlePulse(ctx, *fp.GetFakePulse())
+				fp.onPulse.HandlePulse(ctx, *fp.newPulse())
 			case <-fp.stop:
 				return
 			}
@@ -73,6 +75,9 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 
 // Stop sending a fake pulse.
 func (fp *FakePulsar) Stop(ctx context.Context) {
+	fp.mutex.Lock()
+	defer fp.mutex.Unlock()
+
 	log.Info("Fake pulsar going to stop")
 
 	if fp.running {
@@ -83,11 +88,20 @@ func (fp *FakePulsar) Stop(ctx context.Context) {
 	log.Info("Fake pulsar stopped")
 }
 
+func (fp *FakePulsar) Stopped() bool {
+	fp.mutex.RLock()
+	defer fp.mutex.RUnlock()
+
+	return !fp.running
+}
+
 func (fp *FakePulsar) newPulse() *core.Pulse {
+	fp.pulse++
 	generator := entropygenerator.StandardEntropyGenerator{}
 	return &core.Pulse{
-		PulseNumber:     1,
-		NextPulseNumber: 2,
-		Entropy:         generator.GenerateEntropy(),
+		EpochPulseNumber: -1,
+		PulseNumber:      core.PulseNumber(fp.pulse),
+		NextPulseNumber:  core.PulseNumber(fp.pulse + 1),
+		Entropy:          generator.GenerateEntropy(),
 	}
 }

@@ -265,7 +265,7 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 	certManager, cryptographyService := s.initCrypto(node, origin.ID())
 	netSwitcher := testutils.NewNetworkSwitcherMock(s.T())
 	netSwitcher.GetStateMock.Set(func() (r core.NetworkState) {
-		return core.CompleteNetworkState
+		return core.VoidNetworkState
 	})
 
 	realKeeper := nodenetwork.NewNodeKeeper(origin)

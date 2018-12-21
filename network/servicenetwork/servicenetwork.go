@@ -173,57 +173,87 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
-	if !n.isFakePulse(&pulse) {
-		n.fakePulsar.Stop(ctx)
-	}
-	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+	traceID := "pulse_" + strconv.FormatUint(uint64(newPulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
-	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
-	if n.PulseManager == nil {
-		logger.Error("PulseManager is not initialized")
-		return
-	}
+	logger.Infof("Got new newPulse number: %d", newPulse.PulseNumber)
+
 	currentPulse, err := n.PulseStorage.Current(ctx)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "Could not get current pulse"))
+		logger.Error(errors.Wrap(err, "Could not get current newPulse"))
 		return
 	}
-	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
-		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "Failed to set pulse"))
-			return
-		}
 
-		// err = n.NetworkSwitcher.OnPulse(ctx, pulse)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
-			return
-		}
+	// Working on early network state, ready for fake pulses
+	if isFakePulse(&newPulse) && !fakePulseAllowed(n.NetworkSwitcher.GetState()) {
+		logger.Infof("Got fake pulse on invalid network state. Current: %+v. New: %+v", currentPulse, newPulse)
+		return
+	}
 
-		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-		go func(logger core.Logger, network *ServiceNetwork) {
-			if network.NetworkCoordinator == nil || !network.NetworkCoordinator.IsStarted() {
-				return
-			}
-			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
-			if err != nil {
-				logger.Warn("Error writing active nodes to ledger: " + err.Error())
-			}
-			log.Info("ServiceNetwork call PhaseManager.OnPulse")
+	if !isNextPulse(currentPulse, &newPulse) && !isNewEpoch(currentPulse, &newPulse) && !fakePulseStarted(currentPulse, &newPulse) {
+		logger.Infof("Incorrect newPulse number. Current: %+v. New: %+v", currentPulse, newPulse)
+		return
+	}
 
-			err = n.PhaseManager.OnPulse(ctx, &pulse)
-			if err != nil {
-				logger.Warn("phase manager fail: " + err.Error())
-			}
-		}(logger, n)
-	} else {
-		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
+	// Got real pulse
+	if isFakePulse(currentPulse) && !isFakePulse(&newPulse) {
+		n.fakePulsar.Stop(ctx)
+	}
+
+	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
+	if err != nil {
+		logger.Error(errors.Wrap(err, "Failed to set newPulse"))
+		return
+	}
+
+	// err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
+	// if err != nil {
+	// 	logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
+	// 	return
+	// }
+
+	logger.Infof("Set new current newPulse number: %d", newPulse.PulseNumber)
+	go n.networkCoordinatorOnPulse(ctx, newPulse)
+	go n.phaseManagerOnPulse(ctx, newPulse)
+}
+
+func (n *ServiceNetwork) networkCoordinatorOnPulse(ctx context.Context, newPulse core.Pulse) {
+	logger := inslogger.FromContext(ctx)
+
+	if !n.NetworkCoordinator.IsStarted() {
+		return
+	}
+	err := n.NetworkCoordinator.WriteActiveNodes(ctx, newPulse.PulseNumber, n.NodeNetwork.GetActiveNodes())
+	if err != nil {
+		logger.Warn("Error writing active nodes to ledger: " + err.Error())
+	}
+	logger.Info("ServiceNetwork call PhaseManager.OnPulse")
+}
+
+func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.Pulse) {
+	logger := inslogger.FromContext(ctx)
+
+	if err := n.PhaseManager.OnPulse(ctx, &newPulse); err != nil {
+		logger.Warn("phase manager fail: " + err.Error())
 	}
 }
 
-func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
-	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
+func isFakePulse(newPulse *core.Pulse) bool {
+	return newPulse.EpochPulseNumber == -1
+}
+
+func isNewEpoch(currentPulse, newPulse *core.Pulse) bool {
+	return newPulse.EpochPulseNumber > currentPulse.EpochPulseNumber
+}
+
+func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
+	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
+}
+
+func fakePulseStarted(currentPulse, newPulse *core.Pulse) bool {
+	return isFakePulse(newPulse) && currentPulse.EpochPulseNumber > -1
+}
+
+func fakePulseAllowed(state core.NetworkState) bool {
+	return state == core.VoidNetworkState || state == core.NoNetworkState
 }
