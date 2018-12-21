@@ -256,23 +256,5 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 			ul.addNode(ul.origin, int(c.NodeJoinerIndex))
 		}
 	}
-<<<<<<< HEAD
 	return nil
-=======
-}
-
-func claimToNode(address, version string, claim *consensus.NodeJoinClaim) (core.Node, error) {
-	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKeyPEM(claim.NodePK[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
-	}
-	node := NewNode(
-		claim.NodeRef,
-		core.StaticRole(int(claim.NodeRoleRecID)),
-		key,
-		address,
-		version)
-	return node, nil
->>>>>>> 144b471aca17d53ddf3e234df284ab982df5f90c
 }
