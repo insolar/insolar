@@ -102,18 +102,18 @@ func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 // DumpAllUsers processes dump all users request
 func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
-		return nil, fmt.Errorf("[ DumpUserInfo ] Only root can call this method")
+		return nil, fmt.Errorf("[ DumpAllUsers ] Only root can call this method")
 	}
 	res := []map[string]interface{}{}
 	iterator, err := rd.NewChildrenTypedIterator(member.GetPrototype())
 	if err != nil {
-		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get children: %s", err.Error())
+		return nil, fmt.Errorf("[ DumpAllUsers ] Can't get children: %s", err.Error())
 	}
 
 	for iterator.HasNext() {
 		cref, err := iterator.Next()
 		if err != nil {
-			return nil, fmt.Errorf("[ DumpUserInfo ] Can't get next child: %s", err.Error())
+			return nil, fmt.Errorf("[ DumpAllUsers ] Can't get next child: %s", err.Error())
 		}
 
 		if cref == rd.RootMember {

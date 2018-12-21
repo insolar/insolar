@@ -465,8 +465,8 @@ func (db *DB) IterateLocalData(
 	return db.iterate(ctx, fullPrefix, handler)
 }
 
-// IterateRecords iterates over records.
-func (db *DB) IterateRecords(
+// IterateRecordsOnPulse iterates over records on provided Jet ID and Pulse.
+func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
@@ -478,6 +478,25 @@ func (db *DB) IterateRecords(
 		id := core.NewRecordID(pulse, k)
 		rec := record.DeserializeRecord(v)
 		err := handler(*id, rec)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+// IterateIndexIDs iterates over index IDs on provided Jet ID.
+func (db *DB) IterateIndexIDs(
+	ctx context.Context,
+	jetID core.RecordID,
+	handler func(id core.RecordID) error,
+) error {
+	prefix := prefixkey(scopeIDLifeline, jetID[:])
+
+	return db.iterate(ctx, prefix, func(k, v []byte) error {
+		pn := pulseNumFromKey(0, k)
+		id := core.NewRecordID(pn, k[core.PulseNumberSize:])
+		err := handler(*id)
 		if err != nil {
 			return err
 		}
