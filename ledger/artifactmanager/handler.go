@@ -618,12 +618,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 	msg := parcel.Message().(*message.ValidateRecord)
 	jetID := jetFromContext(ctx)
 
-	currentPulse, err := h.db.GetLatestPulse(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
+	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		if err == storage.ErrNotFound {
 			heavy, err := h.findHeavy(ctx, msg.Object.Record(), parcel.Pulse())
@@ -660,7 +655,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 			Object:              msg.Object,
 			ValidatedState:      msg.State,
 			LatestStateApproved: idx.LatestStateApproved,
-		}, currentPulse.Pulse, &core.MessageSendOptions{
+		}, &core.MessageSendOptions{
 			Receiver: &nodes[0],
 		})
 		if err != nil {
@@ -773,20 +768,12 @@ func (h *MessageHandler) findHeavy(ctx context.Context, obj *core.RecordID, puls
 func (h *MessageHandler) saveIndexFromHeavy(
 	ctx context.Context, s storage.Store, jetID core.RecordID, obj core.RecordRef, heavy *core.RecordRef,
 ) (*index.ObjectLifeline, error) {
-	currentPulse, err := h.db.GetLatestPulse(ctx)
-	if err != nil {
-		return nil, err
-	}
 
-	genericReply, err := h.Bus.Send(
-		ctx,
-		&message.GetObjectIndex{
-			Object: obj,
-		},
-		currentPulse.Pulse,
-		&core.MessageSendOptions{
-			Receiver: heavy,
-		})
+	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
+		Object: obj,
+	}, &core.MessageSendOptions{
+		Receiver: heavy,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
