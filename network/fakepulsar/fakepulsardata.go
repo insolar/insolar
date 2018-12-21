@@ -28,8 +28,8 @@ func (fpr *FakePulsarRequest) Type() types.PacketType {
 }
 
 type FakePulsarResponse struct {
-	pulseNum       int64
-	firstPulseTime int64
+	PulseNum       int64
+	FirstPulseTime int64
 }
 
 func (fpr *FakePulsarResponse) Type() types.PacketType {

@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/network/fakepulsar"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -38,11 +40,12 @@ import (
 )
 
 type Bootstrapper struct {
-	options   *common.Options
-	transport network.InternalTransport
-	pinger    *pinger.Pinger
-	cert      core.Certificate
-	keeper    network.NodeKeeper
+	options    *common.Options
+	transport  network.InternalTransport
+	pinger     *pinger.Pinger
+	cert       core.Certificate
+	keeper     network.NodeKeeper
+	fakePulsar *fakepulsar.FakePulsar
 }
 
 type NodeBootstrapRequest struct{}
@@ -120,6 +123,8 @@ func init() {
 	gob.Register(&StartSessionResponse{})
 	gob.Register(&GenesisRequest{})
 	gob.Register(&GenesisResponse{})
+	gob.Register(&fakepulsar.FakePulsarRequest{})
+	gob.Register(&fakepulsar.FakePulsarResponse{})
 }
 
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
@@ -294,11 +299,23 @@ func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
 		return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
 	}
 	data := response.GetData().(*NodeBootstrapResponse)
-	if data.Code == Rejected {
+	switch data.Code {
+	case Rejected:
 		return nil, errors.New("Rejected: " + data.RejectReason)
-	}
-	if data.Code == Redirected {
+	case Redirected:
 		return bootstrap(data.RedirectHost, bc.options, bc.startBootstrap)
+	case Accepted:
+		request := bc.transport.NewRequestBuilder().Type(types.FakePulsarRequest).Data(fakepulsar.FakePulsarRequest{}).Build()
+		future, err := bc.transport.SendRequestPacket(request, bootstrapHost)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
+		}
+		response, err := future.GetResponse(bc.options.BootstrapTimeout)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
+		}
+		data := response.GetData().(*fakepulsar.FakePulsarResponse)
+		bc.fakePulsar.SetPulseData(data.FirstPulseTime, data.PulseNum)
 	}
 	return response.GetSenderHost(), nil
 }
@@ -330,17 +347,30 @@ func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Requ
 	return bc.transport.BuildResponse(request, &GenesisResponse{Discovery: discovery}), nil
 }
 
+func (bc *Bootstrapper) processFakePulse(ctx context.Context, request network.Request) (network.Response, error) {
+	return bc.transport.BuildResponse(request, &fakepulsar.FakePulsarResponse{
+		PulseNum:       bc.fakePulsar.GetPulseNum(),
+		FirstPulseTime: bc.fakePulsar.GetFirstPulseTime(),
+	}), nil
+}
+
 func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
 	bc.keeper = keeper
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
+	bc.transport.RegisterPacketHandler(types.FakePulsarRequest, bc.processFakePulse)
 }
 
-func NewBootstrapper(options *common.Options, certificate core.Certificate, transport network.InternalTransport) *Bootstrapper {
+func NewBootstrapper(
+	options *common.Options,
+	certificate core.Certificate,
+	transport network.InternalTransport,
+	pulsar *fakepulsar.FakePulsar) *Bootstrapper {
 	return &Bootstrapper{
-		options:   options,
-		cert:      certificate,
-		transport: transport,
-		pinger:    pinger.NewPinger(transport),
+		options:    options,
+		cert:       certificate,
+		transport:  transport,
+		pinger:     pinger.NewPinger(transport),
+		fakePulsar: pulsar,
 	}
 }
