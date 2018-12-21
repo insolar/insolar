@@ -485,6 +485,25 @@ func (db *DB) IterateRecordsOnPulse(
 	})
 }
 
+// IterateIndexIDs iterates over index IDs on provided Jet ID.
+func (db *DB) IterateIndexIDs(
+	ctx context.Context,
+	jetID core.RecordID,
+	handler func(id core.RecordID) error,
+) error {
+	prefix := prefixkey(scopeIDLifeline, jetID[:])
+
+	return db.iterate(ctx, prefix, func(k, v []byte) error {
+		pn := pulseNumFromKey(0, k)
+		id := core.NewRecordID(pn, k[core.PulseNumberSize:])
+		err := handler(*id)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 // SetActiveNodes saves active nodes for pulse in memory.
 func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
 	db.nodeHistoryLock.Lock()
