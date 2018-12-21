@@ -36,6 +36,8 @@ func (s *testSuite) TestNodeConnect() {
 	s.initNode(s.testNode, Disable)
 
 	s.InitTestNode()
+	s.bootstrapNodes[0].serviceNetwork.PhaseManager = &phaseManagerWrapper{original: s.bootstrapNodes[0].serviceNetwork.PhaseManager, result: phasesResult}
+
 	s.StartTestNode()
 
 	res := <-phasesResult
@@ -76,11 +78,12 @@ func TestServiceNetworkIntegration(t *testing.T) {
 	suite.Run(t, s)
 }
 
+/*
 func TestServiceNetwork3BootsrtapNodes(t *testing.T) {
 	s := NewTestSuite(3, 0)
 	suite.Run(t, s)
 }
-
+*/
 // Full timeout test
 type FullTimeoutPhaseManager struct {
 }
