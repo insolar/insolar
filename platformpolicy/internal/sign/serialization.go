@@ -48,7 +48,7 @@ func SerializeTwoBigInt(one, two *big.Int) []byte {
 		panic(err)
 	}
 
-	serialized := make([]byte, TwoBigIntBytesLength)
+	var serialized [TwoBigIntBytesLength]byte
 
 	serialized[0] = uint8(oneBytesLen)
 	serialized[1] = uint8(twoBytesLen)
@@ -69,8 +69,7 @@ func DeserializeTwoBigInt(data []byte) (*big.Int, *big.Int, error) {
 		return nil, nil, errors.Errorf("[ DeserializeTwoBigInt ] wrong data length: %d", len(data))
 	}
 
-	one := new(big.Int)
-	two := new(big.Int)
+	var one, two big.Int
 
 	oneBytesLen := int(data[0])
 	twoBytesLen := int(data[1])
@@ -79,18 +78,13 @@ func DeserializeTwoBigInt(data []byte) (*big.Int, *big.Int, error) {
 		return nil, nil, errors.Errorf("[ DeserializeTwoBigInt ] wrong data to parse one len: %d, two len: %d", oneBytesLen, twoBytesLen)
 	}
 
-	oneBytes := make([]byte, oneBytesLen)
-	twoBytes := make([]byte, twoBytesLen)
-
 	oneStartPos := sizeBytesLength
 	oneEndPos := oneStartPos + oneBytesLen
-	copy(oneBytes, data[oneStartPos:oneEndPos])
 
 	twoStartPos := sizeBytesLength + expectedBigIntBytesLength
 	twoEndPos := twoStartPos + twoBytesLen
-	copy(twoBytes, data[twoStartPos:twoEndPos])
 
-	one.SetBytes(oneBytes)
-	two.SetBytes(twoBytes)
-	return one, two, nil
+	one.SetBytes(data[oneStartPos:oneEndPos])
+	two.SetBytes(data[twoStartPos:twoEndPos])
+	return &one, &two, nil
 }
