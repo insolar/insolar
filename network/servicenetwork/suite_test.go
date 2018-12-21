@@ -242,7 +242,7 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 
 	pulseManagerMock := testutils.NewPulseManagerMock(s.T())
 	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
-		return serviceNetwork.NodeKeeper.MoveSyncToActive()
+		return nil
 	})
 
 	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
@@ -273,6 +273,7 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 
+	realKeeper.SetState(network.Waiting)
 	if len(certManager.GetCertificate().GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certManager.GetCertificate()) {
 		realKeeper.SetState(network.Ready)
 		realKeeper.AddActiveNodes([]core.Node{origin})

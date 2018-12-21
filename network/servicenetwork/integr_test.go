@@ -42,8 +42,12 @@ func (s *testSuite) TestNodeConnect() {
 
 	res := <-phasesResult
 	s.NoError(res)
-	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1, len(activeNodes))
+	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(1, len(activeNodes))
+	err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
+	s.NoError(err)
+	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(2, len(activeNodes))
 
 	// teardown
 	<-time.After(time.Second * 3)

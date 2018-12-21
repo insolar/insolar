@@ -108,7 +108,10 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
 	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for ref, packet := range resultPackets {
-		err = fp.checkPacketSignature(packet, ref)
+		err = nil
+		if !ref.Equal(fp.NodeKeeper.GetOrigin().ID()) {
+			err = fp.checkPacketSignature(packet, ref)
+		}
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to check phase1 packet signature from %s: %s", ref, err.Error())
 			continue
@@ -184,7 +187,7 @@ func (fp *FirstPhase) filterClaims(nodeID core.RecordRef, claims []packets.Refer
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
 		signedClaim, ok := claim.(packets.SignedClaim)
-		if ok {
+		if ok && !nodeID.Equal(fp.NodeKeeper.GetOrigin().ID()) {
 			err := fp.checkClaimSignature(signedClaim)
 			if err != nil {
 				log.Error("[ filterClaims ] failed to check a claim sign: " + err.Error())

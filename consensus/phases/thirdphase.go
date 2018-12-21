@@ -48,7 +48,10 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	}
 
 	for ref, packet := range responses {
-		err = tp.checkPacketSignature(packet, ref)
+		err = nil
+		if !ref.Equal(tp.NodeKeeper.GetOrigin().ID()) {
+			err = tp.checkPacketSignature(packet, ref)
+		}
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to check phase3 packet signature from %s: %s", ref, err.Error())
 			continue

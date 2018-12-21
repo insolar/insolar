@@ -103,6 +103,10 @@ func (nc *NaiveCommunicator) setPulseNumber(new core.PulseNumber) bool {
 
 func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet packets.ConsensusPacket) {
 	for _, node := range participants {
+		if node.ID().Equal(nc.NodeKeeper.GetOrigin().ID()) {
+			continue
+		}
+
 		go func(n core.Node) {
 			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
@@ -126,6 +130,10 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 	}
 
 	for ref, req := range requests {
+		if ref.Equal(nc.NodeKeeper.GetOrigin().ID()) {
+			continue
+		}
+
 		go func(node core.RecordRef, consensusPacket packets.ConsensusPacket) {
 			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
 			if err != nil {

@@ -174,6 +174,10 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+	if n.NodeKeeper.GetState() == network.Waiting {
+		return
+	}
+
 	traceID := "pulse_" + strconv.FormatUint(uint64(newPulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new newPulse number: %d", newPulse.PulseNumber)
