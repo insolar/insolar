@@ -1014,7 +1014,7 @@ func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
 		jc.HeavyMock.Return(genRandomRef(0), nil)
 		msg := message.SetRecord{
 			Record:    record.SerializeRecord(&rec),
-			TargetRef: *core.NewRecordRef(core.RecordID{}, *record.NewRecordIDFromRecord(cs, 2, &rec)),
+			TargetRef: *core.NewRecordRef(core.RecordID{}, *record.NewRecordIDFromRecord(cs, core.FirstPulseNumber+2, &rec)),
 		}
 		err := db.UpdateJetTree(ctx, core.FirstPulseNumber+2, true, *jet.NewID(4, recID.Hash()))
 		require.NoError(t, err)

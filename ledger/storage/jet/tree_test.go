@@ -25,7 +25,6 @@ import (
 )
 
 func TestTree_Find(t *testing.T) {
-	t.Skip()
 	tree := Tree{
 		Head: &jet{
 			Right: &jet{
@@ -49,15 +48,14 @@ func TestTree_Find(t *testing.T) {
 	depth, prefix := Jet(*id)
 	assert.Equal(t, depth, uint8(4))
 	assert.Equal(t, expectedPrefix, prefix)
-	assert.Equal(t, false, actual)
+	assert.False(t, actual)
 
 	jetID, actual := tree.Find(*jetLookup)
 	assert.Equal(t, jetLookup, jetID)
-	assert.Equal(t, true, actual)
+	assert.True(t, actual)
 }
 
 func TestTree_Update(t *testing.T) {
-	t.Skip()
 	tree := Tree{Head: &jet{}}
 
 	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
@@ -83,6 +81,13 @@ func TestTree_Update(t *testing.T) {
 	assert.Equal(t, uint8(8), depth)
 	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
 	assert.Equal(t, false, actual)
+
+	tree.Update(*NewID(8, lookup.Hash()), true)
+	id, actual = tree.Find(*lookup)
+	depth, prefix = Jet(*id)
+	assert.Equal(t, uint8(8), depth)
+	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
+	assert.Equal(t, true, actual)
 }
 
 func TestTree_Split(t *testing.T) {

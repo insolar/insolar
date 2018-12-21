@@ -50,12 +50,12 @@ func (j *jet) Find(val []byte, depth uint8) (*jet, uint8) {
 
 // Update add missing tree branches for provided prefix.
 func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
-	if depth >= maxDepth {
-		return
-	}
-
 	if setActual {
 		j.Actual = true
+	}
+
+	if depth >= maxDepth {
+		return
 	}
 
 	if getBit(prefix, depth) {
@@ -97,9 +97,8 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	if id.Pulse() == core.PulseNumberJet {
 		return &id, true
 	}
-	// TODO: write 'actual' test and retur actual flag from jet.
-	_, depth := t.Head.Find(id.Hash(), 0)
-	return NewID(uint8(depth), resetBits(id.Hash(), depth)), true
+	j, depth := t.Head.Find(id.Hash(), 0)
+	return NewID(uint8(depth), resetBits(id.Hash(), depth)), j.Actual
 }
 
 // Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
