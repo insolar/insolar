@@ -28,34 +28,46 @@ import (
 // and transferred to player.
 type player struct {
 	sender
-	tape   tape
-	scheme core.PlatformCryptographyScheme
+	tape         tape
+	scheme       core.PlatformCryptographyScheme
+	pulseStorage core.PulseStorage
 }
 
 // newPlayer creates player instance. It will replay replies from provided tape.
-func newPlayer(s sender, tape tape, scheme core.PlatformCryptographyScheme) *player {
-	return &player{sender: s, tape: tape, scheme: scheme}
+func newPlayer(s sender, tape tape, scheme core.PlatformCryptographyScheme, pulseStorage core.PulseStorage) *player {
+	return &player{
+		sender:       s,
+		tape:         tape,
+		scheme:       scheme,
+		pulseStorage: pulseStorage,
+	}
 }
 
 // WriteTape for player is not available.
-func (r *player) WriteTape(ctx context.Context, w io.Writer) error {
+func (p *player) WriteTape(ctx context.Context, w io.Writer) error {
 	panic("can't write the tape from player")
 }
 
 // Send wraps MessageBus Send to reply replies from the tape. If reply for this message is not on the tape, an error
 // will be returned.
-func (r *player) Send(ctx context.Context, msg core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
+func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
 	var (
 		rep core.Reply
 		err error
 	)
-	parcel, err := r.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
+
+	currentPulse, err := p.pulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
-	id := GetMessageHash(r.scheme, parcel)
 
-	rep, err = r.tape.GetReply(ctx, id)
+	parcel, err := p.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
+	if err != nil {
+		return nil, err
+	}
+	id := GetMessageHash(p.scheme, parcel)
+
+	rep, err = p.tape.GetReply(ctx, id)
 	if err == nil {
 		return rep, nil
 	}

@@ -81,7 +81,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 
 	t.Run("fetches index from heavy when no index", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
-		mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Head, m.Object)
 				buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -204,7 +204,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	h.RecentStorageProvider = provideMock
 
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
-		mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Parent, m.Object)
 				buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -321,7 +321,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 		AsType: delegateType,
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Head, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -397,7 +397,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 		Object: *genRandomRef(0),
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Object, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -653,7 +653,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 		Parent: *genRandomRef(0),
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Parent, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -770,10 +770,9 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		require.Equal(t, o, obj)
 		require.Equal(t, p, *secondId)
 	}
-	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int, isMine bool) {
+	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int) {
 		require.Equal(t, p, *firstID)
 		require.Equal(t, 320, ttl)
-		require.Equal(t, true, isMine)
 	}
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -995,6 +994,7 @@ func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
 
 	t.Run("returns jet miss when miss with empty tree", func(t *testing.T) {
 		jc.LightExecutorForJetMock.Return(genRandomRef(0), nil)
+		jc.HeavyMock.Return(genRandomRef(0), nil)
 		msg := message.SetRecord{
 			Record:    record.SerializeRecord(&rec),
 			TargetRef: *core.NewRecordRef(core.RecordID{}, *record.NewRecordIDFromRecord(cs, 0, &rec)),
@@ -1011,6 +1011,7 @@ func TestMessageHandler_HandleSetRecord_JetMiss(t *testing.T) {
 
 	t.Run("returns jet miss when miss with filled tree", func(t *testing.T) {
 		jc.LightExecutorForJetMock.Return(genRandomRef(0), nil)
+		jc.HeavyMock.Return(genRandomRef(0), nil)
 		msg := message.SetRecord{
 			Record:    record.SerializeRecord(&rec),
 			TargetRef: *core.NewRecordRef(core.RecordID{}, *record.NewRecordIDFromRecord(cs, 2, &rec)),

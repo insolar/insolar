@@ -69,9 +69,10 @@ type PulseManager struct {
 }
 
 type pmOptions struct {
-	enableSync      bool
-	splitThreshold  uint64
-	dropHistorySize int
+	enableSync       bool
+	splitThreshold   uint64
+	dropHistorySize  int
+	storeLightPulses core.PulseNumber
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -88,9 +89,10 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 		db:           db,
 		currentPulse: *core.GenesisPulse,
 		options: pmOptions{
-			enableSync:      pmconf.HeavySyncEnabled,
-			splitThreshold:  pmconf.SplitThreshold,
-			dropHistorySize: conf.JetSizesHistoryDepth,
+			enableSync:       pmconf.HeavySyncEnabled,
+			splitThreshold:   pmconf.SplitThreshold,
+			dropHistorySize:  conf.JetSizesHistoryDepth,
+			storeLightPulses: conf.LightChainLimit,
 		},
 		syncClientsPool: heavySyncPool,
 	}
@@ -125,7 +127,7 @@ func (m *PulseManager) processEndPulse(
 			msg, hotRecordsError := m.getExecutorData(
 				ctx, jetID, currentPulse.PulseNumber, drop, dropSerialized)
 			if hotRecordsError != nil {
-				return errors.Wrap(err, "processRecentObjects failed")
+				return errors.Wrapf(err, "getExecutorData failed for jet id %v", jetID)
 			}
 			sendError := m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg)
 			if sendError != nil {
@@ -139,7 +141,19 @@ func (m *PulseManager) processEndPulse(
 			return nil
 		})
 	}
-	return g.Wait()
+	err = g.Wait()
+	if err != nil {
+		return errors.Wrap(err, "got error on jets sync")
+	}
+
+	// TODO: maybe move cleanup in the above cycle or process removal in separate job - 20.Dec.2018 @nordicdyno
+	untilPN := currentPulse.PulseNumber - m.options.storeLightPulses
+	for jetID := range jetIDs {
+		if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *PulseManager) createDrop(
@@ -208,7 +222,7 @@ func (m *PulseManager) processDrop(
 		Messages:    messages,
 		PulseNumber: pulse.PulseNumber,
 	}
-	_, err := m.Bus.Send(ctx, msg, *pulse, nil)
+	_, err := m.Bus.Send(ctx, msg, nil)
 	if err != nil {
 		return err
 	}
@@ -247,13 +261,6 @@ func (m *PulseManager) getExecutorData(
 			Index: encoded,
 		}
 
-		if !recentStorage.IsMine(id) {
-			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
-			if err != nil {
-				logger.Error(err)
-				return nil, errors.Wrap(err, "[ processRecentObjects ] Can't RemoveObjectIndex")
-			}
-		}
 	}
 
 	for objID, requests := range recentStorage.GetRequests() {
@@ -321,17 +328,17 @@ func (m *PulseManager) sendExecutorData(
 		leftMsg.Jet = *core.NewRecordRef(core.DomainID, *left)
 		rightMsg := *msg
 		rightMsg.Jet = *core.NewRecordRef(core.DomainID, *right)
-		_, err = m.Bus.Send(ctx, &leftMsg, *currentPulse, nil)
+		_, err = m.Bus.Send(ctx, &leftMsg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
-		_, err = m.Bus.Send(ctx, &rightMsg, *currentPulse, nil)
+		_, err = m.Bus.Send(ctx, &rightMsg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
 	} else {
 		msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
-		_, err := m.Bus.Send(ctx, msg, *currentPulse, nil)
+		_, err := m.Bus.Send(ctx, msg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
@@ -368,7 +375,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.currentPulse = newPulse
 
 	// swap active nodes
-	m.ActiveListSwapper.MoveSyncToActive()
+	// TODO: fix network consensus and uncomment this (after NETD18-74)
+	// m.ActiveListSwapper.MoveSyncToActive()
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)

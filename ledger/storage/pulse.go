@@ -165,3 +165,7 @@ func (db *DB) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 
 	return tx.GetLatestPulse(ctx)
 }
+
+func pulseNumFromKey(from int, key []byte) core.PulseNumber {
+	return core.NewPulseNumber(key[from : from+core.PulseNumberSize])
+}

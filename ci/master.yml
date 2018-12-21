@@ -1,7 +1,15 @@
 groups:
 - name: master
   jobs:
-    - unit
+    - insolard
+    - builder
+
+resource_types:
+- name: kubernetes
+  type: docker-image
+  source:
+    repository: zlabjp/kubernetes-resource
+    tag: "1.11"
 
 resources:
 - name: master
@@ -24,49 +32,68 @@ resources:
     username: ((meta.registry.username))
     password: ((meta.registry.password))
 
+- name: adm
+  type: git
+  source:
+    uri: git@github.com:insolar/adm.git
+    branch: master
+    private_key: ((meta.github.adm_key))
+
+- name: deploy
+  type: kubernetes
+  source:
+    kubeconfig: ((meta.kubernetes.dev-config))
+
 jobs:
-- name: unit
+- name: insolard
   public: true
   plan:
   - get: master
     trigger: true
+  - get: adm
+    trigger: false
   - get: builder
     params: 
       save: true
-  - task: unit
-    timeout: 10m
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source: {repository: golang}
-      inputs:
-      - name: master
-        path: /go/src/github.com/insolar/insolar
-      run:
-        path: sh
-        args:
-          - -exc
-          - |
-             echo tests
-             #pwd
-             #ls -alh go
-             #export CGO_ENABLED=0
-             #export GORACE="halt_on_error=1"
-             #export GOMAXPROCS=2
-             #export INSOLAR_LOG_LEVEL=debug
-             #export GOPATH=$(pwd)/go
-
-             #mkdir $GOPATH/bin
-             #export PATH=$PATH:$GOPATH/bin
-             #ls -alh
-             #env
-             #cd $GOPATH/src/github.com/insolar/insolar
-             #make install-deps
-             #make pre-build
-             #make build
   - put: insolard
     params:
       build: master
       target: insolard
       load_base: builder
+      tag_file: master/.git/short_ref
+      tag_as_latest: true
+  - task: set-tag
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: alpine}
+      inputs:
+        - name: master
+        - name: adm
+      outputs:
+        - name: deploy
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cp master/.git/short_ref deploy/tag
+            cp adm/manifests/dev/bootstrap-ss.yaml deploy/bootstrap.yaml
+            ls -alh
+            sed -i "s/registry.ins.world\/insolard/registry.ins.world\/insolard:$(cat deploy/tag)/g" deploy/bootstrap.yaml
+            cat deploy/bootstrap.yaml
+  - put: deploy
+    params:
+      namespace: dev
+      kubectl: apply -f deploy/bootstrap.yaml
+
+- name: builder
+  public: true
+  plan:
+  - get: master
+    trigger: false
+  - put: builder
+    params:
+      build: master
+      dockerfile: master/docker/Dockerfile.builder

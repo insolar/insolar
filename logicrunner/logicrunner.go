@@ -81,6 +81,7 @@ type CurrentExecution struct {
 	Request       *Ref
 	RequesterNode *Ref
 	ReturnMode    message.MethodReturnMode
+	SentResult    bool
 }
 
 type ExecutionQueueResult struct {
@@ -383,6 +384,10 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
+	if es.Current.SentResult {
+		return false
+	}
+
 	if es.Current.ReturnMode == message.ReturnNoWait {
 		return false
 	}
@@ -395,6 +400,8 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	if inslogger.TraceID(es.Current.Context) != inslogger.TraceID(ctx) {
 		return false
 	}
+
+	inslogger.FromContext(ctx).Debug("loop detected")
 
 	return true
 }
@@ -539,13 +546,8 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 	es.pending = NotPending
 
 	go func() {
-		pulse, err := lr.PulseStorage.Current(ctx)
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
-			return
-		}
 		msg := message.PendingFinished{Reference: currentRef}
-		_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
+		_, err := lr.MessageBus.Send(ctx, &msg, nil)
 		if err != nil {
 			inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
 		}
@@ -587,22 +589,38 @@ func (lr *LogicRunner) executeOrValidate(
 	if err != nil {
 		errstr = err.Error()
 	}
-	if es.Current.ReturnMode == message.ReturnResult {
-		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", es.Current.Request)
 
-		_, err = core.MessageBusFromContext(ctx, nil).Send(ctx, &message.ReturnResults{
-			Caller:  lr.NodeNetwork.GetOrigin().ID(),
-			Target:  *es.Current.RequesterNode,
-			Request: *es.Current.Request,
-			Reply:   re,
-			Error:   errstr,
-		}, *lr.pulse(ctx), &core.MessageSendOptions{
-			Receiver: es.Current.RequesterNode,
-		})
-		if err != nil {
-			inslogger.FromContext(ctx).Debug("couldn't deliver results")
-		}
+	es.Lock()
+	defer es.Unlock()
+
+	es.Current.SentResult = true
+	if es.Current.ReturnMode != message.ReturnResult {
+		return re, err
 	}
+
+	target := *es.Current.RequesterNode
+	request := *es.Current.Request
+
+	go func() {
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
+
+		_, err = core.MessageBusFromContext(ctx, nil).Send(
+			ctx,
+			&message.ReturnResults{
+				Caller:  lr.NodeNetwork.GetOrigin().ID(),
+				Target:  target,
+				Request: request,
+				Reply:   re,
+				Error:   errstr,
+			},
+			&core.MessageSendOptions{
+			Receiver: &target,
+			},
+		)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
+		}
+	}()
 
 	return re, err
 }
@@ -826,16 +844,11 @@ func (lr *LogicRunner) executeConstructorCall(
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
-	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
-
 	lr.stateMutex.Lock()
-	defer lr.stateMutex.Unlock()
-
 	messages := make([]core.Message, 0)
 
-	// send copy for validation
 	for ref, state := range lr.state {
-		// we are executor again - we still working
+		// we are executor again - just continue working
 		// TODO we need to do something with validation
 		isAuthorized, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
@@ -858,7 +871,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			queue := es.releaseQueue()
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
 			requests := caseBind.getCaseBindForMessage(ctx)
-
 			messages = append(
 				messages,
 				&message.ValidateCaseBind{
@@ -886,16 +898,41 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		state.Unlock()
 	}
 
-	for _, msg := range messages {
-		_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
-		if err != nil {
-			return errors.Wrap(err, "error while sending validation data on pulse")
+	lr.stateMutex.Unlock()
+
+	var errorCounter int
+	var sendWg sync.WaitGroup
+	if len(messages) > 0 {
+		errChan := make(chan error, len(messages))
+		sendWg.Add(len(messages))
+
+		for _, msg := range messages {
+			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg, &errChan)
+		}
+
+		sendWg.Wait()
+		close(errChan)
+
+		for err := range errChan {
+			if err != nil {
+				errorCounter++
+				inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
+			}
+		}
+
+		if errorCounter > 0 {
+			return errors.New("error while sending executor data in OnPulse, see logs for more information")
 		}
 	}
 
 	return nil
 }
 
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message,sendWg *sync.WaitGroup, errChan *chan error) {
+	defer sendWg.Done()
+	_, err := lr.MessageBus.Send(ctx, msg, nil)
+	*errChan <- err
+}
 func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
 	for _, elem := range queue {

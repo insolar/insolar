@@ -50,14 +50,14 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	require.NoError(t, err)
 	firstCryptoService := cryptography.NewKeyBoundCryptographyService(firstPrivateKey)
 	extractedFirstPublicKey := keyProcessor.ExtractPublicKey(firstPrivateKey)
-	parsedFirstPubKey, err := keyProcessor.ExportPublicKey(extractedFirstPublicKey)
+	parsedFirstPubKey, err := keyProcessor.ExportPublicKeyPEM(extractedFirstPublicKey)
 	require.NoError(t, err)
 
 	secondPrivateKey, err := keyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
 	secondCryptoService := cryptography.NewKeyBoundCryptographyService(secondPrivateKey)
 	extractedSecondPublicKey := keyProcessor.ExtractPublicKey(secondPrivateKey)
-	parsedSecondPubKey, err := keyProcessor.ExportPublicKey(extractedSecondPublicKey)
+	parsedSecondPubKey, err := keyProcessor.ExportPublicKeyPEM(extractedSecondPublicKey)
 	require.NoError(t, err)
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -145,7 +145,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 		configuration.Pulsar{
 			ConnectionType:        "tcp",
 			MainListenerAddress:   ":1640",
-			DistributionTransport: configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1890", BehindNAT: false},
+			DistributionTransport: configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:1890", BehindNAT: false},
 			Neighbours:            []configuration.PulsarNodeAddress{},
 		},
 		cryptoService,
@@ -200,7 +200,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	firstCryptoService := cryptography.NewKeyBoundCryptographyService(firstPrivateKey)
 	pubFirstKey, err := firstCryptoService.GetPublicKey()
 	require.NoError(t, err)
-	exporteFirstKey, err := keyProcessorFirst.ExportPublicKey(pubFirstKey)
+	exporteFirstKey, err := keyProcessorFirst.ExportPublicKeyPEM(pubFirstKey)
 	require.NoError(t, err)
 	inslogger.FromContext(ctx).Infof("first outside - %v", string(exporteFirstKey))
 
@@ -211,7 +211,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	secondCryptoService := cryptography.NewKeyBoundCryptographyService(secondPrivateKey)
 	pubSecondKey, err := secondCryptoService.GetPublicKey()
 	require.NoError(t, err)
-	exportedSecondKey, err := keyProcessorSecond.ExportPublicKey(pubSecondKey)
+	exportedSecondKey, err := keyProcessorSecond.ExportPublicKeyPEM(pubSecondKey)
 	require.NoError(t, err)
 	inslogger.FromContext(ctx).Infof("second outside - %v", string(exportedSecondKey))
 
@@ -243,7 +243,6 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	)
 	firstStateSwitcher.setState(WaitingForStart)
 	firstStateSwitcher.SetPulsar(firstPulsar)
-
 
 	secondStateSwitcher := &StateSwitcherImpl{}
 	secondPulsar, err := NewPulsar(
@@ -281,7 +280,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		err = firstPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
 		require.NoError(t, err)
 	}()
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	// Assert
 	pulseDistributor.MinimockWait(100 * time.Millisecond)
@@ -326,15 +325,6 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		"127.0.0.1:1647",
 	}
 
-	// keyGenerator := func() (crypto.PrivateKey, crypto.PublicKey, string) {
-	// 	kp := platformpolicy.NewKeyProcessor()
-	// 	key, _ := kp.GeneratePrivateKey()
-	// 	publicKey := kp.ExtractPublicKey(key)
-	// 	pubKeyString, _ := kp.ExportPublicKey(publicKey)
-	//
-	// 	return key, publicKey, string(pubKeyString)
-	// }
-
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
 	pulsarsPrivateKeys := [7]crypto.PrivateKey{}
@@ -365,7 +355,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 			if configIndex == pulsarIndex {
 				continue
 			}
-			publicKeyBytes, err := keyProcessor.ExportPublicKey(keyProcessor.ExtractPublicKey(pulsarsPrivateKeys[configIndex]))
+			publicKeyBytes, err := keyProcessor.ExportPublicKeyPEM(keyProcessor.ExtractPublicKey(pulsarsPrivateKeys[configIndex]))
 			require.NoError(t, err)
 			conf.Pulsar.Neighbours = append(conf.Pulsar.Neighbours, configuration.PulsarNodeAddress{
 				ConnectionType: "tcp",
@@ -400,7 +390,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 		for neighbourIndex := pulsarIndex + 1; neighbourIndex < 7; neighbourIndex++ {
 			publicKey := keyProcessor.ExtractPublicKey(pulsarsPrivateKeys[neighbourIndex])
-			publicKeyBytes, err := keyProcessor.ExportPublicKey(publicKey)
+			publicKeyBytes, err := keyProcessor.ExportPublicKeyPEM(publicKey)
 			require.NoError(t, err)
 			err = pulsars[pulsarIndex].EstablishConnectionToPulsar(ctx, string(publicKeyBytes))
 			require.NoError(t, err)
@@ -424,7 +414,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	pulseDistributorMock.MinimockFinish()
 
@@ -440,7 +430,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 		for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 			pubKey := keyProcessor.ExtractPublicKey(pulsarsPrivateKeys[pulsarIndex])
-			publicKeyBytes, _ := keyProcessor.ExportPublicKey(pubKey)
+			publicKeyBytes, _ := keyProcessor.ExportPublicKeyPEM(pubKey)
 			pulseSenderConfirmation := pulsar.GetLastPulse().Signs[string(publicKeyBytes)]
 
 			confirmationForCheck := PulseSenderConfirmationPayload{
@@ -454,7 +444,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 			hashProvider := pulsar.PlatformCryptographyScheme.IntegrityHasher()
 			hash, _ := confirmationForCheck.Hash(hashProvider)
 
-			isOk := pulsar.CryptographyService.Verify(pubKey, core.SignatureFromBytes(pulseSenderConfirmation.Signature),hash)
+			isOk := pulsar.CryptographyService.Verify(pubKey, core.SignatureFromBytes(pulseSenderConfirmation.Signature), hash)
 			require.Equal(t, true, isOk)
 		}
 	}

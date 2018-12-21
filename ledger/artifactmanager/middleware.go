@@ -22,7 +22,9 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 )
 
@@ -54,6 +56,8 @@ func jetFromContext(ctx context.Context) core.RecordID {
 
 func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		logger := inslogger.FromContext(ctx)
+
 		genericMsg := parcel.Message()
 		msg, ok := genericMsg.(message.LedgerMessage)
 		if !ok {
@@ -82,12 +86,27 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		// Check if jet is ours.
 		node, err := m.jetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
 		if err != nil {
+			logger.Debugf("checkJet: failed to check isMine: %s", err.Error())
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
 		if *node != m.jetCoordinator.Me() {
+			// TODO: sergey.morozov 2018-12-21 This is hack. Must implement correct Jet checking for HME.
+			logger.Debugf("checkJet: [ HACK ] checking if I am Heavy Material")
+			heavy, err := m.jetCoordinator.Heavy(ctx, targetPulse)
+			if err != nil {
+				logger.Debugf("checkJet: [ HACK ] failed to check for Heavy role")
+				return nil, errors.Wrap(err, "[ HACK ] failed to check for heavy role")
+			}
+			if *heavy == m.jetCoordinator.Me() {
+				logger.Debugf("checkJet: [ HACK ] I am Heavy. Accept parcel.")
+				return handler(contextWithJet(ctx, jet.ZeroJetID), parcel)
+			}
+
+			logger.Debugf("checkJet: not Mine")
 			return &reply.JetMiss{JetID: jetID}, nil
 		}
 
+		logger.Debugf("checkJet: done well")
 		return handler(contextWithJet(ctx, jetID), parcel)
 	}
 }
@@ -134,14 +153,9 @@ func (m *middleware) fetchJet(
 	if err != nil {
 		return nil, err
 	}
-	currentPulse, err := m.db.GetLatestPulse(ctx)
-	if err != nil {
-		return nil, err
-	}
 	rep, err := m.messageBus.Send(
 		ctx,
 		&message.GetJet{Object: target},
-		currentPulse.Pulse,
 		&core.MessageSendOptions{Receiver: prevExecutor},
 	)
 	r, ok := rep.(*reply.Jet)

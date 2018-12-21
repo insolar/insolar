@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112XEbUnup48ZdZtni8ndHJUKpba6YXSLfgPFkddU.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("1111XXeHHVuzeAmiP8nz9JRBcy1CsqDgqRTX4aWKcC.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -298,62 +298,6 @@ func (r *Member) CallNoWait(rootDomain core.RecordRef, method string, params []b
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Call", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// RegisterNodeCall is proxy generated method
-func (r *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = ref
-	args[1] = params
-
-	var argsSerialized []byte
-
-	ret := [2]interface{}{}
-	var ret0 interface{}
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNodeCall", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, err
-	}
-
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// RegisterNodeCallNoWait is proxy generated method
-func (r *Member) RegisterNodeCallNoWait(ref core.RecordRef, params []byte) error {
-	var args [2]interface{}
-	args[0] = ref
-	args[1] = params
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNodeCall", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
