@@ -201,17 +201,18 @@ func (fp *FirstPhase) filterClaims(nodeID core.RecordRef, claims []packets.Refer
 }
 
 func (fp *FirstPhase) checkClaimSignature(claim packets.SignedClaim) error {
-	key, err := claim.GetPublicKey()
-	if err != nil {
-		return errors.Wrap(err, "[ checkClaimSignature ] Failed to import a key")
-	}
-	rawClaim, err := claim.SerializeRaw()
-	if err != nil {
-		return errors.Wrap(err, "[ checkClaimSignature ] Failed to serialize a claim")
-	}
-	success := fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.GetSignature()), rawClaim)
-	if !success {
-		return errors.New("[ checkClaimSignature ] Signature verification failed")
-	}
+	// TODO: uncomment this until we can serialize/deserialize PK in 64 bytes
+	// key, err := claim.GetPublicKey()
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ checkClaimSignature ] Failed to import a key")
+	// }
+	// rawClaim, err := claim.SerializeRaw()
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ checkClaimSignature ] Failed to serialize a claim")
+	// }
+	// success := fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.GetSignature()), rawClaim)
+	// if !success {
+	// 	return errors.New("[ checkClaimSignature ] Signature verification failed")
+	// }
 	return nil
 }
